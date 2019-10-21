@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <RepositoryUrl>https://github.com/mhelvacikoylu/twino.git</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
+    <Description>JSON Web Token Authentication and Authorization library for Twino MVC.</Description>
+    <Company>Mehmet Helvacıköylü</Company>
+    <Authors>Mehmet Helvacıköylü</Authors>
+    <PackageTags>twino, websocket, http, mvc, jwt, token, authorization, authentication</PackageTags>
+    <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <FileVersion>1.0.0</FileVersion>
+    <Version>3.2.0</Version>
+    <PackageVersion>1.0.0-beta</PackageVersion>
+    <LangVersion>8</LangVersion>
+    <NeutralLanguage>en</NeutralLanguage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="5.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Twino.Mvc\Twino.Mvc.csproj" />
+    <ProjectReference Include="..\Twino.Server\Twino.Server.csproj" />
+  </ItemGroup>
+
+</Project>

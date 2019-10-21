@@ -1,0 +1,21 @@
+{
+  "PingInterval": 60000,
+  "HttpConnectionTimeMax": 120,
+  "MaximumRequestLength": 20480,
+  "MaximumUriLength": 1024,
+  "MaximumHeaderLength": 4096,
+  "MaximumPendingConnections": 800,
+  "RequestTimeout": 60000,
+  "Hosts": [
+    {
+      "Port": 441,
+      "SslEnabled": true,
+      "SslCertificate": "lc1024.pfx",
+      "CertificateKey": "",
+      "BypassSslValidation": true,
+      "SslProtocol": "Tls",
+      "Hostnames": null
+    }
+  ],
+  "IsDevelopment": true
+}

@@ -1,0 +1,67 @@
+﻿using Twino.Mvc.Auth;
+using Twino.Mvc.Controllers;
+using Twino.Mvc.Controllers.Parameters;
+using Twino.Mvc.Filters.Route;
+using Sample.Mvc.Models;
+using System;
+
+namespace Sample.Mvc.Controller
+{
+    [TestControllerFilter]
+    [Route("[controller]")]
+    public class OtherController : TwinoController
+    {
+        private IDemoService DemoService { get; set; }
+
+        public OtherController(IDemoService demoService)
+        {
+            DemoService = demoService;
+        }
+
+        [HttpGet("hello")]
+        public IActionResult Hello([FromQuery] string name)
+        {
+            return String($"Hello {name}!");
+        }
+
+        [HttpGet("go")]
+        public IActionResult Go([FromHeader("User-Agent")] string agent)
+        {
+            return String($"Browser: {agent}!");
+        }
+
+        [HttpGet("number")]
+        public IActionResult Number()
+        {
+            return String("Number is " + DemoService.GetNumber());
+        }
+        
+        [HttpGet("test")]
+        [TestActionFilter]
+        public IActionResult Test()
+        {
+            Console.WriteLine("Test...");
+            return String("Hello world!");
+        }
+
+        [HttpGet("[action]")]
+        public IActionResult act()
+        {
+            return String("act");
+        }
+
+        [HttpGet("complex/[action]/path/{id}/{?opt}")]
+        public IActionResult Act(int id, int?opt)
+        {
+            return String("Complex Act: " + id + ", " + (opt.HasValue ? opt.Value : -1).ToString());
+        }
+
+        [Authorize]
+        [HttpGet("[action]")]
+        public IActionResult Auth()
+        {
+            return String("auth ok!");
+        }
+
+    }
+}

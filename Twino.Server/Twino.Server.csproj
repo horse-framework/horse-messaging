@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <Authors>Mehmet Helvacıköylü</Authors>
+    <Product>Twino.Server</Product>
+    <Description>Advanced WebSocket Server with lightweight HTTP Server.</Description>
+    <RepositoryUrl>https://github.com/mhelvacikoylu/twino.git</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <NeutralLanguage>en</NeutralLanguage>
+    <Version>3.2.0</Version>
+    <PackageTags>twino, websocket, server, http, tcp, lightweight, mq</PackageTags>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <FileVersion>1.0.0</FileVersion>
+    <PackageVersion>1.0.0-beta</PackageVersion>
+    <LangVersion>8</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Twino.Core\Twino.Core.csproj" />
+  </ItemGroup>
+
+</Project>

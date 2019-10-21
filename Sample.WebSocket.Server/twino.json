@@ -1,0 +1,30 @@
+﻿{
+  "PingInterval": 5000,
+  "HttpConnectionTimeMax": 120,
+  "MaximumRequestLength": 2097152,
+  "MaximumUriLength": 1024,
+  "MaximumHeaderLength": 4096,
+  "MaximumPendingConnections": 100,
+  "RequestTimeout": 60000,
+  "ContentEncoding": "gzip",
+  "Hosts": [
+    {
+      "Port": 84,
+      "SslEnabled": false,
+      "SslCertificate": null,
+      "CertificateKey": null,
+      "BypassSslValidation": true,
+      "SslProtocol": "Tls12",
+      "Hostnames": null
+    },
+    {
+      "Port": 82,
+      "SslEnabled": false,
+      "SslCertificate": null,
+      "CertificateKey": null,
+      "BypassSslValidation": true,
+      "SslProtocol": "Tls12",
+      "Hostnames": null
+    }
+  ]
+}
