@@ -6,7 +6,7 @@ namespace Twino.Server.Http
     /// <summary>
     /// HTTP request handler delegate for http requests
     /// </summary>
-    public delegate void HttpRequestHandlerDelegate(TwinoServer server, HttpRequest request, HttpResponse response);
+    public delegate Task HttpRequestHandlerDelegate(TwinoServer server, HttpRequest request, HttpResponse response);
 
     /// <summary>
     /// Created for http request handling implementation of hgttp server.
@@ -25,18 +25,9 @@ namespace Twino.Server.Http
         /// <summary>
         /// Triggered when a non-websocket request available.
         /// </summary>
-        public void Request(TwinoServer server, HttpRequest request, HttpResponse response)
-        {
-            _handler(server, request, response);
-        }
-
-        /// <summary>
-        /// Triggered when a non-websocket request available.
-        /// </summary>
         public async Task RequestAsync(TwinoServer server, HttpRequest request, HttpResponse response)
         {
-            await Task.Factory.StartNew(() => Request(server, request, response));
+            await _handler(server, request, response);
         }
-        
     }
 }

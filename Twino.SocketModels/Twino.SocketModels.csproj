@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <Version>3.2.0</Version>
-    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <AssemblyVersion>1.0.1</AssemblyVersion>
     <Authors>Mehmet Helvacıköylü</Authors>
     <Company>Mehmet Helvacıköylü</Company>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -12,8 +12,8 @@
     <RepositoryUrl>https://github.com/mhelvacikoylu/twino.git</RepositoryUrl>
     <PackageTags>twino, websocket, client, server, model, messaging</PackageTags>
     <Description>Object based communication library for Twino WebSocket servers and clients.</Description>
-    <FileVersion>1.0.0</FileVersion>
-    <PackageVersion>1.0.0-beta</PackageVersion>
+    <FileVersion>1.0.1</FileVersion>
+    <PackageVersion>1.0.1</PackageVersion>
     <LangVersion>8</LangVersion>
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
