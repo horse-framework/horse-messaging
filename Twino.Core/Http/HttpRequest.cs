@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -90,7 +91,7 @@ namespace Twino.Core.Http
         /// </summary>
         public Dictionary<string, string> GetQueryStringValues()
         {
-            Dictionary<string, string> items = new Dictionary<string, string>();
+            Dictionary<string, string> items = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 
             int start = Path.IndexOf('?');
             if (start < 0)

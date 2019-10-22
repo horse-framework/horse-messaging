@@ -401,7 +401,7 @@ namespace Twino.Server.Http
         private async Task WriteStatusResponse(HttpResponse response, HttpStatusCode code)
         {
             response.StatusCode = code;
-            ResponseWriter writer = new ResponseWriter(response);
+            ResponseWriter writer = new ResponseWriter(response, _server);
             await writer.Write(response);
         }
 

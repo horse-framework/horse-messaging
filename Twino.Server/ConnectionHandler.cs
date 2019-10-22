@@ -231,7 +231,7 @@ namespace Twino.Server
 
             handshake.State = ConnectionStates.Http;
             await _server.RequestHandler.RequestAsync(_server, request, response);
-            ResponseWriter writer = new ResponseWriter(response);
+            ResponseWriter writer = new ResponseWriter(response, _server);
             await writer.Write(response);
 
             return _server.Options.HttpConnectionTimeMax > 0;

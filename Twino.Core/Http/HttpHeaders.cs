@@ -6,33 +6,28 @@
     /// </summary>
     public static class HttpHeaders
     {
-        public const string HOST = "host";
-        public const string ORIGIN = "origin";
-        public const string SERVER = "server";
+        public const string HOST = "Host";
+        public const string ORIGIN = "Origin";
+        public const string SERVER = "Server";
+        public const string DATE = "Date";
         public const string HTTP_VERSION = "HTTP/1.1";
-        public const string CONTENT_TYPE = "content-type";
+        public const string CONTENT_TYPE = "Content-Type";
         public const string LOCATION = "Location";
-        public const string CONTENT_ENCODING = "content-encoding";
-        public const string CONTENT_LENGTH = "content-length";
-        public const string ACCEPT_ENCODING = "accept-encoding";
-        public const string ACCEPT_LANGUAGE = "accept-language";
-        public const string UPGRADE = "upgrade";
-        public const string PRAGMA = "pragma";
-        public const string CACHE_CONTROL = "cache-control";
-        public const string CONNECTION = "connection";
-        public const string WEBSOCKET_VERSION = "Sec-websocket-version";
-        public const string WEBSOCKET_KEY = "sec-websocket-key";
-        public const string WEBSOCKET_EXTENSIONS = "sec-websocket-extensions";
-        public const string WEBSOCKET_ACCEPT = "sec-websocket-accept";
-        public const string AUTHORIZATION = "authorization";
+        public const string CONTENT_ENCODING = "Content-Encoding";
+        public const string CONTENT_LENGTH = "Content-Length";
+        public const string ACCEPT_ENCODING = "Accept-Encoding";
+        public const string ACCEPT_LANGUAGE = "Accept-Language";
+        public const string UPGRADE = "Upgrade";
+        public const string PRAGMA = "Pragma";
+        public const string CACHE_CONTROL = "Cache-Control";
+        public const string CONNECTION = "Connection";
+        public const string WEBSOCKET_VERSION = "Sec-WebSocket-Version";
+        public const string WEBSOCKET_KEY = "Sec-WebSocket-Key";
+        public const string WEBSOCKET_EXTENSIONS = "Sec-WebSocket-Extensions";
+        public const string WEBSOCKET_ACCEPT = "Sec-WebSocket-Accept";
+        public const string AUTHORIZATION = "Authorization";
         public const string BEARER = "Bearer";
-        public const string ACCESS_CONTROL_ALLOW_ORIGIN = "access-control-allow-origin";
-
-        public const string LCASE_HOST = "host";
-        public const string LCASE_ACCEPT_ENCODING = "accept-encoding";
-        public const string LCASE_WEBSOCKET_KEY = "sec-websocket-key";
-        public const string LCASE_CONTENT_TYPE = "content-type";
-        public const string LCASE_CONTENT_LENGTH = "content-length";
+        public const string ACCESS_CONTROL_ALLOW_ORIGIN = "Access-Control-Allow-Origin";
 
         public const string HTTP_GET = "GET";
         public const string HTTP_POST = "POST";
@@ -41,13 +36,6 @@
         public const string HTTP_DELETE = "DELETE";
         public const string HTTP_OPTIONS = "OPTIONS";
         public const string HTTP_HEAD = "HEAD";
-        public const string LCASE_HTTP_GET = "get";
-        public const string LCASE_HTTP_POST = "post";
-        public const string LCASE_HTTP_PUT = "put";
-        public const string LCASE_HTTP_PATCH = "patch";
-        public const string LCASE_HTTP_DELETE = "delete";
-        public const string LCASE_HTTP_OPTIONS = "options";
-        public const string LCASE_HTTP_HEAD = "head";
 
         public const string VALUE_SERVER = "twino";
         public const string VALUE_CHARSET_UTF8 = "charset=UTF-8";
