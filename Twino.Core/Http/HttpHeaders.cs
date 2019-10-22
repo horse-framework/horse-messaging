@@ -27,7 +27,12 @@
         public const string WEBSOCKET_ACCEPT = "Sec-WebSocket-Accept";
         public const string AUTHORIZATION = "Authorization";
         public const string BEARER = "Bearer";
+        
+        public const string ACCESS_CONTROL_ALLOW_CREDENTIALS = "Access-Control-Allow-Credentials";
         public const string ACCESS_CONTROL_ALLOW_ORIGIN = "Access-Control-Allow-Origin";
+        public const string ACCESS_CONTROL_ALLOW_HEADERS = "Access-Control-Allow-Headers";
+        public const string ACCESS_CONTROL_ALLOW_METHODS = "Access-Control-Allow-Methods";
+        public const string ACCESS_CONTROL_MAX_AGE = "Access-Control-Max-Age";
 
         public const string HTTP_GET = "GET";
         public const string HTTP_POST = "POST";
@@ -49,6 +54,7 @@
         public const string VALUE_KEEP_ALIVE = "keep-alive";
         public const string VALUE_CLOSE = "close";
         public const string VALUE_WEBSOCKET_EXTENSIONS = "permessage-deflate; client_max_window_bits";
+
 
         public const string WEBSOCKET_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 

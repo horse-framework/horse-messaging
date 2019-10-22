@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Twino.Core.Http;
 using Twino.Mvc.Results;
 
@@ -24,32 +25,31 @@ namespace Twino.Mvc.Middlewares
         public async Task Invoke(NextMiddlewareHandler next, HttpRequest request, HttpResponse response)
         {
             if (AllowCredentials)
-                response.AdditionalHeaders.Add("Access-Control-Allow-Credentials", "true");
+                response.AdditionalHeaders.Add(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
 
             if (!string.IsNullOrEmpty(AllowedOrigins))
             {
                 if (AllowedOrigins == "*")
                 {
-                    if (request.Headers.ContainsKey(HttpHeaders.ORIGIN))
-                        response.AdditionalHeaders.Add("Access-Control-Allow-Origin", request.Headers[HttpHeaders.ORIGIN]);
-                    else
-                        response.AdditionalHeaders.Add("Access-Control-Allow-Origin", "*");
-
+                    response.AdditionalHeaders.Add(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN,
+                                                   request.Headers.ContainsKey(HttpHeaders.ORIGIN)
+                                                       ? request.Headers[HttpHeaders.ORIGIN]
+                                                       : "*");
                 }
                 else
-                    response.AdditionalHeaders.Add("Access-Control-Allow-Origin", AllowedOrigins);
+                    response.AdditionalHeaders.Add(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, AllowedOrigins);
             }
 
-            if (request.Method == "OPTIONS")
+            if (request.Method.Equals(HttpHeaders.HTTP_OPTIONS, StringComparison.InvariantCultureIgnoreCase))
             {
                 if (!string.IsNullOrEmpty(AllowedHeaders))
-                    response.AdditionalHeaders.Add("Access-Control-Allow-Headers", AllowedHeaders);
+                    response.AdditionalHeaders.Add(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS, AllowedHeaders);
 
                 if (!string.IsNullOrEmpty(AllowedMethods))
-                    response.AdditionalHeaders.Add("Access-control-Allow-Methods", AllowedMethods);
+                    response.AdditionalHeaders.Add(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, AllowedMethods);
 
                 if (!string.IsNullOrEmpty(AllowMaxAge))
-                    response.AdditionalHeaders.Add("Access-Control-Max-Age", AllowMaxAge);
+                    response.AdditionalHeaders.Add(HttpHeaders.ACCESS_CONTROL_MAX_AGE, AllowMaxAge);
 
                 next(StatusCodeResult.NoContent());
                 return;
