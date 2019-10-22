@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Twino.Core;
 using Twino.SocketModels.Models;
 using Twino.SocketModels.Serialization;
@@ -165,7 +164,7 @@ namespace Twino.SocketModels
             lock (_pendingRequests)
                 _pendingRequests.Add(header.Unique, pendingRequest);
 
-            byte[] prepared = PrepareRequest(header, model);
+            byte[] prepared = await PrepareRequest(header, model);
             sender.Send(prepared);
 
             return await completionSource.Task;
@@ -215,7 +214,7 @@ namespace Twino.SocketModels
         /// <summary>
         /// Process the request from the client and sends the response. 
         /// </summary>
-        private void ProcessRequest(SocketBase sender, RequestDescriptor descriptor, RequestHeader header, object requestModel)
+        private async Task ProcessRequest(SocketBase sender, RequestDescriptor descriptor, RequestHeader header, object requestModel)
         {
             try
             {
@@ -223,13 +222,13 @@ namespace Twino.SocketModels
 
                 if (responseModel == null)
                 {
-                    sender.Send(PrepareResponse(new SocketResponse
-                                                {
-                                                    Status = ResponseStatus.Failed,
-                                                    Unique = header.Unique,
-                                                    RequestType = header.RequestType,
-                                                    ResponseType = header.ResponseType
-                                                }, null));
+                    sender.Send(await PrepareResponse(new SocketResponse
+                                                      {
+                                                          Status = ResponseStatus.Failed,
+                                                          Unique = header.Unique,
+                                                          RequestType = header.RequestType,
+                                                          ResponseType = header.ResponseType
+                                                      }, null));
                     return;
                 }
 
@@ -241,7 +240,7 @@ namespace Twino.SocketModels
                                               ResponseType = header.ResponseType
                                           };
 
-                byte[] prepared = PrepareResponse(response, (ISocketModel) responseModel);
+                byte[] prepared = await PrepareResponse(response, (ISocketModel) responseModel);
                 sender.Send(prepared);
             }
             catch
@@ -253,7 +252,7 @@ namespace Twino.SocketModels
                                          RequestType = header.RequestType,
                                          ResponseType = header.ResponseType
                                      };
-                byte[] prepared = PrepareResponse(err, null);
+                byte[] prepared = await PrepareResponse(err, null);
                 sender.Send(prepared);
             }
         }
@@ -405,7 +404,7 @@ namespace Twino.SocketModels
                 return null;
 
             string serialized = message.Substring(headerStart, headerEnd - headerStart + 1);
-            T header = JsonConvert.DeserializeObject<T>(serialized);
+            T header = System.Text.Json.JsonSerializer.Deserialize<T>(serialized);
             return header;
         }
 
@@ -441,7 +440,7 @@ namespace Twino.SocketModels
                 model = criticalModel;
             }
             else
-                model = JsonConvert.DeserializeObject(serialized, type);
+                model = System.Text.Json.JsonSerializer.Deserialize(serialized, type);
 
             return model;
         }
@@ -449,12 +448,12 @@ namespace Twino.SocketModels
         /// <summary>
         /// Creates request websocket message from header and model instances
         /// </summary>
-        private static byte[] PrepareRequest(RequestHeader header, ISocketModel model)
+        private static async Task<byte[]> PrepareRequest(RequestHeader header, ISocketModel model)
         {
             LightJsonWriter writer = new LightJsonWriter();
 
-            writer.Writer.WriteRaw(REQUEST_CODE + "=");
-            writer.Writer.WriteStartArray();
+            await writer.Writer.WriteRawAsync(REQUEST_CODE + "=");
+            await writer.Writer.WriteStartArrayAsync();
 
             //header
             writer.StartObject();
@@ -462,7 +461,7 @@ namespace Twino.SocketModels
             writer.Write("requestType", header.RequestType);
             writer.Write("responseType", header.ResponseType);
             writer.EndObject();
-            writer.Writer.WriteRaw(",");
+            await writer.Writer.WriteRawAsync(",");
 
             if (model is IPerformanceCriticalModel critical)
             {
@@ -471,22 +470,22 @@ namespace Twino.SocketModels
                 writer.EndObject();
             }
             else
-                writer.Writer.WriteRaw(JsonConvert.SerializeObject(model));
+                await writer.Writer.WriteRawAsync(System.Text.Json.JsonSerializer.Serialize(model));
 
-            writer.Writer.WriteEndArray();
+            await writer.Writer.WriteEndArrayAsync();
 
             string message = writer.GetResult();
-            return WebSocketWriter.CreateFromUTF8(message);
+            return await WebSocketWriter.CreateFromUTF8Async(message);
         }
 
         /// <summary>
         /// Creates response websocket message from header and model instances
         /// </summary>
-        private static byte[] PrepareResponse(SocketResponse header, ISocketModel model)
+        private static async Task<byte[]> PrepareResponse(SocketResponse header, ISocketModel model)
         {
             LightJsonWriter writer = new LightJsonWriter();
-            writer.Writer.WriteRaw(RESPONSE_CODE + "=");
-            writer.Writer.WriteStartArray();
+            await writer.Writer.WriteRawAsync(RESPONSE_CODE + "=");
+            await writer.Writer.WriteStartArrayAsync();
 
             //header
             writer.StartObject();
@@ -495,7 +494,7 @@ namespace Twino.SocketModels
             writer.Write("responseType", header.ResponseType);
             writer.Write("status", header.Status);
             writer.EndObject();
-            writer.Writer.WriteRaw(",");
+            await writer.Writer.WriteRawAsync(",");
 
             if (model is IPerformanceCriticalModel critical)
             {
@@ -504,12 +503,12 @@ namespace Twino.SocketModels
                 writer.EndObject();
             }
             else
-                writer.Writer.WriteRaw(JsonConvert.SerializeObject(model));
+                await writer.Writer.WriteRawAsync(System.Text.Json.JsonSerializer.Serialize(model));
 
-            writer.Writer.WriteEndArray();
+            await writer.Writer.WriteEndArrayAsync();
 
             string message = writer.GetResult();
-            return WebSocketWriter.CreateFromUTF8(message);
+            return await WebSocketWriter.CreateFromUTF8Async(message);
         }
 
         #endregion

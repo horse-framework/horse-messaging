@@ -147,9 +147,22 @@ namespace Twino.Client
                 byte[] buffer = new byte[8192];
                 int len = Stream.Read(buffer, 0, buffer.Length);
                 string response = Encoding.UTF8.GetString(buffer, 0, len);
-                string first = response.Substring(0, 50);
-                if (!first.Contains(" 101 "))
-                    throw new NotSupportedException("Server doesn't support web socket protocol");
+                
+                string first = response.Substring(0, 50).Trim();
+                int i1 = first.IndexOf(' ');
+                if (i1 < 1)
+                    throw new InvalidOperationException("Unexpected server response");
+
+                int i2 = first.IndexOf(' ', i1 + 1);
+                if (i1 < 0 || i2 < 0 || i2 <= i1)
+                    throw new InvalidOperationException("Unexpected server response");
+
+                string statusCode = first.Substring(i1, i2 - i1).Trim();
+                if (statusCode.StartsWith("4"))
+                    throw new NotSupportedException("Server doesn't support web socket protocol: " + statusCode);
+
+                if (statusCode != "101")
+                    throw new InvalidOperationException("Connection Error: " + statusCode);
 
                 //Creates HttpRequest class from the response message
                 RequestBuilder reader = new RequestBuilder();
@@ -174,7 +187,7 @@ namespace Twino.Client
                 Thread thread = new Thread(Read);
                 thread.IsBackground = true;
                 thread.Start();
-                
+
                 OnConnected();
             }
             catch (Exception ex)

@@ -35,7 +35,7 @@ namespace Twino.Server.Http
                     case ContentEncodings.Brotli:
                     {
                         await using (BrotliStream brotli = new BrotliStream(ms, CompressionMode.Compress))
-                            brotli.Write(content, 0, content.Length);
+                            await brotli.WriteAsync(content, 0, content.Length);
 
                         result = ms.ToArray();
                         break;
@@ -43,7 +43,7 @@ namespace Twino.Server.Http
                     case ContentEncodings.Gzip:
                     {
                         await using (GZipStream gzip = new GZipStream(ms, CompressionMode.Compress))
-                            gzip.Write(content, 0, content.Length);
+                            await gzip.WriteAsync(content, 0, content.Length);
 
                         result = ms.ToArray();
                         break;

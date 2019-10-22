@@ -40,13 +40,13 @@ namespace Twino.Server.WebSockets
         /// <summary>
         /// Completes WebSocket Protocol Handshaking operations
         /// </summary>
-        internal async Task<bool> HandshakeClient()
+        internal async Task HandshakeClient()
         {
             if (!Request.IsWebSocket)
             {
                 Client.Close();
                 Client.Dispose();
-                return false;
+                return;
             }
 
             byte[] response = BuildResponse(Request.WebSocketKey);
@@ -57,8 +57,6 @@ namespace Twino.Server.WebSockets
             Server.SetClientConnected(client);
             client.Start();
             Server.Pinger.AddClient(client);
-            
-            return true;
         }
 
         /// <summary>
@@ -79,7 +77,7 @@ namespace Twino.Server.WebSockets
         /// <summary>
         /// Computes response hash from the requested web socket key
         /// </summary>
-        private string CreateWebSocketGuid(string key)
+        private static string CreateWebSocketGuid(string key)
         {
             byte[] keybytes = Encoding.UTF8.GetBytes(key + HttpHeaders.WEBSOCKET_GUID);
             return Convert.ToBase64String(SHA1.Create().ComputeHash(keybytes));

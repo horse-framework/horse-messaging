@@ -33,11 +33,6 @@ namespace Twino.Server.Http
         private readonly TwinoServer _server;
 
         /// <summary>
-        /// Inner server object of the request
-        /// </summary>
-        private readonly InnerServer _innerServer;
-
-        /// <summary>
         /// Reads string data from memory stream. Used for reading header values.
         /// </summary>
         private StreamReader _reader;
@@ -100,13 +95,18 @@ namespace Twino.Server.Http
         /// </summary>
         private TaskCompletionSource<Tuple<HttpRequest, HttpResponse>> _completion;
 
+        /// <summary>
+        /// Info of the the
+        /// </summary>
+        private readonly HandshakeInfo _info;
+
         #endregion
 
-        public RequestReader(TwinoServer server, InnerServer innerServer)
+        internal RequestReader(TwinoServer server, HandshakeInfo info)
         {
+            _info = info;
             _server = server;
             _options = server.Options;
-            _innerServer = innerServer;
         }
 
         #region Actions
@@ -141,7 +141,7 @@ namespace Twino.Server.Http
                 //if the object is disposed, it means server closed the connection. we do not need to log this
                 if (!(ex is ObjectDisposedException) && _server.Logger != null)
                     _server.Logger.LogException("END_READ_REQUEST", ex);
-                
+
                 _completion.SetResult(new Tuple<HttpRequest, HttpResponse>(null, null));
             }
 
@@ -286,7 +286,7 @@ namespace Twino.Server.Http
             //we don't need to validate body ?
             //char[] body = new char[_request.ContentLength];
 
-            _request.IsHttps = _innerServer.Options.SslEnabled;
+            _request.IsHttps = _info.Server.Options.SslEnabled;
 
             if (string.IsNullOrEmpty(_request.AcceptEncoding))
                 _response.ContentEncoding = ContentEncodings.None;
@@ -332,13 +332,15 @@ namespace Twino.Server.Http
 
                     if (x > short.MaxValue)
                         again = false;
-                    
                 } while (again);
             }
             catch (Exception ex)
             {
-                if (_server.Logger != null)
+                if (_info.State != ConnectionStates.Closed)
+                {
                     _server.Logger.LogException("READ_REQUEST", ex);
+                    _info.Close();
+                }
 
                 _completion.SetResult(new Tuple<HttpRequest, HttpResponse>(null, null));
             }
@@ -367,13 +369,13 @@ namespace Twino.Server.Http
             }
 
             //checks if hostname is allowed
-            if (_innerServer.Options.Hostnames != null)
+            if (_info.Server.Options.Hostnames != null)
             {
-                if (!(_innerServer.Options.Hostnames.Length == 1 && _innerServer.Options.Hostnames[0] == "*"))
+                if (!(_info.Server.Options.Hostnames.Length == 1 && _info.Server.Options.Hostnames[0] == "*"))
                 {
                     string host = request.Host.ToLower(new CultureInfo("en-US"));
                     bool allowed = false;
-                    foreach (string ah in _innerServer.Options.Hostnames)
+                    foreach (string ah in _info.Server.Options.Hostnames)
                     {
                         if (string.Equals(host, ah, StringComparison.InvariantCultureIgnoreCase))
                         {

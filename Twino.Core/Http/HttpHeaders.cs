@@ -10,7 +10,7 @@
         public const string ORIGIN = "origin";
         public const string SERVER = "server";
         public const string HTTP_VERSION = "HTTP/1.1";
-        public const string CONTENT_TYPE = "content-Type";
+        public const string CONTENT_TYPE = "content-type";
         public const string LOCATION = "Location";
         public const string CONTENT_ENCODING = "content-encoding";
         public const string CONTENT_LENGTH = "content-length";
@@ -50,7 +50,7 @@
         public const string LCASE_HTTP_HEAD = "head";
 
         public const string VALUE_SERVER = "twino";
-        public const string VALUE_CHARSET_UTF8 = "charset=utf8";
+        public const string VALUE_CHARSET_UTF8 = "charset=UTF-8";
         public const string VALUE_GZIP = "gzip";
         public const string VALUE_BROTLI = "br";
         public const string VALUE_GZIP_DEFLATE_BR = "gzip, deflate, br";

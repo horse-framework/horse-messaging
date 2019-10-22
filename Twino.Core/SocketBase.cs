@@ -210,6 +210,26 @@ namespace Twino.Core
                 return false;
             }
         }
+        
+        /// <summary>
+        /// Sends a string message to the socket client.
+        /// Data must be plain text,
+        /// WebSocket protocol information will be added
+        /// </summary>
+        public virtual async Task<bool> SendAsync(string message)
+        {
+            try
+            {
+                byte[] data = await WebSocketWriter.CreateFromUTF8Async(message);
+                return Send(data);
+            }
+            catch (Exception ex)
+            {
+                OnError("SEND_STRING", ex);
+                Disconnect();
+                return false;
+            }
+        }
 
         private void EndWrite(IAsyncResult ar)
         {
@@ -301,16 +321,18 @@ namespace Twino.Core
         /// </summary>
         private void SendQueue(byte[] data)
         {
+            SpinWait wait = new SpinWait();
+            DateTime until = DateTime.UtcNow.AddSeconds(5);
+            
             Task.Factory.StartNew(() =>
             {
-                DateTime until = DateTime.UtcNow.AddSeconds(10);
                 while (!_writeCompleted)
                 {
-                    Thread.Sleep(2);
+                    wait.SpinOnce();
                     if (DateTime.UtcNow > until)
                         return;
                 }
-
+                
                 Send(data);
             });
         }

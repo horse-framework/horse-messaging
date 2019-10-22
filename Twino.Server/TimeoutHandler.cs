@@ -49,6 +49,8 @@ namespace Twino.Server
                                 if (handshake.MaxAlive < DateTime.UtcNow)
                                     removing.Add(handshake);
                             }
+                            else if (handshake.State == ConnectionStates.WebSocket)
+                                removing.Add(handshake);
                             else if (handshake.State > ConnectionStates.Pending || handshake.Timeout < DateTime.UtcNow)
                                 removing.Add(handshake);
                         }
