@@ -9,15 +9,11 @@ namespace Sample.Http.Server
 {
     public class RequestHandler : IHttpRequestHandler
     {
-        public void Request(TwinoServer server, HttpRequest request, HttpResponse response)
+        public async Task RequestAsync(TwinoServer server, HttpRequest request, HttpResponse response)
         {
             response.SetToHtml();
             Console.WriteLine("Hello World: " + request.Content);
-        }
-
-        public async Task RequestAsync(TwinoServer server, HttpRequest request, HttpResponse response)
-        {
-            await Task.Factory.StartNew(() => Request(server, request, response));
+            await Task.CompletedTask;
         }
     }
 
