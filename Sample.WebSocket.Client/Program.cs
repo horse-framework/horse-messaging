@@ -4,6 +4,7 @@ using Twino.Server;
 using System;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using Microsoft.Win32.SafeHandles;
 using Twino.Client;
 using Twino.Server.WebSockets;
 
@@ -59,9 +60,15 @@ namespace Sample.WebSocket.Client
         static void ConnectWithTwino()
         {
             TwinoClient cx = new TwinoClient();
-            cx.MessageReceived += (c, m) => c.Send(".");
-            cx.Connect("127.0.0.1", 84, false);
-            cx.Send(".");
+            cx.MessageReceived += (c, m) => Console.WriteLine("# " + m);
+            cx.Connected += c => Console.WriteLine("Connected"); 
+            cx.Disconnected += c => Console.WriteLine("Disconnected"); 
+            cx.Connect("ws://127.0.0.1:82");
+            while (true)
+            {
+                string s = Console.ReadLine();
+                cx.Send(s);
+            }
         }
         
         static void Main(string[] args)
@@ -73,8 +80,6 @@ namespace Sample.WebSocket.Client
            // Console.ReadLine();
 
             ConnectWithTwino();
-
-            Console.ReadLine();
             
         }
 

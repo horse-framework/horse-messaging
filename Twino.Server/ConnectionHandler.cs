@@ -98,20 +98,13 @@ namespace Twino.Server
 
         private static SslProtocols GetProtocol(InnerServer server)
         {
-            switch (server.Options.SslProtocol)
+            return server.Options.SslProtocol switch
             {
-                case "tls":
-                    return SslProtocols.Tls;
-
-                case "tls11":
-                    return SslProtocols.Tls11;
-
-                case "tls12":
-                    return SslProtocols.Tls12;
-
-                default:
-                    return SslProtocols.None;
-            }
+                "tls" => SslProtocols.Tls,
+                "tls11" => SslProtocols.Tls11,
+                "tls12" => SslProtocols.Tls12,
+                _ => SslProtocols.None
+            };
         }
 
         /// <summary>
@@ -143,7 +136,7 @@ namespace Twino.Server
                 try
                 {
                     SslStream sslStream = _inner.Options.BypassSslValidation
-                                              ? new SslStream(tcp.GetStream(), true, userCertificateValidationCallback: (a, b, c, d) => true)
+                                              ? new SslStream(tcp.GetStream(), true, (a, b, c, d) => true)
                                               : new SslStream(tcp.GetStream(), true);
 
                     handshake.SslStream = sslStream;

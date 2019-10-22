@@ -114,7 +114,7 @@ namespace Twino.Server.WebSockets
         /// </summary>
         private void AddIncomingSockets()
         {
-            if (_outgoing.Count == 0)
+            if (_incoming.Count == 0)
                 return;
 
             lock (_incoming)
@@ -132,22 +132,21 @@ namespace Twino.Server.WebSockets
         /// </summary>
         private void PingClients()
         {
-            DateTime time = DateTime.UtcNow - _interval;
             foreach (SocketPingInfo info in _clients)
             {
-                if (!info.Socket.IsConnected)
+                if (info.Socket == null || !info.Socket.IsConnected)
                 {
                     RemoveClient(info.Socket);
                     continue;
                 }
 
-                if (!info.New && info.Socket.PongTime < info.Update)
+                if (!info.New && info.Socket.PongTime < info.Last)
                 {
                     info.Socket.Disconnect();
                     continue;
                 }
 
-                if (info.Update > time)
+                if (info.Last + _interval > DateTime.UtcNow)
                     continue;
 
                 info.Ping();

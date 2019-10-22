@@ -141,7 +141,7 @@ namespace Twino.Server.Http
                 //if the object is disposed, it means server closed the connection. we do not need to log this
                 if (!(ex is ObjectDisposedException) && _server.Logger != null)
                     _server.Logger.LogException("END_READ_REQUEST", ex);
-                
+
                 _completion.SetResult(new Tuple<HttpRequest, HttpResponse>(null, null));
             }
 
@@ -332,7 +332,6 @@ namespace Twino.Server.Http
 
                     if (x > short.MaxValue)
                         again = false;
-                    
                 } while (again);
             }
             catch (Exception ex)

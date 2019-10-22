@@ -34,7 +34,12 @@ namespace Test.Server
             ServerOptions options = ServerOptions.CreateDefault();
             options.ContentEncoding = null;
 
-            TwinoServer server = TwinoServer.CreateHttp((twinoServer, request, response) => { response.SetToJson(new {Success = true, Message = "Hello world"}); }, options);
+            TwinoServer server = TwinoServer.CreateHttp((twinoServer, request, response) =>
+            {
+                response.SetToJson(new {Success = true, Message = "Hello world"});
+                return Task.CompletedTask;
+            }, options);
+            
             server.Start(382);
 
             System.Threading.Thread.Sleep(250);
