@@ -66,6 +66,15 @@ namespace Twino.Core.Http
         /// <summary>
         /// Sets response content type to html and status to 200
         /// </summary>
+        public void SetToText()
+        {
+            ContentType = "text/plain";
+            StatusCode = HttpStatusCode.OK;
+        }
+
+        /// <summary>
+        /// Sets response content type to html and status to 200
+        /// </summary>
         public void SetToHtml()
         {
             ContentType = "text/html";

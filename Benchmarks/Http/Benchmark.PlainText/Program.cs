@@ -32,8 +32,7 @@ namespace Benchmark.PlainText
             {
                 if (request.Path.Equals("/plaintext", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    response.ContentType = "text/plain";
-                    response.StatusCode = HttpStatusCode.OK;
+                    response.SetToText();
                     response.Write("Hello, World!");
                 }
                 else
