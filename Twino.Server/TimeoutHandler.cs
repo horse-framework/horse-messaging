@@ -31,6 +31,7 @@ namespace Twino.Server
             _running = true;
             _timer = new Thread(Cycle);
             _timer.IsBackground = true;
+            _timer.Priority = ThreadPriority.BelowNormal;
             _timer.Start();
         }
 

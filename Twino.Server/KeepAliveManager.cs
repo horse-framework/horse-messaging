@@ -4,7 +4,7 @@ namespace Twino.Server
 {
     internal class KeepAliveManager
     {
-        private readonly TimeoutHandler[] _timeoutHandlers = new TimeoutHandler[10];
+        private TimeoutHandler[] _timeoutHandlers;
 
         public bool IsRunning { get; private set; }
         private int _nextIndex;
@@ -14,6 +14,9 @@ namespace Twino.Server
             if (IsRunning)
                 throw new InvalidOperationException("Keep Alive Manager is already running");
 
+            int count = Environment.ProcessorCount * 2;
+            _timeoutHandlers = new TimeoutHandler[count];
+            
             IsRunning = true;
             _nextIndex = 0;
             Random rnd = new Random();
