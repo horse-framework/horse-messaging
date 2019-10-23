@@ -16,7 +16,7 @@ namespace Twino.Core.Http
         {
             HttpRequest request = new HttpRequest();
             request.Content = "";
-            request.Headers = new Dictionary<string, string>();
+            request.Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 
             //string[] lines = data.Split(new string[] { "\r\n" }, StringSplitOptions.None);
             bool head = true;
@@ -68,7 +68,7 @@ namespace Twino.Core.Http
         public HttpRequest Build(List<string> headers)
         {
             HttpRequest request = new HttpRequest();
-            request.Headers = new Dictionary<string, string>();
+            request.Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 
             string[] headline = headers[0].Split(' ');
 

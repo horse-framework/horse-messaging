@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -19,19 +20,6 @@ namespace Playground
     {
         static void Main(string[] args)
         {
-            Console.ReadLine();
-            Stopwatch sw = new Stopwatch();
-            string s1 = DateTime.UtcNow.ToString("R");
-            string s = DateTime.UtcNow.ToString("R");
-            sw.Start();
-
-            for (int i = 0; i < 1000000; i++)
-                s = s1.Trim();
-
-            sw.Stop();
-            Console.WriteLine(sw.ElapsedMilliseconds);
-            Console.WriteLine(s);
-            Console.ReadLine();
         }
     }
 }
