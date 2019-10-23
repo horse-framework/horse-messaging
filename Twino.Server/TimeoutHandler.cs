@@ -13,6 +13,7 @@ namespace Twino.Server
 
         private Thread _timer;
 
+        private static readonly int INTERVAL = 500;
         public bool Running { get; set; }
         private readonly int _timeoutMilliseconds;
 
@@ -31,7 +32,7 @@ namespace Twino.Server
             {
                 while (Running)
                 {
-                    Thread.Sleep(500);
+                    Thread.Sleep(INTERVAL);
                     List<HandshakeInfo> removing = new List<HandshakeInfo>();
 
                     lock (_handshakes)

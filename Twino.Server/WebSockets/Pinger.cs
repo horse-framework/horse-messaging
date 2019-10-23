@@ -29,6 +29,8 @@ namespace Twino.Server.WebSockets
         /// </summary>
         private Timer _timer;
 
+        private static readonly int TIMER_INTERVAL = 5000;
+
         /// <summary>
         /// Ping time interval
         /// </summary>
@@ -47,7 +49,7 @@ namespace Twino.Server.WebSockets
         /// </summary>
         public void Start()
         {
-            _timer = new Timer(5000);
+            _timer = new Timer(TIMER_INTERVAL);
             _timer.AutoReset = true;
             _timer.Elapsed += (sender, args) => Tick();
             _timer.Start();
