@@ -6,9 +6,15 @@ namespace Twino.Server
     {
         private TimeoutHandler[] _timeoutHandlers;
 
+        /// <summary>
+        /// If true, keep alive manager and timeout handlers are running
+        /// </summary>
         public bool IsRunning { get; private set; }
         private int _nextIndex;
 
+        /// <summary>
+        /// Creates timeout handlers (vCPU x 2 handlers) and runs them
+        /// </summary>
         public void Start(int timeoutMilliseconds)
         {
             if (IsRunning)
@@ -29,6 +35,9 @@ namespace Twino.Server
             }
         }
 
+        /// <summary>
+        /// Stops all timeout handlers
+        /// </summary>
         public void Stop()
         {
             IsRunning = false;

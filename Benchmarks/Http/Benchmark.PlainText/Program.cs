@@ -13,7 +13,7 @@ namespace Benchmark.PlainText
             ServerOptions options = new ServerOptions
                                     {
                                         RequestTimeout = 300000,
-                                        HttpConnectionTimeMax = 300,
+                                        HttpConnectionTimeMax = 30,
                                         MaximumHeaderLength = 8192,
                                         MaximumUriLength = 1024,
                                         MaximumRequestLength = 819200,

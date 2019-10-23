@@ -30,11 +30,8 @@ namespace Twino.Server
         /// </summary>
         public async Task Handle()
         {
-            if (_server.Options.HttpConnectionTimeMax > 0)
-            {
-                _inner.KeepAliveManager = new KeepAliveManager();
-                _inner.KeepAliveManager.Start(_server.Options.RequestTimeout);
-            }
+            _inner.KeepAliveManager = new KeepAliveManager();
+            _inner.KeepAliveManager.Start(_server.Options.RequestTimeout);
 
             int alive = _server.Options.RequestTimeout;
             if (_server.Options.HttpConnectionTimeMax * 1000 > alive)
@@ -189,7 +186,7 @@ namespace Twino.Server
                 {
                     bool success = await ProcessHttpRequest(handshake, request, response);
                     await reader.Dispose();
-                    
+
                     if (success && _server.Options.HttpConnectionTimeMax > 0)
                         await FinishAccept(handshake);
                     else
@@ -202,7 +199,7 @@ namespace Twino.Server
                     _server.Logger.LogException("HANDLE_CONNECTION", ex);
 
                 handshake.Close();
-                
+
                 await reader.Dispose();
             }
         }
