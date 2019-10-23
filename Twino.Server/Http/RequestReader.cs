@@ -25,7 +25,7 @@ namespace Twino.Server.Http
         /// <summary>
         /// reqeust stream. When the data is read from socket buffer, it's written to this stream and is proceed from here
         /// </summary>
-        private readonly MemoryStream _ms = new MemoryStream();
+        private MemoryStream _ms = new MemoryStream();
 
         /// <summary>
         /// Request Server
@@ -107,6 +107,27 @@ namespace Twino.Server.Http
             _info = info;
             _server = server;
             _options = server.Options;
+        }
+
+        public async Task Dispose()
+        {
+            if (_ms != null)
+            {
+                await _ms.DisposeAsync();
+                _ms = null;
+            }
+
+            if (_body != null)
+            {
+                await _body.DisposeAsync();
+                _body = null;
+            }
+
+            if (_reader != null)
+            {
+                _reader.Dispose();
+                _reader = null;
+            }
         }
 
         #region Actions
@@ -401,7 +422,7 @@ namespace Twino.Server.Http
         private async Task WriteStatusResponse(HttpResponse response, HttpStatusCode code)
         {
             response.StatusCode = code;
-            ResponseWriter writer = new ResponseWriter(response, _server);
+            ResponseWriter writer = new ResponseWriter(_server);
             await writer.Write(response);
         }
 

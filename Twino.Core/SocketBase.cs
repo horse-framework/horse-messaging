@@ -259,7 +259,7 @@ namespace Twino.Core
         {
             try
             {
-                if (Stream == null)
+                if (Stream == null || preparedData == null)
                     return false;
 
                 lock (Stream)

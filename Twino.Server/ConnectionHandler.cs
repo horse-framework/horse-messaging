@@ -30,8 +30,8 @@ namespace Twino.Server
         /// </summary>
         public async Task Handle()
         {
-            _inner.TimeoutHandler = new TimeoutHandler(_server.Options.RequestTimeout);
-            _inner.TimeoutHandler.Run();
+            _inner.KeepAliveManager = new KeepAliveManager();
+            _inner.KeepAliveManager.Start(_server.Options.RequestTimeout);
 
             int alive = _server.Options.RequestTimeout;
             if (_server.Options.HttpConnectionTimeMax * 1000 > alive)
@@ -88,10 +88,10 @@ namespace Twino.Server
             {
             }
 
-            if (_inner.TimeoutHandler != null)
-                _inner.TimeoutHandler.Running = false;
+            if (_inner.KeepAliveManager != null)
+                _inner.KeepAliveManager.Stop();
 
-            _inner.TimeoutHandler = null;
+            _inner.KeepAliveManager = null;
             _inner.Listener = null;
             _inner.Handle = null;
         }
@@ -125,8 +125,8 @@ namespace Twino.Server
                                           MaxAlive = DateTime.UtcNow + _minAliveHttpDuration
                                       };
 
-            if (_inner.TimeoutHandler != null)
-                _inner.TimeoutHandler.Add(handshake);
+            if (_inner.KeepAliveManager != null)
+                _inner.KeepAliveManager.Add(handshake);
 
             //ssl handshaking
             if (_inner.Options.SslEnabled)
@@ -185,6 +185,8 @@ namespace Twino.Server
                 else
                 {
                     bool success = await ProcessHttpRequest(handshake, request, response);
+                    await reader.Dispose();
+
                     if (success && _server.Options.HttpConnectionTimeMax > 0)
                         await FinishAccept(handshake);
                     else
@@ -197,6 +199,8 @@ namespace Twino.Server
                     _server.Logger.LogException("HANDLE_CONNECTION", ex);
 
                 handshake.Close();
+
+                await reader.Dispose();
             }
         }
 
@@ -231,7 +235,7 @@ namespace Twino.Server
 
             handshake.State = ConnectionStates.Http;
             await _server.RequestHandler.RequestAsync(_server, request, response);
-            ResponseWriter writer = new ResponseWriter(response, _server);
+            ResponseWriter writer = new ResponseWriter(_server);
             await writer.Write(response);
 
             return _server.Options.HttpConnectionTimeMax > 0;

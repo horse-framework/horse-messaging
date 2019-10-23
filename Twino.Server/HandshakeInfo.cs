@@ -82,7 +82,7 @@ namespace Twino.Server
         /// Inner server object of the connection
         /// </summary>
         public InnerServer Server { get; private set; }
-
+        
         public HandshakeInfo(TcpClient client, InnerServer server)
         {
             Client = client;
@@ -127,7 +127,6 @@ namespace Twino.Server
             {
             }
 
-            Client = null;
             SslStream = null;
             PlainStream = null;
             NegotiateStream = null;
