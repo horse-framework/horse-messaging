@@ -46,6 +46,10 @@ namespace Twino.Server
         public void Add(HandshakeInfo info)
         {
             int i = _nextIndex++;
+            
+            if (_nextIndex >= _timeoutHandlers.Length)
+                _nextIndex = 0;
+            
             if (i >= _timeoutHandlers.Length)
                 i = 0;
 
