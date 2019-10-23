@@ -12,12 +12,10 @@ namespace Twino.Server.Http
     /// </summary>
     internal class ResponseWriter
     {
-        private HttpResponse _response;
         private TwinoServer _server;
 
-        public ResponseWriter(HttpResponse response, TwinoServer server)
+        public ResponseWriter(TwinoServer server)
         {
-            _response = response;
             _server = server;
         }
 

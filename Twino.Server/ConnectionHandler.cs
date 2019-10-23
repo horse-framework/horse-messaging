@@ -185,6 +185,8 @@ namespace Twino.Server
                 else
                 {
                     bool success = await ProcessHttpRequest(handshake, request, response);
+                    await reader.Dispose();
+                    
                     if (success && _server.Options.HttpConnectionTimeMax > 0)
                         await FinishAccept(handshake);
                     else
@@ -197,6 +199,8 @@ namespace Twino.Server
                     _server.Logger.LogException("HANDLE_CONNECTION", ex);
 
                 handshake.Close();
+                
+                await reader.Dispose();
             }
         }
 
@@ -231,7 +235,7 @@ namespace Twino.Server
 
             handshake.State = ConnectionStates.Http;
             await _server.RequestHandler.RequestAsync(_server, request, response);
-            ResponseWriter writer = new ResponseWriter(response, _server);
+            ResponseWriter writer = new ResponseWriter(_server);
             await writer.Write(response);
 
             return _server.Options.HttpConnectionTimeMax > 0;
