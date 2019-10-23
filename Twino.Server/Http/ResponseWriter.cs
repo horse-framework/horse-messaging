@@ -12,11 +12,13 @@ namespace Twino.Server.Http
     /// </summary>
     internal class ResponseWriter
     {
-        private HttpResponse Response { get; }
+        private HttpResponse _response;
+        private TwinoServer _server;
 
-        public ResponseWriter(HttpResponse response)
+        public ResponseWriter(HttpResponse response, TwinoServer server)
         {
-            Response = response;
+            _response = response;
+            _server = server;
         }
 
         /// <summary>
@@ -59,8 +61,12 @@ namespace Twino.Server.Http
             StringBuilder responseBuilder = new StringBuilder();
             responseBuilder.Append(HttpHeaders.Create(HttpHeaders.HTTP_VERSION + " " + Convert.ToInt32(response.StatusCode) + " " + response.StatusCode));
             responseBuilder.Append(HttpHeaders.Create(HttpHeaders.SERVER, HttpHeaders.VALUE_SERVER));
+            responseBuilder.Append(HttpHeaders.Create(HttpHeaders.DATE, _server.Time));
             responseBuilder.Append(HttpHeaders.Create(HttpHeaders.CONTENT_TYPE, response.ContentType, HttpHeaders.VALUE_CHARSET_UTF8));
-
+            
+            if (_server.Options.HttpConnectionTimeMax > 0)
+                responseBuilder.Append(HttpHeaders.Create(HttpHeaders.CONNECTION, HttpHeaders.VALUE_KEEP_ALIVE));
+            
             switch (response.ContentEncoding)
             {
                 case ContentEncodings.Brotli:

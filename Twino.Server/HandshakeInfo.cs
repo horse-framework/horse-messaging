@@ -43,7 +43,7 @@ namespace Twino.Server
         /// <summary>
         /// Handshaking client
         /// </summary>
-        public TcpClient Client { get; set; }
+        public TcpClient Client { get; private set; }
 
         /// <summary>
         /// If the handshaking is a fake SSL, the stream will be NegotiateStream.
@@ -81,7 +81,13 @@ namespace Twino.Server
         /// <summary>
         /// Inner server object of the connection
         /// </summary>
-        public InnerServer Server { get; set; }
+        public InnerServer Server { get; private set; }
+
+        public HandshakeInfo(TcpClient client, InnerServer server)
+        {
+            Client = client;
+            Server = server;
+        }
 
         /// <summary>
         /// Returns the using network stream
@@ -116,13 +122,14 @@ namespace Twino.Server
                     Client.Close();
                     Client.Dispose();
                 }
-                
             }
             catch
             {
             }
 
+            Client = null;
             SslStream = null;
+            PlainStream = null;
             NegotiateStream = null;
         }
     }

@@ -47,8 +47,12 @@ namespace Twino.Core.Http
                         continue;
 
                     string key = line.Substring(0, index);
+                    
+                    if (line[index + 1] == ' ')
+                        index++;
+                    
                     string value = line.Substring(index + 1);
-                    AddHeader(request, key.ToLower(CultureInfo.InvariantCulture), value);
+                    AddHeader(request, key, value);
                 }
                 else
                     request.Content += (i + 1 == lines.Length) ? line : (line + Environment.NewLine);
@@ -81,6 +85,10 @@ namespace Twino.Core.Http
                     continue;
 
                 string key = line.Substring(0, index);
+
+                if (line[index + 1] == ' ')
+                    index++;
+
                 string value = line.Substring(index + 1);
                 AddHeader(request, key, value);
             }
@@ -95,37 +103,32 @@ namespace Twino.Core.Http
         /// </summary>
         private void AddHeader(HttpRequest request, string key, string value)
         {
-            string lcase = key.Trim().ToLower();
-            string trimmed_value = value.Trim();
+            key = key.Trim();
+            value = value.Trim();
 
-            switch (lcase)
+            if (key.Equals(HttpHeaders.HOST, StringComparison.InvariantCultureIgnoreCase))
+                request.Host = value;
+            
+            else if (key.Equals(HttpHeaders.WEBSOCKET_KEY, StringComparison.InvariantCultureIgnoreCase))
             {
-                case HttpHeaders.LCASE_HOST:
-                    request.Host = trimmed_value;
-                    break;
-
-                case HttpHeaders.LCASE_WEBSOCKET_KEY:
-                    request.WebSocketKey = trimmed_value;
-                    request.IsWebSocket = true;
-                    break;
-
-                case HttpHeaders.LCASE_ACCEPT_ENCODING:
-                    request.AcceptEncoding = trimmed_value;
-                    break;
-
-                case HttpHeaders.LCASE_CONTENT_TYPE:
-                    request.ContentType = trimmed_value;
-                    break;
-
-                case HttpHeaders.LCASE_CONTENT_LENGTH:
-                    request.ContentLength = Convert.ToInt32(trimmed_value);
-                    request.ContentLengthSpecified = true;
-                    break;
-
-                default:
-                    request.Headers.Add(key, trimmed_value);
-                    break;
+                request.WebSocketKey = value;
+                request.IsWebSocket = true;
             }
+
+            else if (key.Equals(HttpHeaders.ACCEPT_ENCODING, StringComparison.InvariantCultureIgnoreCase))
+                request.AcceptEncoding = value;
+
+            else if (key.Equals(HttpHeaders.CONTENT_TYPE, StringComparison.InvariantCultureIgnoreCase))
+                request.ContentType = value;
+
+            else if (key.Equals(HttpHeaders.CONTENT_LENGTH, StringComparison.InvariantCultureIgnoreCase))
+            {
+                request.ContentLength = Convert.ToInt32(value);
+                request.ContentLengthSpecified = true;
+            }
+
+            else
+                request.Headers.Add(key, value);
         }
     }
 }

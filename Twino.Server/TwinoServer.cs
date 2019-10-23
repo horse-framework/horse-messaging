@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Twino.Server.Http;
 using Twino.Server.WebSockets;
+using Timer = System.Timers.Timer;
 
 namespace Twino.Server
 {
@@ -63,7 +64,18 @@ namespace Twino.Server
         /// Server status, If true, server is listening for new connections
         /// </summary>
         public bool IsRunning { get; private set; }
-
+        
+        /// <summary>
+        /// Current server time as RFC 1123
+        /// </summary>
+        public string Time { get; private set; }
+        
+        //creating string from DateTime object per request uses some cpu and time (1 sec full cpu for 10million times)
+        /// <summary>
+        /// Server time timer
+        /// </summary>
+        private Timer _timeTimer;
+        
         /// <summary>
         /// TcpListener for HttpServer
         /// </summary>
@@ -268,6 +280,12 @@ namespace Twino.Server
 
         #region Start - Stop
 
+        public void BlockWhileRunning()
+        {
+            while (IsRunning)
+                Thread.Sleep(100);
+        }
+
         public void Start(int port)
         {
             Options.Hosts = new List<HostOptions>();
@@ -292,6 +310,14 @@ namespace Twino.Server
 
             if (Options.Hosts == null)
                 throw new ArgumentNullException($"Hosts", "There is no host to listen. Add hosts to Twino Options");
+
+            if (_timeTimer == null)
+            {
+                _timeTimer = new Timer(1000);
+                _timeTimer.Elapsed += (sender, args) => Time = DateTime.UtcNow.ToString("R");
+                _timeTimer.AutoReset = true;
+                _timeTimer.Start();
+            }
 
             IsRunning = true;
             Started?.Invoke(this);
@@ -344,6 +370,13 @@ namespace Twino.Server
         public void Stop()
         {
             IsRunning = false;
+
+            if (_timeTimer != null)
+            {
+                _timeTimer.Stop();
+                _timeTimer.Dispose();
+                _timeTimer = null;
+            }
 
             if (Pinger != null)
             {

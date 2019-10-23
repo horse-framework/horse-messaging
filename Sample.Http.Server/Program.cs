@@ -9,17 +9,12 @@ namespace Sample.Http.Server
 {
     public class RequestHandler : IHttpRequestHandler
     {
-        public void Request(TwinoServer server, HttpRequest request, HttpResponse response)
-        {
-            response.SetToHtml();
-            response.StatusCode = HttpStatusCode.OK;
-            response.Write("Hello world");
-            //Console.WriteLine("Hello World: " + request.Content);
-        }
-
         public async Task RequestAsync(TwinoServer server, HttpRequest request, HttpResponse response)
         {
-            await Task.Factory.StartNew(() => Request(server, request, response));
+            response.SetToHtml();
+            response.Write("Hello World!");
+            Console.WriteLine("Hello World: " + request.Content);
+            await Task.CompletedTask;
         }
     }
 
@@ -29,9 +24,8 @@ namespace Sample.Http.Server
         {
             RequestHandler handler = new RequestHandler();
             TwinoServer server = TwinoServer.CreateHttp(handler);
-            server.Start();
-
-            Console.ReadLine();
+            server.Start(82);
+            server.BlockWhileRunning();
         }
     }
 }

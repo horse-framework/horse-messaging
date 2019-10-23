@@ -119,10 +119,8 @@ namespace Twino.Server
             if (_inner == null || tcp == null)
                 return;
 
-            HandshakeInfo handshake = new HandshakeInfo
+            HandshakeInfo handshake = new HandshakeInfo(tcp, _inner)
                                       {
-                                          Client = tcp,
-                                          Server = _inner,
                                           State = ConnectionStates.Pending,
                                           MaxAlive = DateTime.UtcNow + _minAliveHttpDuration
                                       };
@@ -165,7 +163,7 @@ namespace Twino.Server
         private async Task FinishAccept(HandshakeInfo handshake)
         {
             //read first request from http client
-            RequestReader reader = new RequestReader(_server, handshake.Server);
+            RequestReader reader = new RequestReader(_server, handshake);
 
             Tuple<HttpRequest, HttpResponse> tuple = await reader.Read(handshake.GetStream());
             HttpRequest request = tuple.Item1;
@@ -233,7 +231,7 @@ namespace Twino.Server
 
             handshake.State = ConnectionStates.Http;
             await _server.RequestHandler.RequestAsync(_server, request, response);
-            ResponseWriter writer = new ResponseWriter(response);
+            ResponseWriter writer = new ResponseWriter(response, _server);
             await writer.Write(response);
 
             return _server.Options.HttpConnectionTimeMax > 0;
@@ -247,4 +245,4 @@ namespace Twino.Server
             return tcp.Client.RemoteEndPoint.ToString().Split(':')[0];
         }
     }
-} 
+}

@@ -68,9 +68,9 @@ namespace Sample.Mvc.Controller
         }
 
         [HttpGet("test")]
-        public IActionResult Test2()
+        public async Task<IActionResult> Test2()
         {
-            return String("Hello world!");
+            return await StringAsync("Hello world!");
         }
 
         [HttpGet("redirect")]
