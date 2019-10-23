@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 
 namespace Twino.Server
@@ -9,6 +10,7 @@ namespace Twino.Server
     /// </summary>
     internal class TimeoutHandler
     {
+        private readonly List<HandshakeInfo> _incoming = new List<HandshakeInfo>();
         private readonly List<HandshakeInfo> _handshakes = new List<HandshakeInfo>();
 
         private Thread _timer;
@@ -33,28 +35,26 @@ namespace Twino.Server
                 while (Running)
                 {
                     Thread.Sleep(INTERVAL);
+                    AddIncomingItems();
                     List<HandshakeInfo> removing = new List<HandshakeInfo>();
 
-                    lock (_handshakes)
+                    foreach (HandshakeInfo handshake in _handshakes)
                     {
-                        foreach (HandshakeInfo handshake in _handshakes)
+                        if (handshake.Client == null || !handshake.Client.Connected)
                         {
-                            if (handshake.Client == null || !handshake.Client.Connected)
-                            {
-                                removing.Add(handshake);
-                                continue;
-                            }
-                            
-                            if (handshake.State == ConnectionStates.Http)
-                            {
-                                if (handshake.MaxAlive < DateTime.UtcNow)
-                                    removing.Add(handshake);
-                            }
-                            else if (handshake.State == ConnectionStates.WebSocket)
-                                removing.Add(handshake);
-                            else if (handshake.State > ConnectionStates.Pending || handshake.Timeout < DateTime.UtcNow)
+                            removing.Add(handshake);
+                            continue;
+                        }
+
+                        if (handshake.State == ConnectionStates.Http)
+                        {
+                            if (handshake.MaxAlive < DateTime.UtcNow)
                                 removing.Add(handshake);
                         }
+                        else if (handshake.State == ConnectionStates.WebSocket)
+                            removing.Add(handshake);
+                        else if (handshake.State > ConnectionStates.Pending || handshake.Timeout < DateTime.UtcNow)
+                            removing.Add(handshake);
                     }
 
                     if (removing.Count == 0)
@@ -69,14 +69,25 @@ namespace Twino.Server
                             handshake.Close();
                     }
 
-                    lock (_handshakes)
-                        foreach (HandshakeInfo state in removing)
-                            _handshakes.Remove(state);
+                    foreach (HandshakeInfo state in removing)
+                        _handshakes.Remove(state);
                 }
             });
 
             _timer.IsBackground = true;
             _timer.Start();
+        }
+
+        private void AddIncomingItems()
+        {
+            lock (_incoming)
+            {
+                if (_incoming.Count > 0)
+                {
+                    _handshakes.AddRange(_incoming);
+                    _incoming.Clear();
+                }
+            }
         }
 
         /// <summary>
@@ -86,9 +97,7 @@ namespace Twino.Server
         public void Add(HandshakeInfo handshake)
         {
             handshake.Timeout = DateTime.UtcNow.AddMilliseconds(_timeoutMilliseconds);
-            lock (_handshakes)
-                _handshakes.Add(handshake);
+            _incoming.Add(handshake);
         }
-
     }
 }
