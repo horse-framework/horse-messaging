@@ -20,9 +20,9 @@ namespace Twino.Server
         public HostOptions Options { get; set; }
         
         /// <summary>
-        /// Request timeout timer for disposing incompleted connections
+        /// Request keep alive manager for disposing incompleted connections
         /// </summary>
-        internal TimeoutHandler TimeoutHandler { get; set; }
+        internal KeepAliveManager KeepAliveManager { get; set; }
 
     }
 

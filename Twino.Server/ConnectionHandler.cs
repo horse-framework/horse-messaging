@@ -30,8 +30,11 @@ namespace Twino.Server
         /// </summary>
         public async Task Handle()
         {
-            _inner.TimeoutHandler = new TimeoutHandler(_server.Options.RequestTimeout);
-            _inner.TimeoutHandler.Run();
+            if (_server.Options.HttpConnectionTimeMax > 0)
+            {
+                _inner.KeepAliveManager = new KeepAliveManager();
+                _inner.KeepAliveManager.Start(_server.Options.RequestTimeout);
+            }
 
             int alive = _server.Options.RequestTimeout;
             if (_server.Options.HttpConnectionTimeMax * 1000 > alive)
@@ -88,10 +91,10 @@ namespace Twino.Server
             {
             }
 
-            if (_inner.TimeoutHandler != null)
-                _inner.TimeoutHandler.Running = false;
+            if (_inner.KeepAliveManager != null)
+                _inner.KeepAliveManager.Stop();
 
-            _inner.TimeoutHandler = null;
+            _inner.KeepAliveManager = null;
             _inner.Listener = null;
             _inner.Handle = null;
         }
@@ -125,8 +128,8 @@ namespace Twino.Server
                                           MaxAlive = DateTime.UtcNow + _minAliveHttpDuration
                                       };
 
-            if (_inner.TimeoutHandler != null)
-                _inner.TimeoutHandler.Add(handshake);
+            if (_inner.KeepAliveManager != null)
+                _inner.KeepAliveManager.Add(handshake);
 
             //ssl handshaking
             if (_inner.Options.SslEnabled)

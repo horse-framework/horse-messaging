@@ -1,6 +1,6 @@
 {
   "PingInterval": 60000,
-  "HttpConnectionTimeMax": 0,
+  "HttpConnectionTimeMax": 20,
   "MaximumRequestLength": 20480,
   "MaximumUriLength": 1024,
   "MaximumHeaderLength": 4096,
