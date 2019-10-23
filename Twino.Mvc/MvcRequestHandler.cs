@@ -245,7 +245,7 @@ namespace Twino.Mvc
                 {
                     case ParameterSource.None:
                     case ParameterSource.Route:
-                        value = route.Values.FirstOrDefault(x => string.Equals(x.Key, ap.FromName, StringComparison.InvariantCultureIgnoreCase)).Value;
+                        value = route.Values[ap.FromName];
                         break;
 
                     case ParameterSource.Body:

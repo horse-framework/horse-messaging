@@ -121,7 +121,7 @@ namespace Twino.Core.Http
         /// </summary>
         public Dictionary<string, string> GetFormValues()
         {
-            Dictionary<string, string> items = new Dictionary<string, string>();
+            Dictionary<string, string> items = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
             if (string.IsNullOrEmpty(Content))
                 return items;
 

@@ -45,7 +45,7 @@ namespace Twino.Core.Http
         /// <summary>
         /// Additional headers for the response.
         /// </summary>
-        public Dictionary<string, string> AdditionalHeaders { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, string> AdditionalHeaders { get; set; } = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 
         /// <summary>
         /// Response content. The response byte array is created just be sending the data to the client.

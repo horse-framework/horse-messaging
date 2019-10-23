@@ -63,7 +63,7 @@ namespace Twino.Client
         /// <summary>
         /// Additional Request headers
         /// </summary>
-        public Dictionary<string, string> Headers { get; private set; } = new Dictionary<string, string>();
+        public Dictionary<string, string> Headers { get; } = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 
         #endregion
 
