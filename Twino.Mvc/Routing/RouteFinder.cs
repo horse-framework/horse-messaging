@@ -17,7 +17,7 @@ namespace Twino.Mvc.Routing
         public RouteMatch Find(IEnumerable<Route> routes, HttpRequest request)
         {
             RouteMatch match = new RouteMatch();
-            match.Values = new Dictionary<string, object>();
+            match.Values = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
 
             //split path to route parts
             string[] parts = request.GetOnlyPath().Split('/', StringSplitOptions.RemoveEmptyEntries);
