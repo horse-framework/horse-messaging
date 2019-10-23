@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Twino.Mvc.Auth
 {
@@ -18,7 +19,7 @@ namespace Twino.Mvc.Auth
 
         public PolicyContainer()
         {
-            Policies = new Dictionary<string, Policy>();
+            Policies = new Dictionary<string, Policy>(StringComparer.InvariantCultureIgnoreCase);
         }
 
         /// <summary>
