@@ -41,7 +41,7 @@ namespace Twino.Server
             _timer.Abort();
             _timer = null;
         }
-        
+
         private void Cycle()
         {
             while (_running)
@@ -50,24 +50,28 @@ namespace Twino.Server
                 AddIncomingItems();
                 List<HandshakeInfo> removing = new List<HandshakeInfo>();
 
-                foreach (HandshakeInfo handshake in _handshakes)
+                lock (_handshakes)
                 {
-                    if (handshake.Client == null || !handshake.Client.Connected)
+                    foreach (HandshakeInfo handshake in _handshakes)
                     {
-                        removing.Add(handshake);
-                        continue;
-                    }
+                        if (handshake.Client == null || !handshake.Client.Connected)
+                        {
+                            removing.Add(handshake);
+                            continue;
+                        }
 
-                    if (handshake.State == ConnectionStates.Http)
-                    {
-                        if (handshake.MaxAlive < DateTime.UtcNow)
+                        if (handshake.State == ConnectionStates.Http)
+                        {
+                            if (handshake.MaxAlive < DateTime.UtcNow)
+                                removing.Add(handshake);
+                        }
+                        else if (handshake.State == ConnectionStates.WebSocket)
+                            removing.Add(handshake);
+                        else if (handshake.State > ConnectionStates.Pending || handshake.Timeout < DateTime.UtcNow)
                             removing.Add(handshake);
                     }
-                    else if (handshake.State == ConnectionStates.WebSocket)
-                        removing.Add(handshake);
-                    else if (handshake.State > ConnectionStates.Pending || handshake.Timeout < DateTime.UtcNow)
-                        removing.Add(handshake);
                 }
+
 
                 if (removing.Count == 0)
                     continue;
@@ -81,8 +85,9 @@ namespace Twino.Server
                         handshake.Close();
                 }
 
-                foreach (HandshakeInfo state in removing)
-                    _handshakes.Remove(state);
+                lock (_handshakes)
+                    foreach (HandshakeInfo state in removing)
+                        _handshakes.Remove(state);
             }
         }
 
