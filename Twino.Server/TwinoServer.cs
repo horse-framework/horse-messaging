@@ -325,7 +325,7 @@ namespace Twino.Server
 
             foreach (HostOptions host in Options.Hosts)
             {
-                InnerServer server = new InnerServer();
+                HostListener server = new HostListener();
                 server.Options = host;
 
                 if (host.SslEnabled && !string.IsNullOrEmpty(host.SslCertificate))

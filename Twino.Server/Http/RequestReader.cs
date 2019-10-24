@@ -98,11 +98,11 @@ namespace Twino.Server.Http
         /// <summary>
         /// Info of the the
         /// </summary>
-        private readonly HandshakeInfo _info;
+        private readonly ConnectionInfo _info;
 
         #endregion
 
-        internal RequestReader(TwinoServer server, HandshakeInfo info)
+        internal RequestReader(TwinoServer server, ConnectionInfo info)
         {
             _info = info;
             _server = server;

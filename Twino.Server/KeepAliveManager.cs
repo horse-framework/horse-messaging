@@ -29,7 +29,8 @@ namespace Twino.Server
             
             for (int i = 0; i < _timeoutHandlers.Length; i++)
             {
-                TimeoutHandler handler = new TimeoutHandler(timeoutMilliseconds, rnd.Next(500, 1500));
+                //rnd between min and max ms, we don't want to see all timeout handlers consume cpu and memory at same time
+                TimeoutHandler handler = new TimeoutHandler(timeoutMilliseconds, rnd.Next(1000, 2000));
                 _timeoutHandlers[i] = handler;
                 handler.Start();
             }
@@ -55,7 +56,7 @@ namespace Twino.Server
         /// Adds new connection to keep alive manager.
         /// This connection's timeout will be set in this method and starts it's timeout span
         /// </summary>
-        public void Add(HandshakeInfo info)
+        public void Add(ConnectionInfo info)
         {
             int i = _nextIndex++;
             

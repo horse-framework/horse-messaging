@@ -38,10 +38,10 @@ namespace Twino.Server
     /// After handshaking completed the state object will be passed to the callback function.
     /// In Twino SSL Handshaking this object type is HandshakeState class
     /// </summary>
-    internal class HandshakeInfo
+    internal class ConnectionInfo
     {
         /// <summary>
-        /// Handshaking client
+        /// TCP Client of the connection
         /// </summary>
         public TcpClient Client { get; private set; }
 
@@ -79,11 +79,11 @@ namespace Twino.Server
         public ConnectionStates State { get; set; } = ConnectionStates.Pending;
 
         /// <summary>
-        /// Inner server object of the connection
+        /// Host listener object of the connection
         /// </summary>
-        public InnerServer Server { get; private set; }
+        public HostListener Server { get; private set; }
         
-        public HandshakeInfo(TcpClient client, InnerServer server)
+        public ConnectionInfo(TcpClient client, HostListener server)
         {
             Client = client;
             Server = server;
