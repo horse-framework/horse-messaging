@@ -61,10 +61,12 @@ namespace Twino.Server.Http
             responseBuilder.Append(HttpHeaders.Create(HttpHeaders.SERVER, HttpHeaders.VALUE_SERVER));
             responseBuilder.Append(HttpHeaders.Create(HttpHeaders.DATE, _server.Time));
             responseBuilder.Append(HttpHeaders.Create(HttpHeaders.CONTENT_TYPE, response.ContentType, HttpHeaders.VALUE_CHARSET_UTF8));
-            
-            if (_server.Options.HttpConnectionTimeMax > 0)
-                responseBuilder.Append(HttpHeaders.Create(HttpHeaders.CONNECTION, HttpHeaders.VALUE_KEEP_ALIVE));
-            
+
+            responseBuilder.Append(HttpHeaders.Create(HttpHeaders.CONNECTION,
+                                                      _server.Options.HttpConnectionTimeMax > 0
+                                                          ? HttpHeaders.VALUE_KEEP_ALIVE
+                                                          : HttpHeaders.VALUE_CLOSE));
+
             switch (response.ContentEncoding)
             {
                 case ContentEncodings.Brotli:
@@ -87,6 +89,5 @@ namespace Twino.Server.Http
             await stream.WriteAsync(bytes, 0, bytes.Length);
             await stream.WriteAsync(result, 0, result.Length);
         }
-
     }
 }

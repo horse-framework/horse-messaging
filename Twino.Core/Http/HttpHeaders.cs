@@ -53,6 +53,9 @@
         public const string VALUE_NO_CACHE = "no-cache";
         public const string VALUE_KEEP_ALIVE = "keep-alive";
         public const string VALUE_CLOSE = "close";
+        public const string VALUE_CLOSED = "Closed";
+        public const string VALUE_TIMEOUT = "timeout";
+        public const string VALUE_MAX = "max";
         public const string VALUE_WEBSOCKET_EXTENSIONS = "permessage-deflate; client_max_window_bits";
 
 
