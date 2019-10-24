@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core.Http;
 using Twino.Mvc;
@@ -23,7 +24,7 @@ namespace Playground
         public int Count { get; set; }
         public string Color { get; set; }
     }
-    
+
     public class Foo
     {
         public string Foo1 { get; set; } = "foo";
@@ -48,11 +49,60 @@ namespace Playground
     {
         static void Main(string[] args)
         {
-            for (int i = 0; i < 25; i++)
-                JsonSerializeTest();
+            while (true)
+            {
+                Stopwatch sw1 = new Stopwatch();
+                sw1.Start();
+                for (int i = 0; i < 10000000; i++)
+                    W1();
 
-            Console.WriteLine("done");
-            Console.ReadLine();
+                sw1.Stop();
+                Console.WriteLine("sw1: " + sw1.ElapsedMilliseconds);
+                Console.ReadLine();
+
+                Stopwatch sw2 = new Stopwatch();
+                TaskCompletionSource<bool> s1 = new TaskCompletionSource<bool>();
+                ThreadPool.QueueUserWorkItem(async (c) =>
+                {
+                    sw2.Start();
+                    for (int i = 0; i < 10000000; i++)
+                        await W2();
+                    sw2.Stop();
+                    s1.SetResult(true);
+                });
+                s1.Task.Wait();
+                Console.WriteLine("sw2: " + sw2.ElapsedMilliseconds);
+                Console.ReadLine();
+
+                Stopwatch sw3 = new Stopwatch();
+                TaskCompletionSource<bool> s2 = new TaskCompletionSource<bool>();
+                ThreadPool.QueueUserWorkItem(async (c) =>
+                {
+                    sw3.Start();
+                    for (int i = 0; i < 10000000; i++)
+                        await W3();
+                    sw3.Stop();
+                    s2.SetResult(true);
+                });
+                s2.Task.Wait();
+                Console.WriteLine("sw3: " + sw3.ElapsedMilliseconds);
+                Console.ReadLine();
+            }
+        }
+
+        static int W1()
+        {
+            return Convert.ToInt32(Math.Pow(4, 5));
+        }
+
+        static async Task<int> W2()
+        {
+            return Convert.ToInt32(Math.Pow(4, 5));
+        }
+
+        static async Task<int> W3()
+        {
+            return await Task.FromResult(Convert.ToInt32(Math.Pow(4, 5)));
         }
 
         static void JsonSerializeTest()
@@ -62,8 +112,8 @@ namespace Playground
             sw.Start();
             for (int j = 0; j < 100000; j++)
             {
-                 string s = System.Text.Json.JsonSerializer.Serialize(new Foo());
-                 byte[] arr = Encoding.UTF8.GetBytes(s);
+                string s = System.Text.Json.JsonSerializer.Serialize(new Foo());
+                byte[] arr = Encoding.UTF8.GetBytes(s);
                 //byte[] arr = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new Foo());
                 bytes += arr.Length;
             }

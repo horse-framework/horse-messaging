@@ -64,18 +64,18 @@ namespace Twino.Server
         /// Server status, If true, server is listening for new connections
         /// </summary>
         public bool IsRunning { get; private set; }
-        
+
         /// <summary>
         /// Current server time as RFC 1123
         /// </summary>
         public string Time { get; private set; }
-        
+
         //creating string from DateTime object per request uses some cpu and time (1 sec full cpu for 10million times)
         /// <summary>
         /// Server time timer
         /// </summary>
         private Timer _timeTimer;
-        
+
         /// <summary>
         /// TcpListener for HttpServer
         /// </summary>
@@ -146,8 +146,8 @@ namespace Twino.Server
         /// <param name="clientFactory">WebSocket client factory</param>
         /// <param name="clientContainer">Client container for online WebSocket clients</param>
         public TwinoServer(IHttpRequestHandler requestHandler,
-                         IClientFactory clientFactory,
-                         IClientContainer clientContainer) : this(requestHandler, clientFactory, clientContainer, null)
+                           IClientFactory clientFactory,
+                           IClientContainer clientContainer) : this(requestHandler, clientFactory, clientContainer, null)
         {
             Options = ServerOptions.LoadFromFile();
         }
@@ -160,9 +160,9 @@ namespace Twino.Server
         /// <param name="clientContainer">Client container for online WebSocket clients</param>
         /// <param name="options">Server options</param>
         public TwinoServer(IHttpRequestHandler requestHandler,
-                         IClientFactory clientFactory,
-                         IClientContainer clientContainer,
-                         ServerOptions options)
+                           IClientFactory clientFactory,
+                           IClientContainer clientContainer,
+                           ServerOptions options)
         {
             RequestHandler = requestHandler;
             ClientFactory = clientFactory;
@@ -252,8 +252,8 @@ namespace Twino.Server
             return CreateWebSocket(async (s, r, t) =>
             {
                 ServerSocket socket = new ServerSocket(s, r, t);
-                action(socket);
-                return await Task.FromResult(socket);
+                await Task.Run(() => action(socket));
+                return socket;
             });
         }
 
@@ -308,19 +308,21 @@ namespace Twino.Server
             if (IsRunning)
                 throw new InvalidOperationException("Stop the HttpServer before restart");
 
-            if (Options.Hosts == null)
+            if (Options.Hosts == null || Options.Hosts.Count == 0)
                 throw new ArgumentNullException($"Hosts", "There is no host to listen. Add hosts to Twino Options");
 
-            if (_timeTimer == null)
+            if (_timeTimer != null)
             {
-                _timeTimer = new Timer(1000);
-                _timeTimer.Elapsed += (sender, args) => Time = DateTime.UtcNow.ToString("R");
-                _timeTimer.AutoReset = true;
-                _timeTimer.Start();
+                _timeTimer.Stop();
+                _timeTimer.Dispose();
             }
 
+            _timeTimer = new Timer(1000);
+            _timeTimer.Elapsed += (sender, args) => Time = DateTime.UtcNow.ToString("R");
+            _timeTimer.AutoReset = true;
+            _timeTimer.Start();
+
             IsRunning = true;
-            Started?.Invoke(this);
             _handlers = new List<ConnectionHandler>();
 
             foreach (HostOptions host in Options.Hosts)
@@ -353,6 +355,7 @@ namespace Twino.Server
             }
 
             IsRunning = true;
+            Started?.Invoke(this);
 
             if (Options.PingInterval > 0)
             {
