@@ -68,7 +68,7 @@ namespace Twino.Core.Http
         /// </summary>
         public void SetToText()
         {
-            ContentType = "text/plain";
+            ContentType = ContentTypes.PLAIN_TEXT;
             StatusCode = HttpStatusCode.OK;
         }
 
@@ -77,7 +77,7 @@ namespace Twino.Core.Http
         /// </summary>
         public void SetToHtml()
         {
-            ContentType = "text/html";
+            ContentType = ContentTypes.TEXT_HTML;
             StatusCode = HttpStatusCode.OK;
         }
 
@@ -86,7 +86,7 @@ namespace Twino.Core.Http
         /// </summary>
         public void SetToJson(object model)
         {
-            ContentType = "application/json";
+            ContentType = ContentTypes.APPLICATION_JSON;
             StatusCode = HttpStatusCode.OK;
             Content.Append(JsonConvert.SerializeObject(model));
         }
@@ -107,7 +107,7 @@ namespace Twino.Core.Http
         {
             return new HttpResponse
                    {
-                       ContentType = "text/html",
+                       ContentType = ContentTypes.TEXT_HTML,
                        StatusCode = HttpStatusCode.BadRequest,
                        ContentEncoding = ContentEncodings.None
                    };
@@ -120,7 +120,7 @@ namespace Twino.Core.Http
         {
             return new HttpResponse
                    {
-                       ContentType = "text/html",
+                       ContentType = ContentTypes.TEXT_HTML,
                        StatusCode = HttpStatusCode.LengthRequired,
                        ContentEncoding = ContentEncodings.None
                    };
@@ -133,7 +133,7 @@ namespace Twino.Core.Http
         {
             return new HttpResponse
                    {
-                       ContentType = "text/html",
+                       ContentType = ContentTypes.TEXT_HTML,
                        StatusCode = HttpStatusCode.RequestUriTooLong,
                        ContentEncoding = ContentEncodings.None
                    };
@@ -146,7 +146,7 @@ namespace Twino.Core.Http
         {
             return new HttpResponse
                    {
-                       ContentType = "text/html",
+                       ContentType = ContentTypes.TEXT_HTML,
                        StatusCode = HttpStatusCode.TooManyRequests,
                        ContentEncoding = ContentEncodings.None
                    };
@@ -159,7 +159,7 @@ namespace Twino.Core.Http
         {
             return new HttpResponse
                    {
-                       ContentType = "text/html",
+                       ContentType = ContentTypes.TEXT_HTML,
                        StatusCode = HttpStatusCode.RequestHeaderFieldsTooLarge,
                        ContentEncoding = ContentEncodings.None
                    };
