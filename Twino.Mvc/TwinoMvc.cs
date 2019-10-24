@@ -301,8 +301,7 @@ namespace Twino.Mvc
             Server.Start();
 
             if (!async)
-                while (Server.IsRunning)
-                    Thread.Sleep(100);
+                Server.BlockWhileRunning();
         }
 
         #endregion

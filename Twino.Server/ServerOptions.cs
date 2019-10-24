@@ -118,21 +118,18 @@ namespace Twino.Server
         {
             return new ServerOptions
                    {
+                       RequestTimeout = 120000,
                        HttpConnectionTimeMax = 180,
-                       MaximumPendingConnections = 0,
-                       MaximumRequestLength = 1024 * 1024,
-                       MaximumUriLength = 750,
                        MaximumHeaderLength = 8192,
-                       PingInterval = 60000,
-                       RequestTimeout = 30000,
-                       ContentEncoding = "gzip",
+                       MaximumUriLength = 1024,
+                       MaximumRequestLength = 1024 * 1024,
+                       MaximumPendingConnections = 0,
+                       PingInterval = 120000,
                        Hosts = new List<HostOptions>
                                {
                                    new HostOptions
                                    {
-                                       Port = 80,
-                                       Hostnames = null,
-                                       SslEnabled = false
+                                       Port = 80
                                    }
                                }
                    };
