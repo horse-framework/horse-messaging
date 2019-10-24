@@ -1,23 +1,31 @@
 # Twino
 
 **Twino** is a .NET Core library.<br>
-Twino provides advanced WebSocket server management, messaging queue infrastructure, HTTP server, MVC pattern similar to ASP.NET Core, WebSocket client. Some of Twino features are listed below:
+Twino provides advanced WebSocket server management, messaging queue infrastructure, HTTP server, MVC pattern similar to ASP.NET Core, WebSocket client.
+
+## Why Twino?
+
+Twino is high scalable advanced websocket server with amazing client management. You can use WebSocket and HTTP server on same project, same port, same host. Twino.Mvc has nearly all features ASP.NET MVC has, and you write nearly same code. It's as fast as kestrel. It has websocket client with sweet connectors and you can send and receive objects via websocket if they are derived some interfaces.
+
+### Features
+
+Some of Twino features are listed below:
+
 - Basic WebSocket Server
-- Client based WebSocket Server
-- Basic HTTP Server based on Request - Response
+- WebSocket Server Client Management
+- Basic HTTP Server based on simple Request and Response
 - Advanced HTTP Server with MVC pattern
 - JWT support with Authorize attribute and custom token implementation
-- Middlewares (including CORS Middleware)
+- Middlewares infrastructure ASP.NET like (including CORS Middleware)
 - SSL Support with pfx, crt or custom string
-- Multiple Host binding
-- Async and Sync Request handling
+- Multiple Host bindings with multiple ports (you don't need reverse proxy)
 - WebSocket Clients
 - Connectors for WebSocket Clients for different purposes
 - HTTP and WebSocket server on same port
 - Request and Response Architecture (non-HTTP) via one active TCP connection
 - Object based data transfer with IModelWriter and IModelReader interfaces
-- Firewall
 - GZIP and Brotli content encoding support
+- Application form, JSON and XML support on Twino.Mvc
 - Custom and fast serialization helper libarary for objects
 
 ### Libraries
