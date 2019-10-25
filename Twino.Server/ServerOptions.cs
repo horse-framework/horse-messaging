@@ -73,18 +73,17 @@ namespace Twino.Server
         /// If exists, loads options from file.
         /// If not exists, returns default options.
         /// </summary>
-        internal static ServerOptions LoadFromFile()
+        internal static ServerOptions LoadFromFile(string filename = null)
         {
-            string filename = null;
-
-            foreach (string file in OptionsFiles)
-            {
-                if (File.Exists(file))
+            if (string.IsNullOrEmpty(filename))
+                foreach (string file in OptionsFiles)
                 {
-                    filename = file;
-                    break;
+                    if (File.Exists(file))
+                    {
+                        filename = file;
+                        break;
+                    }
                 }
-            }
 
             if (string.IsNullOrEmpty(filename))
                 return CreateDefault();

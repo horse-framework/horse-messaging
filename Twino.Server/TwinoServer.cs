@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Twino.Server.Http;
 using Twino.Server.WebSockets;
 using Timer = System.Timers.Timer;
@@ -122,9 +123,27 @@ namespace Twino.Server
         /// <summary>
         /// Creates new TwinoServer instance.
         /// </summary>
+        /// <param name="requestHandler">HTTP Request handler</param>
+        /// <param name="options">Server options</param>
+        public TwinoServer(IHttpRequestHandler requestHandler, ServerOptions options) : this(requestHandler, null, null, options)
+        {
+        }
+
+        /// <summary>
+        /// Creates new TwinoServer instance.
+        /// </summary>
+        /// <param name="requestHandler">HTTP Request handler</param>
+        /// <param name="optionsFile">Server options</param>
+        public TwinoServer(IHttpRequestHandler requestHandler, string optionsFile) : this(requestHandler, null, null, optionsFile)
+        {
+        }
+
+        /// <summary>
+        /// Creates new TwinoServer instance.
+        /// </summary>
         /// <param name="clientFactory">WebSocket client factory</param>
         /// <param name="options">Server options</param>
-        public TwinoServer(IClientFactory clientFactory, ServerOptions options) : this(null, clientFactory, null, null)
+        public TwinoServer(IClientFactory clientFactory, ServerOptions options) : this(null, clientFactory, null)
         {
             Options = options;
         }
@@ -132,10 +151,9 @@ namespace Twino.Server
         /// <summary>
         /// Creates new TwinoServer instance.
         /// </summary>
-        /// <param name="requestHandler">HTTP Request handler</param>
         /// <param name="clientFactory">WebSocket client factory</param>
-        public TwinoServer(IHttpRequestHandler requestHandler, IClientFactory clientFactory)
-            : this(requestHandler, clientFactory, null, null)
+        /// <param name="optionsFile">Server options</param>
+        public TwinoServer(IClientFactory clientFactory, string optionsFile) : this(null, clientFactory, null, optionsFile)
         {
         }
 
@@ -147,7 +165,7 @@ namespace Twino.Server
         /// <param name="clientContainer">Client container for online WebSocket clients</param>
         public TwinoServer(IHttpRequestHandler requestHandler,
                            IClientFactory clientFactory,
-                           IClientContainer clientContainer) : this(requestHandler, clientFactory, clientContainer, null)
+                           IClientContainer clientContainer) : this(requestHandler, clientFactory, clientContainer, (ServerOptions) null)
         {
             Options = ServerOptions.LoadFromFile();
         }
@@ -161,13 +179,31 @@ namespace Twino.Server
         /// <param name="options">Server options</param>
         public TwinoServer(IHttpRequestHandler requestHandler,
                            IClientFactory clientFactory,
-                           IClientContainer clientContainer,
-                           ServerOptions options)
+                           IClientContainer clientContainer = null,
+                           ServerOptions options = null)
         {
             RequestHandler = requestHandler;
             ClientFactory = clientFactory;
             Container = clientContainer;
             Options = options ?? ServerOptions.LoadFromFile();
+        }
+
+        /// <summary>
+        /// Creates new TwinoServer instance.
+        /// </summary>
+        /// <param name="requestHandler">HTTP Request handler</param>
+        /// <param name="clientFactory">WebSocket client factory</param>
+        /// <param name="clientContainer">Client container for online WebSocket clients</param>
+        /// <param name="optionsFilename">Server options full path (absolute or relative)</param>
+        public TwinoServer(IHttpRequestHandler requestHandler,
+                           IClientFactory clientFactory,
+                           IClientContainer clientContainer = null,
+                           string optionsFilename = null)
+        {
+            RequestHandler = requestHandler;
+            ClientFactory = clientFactory;
+            Container = clientContainer;
+            Options = ServerOptions.LoadFromFile(optionsFilename);
         }
 
         #endregion
