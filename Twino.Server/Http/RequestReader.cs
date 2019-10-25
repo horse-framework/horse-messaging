@@ -147,7 +147,7 @@ namespace Twino.Server.Http
 
                 if (_readingHeader)
                 {
-                    _ms.Write(_buffer, 0, read);
+                    await _ms.WriteAsync(_buffer, 0, read);
                     _ms.Position -= read;
                 }
 

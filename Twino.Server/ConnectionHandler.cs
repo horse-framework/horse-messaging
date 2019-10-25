@@ -59,7 +59,14 @@ namespace Twino.Server
                             if (_server.Logger != null)
                                 _server.Logger.LogException("ACCEPT_CLIENT", ex);
 
-                            client.Close();
+                            //may throw exception while closing and disposing network stream
+                            try
+                            {
+                                client.Close();
+                            }
+                            catch
+                            {
+                            }
                         }
                     }, tcp);
                 }
@@ -125,8 +132,7 @@ namespace Twino.Server
                                       MaxAlive = DateTime.UtcNow + _minAliveHttpDuration
                                   };
 
-            if (_listener.KeepAliveManager != null)
-                _listener.KeepAliveManager.Add(info);
+            _listener.KeepAliveManager.Add(info);
 
             //ssl handshaking
             if (_listener.Options.SslEnabled)

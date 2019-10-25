@@ -44,16 +44,52 @@ namespace Playground
                                                  };
     }
 
+    public class HW1
+    {
+        public string Message { get; set; }
+    }
+
+    public class HW2
+    {
+        public string Message;
+    }
+
+    public struct HW3
+    {
+        public string Message;
+
+        public HW3(string msg)
+        {
+            Message = msg;
+        }
+    }
 
     class Program
     {
+        static void Measure(int count, Action method)
+        {
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            for (int i = 0; i < count; i++)
+                method();
+
+            sw.Stop();
+            Console.WriteLine("elapsed ms: " + sw.ElapsedMilliseconds);
+            Console.ReadLine();
+        }
+
         static void Main(string[] args)
+        {
+            
+        }
+
+        static void Tasks()
         {
             while (true)
             {
                 Stopwatch sw1 = new Stopwatch();
                 sw1.Start();
-                for (int i = 0; i < 10000000; i++)
+                for (int i = 0; i < 2000000; i++)
                     W1();
 
                 sw1.Stop();
@@ -65,7 +101,7 @@ namespace Playground
                 ThreadPool.QueueUserWorkItem(async (c) =>
                 {
                     sw2.Start();
-                    for (int i = 0; i < 10000000; i++)
+                    for (int i = 0; i < 2000000; i++)
                         await W2();
                     sw2.Stop();
                     s1.SetResult(true);
@@ -79,7 +115,7 @@ namespace Playground
                 ThreadPool.QueueUserWorkItem(async (c) =>
                 {
                     sw3.Start();
-                    for (int i = 0; i < 10000000; i++)
+                    for (int i = 0; i < 2000000; i++)
                         await W3();
                     sw3.Stop();
                     s2.SetResult(true);

@@ -20,7 +20,7 @@ namespace Twino.Server
             if (IsRunning)
                 throw new InvalidOperationException("Keep Alive Manager is already running");
 
-            int count = Environment.ProcessorCount * 2;
+            int count = Environment.ProcessorCount;
             _timeoutHandlers = new TimeoutHandler[count];
             
             IsRunning = true;

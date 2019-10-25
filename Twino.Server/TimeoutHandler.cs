@@ -12,7 +12,9 @@ namespace Twino.Server
         private readonly List<ConnectionInfo> _incoming = new List<ConnectionInfo>();
         private readonly List<ConnectionInfo> _connections = new List<ConnectionInfo>();
 
-        private Thread _timer;
+        private Timer _timer;
+
+        //private Thread _timer;
         private readonly int _timeoutMilliseconds;
         private readonly int _tickInterval;
         private bool _running;
@@ -29,24 +31,16 @@ namespace Twino.Server
         internal void Start()
         {
             _running = true;
-            _timer = new Thread(() =>
+            _timer = new Timer(state =>
             {
-                while (_running)
+                try
                 {
-                    //don't let exit, if there is an exception, somehow
-                    try
-                    {
-                        Tick();
-                    }
-                    catch
-                    {
-                    }
+                    Tick();
                 }
-            });
-
-            _timer.IsBackground = true;
-            _timer.Priority = ThreadPriority.BelowNormal;
-            _timer.Start();
+                catch
+                {
+                }
+            }, null, _tickInterval, _tickInterval);
         }
 
         /// <summary>
@@ -55,7 +49,7 @@ namespace Twino.Server
         internal void Stop()
         {
             _running = false;
-            _timer.Abort();
+            _timer.Dispose();
             _timer = null;
         }
 
@@ -65,8 +59,6 @@ namespace Twino.Server
         /// </summary>
         private void Tick()
         {
-            Thread.Sleep(_tickInterval);
-
             //add incoming clients to the timeout handle list
             AddIncomingItems();
 
@@ -134,6 +126,7 @@ namespace Twino.Server
 
                         _connections.Add(i);
                     }
+
                     _incoming.Clear();
                 }
         }
