@@ -52,7 +52,7 @@ namespace Test.SocketModels.Helpers
             Server = TwinoServer.CreateWebSocket(async (server, request, client) =>
             {
                 ServerSocket socket = new ServerSocket(server, request, client);
-                socket.MessageReceived += (s, m) => _requestManager.HandleRequests(s, m);
+                socket.MessageReceived += async (s, m) => await _requestManager.HandleRequests(s, m);
                 return await Task.FromResult(socket);
             }, options);
 

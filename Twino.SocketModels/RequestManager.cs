@@ -194,7 +194,7 @@ namespace Twino.SocketModels
         /// Reads the message from the socket.
         /// If the message is request, finds the subscription and process it.
         /// </summary>
-        public void HandleRequests(SocketBase sender, string receivedMessage)
+        public async Task HandleRequests(SocketBase sender, string receivedMessage)
         {
             RequestHeader header = ReadHeader<RequestHeader>(REQUEST_CODE, receivedMessage);
             if (header == null)
@@ -208,7 +208,7 @@ namespace Twino.SocketModels
             if (requestModel == null)
                 return;
 
-            ProcessRequest(sender, descriptor, header, requestModel);
+            await ProcessRequest(sender, descriptor, header, requestModel);
         }
 
         /// <summary>
