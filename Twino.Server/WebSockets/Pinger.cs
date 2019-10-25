@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Timer = System.Timers.Timer;
+using System.Threading;
 
 namespace Twino.Server.WebSockets
 {
@@ -49,10 +49,7 @@ namespace Twino.Server.WebSockets
         /// </summary>
         public void Start()
         {
-            _timer = new Timer(TIMER_INTERVAL);
-            _timer.AutoReset = true;
-            _timer.Elapsed += (sender, args) => Tick();
-            _timer.Start();
+            _timer = new Timer(state => Tick(), null, TIMER_INTERVAL, TIMER_INTERVAL);
         }
 
         /// <summary>
@@ -62,7 +59,6 @@ namespace Twino.Server.WebSockets
         {
             if (_timer != null)
             {
-                _timer.Stop();
                 _timer.Dispose();
                 _timer = null;
             }
@@ -72,7 +68,8 @@ namespace Twino.Server.WebSockets
             lock (_incoming)
                 _incoming.Clear();
 
-            _outgoing.Clear();
+            lock (_outgoing)
+                _outgoing.Clear();
         }
 
         /// <summary>
@@ -116,11 +113,11 @@ namespace Twino.Server.WebSockets
         /// </summary>
         private void AddIncomingSockets()
         {
-            if (_incoming.Count == 0)
-                return;
-
             lock (_incoming)
             {
+                if (_incoming.Count == 0)
+                    return;
+
                 foreach (SocketPingInfo info in _incoming)
                     _clients.Add(info);
 
@@ -160,11 +157,11 @@ namespace Twino.Server.WebSockets
         /// </summary>
         private void RemoveOutgoingSockets()
         {
-            if (_outgoing.Count == 0)
-                return;
-
             lock (_outgoing)
             {
+                if (_outgoing.Count == 0)
+                    return;
+
                 _clients.RemoveAll(x => _outgoing.Contains(x.Socket));
                 _outgoing.Clear();
             }
