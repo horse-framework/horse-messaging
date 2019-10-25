@@ -80,7 +80,6 @@ namespace Playground
 
         static void Main(string[] args)
         {
-            
         }
 
         static void Tasks()

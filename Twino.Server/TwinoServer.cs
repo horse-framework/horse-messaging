@@ -5,7 +5,6 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Twino.Server.Http;
 using Twino.Server.WebSockets;
 using Timer = System.Timers.Timer;
@@ -165,7 +164,7 @@ namespace Twino.Server
         /// <param name="clientContainer">Client container for online WebSocket clients</param>
         public TwinoServer(IHttpRequestHandler requestHandler,
                            IClientFactory clientFactory,
-                           IClientContainer clientContainer) : this(requestHandler, clientFactory, clientContainer, (ServerOptions) null)
+                           IClientContainer clientContainer) : this(requestHandler, clientFactory, clientContainer, default(ServerOptions))
         {
             Options = ServerOptions.LoadFromFile();
         }
@@ -216,7 +215,7 @@ namespace Twino.Server
         /// </summary>
         public static TwinoServer CreateHttp(IHttpRequestHandler requestHandler)
         {
-            return new TwinoServer(requestHandler, null);
+            return new TwinoServer(requestHandler, default(ServerOptions));
         }
 
         /// <summary>
@@ -226,7 +225,7 @@ namespace Twino.Server
         public static TwinoServer CreateHttp(HttpRequestHandlerDelegate handler)
         {
             MethodHttpRequestHandler requestHandler = new MethodHttpRequestHandler(handler);
-            return new TwinoServer(requestHandler, null);
+            return new TwinoServer(requestHandler, default(ServerOptions));
         }
 
         /// <summary>
@@ -235,7 +234,16 @@ namespace Twino.Server
         /// </summary>
         public static TwinoServer CreateHttp(IHttpRequestHandler requestHandler, ServerOptions options)
         {
-            return new TwinoServer(requestHandler, null, null, options);
+            return new TwinoServer(requestHandler, options);
+        }
+
+        /// <summary>
+        /// Creates new HTTP Server, supports only HTTP Requests (WebSockets are not supported)
+        /// Options must be set with method parameter
+        /// </summary>
+        public static TwinoServer CreateHttp(IHttpRequestHandler requestHandler, string optionsFilename)
+        {
+            return new TwinoServer(requestHandler, optionsFilename);
         }
 
         /// <summary>
@@ -249,12 +257,22 @@ namespace Twino.Server
         }
 
         /// <summary>
+        /// Creates new HTTP Server, supports only HTTP Requests (WebSockets are not supported)
+        /// Options must be set with method parameter
+        /// </summary>
+        public static TwinoServer CreateHttp(HttpRequestHandlerDelegate handler, string optionsFilename)
+        {
+            MethodHttpRequestHandler requestHandler = new MethodHttpRequestHandler(handler);
+            return new TwinoServer(requestHandler, optionsFilename);
+        }
+
+        /// <summary>
         /// Creates new WebSocket Server, supports only WS Requests (HTTP requests are not supported)
         /// Options are loaded from JSON file
         /// </summary>
         public static TwinoServer CreateWebSocket(IClientFactory clientFactory)
         {
-            return new TwinoServer(null, clientFactory);
+            return new TwinoServer(clientFactory, default(ServerOptions));
         }
 
         /// <summary>
@@ -264,7 +282,7 @@ namespace Twino.Server
         public static TwinoServer CreateWebSocket(ClientFactoryHandler handler)
         {
             DefaultClientFactory factory = new DefaultClientFactory(handler);
-            return new TwinoServer(null, factory);
+            return new TwinoServer(factory, default(ServerOptions));
         }
 
         /// <summary>
@@ -276,7 +294,7 @@ namespace Twino.Server
         public static TwinoServer CreateWebSocket()
         {
             DefaultClientFactory factory = new DefaultClientFactory(async (s, r, t) => await Task.FromResult(new ServerSocket(s, r, t)));
-            return new TwinoServer(null, factory);
+            return new TwinoServer(factory, default(ServerOptions));
         }
 
         /// <summary>
@@ -299,7 +317,16 @@ namespace Twino.Server
         /// </summary>
         public static TwinoServer CreateWebSocket(IClientFactory clientFactory, ServerOptions options)
         {
-            return new TwinoServer(null, clientFactory, null, options);
+            return new TwinoServer(clientFactory, options);
+        }
+
+        /// <summary>
+        /// Creates new WebSocket Server, supports only WS Requests (HTTP requests are not supported)
+        /// Options filename may be relative or absolute
+        /// </summary>
+        public static TwinoServer CreateWebSocket(IClientFactory clientFactory, string optionsFilename)
+        {
+            return new TwinoServer(clientFactory, optionsFilename);
         }
 
         /// <summary>
@@ -312,6 +339,16 @@ namespace Twino.Server
             return new TwinoServer(null, factory, null, options);
         }
 
+        /// <summary>
+        /// Creates new WebSocket Server, supports only WS Requests (HTTP requests are not supported)
+        /// Options filename may be relative or absolute
+        /// </summary>
+        public static TwinoServer CreateWebSocket(ClientFactoryHandler handler, string optionsFilename)
+        {
+            DefaultClientFactory factory = new DefaultClientFactory(handler);
+            return new TwinoServer(factory, optionsFilename);
+        }
+        
         #endregion
 
         #region Start - Stop
