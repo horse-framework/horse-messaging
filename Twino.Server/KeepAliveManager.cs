@@ -10,6 +10,7 @@ namespace Twino.Server
         /// If true, keep alive manager and timeout handlers are running
         /// </summary>
         public bool IsRunning { get; private set; }
+
         private int _nextIndex;
 
         /// <summary>
@@ -22,11 +23,11 @@ namespace Twino.Server
 
             int count = Environment.ProcessorCount;
             _timeoutHandlers = new TimeoutHandler[count];
-            
+
             IsRunning = true;
             _nextIndex = 0;
             Random rnd = new Random();
-            
+
             for (int i = 0; i < _timeoutHandlers.Length; i++)
             {
                 //rnd between min and max ms, we don't want to see all timeout handlers consume cpu and memory at same time
@@ -42,7 +43,7 @@ namespace Twino.Server
         public void Stop()
         {
             IsRunning = false;
-            
+
             foreach (var handler in _timeoutHandlers)
             {
                 if (handler == null)
@@ -59,10 +60,10 @@ namespace Twino.Server
         public void Add(ConnectionInfo info)
         {
             int i = _nextIndex++;
-            
+
             if (_nextIndex >= _timeoutHandlers.Length)
                 _nextIndex = 0;
-            
+
             if (i >= _timeoutHandlers.Length)
                 i = 0;
 

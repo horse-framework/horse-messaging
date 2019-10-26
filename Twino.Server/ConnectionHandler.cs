@@ -2,7 +2,6 @@ using System;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
-using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core.Http;
 using Twino.Server.Http;
@@ -47,28 +46,25 @@ namespace Twino.Server
                 try
                 {
                     TcpClient tcp = await _listener.Listener.AcceptTcpClientAsync();
-                    ThreadPool.UnsafeQueueUserWorkItem(async t =>
+
+                    try
                     {
-                        TcpClient client = (TcpClient) t;
+                        await AcceptClient(tcp);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (_server.Logger != null)
+                            _server.Logger.LogException("ACCEPT_CLIENT", ex);
+
+                        //may throw exception while closing and disposing network stream
                         try
                         {
-                            await AcceptClient(client);
+                            tcp.Close();
                         }
-                        catch (Exception ex)
+                        catch
                         {
-                            if (_server.Logger != null)
-                                _server.Logger.LogException("ACCEPT_CLIENT", ex);
-
-                            //may throw exception while closing and disposing network stream
-                            try
-                            {
-                                client.Close();
-                            }
-                            catch
-                            {
-                            }
                         }
-                    }, tcp);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -76,42 +72,6 @@ namespace Twino.Server
                         _server.Logger.LogException("ACCEPT_TCP_CLIENT", ex);
                 }
             }
-        }
-
-        /// <summary>
-        /// Disposes connection handler and releases all resources
-        /// </summary>
-        public void Dispose()
-        {
-            if (_listener.Listener == null)
-                return;
-
-            _listener.Listener.Start();
-            try
-            {
-                _listener.Handle.Interrupt();
-            }
-            catch
-            {
-            }
-
-            if (_listener.KeepAliveManager != null)
-                _listener.KeepAliveManager.Stop();
-
-            _listener.KeepAliveManager = null;
-            _listener.Listener = null;
-            _listener.Handle = null;
-        }
-
-        private static SslProtocols GetProtocol(HostListener server)
-        {
-            return server.Options.SslProtocol switch
-            {
-                "tls" => SslProtocols.Tls,
-                "tls11" => SslProtocols.Tls11,
-                "tls12" => SslProtocols.Tls12,
-                _ => SslProtocols.None
-            };
         }
 
         /// <summary>
@@ -134,70 +94,34 @@ namespace Twino.Server
 
             _listener.KeepAliveManager.Add(info);
 
-            //ssl handshaking
-            if (_listener.Options.SslEnabled)
-            {
-                try
-                {
-                    SslStream sslStream = _listener.Options.BypassSslValidation
-                                              ? new SslStream(tcp.GetStream(), true, (a, b, c, d) => true)
-                                              : new SslStream(tcp.GetStream(), true);
-
-                    info.SslStream = sslStream;
-                    SslProtocols protocol = GetProtocol(_listener);
-                    await sslStream.AuthenticateAsServerAsync(_listener.Certificate, false, protocol, false);
-                }
-                catch (Exception ex)
-                {
-                    if (_server.Logger != null)
-                        _server.Logger.LogException("SSL_HANDSHAKE", ex);
-
-                    tcp.Close();
-                    return;
-                }
-            }
-            else
-                info.PlainStream = tcp.GetStream();
-
-            await FinishAccept(info);
-        }
-
-        /// <summary>
-        /// After TCP socket is accepted and SSL handshaking is completed.
-        /// Reads the HTTP Request and finishes the operation if WebSocket or HTTP Request
-        /// </summary>
-        private async Task FinishAccept(ConnectionInfo info)
-        {
-            //read first request from http client
-            RequestReader reader = new RequestReader(_server, info);
-
-            Tuple<HttpRequest, HttpResponse> tuple = await reader.Read(info.GetStream());
-            HttpRequest request = tuple.Item1;
-            HttpResponse response = tuple.Item2;
-
             try
             {
-                if (request == null)
+                //ssl handshaking
+                if (_listener.Options.SslEnabled)
                 {
-                    info.Close();
-                    return;
+                    try
+                    {
+                        SslStream sslStream = _listener.Options.BypassSslValidation
+                                                  ? new SslStream(tcp.GetStream(), true, (a, b, c, d) => true)
+                                                  : new SslStream(tcp.GetStream(), true);
+
+                        info.SslStream = sslStream;
+                        SslProtocols protocol = GetProtocol(_listener);
+                        await sslStream.AuthenticateAsServerAsync(_listener.Certificate, false, protocol, false);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (_server.Logger != null)
+                            _server.Logger.LogException("SSL_HANDSHAKE", ex);
+
+                        tcp.Close();
+                        return;
+                    }
                 }
-
-                request.IpAddress = FindIPAddress(info.Client);
-
-                //handle request
-                if (request.IsWebSocket)
-                    await ProcessWebSocketRequest(info, request);
                 else
-                {
-                    bool success = await ProcessHttpRequest(info, request, response);
-                    await reader.Dispose();
+                    info.PlainStream = tcp.GetStream();
 
-                    if (success && _server.Options.HttpConnectionTimeMax > 0)
-                        await FinishAccept(info);
-                    else
-                        info.Close();
-                }
+                await ReadConnection(info);
             }
             catch (Exception ex)
             {
@@ -205,9 +129,63 @@ namespace Twino.Server
                     _server.Logger.LogException("HANDLE_CONNECTION", ex);
 
                 info.Close();
-
-                await reader.Dispose();
             }
+        }
+
+        /// <summary>
+        /// After TCP socket is accepted and SSL handshaking is completed.
+        /// Reads the HTTP Request and finishes the operation if WebSocket or HTTP Request
+        /// </summary>
+        private async Task ReadConnection(ConnectionInfo info)
+        {
+            while (true)
+            {
+                //read first request from http client
+                RequestReader reader = new RequestReader(_server, info);
+
+                Tuple<HttpRequest, HttpResponse> tuple = await reader.Read(info.GetStream());
+                HttpRequest request = tuple.Item1;
+                HttpResponse response = tuple.Item2;
+
+                if (request == null)
+                {
+                    info.Close();
+                    return;
+                }
+
+                bool again = await ProcessConnection(info, reader, request, response);
+
+                if (!again)
+                    break;
+            }
+        }
+
+        private async Task<bool> ProcessConnection(ConnectionInfo info, RequestReader reader, HttpRequest request, HttpResponse response)
+        {
+            if (request == null)
+            {
+                info.Close();
+                return false;
+            }
+
+            request.IpAddress = FindIPAddress(info.Client);
+
+            //handle request
+            if (request.IsWebSocket)
+            {
+                await ProcessWebSocketRequest(info, request);
+                return false;
+            }
+
+            bool success = await ProcessHttpRequest(info, request, response);
+
+            if (!success || _server.Options.HttpConnectionTimeMax == 0)
+            {
+                info.Close();
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -253,6 +231,43 @@ namespace Twino.Server
         private static string FindIPAddress(TcpClient tcp)
         {
             return tcp.Client.RemoteEndPoint.ToString().Split(':')[0];
+        }
+
+
+        /// <summary>
+        /// Disposes connection handler and releases all resources
+        /// </summary>
+        public void Dispose()
+        {
+            if (_listener.Listener == null)
+                return;
+
+            _listener.Listener.Start();
+            try
+            {
+                _listener.Handle.Interrupt();
+            }
+            catch
+            {
+            }
+
+            if (_listener.KeepAliveManager != null)
+                _listener.KeepAliveManager.Stop();
+
+            _listener.KeepAliveManager = null;
+            _listener.Listener = null;
+            _listener.Handle = null;
+        }
+
+        private static SslProtocols GetProtocol(HostListener server)
+        {
+            return server.Options.SslProtocol switch
+            {
+                "tls" => SslProtocols.Tls,
+                "tls11" => SslProtocols.Tls11,
+                "tls12" => SslProtocols.Tls12,
+                _ => SslProtocols.None
+            };
         }
     }
 }

@@ -390,6 +390,7 @@ namespace Twino.Server
                 _timeTimer.Dispose();
             }
 
+            Time = DateTime.UtcNow.ToString("R");
             _timeTimer = new Timer(1000);
             _timeTimer.Elapsed += (sender, args) => Time = DateTime.UtcNow.ToString("R");
             _timeTimer.AutoReset = true;
@@ -418,7 +419,6 @@ namespace Twino.Server
                     server.Listener.Start(Options.MaximumPendingConnections);
 
                 ConnectionHandler handler = new ConnectionHandler(this, server);
-
                 server.Handle = new Thread(async () => { await handler.Handle(); });
                 server.Handle.IsBackground = true;
                 server.Handle.Priority = ThreadPriority.Highest;

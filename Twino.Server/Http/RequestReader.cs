@@ -13,14 +13,14 @@ namespace Twino.Server.Http
     /// HTTP Request reader class.
     /// Reads the http request
     /// </summary>
-    public class RequestReader
+    public class RequestReader : IDisposable
     {
         #region Fields
 
         /// <summary>
         /// Request buffer
         /// </summary>
-        private readonly byte[] _buffer = new byte[512];
+        private readonly byte[] _buffer = new byte[256];
 
         /// <summary>
         /// reqeust stream. When the data is read from socket buffer, it's written to this stream and is proceed from here
@@ -31,11 +31,6 @@ namespace Twino.Server.Http
         /// Request Server
         /// </summary>
         private readonly TwinoServer _server;
-
-        /// <summary>
-        /// Reads string data from memory stream. Used for reading header values.
-        /// </summary>
-        private StreamReader _reader;
 
         /// <summary>
         /// Server options
@@ -109,24 +104,18 @@ namespace Twino.Server.Http
             _options = server.Options;
         }
 
-        public async Task Dispose()
+        public void Dispose()
         {
             if (_ms != null)
             {
-                await _ms.DisposeAsync();
+                _ms.Dispose();
                 _ms = null;
             }
 
             if (_body != null)
             {
-                await _body.DisposeAsync();
+                _body.Dispose();
                 _body = null;
-            }
-
-            if (_reader != null)
-            {
-                _reader.Dispose();
-                _reader = null;
             }
         }
 
@@ -137,34 +126,23 @@ namespace Twino.Server.Http
         /// </summary>
         private async Task<bool> ProcessRead(int read)
         {
-            try
+            if (read == 0)
             {
-                if (read == 0)
-                {
-                    _completion.SetResult(new Tuple<HttpRequest, HttpResponse>(null, null));
-                    return false;
-                }
-
-                if (_readingHeader)
-                {
-                    await _ms.WriteAsync(_buffer, 0, read);
-                    _ms.Position -= read;
-                }
-
-                _totalRead += read;
-                await ProcessBuffer(read);
-
-                if (!_completed)
-                    return true;
-            }
-            catch (Exception ex)
-            {
-                //if the object is disposed, it means server closed the connection. we do not need to log this
-                if (!(ex is ObjectDisposedException) && _server.Logger != null)
-                    _server.Logger.LogException("END_READ_REQUEST", ex);
-
                 _completion.SetResult(new Tuple<HttpRequest, HttpResponse>(null, null));
+                return false;
             }
+
+            if (_readingHeader)
+            {
+                await _ms.WriteAsync(_buffer, 0, read);
+                _ms.Position -= read;
+            }
+
+            _totalRead += read;
+            await ProcessBuffer(read);
+
+            if (!_completed)
+                return true;
 
             return false;
         }
@@ -204,7 +182,7 @@ namespace Twino.Server.Http
         /// </summary>
         private async Task ReadHeader()
         {
-            string data = _reader.ReadToEnd();
+            string data = Encoding.UTF8.GetString(_ms.ToArray());
 
             //if some data left from previous buffer, add this data
             if (!string.IsNullOrEmpty(_left))
@@ -298,7 +276,7 @@ namespace Twino.Server.Http
         private async Task AnalyzeHeader()
         {
             RequestBuilder builder = new RequestBuilder();
-            _request = builder.Build(_headers.ToArray());
+            _request = builder.Build(_headers);
             _request.Response = _response;
 
             if (!await ValidateRequest(_request, _response))
@@ -335,7 +313,6 @@ namespace Twino.Server.Http
         public async Task<Tuple<HttpRequest, HttpResponse>> Read(Stream stream)
         {
             _completion = new TaskCompletionSource<Tuple<HttpRequest, HttpResponse>>(TaskCreationOptions.None);
-            _reader = new StreamReader(_ms, Encoding.UTF8, true);
             _readingHeader = true;
             _totalRead = 0;
             _response = new HttpResponse();
@@ -359,7 +336,9 @@ namespace Twino.Server.Http
             {
                 if (_info.State != ConnectionStates.Closed)
                 {
-                    _server.Logger.LogException("READ_REQUEST", ex);
+                    if (_server.Logger != null)
+                        _server.Logger.LogException("READ_REQUEST", ex);
+                    
                     _info.Close();
                 }
 

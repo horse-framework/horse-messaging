@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 
 namespace Twino.Core.Http
 {
@@ -11,6 +10,58 @@ namespace Twino.Core.Http
     {
         /// <summary>
         /// Builds full string request data and creates new HttpRequest object
+        /// </summary>
+        public HttpRequest Build(List<string> lines)
+        {
+            HttpRequest request = new HttpRequest();
+            request.Content = "";
+            request.Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+
+            //string[] lines = data.Split(new string[] { "\r\n" }, StringSplitOptions.None);
+            bool head = true;
+
+            //read first line. Must be in "GET path HTTP/version" format
+            string[] headline = lines[0].Split(' ');
+
+            if (headline.Length < 2)
+                return null;
+
+            request.Method = headline[0];
+            request.Path = headline[1];
+
+            //reads content and header data
+            for (int i = 1; i < lines.Count; i++)
+            {
+                string line = lines[i];
+                if (head && string.IsNullOrEmpty(line))
+                {
+                    head = false;
+                    continue;
+                }
+
+                if (head)
+                {
+                    int index = line.IndexOf(':');
+                    if (index < 0)
+                        continue;
+
+                    string key = line.Substring(0, index);
+
+                    if (line[index + 1] == ' ')
+                        index++;
+
+                    string value = line.Substring(index + 1);
+                    AddHeader(request, key, value);
+                }
+                else
+                    request.Content += (i + 1 == lines.Count) ? line : (line + Environment.NewLine);
+            }
+
+            return request;
+        }
+
+        /// <summary>
+        /// Builds HttpRequest from header lines.
         /// </summary>
         public HttpRequest Build(string[] lines)
         {
@@ -47,50 +98,15 @@ namespace Twino.Core.Http
                         continue;
 
                     string key = line.Substring(0, index);
-                    
+
                     if (line[index + 1] == ' ')
                         index++;
-                    
+
                     string value = line.Substring(index + 1);
                     AddHeader(request, key, value);
                 }
                 else
                     request.Content += (i + 1 == lines.Length) ? line : (line + Environment.NewLine);
-            }
-
-            return request;
-        }
-
-        /// <summary>
-        /// Builds HttpRequest from header lines.
-        /// Used when request received from network as partial (header only)
-        /// </summary>
-        public HttpRequest Build(List<string> headers)
-        {
-            HttpRequest request = new HttpRequest();
-            request.Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
-
-            string[] headline = headers[0].Split(' ');
-
-            if (headline.Length < 2)
-                return null;
-
-            request.Method = headline[0];
-            request.Path = headline[1];
-
-            foreach (string line in headers)
-            {
-                int index = line.IndexOf(':');
-                if (index < 0)
-                    continue;
-
-                string key = line.Substring(0, index);
-
-                if (line[index + 1] == ' ')
-                    index++;
-
-                string value = line.Substring(index + 1);
-                AddHeader(request, key, value);
             }
 
             return request;
@@ -108,7 +124,7 @@ namespace Twino.Core.Http
 
             if (key.Equals(HttpHeaders.HOST, StringComparison.InvariantCultureIgnoreCase))
                 request.Host = value;
-            
+
             else if (key.Equals(HttpHeaders.WEBSOCKET_KEY, StringComparison.InvariantCultureIgnoreCase))
             {
                 request.WebSocketKey = value;
