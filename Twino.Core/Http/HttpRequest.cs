@@ -126,8 +126,11 @@ namespace Twino.Core.Http
         /// </summary>
         public Dictionary<string, string> GetFormValues()
         {
-            string content = Encoding.UTF8.GetString(ContentStream.ToArray());
             Dictionary<string, string> items = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+            if (ContentStream == null)
+                return items;
+
+            string content = Encoding.UTF8.GetString(ContentStream.ToArray());
             if (string.IsNullOrEmpty(content))
                 return items;
 
