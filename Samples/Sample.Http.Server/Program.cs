@@ -35,12 +35,11 @@ namespace Sample.Http.Server
                 {
                     response.SetToText();
                     Rps++;
-                    response.Write("Hello, World!");
+                    await response.WriteAsync("Hello, World!");
                 }
                 else
                     response.StatusCode = HttpStatusCode.NotFound;
 
-                await Task.CompletedTask;
             }, ServerOptions.CreateDefault());
 
             server.Options.ContentEncoding = null;

@@ -50,7 +50,7 @@ namespace Twino.Server.WebSockets
             }
 
             byte[] response = BuildResponse(Request.WebSocketKey);
-            await Request.Response.Stream.WriteAsync(response, 0, response.Length);
+            await Request.Response.NetworkStream.WriteAsync(response, 0, response.Length);
 
             await Task.Yield();
             ServerSocket client = await Server.ClientFactory.Create(Server, Request, Client);

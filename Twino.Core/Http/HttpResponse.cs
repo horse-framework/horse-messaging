@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Twino.Core.Http
 {
@@ -40,7 +41,7 @@ namespace Twino.Core.Http
         /// <summary>
         /// Network stream of the Requester (if connection is using SSL, this stream is SslStream. otherwise NetworkStream)
         /// </summary>
-        public Stream Stream { get; set; }
+        internal Stream NetworkStream { get; set; }
 
         /// <summary>
         /// Additional headers for the response.
@@ -51,7 +52,9 @@ namespace Twino.Core.Http
         /// Response content. The response byte array is created just be sending the data to the client.
         /// Until this operation, data wil be appended to the content string builder.
         /// </summary>
-        private StringBuilder Content { get; } = new StringBuilder();
+       // private StringBuilder Content { get; } = new StringBuilder();
+
+        public MemoryStream ResponseStream { get; } = new MemoryStream();
 
         #endregion
 
@@ -60,9 +63,27 @@ namespace Twino.Core.Http
         /// </summary>
         public void Write(string content)
         {
-            Content.Append(content);
+            byte[] data = Encoding.UTF8.GetBytes(content);
+            ResponseStream.Write(data, 0, data.Length);
         }
 
+        /// <summary>
+        /// Writes a string to the response
+        /// </summary>
+        public async Task WriteAsync(string content)
+        {
+            byte[] data = Encoding.UTF8.GetBytes(content);
+            await ResponseStream.WriteAsync(data, 0, data.Length);
+        }
+        
+        /// <summary>
+        /// Writes a string to the response
+        /// </summary>
+        public async Task WriteAsync(byte[] data)
+        {
+            await ResponseStream.WriteAsync(data, 0, data.Length);
+        }
+        
         /// <summary>
         /// Sets response content type to html and status to 200
         /// </summary>
@@ -88,16 +109,18 @@ namespace Twino.Core.Http
         {
             ContentType = ContentTypes.APPLICATION_JSON;
             StatusCode = HttpStatusCode.OK;
-            Content.Append(JsonConvert.SerializeObject(model));
+            byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(model));
+            ResponseStream.Write(data, 0, data.Length);
         }
-
+        
         /// <summary>
-        /// Reads the content and creates byte array for shipping
+        /// Sets response content type to json and status to 200
         /// </summary>
-        /// <returns></returns>
-        public byte[] GetContent()
+        public async Task SetToJsonAsync(object model)
         {
-            return Encoding.UTF8.GetBytes(Content.ToString());
+            ContentType = ContentTypes.APPLICATION_JSON;
+            StatusCode = HttpStatusCode.OK;
+            await System.Text.Json.JsonSerializer.SerializeAsync(ResponseStream, model, model.GetType());
         }
 
         /// <summary>

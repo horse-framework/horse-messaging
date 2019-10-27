@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
@@ -40,38 +41,35 @@ namespace Twino.Server.Http
         /// </summary>
         internal async Task Write(HttpResponse response)
         {
-            Stream stream = response.Stream;
-            byte[] result;
-            byte[] content = response.GetContent();
-            if (content != null && content.Length > 0)
+            Stream stream = response.NetworkStream;
+            MemoryStream memoryStream;
+            if (response.ResponseStream.Length > 0)
             {
                 switch (response.ContentEncoding)
                 {
                     case ContentEncodings.Brotli:
                     {
-                        await using MemoryStream ms = new MemoryStream();
-                        await using (BrotliStream brotli = new BrotliStream(ms, CompressionMode.Compress))
-                            await brotli.WriteAsync(content, 0, content.Length);
+                        memoryStream = new MemoryStream();
+                        await using BrotliStream brotli = new BrotliStream(memoryStream, CompressionMode.Compress);
+                        response.ResponseStream.WriteTo(brotli);
 
-                        result = ms.ToArray();
                         break;
                     }
                     case ContentEncodings.Gzip:
                     {
-                        await using MemoryStream ms = new MemoryStream();
-                        await using (GZipStream gzip = new GZipStream(ms, CompressionMode.Compress))
-                            await gzip.WriteAsync(content, 0, content.Length);
-
-                        result = ms.ToArray();
+                        memoryStream = new MemoryStream();
+                        await using GZipStream gzip = new GZipStream(memoryStream, CompressionMode.Compress);
+                        response.ResponseStream.WriteTo(gzip);
                         break;
                     }
+
                     default:
-                        result = content;
+                        memoryStream = response.ResponseStream;
                         break;
                 }
             }
             else
-                result = new byte[0];
+                memoryStream = response.ResponseStream;
 
             await using MemoryStream m = new MemoryStream();
 
@@ -95,7 +93,7 @@ namespace Twino.Server.Http
                     break;
             }
 
-            await Write(m, HttpHeaders.CONTENT_LENGTH, result.Length.ToString());
+            await Write(m, HttpHeaders.CONTENT_LENGTH, memoryStream.Length.ToString());
 
             foreach (var header in response.AdditionalHeaders)
                 await Write(m, header.Key, header.Value);
@@ -103,7 +101,7 @@ namespace Twino.Server.Http
             await m.WriteAsync(HttpReader.CRLF, 0, 2);
 
             m.WriteTo(stream);
-            await stream.WriteAsync(new ReadOnlyMemory<byte>(result));
+            memoryStream.WriteTo(stream);
         }
     }
 }

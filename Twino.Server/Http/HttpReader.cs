@@ -54,7 +54,7 @@ namespace Twino.Server.Http
             HttpResponse response = new HttpResponse();
 
             request.Response = response;
-            response.Stream = stream;
+            response.NetworkStream = stream;
 
             int readLength = 0;
             int start = 0;
