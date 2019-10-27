@@ -102,10 +102,15 @@ namespace Twino.Server
                 else
                     info.PlainStream = tcp.GetStream();
 
+                //read first request from http client
+                HttpReader reader = new HttpReader(_server.Options, info.Server.Options);
                 bool keepReading;
                 do
                 {
-                    keepReading = await ReadConnection(info);
+                    keepReading = await ReadConnection(info, reader);
+                    if (keepReading)
+                        reader.Reset();
+                    
                 } while (keepReading);
             }
             catch (Exception ex)
@@ -121,11 +126,8 @@ namespace Twino.Server
         /// After TCP socket is accepted and SSL handshaking is completed.
         /// Reads the HTTP Request and finishes the operation if WebSocket or HTTP Request
         /// </summary>
-        private async Task<bool> ReadConnection(ConnectionInfo info)
+        private async Task<bool> ReadConnection(ConnectionInfo info, HttpReader reader)
         {
-            //read first request from http client
-            HttpReader reader = new HttpReader(_server.Options, info.Server.Options);
-
             Tuple<HttpRequest, HttpResponse> tuple = await reader.Read(info.GetStream());
             HttpRequest request = tuple.Item1;
             HttpResponse response = tuple.Item2;

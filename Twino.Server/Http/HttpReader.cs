@@ -23,6 +23,10 @@ namespace Twino.Server.Http
 
         private bool _firstLine = true;
         private bool _readingHeaders = true;
+        private readonly byte[] _smallBuffer = new byte[256];
+        
+        //isn't initialized now, maybe we never require it
+        private byte[] _largeBuffer;
 
         public int HeaderLength { get; private set; }
         public int ContentLength { get; private set; }
@@ -34,6 +38,14 @@ namespace Twino.Server.Http
         {
             _options = options;
             _hostOptions = hostOptions;
+        }
+
+        public void Reset()
+        {
+            _firstLine = true;
+            _readingHeaders = true;
+            HeaderLength = 0;
+            ContentLength = 0;
         }
 
         public async Task<Tuple<HttpRequest, HttpResponse>> Read(Stream stream)
@@ -49,11 +61,6 @@ namespace Twino.Server.Http
 
             //this value will be true, if small buffer isn't enough and tells us to use large buffer
             bool requiredMoreData = false;
-
-            byte[] smallBuffer = new byte[256];
-
-            //isn't initialized now, maybe we never require it
-            byte[] largeBuffer = null;
 
             //when large buffer is used, this value will be true. and if we can't find CRLF even this value is true, bad request will be returned
             bool largeBufferUsed = false;
@@ -77,27 +84,27 @@ namespace Twino.Server.Http
 
                     //we need to keep data between start and end, read more data and put new data to the end of the kept
 
-                    if (largeBuffer == null)
-                        largeBuffer = new byte[6144]; //4096 for max cookie size, others for "Cookie:" key and cookie path and deadline (6KB total)
+                    if (_largeBuffer == null)
+                        _largeBuffer = new byte[6144]; //4096 for max cookie size, others for "Cookie:" key and cookie path and deadline (6KB total)
 
                     //copy left data to large buffer
                     int prevSize = readLength - start;
-                    Buffer.BlockCopy(smallBuffer, start, largeBuffer, 0, prevSize);
+                    Buffer.BlockCopy(_smallBuffer, start, _largeBuffer, 0, prevSize);
 
                     //read more
-                    int read = await stream.ReadAsync(largeBuffer, prevSize, largeBuffer.Length - prevSize);
+                    int read = await stream.ReadAsync(_largeBuffer, prevSize, _largeBuffer.Length - prevSize);
 
                     readLength = prevSize + read;
-                    buffer = largeBuffer;
+                    buffer = _largeBuffer;
                     largeBufferUsed = true;
                 }
                 else
                 {
-                    readLength = await stream.ReadAsync(smallBuffer, 0, smallBuffer.Length);
+                    readLength = await stream.ReadAsync(_smallBuffer, 0, _smallBuffer.Length);
                     if (readLength < 1 && _firstLine)
                         return new Tuple<HttpRequest, HttpResponse>(null, null);
 
-                    buffer = smallBuffer;
+                    buffer = _smallBuffer;
                     largeBufferUsed = false;
                 }
 
