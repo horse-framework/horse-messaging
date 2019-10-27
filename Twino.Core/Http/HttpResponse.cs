@@ -51,7 +51,7 @@ namespace Twino.Core.Http
         /// Response content. The response byte array is created just be sending the data to the client.
         /// Until this operation, data wil be appended to the content string builder.
         /// </summary>
-        private StringBuilder Content { get; set; } = new StringBuilder();
+        private StringBuilder Content { get; } = new StringBuilder();
 
         #endregion
 

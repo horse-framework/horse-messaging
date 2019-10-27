@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -57,9 +58,14 @@ namespace Twino.Core.Http
         public string AcceptEncoding { get; set; }
 
         /// <summary>
-        /// Request content
+        /// Full querystring data, such as a=1&b=2&c=3...
         /// </summary>
-        public string Content { get; set; }
+        public string QueryStringData { get; set; }
+
+        /// <summary>
+        /// Request content stream
+        /// </summary>
+        public MemoryStream ContentStream { get; set; }
 
         /// <summary>
         /// Length of request content
@@ -79,7 +85,7 @@ namespace Twino.Core.Http
         /// <summary>
         /// All other headers as key and value
         /// </summary>
-        public Dictionary<string, string> Headers { get; set; }
+        public Dictionary<string, string> Headers { get; set; } = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 
         /// <summary>
         /// Response of the request
@@ -93,11 +99,10 @@ namespace Twino.Core.Http
         {
             Dictionary<string, string> items = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 
-            int start = Path.IndexOf('?');
-            if (start < 0)
+            if (string.IsNullOrEmpty(QueryStringData))
                 return items;
 
-            string[] pairs = Path.Substring(start + 1).Split('&');
+            string[] pairs = QueryStringData.Split('&');
             foreach (string pair in pairs)
             {
                 string[] key_value = pair.Split('=');
@@ -121,11 +126,12 @@ namespace Twino.Core.Http
         /// </summary>
         public Dictionary<string, string> GetFormValues()
         {
+            string content = Encoding.UTF8.GetString(ContentStream.ToArray());
             Dictionary<string, string> items = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
-            if (string.IsNullOrEmpty(Content))
+            if (string.IsNullOrEmpty(content))
                 return items;
 
-            string[] pairs = Content.Split('&');
+            string[] pairs = content.Split('&');
             foreach (string pair in pairs)
             {
                 string[] key_value = pair.Split('=');
@@ -142,18 +148,6 @@ namespace Twino.Core.Http
             }
 
             return items;
-        }
-
-        /// <summary>
-        /// Returns only path. If path includes query string, result doesn't contains query string data
-        /// </summary>
-        public string GetOnlyPath()
-        {
-            int qstr_index = Path.IndexOf('?');
-            if (qstr_index < 0)
-                return Path;
-
-            return Path.Substring(0, qstr_index);
         }
     }
 }

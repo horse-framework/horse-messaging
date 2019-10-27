@@ -20,7 +20,7 @@ namespace Twino.Mvc.Routing
             match.Values = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
 
             //split path to route parts
-            string[] parts = request.GetOnlyPath().Split('/', StringSplitOptions.RemoveEmptyEntries);
+            string[] parts = request.Path.Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0)
                 parts = new string[] { "" };
 

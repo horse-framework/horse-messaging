@@ -348,7 +348,7 @@ namespace Twino.Server
             DefaultClientFactory factory = new DefaultClientFactory(handler);
             return new TwinoServer(factory, optionsFilename);
         }
-        
+
         #endregion
 
         #region Start - Stop
@@ -390,9 +390,9 @@ namespace Twino.Server
                 _timeTimer.Dispose();
             }
 
-            Time = DateTime.UtcNow.ToString("R");
+            Time = "Date: " + DateTime.UtcNow.ToString("R") + "\r\n";
             _timeTimer = new Timer(1000);
-            _timeTimer.Elapsed += (sender, args) => Time = DateTime.UtcNow.ToString("R");
+            _timeTimer.Elapsed += (sender, args) => Time = "Date: " + DateTime.UtcNow.ToString("R") + "\r\n";
             _timeTimer.AutoReset = true;
             _timeTimer.Start();
 

@@ -194,7 +194,7 @@ namespace Twino.Mvc
                     Action(ar);
                     source.SetResult(true);
                 });
-                
+
                 await source.Task;
             }
             else
@@ -249,16 +249,18 @@ namespace Twino.Mvc
                         break;
 
                     case ParameterSource.Body:
+                    {
+                        string content = Encoding.UTF8.GetString(request.ContentStream.ToArray());
                         if (ap.FromName == "json")
-                            value = Newtonsoft.Json.JsonConvert.DeserializeObject(request.Content, ap.ParameterType);
+                            value = Newtonsoft.Json.JsonConvert.DeserializeObject(content, ap.ParameterType);
                         else if (ap.FromName == "xml")
                         {
-                            using MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(request.Content));
+                            using MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(content));
                             XmlSerializer serializer = new XmlSerializer(ap.ParameterType);
                             value = serializer.Deserialize(ms);
                         }
-
                         break;
+                    }
 
                     case ParameterSource.Form:
                         if (formValues.ContainsKey(ap.FromName))

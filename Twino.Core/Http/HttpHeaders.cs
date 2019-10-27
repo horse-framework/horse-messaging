@@ -1,4 +1,6 @@
-﻿namespace Twino.Core.Http
+﻿using System.Runtime.CompilerServices;
+
+namespace Twino.Core.Http
 {
     /// <summary>
     /// HTTP Header known key and value list.
@@ -64,6 +66,7 @@
         /// <summary>
         /// Creates new header line like "Key: value + [\r\n]"
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string Create(string key, int value)
         {
             return Create(key, value.ToString());
@@ -72,6 +75,7 @@
         /// <summary>
         /// Creates new header line like "line + [\r\n]"
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string Create(string line)
         {
             return line + "\r\n";
@@ -80,14 +84,16 @@
         /// <summary>
         /// Creates new header line like "Key: value + [\r\n]"
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string Create(string key, string value)
         {
-            return key + ": " + value + "\r\n";
+            return string.Concat(key, ": ", value, "\r\n"); // key + ": " + value + "\r\n";
         }
 
         /// <summary>
         /// Creates new header line like "Key: value; other_value; other_value... + [\r\n]"
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string Create(string key, string value, params string[] otherValues)
         {
             string total = value;

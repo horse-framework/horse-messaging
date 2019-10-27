@@ -2,6 +2,7 @@ using System;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core.Http;
 using Twino.Server.Http;
@@ -46,25 +47,7 @@ namespace Twino.Server
                 try
                 {
                     TcpClient tcp = await _listener.Listener.AcceptTcpClientAsync();
-
-                    try
-                    {
-                        await AcceptClient(tcp);
-                    }
-                    catch (Exception ex)
-                    {
-                        if (_server.Logger != null)
-                            _server.Logger.LogException("ACCEPT_CLIENT", ex);
-
-                        //may throw exception while closing and disposing network stream
-                        try
-                        {
-                            tcp.Close();
-                        }
-                        catch
-                        {
-                        }
-                    }
+                    ThreadPool.UnsafeQueueUserWorkItem(async t => await AcceptClient(tcp), tcp, false);
                 }
                 catch (Exception ex)
                 {
@@ -81,9 +64,7 @@ namespace Twino.Server
         /// </summary>
         private async Task AcceptClient(TcpClient tcp)
         {
-            await Task.Yield();
-
-            if (_listener == null || tcp == null)
+            if (_listener == null)
                 return;
 
             ConnectionInfo info = new ConnectionInfo(tcp, _listener)
@@ -121,7 +102,11 @@ namespace Twino.Server
                 else
                     info.PlainStream = tcp.GetStream();
 
-                await ReadConnection(info);
+                bool keepReading;
+                do
+                {
+                    keepReading = await ReadConnection(info);
+                } while (keepReading);
             }
             catch (Exception ex)
             {
@@ -136,38 +121,43 @@ namespace Twino.Server
         /// After TCP socket is accepted and SSL handshaking is completed.
         /// Reads the HTTP Request and finishes the operation if WebSocket or HTTP Request
         /// </summary>
-        private async Task ReadConnection(ConnectionInfo info)
+        private async Task<bool> ReadConnection(ConnectionInfo info)
         {
-            while (true)
-            {
-                //read first request from http client
-                RequestReader reader = new RequestReader(_server, info);
+            //read first request from http client
+            HttpReader reader = new HttpReader(_server.Options, info.Server.Options);
 
-                Tuple<HttpRequest, HttpResponse> tuple = await reader.Read(info.GetStream());
-                HttpRequest request = tuple.Item1;
-                HttpResponse response = tuple.Item2;
+            Tuple<HttpRequest, HttpResponse> tuple = await reader.Read(info.GetStream());
+            HttpRequest request = tuple.Item1;
+            HttpResponse response = tuple.Item2;
 
-                if (request == null)
-                {
-                    info.Close();
-                    return;
-                }
-
-                bool again = await ProcessConnection(info, reader, request, response);
-
-                if (!again)
-                    break;
-            }
-        }
-
-        private async Task<bool> ProcessConnection(ConnectionInfo info, RequestReader reader, HttpRequest request, HttpResponse response)
-        {
             if (request == null)
             {
                 info.Close();
                 return false;
             }
 
+            request.ContentLength = reader.ContentLength;
+            if (response.StatusCode > 0)
+            {
+                ResponseWriter writer = new ResponseWriter(_server);
+                await writer.Write(response);
+                if (_server.Options.HttpConnectionTimeMax > 0)
+                    return true;
+
+                info.Close();
+                return false;
+            }
+
+            bool again = await ProcessConnection(info, request, response);
+
+            if (!again)
+                return false;
+
+            return true;
+        }
+
+        private async Task<bool> ProcessConnection(ConnectionInfo info, HttpRequest request, HttpResponse response)
+        {
             request.IpAddress = FindIPAddress(info.Client);
 
             //handle request
@@ -200,6 +190,8 @@ namespace Twino.Server
                 return;
             }
 
+            await Task.Yield();
+
             info.State = ConnectionStates.WebSocket;
             SocketRequestHandler handler = new SocketRequestHandler(_server, request, info.Client);
             await handler.HandshakeClient();
@@ -216,6 +208,8 @@ namespace Twino.Server
                 info.Close();
                 return false;
             }
+
+            await Task.Yield();
 
             info.State = ConnectionStates.Http;
             await _server.RequestHandler.RequestAsync(_server, request, response);

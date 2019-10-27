@@ -5,7 +5,7 @@ Twino provides advanced WebSocket server management, messaging queue infrastruct
 
 ## Why Twino?
 
-Twino is high scalable advanced websocket server with amazing client management. You can use WebSocket and HTTP server on same project, same port, same host. Twino.Mvc has nearly all features ASP.NET MVC has, and you write nearly same code. It's as fast as kestrel. It has websocket client with sweet connectors and you can send and receive objects via websocket if they are derived some interfaces.
+Twino is high scalable advanced websocket server with amazing client management. You can use WebSocket and HTTP server on same project, same port, same host. Twino.Mvc has nearly all features ASP.NET MVC has, and you write nearly same code. It has websocket client with sweet connectors and you can send and receive objects via websocket if they are derived some interfaces.
 
 ### Features
 
