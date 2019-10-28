@@ -20,6 +20,7 @@ namespace Twino.Server.Http
         public const byte EQUALS = (byte) '=';
         public const byte SPACE = (byte) ' ';
         public static readonly byte[] CRLF = {CR, LF};
+        public static readonly byte[] COLON_SPACE = {COLON, SPACE};
 
         private bool _firstLine = true;
         private bool _readingHeaders = true;

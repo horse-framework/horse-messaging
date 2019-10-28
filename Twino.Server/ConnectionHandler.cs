@@ -18,11 +18,13 @@ namespace Twino.Server
         private readonly TwinoServer _server;
         private readonly HostListener _listener;
         private TimeSpan _minAliveHttpDuration;
+        private readonly ResponseWriter _writer;
 
         public ConnectionHandler(TwinoServer server, HostListener listener)
         {
             _server = server;
             _listener = listener;
+            _writer = new ResponseWriter(server);
         }
 
         /// <summary>
@@ -141,8 +143,7 @@ namespace Twino.Server
             request.ContentLength = reader.ContentLength;
             if (response.StatusCode > 0)
             {
-                ResponseWriter writer = new ResponseWriter(_server);
-                await writer.Write(response);
+                await _writer.Write(response);
                 if (_server.Options.HttpConnectionTimeMax > 0)
                     return true;
 
@@ -215,8 +216,7 @@ namespace Twino.Server
 
             info.State = ConnectionStates.Http;
             await _server.RequestHandler.RequestAsync(_server, request, response);
-            ResponseWriter writer = new ResponseWriter(_server);
-            await writer.Write(response);
+            await _writer.Write(response);
 
             return _server.Options.HttpConnectionTimeMax > 0;
         }

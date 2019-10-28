@@ -13,7 +13,7 @@ namespace Twino.Server.Http
     /// </summary>
     internal class ResponseWriter
     {
-        private TwinoServer _server;
+        private readonly TwinoServer _server;
 
         public ResponseWriter(TwinoServer server)
         {
@@ -22,16 +22,16 @@ namespace Twino.Server.Http
 
         private static async Task Write(Stream stream, string msg)
         {
-            byte[] data = Encoding.UTF8.GetBytes(msg);
+            byte[] data = Encoding.ASCII.GetBytes(msg);
             await stream.WriteAsync(data, 0, data.Length);
         }
 
         private static async Task Write(Stream stream, string key, string value)
         {
             byte[] kbytes = Encoding.ASCII.GetBytes(key);
-            byte[] vbytes = Encoding.UTF8.GetBytes(value);
+            byte[] vbytes = Encoding.ASCII.GetBytes(value);
             await stream.WriteAsync(kbytes, 0, kbytes.Length);
-            await stream.WriteAsync(new byte[] {HttpReader.COLON, HttpReader.SPACE}, 0, 2);
+            await stream.WriteAsync(HttpReader.COLON_SPACE, 0, 2);
             await stream.WriteAsync(vbytes, 0, vbytes.Length);
             await stream.WriteAsync(HttpReader.CRLF, 0, 2);
         }
