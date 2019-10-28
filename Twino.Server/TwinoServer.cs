@@ -66,11 +66,6 @@ namespace Twino.Server
         /// </summary>
         public bool IsRunning { get; private set; }
 
-        /// <summary>
-        /// Current server time as RFC 1123
-        /// </summary>
-        public static byte[] Time { get; private set; }
-
         //creating string from DateTime object per request uses some cpu and time (1 sec full cpu for 10million times)
         /// <summary>
         /// Server time timer
@@ -391,9 +386,9 @@ namespace Twino.Server
                 _timeTimer.Dispose();
             }
 
-            Time = Encoding.UTF8.GetBytes("Date: " + DateTime.UtcNow.ToString("R") + "\r\n");
+            PredefinedHeaders.SERVER_TIME_CRLF = Encoding.UTF8.GetBytes("Date: " + DateTime.UtcNow.ToString("R") + "\r\n");
             _timeTimer = new Timer(1000);
-            _timeTimer.Elapsed += (sender, args) => Time = Encoding.UTF8.GetBytes("Date: " + DateTime.UtcNow.ToString("R") + "\r\n");
+            _timeTimer.Elapsed += (sender, args) => PredefinedHeaders.SERVER_TIME_CRLF = Encoding.UTF8.GetBytes("Date: " + DateTime.UtcNow.ToString("R") + "\r\n");
             _timeTimer.AutoReset = true;
             _timeTimer.Start();
 

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
@@ -22,8 +21,8 @@ namespace Twino.Server.Http
 
         private static async Task Write(Stream stream, string msg)
         {
-            byte[] data = Encoding.ASCII.GetBytes(msg);
-            await stream.WriteAsync(data, 0, data.Length);
+            ReadOnlyMemory<byte> data = Encoding.ASCII.GetBytes(msg);
+            await stream.WriteAsync(data);
         }
 
         private static async Task Write(Stream stream, string key, string value)
@@ -69,29 +68,39 @@ namespace Twino.Server.Http
 
             await using MemoryStream m = new MemoryStream();
 
-            await Write(m, HttpHeaders.Create(HttpHeaders.HTTP_VERSION + " " + Convert.ToInt32(response.StatusCode) + " " + response.StatusCode));
-            await Write(m, HttpHeaders.SERVER, HttpHeaders.VALUE_SERVER);
-            await m.WriteAsync(TwinoServer.Time, 0, TwinoServer.Time.Length);
+            await m.WriteAsync(PredefinedHeaders.HTTP_VERSION);
+            await Write(m, HttpHeaders.Create(Convert.ToInt32(response.StatusCode) + " " + response.StatusCode));
+            await m.WriteAsync(PredefinedHeaders.SERVER_CRLF);
+            await m.WriteAsync(PredefinedHeaders.SERVER_TIME_CRLF);
 
             if (!string.IsNullOrEmpty(response.ContentType))
-                await Write(m, HttpHeaders.CONTENT_TYPE, response.ContentType + ";" + HttpHeaders.VALUE_CHARSET_UTF8);
-            
-            await Write(m, HttpHeaders.CONNECTION,
-                        _server.Options.HttpConnectionTimeMax > 0
-                            ? HttpHeaders.VALUE_KEEP_ALIVE
-                            : HttpHeaders.VALUE_CLOSE);
+            {
+                await m.WriteAsync(PredefinedHeaders.CONTENT_TYPE_COLON);
+                await Write(m, response.ContentType);
+                await m.WriteAsync(PredefinedHeaders.CHARSET_UTF8_CRLF);
+            }
+
+            if (_server.Options.HttpConnectionTimeMax > 0)
+                await m.WriteAsync(PredefinedHeaders.CONNECTION_KEEP_ALIVE_CRLF);
+            else
+                await m.WriteAsync(PredefinedHeaders.CONNECTION_CLOSE_CRLF);
 
             switch (response.ContentEncoding)
             {
                 case ContentEncodings.Brotli:
-                    await Write(m, HttpHeaders.CONTENT_ENCODING, HttpHeaders.VALUE_BROTLI);
+                    await m.WriteAsync(PredefinedHeaders.ENCODING_BR_CRLF);
                     break;
+                
                 case ContentEncodings.Gzip:
-                    await Write(m, HttpHeaders.CONTENT_ENCODING, HttpHeaders.VALUE_GZIP);
+                    await m.WriteAsync(PredefinedHeaders.ENCODING_GZIP_CRLF);
                     break;
             }
 
-            await Write(m, HttpHeaders.CONTENT_LENGTH, memoryStream.Length.ToString());
+            if (memoryStream.Length > 0)
+            {
+                await m.WriteAsync(PredefinedHeaders.CONTENT_LENGTH_COLON);
+                await Write(m, memoryStream.Length + "\r\n");
+            }
 
             foreach (var header in response.AdditionalHeaders)
                 await Write(m, header.Key, header.Value);
