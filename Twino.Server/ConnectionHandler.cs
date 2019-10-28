@@ -227,7 +227,6 @@ namespace Twino.Server
             return tcp.Client.RemoteEndPoint.ToString().Split(':')[0];
         }
 
-
         /// <summary>
         /// Disposes connection handler and releases all resources
         /// </summary>

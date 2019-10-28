@@ -137,16 +137,6 @@ namespace Twino.Server
         /// Creates new TwinoServer instance.
         /// </summary>
         /// <param name="clientFactory">WebSocket client factory</param>
-        /// <param name="options">Server options</param>
-        public TwinoServer(IClientFactory clientFactory, ServerOptions options) : this(null, clientFactory, null)
-        {
-            Options = options;
-        }
-
-        /// <summary>
-        /// Creates new TwinoServer instance.
-        /// </summary>
-        /// <param name="clientFactory">WebSocket client factory</param>
         /// <param name="optionsFile">Server options</param>
         public TwinoServer(IClientFactory clientFactory, string optionsFile) : this(null, clientFactory, null, optionsFile)
         {
@@ -268,7 +258,7 @@ namespace Twino.Server
         /// </summary>
         public static TwinoServer CreateWebSocket(IClientFactory clientFactory)
         {
-            return new TwinoServer(clientFactory, default(ServerOptions));
+            return new TwinoServer(null, clientFactory, null);
         }
 
         /// <summary>
@@ -278,7 +268,7 @@ namespace Twino.Server
         public static TwinoServer CreateWebSocket(ClientFactoryHandler handler)
         {
             DefaultClientFactory factory = new DefaultClientFactory(handler);
-            return new TwinoServer(factory, default(ServerOptions));
+            return new TwinoServer(null, factory, null);
         }
 
         /// <summary>
@@ -290,7 +280,7 @@ namespace Twino.Server
         public static TwinoServer CreateWebSocket()
         {
             DefaultClientFactory factory = new DefaultClientFactory(async (s, r, t) => await Task.FromResult(new ServerSocket(s, r, t)));
-            return new TwinoServer(factory, default(ServerOptions));
+            return new TwinoServer(null, factory, null);
         }
 
         /// <summary>
@@ -313,7 +303,7 @@ namespace Twino.Server
         /// </summary>
         public static TwinoServer CreateWebSocket(IClientFactory clientFactory, ServerOptions options)
         {
-            return new TwinoServer(clientFactory, options);
+            return new TwinoServer(null, clientFactory, null, options);
         }
 
         /// <summary>

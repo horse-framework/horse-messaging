@@ -20,6 +20,7 @@ namespace Sample.Http.Server
             }, ServerOptions.CreateDefault());
 
             server.Options.ContentEncoding = null;
+            server.Options.Hosts[0].Port = 82;
 
             server.Start();
             server.BlockWhileRunning();

@@ -1,9 +1,12 @@
 ﻿using System;
+using System.IO;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Twino.Core.Http;
+using Twino.Server.Http;
 using HttpHeaders = Twino.Core.Http.HttpHeaders;
 
 namespace Twino.Server.WebSockets
@@ -42,36 +45,22 @@ namespace Twino.Server.WebSockets
         /// </summary>
         internal async Task HandshakeClient()
         {
-            if (!Request.IsWebSocket)
-            {
-                Client.Close();
-                Client.Dispose();
-                return;
-            }
+            await using MemoryStream ms = new MemoryStream();
+            await ms.WriteAsync(PredefinedHeaders.WEBSOCKET_101_SWITCHING_PROTOCOLS_CRLF);
+            await ms.WriteAsync(PredefinedHeaders.SERVER_CRLF);
+            await ms.WriteAsync(PredefinedHeaders.CONNECTION_UPGRADE_CRLF);
+            await ms.WriteAsync(PredefinedHeaders.UPGRADE_WEBSOCKET_CRLF);
+            await ms.WriteAsync(PredefinedHeaders.SEC_WEB_SOCKET_COLON);
 
-            byte[] response = BuildResponse(Request.WebSocketKey);
-            await Request.Response.NetworkStream.WriteAsync(response, 0, response.Length);
+            ReadOnlyMemory<byte> memory = Encoding.UTF8.GetBytes(CreateWebSocketGuid(Request.WebSocketKey) + "\r\n\r\n");
+            await ms.WriteAsync(memory);
 
-            await Task.Yield();
+            ms.WriteTo(Request.Response.NetworkStream);
+
             ServerSocket client = await Server.ClientFactory.Create(Server, Request, Client);
             Server.SetClientConnected(client);
             client.Start();
             Server.Pinger.AddClient(client);
-        }
-
-        /// <summary>
-        /// Creates WebSocket Switching Protocol Response
-        /// </summary>
-        private byte[] BuildResponse(string websocketKey)
-        {
-            byte[] response = Encoding.UTF8.GetBytes(HttpHeaders.HTTP_VERSION + " 101 Switching Protocols" + Environment.NewLine +
-                                                     HttpHeaders.Create(HttpHeaders.SERVER, HttpHeaders.VALUE_SERVER) +
-                                                     HttpHeaders.Create(HttpHeaders.CONNECTION, HttpHeaders.UPGRADE) +
-                                                     HttpHeaders.Create(HttpHeaders.UPGRADE, HttpHeaders.VALUE_WEBSOCKET) +
-                                                     HttpHeaders.Create(HttpHeaders.WEBSOCKET_ACCEPT, CreateWebSocketGuid(websocketKey)) +
-                                                     Environment.NewLine);
-
-            return response;
         }
 
         /// <summary>

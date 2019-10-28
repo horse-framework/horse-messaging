@@ -32,9 +32,7 @@ namespace Sample.WebSocket.Server
 
         protected override void OnMessageReceived(string message)
         {
-            System.Threading.Thread.Sleep(1250);
-            if (message == ".")
-                Send(".");
+            Console.WriteLine("# " + message);
         }
     }
 
@@ -48,6 +46,7 @@ namespace Sample.WebSocket.Server
         public async Task<ServerSocket> Create(TwinoServer server, HttpRequest request, TcpClient client)
         {
             Client c = new Client(server, request, client);
+
             Program.ServerClient = c;
             return await Task.FromResult(c);
         }
@@ -64,7 +63,10 @@ namespace Sample.WebSocket.Server
             server.Start();
 
             while (true)
-                Console.ReadLine();
+            {
+                string msg = Console.ReadLine();
+                ServerClient.Send(msg);
+            }
         }
     }
 }
