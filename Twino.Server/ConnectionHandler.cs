@@ -172,7 +172,7 @@ namespace Twino.Server
 
             bool success = await ProcessHttpRequest(info, request, response);
 
-            if (!success || _server.Options.HttpConnectionTimeMax == 0)
+            if (!success)
             {
                 info.Close();
                 return false;
@@ -211,8 +211,6 @@ namespace Twino.Server
                 info.Close();
                 return false;
             }
-
-            await Task.Yield();
 
             info.State = ConnectionStates.Http;
             await _server.RequestHandler.RequestAsync(_server, request, response);

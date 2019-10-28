@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,9 +11,11 @@ namespace Sample.Http.Server
 {
     class Program
     {
+        private static byte[] HELLO_WORLD = Encoding.UTF8.GetBytes("Hello, World!");
         private static Timer _timer;
         public static List<int> RpsList = new List<int>();
-        public static int Rps { get; set; }
+        public static volatile int Rps;
+        public static int Total;
 
         static void Main(string[] args)
         {
@@ -25,7 +28,7 @@ namespace Sample.Http.Server
 
                 RpsList.Add(r);
                 int avg = Convert.ToInt32(RpsList.Average(x => x));
-                Console.WriteLine($"Rps: {r}, Avg: {avg}");
+                Console.WriteLine($"Rps: {r}, Avg: {avg}, Total: {Total}");
             }, null, 1000, 1000);
 
 

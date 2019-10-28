@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.Server.Http;
@@ -68,7 +69,7 @@ namespace Twino.Server
         /// <summary>
         /// Current server time as RFC 1123
         /// </summary>
-        public string Time { get; private set; }
+        public static byte[] Time { get; private set; }
 
         //creating string from DateTime object per request uses some cpu and time (1 sec full cpu for 10million times)
         /// <summary>
@@ -390,9 +391,9 @@ namespace Twino.Server
                 _timeTimer.Dispose();
             }
 
-            Time = "Date: " + DateTime.UtcNow.ToString("R") + "\r\n";
+            Time = Encoding.UTF8.GetBytes("Date: " + DateTime.UtcNow.ToString("R") + "\r\n");
             _timeTimer = new Timer(1000);
-            _timeTimer.Elapsed += (sender, args) => Time = "Date: " + DateTime.UtcNow.ToString("R") + "\r\n";
+            _timeTimer.Elapsed += (sender, args) => Time = Encoding.UTF8.GetBytes("Date: " + DateTime.UtcNow.ToString("R") + "\r\n");
             _timeTimer.AutoReset = true;
             _timeTimer.Start();
 
