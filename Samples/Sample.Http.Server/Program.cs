@@ -1,6 +1,7 @@
 ﻿using Twino.Server;
 using System;
 using System.Net;
+using System.Text;
 
 namespace Sample.Http.Server
 {

@@ -6,6 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Twino.Core.Http;
 using Twino.Server.Http;
 using Twino.Server.WebSockets;
 using Timer = System.Timers.Timer;
@@ -76,6 +77,8 @@ namespace Twino.Server
         /// TcpListener for HttpServer
         /// </summary>
         private List<ConnectionHandler> _handlers = new List<ConnectionHandler>();
+
+        internal ContentEncodings[] SupportedEncodings { get; private set; }
 
         #endregion
 
@@ -413,6 +416,7 @@ namespace Twino.Server
                 _handlers.Add(handler);
             }
 
+            InitSupportedEncodings();
             IsRunning = true;
             Started?.Invoke(this);
 
@@ -454,5 +458,30 @@ namespace Twino.Server
         }
 
         #endregion
+        
+        private void InitSupportedEncodings()
+        {
+            if (string.IsNullOrEmpty(Options.ContentEncoding))
+            {
+                SupportedEncodings = new ContentEncodings[0];
+                return;
+            }
+            
+            List<ContentEncodings> result = new List<ContentEncodings>();
+            string[] encodings = Options.ContentEncoding.Replace(" ", "").Split(',');
+            foreach (var encoding in encodings)
+            {
+                if (encoding.Equals("br", StringComparison.InvariantCultureIgnoreCase))
+                    result.Add(ContentEncodings.Brotli);
+
+                else if (encoding.Equals("gzip", StringComparison.InvariantCultureIgnoreCase))
+                    result.Add(ContentEncodings.Gzip);
+
+                else if (encoding.Equals("deflate", StringComparison.InvariantCultureIgnoreCase))
+                    result.Add(ContentEncodings.Deflate);
+            }
+
+            SupportedEncodings = result.ToArray();
+        }
     }
 }

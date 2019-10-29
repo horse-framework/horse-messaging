@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.Mvc.Controllers;
 using Twino.Mvc.Controllers.Parameters;
@@ -15,6 +16,14 @@ namespace Sample.Mvc.Controller
     [Route("[controller]")]
     public class DemoController : TwinoController
     {
+
+        [HttpGet("file")]
+        public IActionResult File()
+        {
+            FileStream fs = new FileStream("/home/mehmet/Desktop/twino/kmöğx.pdf", FileMode.Open, FileAccess.Read);
+            FileResult file = new FileResult(fs,"kmöğx.pdf");
+            return file;
+        }
         [HttpGet("geta/{?id}")]
         public async Task<IActionResult> GetA([FromRoute] int? id)
         {

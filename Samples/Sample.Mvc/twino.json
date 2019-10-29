@@ -6,6 +6,7 @@
   "MaximumHeaderLength": 4096,
   "MaximumPendingConnections": 800,
   "RequestTimeout": 60000,
+  "ContentEncoding": "br, gzip, deflate",
   "Hosts": [
     {
       "Port": 441,

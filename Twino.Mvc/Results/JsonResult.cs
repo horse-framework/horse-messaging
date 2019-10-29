@@ -41,12 +41,18 @@ namespace Twino.Mvc.Results
             Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
         }
 
+        /// <summary>
+        /// Sets json objects of json result
+        /// </summary>
         public async Task SetAsync(object model)
         {
             Stream = new MemoryStream();
             await System.Text.Json.JsonSerializer.SerializeAsync(Stream, model, model.GetType());
         }
 
+        /// <summary>
+        /// Sets json objects of json result
+        /// </summary>
         public void Set(object model)
         {
             string serialized = System.Text.Json.JsonSerializer.Serialize(model);

@@ -141,6 +141,8 @@ namespace Twino.Server
             }
 
             request.ContentLength = reader.ContentLength;
+            response.Request = request;
+            
             if (response.StatusCode > 0)
             {
                 await _writer.Write(response);

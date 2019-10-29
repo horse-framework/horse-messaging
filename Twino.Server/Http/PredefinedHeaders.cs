@@ -15,6 +15,7 @@ namespace Twino.Server.Http
         internal static readonly ReadOnlyMemory<byte> CONTENT_TYPE_COLON = Encoding.ASCII.GetBytes("Content-Type: ");
         
         internal static readonly ReadOnlyMemory<byte> ENCODING_GZIP_CRLF = Encoding.ASCII.GetBytes("Content-Encoding: gzip\r\n");
+        internal static readonly ReadOnlyMemory<byte> ENCODING_DEFLATE_CRLF = Encoding.ASCII.GetBytes("Content-Encoding: deflate\r\n");
         internal static readonly ReadOnlyMemory<byte> ENCODING_BR_CRLF = Encoding.ASCII.GetBytes("Content-Encoding: br\n");
         
         internal static readonly byte[] CONTENT_DISPOSITION_COLON = Encoding.ASCII.GetBytes("Content-Disposition: ");

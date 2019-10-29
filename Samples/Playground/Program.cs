@@ -80,6 +80,9 @@ namespace Playground
 
         static void Main(string[] args)
         {
+            string filename = "asda çipşlğüas.txt";
+            string ascii = Encoding.ASCII.GetString(Encoding.ASCII.GetBytes(filename));
+            Console.WriteLine(ascii);
         }
 
         static void Tasks()

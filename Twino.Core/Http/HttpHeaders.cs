@@ -19,6 +19,7 @@ namespace Twino.Core.Http
         public const string LOCATION = "Location";
         public const string CONTENT_ENCODING = "Content-Encoding";
         public const string CONTENT_LENGTH = "Content-Length";
+        public const string CONTENT_DISPOSITION = "Content-Disposition";
         public const string ACCEPT_ENCODING = "Accept-Encoding";
         public const string ACCEPT_LANGUAGE = "Accept-Language";
         public const string UPGRADE = "Upgrade";

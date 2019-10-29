@@ -210,6 +210,9 @@ namespace Twino.Mvc
         /// </summary>
         public async void WriteResponse(HttpResponse response, IActionResult result)
         {
+            if (!response.SuppressContentEncoding && result is FileResult)
+                response.SuppressContentEncoding = true;
+            
             response.StatusCode = result.Code;
             response.ContentType = result.ContentType;
 

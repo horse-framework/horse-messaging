@@ -12,7 +12,8 @@ namespace Twino.Core.Http
     {
         None,
         Gzip,
-        Brotli
+        Brotli,
+        Deflate
     }
 
     /// <summary>
@@ -55,7 +56,17 @@ namespace Twino.Core.Http
         // private StringBuilder Content { get; } = new StringBuilder();
 
         public MemoryStream ResponseStream { get; } = new MemoryStream();
-
+        
+        /// <summary>
+        /// If true, prevents to apply content encodings. even server supports and client accepts.
+        /// </summary>
+        public bool SuppressContentEncoding { get; set; }
+        
+        /// <summary>
+        /// Request of the response
+        /// </summary>
+        public HttpRequest Request { get; internal set; }
+        
         #endregion
 
         /// <summary>
@@ -150,7 +161,7 @@ namespace Twino.Core.Http
                    {
                        ContentType = ContentTypes.TEXT_HTML,
                        StatusCode = HttpStatusCode.BadRequest,
-                       ContentEncoding = ContentEncodings.None
+                       SuppressContentEncoding = true
                    };
         }
 
@@ -163,7 +174,7 @@ namespace Twino.Core.Http
                    {
                        ContentType = ContentTypes.TEXT_HTML,
                        StatusCode = HttpStatusCode.LengthRequired,
-                       ContentEncoding = ContentEncodings.None
+                       SuppressContentEncoding = true
                    };
         }
 
@@ -176,7 +187,7 @@ namespace Twino.Core.Http
                    {
                        ContentType = ContentTypes.TEXT_HTML,
                        StatusCode = HttpStatusCode.RequestUriTooLong,
-                       ContentEncoding = ContentEncodings.None
+                       SuppressContentEncoding = true
                    };
         }
 
@@ -189,7 +200,7 @@ namespace Twino.Core.Http
                    {
                        ContentType = ContentTypes.TEXT_HTML,
                        StatusCode = HttpStatusCode.TooManyRequests,
-                       ContentEncoding = ContentEncodings.None
+                       SuppressContentEncoding = true
                    };
         }
 
@@ -202,7 +213,7 @@ namespace Twino.Core.Http
                    {
                        ContentType = ContentTypes.TEXT_HTML,
                        StatusCode = HttpStatusCode.RequestHeaderFieldsTooLarge,
-                       ContentEncoding = ContentEncodings.None
+                       SuppressContentEncoding = true
                    };
         }
     }
