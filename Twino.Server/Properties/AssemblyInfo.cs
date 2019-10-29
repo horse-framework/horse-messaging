@@ -3,5 +3,4 @@
 
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Twino.Client")]
 [assembly: InternalsVisibleTo("Twino.Mvc")]

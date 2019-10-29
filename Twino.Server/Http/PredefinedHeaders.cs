@@ -16,11 +16,20 @@ namespace Twino.Server.Http
         
         internal static readonly ReadOnlyMemory<byte> ENCODING_GZIP_CRLF = Encoding.ASCII.GetBytes("Content-Encoding: gzip\r\n");
         internal static readonly ReadOnlyMemory<byte> ENCODING_BR_CRLF = Encoding.ASCII.GetBytes("Content-Encoding: br\n");
-
+        
+        internal static readonly byte[] CONTENT_DISPOSITION_COLON = Encoding.ASCII.GetBytes("Content-Disposition: ");
+        internal static readonly byte[] CONTENT_TYPE_COLON_BYTES = Encoding.ASCII.GetBytes("Content-Type: ");
+        internal static readonly byte[] CONTENT_TRANSFER_ENCODING = Encoding.ASCII.GetBytes("Content-Transfer-Encoding: ");
+        
         internal static ReadOnlyMemory<byte> SERVER_TIME_CRLF = Encoding.ASCII.GetBytes("Date: " + DateTime.UtcNow.ToString("R") + "\r\n");
 
         internal static ReadOnlyMemory<byte> WEBSOCKET_101_SWITCHING_PROTOCOLS_CRLF = Encoding.ASCII.GetBytes("HTTP/1.1 101 Switching Protocols\r\n");
         internal static ReadOnlyMemory<byte> UPGRADE_WEBSOCKET_CRLF = Encoding.ASCII.GetBytes("Upgrade: websocket\r\n");
         internal static ReadOnlyMemory<byte> SEC_WEB_SOCKET_COLON = Encoding.ASCII.GetBytes("Sec-WebSocket-Accept: ");
+
+        internal static readonly byte[] BOUNDARY_END = Encoding.ASCII.GetBytes("--");
+
+        internal static string NAME_KV_QUOTA = "name=\"";
+        internal static string FILENAME_KV_QUOTA = "filename=\"";
     }
 }

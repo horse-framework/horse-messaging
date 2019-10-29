@@ -151,6 +151,7 @@ namespace Twino.Server
                 return false;
             }
 
+            reader.ReadContent(request);
             bool again = await ProcessConnection(info, request, response);
 
             if (!again)

@@ -19,7 +19,6 @@ namespace Twino.Client
         {
             HttpRequest request = new HttpRequest();
             request.ContentStream = new MemoryStream();
-            request.Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 
             //string[] lines = data.Split(new string[] { "\r\n" }, StringSplitOptions.None);
             bool head = true;

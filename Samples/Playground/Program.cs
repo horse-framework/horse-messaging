@@ -76,35 +76,10 @@ namespace Playground
 
             sw.Stop();
             Console.WriteLine("elapsed ms: " + sw.ElapsedMilliseconds);
-            Console.ReadLine();
         }
 
         static void Main(string[] args)
         {
-            ServerOptions serverOptions = ServerOptions.CreateDefault();
-            HttpReader reader = new HttpReader(serverOptions, serverOptions.Hosts[0]);
-            byte[] array = Encoding.UTF8.GetBytes("GET /plaintext HTTP/1.1\r\n" +
-                                                  "Host: localhost\r\n" +
-                                                  "Connection: keep-alive\r\n" +
-                                                  "Content-Length: 15\r\n" +
-                                                  "X-Data: Test\r\n\r\n" +
-                                                  "a=123&b=456&c=1");
-
-            MemoryStream ms = new MemoryStream(array);
-
-
-            ms.Position = 0;
-            var tuple = reader.Read(ms).Result;
-            var request = tuple.Item1;
-            Console.WriteLine(request.Method + " " + request.Path + " HTTP/1.1");
-            foreach (var kv in request.Headers)
-            {
-                Console.WriteLine(kv.Key + ":" + kv.Value);
-            }
-
-            Console.WriteLine("-> Header Length: " + reader.HeaderLength);
-            Console.WriteLine("-> Content Length: " + reader.ContentLength);
-            Console.WriteLine(Encoding.UTF8.GetString(request.ContentStream.ToArray()));
         }
 
         static void Tasks()

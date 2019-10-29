@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -25,7 +27,7 @@ namespace Twino.Server.Http
         private bool _firstLine = true;
         private bool _readingHeaders = true;
         private readonly byte[] _smallBuffer = new byte[256];
-        
+
         //isn't initialized now, maybe we never require it
         private byte[] _largeBuffer;
 
@@ -336,24 +338,87 @@ namespace Twino.Server.Http
                 if (key.Equals(HttpHeaders.HOST, StringComparison.InvariantCultureIgnoreCase))
                     request.Host = value;
 
-                else if (key.Equals(HttpHeaders.WEBSOCKET_KEY, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    request.WebSocketKey = value;
-                    request.IsWebSocket = true;
-                }
-
                 else if (key.Equals(HttpHeaders.ACCEPT_ENCODING, StringComparison.InvariantCultureIgnoreCase))
                     request.AcceptEncoding = value;
 
                 else if (key.Equals(HttpHeaders.CONTENT_TYPE, StringComparison.InvariantCultureIgnoreCase))
-                    request.ContentType = value;
+                {
+                    int i = value.IndexOf(';');
+                    if (i < 1)
+                        request.ContentType = value;
+                    else
+                    {
+                        request.ContentType = value.Substring(0, i);
+                        int partIndex = value.IndexOf('=', i + 2);
+                        if (partIndex > 0)
+                            request.Boundary = value.Substring(partIndex + 1);
+                    }
+                }
 
                 else if (key.Equals(HttpHeaders.CONTENT_LENGTH, StringComparison.InvariantCultureIgnoreCase))
                 {
                     request.ContentLength = Convert.ToInt32(value);
                     request.ContentLengthSpecified = true;
                 }
+
+                else if (key.Equals(HttpHeaders.WEBSOCKET_KEY, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    request.WebSocketKey = value;
+                    request.IsWebSocket = true;
+                }
             }
         }
+        
+        /// <summary>
+        /// Reads query string from header and form - file data from content, sets values to request's QueryString, Form and Files properties
+        /// </summary>
+        internal void ReadContent(HttpRequest request)
+        {
+            request.QueryString = !string.IsNullOrEmpty(request.QueryStringData)
+                                      ? EncodedFormDataReader.Read(request.QueryStringData)
+                                      : new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+
+            if (string.IsNullOrEmpty(request.ContentType))
+                return;
+
+            if (request.ContentType.Equals(HttpHeaders.MULTIPART_FORM_DATA, StringComparison.InvariantCultureIgnoreCase))
+            {
+                if (request.ContentLength > 0)
+                {
+                    List<FormDataItem> data = MultipartFormDataReader.Read(request.Boundary, request.ContentStream);
+
+                    request.Form = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+                    foreach (FormDataItem item in data.Where(x => !x.IsFile))
+                    {
+                        string value = Encoding.UTF8.GetString(item.Stream.ToArray());
+                        if (request.Form.ContainsKey(item.Name))
+                            request.Form[item.Name] += "," + value;
+                        else
+                            request.Form.Add(item.Name, value);
+                    }
+
+                    request.Files = data.Where(x => x.IsFile).Select(x => new FormFile
+                                                                          {
+                                                                              Filename = x.Filename,
+                                                                              Name = x.Name,
+                                                                              Size = Convert.ToInt32(x.Stream.Length),
+                                                                              Stream = x.Stream,
+                                                                              ContentType = x.ContentType
+                                                                          });
+                }
+                else
+                {
+                    request.Form = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+                    request.Files = new IFormFile[0];
+                }
+            }
+            else if (request.ContentType.Equals(HttpHeaders.APPLICATION_FORM_URLENCODED, StringComparison.InvariantCultureIgnoreCase))
+            {
+                request.Form = request.ContentLength > 0
+                                   ? EncodedFormDataReader.Read(request.ContentStream)
+                                   : new Dictionary<string, string>();
+            }
+        }
+
     }
 }

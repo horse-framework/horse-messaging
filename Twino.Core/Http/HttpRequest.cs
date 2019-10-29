@@ -58,11 +58,6 @@ namespace Twino.Core.Http
         public string AcceptEncoding { get; set; }
 
         /// <summary>
-        /// Full querystring data, such as a=1&b=2&c=3...
-        /// </summary>
-        public string QueryStringData { get; set; }
-
-        /// <summary>
         /// Request content stream
         /// </summary>
         public MemoryStream ContentStream { get; set; }
@@ -73,84 +68,34 @@ namespace Twino.Core.Http
         public int ContentLength { get; internal set; }
 
         /// <summary>
-        /// True if request has Content-Length header
-        /// </summary>
-        internal bool ContentLengthSpecified { get; set; }
-
-        /// <summary>
         /// Request Content Type (form, json etc)
         /// </summary>
         public string ContentType { get; set; }
 
+        public Dictionary<string, string> QueryString { get; internal set; }
+        public Dictionary<string, string> Form { get; internal set; }
+        public IEnumerable<IFormFile> Files { get; internal set; }
+
         /// <summary>
         /// All other headers as key and value
         /// </summary>
-        public Dictionary<string, string> Headers { get; set; } = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+        public Dictionary<string, string> Headers { get; } = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 
         /// <summary>
         /// Response of the request
         /// </summary>
         public HttpResponse Response { get; internal set; }
+        
+        /// <summary>
+        /// Full querystring data, such as a=1&b=2&c=3...
+        /// </summary>
+        internal string QueryStringData { get; set; }
+
+        internal string Boundary { get; set; }
 
         /// <summary>
-        /// Parses Path extension and returns query string key value pairs
+        /// True if request has Content-Length header
         /// </summary>
-        public Dictionary<string, string> GetQueryStringValues()
-        {
-            Dictionary<string, string> items = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
-
-            if (string.IsNullOrEmpty(QueryStringData))
-                return items;
-
-            string[] pairs = QueryStringData.Split('&');
-            foreach (string pair in pairs)
-            {
-                string[] key_value = pair.Split('=');
-                if (key_value.Length != 2)
-                    continue;
-
-                string key = key_value[0];
-                string value = HtmlEncoder.HtmlDecode(key_value[1], Encoding.UTF8);
-
-                if (items.ContainsKey(key))
-                    items[key] += "," + value;
-                else
-                    items.Add(key, value);
-            }
-
-            return items;
-        }
-
-        /// <summary>
-        /// Parses request content and returns form key value pairs
-        /// </summary>
-        public Dictionary<string, string> GetFormValues()
-        {
-            Dictionary<string, string> items = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
-            if (ContentStream == null)
-                return items;
-
-            string content = Encoding.UTF8.GetString(ContentStream.ToArray());
-            if (string.IsNullOrEmpty(content))
-                return items;
-
-            string[] pairs = content.Split('&');
-            foreach (string pair in pairs)
-            {
-                string[] key_value = pair.Split('=');
-                if (key_value.Length != 2)
-                    continue;
-
-                string key = key_value[0];
-                string value = HtmlEncoder.HtmlDecode(key_value[1], Encoding.UTF8);
-
-                if (items.ContainsKey(key))
-                    items[key] = "," + value;
-                else
-                    items.Add(key, value);
-            }
-
-            return items;
-        }
+        internal bool ContentLengthSpecified { get; set; }
     }
 }

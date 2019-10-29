@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Twino.Core.Http;
@@ -12,11 +11,9 @@ namespace Test.Mvc.Helpers
     {
         public async Task Invoke(NextMiddlewareHandler next, HttpRequest request, HttpResponse response)
         {
-            Dictionary<string, string> queryStrings = request.GetQueryStringValues();
-
-            if (queryStrings.ContainsKey("middleware"))
+            if (request.QueryString.ContainsKey("middleware"))
             {
-                string value = queryStrings["middleware"];
+                string value = request.QueryString["middleware"];
                 if (value == "custom")
                 {
                     IActionResult result = new StatusCodeResult(HttpStatusCode.Forbidden);

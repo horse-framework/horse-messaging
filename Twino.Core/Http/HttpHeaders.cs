@@ -46,6 +46,11 @@ namespace Twino.Core.Http
         public const string HTTP_OPTIONS = "OPTIONS";
         public const string HTTP_HEAD = "HEAD";
 
+        public const string MULTIPART_FORM_DATA = "multipart/form-data";
+        public const string APPLICATION_FORM_URLENCODED = "application/x-www-form-urlencoded";
+        public const string APPLICATION_OCTET_STREAM = "application/octet-stream";
+        public const string MULTIPART_MIXED = "multipart/mixed";
+
         public const string VALUE_SERVER = "twino";
         public const string VALUE_CHARSET_UTF8 = "charset=UTF-8";
         public const string VALUE_GZIP = "gzip";
@@ -61,8 +66,7 @@ namespace Twino.Core.Http
         public const string VALUE_TIMEOUT = "timeout";
         public const string VALUE_MAX = "max";
         public const string VALUE_WEBSOCKET_EXTENSIONS = "permessage-deflate; client_max_window_bits";
-
-
+        
         public const string WEBSOCKET_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
         /// <summary>

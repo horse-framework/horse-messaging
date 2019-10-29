@@ -233,9 +233,6 @@ namespace Twino.Mvc
         /// </summary>
         private IEnumerable<ParameterValue> FillParameters(HttpRequest request, RouteMatch route)
         {
-            Dictionary<string, string> queryStrings = request.GetQueryStringValues();
-            Dictionary<string, string> formValues = request.GetFormValues();
-
             foreach (ActionParameter ap in route.Route.Parameters.OrderBy(x => x.Index))
             {
                 object value = null;
@@ -259,17 +256,18 @@ namespace Twino.Mvc
                             XmlSerializer serializer = new XmlSerializer(ap.ParameterType);
                             value = serializer.Deserialize(ms);
                         }
+
                         break;
                     }
 
                     case ParameterSource.Form:
-                        if (formValues.ContainsKey(ap.FromName))
-                            value = formValues[ap.FromName];
+                        if (request.Form.ContainsKey(ap.FromName))
+                            value = request.Form[ap.FromName];
                         break;
 
                     case ParameterSource.QueryString:
-                        if (queryStrings.ContainsKey(ap.FromName))
-                            value = queryStrings[ap.FromName];
+                        if (request.QueryString.ContainsKey(ap.FromName))
+                            value = request.QueryString[ap.FromName];
                         break;
 
                     case ParameterSource.Header:
