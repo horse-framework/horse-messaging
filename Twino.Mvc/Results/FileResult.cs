@@ -1,8 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using Twino.Core.Http;
 using Twino.Mvc.Controllers;
 using Twino.Server.Http;
@@ -24,7 +25,7 @@ namespace Twino.Mvc.Results
         /// <summary>
         /// Result data stream
         /// </summary>
-        public Stream Stream { get; } = new MemoryStream();
+        public Stream Stream { get; private set; }
         
         /// <summary>
         /// Additional custom headers with key and value
@@ -48,7 +49,8 @@ namespace Twino.Mvc.Results
         private void Set(Stream stream, string contentType, string filename)
         {
             ContentType = contentType;
-            stream.CopyTo(Stream);
+            Stream = stream;
+            //GC.SuppressFinalize(Stream);
             
             if (!string.IsNullOrEmpty(filename))
             {

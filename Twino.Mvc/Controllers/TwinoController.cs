@@ -1,4 +1,5 @@
-﻿using Twino.Mvc.Results;
+﻿using System.IO;
+using Twino.Mvc.Results;
 using Twino.Server;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -98,6 +99,14 @@ namespace Twino.Mvc.Controllers
         protected async Task<IActionResult> StringAsync(string content)
         {
             return await Task.FromResult(new StringResult(content));
+        }
+
+        /// <summary>
+        /// Creates new file result
+        /// </summary>
+        protected async Task<IActionResult> File(Stream fileStream, string filename)
+        {
+            return await Task.FromResult(new FileResult(fileStream, filename));
         }
     }
 }

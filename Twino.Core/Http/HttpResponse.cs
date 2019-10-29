@@ -55,7 +55,7 @@ namespace Twino.Core.Http
         /// </summary>
         // private StringBuilder Content { get; } = new StringBuilder();
 
-        public MemoryStream ResponseStream { get; } = new MemoryStream();
+        public Stream ResponseStream { get; internal set; } = new MemoryStream();
         
         /// <summary>
         /// If true, prevents to apply content encodings. even server supports and client accepts.

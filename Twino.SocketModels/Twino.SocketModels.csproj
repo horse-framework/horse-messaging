@@ -13,7 +13,7 @@
     <PackageTags>twino, websocket, client, server, model, messaging</PackageTags>
     <Description>Object based communication library for Twino WebSocket servers and clients.</Description>
     <FileVersion>1.2.0</FileVersion>
-    <PackageVersion>1.2.0</PackageVersion>
+    <PackageVersion>1.2.0-beta</PackageVersion>
     <LangVersion>8</LangVersion>
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>

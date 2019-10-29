@@ -94,6 +94,9 @@ namespace Twino.Server.Http
             await resultStream.CopyToAsync(m);
 
             m.WriteTo(stream);
+
+            if (response.ResponseStream != null)
+                GC.ReRegisterForFinalize(response.ResponseStream);
         }
     }
 }

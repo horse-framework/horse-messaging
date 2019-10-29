@@ -228,7 +228,10 @@ namespace Twino.Mvc
             }
 
             if (result.Stream != null && result.Stream.Length > 0)
-                await response.WriteAsync(result.Stream);
+            {
+                response.ResponseStream = result.Stream;
+                GC.SuppressFinalize(response.ResponseStream);
+            }
         }
 
         /// <summary>

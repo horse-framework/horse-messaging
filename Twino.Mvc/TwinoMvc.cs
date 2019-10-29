@@ -11,7 +11,9 @@ using Twino.Server.WebSockets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Reflection;
+using Twino.Core.Http;
 
 namespace Twino.Mvc
 {
@@ -387,6 +389,26 @@ namespace Twino.Mvc
                 Server.BlockWhileRunning();
         }
 
+        #endregion
+
+        #region Use Files
+        
+        public void UseFiles(string urlPath, string physicalPath)
+        {
+        }
+        
+        public void UseFiles(string urlPath, string[] physicalPaths)
+        {
+        }
+        
+        public void UseFiles(string urlPath, string physicalPath, Func<HttpRequest, HttpStatusCode> validation)
+        {
+        }
+        
+        public void UseFiles(string urlPath, string[] physicalPaths, Func<HttpRequest, HttpStatusCode> validation)
+        {
+        }
+        
         #endregion
     }
 }
