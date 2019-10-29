@@ -89,6 +89,8 @@ namespace Twino.Server.Http
                 await Write(m, header.Key, header.Value);
 
             await m.WriteAsync(HttpReader.CRLF, 0, 2);
+
+            resultStream.Position = 0;
             await resultStream.CopyToAsync(m);
 
             m.WriteTo(stream);

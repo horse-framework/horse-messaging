@@ -212,7 +212,7 @@ namespace Twino.Mvc
         {
             if (!response.SuppressContentEncoding && result is FileResult)
                 response.SuppressContentEncoding = true;
-            
+
             response.StatusCode = result.Code;
             response.ContentType = result.ContentType;
 

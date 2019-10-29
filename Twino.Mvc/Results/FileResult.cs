@@ -24,7 +24,7 @@ namespace Twino.Mvc.Results
         /// <summary>
         /// Result data stream
         /// </summary>
-        public Stream Stream { get; private set; }
+        public Stream Stream { get; } = new MemoryStream();
         
         /// <summary>
         /// Additional custom headers with key and value
@@ -48,12 +48,12 @@ namespace Twino.Mvc.Results
         private void Set(Stream stream, string contentType, string filename)
         {
             ContentType = contentType;
-            Stream = stream;
+            stream.CopyTo(Stream);
             
             if (!string.IsNullOrEmpty(filename))
             {
                 string ascii = Encoding.ASCII.GetString(Encoding.ASCII.GetBytes(filename)).Replace("?", "_");
-                string encoded = System.Net.WebUtility.UrlEncode(filename);
+                string encoded = WebUtility.UrlEncode(filename);
                 Headers.Add(HttpHeaders.CONTENT_DISPOSITION, $"attachment; filename=\"{ascii}\"; filename*=UTF-8''{encoded}");
             }
         }
