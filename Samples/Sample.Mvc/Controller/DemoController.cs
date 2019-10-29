@@ -48,14 +48,14 @@ namespace Sample.Mvc.Controller
         {
             return String("Hello world: " + id);
         }
-        
-        [HttpPost("get2")]
-        public IActionResult Get2([FromBody] A a)
+
+        [HttpGet("get2")]
+        public async Task<IActionResult> Get2()
         {
-            return Json(new
-                        {
-                            Message = "Hello World 2: "
-                        });
+            return await JsonAsync(new
+                                   {
+                                       Message = "Hello World 2: "
+                                   });
         }
 
         [HttpGet("optional/{?num}")]

@@ -52,7 +52,7 @@ namespace Twino.Core.Http
         /// Response content. The response byte array is created just be sending the data to the client.
         /// Until this operation, data wil be appended to the content string builder.
         /// </summary>
-       // private StringBuilder Content { get; } = new StringBuilder();
+        // private StringBuilder Content { get; } = new StringBuilder();
 
         public MemoryStream ResponseStream { get; } = new MemoryStream();
 
@@ -76,16 +76,24 @@ namespace Twino.Core.Http
             await ResponseStream.WriteAsync(data, 0, data.Length);
         }
 
+        /// <summary>
+        /// Writes a stream to the response stream
+        /// </summary>
         public void Write(Stream stream)
         {
+            stream.Position = 0;
             stream.CopyTo(ResponseStream);
         }
-        
+
+        /// <summary>
+        /// Writes a stream to the response stream
+        /// </summary>
         public async Task WriteAsync(Stream stream)
         {
+            stream.Position = 0;
             await stream.CopyToAsync(ResponseStream);
         }
-        
+
         /// <summary>
         /// Writes a string to the response
         /// </summary>
@@ -93,7 +101,7 @@ namespace Twino.Core.Http
         {
             await ResponseStream.WriteAsync(data, 0, data.Length);
         }
-        
+
         /// <summary>
         /// Sets response content type to html and status to 200
         /// </summary>
@@ -122,7 +130,7 @@ namespace Twino.Core.Http
             byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(model));
             ResponseStream.Write(data, 0, data.Length);
         }
-        
+
         /// <summary>
         /// Sets response content type to json and status to 200
         /// </summary>
