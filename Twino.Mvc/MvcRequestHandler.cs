@@ -63,6 +63,9 @@ namespace Twino.Mvc
             }
             catch (Exception ex)
             {
+                if (request.Response.ResponseStream != null)
+                    GC.ReRegisterForFinalize(request.Response.ResponseStream);
+                
                 if (Mvc.IsDevelopment)
                 {
                     IErrorHandler handler = new DevelopmentErrorHandler();
@@ -208,7 +211,7 @@ namespace Twino.Mvc
         /// <summary>
         /// Writes the action result to the response
         /// </summary>
-        public async void WriteResponse(HttpResponse response, IActionResult result)
+        public void WriteResponse(HttpResponse response, IActionResult result)
         {
             if (!response.SuppressContentEncoding && result is FileResult)
                 response.SuppressContentEncoding = true;

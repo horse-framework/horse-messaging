@@ -50,7 +50,6 @@ namespace Twino.Mvc.Results
         {
             ContentType = contentType;
             Stream = stream;
-            //GC.SuppressFinalize(Stream);
             
             if (!string.IsNullOrEmpty(filename))
             {
