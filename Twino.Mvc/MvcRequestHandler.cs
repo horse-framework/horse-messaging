@@ -208,7 +208,7 @@ namespace Twino.Mvc
         /// <summary>
         /// Writes the action result to the response
         /// </summary>
-        public void WriteResponse(HttpResponse response, IActionResult result)
+        public async void WriteResponse(HttpResponse response, IActionResult result)
         {
             response.StatusCode = result.Code;
             response.ContentType = result.ContentType;
@@ -224,8 +224,8 @@ namespace Twino.Mvc
                         response.AdditionalHeaders.Add(header.Key, header.Value);
             }
 
-            if (!string.IsNullOrEmpty(result.Content))
-                response.Write(result.Content);
+            if (result.Stream != null && result.Stream.Length > 0)
+                await response.WriteAsync(result.Stream);
         }
 
         /// <summary>

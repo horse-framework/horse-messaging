@@ -37,7 +37,9 @@ namespace Twino.Mvc.Controllers
         /// </summary>
         protected IActionResult Json(object obj)
         {
-            return new JsonResult(obj);
+            JsonResult json = new JsonResult();
+            json.Set(obj);
+            return json;
         }
 
         /// <summary>
@@ -45,9 +47,11 @@ namespace Twino.Mvc.Controllers
         /// </summary>
         protected async Task<IActionResult> JsonAsync(object obj)
         {
-            return await Task.FromResult(new JsonResult(obj));
+            JsonResult json = new JsonResult();
+            await json.SetAsync(obj);
+            return json;
         }
-        
+
         /// <summary>
         /// Creates new XML result from the object. Status code will be set to 200.
         /// </summary>
@@ -87,7 +91,7 @@ namespace Twino.Mvc.Controllers
         {
             return new StringResult(content);
         }
-        
+
         /// <summary>
         /// Creates new plain text result from the value. Status code will be set to 200.
         /// </summary>

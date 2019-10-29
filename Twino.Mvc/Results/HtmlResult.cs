@@ -1,7 +1,9 @@
 ﻿using System;
 using Twino.Mvc.Controllers;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
+using System.Text;
 using Twino.Core;
 
 namespace Twino.Mvc.Results
@@ -24,7 +26,7 @@ namespace Twino.Mvc.Results
         /// <summary>
         /// Result content body
         /// </summary>
-        public string Content { get; }
+        public Stream Stream { get; }
 
         /// <summary>
         /// Additional custom headers with key and value
@@ -36,7 +38,7 @@ namespace Twino.Mvc.Results
             Code = HttpStatusCode.OK;
             ContentType = ContentTypes.TEXT_HTML;
             Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
-            Content = content;
+            Stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
         }
     }
 }

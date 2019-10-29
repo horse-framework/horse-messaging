@@ -75,6 +75,16 @@ namespace Twino.Core.Http
             byte[] data = Encoding.UTF8.GetBytes(content);
             await ResponseStream.WriteAsync(data, 0, data.Length);
         }
+
+        public void Write(Stream stream)
+        {
+            stream.CopyTo(ResponseStream);
+        }
+        
+        public async Task WriteAsync(Stream stream)
+        {
+            await stream.CopyToAsync(ResponseStream);
+        }
         
         /// <summary>
         /// Writes a string to the response

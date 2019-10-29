@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Net;
 
 namespace Twino.Mvc.Controllers
@@ -21,7 +22,7 @@ namespace Twino.Mvc.Controllers
         /// <summary>
         /// Result content body
         /// </summary>
-        string Content { get; }
+        Stream Stream { get; }
 
         /// <summary>
         /// Additional custom headers with key and value

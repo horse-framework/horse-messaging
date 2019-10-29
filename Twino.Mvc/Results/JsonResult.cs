@@ -1,7 +1,10 @@
 ﻿using System;
 using Twino.Mvc.Controllers;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
+using System.Text;
+using System.Threading.Tasks;
 using Twino.Core;
 
 namespace Twino.Mvc.Results
@@ -24,19 +27,30 @@ namespace Twino.Mvc.Results
         /// <summary>
         /// Result content body
         /// </summary>
-        public string Content { get; private set; }
+        public Stream Stream { get; private set; }
 
         /// <summary>
         /// Additional custom headers with key and value
         /// </summary>
         public Dictionary<string, string> Headers { get; }
         
-        public JsonResult(object obj)
+        public JsonResult()
         {
             Code = HttpStatusCode.OK;
             ContentType = ContentTypes.APPLICATION_JSON;
             Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
-            Content = Newtonsoft.Json.JsonConvert.SerializeObject(obj);
+        }
+
+        public async Task SetAsync(object model)
+        {
+            Stream = new MemoryStream();
+            await System.Text.Json.JsonSerializer.SerializeAsync(Stream, model, model.GetType());
+        }
+
+        public void Set(object model)
+        {
+            string serialized = System.Text.Json.JsonSerializer.Serialize(model);
+            Stream = new MemoryStream(Encoding.UTF8.GetBytes(serialized));
         }
     }
 }

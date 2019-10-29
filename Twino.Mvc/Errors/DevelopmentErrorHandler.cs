@@ -49,9 +49,7 @@ namespace Twino.Mvc.Errors
             response.StatusCode = result.Code;
             response.ContentType = result.ContentType;
             response.AdditionalHeaders = response.AdditionalHeaders;
-
-            if (!string.IsNullOrEmpty(result.Content))
-                response.Write(result.Content);
+            response.Write(result.Stream);
         }
     }
 }

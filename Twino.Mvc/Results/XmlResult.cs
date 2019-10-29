@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
 using Twino.Core;
@@ -26,7 +27,7 @@ namespace Twino.Mvc.Results
         /// <summary>
         /// Result content body
         /// </summary>
-        public string Content { get; }
+        public Stream Stream { get; }
 
         /// <summary>
         /// Additional custom headers with key and value
@@ -43,8 +44,8 @@ namespace Twino.Mvc.Results
             using StringWriter writer = new StringWriter();
             using XmlWriter xml = XmlWriter.Create(writer);
             serializer.Serialize(xml, obj);
-            Content = xml.ToString();
-        }
 
+            Stream = new MemoryStream(Encoding.UTF8.GetBytes(xml.ToString()));
+        }
     }
 }
