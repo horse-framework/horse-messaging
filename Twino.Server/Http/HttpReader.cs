@@ -201,6 +201,14 @@ namespace Twino.Server.Http
             //if buffer doesn't contain CRLF, we need load more data and come back here again 
             if (endOfLine < 0)
             {
+                //last empty line
+                if (buffer[start] == LF)
+                {
+                    requiredMoreData = false;
+                    _readingHeaders = false;
+                    return start + 1;
+                }
+                
                 //keep last read, read more and come here again
                 requiredMoreData = true;
                 return start;
