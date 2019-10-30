@@ -26,10 +26,8 @@ namespace Twino.Server.Http
 
         private bool _firstLine = true;
         private bool _readingHeaders = true;
-        private readonly byte[] _smallBuffer = new byte[256];
-
-        //isn't initialized now, maybe we never require it
-        private byte[] _largeBuffer;
+        private readonly byte[] _buffer = new byte[256];
+        private readonly MemoryStream _stream = new MemoryStream(256);
 
         public int HeaderLength { get; private set; }
         public int ContentLength { get; private set; }
@@ -65,69 +63,50 @@ namespace Twino.Server.Http
             //this value will be true, if small buffer isn't enough and tells us to use large buffer
             bool requiredMoreData = false;
 
-            //when large buffer is used, this value will be true. and if we can't find CRLF even this value is true, bad request will be returned
-            bool largeBufferUsed = false;
-
             do
             {
-                byte[] buffer;
-
                 //if end of the request reading
                 if (!_readingHeaders && ContentLength >= request.ContentLength)
                     break;
 
+                readLength = await stream.ReadAsync(_buffer, 0, _buffer.Length);
+                if (readLength < 1 && _firstLine)
+                    return new Tuple<HttpRequest, HttpResponse>(null, null);
+
                 if (requiredMoreData)
                 {
-                    //we can't find CRLF with large buffer, return bad request
-                    if (largeBufferUsed)
-                    {
-                        response.StatusCode = HttpStatusCode.BadRequest;
-                        break;
-                    }
-
-                    //we need to keep data between start and end, read more data and put new data to the end of the kept
-
-                    if (_largeBuffer == null)
-                        _largeBuffer = new byte[6144]; //4096 for max cookie size, others for "Cookie:" key and cookie path and deadline (6KB total)
-
-                    //copy left data to large buffer
-                    int prevSize = readLength - start;
-                    Buffer.BlockCopy(_smallBuffer, start, _largeBuffer, 0, prevSize);
-
-                    //read more
-                    int read = await stream.ReadAsync(_largeBuffer, prevSize, _largeBuffer.Length - prevSize);
-
-                    readLength = prevSize + read;
-                    buffer = _largeBuffer;
-                    largeBufferUsed = true;
+                    _stream.Write(_buffer, 0, readLength);
+                    requiredMoreData = false;
                 }
                 else
                 {
-                    readLength = await stream.ReadAsync(_smallBuffer, 0, _smallBuffer.Length);
-                    if (readLength < 1 && _firstLine)
-                        return new Tuple<HttpRequest, HttpResponse>(null, null);
+                    if (_stream.Length != readLength || _stream.Position > 0)
+                    {
+                        _stream.Position = 0;
+                        _stream.SetLength(readLength);
+                    }
 
-                    buffer = _smallBuffer;
-                    largeBufferUsed = false;
+                    _stream.Write(_buffer, 0, readLength);
+                    start = 0;
                 }
 
                 if (readLength < 1)
                     break;
 
-                start = 0;
-                while (start < readLength)
+                //start = 0;
+                while (start < _stream.Length)
                 {
                     //if reading header is finished, redirect to content reading
                     if (!_readingHeaders)
                     {
-                        start = ReadContent(request, buffer, start, readLength - start);
+                        start = ReadContent(request, _stream.GetBuffer(), start, (int) _stream.Length - start);
                         continue;
                     }
 
                     //reading first line for http method, url and versio
                     if (_firstLine)
                     {
-                        start = ReadRequestInfo(request, buffer, readLength - start, out requiredMoreData);
+                        start = ReadRequestInfo(request, _stream.GetBuffer(), (int) _stream.Length, out requiredMoreData);
 
                         //reading first line isn't completed, we need to feed data and re-read first line
                         if (!requiredMoreData)
@@ -136,7 +115,7 @@ namespace Twino.Server.Http
 
                     //reading headers
                     else
-                        start = ReadHeaderLine(request, buffer, start, readLength - start, out requiredMoreData);
+                        start = ReadHeaderLine(request, _stream.GetBuffer(), start, (int) _stream.Length - start, out requiredMoreData);
 
                     if (requiredMoreData)
                         break;
@@ -368,7 +347,7 @@ namespace Twino.Server.Http
                 }
             }
         }
-        
+
         /// <summary>
         /// Reads query string from header and form - file data from content, sets values to request's QueryString, Form and Files properties
         /// </summary>
@@ -419,6 +398,5 @@ namespace Twino.Server.Http
                                    : new Dictionary<string, string>();
             }
         }
-
     }
 }

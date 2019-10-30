@@ -43,27 +43,13 @@ namespace Sample.WebSocket.Client
             server.Start();
         }
 
-        static void ConnectWithTcpClient()
-        {
-            Console.WriteLine("connecting");
-            TcpClient tcpx = new TcpClient();
-            tcpx.Connect("127.0.0.1", 84);
-
-            while (tcpx.Connected)
-            {
-                Console.WriteLine("connected");
-                tcpx.GetStream().Write(new byte[] { 97 });
-            }
-            Console.WriteLine("disconnected");
-        }
-
         static void ConnectWithTwino()
         {
             TwinoClient cx = new TwinoClient();
             cx.MessageReceived += (c, m) => Console.WriteLine("# " + m);
             cx.Connected += c => Console.WriteLine("Connected"); 
             cx.Disconnected += c => Console.WriteLine("Disconnected"); 
-            cx.Connect("ws://127.0.0.1:82");
+            cx.Connect("ws://127.0.0.1:84");
             while (true)
             {
                 string s = Console.ReadLine();

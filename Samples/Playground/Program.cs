@@ -80,9 +80,21 @@ namespace Playground
 
         static void Main(string[] args)
         {
-            string filename = "asda çipşlğüas.txt";
-            string ascii = Encoding.ASCII.GetString(Encoding.ASCII.GetBytes(filename));
-            Console.WriteLine(ascii);
+            string req = "GET / HTTP/1.1\r\n" +
+                         "Host: 127.0.0.1\r\n" +
+                         "Connection: Upgrade\r\n" +
+                         "Pragma: no-cache\r\n" +
+                         "Cache-Control: no-cache\r\n" +
+                         "Upgrade: websocket\r\n" +
+                         "Sec-WebSocket-Version: 13\r\n" +
+                         "Accept-Encoding: gzip, deflate, br\r\n" +
+                         "Accept-Language: en-US,en;q=0.9\r\n" +
+                         "Sec-WebSocket-Key: /gXWdaa3iWc5nw415P1vE03Ded8=\r\n" +
+                         "Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits";
+            byte[] bdata = Encoding.UTF8.GetBytes(req);
+            HttpReader reader = new HttpReader(ServerOptions.CreateDefault(), new HostOptions());
+            var tuple = reader.Read(new MemoryStream(bdata)).Result;
+            Console.WriteLine(tuple.Item2.StatusCode);
         }
 
         static void Tasks()
