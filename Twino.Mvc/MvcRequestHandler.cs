@@ -65,7 +65,7 @@ namespace Twino.Mvc
             {
                 if (request.Response.ResponseStream != null)
                     GC.ReRegisterForFinalize(request.Response.ResponseStream);
-                
+
                 if (Mvc.IsDevelopment)
                 {
                     IErrorHandler handler = new DevelopmentErrorHandler();
@@ -231,10 +231,7 @@ namespace Twino.Mvc
             }
 
             if (result.Stream != null && result.Stream.Length > 0)
-            {
-                response.ResponseStream = result.Stream;
-                GC.SuppressFinalize(response.ResponseStream);
-            }
+                response.SetStream(result.Stream, true, true);
         }
 
         /// <summary>

@@ -49,12 +49,21 @@ namespace Twino.Server
                 try
                 {
                     TcpClient tcp = await _listener.Listener.AcceptTcpClientAsync();
-                    ThreadPool.UnsafeQueueUserWorkItem(async t => await AcceptClient(tcp), tcp, false);
+                    ThreadPool.UnsafeQueueUserWorkItem(async t =>
+                    {
+                        try
+                        {
+                            await AcceptClient(tcp);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (_server.Logger != null)
+                                _server.Logger.LogException("Unhandled Exception", ex);
+                        }
+                    }, tcp, false);
                 }
-                catch (Exception ex)
+                catch
                 {
-                    if (_server.Logger != null)
-                        _server.Logger.LogException("ACCEPT_TCP_CLIENT", ex);
                 }
             }
         }
@@ -112,7 +121,6 @@ namespace Twino.Server
                     keepReading = await ReadConnection(info, reader);
                     if (keepReading)
                         reader.Reset();
-                    
                 } while (keepReading);
             }
             catch (Exception ex)
@@ -142,7 +150,7 @@ namespace Twino.Server
 
             request.ContentLength = reader.ContentLength;
             response.Request = request;
-            
+
             if (response.StatusCode > 0)
             {
                 await _writer.Write(response);

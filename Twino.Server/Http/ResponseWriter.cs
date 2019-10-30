@@ -95,7 +95,7 @@ namespace Twino.Server.Http
 
             m.WriteTo(stream);
 
-            if (response.ResponseStream != null)
+            if (response.StreamSuppressed && response.ResponseStream != null)
                 GC.ReRegisterForFinalize(response.ResponseStream);
         }
     }
