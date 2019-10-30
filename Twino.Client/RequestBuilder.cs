@@ -58,7 +58,7 @@ namespace Twino.Client
                 }
                 else
                 {
-                    string sdata = (i + 1 == lines.Length) ? line : (line + Environment.NewLine);
+                    string sdata = (i + 1 == lines.Length) ? line : (line + "\r\n");
                     byte[] bdata = Encoding.UTF8.GetBytes(sdata);
                     request.ContentStream.Write(bdata, 0, bdata.Length);
                 }

@@ -16,17 +16,17 @@ namespace Twino.Server
         /// HTTP, WebSocket or something different.
         /// </summary>
         Pending,
-        
+
         /// <summary>
         /// Connection is completed.
         /// </summary>
         Closed,
-        
+
         /// <summary>
         /// Connection is accepted as web socket. It's still alive and will.
         /// </summary>
         WebSocket,
-        
+
         /// <summary>
         /// Connection is accepted and first response is sent.
         /// Keeping alive and waiting next HTTP requests via same TCP connection.
@@ -46,12 +46,6 @@ namespace Twino.Server
         public TcpClient Client { get; private set; }
 
         /// <summary>
-        /// If the handshaking is a fake SSL, the stream will be NegotiateStream.
-        /// If not, this value will be null
-        /// </summary>
-        public NegotiateStream NegotiateStream { get; set; }
-
-        /// <summary>
         /// If the handshaking is a real SSL, the stream will be SslStream.
         /// If not, this value will be null
         /// </summary>
@@ -60,7 +54,7 @@ namespace Twino.Server
         /// <summary>
         /// If there is no real or fake SSL handkshaking plain stream is used.
         /// </summary>
-        public NetworkStream PlainStream { get; set; }
+        public NetworkStream PlainStream { get; private set; }
 
         /// <summary>
         /// The time the connection dispose if operation can't complete
@@ -82,11 +76,12 @@ namespace Twino.Server
         /// Host listener object of the connection
         /// </summary>
         public HostListener Server { get; private set; }
-        
+
         public ConnectionInfo(TcpClient client, HostListener server)
         {
             Client = client;
             Server = server;
+            PlainStream = client.GetStream();
         }
 
         /// <summary>
@@ -98,10 +93,7 @@ namespace Twino.Server
             if (SslStream != null)
                 return SslStream;
 
-            if (PlainStream != null)
-                return PlainStream;
-
-            return NegotiateStream;
+            return PlainStream;
         }
 
         /// <summary>
@@ -109,6 +101,9 @@ namespace Twino.Server
         /// </summary>
         public void Close()
         {
+            if (State == ConnectionStates.Closed)
+                return;
+            
             State = ConnectionStates.Closed;
 
             try
@@ -116,7 +111,7 @@ namespace Twino.Server
                 Stream stream = GetStream();
                 if (stream != null)
                     stream.Dispose();
-                
+
                 if (Client != null)
                 {
                     Client.Close();
@@ -129,7 +124,6 @@ namespace Twino.Server
 
             SslStream = null;
             PlainStream = null;
-            NegotiateStream = null;
         }
     }
 }

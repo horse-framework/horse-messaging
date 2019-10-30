@@ -63,7 +63,7 @@ namespace Twino.Mvc
             }
             catch (Exception ex)
             {
-                if (request.Response.ResponseStream != null)
+                if (request.Response.StreamSuppressed && request.Response.ResponseStream != null)
                     GC.ReRegisterForFinalize(request.Response.ResponseStream);
 
                 if (Mvc.IsDevelopment)

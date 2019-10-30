@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -110,8 +111,6 @@ namespace Twino.Server
                         return;
                     }
                 }
-                else
-                    info.PlainStream = tcp.GetStream();
 
                 //read first request from http client
                 HttpReader reader = new HttpReader(_server.Options, info.Server.Options);
@@ -119,9 +118,15 @@ namespace Twino.Server
                 do
                 {
                     keepReading = await ReadConnection(info, reader);
+                    
                     if (keepReading)
                         reader.Reset();
+                    
                 } while (keepReading);
+            }
+            catch (IOException ex)
+            {
+                info.Close();
             }
             catch (Exception ex)
             {
@@ -154,9 +159,6 @@ namespace Twino.Server
             if (response.StatusCode > 0)
             {
                 await _writer.Write(response);
-                if (_server.Options.HttpConnectionTimeMax > 0)
-                    return true;
-
                 info.Close();
                 return false;
             }
@@ -164,10 +166,7 @@ namespace Twino.Server
             reader.ReadContent(request);
             bool again = await ProcessConnection(info, request, response);
 
-            if (!again)
-                return false;
-
-            return true;
+            return again;
         }
 
         private async Task<bool> ProcessConnection(ConnectionInfo info, HttpRequest request, HttpResponse response)

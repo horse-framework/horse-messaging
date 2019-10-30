@@ -208,7 +208,7 @@ namespace Twino.Client
                 WebSocketKey = Convert.ToBase64String(hash);
             }
 
-            string request = HttpHeaders.HTTP_GET + " " + dns.Path + " " + HttpHeaders.HTTP_VERSION + Environment.NewLine +
+            string request = HttpHeaders.HTTP_GET + " " + dns.Path + " " + HttpHeaders.HTTP_VERSION + "\r\n" +
                              HttpHeaders.Create(HttpHeaders.HOST, dns.Hostname) +
                              HttpHeaders.Create(HttpHeaders.CONNECTION, HttpHeaders.UPGRADE) +
                              HttpHeaders.Create(HttpHeaders.PRAGMA, HttpHeaders.VALUE_NO_CACHE) +
@@ -223,7 +223,7 @@ namespace Twino.Client
             foreach (var kv in Headers)
                 request += HttpHeaders.Create(kv.Key, kv.Value);
 
-            request += Environment.NewLine;
+            request += "\r\n";
             return Encoding.UTF8.GetBytes(request);
         }
 

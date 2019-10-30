@@ -47,6 +47,8 @@ namespace Twino.Server.Http
             _readingHeaders = true;
             HeaderLength = 0;
             ContentLength = 0;
+            _stream.Position = 0;
+            _stream.SetLength(0);
         }
 
         public async Task<Tuple<HttpRequest, HttpResponse>> Read(Stream stream)
@@ -70,7 +72,7 @@ namespace Twino.Server.Http
                     break;
 
                 readLength = await stream.ReadAsync(_buffer, 0, _buffer.Length);
-                if (readLength < 1 && _firstLine)
+                if (readLength < 1)
                     return new Tuple<HttpRequest, HttpResponse>(null, null);
 
                 if (requiredMoreData)
@@ -80,11 +82,11 @@ namespace Twino.Server.Http
                 }
                 else
                 {
-                    if (_stream.Length != readLength || _stream.Position > 0)
-                    {
+                    if (_stream.Position > 0)
                         _stream.Position = 0;
+
+                    if (_stream.Length > readLength)
                         _stream.SetLength(readLength);
-                    }
 
                     _stream.Write(_buffer, 0, readLength);
                     start = 0;
