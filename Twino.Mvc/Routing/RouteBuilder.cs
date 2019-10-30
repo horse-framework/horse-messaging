@@ -71,7 +71,7 @@ namespace Twino.Mvc.Routing
         /// <summary>
         /// Finds route value for the controller type
         /// </summary>
-        private List<string> FindControllerRoutes(Type controllerType)
+        private static List<string> FindControllerRoutes(Type controllerType)
         {
             List<string> routes = new List<string>();
 

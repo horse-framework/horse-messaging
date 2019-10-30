@@ -30,6 +30,8 @@ namespace Twino.Mvc
         /// </summary>
         public List<Route> Routes { get; private set; }
 
+        public List<FileRoute> FileRoutes { get; private set; }
+
         /// <summary>
         /// HTTP server of Twino MVC
         /// </summary>
@@ -115,7 +117,7 @@ namespace Twino.Mvc
             : this(new DefaultClientFactory(clientHandler), optionsFilename)
         {
         }
-        
+
         /// <summary>
         /// Creates Default MVC HTTP Server with WebSocket support.
         /// </summary>
@@ -297,6 +299,7 @@ namespace Twino.Mvc
         public void Init()
         {
             Routes = new List<Route>();
+            FileRoutes = new List<FileRoute>();
             CreateRoutes();
         }
 
@@ -392,23 +395,27 @@ namespace Twino.Mvc
         #endregion
 
         #region Use Files
-        
+
         public void UseFiles(string urlPath, string physicalPath)
         {
+            FileRoutes.Add(new FileRoute(urlPath, new[] {physicalPath}));
         }
-        
+
         public void UseFiles(string urlPath, string[] physicalPaths)
         {
+            FileRoutes.Add(new FileRoute(urlPath, physicalPaths));
         }
-        
+
         public void UseFiles(string urlPath, string physicalPath, Func<HttpRequest, HttpStatusCode> validation)
         {
+            FileRoutes.Add(new FileRoute(urlPath, new[] {physicalPath}, validation));
         }
-        
+
         public void UseFiles(string urlPath, string[] physicalPaths, Func<HttpRequest, HttpStatusCode> validation)
         {
+            FileRoutes.Add(new FileRoute(urlPath, physicalPaths, validation));
         }
-        
+
         #endregion
     }
 }

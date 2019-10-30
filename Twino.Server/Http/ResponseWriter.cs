@@ -39,11 +39,17 @@ namespace Twino.Server.Http
         {
             Stream stream = response.NetworkStream;
             Stream resultStream;
+            bool hasStream = response.HasStream() && response.ResponseStream.Length > 0;
 
-            if (response.ResponseStream.Length > 0 && _server.SupportedEncodings.Length > 0)
-                resultStream = await _writer.WriteAsync(response.Request, response);
+            if (hasStream)
+            {
+                if (_server.SupportedEncodings.Length > 0)
+                    resultStream = await _writer.WriteAsync(response.Request, response);
+                else
+                    resultStream = response.ResponseStream;
+            }
             else
-                resultStream = response.ResponseStream;
+                resultStream = null;
 
             await using MemoryStream m = new MemoryStream();
 
@@ -52,35 +58,35 @@ namespace Twino.Server.Http
             await m.WriteAsync(PredefinedHeaders.SERVER_CRLF);
             await m.WriteAsync(PredefinedHeaders.SERVER_TIME_CRLF);
 
-            if (!string.IsNullOrEmpty(response.ContentType))
+            if (hasStream)
             {
-                await m.WriteAsync(PredefinedHeaders.CONTENT_TYPE_COLON);
-                await Write(m, response.ContentType);
-                await m.WriteAsync(PredefinedHeaders.CHARSET_UTF8_CRLF);
-            }
+                if (!string.IsNullOrEmpty(response.ContentType))
+                {
+                    await m.WriteAsync(PredefinedHeaders.CONTENT_TYPE_COLON);
+                    await Write(m, response.ContentType);
+                    await m.WriteAsync(PredefinedHeaders.CHARSET_UTF8_CRLF);
+                }
 
-            if (_server.Options.HttpConnectionTimeMax > 0)
-                await m.WriteAsync(PredefinedHeaders.CONNECTION_KEEP_ALIVE_CRLF);
-            else
-                await m.WriteAsync(PredefinedHeaders.CONNECTION_CLOSE_CRLF);
+                if (_server.Options.HttpConnectionTimeMax > 0)
+                    await m.WriteAsync(PredefinedHeaders.CONNECTION_KEEP_ALIVE_CRLF);
+                else
+                    await m.WriteAsync(PredefinedHeaders.CONNECTION_CLOSE_CRLF);
 
-            switch (response.ContentEncoding)
-            {
-                case ContentEncodings.Brotli:
-                    await m.WriteAsync(PredefinedHeaders.ENCODING_BR_CRLF);
-                    break;
+                switch (response.ContentEncoding)
+                {
+                    case ContentEncodings.Brotli:
+                        await m.WriteAsync(PredefinedHeaders.ENCODING_BR_CRLF);
+                        break;
 
-                case ContentEncodings.Gzip:
-                    await m.WriteAsync(PredefinedHeaders.ENCODING_GZIP_CRLF);
-                    break;
+                    case ContentEncodings.Gzip:
+                        await m.WriteAsync(PredefinedHeaders.ENCODING_GZIP_CRLF);
+                        break;
 
-                case ContentEncodings.Deflate:
-                    await m.WriteAsync(PredefinedHeaders.ENCODING_DEFLATE_CRLF);
-                    break;
-            }
+                    case ContentEncodings.Deflate:
+                        await m.WriteAsync(PredefinedHeaders.ENCODING_DEFLATE_CRLF);
+                        break;
+                }
 
-            if (resultStream.Length > 0)
-            {
                 await m.WriteAsync(PredefinedHeaders.CONTENT_LENGTH_COLON);
                 await Write(m, resultStream.Length + "\r\n");
             }
@@ -90,12 +96,15 @@ namespace Twino.Server.Http
 
             await m.WriteAsync(HttpReader.CRLF, 0, 2);
 
-            resultStream.Position = 0;
-            await resultStream.CopyToAsync(m);
+            if (hasStream)
+            {
+                resultStream.Position = 0;
+                await resultStream.CopyToAsync(m);
+            }
 
             m.WriteTo(stream);
 
-            if (response.StreamSuppressed && response.ResponseStream != null)
+            if (hasStream && response.StreamSuppressed && response.ResponseStream != null)
                 GC.ReRegisterForFinalize(response.ResponseStream);
         }
     }

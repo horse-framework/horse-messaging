@@ -18,7 +18,7 @@ namespace Sample.Mvc
         static void Main(string[] args)
         {
             using TwinoMvc mvc = new TwinoMvc();
-            
+
             mvc.IsDevelopment = true;
             mvc.Init(twino =>
             {
@@ -38,6 +38,8 @@ namespace Sample.Mvc
                 twino.Policies.Add(Policy.RequireRole("Admin", "Admin"));
                 twino.Policies.Add(Policy.RequireClaims("IT", "Database", "Cloud", "Source"));
                 twino.Policies.Add(Policy.Custom("Custom", (d, c) => true));
+
+                twino.UseFiles("/download", "/home/mehmet/files");
             });
 
             CorsMiddleware cors = new CorsMiddleware();

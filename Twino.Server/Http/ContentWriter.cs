@@ -17,6 +17,9 @@ namespace Twino.Server.Http
 
         public async Task<Stream> WriteAsync(HttpRequest request, HttpResponse response)
         {
+            if (!response.HasStream())
+                return null;
+            
             if (response.SuppressContentEncoding || _server.SupportedEncodings.Length == 0 || string.IsNullOrEmpty(request.AcceptEncoding))
             {
                 response.ContentEncoding = ContentEncodings.None;

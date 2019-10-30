@@ -83,7 +83,19 @@ namespace Twino.Mvc
         /// </summary>
         private async Task RequestMvc(TwinoServer server, HttpRequest request, HttpResponse response)
         {
-            //find route
+            //find file route
+            if (Mvc.FileRoutes.Count > 0)
+            {
+                IActionResult fileResult = Mvc.RouteFinder.FindFile(Mvc.FileRoutes, request);
+                if (fileResult != null)
+                {
+                    response.SuppressContentEncoding = true;
+                    WriteResponse(response, fileResult);
+                    return;
+                }
+            }
+
+            //find controller route
             RouteMatch match = Mvc.RouteFinder.Find(Mvc.Routes, request);
             if (match?.Route == null)
             {

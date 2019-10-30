@@ -227,7 +227,7 @@ namespace Twino.Server
             await _server.RequestHandler.RequestAsync(_server, request, response);
             await _writer.Write(response);
 
-            return _server.Options.HttpConnectionTimeMax > 0;
+            return _server.Options.HttpConnectionTimeMax > 0 && response.HasStream();
         }
 
         /// <summary>

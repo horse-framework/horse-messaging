@@ -132,6 +132,15 @@ namespace Twino.Core.Http
         #region Set Stream
 
         /// <summary>
+        /// Returns true if response has content
+        /// </summary>
+        /// <returns></returns>
+        public bool HasStream()
+        {
+            return _responseStream != null;
+        }
+
+        /// <summary>
         /// Changes response's stream
         /// </summary>
         /// <param name="newStream">New stream</param>
