@@ -55,7 +55,7 @@ namespace Twino.Server.Http
                 {
                     if (response.ContentEncoding != ContentEncodings.None)
                         response.ContentEncoding = ContentEncodings.None;
-                    
+
                     resultStream = response.ResponseStream;
                 }
             }
@@ -129,13 +129,27 @@ namespace Twino.Server.Http
                 await Write(m, header.Key, header.Value);
 
             await m.WriteAsync(HttpReader.CRLF, 0, 2);
+
             if (hasStream)
             {
                 resultStream.Position = 0;
-                await resultStream.CopyToAsync(m);
+                
+                //if data is greater than 5KB, don't waste memory and send it to network as partial
+                if (resultStream.Length > 5120)
+                {
+                    m.WriteTo(stream);
+                    await resultStream.CopyToAsync(stream);
+                }
+                
+                //write small data to memory stream and send all data to network at once for better response time
+                else
+                {
+                    await resultStream.CopyToAsync(m);
+                    m.WriteTo(stream);
+                }
             }
-
-            m.WriteTo(stream);
+            else
+                m.WriteTo(stream);
 
             //let gc to dispose response stream
             if (hasStream && response.StreamSuppressed && response.ResponseStream != null)
