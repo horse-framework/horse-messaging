@@ -120,6 +120,16 @@ namespace Twino.Server
                         SslProtocols protocol = GetProtocol(_listener);
                         await sslStream.AuthenticateAsServerAsync(_listener.Certificate, false, protocol, false);
                     }
+                    catch (IOException)
+                    {
+                        tcp.Close();
+                        return;
+                    }
+                    catch (SocketException)
+                    {
+                        tcp.Close();
+                        return;
+                    }
                     catch (Exception ex)
                     {
                         if (_server.Logger != null)
