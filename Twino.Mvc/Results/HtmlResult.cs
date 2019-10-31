@@ -40,5 +40,14 @@ namespace Twino.Mvc.Results
             Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
             Stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
         }
+        
+        
+        public HtmlResult(byte[] bytes)
+        {
+            Code = HttpStatusCode.OK;
+            ContentType = ContentTypes.TEXT_HTML;
+            Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+            Stream = new MemoryStream(bytes);
+        }
     }
 }
