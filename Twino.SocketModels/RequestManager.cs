@@ -330,33 +330,39 @@ namespace Twino.SocketModels
                 return;
 
             List<SocketBase> removingClients = new List<SocketBase>();
-            List<string> removingRequests = new List<string>();
+
+            List<KeyValuePair<string, PendingRequest>> errors = new List<KeyValuePair<string, PendingRequest>>();
+            List<KeyValuePair<string, PendingRequest>> timeouts = new List<KeyValuePair<string, PendingRequest>>();
 
             _cleanupTimer = new Timer(state =>
             {
+                if (errors.Count > 0)
+                    errors.Clear();
+
+                if (timeouts.Count > 0)
+                    timeouts.Clear();
+
+                if (removingClients.Count > 0)
+                    removingClients.Clear();
+                
                 lock (_pendingRequests)
                 {
                     foreach (KeyValuePair<string, PendingRequest> pair in _pendingRequests)
                     {
                         if (pair.Value.Sender == null || !pair.Value.Sender.IsConnected)
                         {
-                            pair.Value.CompleteAsError();
-                            removingRequests.Add(pair.Key);
+                            errors.Add(pair);
                             continue;
                         }
 
                         if (pair.Value.Deadline > DateTime.UtcNow)
                             continue;
 
-                        pair.Value.CompleteAsTimeout();
-                        removingRequests.Add(pair.Key);
+                        timeouts.Add(pair);
                     }
 
-                    foreach (string str in removingRequests)
-                        _pendingRequests.Remove(str);
-
-                    if (removingRequests.Count > 0)
-                        removingRequests.Clear();
+                    foreach (var kv in errors) _pendingRequests.Remove(kv.Key);
+                    foreach (var kv in timeouts) _pendingRequests.Remove(kv.Key);
                 }
 
                 lock (_handlingClients)
@@ -372,11 +378,14 @@ namespace Twino.SocketModels
 
                     foreach (SocketBase client in removingClients)
                         _handlingClients.Remove(client);
-
-                    if (_handlingClients.Count > 0)
-                        _handlingClients.Clear();
                 }
-                
+
+                foreach (KeyValuePair<string, PendingRequest> error in errors)
+                    error.Value.CompleteAsError();
+
+                foreach (KeyValuePair<string, PendingRequest> timeout in timeouts)
+                    timeout.Value.CompleteAsTimeout();
+
             }, null, 1000, 1000);
         }
 
