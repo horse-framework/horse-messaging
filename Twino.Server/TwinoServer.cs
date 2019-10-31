@@ -374,7 +374,7 @@ namespace Twino.Server
             while (IsRunning)
                 await Task.Delay(250);
         }
-        
+
         /// <summary>
         /// Starts server and listens specified port without ssl
         /// </summary>
@@ -418,6 +418,7 @@ namespace Twino.Server
             _timeTimer.Start();
 
             IsRunning = true;
+            InitSupportedEncodings();
             _handlers = new List<ConnectionHandler>();
 
             foreach (HostOptions host in Options.Hosts)
@@ -440,15 +441,13 @@ namespace Twino.Server
                     server.Listener.Start(Options.MaximumPendingConnections);
 
                 ConnectionHandler handler = new ConnectionHandler(this, server);
-                server.Handle = new Thread(async () => { await handler.Handle(); });
+                server.Handle = new Thread(async () => await handler.Handle());
                 server.Handle.IsBackground = true;
                 server.Handle.Priority = ThreadPriority.Highest;
                 server.Handle.Start();
-
                 _handlers.Add(handler);
             }
 
-            InitSupportedEncodings();
             IsRunning = true;
             Started?.Invoke(this);
 
@@ -494,7 +493,7 @@ namespace Twino.Server
         }
 
         #endregion
-        
+
         /// <summary>
         /// Load supported content encodings for server and make ready for response writing
         /// </summary>
@@ -505,7 +504,7 @@ namespace Twino.Server
                 SupportedEncodings = new ContentEncodings[0];
                 return;
             }
-            
+
             List<ContentEncodings> result = new List<ContentEncodings>();
             string[] encodings = Options.ContentEncoding.Replace(" ", "").Split(',');
             foreach (var encoding in encodings)

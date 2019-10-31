@@ -20,19 +20,19 @@ namespace Twino.Server
         /// twino server of connection handler
         /// </summary>
         private readonly TwinoServer _server;
-        
+
         /// <summary>
         /// Host listener object of connection handler
         /// </summary>
         private readonly HostListener _listener;
-        
+
         /// <summary>
         /// Maximum alive duration for a client.
         /// This value generally equals to HttpConnectionTimeMax.
         /// But when connection keep-alive disabled, this value equals to RequestTimeout
         /// </summary>
         private TimeSpan _manAliveHttpDuration;
-        
+
         /// <summary>
         /// Response writing is not request or client specified.
         /// We can reuse same instance instead of creating new one for each request
@@ -110,34 +110,13 @@ namespace Twino.Server
                 //ssl handshaking
                 if (_listener.Options.SslEnabled)
                 {
-                    try
-                    {
-                        SslStream sslStream = _listener.Options.BypassSslValidation
-                                                  ? new SslStream(tcp.GetStream(), true, (a, b, c, d) => true)
-                                                  : new SslStream(tcp.GetStream(), true);
+                    SslStream sslStream = _listener.Options.BypassSslValidation
+                                              ? new SslStream(tcp.GetStream(), true, (a, b, c, d) => true)
+                                              : new SslStream(tcp.GetStream(), true);
 
-                        info.SslStream = sslStream;
-                        SslProtocols protocol = GetProtocol(_listener);
-                        await sslStream.AuthenticateAsServerAsync(_listener.Certificate, false, protocol, false);
-                    }
-                    catch (IOException)
-                    {
-                        tcp.Close();
-                        return;
-                    }
-                    catch (SocketException)
-                    {
-                        tcp.Close();
-                        return;
-                    }
-                    catch (Exception ex)
-                    {
-                        if (_server.Logger != null)
-                            _server.Logger.LogException("SSL_HANDSHAKE", ex);
-
-                        tcp.Close();
-                        return;
-                    }
+                    info.SslStream = sslStream;
+                    SslProtocols protocol = GetProtocol(_listener);
+                    await sslStream.AuthenticateAsServerAsync(_listener.Certificate, false, protocol, false);
                 }
 
                 //read first request from http client
@@ -149,7 +128,7 @@ namespace Twino.Server
 
                     if (keepReading)
                         reader.Reset();
-
+                    
                 } while (keepReading);
             }
             catch (SocketException)

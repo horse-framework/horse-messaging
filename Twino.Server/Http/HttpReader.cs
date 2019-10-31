@@ -145,7 +145,7 @@ namespace Twino.Server.Http
                     //if reading header is finished, redirect to content reading
                     if (!_readingHeaders)
                     {
-                        start = ReadContent(request, _stream.GetBuffer(), start, (int) _stream.Length - start);
+                        start = await ReadContent(request, _stream.GetBuffer(), start, (int) _stream.Length - start);
                         continue;
                     }
 
@@ -299,12 +299,12 @@ namespace Twino.Server.Http
         /// Read request content
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int ReadContent(HttpRequest request, byte[] buffer, int start, int length)
+        private async Task<int> ReadContent(HttpRequest request, byte[] buffer, int start, int length)
         {
             if (request.ContentStream == null)
                 request.ContentStream = new MemoryStream();
 
-            request.ContentStream.Write(buffer, start, length);
+            await request.ContentStream.WriteAsync(buffer, start, length);
             ContentLength += length;
 
             return start + length;
@@ -339,11 +339,10 @@ namespace Twino.Server.Http
             {
                 if (!(_hostOptions.Hostnames.Length == 1 && _hostOptions.Hostnames[0] == "*"))
                 {
-                    string host = request.Host.ToLower(new CultureInfo("en-US"));
                     bool allowed = false;
                     foreach (string ah in _hostOptions.Hostnames)
                     {
-                        if (string.Equals(host, ah, StringComparison.InvariantCultureIgnoreCase))
+                        if (string.Equals(request.Host, ah, StringComparison.InvariantCultureIgnoreCase))
                         {
                             allowed = true;
                             break;
