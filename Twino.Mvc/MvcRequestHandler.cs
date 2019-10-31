@@ -202,11 +202,10 @@ namespace Twino.Mvc
             if (a == null)
             {
                 TaskCompletionSource<bool> source = new TaskCompletionSource<bool>();
-                ThreadPool.QueueUserWorkItem(async t =>
+                ThreadPool.QueueUserWorkItem(t =>
                 {
                     try
                     {
-                        await Task.Yield();
                         IActionResult ar = (IActionResult) match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray());
                         Action(ar);
                         source.SetResult(true);
