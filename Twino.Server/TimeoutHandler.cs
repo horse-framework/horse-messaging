@@ -9,16 +9,34 @@ namespace Twino.Server
     /// </summary>
     internal class TimeoutHandler
     {
+        /// <summary>
+        /// newly connected clients. created for optimizing (to not lock real collection)
+        /// </summary>
         private readonly List<ConnectionInfo> _incoming = new List<ConnectionInfo>();
+        
+        /// <summary>
+        /// active tcp clients that are checked if they are timed out
+        /// </summary>
         private readonly List<ConnectionInfo> _connections = new List<ConnectionInfo>();
 
+        /// <summary>
+        /// timeout timer
+        /// </summary>
         private Timer _timer;
-
-        //private Thread _timer;
+        
+        /// <summary>
+        /// clients' timeout total milliseconds
+        /// </summary>
         private readonly int _timeoutMilliseconds;
+        
+        /// <summary>
+        /// timer interval
+        /// </summary>
         private readonly int _tickInterval;
-        private bool _running;
 
+        /// <summary>
+        /// Creates new timeout handler with specified timeout milliseconds and check timer interval
+        /// </summary>
         internal TimeoutHandler(int timeoutMilliseconds, int tickInterval)
         {
             _timeoutMilliseconds = timeoutMilliseconds;
@@ -30,7 +48,6 @@ namespace Twino.Server
         /// </summary>
         internal void Start()
         {
-            _running = true;
             _timer = new Timer(state =>
             {
                 try
@@ -48,7 +65,6 @@ namespace Twino.Server
         /// </summary>
         internal void Stop()
         {
-            _running = false;
             _timer.Dispose();
             _timer = null;
         }

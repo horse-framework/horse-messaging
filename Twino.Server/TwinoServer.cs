@@ -18,6 +18,9 @@ namespace Twino.Server
     /// </summary>
     public delegate void TwinoServerEventHandler(TwinoServer server);
 
+    /// <summary>
+    /// Server handler for client events such as connect, disconnect
+    /// </summary>
     public delegate void TwinoServerClientEventHandler(TwinoServer server, ServerSocket client);
 
     /// <summary>
@@ -29,6 +32,9 @@ namespace Twino.Server
     {
         #region Properties
 
+        /// <summary>
+        /// Pinger for websocket clients
+        /// </summary>
         internal Pinger Pinger { get; private set; }
 
         /// <summary>
@@ -78,6 +84,9 @@ namespace Twino.Server
         /// </summary>
         private List<ConnectionHandler> _handlers = new List<ConnectionHandler>();
 
+        /// <summary>
+        /// Supported content encodings
+        /// </summary>
         internal ContentEncodings[] SupportedEncodings { get; private set; }
 
         #endregion
@@ -104,11 +113,17 @@ namespace Twino.Server
         /// </summary>
         public event TwinoServerClientEventHandler ClientDisconnected;
 
+        /// <summary>
+        /// Trigger client connected event
+        /// </summary>
         internal void SetClientConnected(ServerSocket client)
         {
             ClientConnected?.Invoke(this, client);
         }
 
+        /// <summary>
+        /// Trigger client disconnected event
+        /// </summary>
         internal void SetClientDisconnected(ServerSocket client)
         {
             ClientDisconnected?.Invoke(this, client);
@@ -342,12 +357,28 @@ namespace Twino.Server
 
         #region Start - Stop
 
+        /// <summary>
+        /// Block main thread, typical thread sleep
+        /// </summary>
         public void BlockWhileRunning()
         {
             while (IsRunning)
                 Thread.Sleep(100);
         }
 
+        /// <summary>
+        /// Block main thread, typical task delay
+        /// </summary>
+        public async Task BlockWhileRunningAsync()
+        {
+            while (IsRunning)
+                await Task.Delay(250);
+        }
+        
+        /// <summary>
+        /// Starts server and listens specified port without ssl
+        /// </summary>
+        /// <param name="port"></param>
         public void Start(int port)
         {
             Options.Hosts = new List<HostOptions>();
@@ -379,6 +410,7 @@ namespace Twino.Server
                 _timeTimer.Dispose();
             }
 
+            //start ping timer, this is required for request/response optimization
             PredefinedHeaders.SERVER_TIME_CRLF = Encoding.UTF8.GetBytes("Date: " + DateTime.UtcNow.ToString("R") + "\r\n");
             _timeTimer = new Timer(1000);
             _timeTimer.Elapsed += (sender, args) => PredefinedHeaders.SERVER_TIME_CRLF = Encoding.UTF8.GetBytes("Date: " + DateTime.UtcNow.ToString("R") + "\r\n");
@@ -420,6 +452,7 @@ namespace Twino.Server
             IsRunning = true;
             Started?.Invoke(this);
 
+            //if websocket ping is activated, starts pinger
             if (Options.PingInterval > 0)
             {
                 Pinger = new Pinger(this, TimeSpan.FromMilliseconds(Options.PingInterval));
@@ -437,6 +470,7 @@ namespace Twino.Server
         {
             IsRunning = false;
 
+            //stop server time creator timer
             if (_timeTimer != null)
             {
                 _timeTimer.Stop();
@@ -444,12 +478,14 @@ namespace Twino.Server
                 _timeTimer = null;
             }
 
+            //stop websocket pinger
             if (Pinger != null)
             {
                 Pinger.Stop();
                 Pinger = null;
             }
 
+            //stop and dispose all listeners (for all ports)
             foreach (ConnectionHandler handler in _handlers)
                 handler.Dispose();
 
@@ -459,6 +495,9 @@ namespace Twino.Server
 
         #endregion
         
+        /// <summary>
+        /// Load supported content encodings for server and make ready for response writing
+        /// </summary>
         private void InitSupportedEncodings()
         {
             if (string.IsNullOrEmpty(Options.ContentEncoding))

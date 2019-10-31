@@ -16,9 +16,27 @@ namespace Twino.Server
     /// </summary>
     public class ConnectionHandler
     {
+        /// <summary>
+        /// twino server of connection handler
+        /// </summary>
         private readonly TwinoServer _server;
+        
+        /// <summary>
+        /// Host listener object of connection handler
+        /// </summary>
         private readonly HostListener _listener;
-        private TimeSpan _minAliveHttpDuration;
+        
+        /// <summary>
+        /// Maximum alive duration for a client.
+        /// This value generally equals to HttpConnectionTimeMax.
+        /// But when connection keep-alive disabled, this value equals to RequestTimeout
+        /// </summary>
+        private TimeSpan _manAliveHttpDuration;
+        
+        /// <summary>
+        /// Response writing is not request or client specified.
+        /// We can reuse same instance instead of creating new one for each request
+        /// </summary>
         private readonly ResponseWriter _writer;
 
         public ConnectionHandler(TwinoServer server, HostListener listener)
@@ -40,7 +58,7 @@ namespace Twino.Server
             if (_server.Options.HttpConnectionTimeMax * 1000 > alive)
                 alive = _server.Options.HttpConnectionTimeMax * 1000;
 
-            _minAliveHttpDuration = TimeSpan.FromMilliseconds(alive);
+            _manAliveHttpDuration = TimeSpan.FromMilliseconds(alive);
 
             while (_server.IsRunning)
             {
@@ -82,7 +100,7 @@ namespace Twino.Server
             ConnectionInfo info = new ConnectionInfo(tcp, _listener)
                                   {
                                       State = ConnectionStates.Pending,
-                                      MaxAlive = DateTime.UtcNow + _minAliveHttpDuration
+                                      MaxAlive = DateTime.UtcNow + _manAliveHttpDuration
                                   };
 
             _listener.KeepAliveManager.Add(info);
@@ -118,13 +136,17 @@ namespace Twino.Server
                 do
                 {
                     keepReading = await ReadConnection(info, reader);
-                    
+
                     if (keepReading)
                         reader.Reset();
-                    
+
                 } while (keepReading);
             }
-            catch (IOException ex)
+            catch (SocketException)
+            {
+                info.Close();
+            }
+            catch (IOException)
             {
                 info.Close();
             }
@@ -169,6 +191,9 @@ namespace Twino.Server
             return again;
         }
 
+        /// <summary>
+        /// Process the request and redirect it to websocket or http handler
+        /// </summary>
         private async Task<bool> ProcessConnection(ConnectionInfo info, HttpRequest request, HttpResponse response)
         {
             request.IpAddress = FindIPAddress(info.Client);
@@ -226,6 +251,7 @@ namespace Twino.Server
             await _server.RequestHandler.RequestAsync(_server, request, response);
             await _writer.Write(response);
 
+            //stay alive, if keep alive active and response has stream
             return _server.Options.HttpConnectionTimeMax > 0 && response.HasStream();
         }
 
@@ -262,6 +288,9 @@ namespace Twino.Server
             _listener.Handle = null;
         }
 
+        /// <summary>
+        /// Finds supported SSL protocol from server options
+        /// </summary>
         private static SslProtocols GetProtocol(HostListener server)
         {
             return server.Options.SslProtocol switch

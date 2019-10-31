@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace Twino.Server.Http
 {
+    /// <summary>
+    /// Known MIME type for file operations
+    /// </summary>
     public class MimeTypes
     {
         private static readonly IDictionary<string, string> _mappings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase)
@@ -569,6 +572,9 @@ namespace Twino.Server.Http
                                                                    {".zip", "application/x-zip-compressed"},
                                                                };
 
+        /// <summary>
+        /// Find MIME type from filename
+        /// </summary>
         public static string GetMimeType(string filename)
         {
             int lastIndex = filename.LastIndexOf('.');

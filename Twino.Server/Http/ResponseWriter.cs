@@ -20,12 +20,18 @@ namespace Twino.Server.Http
             _writer = new ContentWriter(server);
         }
 
+        /// <summary>
+        /// Writes string value to specified stream
+        /// </summary>
         private static async Task Write(Stream stream, string msg)
         {
             ReadOnlyMemory<byte> data = Encoding.ASCII.GetBytes(msg);
             await stream.WriteAsync(data);
         }
 
+        /// <summary>
+        /// Writes header key and value to specified stream
+        /// </summary>
         private static async Task Write(Stream stream, string key, string value)
         {
             byte[] data = Encoding.UTF8.GetBytes(key + ": " + value + "\r\n");
@@ -43,15 +49,23 @@ namespace Twino.Server.Http
 
             if (hasStream)
             {
-                if (_server.SupportedEncodings.Length > 0)
+                if (!response.SuppressContentEncoding && _server.SupportedEncodings.Length > 0)
                     resultStream = await _writer.WriteAsync(response.Request, response);
                 else
+                {
+                    if (response.ContentEncoding != ContentEncodings.None)
+                        response.ContentEncoding = ContentEncodings.None;
+                    
                     resultStream = response.ResponseStream;
+                }
             }
+
+            //if response stream does not exists
+            //we are checking to find a response message for http status code
             else
             {
                 byte[] bytes;
-                
+
                 bool found = PredefinedResults.Statuses.TryGetValue(response.StatusCode, out bytes);
                 if (found && bytes != null)
                 {
@@ -65,6 +79,7 @@ namespace Twino.Server.Http
 
             await using MemoryStream m = new MemoryStream();
 
+            //http version, http status, server info and server time
             await m.WriteAsync(PredefinedHeaders.HTTP_VERSION);
             await Write(m, HttpHeaders.Create(Convert.ToInt32(response.StatusCode) + " " + response.StatusCode));
             await m.WriteAsync(PredefinedHeaders.SERVER_CRLF);
@@ -72,6 +87,7 @@ namespace Twino.Server.Http
 
             if (hasStream)
             {
+                //content type
                 if (!string.IsNullOrEmpty(response.ContentType))
                 {
                     await m.WriteAsync(PredefinedHeaders.CONTENT_TYPE_COLON);
@@ -79,11 +95,13 @@ namespace Twino.Server.Http
                     await m.WriteAsync(PredefinedHeaders.CHARSET_UTF8_CRLF);
                 }
 
+                //connection keep alive or close
                 if (_server.Options.HttpConnectionTimeMax > 0)
                     await m.WriteAsync(PredefinedHeaders.CONNECTION_KEEP_ALIVE_CRLF);
                 else
                     await m.WriteAsync(PredefinedHeaders.CONNECTION_CLOSE_CRLF);
 
+                //content encoding
                 switch (response.ContentEncoding)
                 {
                     case ContentEncodings.Brotli:
@@ -99,12 +117,14 @@ namespace Twino.Server.Http
                         break;
                 }
 
+                //content length
                 await m.WriteAsync(PredefinedHeaders.CONTENT_LENGTH_COLON);
                 await Write(m, resultStream.Length + "\r\n");
             }
             else
                 await m.WriteAsync(PredefinedHeaders.CONNECTION_CLOSE_CRLF);
 
+            //custom headers 
             foreach (var header in response.AdditionalHeaders)
                 await Write(m, header.Key, header.Value);
 
@@ -117,6 +137,7 @@ namespace Twino.Server.Http
 
             m.WriteTo(stream);
 
+            //let gc to dispose response stream
             if (hasStream && response.StreamSuppressed && response.ResponseStream != null)
                 GC.ReRegisterForFinalize(response.ResponseStream);
         }

@@ -6,8 +6,15 @@ using Twino.Core.Http;
 
 namespace Twino.Server.Http
 {
+    /// <summary>
+    /// multipart/form-data parser
+    /// </summary>
     public static class MultipartFormDataReader
     {
+        
+        /// <summary>
+        /// Reads and parses multipart/form-data content from stream
+        /// </summary>
         public static List<FormDataItem> Read(string boundary, MemoryStream stream)
         {
             Span<byte> boundarySpan = Encoding.UTF8.GetBytes("--" + boundary);
@@ -108,13 +115,6 @@ namespace Twino.Server.Http
                             //single data
                             else
                                 item.ContentType = contentType;
-                        }
-
-                        //transfer encoding binary
-                        else if (line.StartsWith(PredefinedHeaders.CONTENT_TRANSFER_ENCODING))
-                        {
-                            Span<byte> value = line.Slice(PredefinedHeaders.CONTENT_TRANSFER_ENCODING.Length);
-                            item.TransferEncoding = Encoding.UTF8.GetString(value);
                         }
                     }
 

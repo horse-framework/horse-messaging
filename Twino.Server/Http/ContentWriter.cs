@@ -6,6 +6,10 @@ using Twino.Core.Http;
 
 namespace Twino.Server.Http
 {
+    /// <summary>
+    /// Response content writer class.
+    /// Finds encoder and writes response content to a stream
+    /// </summary>
     public class ContentWriter
     {
         private readonly TwinoServer _server;
@@ -15,12 +19,12 @@ namespace Twino.Server.Http
             _server = server;
         }
 
+        /// <summary>
+        /// Writes response content to a stream and returns it
+        /// </summary>
         public async Task<Stream> WriteAsync(HttpRequest request, HttpResponse response)
         {
-            if (!response.HasStream())
-                return null;
-            
-            if (response.SuppressContentEncoding || _server.SupportedEncodings.Length == 0 || string.IsNullOrEmpty(request.AcceptEncoding))
+            if (string.IsNullOrEmpty(request.AcceptEncoding))
             {
                 response.ContentEncoding = ContentEncodings.None;
                 return response.ResponseStream;
@@ -36,7 +40,10 @@ namespace Twino.Server.Http
             return response.ResponseStream;
         }
 
-        private bool EncodingIsAccepted(HttpRequest request, ContentEncodings encoding)
+        /// <summary>
+        /// Returns true if encoding is supported by client
+        /// </summary>
+        private static bool EncodingIsAccepted(HttpRequest request, ContentEncodings encoding)
         {
             return encoding switch
             {
@@ -47,6 +54,9 @@ namespace Twino.Server.Http
             };
         }
 
+        /// <summary>
+        /// Writes response content to stream with specified encoding
+        /// </summary>
         private async Task<Stream> WriteEncoded(HttpResponse response, ContentEncodings encoding)
         {
             response.ResponseStream.Position = 0;
@@ -67,6 +77,9 @@ namespace Twino.Server.Http
             return stream;
         }
 
+        /// <summary>
+        /// Creates encoding stream from encoding enum value
+        /// </summary>
         private Stream CreateEncodingStream(Stream parent, ContentEncodings encoding)
         {
             return encoding switch

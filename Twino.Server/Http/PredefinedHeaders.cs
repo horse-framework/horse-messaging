@@ -3,6 +3,9 @@ using System.Text;
 
 namespace Twino.Server.Http
 {
+    /// <summary>
+    /// Predefined response and request header partial data for optimization
+    /// </summary>
     public static class PredefinedHeaders
     {
         internal static readonly ReadOnlyMemory<byte> HTTP_VERSION = Encoding.ASCII.GetBytes("HTTP/1.1 ");
@@ -30,7 +33,7 @@ namespace Twino.Server.Http
 
         internal static readonly byte[] BOUNDARY_END = Encoding.ASCII.GetBytes("--");
 
-        internal static string NAME_KV_QUOTA = "name=\"";
-        internal static string FILENAME_KV_QUOTA = "filename=\"";
+        internal const string NAME_KV_QUOTA = "name=\"";
+        internal const string FILENAME_KV_QUOTA = "filename=\"";
     }
 }

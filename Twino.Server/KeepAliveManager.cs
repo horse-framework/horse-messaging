@@ -2,6 +2,10 @@ using System;
 
 namespace Twino.Server
 {
+    /// <summary>
+    /// Connection keeping alive manager.
+    /// Checks all timeout operations and maximum tcp connection durations
+    /// </summary>
     internal class KeepAliveManager
     {
         private TimeoutHandler[] _timeoutHandlers;
@@ -31,7 +35,7 @@ namespace Twino.Server
             for (int i = 0; i < _timeoutHandlers.Length; i++)
             {
                 //rnd between min and max ms, we don't want to see all timeout handlers consume cpu and memory at same time
-                TimeoutHandler handler = new TimeoutHandler(timeoutMilliseconds, rnd.Next(1000, 2000));
+                TimeoutHandler handler = new TimeoutHandler(timeoutMilliseconds, rnd.Next(2500, 6000));
                 _timeoutHandlers[i] = handler;
                 handler.Start();
             }

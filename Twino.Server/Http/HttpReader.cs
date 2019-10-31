@@ -11,8 +11,14 @@ using Twino.Core.Http;
 
 namespace Twino.Server.Http
 {
+    /// <summary>
+    /// Http 1.1 Request reader and parser
+    /// </summary>
     public class HttpReader
     {
+        
+        #region Constants
+        
         public const byte CR = (byte) '\r';
         public const byte LF = (byte) '\n';
         public const byte COLON = (byte) ':';
@@ -24,17 +30,52 @@ namespace Twino.Server.Http
         public static readonly byte[] CRLF = {CR, LF};
         public static readonly byte[] COLON_SPACE = {COLON, SPACE};
 
+        #endregion
+        
+        #region Fields - Properties
+        
+        /// <summary>
+        /// If true, the first line is being read
+        /// </summary>
         private bool _firstLine = true;
+        
+        /// <summary>
+        /// If true, reader is reading headers from network stream. Otherwise content is being read.
+        /// </summary>
         private bool _readingHeaders = true;
+        
+        /// <summary>
+        /// Network stream read buffer
+        /// </summary>
         private readonly byte[] _buffer = new byte[256];
+        
+        /// <summary>
+        /// Request stream, buffer is writted to this stream while reading from network stream
+        /// </summary>
         private readonly MemoryStream _stream = new MemoryStream(256);
 
+        /// <summary>
+        /// Is kept for checking if header length exceeds maximum header length option
+        /// </summary>
         public int HeaderLength { get; private set; }
+        
+        /// <summary>
+        /// Is kept for recognize content length
+        /// </summary>
         public int ContentLength { get; private set; }
 
+        /// <summary>
+        /// Twino server options
+        /// </summary>
         private readonly ServerOptions _options;
+        
+        /// <summary>
+        /// Connection handler's host options
+        /// </summary>
         private readonly HostOptions _hostOptions;
 
+        #endregion
+        
         public HttpReader(ServerOptions options, HostOptions hostOptions)
         {
             _options = options;
@@ -51,6 +92,9 @@ namespace Twino.Server.Http
             _stream.SetLength(0);
         }
 
+        /// <summary>
+        /// Reads, parses and creates request from stream and creates response for the request
+        /// </summary>
         public async Task<Tuple<HttpRequest, HttpResponse>> Read(Stream stream)
         {
             HttpRequest request = new HttpRequest();

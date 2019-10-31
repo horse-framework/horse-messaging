@@ -6,7 +6,14 @@ namespace Twino.Server
 {
     public class HostListener
     {
+        /// <summary>
+        /// Port listener object of the host
+        /// </summary>
         public TcpListener Listener { get; set; }
+        
+        /// <summary>
+        /// TCP connection accepting thread
+        /// </summary>
         public Thread Handle { get; set; }
 
         /// <summary>

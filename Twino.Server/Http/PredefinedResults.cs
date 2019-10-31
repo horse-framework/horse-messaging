@@ -4,10 +4,13 @@ using System.Text;
 
 namespace Twino.Server.Http
 {
+    /// <summary>
+    /// Predefined default status code response content messages for twino server
+    /// </summary>
     internal static class PredefinedResults
     {
         private const string B = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 1.1//EN\"><html><title>Not Found</title><body style=\"text-align:center;\"><div style=\"padding:30px;\"><h1>";
-        private const string A = "</h1></div><hr /><span>Twino Http Server</span></body></html>";
+        private const string A = "</h1></div><hr /><span>twino</span></body></html>";
 
         internal static readonly Dictionary<HttpStatusCode, byte[]> Statuses
             = new Dictionary<HttpStatusCode, byte[]>
