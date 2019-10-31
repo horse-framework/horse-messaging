@@ -69,10 +69,10 @@ namespace Twino.Mvc
                 if (Mvc.IsDevelopment)
                 {
                     IErrorHandler handler = new DevelopmentErrorHandler();
-                    handler.Error(request, ex);
+                    await handler.Error(request, ex);
                 }
                 else if (Mvc.ErrorHandler != null)
-                    Mvc.ErrorHandler.Error(request, ex);
+                    await Mvc.ErrorHandler.Error(request, ex);
                 else
                     WriteResponse(request.Response, StatusCodeResult.InternalServerError());
             }

@@ -24,11 +24,12 @@ namespace Twino.Mvc.Middlewares
             Request = request;
             Response = response;
             CanNext = true;
-            Next = result =>
-             {
-                 LastResult = result;
-                 CanNext = result == null;
-             };
+            Next = async result =>
+            {
+                LastResult = result;
+                CanNext = result == null;
+                await Task.CompletedTask;
+            };
         }
 
         public void UseMiddleware(IMiddleware middleware)
@@ -38,7 +39,7 @@ namespace Twino.Mvc.Middlewares
 
         public async Task RunSequence()
         {
-            foreach(IMiddleware middleware in Middlewares)
+            foreach (IMiddleware middleware in Middlewares)
             {
                 CanNext = false;
                 await middleware.Invoke(Next, Request, Response);
@@ -46,7 +47,5 @@ namespace Twino.Mvc.Middlewares
                     break;
             }
         }
-
     }
-
 }

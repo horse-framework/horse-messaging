@@ -51,12 +51,11 @@ namespace Twino.Mvc.Middlewares
                 if (!string.IsNullOrEmpty(AllowMaxAge))
                     response.AdditionalHeaders.Add(HttpHeaders.ACCESS_CONTROL_MAX_AGE, AllowMaxAge);
 
-                next(StatusCodeResult.NoContent());
+                await next(StatusCodeResult.NoContent());
                 return;
             }
 
-            next(null);
-            await Task.CompletedTask;
+            await next(null);
         }
     }
 }
