@@ -63,18 +63,13 @@ namespace Twino.Server.Http
             response.ContentEncoding = encoding;
 
             MemoryStream stream = new MemoryStream();
-            await using MemoryStream ms = new MemoryStream();
+            MemoryStream ms = new MemoryStream();
             Stream encodingStream = CreateEncodingStream(ms, encoding);
             await response.ResponseStream.CopyToAsync(encodingStream);
             await encodingStream.FlushAsync();
             
             ms.Position = 0;
-            await ms.CopyToAsync(stream);
-            stream.Position = 0;
-
-            await encodingStream.DisposeAsync();
-            
-            return stream;
+            return ms;
         }
 
         /// <summary>
