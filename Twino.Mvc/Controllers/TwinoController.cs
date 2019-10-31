@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Net;
 using Twino.Mvc.Results;
 using Twino.Server;
 using System.Security.Claims;
@@ -13,6 +14,9 @@ namespace Twino.Mvc.Controllers
     /// </summary>
     public class TwinoController : IController
     {
+        
+        #region Properties
+        
         /// <summary>
         /// Gets HTTP Request information for the specified request
         /// </summary>
@@ -33,6 +37,10 @@ namespace Twino.Mvc.Controllers
         /// </summary>
         public ClaimsPrincipal User { get; internal set; }
 
+        #endregion
+        
+        #region Return Results
+        
         /// <summary>
         /// Creates new JSON result from the object. Status code will be set to 200.
         /// </summary>
@@ -46,9 +54,9 @@ namespace Twino.Mvc.Controllers
         /// <summary>
         /// Creates new JSON result from the object. Status code will be set to 200.
         /// </summary>
-        protected async Task<IActionResult> JsonAsync(object obj)
+        protected async Task<IActionResult> JsonAsync(object obj, HttpStatusCode statusCode = HttpStatusCode.OK)
         {
-            JsonResult json = new JsonResult();
+            JsonResult json = new JsonResult(statusCode);
             await json.SetAsync(obj);
             return json;
         }
@@ -108,5 +116,164 @@ namespace Twino.Mvc.Controllers
         {
             return await Task.FromResult(new FileResult(fileStream, filename));
         }
+
+        #endregion
+        
+        #region Status Code - Json
+        
+        /// <summary>
+        /// Returns JSON result with 200 HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> Ok(object model)
+        {
+            return await JsonAsync(model);
+        }
+ 
+        /// <summary>
+        /// Returns JSON result with Created HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> Created(object model)
+        {
+            return await JsonAsync(model, HttpStatusCode.Created);
+        }
+        
+        /// <summary>
+        /// Returns JSON result with Accepted HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> Accepted(object model)
+        {
+            return await JsonAsync(model, HttpStatusCode.Accepted);
+        }
+        
+        /// <summary>
+        /// Returns JSON result with BadRequest HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> BadRequest(object model)
+        {
+            return await JsonAsync(model, HttpStatusCode.BadRequest);
+        }
+
+        /// <summary>
+        /// Returns JSON result with BadGateway HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> BadGateway(object model)
+        {
+            return await JsonAsync(model, HttpStatusCode.BadGateway);
+        }
+
+        /// <summary>
+        /// Returns JSON result with Unauthorized HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> Unauthorized(object model)
+        {
+            return await JsonAsync(model, HttpStatusCode.Unauthorized);
+        }
+
+        /// <summary>
+        /// Returns JSON result with PaymentRequired HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> PaymentRequired(object model)
+        {
+            return await JsonAsync(model, HttpStatusCode.PaymentRequired);
+        }
+        
+        /// <summary>
+        /// Returns JSON result with Forbidden HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> Forbidden(object model)
+        {
+            return await JsonAsync(model, HttpStatusCode.Forbidden);
+        }
+        
+        /// <summary>
+        /// Returns JSON result with NotFound HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> NotFound(object model)
+        {
+            return await JsonAsync(model, HttpStatusCode.NotFound);
+        }
+
+        /// <summary>
+        /// Returns JSON result with MethodNotAllowed HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> MethodNotAllowed(object model)
+        {
+            return await JsonAsync(model, HttpStatusCode.MethodNotAllowed);
+        }
+        
+        /// <summary>
+        /// Returns JSON result with NotAcceptable HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> NotAcceptable(object model)
+        {
+            return await JsonAsync(model, HttpStatusCode.NotAcceptable);
+        }
+        
+        /// <summary>
+        /// Returns JSON result with Conflict HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> Conflict(object model)
+        {
+            return await JsonAsync(model, HttpStatusCode.Conflict);
+        }
+        
+        /// <summary>
+        /// Returns JSON result with Gone HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> Gone(object model)
+        {
+            return await JsonAsync(model, HttpStatusCode.Gone);
+        }
+        
+        /// <summary>
+        /// Returns JSON result with LengthRequired HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> LengthRequired(object model)
+        {
+            return await JsonAsync(model, HttpStatusCode.LengthRequired);
+        }
+        
+        /// <summary>
+        /// Returns JSON result with PreconditionFailed HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> PreconditionFailed(object model)
+        {
+            return await JsonAsync(model, HttpStatusCode.PreconditionFailed);
+        }
+        
+        /// <summary>
+        /// Returns JSON result with RequestEntityTooLarge HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> RequestEntityTooLarge(object model)
+        {
+            return await JsonAsync(model, HttpStatusCode.RequestEntityTooLarge);
+        }
+        
+        /// <summary>
+        /// Returns JSON result with UnsupportedMediaType HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> UnsupportedMediaType(object model)
+        {
+            return await JsonAsync(model, HttpStatusCode.UnsupportedMediaType);
+        }
+
+        /// <summary>
+        /// Returns JSON result with ExpectationFailed HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> ExpectationFailed(object model)
+        {
+            return await JsonAsync(model, HttpStatusCode.ExpectationFailed);
+        }
+
+        /// <summary>
+        /// Returns JSON result with NotImplemented HTTP status code
+        /// </summary>
+        protected async Task<IActionResult> NotImplemented(object model)
+        {
+            return await JsonAsync(model, HttpStatusCode.NotImplemented);
+        }
+
+        #endregion
+        
     }
 }

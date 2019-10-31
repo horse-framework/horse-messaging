@@ -34,16 +34,16 @@ namespace Twino.Mvc.Results
         /// </summary>
         public Dictionary<string, string> Headers { get; }
         
-        public JsonResult()
+        public JsonResult(HttpStatusCode code = HttpStatusCode.OK)
         {
-            Code = HttpStatusCode.OK;
+            Code = code;
             ContentType = ContentTypes.APPLICATION_JSON;
             Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
         }
         
-        public JsonResult(object model)
+        public JsonResult(object model, HttpStatusCode code = HttpStatusCode.OK)
         {
-            Code = HttpStatusCode.OK;
+            Code = code;
             ContentType = ContentTypes.APPLICATION_JSON;
             Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
             Set(model);
