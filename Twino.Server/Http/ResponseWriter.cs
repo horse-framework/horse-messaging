@@ -49,7 +49,19 @@ namespace Twino.Server.Http
                     resultStream = response.ResponseStream;
             }
             else
-                resultStream = null;
+            {
+                byte[] bytes;
+                
+                bool found = PredefinedResults.Statuses.TryGetValue(response.StatusCode, out bytes);
+                if (found && bytes != null)
+                {
+                    resultStream = new MemoryStream(bytes);
+                    response.ContentEncoding = ContentEncodings.None;
+                    hasStream = true;
+                }
+                else
+                    resultStream = null;
+            }
 
             await using MemoryStream m = new MemoryStream();
 
@@ -90,12 +102,13 @@ namespace Twino.Server.Http
                 await m.WriteAsync(PredefinedHeaders.CONTENT_LENGTH_COLON);
                 await Write(m, resultStream.Length + "\r\n");
             }
+            else
+                await m.WriteAsync(PredefinedHeaders.CONNECTION_CLOSE_CRLF);
 
             foreach (var header in response.AdditionalHeaders)
                 await Write(m, header.Key, header.Value);
 
             await m.WriteAsync(HttpReader.CRLF, 0, 2);
-
             if (hasStream)
             {
                 resultStream.Position = 0;

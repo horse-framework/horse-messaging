@@ -228,6 +228,14 @@ namespace Twino.Mvc
             if (!response.SuppressContentEncoding && result is FileResult)
                 response.SuppressContentEncoding = true;
 
+            if (result.Stream == null)
+            {
+                IActionResult statusAction;
+                bool found = Mvc.StatusCodeResults.TryGetValue(result.Code, out statusAction);
+                if (found && statusAction != null)
+                    result = statusAction;
+            }
+
             response.StatusCode = result.Code;
             response.ContentType = result.ContentType;
 

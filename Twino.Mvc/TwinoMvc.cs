@@ -32,6 +32,8 @@ namespace Twino.Mvc
 
         public List<FileRoute> FileRoutes { get; private set; }
 
+        public Dictionary<HttpStatusCode, IActionResult> StatusCodeResults { get; } = new Dictionary<HttpStatusCode, IActionResult>();
+
         /// <summary>
         /// HTTP server of Twino MVC
         /// </summary>

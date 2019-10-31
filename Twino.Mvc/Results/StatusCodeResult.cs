@@ -1,4 +1,5 @@
-﻿using Twino.Mvc.Controllers;
+﻿using System;
+using Twino.Mvc.Controllers;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -248,17 +249,25 @@ namespace Twino.Mvc.Results
         /// <summary>
         /// 400 - Bad Request
         /// </summary>
+        public static async Task<IActionResult> BadRequestAsync()
+        {
+            return await Task.FromResult(BadRequest());
+        }
+
+        /// <summary>
+        /// 400 - Bad Request
+        /// </summary>
         public static IActionResult BadRequest()
         {
             return new StatusCodeResult(HttpStatusCode.BadRequest);
         }
 
         /// <summary>
-        /// 400 - Bad Request
+        /// 401 - Unauthorized
         /// </summary>
-        public static async Task<IActionResult> BadRequestAsync()
+        public static async Task<IActionResult> UnauthorizedAsync()
         {
-            return await Task.FromResult(new StatusCodeResult(HttpStatusCode.BadRequest));
+            return await Task.FromResult(Unauthorized());
         }
 
         /// <summary>
@@ -267,14 +276,6 @@ namespace Twino.Mvc.Results
         public static IActionResult Unauthorized()
         {
             return new StatusCodeResult(HttpStatusCode.Unauthorized);
-        }
-
-        /// <summary>
-        /// 401 - Unauthorized
-        /// </summary>
-        public static async Task<IActionResult> UnauthorizedAsync()
-        {
-            return await Task.FromResult(new StatusCodeResult(HttpStatusCode.Unauthorized));
         }
 
         /// <summary>
@@ -306,7 +307,7 @@ namespace Twino.Mvc.Results
         /// </summary>
         public static async Task<IActionResult> NotFoundAsync()
         {
-            return await Task.FromResult(new StatusCodeResult(HttpStatusCode.NotFound));
+            return await Task.FromResult(NotFound());
         }
 
         /// <summary>

@@ -40,6 +40,8 @@ namespace Sample.Mvc
                 twino.Policies.Add(Policy.Custom("Custom", (d, c) => true));
 
                 twino.UseFiles("/download", "/home/mehmet/files");
+
+                twino.StatusCodeResults.Add(HttpStatusCode.Unauthorized, new JsonResult(new {Message = "Access denied"}));
             });
 
             CorsMiddleware cors = new CorsMiddleware();

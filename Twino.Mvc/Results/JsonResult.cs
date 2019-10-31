@@ -40,7 +40,15 @@ namespace Twino.Mvc.Results
             ContentType = ContentTypes.APPLICATION_JSON;
             Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
         }
-
+        
+        public JsonResult(object model)
+        {
+            Code = HttpStatusCode.OK;
+            ContentType = ContentTypes.APPLICATION_JSON;
+            Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+            Set(model);
+        }
+        
         /// <summary>
         /// Sets json objects of json result
         /// </summary>
