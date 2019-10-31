@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Twino.Core.Http;
 
 namespace Twino.Mvc.Errors
@@ -11,8 +12,8 @@ namespace Twino.Mvc.Errors
     public interface IErrorHandler
     {
         /// <summary>
-        /// When an uncatched error has occured in HTTP Request, this method will be called.
+        /// [async] When an uncatched error has occured in HTTP Request, this method will be called.
         /// </summary>
-        void Error(HttpRequest request, Exception ex);
+        Task Error(HttpRequest request, Exception ex);
     }
 }

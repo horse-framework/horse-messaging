@@ -121,7 +121,7 @@ namespace Twino.Server.Http
 
                 if (requiredMoreData)
                 {
-                    _stream.Write(_buffer, 0, readLength);
+                    await _stream.WriteAsync(_buffer, 0, readLength);
                     requiredMoreData = false;
                 }
                 else
@@ -132,7 +132,7 @@ namespace Twino.Server.Http
                     if (_stream.Length > readLength)
                         _stream.SetLength(readLength);
 
-                    _stream.Write(_buffer, 0, readLength);
+                    await _stream.WriteAsync(_buffer, 0, readLength);
                     start = 0;
                 }
 

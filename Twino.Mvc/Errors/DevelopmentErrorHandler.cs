@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using System.Threading.Tasks;
 using Twino.Core.Http;
 using Twino.Mvc.Controllers;
 using Twino.Mvc.Results;
@@ -17,7 +18,7 @@ namespace Twino.Mvc.Errors
         /// <summary>
         /// Writes all exception information to the response
         /// </summary>
-        public void Error(HttpRequest request, Exception ex)
+        public async Task Error(HttpRequest request, Exception ex)
         {
             StringBuilder builder = new StringBuilder();
             builder.Append("<html>");
@@ -38,18 +39,18 @@ namespace Twino.Mvc.Errors
             builder.Append("</html>");
 
             HtmlResult error = new HtmlResult(builder.ToString().Replace("\n", "<br>"));
-            WriteResponse(request.Response, error);
+            await WriteResponse(request.Response, error);
         }
 
         /// <summary>
         /// Writes IActionResult to the response
         /// </summary>
-        private void WriteResponse(HttpResponse response, IActionResult result)
+        private static async Task WriteResponse(HttpResponse response, IActionResult result)
         {
             response.StatusCode = result.Code;
             response.ContentType = result.ContentType;
-            response.AdditionalHeaders = response.AdditionalHeaders;
-            response.Write(result.Stream);
+            response.AdditionalHeaders = result.Headers;
+            await response.WriteAsync(result.Stream);
         }
     }
 }
