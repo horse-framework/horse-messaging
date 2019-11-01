@@ -22,7 +22,9 @@ namespace Sample.Mvc
             mvc.IsDevelopment = true;
             mvc.Init(twino =>
             {
-                twino.Services
+                twino.Services.AddScoped<IScopedService, ScopedService>();
+                twino.Services.AddTransient<IFirstService, FirstService>();
+                twino.Services.AddTransient<ISecondService, SecondService>();
 
                 twino.AddJwt(options =>
                 {

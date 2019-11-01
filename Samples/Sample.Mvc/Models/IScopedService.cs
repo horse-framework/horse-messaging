@@ -1,6 +1,6 @@
 namespace Sample.Mvc.Models
 {
-    public class IScopedService
+    public interface IScopedService
     {
         
     }
