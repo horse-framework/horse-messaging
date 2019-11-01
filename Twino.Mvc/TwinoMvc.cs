@@ -30,8 +30,14 @@ namespace Twino.Mvc
         /// </summary>
         public List<Route> Routes { get; private set; }
 
+        /// <summary>
+        /// File download routes
+        /// </summary>
         public List<FileRoute> FileRoutes { get; private set; }
 
+        /// <summary>
+        /// Default HTTP status results
+        /// </summary>
         public Dictionary<HttpStatusCode, IActionResult> StatusCodeResults { get; } = new Dictionary<HttpStatusCode, IActionResult>();
 
         /// <summary>
@@ -83,11 +89,7 @@ namespace Twino.Mvc
         /// </summary>
         public bool IsDevelopment { get; set; }
 
-        /// <summary>
-        /// Handler action for middlewares.
-        /// Called for each request before the MVC Request processing starts.
-        /// </summary>
-        internal Action<IMvcApp> RunnerAction { get; set; }
+        internal MvcAppBuilder AppBuilder { get; private set; }
 
         #endregion
 
@@ -230,7 +232,8 @@ namespace Twino.Mvc
             ErrorHandler = new DefaultErrorHandler();
             Policies = new PolicyContainer();
 
-            IHttpRequestHandler requestHandler = new MvcRequestHandler(this);
+            AppBuilder = new MvcAppBuilder(this);
+            IHttpRequestHandler requestHandler = new MvcRequestHandler(this, AppBuilder);
 
             Server = options == null
                          ? new TwinoServer(requestHandler, clientFactory, clientContainer)
@@ -266,7 +269,8 @@ namespace Twino.Mvc
             ErrorHandler = new DefaultErrorHandler();
             Policies = new PolicyContainer();
 
-            IHttpRequestHandler requestHandler = new MvcRequestHandler(this);
+            AppBuilder = new MvcAppBuilder(this);
+            IHttpRequestHandler requestHandler = new MvcRequestHandler(this, AppBuilder);
 
             Server = optionsFilename == null
                          ? new TwinoServer(requestHandler, clientFactory, clientContainer)
@@ -361,7 +365,7 @@ namespace Twino.Mvc
         /// <summary>
         /// Runs Twino MVC Server as sync, with middleware implementation
         /// </summary>
-        public void Run(Action<IMvcApp> runner)
+        public void Run(Action<IMvcAppBuilder> runner)
         {
             Run(runner, false);
         }
@@ -377,7 +381,7 @@ namespace Twino.Mvc
         /// <summary>
         /// Runs Twino MVC Server as async, with middleware implementation
         /// </summary>
-        public void RunAsync(Action<IMvcApp> runner)
+        public void RunAsync(Action<IMvcAppBuilder> runner)
         {
             Run(runner, true);
         }
@@ -385,37 +389,15 @@ namespace Twino.Mvc
         /// <summary>
         /// Runs Twino MVC Server
         /// </summary>
-        private void Run(Action<IMvcApp> runner, bool async)
+        private void Run(Action<IMvcAppBuilder> runner, bool async)
         {
-            RunnerAction = runner;
+            if (runner != null)
+                runner(AppBuilder);
+            
             Server.Start();
 
             if (!async)
                 Server.BlockWhileRunning();
-        }
-
-        #endregion
-
-        #region Use Files
-
-        public void UseFiles(string urlPath, string physicalPath)
-        {
-            FileRoutes.Add(new FileRoute(urlPath, new[] {physicalPath}));
-        }
-
-        public void UseFiles(string urlPath, string[] physicalPaths)
-        {
-            FileRoutes.Add(new FileRoute(urlPath, physicalPaths));
-        }
-
-        public void UseFiles(string urlPath, string physicalPath, Func<HttpRequest, HttpStatusCode> validation)
-        {
-            FileRoutes.Add(new FileRoute(urlPath, new[] {physicalPath}, validation));
-        }
-
-        public void UseFiles(string urlPath, string[] physicalPaths, Func<HttpRequest, HttpStatusCode> validation)
-        {
-            FileRoutes.Add(new FileRoute(urlPath, physicalPaths, validation));
         }
 
         #endregion

@@ -34,9 +34,12 @@ namespace Twino.Mvc
         /// </summary>
         public TwinoMvc Mvc { get; }
 
-        public MvcRequestHandler(TwinoMvc mvc)
+        internal MvcAppBuilder App { get; }
+
+        public MvcRequestHandler(TwinoMvc mvc, MvcAppBuilder app)
         {
             Mvc = mvc;
+            App = app;
         }
 
         /// <summary>
@@ -47,22 +50,19 @@ namespace Twino.Mvc
             try
             {
                 IContainerScope scope = Mvc.Services.CreateScope();
-                
-                if (Mvc.RunnerAction == null)
+
+                if (App.Descriptors.Count > 0)
                 {
-                    await RequestMvc(server, request, response, scope);
-                    return;
+                    MiddlewareRunner runner = new MiddlewareRunner(Mvc, scope);
+                    await runner.RunSequence(App, request, response);
+                    if (runner.LastResult != null)
+                    {
+                        WriteResponse(response, runner.LastResult);
+                        return;
+                    }
                 }
 
-                MvcApp app = new MvcApp(request, response);
-
-                Mvc.RunnerAction(app);
-                await app.RunSequence();
-
-                if (app.LastResult != null)
-                    WriteResponse(response, app.LastResult);
-                else
-                    await RequestMvc(server, request, response, scope);
+                await RequestMvc(server, request, response, scope);
             }
             catch (Exception ex)
             {

@@ -9,7 +9,7 @@ namespace Test.Mvc.Helpers
 {
     public class CustomMiddleware : IMiddleware
     {
-        public async Task Invoke(NextMiddlewareHandler next, HttpRequest request, HttpResponse response)
+        public async Task Invoke(HttpRequest request, HttpResponse response, MiddlewareResultHandler setResult)
         {
             if (request.QueryString.ContainsKey("middleware"))
             {
@@ -17,12 +17,11 @@ namespace Test.Mvc.Helpers
                 if (value == "custom")
                 {
                     IActionResult result = new StatusCodeResult(HttpStatusCode.Forbidden);
-                    next(result);
+                    setResult(result);
                     return;
                 }
             }
 
-            next(null);
             await Task.CompletedTask;
         }
     }
