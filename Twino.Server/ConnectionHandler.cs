@@ -131,6 +131,11 @@ namespace Twino.Server
                     
                 } while (keepReading);
             }
+            //when non-http request message received 
+            catch(ArgumentOutOfRangeException)
+            {
+                info.Close();
+            }
             catch (SocketException)
             {
                 info.Close();
