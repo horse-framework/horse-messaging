@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.Mvc.Controllers;
@@ -51,6 +52,16 @@ namespace Sample.Mvc.Controller
         {
             Thread.Sleep(100);
             return String("Hello world: " + id);
+        }
+
+        [HttpGet("large")]
+        public async Task<IActionResult> Get()
+        {
+            List<string> list = new List<string>();
+            for (int i = 0; i < 50; i++)
+                list.Add(new string('b', 100));
+
+            return await JsonAsync(list);
         }
 
         [HttpGet("get3/{?id}")]

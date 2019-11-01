@@ -128,22 +128,10 @@ namespace Twino.Server
 
                     if (keepReading)
                         reader.Reset();
-                    
                 } while (keepReading);
             }
-            catch (SocketException)
+            catch
             {
-                info.Close();
-            }
-            catch (IOException)
-            {
-                info.Close();
-            }
-            catch (Exception ex)
-            {
-                if (_server.Logger != null)
-                    _server.Logger.LogException("HANDLE_CONNECTION", ex);
-
                 info.Close();
             }
         }
@@ -237,7 +225,16 @@ namespace Twino.Server
             }
 
             info.State = ConnectionStates.Http;
-            await _server.RequestHandler.RequestAsync(_server, request, response);
+            try
+            {
+                await _server.RequestHandler.RequestAsync(_server, request, response);
+            }
+            catch (Exception ex)
+            {
+                if (_server.Logger != null)
+                    _server.Logger.LogException("Unhandled Exception", ex);
+            }
+
             await _writer.Write(response);
 
             //stay alive, if keep alive active and response has stream

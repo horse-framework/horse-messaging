@@ -13,9 +13,9 @@
     <NeutralLanguage>en</NeutralLanguage>
     <Version>3.2.0</Version>
     <PackageTags>twino, websocket, server, http, tcp, lightweight, mq</PackageTags>
-    <AssemblyVersion>1.2.3</AssemblyVersion>
-    <FileVersion>1.2.3</FileVersion>
-    <PackageVersion>1.2.3</PackageVersion>
+    <AssemblyVersion>1.2.4</AssemblyVersion>
+    <FileVersion>1.2.4</FileVersion>
+    <PackageVersion>1.2.4</PackageVersion>
     <LangVersion>8</LangVersion>
   </PropertyGroup>
 

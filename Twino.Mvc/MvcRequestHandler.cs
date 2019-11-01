@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using Twino.Mvc.Auth;
 using Twino.Core.Http;
 using Twino.Mvc.Middlewares;
+using Twino.Mvc.Services;
 
 namespace Twino.Mvc
 {
@@ -45,9 +46,11 @@ namespace Twino.Mvc
         {
             try
             {
+                IContainerScope scope = Mvc.Services.CreateScope();
+                
                 if (Mvc.RunnerAction == null)
                 {
-                    await RequestMvc(server, request, response);
+                    await RequestMvc(server, request, response, scope);
                     return;
                 }
 
@@ -59,7 +62,7 @@ namespace Twino.Mvc
                 if (app.LastResult != null)
                     WriteResponse(response, app.LastResult);
                 else
-                    await RequestMvc(server, request, response);
+                    await RequestMvc(server, request, response, scope);
             }
             catch (Exception ex)
             {
@@ -81,7 +84,7 @@ namespace Twino.Mvc
         /// <summary>
         /// Handles the request in MVC pattern
         /// </summary>
-        private async Task RequestMvc(TwinoServer server, HttpRequest request, HttpResponse response)
+        private async Task RequestMvc(TwinoServer server, HttpRequest request, HttpResponse response, IContainerScope scope)
         {
             //find file route
             if (Mvc.FileRoutes.Count > 0)
@@ -136,7 +139,7 @@ namespace Twino.Mvc
             if (!CallFilters(response, context, controllerFilters, filter => filter.BeforeCreated(context)))
                 return;
 
-            TwinoController controller = Mvc.ControllerFactory.CreateInstance(Mvc, match.Route.ControllerType, request, response);
+            TwinoController controller = Mvc.ControllerFactory.CreateInstance(Mvc, match.Route.ControllerType, request, response, scope);
             if (controller == null)
             {
                 WriteResponse(response, Mvc.NotFoundResult);
