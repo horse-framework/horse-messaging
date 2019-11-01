@@ -22,7 +22,7 @@ namespace Sample.Mvc
             mvc.IsDevelopment = true;
             mvc.Init(twino =>
             {
-                twino.Services.Add<IDemoService, DemoService>();
+                twino.Services
 
                 twino.AddJwt(options =>
                 {

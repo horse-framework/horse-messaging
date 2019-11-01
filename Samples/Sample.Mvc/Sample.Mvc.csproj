@@ -7,12 +7,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\Twino.Mvc.Auth.Jwt\Twino.Mvc.Auth.Jwt.csproj"/>
-        <ProjectReference Include="..\..\Twino.Mvc\Twino.Mvc.csproj"/>
+        <ProjectReference Include="..\..\Twino.Mvc.Auth.Jwt\Twino.Mvc.Auth.Jwt.csproj" />
+        <ProjectReference Include="..\..\Twino.Mvc\Twino.Mvc.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <Folder Include="Properties\"/>
+        <Folder Include="Properties\" />
     </ItemGroup>
 
     <ItemGroup>
