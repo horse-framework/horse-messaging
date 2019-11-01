@@ -4,12 +4,8 @@ using Twino.Mvc.Auth.Jwt;
 using Twino.Mvc.Middlewares;
 using Sample.Mvc.Models;
 using System;
-using System.Linq;
 using System.Net;
-using System.Net.Http;
 using Twino.Mvc.Results;
-using Twino.Server;
-using Twino.Server.WebSockets;
 
 namespace Sample.Mvc
 {
@@ -22,7 +18,7 @@ namespace Sample.Mvc
             mvc.IsDevelopment = true;
             mvc.Init(twino =>
             {
-                twino.Services.Add<IDemoService, DemoService>();
+                twino.Services.AddTransient<IDemoService, DemoService>();
 
                 twino.AddJwt(options =>
                 {

@@ -6,6 +6,8 @@ namespace Sample.Mvc.Models
     {
         private Random rnd = new Random();
 
+        public string Name = "A";
+
         public int GetNumber()
         {
             return rnd.Next(0, 1000);

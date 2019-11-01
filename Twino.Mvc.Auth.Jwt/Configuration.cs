@@ -21,7 +21,7 @@ namespace Twino.Mvc.Auth.Jwt
             twino.ClaimsPrincipalValidator = new JwtClaimsPrincipalValidator(jwtOptions);
 
             twino.Services.AddSingleton<JwtOptions, JwtOptions>(jwtOptions);
-            twino.Services.Add<IJwtProvider, JwtProvider>();
+            twino.Services.AddScoped<IJwtProvider, JwtProvider>();
 
             return twino;
         }
