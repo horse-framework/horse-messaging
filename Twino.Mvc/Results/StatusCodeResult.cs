@@ -1,6 +1,9 @@
-﻿using Twino.Mvc.Controllers;
+﻿using System;
+using Twino.Mvc.Controllers;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Core.Http;
@@ -22,7 +25,7 @@ namespace Twino.Mvc.Results
         /// <summary>
         /// Result content body
         /// </summary>
-        public string Content { get; private set; }
+        public Stream Stream { get; private set; }
 
         /// <summary>
         /// Additional custom headers with key and value
@@ -33,7 +36,6 @@ namespace Twino.Mvc.Results
         {
             Headers = new Dictionary<string, string>();
             ContentType = ContentTypes.TEXT_HTML;
-            Content = null;
             Code = code;
         }
 
@@ -140,7 +142,10 @@ namespace Twino.Mvc.Results
         {
             StatusCodeResult result = new StatusCodeResult(HttpStatusCode.MovedPermanently);
             result.Headers.Add(HttpHeaders.LOCATION, location);
-            result.Content = "<html><head><title>Moved</title></head><body><div>Page moved to <a href=\"" + location + "\">here</a></div></body></html>";
+            
+            result.Stream = new MemoryStream(Encoding.UTF8.GetBytes("<html><head><title>Moved</title></head><body><div>Page moved to <a href=\"" +
+                                                                    location +
+                                                                    "\">here</a></div></body></html>"));
             return result;
         }
 
@@ -159,7 +164,11 @@ namespace Twino.Mvc.Results
         {
             StatusCodeResult result = new StatusCodeResult(HttpStatusCode.Found);
             result.Headers.Add(HttpHeaders.LOCATION, location);
-            result.Content = "<html><head><title>Moved</title></head><body><div>Page moved to <a href=\"" + location + "\">here</a></div></body></html>";
+            
+            result.Stream = new MemoryStream(Encoding.UTF8.GetBytes("<html><head><title>Moved</title></head><body><div>Page moved to <a href=\"" +
+                                                                    location +
+                                                                    "\">here</a></div></body></html>"));
+
             return result;
         }
 
@@ -178,7 +187,10 @@ namespace Twino.Mvc.Results
         {
             StatusCodeResult result = new StatusCodeResult(HttpStatusCode.Redirect);
             result.Headers.Add(HttpHeaders.LOCATION, location);
-            result.Content = "<html><head><title>Moved</title></head><body><div>Page moved to <a href=\"" + location + "\">here</a></div></body></html>";
+            
+            result.Stream = new MemoryStream(Encoding.UTF8.GetBytes("<html><head><title>Moved</title></head><body><div>Page moved to <a href=\"" +
+                                                                    location +
+                                                                    "\">here</a></div></body></html>"));
             return result;
         }
 
@@ -197,7 +209,10 @@ namespace Twino.Mvc.Results
         {
             StatusCodeResult result = new StatusCodeResult(HttpStatusCode.TemporaryRedirect);
             result.Headers.Add(HttpHeaders.LOCATION, location);
-            result.Content = "<html><head><title>Moved</title></head><body><div>Page moved to <a href=\"" + location + "\">here</a></div></body></html>";
+
+            result.Stream = new MemoryStream(Encoding.UTF8.GetBytes("<html><head><title>Moved</title></head><body><div>Page moved to <a href=\"" +
+                                                                    location +
+                                                                    "\">here</a></div></body></html>"));
             return result;
         }
 
@@ -216,7 +231,10 @@ namespace Twino.Mvc.Results
         {
             StatusCodeResult result = new StatusCodeResult(HttpStatusCode.PermanentRedirect);
             result.Headers.Add(HttpHeaders.LOCATION, location);
-            result.Content = "<html><head><title>Moved</title></head><body><div>Page moved to <a href=\"" + location + "\">here</a></div></body></html>";
+
+            result.Stream = new MemoryStream(Encoding.UTF8.GetBytes("<html><head><title>Moved</title></head><body><div>Page moved to <a href=\"" +
+                                                                    location +
+                                                                    "\">here</a></div></body></html>"));
             return result;
         }
 
@@ -231,17 +249,25 @@ namespace Twino.Mvc.Results
         /// <summary>
         /// 400 - Bad Request
         /// </summary>
+        public static async Task<IActionResult> BadRequestAsync()
+        {
+            return await Task.FromResult(BadRequest());
+        }
+
+        /// <summary>
+        /// 400 - Bad Request
+        /// </summary>
         public static IActionResult BadRequest()
         {
             return new StatusCodeResult(HttpStatusCode.BadRequest);
         }
 
         /// <summary>
-        /// 400 - Bad Request
+        /// 401 - Unauthorized
         /// </summary>
-        public static async Task<IActionResult> BadRequestAsync()
+        public static async Task<IActionResult> UnauthorizedAsync()
         {
-            return await Task.FromResult(new StatusCodeResult(HttpStatusCode.BadRequest));
+            return await Task.FromResult(Unauthorized());
         }
 
         /// <summary>
@@ -250,14 +276,6 @@ namespace Twino.Mvc.Results
         public static IActionResult Unauthorized()
         {
             return new StatusCodeResult(HttpStatusCode.Unauthorized);
-        }
-
-        /// <summary>
-        /// 401 - Unauthorized
-        /// </summary>
-        public static async Task<IActionResult> UnauthorizedAsync()
-        {
-            return await Task.FromResult(new StatusCodeResult(HttpStatusCode.Unauthorized));
         }
 
         /// <summary>
@@ -289,7 +307,7 @@ namespace Twino.Mvc.Results
         /// </summary>
         public static async Task<IActionResult> NotFoundAsync()
         {
-            return await Task.FromResult(new StatusCodeResult(HttpStatusCode.NotFound));
+            return await Task.FromResult(NotFound());
         }
 
         /// <summary>
@@ -571,7 +589,7 @@ namespace Twino.Mvc.Results
         {
             return new StatusCodeResult(HttpStatusCode.ServiceUnavailable);
         }
-        
+
         /// <summary>
         /// 503 - Service Unavailable
         /// </summary>

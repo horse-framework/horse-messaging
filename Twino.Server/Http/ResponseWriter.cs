@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.IO.Compression;
 using System.Text;
 using System.Threading.Tasks;
 using Twino.Core.Http;
@@ -12,11 +11,31 @@ namespace Twino.Server.Http
     /// </summary>
     internal class ResponseWriter
     {
-        private TwinoServer _server;
+        private readonly TwinoServer _server;
+        private readonly ContentWriter _writer;
 
         public ResponseWriter(TwinoServer server)
         {
             _server = server;
+            _writer = new ContentWriter(server);
+        }
+
+        /// <summary>
+        /// Writes string value to specified stream
+        /// </summary>
+        private static async Task Write(Stream stream, string msg)
+        {
+            ReadOnlyMemory<byte> data = Encoding.ASCII.GetBytes(msg);
+            await stream.WriteAsync(data);
+        }
+
+        /// <summary>
+        /// Writes header key and value to specified stream
+        /// </summary>
+        private static async Task Write(Stream stream, string key, string value)
+        {
+            byte[] data = Encoding.UTF8.GetBytes(key + ": " + value + "\r\n");
+            await stream.WriteAsync(data, 0, data.Length);
         }
 
         /// <summary>
@@ -24,69 +43,117 @@ namespace Twino.Server.Http
         /// </summary>
         internal async Task Write(HttpResponse response)
         {
-            Stream stream = response.Stream;
-            await using MemoryStream ms = new MemoryStream();
-            byte[] result;
-            byte[] content = response.GetContent();
-            if (content != null && content.Length > 0)
+            Stream stream = response.NetworkStream;
+            Stream resultStream;
+            bool hasStream = response.HasStream() && response.ResponseStream.Length > 0;
+
+            if (hasStream)
             {
+                if (!response.SuppressContentEncoding && _server.SupportedEncodings.Length > 0)
+                    resultStream = await _writer.WriteAsync(response.Request, response);
+                else
+                {
+                    if (response.ContentEncoding != ContentEncodings.None)
+                        response.ContentEncoding = ContentEncodings.None;
+
+                    resultStream = response.ResponseStream;
+                }
+            }
+
+            //if response stream does not exists
+            //we are checking to find a response message for http status code
+            else
+            {
+                byte[] bytes;
+
+                bool found = PredefinedResults.Statuses.TryGetValue(response.StatusCode, out bytes);
+                if (found && bytes != null)
+                {
+                    resultStream = new MemoryStream(bytes);
+                    response.ContentEncoding = ContentEncodings.None;
+                    hasStream = true;
+                }
+                else
+                    resultStream = null;
+            }
+
+            await using MemoryStream m = new MemoryStream();
+
+            //http version, http status, server info and server time
+            await m.WriteAsync(PredefinedHeaders.HTTP_VERSION);
+            await Write(m, HttpHeaders.Create(Convert.ToInt32(response.StatusCode) + " " + response.StatusCode));
+            await m.WriteAsync(PredefinedHeaders.SERVER_CRLF);
+            await m.WriteAsync(PredefinedHeaders.SERVER_TIME_CRLF);
+
+            if (hasStream)
+            {
+                //content type
+                if (!string.IsNullOrEmpty(response.ContentType))
+                {
+                    await m.WriteAsync(PredefinedHeaders.CONTENT_TYPE_COLON);
+                    await Write(m, response.ContentType);
+                    await m.WriteAsync(PredefinedHeaders.CHARSET_UTF8_CRLF);
+                }
+
+                //connection keep alive or close
+                if (_server.Options.HttpConnectionTimeMax > 0)
+                    await m.WriteAsync(PredefinedHeaders.CONNECTION_KEEP_ALIVE_CRLF);
+                else
+                    await m.WriteAsync(PredefinedHeaders.CONNECTION_CLOSE_CRLF);
+
+                //content encoding
                 switch (response.ContentEncoding)
                 {
                     case ContentEncodings.Brotli:
-                    {
-                        await using (BrotliStream brotli = new BrotliStream(ms, CompressionMode.Compress))
-                            await brotli.WriteAsync(content, 0, content.Length);
-
-                        result = ms.ToArray();
+                        await m.WriteAsync(PredefinedHeaders.ENCODING_BR_CRLF);
                         break;
-                    }
+
                     case ContentEncodings.Gzip:
-                    {
-                        await using (GZipStream gzip = new GZipStream(ms, CompressionMode.Compress))
-                            await gzip.WriteAsync(content, 0, content.Length);
+                        await m.WriteAsync(PredefinedHeaders.ENCODING_GZIP_CRLF);
+                        break;
 
-                        result = ms.ToArray();
+                    case ContentEncodings.Deflate:
+                        await m.WriteAsync(PredefinedHeaders.ENCODING_DEFLATE_CRLF);
                         break;
-                    }
-                    default:
-                        result = content;
-                        break;
+                }
+
+                //content length
+                await m.WriteAsync(PredefinedHeaders.CONTENT_LENGTH_COLON);
+                await Write(m, resultStream.Length + "\r\n");
+            }
+            else
+                await m.WriteAsync(PredefinedHeaders.CONNECTION_CLOSE_CRLF);
+
+            //custom headers 
+            foreach (var header in response.AdditionalHeaders)
+                await Write(m, header.Key, header.Value);
+
+            await m.WriteAsync(HttpReader.CRLF, 0, 2);
+
+            if (hasStream)
+            {
+                resultStream.Position = 0;
+                
+                //if data is greater than 5KB, don't waste memory and send it to network as partial
+                if (resultStream.Length > 5120)
+                {
+                    m.WriteTo(stream);
+                    await resultStream.CopyToAsync(stream);
+                }
+                
+                //write small data to memory stream and send all data to network at once for better response time
+                else
+                {
+                    await resultStream.CopyToAsync(m);
+                    m.WriteTo(stream);
                 }
             }
             else
-                result = new byte[0];
+                m.WriteTo(stream);
 
-            StringBuilder responseBuilder = new StringBuilder();
-            responseBuilder.Append(HttpHeaders.Create(HttpHeaders.HTTP_VERSION + " " + Convert.ToInt32(response.StatusCode) + " " + response.StatusCode));
-            responseBuilder.Append(HttpHeaders.Create(HttpHeaders.SERVER, HttpHeaders.VALUE_SERVER));
-            responseBuilder.Append(HttpHeaders.Create(HttpHeaders.DATE, _server.Time));
-            responseBuilder.Append(HttpHeaders.Create(HttpHeaders.CONTENT_TYPE, response.ContentType, HttpHeaders.VALUE_CHARSET_UTF8));
-            
-            if (_server.Options.HttpConnectionTimeMax > 0)
-                responseBuilder.Append(HttpHeaders.Create(HttpHeaders.CONNECTION, HttpHeaders.VALUE_KEEP_ALIVE));
-            
-            switch (response.ContentEncoding)
-            {
-                case ContentEncodings.Brotli:
-                    responseBuilder.Append(HttpHeaders.Create(HttpHeaders.CONTENT_ENCODING, HttpHeaders.VALUE_BROTLI));
-                    break;
-                case ContentEncodings.Gzip:
-                    responseBuilder.Append(HttpHeaders.Create(HttpHeaders.CONTENT_ENCODING, HttpHeaders.VALUE_GZIP));
-                    break;
-            }
-
-            responseBuilder.Append(HttpHeaders.Create(HttpHeaders.CONTENT_LENGTH, result.Length));
-
-            foreach (var header in response.AdditionalHeaders)
-                responseBuilder.Append(HttpHeaders.Create(header.Key, header.Value));
-
-            responseBuilder.Append(Environment.NewLine);
-
-            string str = responseBuilder.ToString();
-            byte[] bytes = Encoding.UTF8.GetBytes(str);
-            await stream.WriteAsync(bytes, 0, bytes.Length);
-            await stream.WriteAsync(result, 0, result.Length);
+            //let gc to dispose response stream
+            if (hasStream && response.StreamSuppressed && response.ResponseStream != null)
+                GC.ReRegisterForFinalize(response.ResponseStream);
         }
-
     }
 }

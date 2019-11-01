@@ -52,10 +52,10 @@ namespace Twino.SocketModels
         private readonly List<SocketBase> _handlingClients = new List<SocketBase>();
 
         /// <summary>
-        /// A timer is running in this thread, it checks pending requests if they are disconnected or timed out.
+        /// It checks pending requests if they are disconnected or timed out.
         /// and it checked handling clients and removes them from handling clients lists if they are disconnected.
         /// </summary>
-        private Thread _cleanupThread;
+        private Timer _cleanupTimer;
 
         #endregion
 
@@ -77,8 +77,11 @@ namespace Twino.SocketModels
             lock (_pendingRequests)
                 _pendingRequests.Clear();
 
-            _cleanupThread.Abort();
-            _cleanupThread = null;
+            if (_cleanupTimer != null)
+            {
+                _cleanupTimer.Dispose();
+                _cleanupTimer = null;
+            }
         }
 
         /// <summary>
@@ -86,7 +89,7 @@ namespace Twino.SocketModels
         /// After that method is called, responses from this client won't be received.
         /// If there are pending requests, their events will be fired as timeout.
         /// </summary>
-        public void UnhandleClient(SocketBase client)
+        public void ReleaseClient(SocketBase client)
         {
             client.MessageReceived -= SenderOnMessageReceived;
 
@@ -141,7 +144,7 @@ namespace Twino.SocketModels
         public async Task<SocketResponse<TResponse>> Request<TResponse>(SocketBase sender, ISocketModel model, int timeoutSeconds)
             where TResponse : ISocketModel, new()
         {
-            if (_cleanupThread == null)
+            if (_cleanupTimer == null)
                 RunCleanupTimer();
 
             CheckReceiveEvents(sender);
@@ -194,7 +197,7 @@ namespace Twino.SocketModels
         /// Reads the message from the socket.
         /// If the message is request, finds the subscription and process it.
         /// </summary>
-        public void HandleRequests(SocketBase sender, string receivedMessage)
+        public async Task HandleRequests(SocketBase sender, string receivedMessage)
         {
             RequestHeader header = ReadHeader<RequestHeader>(REQUEST_CODE, receivedMessage);
             if (header == null)
@@ -208,7 +211,7 @@ namespace Twino.SocketModels
             if (requestModel == null)
                 return;
 
-            ProcessRequest(sender, descriptor, header, requestModel);
+            await ProcessRequest(sender, descriptor, header, requestModel);
         }
 
         /// <summary>
@@ -323,66 +326,67 @@ namespace Twino.SocketModels
         /// </summary>
         private void RunCleanupTimer()
         {
-            if (_cleanupThread != null)
+            if (_cleanupTimer != null)
                 return;
 
-            _cleanupThread = new Thread(() =>
+            List<SocketBase> removingClients = new List<SocketBase>();
+
+            List<KeyValuePair<string, PendingRequest>> errors = new List<KeyValuePair<string, PendingRequest>>();
+            List<KeyValuePair<string, PendingRequest>> timeouts = new List<KeyValuePair<string, PendingRequest>>();
+
+            _cleanupTimer = new Timer(state =>
             {
-                List<SocketBase> removingClients = new List<SocketBase>();
-                List<string> removingRequests = new List<string>();
+                if (errors.Count > 0)
+                    errors.Clear();
 
-                while (true)
+                if (timeouts.Count > 0)
+                    timeouts.Clear();
+
+                if (removingClients.Count > 0)
+                    removingClients.Clear();
+                
+                lock (_pendingRequests)
                 {
-                    lock (_pendingRequests)
+                    foreach (KeyValuePair<string, PendingRequest> pair in _pendingRequests)
                     {
-                        foreach (KeyValuePair<string, PendingRequest> pair in _pendingRequests)
+                        if (pair.Value.Sender == null || !pair.Value.Sender.IsConnected)
                         {
-                            if (pair.Value.Sender == null || !pair.Value.Sender.IsConnected)
-                            {
-                                pair.Value.CompleteAsError();
-                                removingRequests.Add(pair.Key);
-                                continue;
-                            }
-
-                            if (pair.Value.Deadline > DateTime.UtcNow)
-                                continue;
-
-                            pair.Value.CompleteAsTimeout();
-                            removingRequests.Add(pair.Key);
+                            errors.Add(pair);
+                            continue;
                         }
 
-                        foreach (string str in removingRequests)
-                            _pendingRequests.Remove(str);
+                        if (pair.Value.Deadline > DateTime.UtcNow)
+                            continue;
 
-                        if (removingRequests.Count > 0)
-                            removingRequests.Clear();
+                        timeouts.Add(pair);
                     }
 
-                    lock (_handlingClients)
-                    {
-                        foreach (SocketBase client in _handlingClients)
-                        {
-                            if (!client.IsConnected)
-                            {
-                                client.MessageReceived -= SenderOnMessageReceived;
-                                removingClients.Add(client);
-                            }
-                        }
-
-                        foreach (SocketBase client in removingClients)
-                            _handlingClients.Remove(client);
-
-                        if (_handlingClients.Count > 0)
-                            _handlingClients.Clear();
-                    }
-
-                    Thread.Sleep(1000);
+                    foreach (var kv in errors) _pendingRequests.Remove(kv.Key);
+                    foreach (var kv in timeouts) _pendingRequests.Remove(kv.Key);
                 }
-            });
 
-            _cleanupThread.IsBackground = true;
-            _cleanupThread.Priority = ThreadPriority.BelowNormal;
-            _cleanupThread.Start();
+                lock (_handlingClients)
+                {
+                    foreach (SocketBase client in _handlingClients)
+                    {
+                        if (!client.IsConnected)
+                        {
+                            client.MessageReceived -= SenderOnMessageReceived;
+                            removingClients.Add(client);
+                        }
+                    }
+
+                    foreach (SocketBase client in removingClients)
+                        _handlingClients.Remove(client);
+                }
+
+                foreach (KeyValuePair<string, PendingRequest> error in errors)
+                    error.Value.CompleteAsError();
+
+                foreach (KeyValuePair<string, PendingRequest> timeout in timeouts)
+                    timeout.Value.CompleteAsTimeout();
+
+            }, null, 1000, 1000);
         }
 
         #endregion

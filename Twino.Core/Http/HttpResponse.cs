@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Twino.Core.Http
 {
@@ -11,7 +12,8 @@ namespace Twino.Core.Http
     {
         None,
         Gzip,
-        Brotli
+        Brotli,
+        Deflate
     }
 
     /// <summary>
@@ -40,35 +42,154 @@ namespace Twino.Core.Http
         /// <summary>
         /// Network stream of the Requester (if connection is using SSL, this stream is SslStream. otherwise NetworkStream)
         /// </summary>
-        public Stream Stream { get; set; }
+        internal Stream NetworkStream { get; set; }
 
         /// <summary>
         /// Additional headers for the response.
         /// </summary>
         public Dictionary<string, string> AdditionalHeaders { get; set; } = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 
+        private Stream _responseStream;
+
         /// <summary>
-        /// Response content. The response byte array is created just be sending the data to the client.
-        /// Until this operation, data wil be appended to the content string builder.
+        /// Response stream of request
         /// </summary>
-        private StringBuilder Content { get; set; } = new StringBuilder();
+        public Stream ResponseStream
+        {
+            get
+            {
+                if (_responseStream == null)
+                    _responseStream = new MemoryStream();
+
+                return _responseStream;
+            }
+            private set => _responseStream = value;
+        }
+
+        /// <summary>
+        /// If true, prevents to apply content encodings. even server supports and client accepts.
+        /// </summary>
+        public bool SuppressContentEncoding { get; set; }
+
+        /// <summary>
+        /// Request of the response
+        /// </summary>
+        public HttpRequest Request { get; internal set; }
+
+
+        internal bool StreamSuppressed { get; private set; }
 
         #endregion
+
+        #region Write
 
         /// <summary>
         /// Writes a string to the response
         /// </summary>
         public void Write(string content)
         {
-            Content.Append(content);
+            byte[] data = Encoding.UTF8.GetBytes(content);
+            ResponseStream.Write(data, 0, data.Length);
         }
+
+        /// <summary>
+        /// Writes a string to the response
+        /// </summary>
+        public async Task WriteAsync(string content)
+        {
+            byte[] data = Encoding.UTF8.GetBytes(content);
+            await ResponseStream.WriteAsync(data, 0, data.Length);
+        }
+
+        /// <summary>
+        /// Writes a stream to the response stream
+        /// </summary>
+        public void Write(Stream stream)
+        {
+            stream.Position = 0;
+            stream.CopyTo(ResponseStream);
+        }
+
+        /// <summary>
+        /// Writes a stream to the response stream
+        /// </summary>
+        public async Task WriteAsync(Stream stream)
+        {
+            stream.Position = 0;
+            await stream.CopyToAsync(ResponseStream);
+        }
+
+        /// <summary>
+        /// Writes a string to the response
+        /// </summary>
+        public async Task WriteAsync(byte[] data)
+        {
+            await ResponseStream.WriteAsync(data, 0, data.Length);
+        }
+
+        #endregion
+
+        #region Set Stream
+
+        /// <summary>
+        /// Returns true if response has content
+        /// </summary>
+        /// <returns></returns>
+        public bool HasStream()
+        {
+            return _responseStream != null;
+        }
+
+        /// <summary>
+        /// Changes response's stream
+        /// </summary>
+        /// <param name="newStream">New stream</param>
+        /// <param name="suppress">If true, new stream dispose will be prevented until request completed</param>
+        /// <param name="disposeOldStream">If true, old stream will be disposed</param>
+        public void SetStream(Stream newStream, bool suppress, bool disposeOldStream)
+        {
+            if (disposeOldStream && ResponseStream != null)
+                ResponseStream.Dispose();
+
+            ResponseStream = newStream;
+
+            if (suppress)
+            {
+                StreamSuppressed = true;
+                GC.SuppressFinalize(ResponseStream);
+            }
+        }
+
+        /// <summary>
+        /// Changes response's stream
+        /// </summary>
+        /// <param name="newStream">New stream</param>
+        /// <param name="suppress">If true, new stream dispose will be prevented until request completed</param>
+        /// <param name="disposeOldStream">If true, old stream will be disposed</param>
+        public async Task SetStreamAsync(Stream newStream, bool suppress, bool disposeOldStream)
+        {
+            if (disposeOldStream && ResponseStream != null)
+                await ResponseStream.DisposeAsync();
+
+            ResponseStream = newStream;
+
+            if (suppress)
+            {
+                StreamSuppressed = true;
+                GC.SuppressFinalize(ResponseStream);
+            }
+        }
+
+        #endregion
+
+        #region Set Content Type
 
         /// <summary>
         /// Sets response content type to html and status to 200
         /// </summary>
         public void SetToText()
         {
-            ContentType = "text/plain";
+            ContentType = ContentTypes.PLAIN_TEXT;
             StatusCode = HttpStatusCode.OK;
         }
 
@@ -77,7 +198,7 @@ namespace Twino.Core.Http
         /// </summary>
         public void SetToHtml()
         {
-            ContentType = "text/html";
+            ContentType = ContentTypes.TEXT_HTML;
             StatusCode = HttpStatusCode.OK;
         }
 
@@ -86,19 +207,25 @@ namespace Twino.Core.Http
         /// </summary>
         public void SetToJson(object model)
         {
-            ContentType = "application/json";
+            ContentType = ContentTypes.APPLICATION_JSON;
             StatusCode = HttpStatusCode.OK;
-            Content.Append(JsonConvert.SerializeObject(model));
+            byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(model));
+            ResponseStream.Write(data, 0, data.Length);
         }
 
         /// <summary>
-        /// Reads the content and creates byte array for shipping
+        /// Sets response content type to json and status to 200
         /// </summary>
-        /// <returns></returns>
-        public byte[] GetContent()
+        public async Task SetToJsonAsync(object model)
         {
-            return Encoding.UTF8.GetBytes(Content.ToString());
+            ContentType = ContentTypes.APPLICATION_JSON;
+            StatusCode = HttpStatusCode.OK;
+            await System.Text.Json.JsonSerializer.SerializeAsync(ResponseStream, model, model.GetType());
         }
+
+        #endregion
+
+        #region Known Status Codes
 
         /// <summary>
         /// 400 - Bad Request
@@ -107,9 +234,9 @@ namespace Twino.Core.Http
         {
             return new HttpResponse
                    {
-                       ContentType = "text/html",
+                       ContentType = ContentTypes.TEXT_HTML,
                        StatusCode = HttpStatusCode.BadRequest,
-                       ContentEncoding = ContentEncodings.None
+                       SuppressContentEncoding = true
                    };
         }
 
@@ -120,9 +247,9 @@ namespace Twino.Core.Http
         {
             return new HttpResponse
                    {
-                       ContentType = "text/html",
+                       ContentType = ContentTypes.TEXT_HTML,
                        StatusCode = HttpStatusCode.LengthRequired,
-                       ContentEncoding = ContentEncodings.None
+                       SuppressContentEncoding = true
                    };
         }
 
@@ -133,9 +260,9 @@ namespace Twino.Core.Http
         {
             return new HttpResponse
                    {
-                       ContentType = "text/html",
+                       ContentType = ContentTypes.TEXT_HTML,
                        StatusCode = HttpStatusCode.RequestUriTooLong,
-                       ContentEncoding = ContentEncodings.None
+                       SuppressContentEncoding = true
                    };
         }
 
@@ -146,9 +273,9 @@ namespace Twino.Core.Http
         {
             return new HttpResponse
                    {
-                       ContentType = "text/html",
+                       ContentType = ContentTypes.TEXT_HTML,
                        StatusCode = HttpStatusCode.TooManyRequests,
-                       ContentEncoding = ContentEncodings.None
+                       SuppressContentEncoding = true
                    };
         }
 
@@ -159,10 +286,12 @@ namespace Twino.Core.Http
         {
             return new HttpResponse
                    {
-                       ContentType = "text/html",
+                       ContentType = ContentTypes.TEXT_HTML,
                        StatusCode = HttpStatusCode.RequestHeaderFieldsTooLarge,
-                       ContentEncoding = ContentEncodings.None
+                       SuppressContentEncoding = true
                    };
         }
+
+        #endregion
     }
 }

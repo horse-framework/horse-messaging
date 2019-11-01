@@ -1,4 +1,8 @@
-﻿namespace Twino.Core.Http
+﻿using System;
+using System.Runtime.CompilerServices;
+using System.Text;
+
+namespace Twino.Core.Http
 {
     /// <summary>
     /// HTTP Header known key and value list.
@@ -15,6 +19,7 @@
         public const string LOCATION = "Location";
         public const string CONTENT_ENCODING = "Content-Encoding";
         public const string CONTENT_LENGTH = "Content-Length";
+        public const string CONTENT_DISPOSITION = "Content-Disposition";
         public const string ACCEPT_ENCODING = "Accept-Encoding";
         public const string ACCEPT_LANGUAGE = "Accept-Language";
         public const string UPGRADE = "Upgrade";
@@ -42,6 +47,11 @@
         public const string HTTP_OPTIONS = "OPTIONS";
         public const string HTTP_HEAD = "HEAD";
 
+        public const string MULTIPART_FORM_DATA = "multipart/form-data";
+        public const string APPLICATION_FORM_URLENCODED = "application/x-www-form-urlencoded";
+        public const string APPLICATION_OCTET_STREAM = "application/octet-stream";
+        public const string MULTIPART_MIXED = "multipart/mixed";
+
         public const string VALUE_SERVER = "twino";
         public const string VALUE_CHARSET_UTF8 = "charset=UTF-8";
         public const string VALUE_GZIP = "gzip";
@@ -53,14 +63,17 @@
         public const string VALUE_NO_CACHE = "no-cache";
         public const string VALUE_KEEP_ALIVE = "keep-alive";
         public const string VALUE_CLOSE = "close";
+        public const string VALUE_CLOSED = "Closed";
+        public const string VALUE_TIMEOUT = "timeout";
+        public const string VALUE_MAX = "max";
         public const string VALUE_WEBSOCKET_EXTENSIONS = "permessage-deflate; client_max_window_bits";
-
-
+        
         public const string WEBSOCKET_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
         /// <summary>
         /// Creates new header line like "Key: value + [\r\n]"
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string Create(string key, int value)
         {
             return Create(key, value.ToString());
@@ -69,6 +82,7 @@
         /// <summary>
         /// Creates new header line like "line + [\r\n]"
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string Create(string line)
         {
             return line + "\r\n";
@@ -77,14 +91,16 @@
         /// <summary>
         /// Creates new header line like "Key: value + [\r\n]"
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string Create(string key, string value)
         {
-            return key + ": " + value + "\r\n";
+            return string.Concat(key, ": ", value, "\r\n"); // key + ": " + value + "\r\n";
         }
 
         /// <summary>
         /// Creates new header line like "Key: value; other_value; other_value... + [\r\n]"
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string Create(string key, string value, params string[] otherValues)
         {
             string total = value;

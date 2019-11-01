@@ -73,18 +73,17 @@ namespace Twino.Server
         /// If exists, loads options from file.
         /// If not exists, returns default options.
         /// </summary>
-        internal static ServerOptions LoadFromFile()
+        internal static ServerOptions LoadFromFile(string filename = null)
         {
-            string filename = null;
-
-            foreach (string file in OptionsFiles)
-            {
-                if (File.Exists(file))
+            if (string.IsNullOrEmpty(filename))
+                foreach (string file in OptionsFiles)
                 {
-                    filename = file;
-                    break;
+                    if (File.Exists(file))
+                    {
+                        filename = file;
+                        break;
+                    }
                 }
-            }
 
             if (string.IsNullOrEmpty(filename))
                 return CreateDefault();
@@ -118,21 +117,18 @@ namespace Twino.Server
         {
             return new ServerOptions
                    {
+                       RequestTimeout = 120000,
                        HttpConnectionTimeMax = 180,
-                       MaximumPendingConnections = 0,
-                       MaximumRequestLength = 1024 * 1024,
-                       MaximumUriLength = 750,
                        MaximumHeaderLength = 8192,
-                       PingInterval = 60000,
-                       RequestTimeout = 30000,
-                       ContentEncoding = "gzip",
+                       MaximumUriLength = 1024,
+                       MaximumRequestLength = 1024 * 1024,
+                       MaximumPendingConnections = 0,
+                       PingInterval = 120000,
                        Hosts = new List<HostOptions>
                                {
                                    new HostOptions
                                    {
-                                       Port = 80,
-                                       Hostnames = null,
-                                       SslEnabled = false
+                                       Port = 80
                                    }
                                }
                    };

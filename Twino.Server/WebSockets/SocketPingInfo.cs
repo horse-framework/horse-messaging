@@ -3,7 +3,7 @@ using System;
 namespace Twino.Server.WebSockets
 {
     /// <summary>
-    /// Ping meta data for the web socket connection
+    /// Ping info for the web socket connection
     /// </summary>
     internal class SocketPingInfo
     {

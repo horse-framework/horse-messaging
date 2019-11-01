@@ -18,13 +18,13 @@ namespace Sample.Mvc
         static void Main(string[] args)
         {
             using TwinoMvc mvc = new TwinoMvc();
-            
+
             mvc.IsDevelopment = true;
             mvc.Init(twino =>
             {
-                mvc.Services.Add<IDemoService, DemoService>();
+                twino.Services.Add<IDemoService, DemoService>();
 
-                mvc.AddJwt(options =>
+                twino.AddJwt(options =>
                 {
                     options.Key = "Very_very_secret_key";
                     options.Issuer = "localhost";
@@ -35,9 +35,13 @@ namespace Sample.Mvc
                     options.ValidateLifetime = true;
                 });
 
-                mvc.Policies.Add(Policy.RequireRole("Admin", "Admin"));
-                mvc.Policies.Add(Policy.RequireClaims("IT", "Database", "Cloud", "Source"));
-                mvc.Policies.Add(Policy.Custom("Custom", (d, c) => true));
+                twino.Policies.Add(Policy.RequireRole("Admin", "Admin"));
+                twino.Policies.Add(Policy.RequireClaims("IT", "Database", "Cloud", "Source"));
+                twino.Policies.Add(Policy.Custom("Custom", (d, c) => true));
+
+                twino.UseFiles("/download", "/home/mehmet/files");
+
+                twino.StatusCodeResults.Add(HttpStatusCode.Unauthorized, new JsonResult(new {Message = "Access denied"}));
             });
 
             CorsMiddleware cors = new CorsMiddleware();

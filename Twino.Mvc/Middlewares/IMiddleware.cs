@@ -4,7 +4,7 @@ using Twino.Mvc.Controllers;
 
 namespace Twino.Mvc.Middlewares
 {
-    public delegate void NextMiddlewareHandler(IActionResult result);
+    public delegate Task NextMiddlewareHandler(IActionResult result);
 
     public interface IMiddleware
     {

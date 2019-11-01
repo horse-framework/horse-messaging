@@ -1,13 +1,16 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.IO;
+using System.Text;
+using Twino.Core.Http;
 
-namespace Twino.Core.Http
+namespace Twino.Client
 {
+
     /// <summary>
     /// Reads full string request data and creates new HttpRequest object
     /// </summary>
-    public class RequestBuilder
+    internal class RequestBuilder
     {
         /// <summary>
         /// Builds full string request data and creates new HttpRequest object
@@ -15,8 +18,7 @@ namespace Twino.Core.Http
         public HttpRequest Build(string[] lines)
         {
             HttpRequest request = new HttpRequest();
-            request.Content = "";
-            request.Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+            request.ContentStream = new MemoryStream();
 
             //string[] lines = data.Split(new string[] { "\r\n" }, StringSplitOptions.None);
             bool head = true;
@@ -55,42 +57,11 @@ namespace Twino.Core.Http
                     AddHeader(request, key, value);
                 }
                 else
-                    request.Content += (i + 1 == lines.Length) ? line : (line + Environment.NewLine);
-            }
-
-            return request;
-        }
-
-        /// <summary>
-        /// Builds HttpRequest from header lines.
-        /// Used when request received from network as partial (header only)
-        /// </summary>
-        public HttpRequest Build(List<string> headers)
-        {
-            HttpRequest request = new HttpRequest();
-            request.Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
-
-            string[] headline = headers[0].Split(' ');
-
-            if (headline.Length < 2)
-                return null;
-
-            request.Method = headline[0];
-            request.Path = headline[1];
-
-            foreach (string line in headers)
-            {
-                int index = line.IndexOf(':');
-                if (index < 0)
-                    continue;
-
-                string key = line.Substring(0, index);
-
-                if (line[index + 1] == ' ')
-                    index++;
-
-                string value = line.Substring(index + 1);
-                AddHeader(request, key, value);
+                {
+                    string sdata = (i + 1 == lines.Length) ? line : (line + "\r\n");
+                    byte[] bdata = Encoding.UTF8.GetBytes(sdata);
+                    request.ContentStream.Write(bdata, 0, bdata.Length);
+                }
             }
 
             return request;

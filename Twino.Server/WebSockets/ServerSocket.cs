@@ -49,7 +49,7 @@ namespace Twino.Server.WebSockets
         public ServerSocket(TwinoServer server, HttpRequest request, TcpClient client)
         {
             Server = server;
-            Stream = request.Response.Stream;
+            Stream = request.Response.NetworkStream;
             Request = request;
             Client = client;
             IsConnected = true;

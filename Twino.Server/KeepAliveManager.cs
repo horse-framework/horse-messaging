@@ -2,6 +2,10 @@ using System;
 
 namespace Twino.Server
 {
+    /// <summary>
+    /// Connection keeping alive manager.
+    /// Checks all timeout operations and maximum tcp connection durations
+    /// </summary>
     internal class KeepAliveManager
     {
         private TimeoutHandler[] _timeoutHandlers;
@@ -10,6 +14,7 @@ namespace Twino.Server
         /// If true, keep alive manager and timeout handlers are running
         /// </summary>
         public bool IsRunning { get; private set; }
+
         private int _nextIndex;
 
         /// <summary>
@@ -22,14 +27,15 @@ namespace Twino.Server
 
             int count = Environment.ProcessorCount * 2;
             _timeoutHandlers = new TimeoutHandler[count];
-            
+
             IsRunning = true;
             _nextIndex = 0;
             Random rnd = new Random();
-            
+
             for (int i = 0; i < _timeoutHandlers.Length; i++)
             {
-                TimeoutHandler handler = new TimeoutHandler(timeoutMilliseconds, rnd.Next(500, 1500));
+                //rnd between min and max ms, we don't want to see all timeout handlers consume cpu and memory at same time
+                TimeoutHandler handler = new TimeoutHandler(timeoutMilliseconds, rnd.Next(2500, 6000));
                 _timeoutHandlers[i] = handler;
                 handler.Start();
             }
@@ -41,7 +47,7 @@ namespace Twino.Server
         public void Stop()
         {
             IsRunning = false;
-            
+
             foreach (var handler in _timeoutHandlers)
             {
                 if (handler == null)
@@ -55,13 +61,13 @@ namespace Twino.Server
         /// Adds new connection to keep alive manager.
         /// This connection's timeout will be set in this method and starts it's timeout span
         /// </summary>
-        public void Add(HandshakeInfo info)
+        public void Add(ConnectionInfo info)
         {
             int i = _nextIndex++;
-            
+
             if (_nextIndex >= _timeoutHandlers.Length)
                 _nextIndex = 0;
-            
+
             if (i >= _timeoutHandlers.Length)
                 i = 0;
 

@@ -1,30 +1,29 @@
 ﻿using Twino.Server;
-using Twino.Server.Http;
 using System;
 using System.Net;
-using System.Threading.Tasks;
-using Twino.Core.Http;
+using System.Text;
 
 namespace Sample.Http.Server
 {
-    public class RequestHandler : IHttpRequestHandler
-    {
-        public async Task RequestAsync(TwinoServer server, HttpRequest request, HttpResponse response)
-        {
-            response.SetToHtml();
-            response.Write("Hello World!");
-            Console.WriteLine("Hello World: " + request.Content);
-            await Task.CompletedTask;
-        }
-    }
-
     class Program
     {
         static void Main(string[] args)
         {
-            RequestHandler handler = new RequestHandler();
-            TwinoServer server = TwinoServer.CreateHttp(handler);
-            server.Start(82);
+            TwinoServer server = TwinoServer.CreateHttp(async (twinoServer, request, response) =>
+            {
+                if (request.Path.Equals("/plaintext", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    response.SetToText();
+                    await response.WriteAsync("Hello, World!");
+                }
+                else
+                    response.StatusCode = HttpStatusCode.NotFound;
+            }, ServerOptions.CreateDefault());
+
+            server.Options.ContentEncoding = null;
+            server.Options.Hosts[0].Port = 82;
+
+            server.Start();
             server.BlockWhileRunning();
         }
     }

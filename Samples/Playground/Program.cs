@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core.Http;
 using Twino.Mvc;
@@ -23,7 +25,7 @@ namespace Playground
         public int Count { get; set; }
         public string Color { get; set; }
     }
-    
+
     public class Foo
     {
         public string Foo1 { get; set; } = "foo";
@@ -43,16 +45,114 @@ namespace Playground
                                                  };
     }
 
+    public class HW1
+    {
+        public string Message { get; set; }
+    }
+
+    public class HW2
+    {
+        public string Message;
+    }
+
+    public struct HW3
+    {
+        public string Message;
+
+        public HW3(string msg)
+        {
+            Message = msg;
+        }
+    }
 
     class Program
     {
+        static void Measure(int count, Action method)
+        {
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            for (int i = 0; i < count; i++)
+                method();
+
+            sw.Stop();
+            Console.WriteLine("elapsed ms: " + sw.ElapsedMilliseconds);
+        }
+
         static void Main(string[] args)
         {
-            for (int i = 0; i < 25; i++)
-                JsonSerializeTest();
+            string req = "GET / HTTP/1.1\r\n" +
+                         "Host: 127.0.0.1\r\n" +
+                         "Connection: Upgrade\r\n" +
+                         "Pragma: no-cache\r\n" +
+                         "Cache-Control: no-cache\r\n" +
+                         "Upgrade: websocket\r\n" +
+                         "Sec-WebSocket-Version: 13\r\n" +
+                         "Accept-Encoding: gzip, deflate, br\r\n" +
+                         "Accept-Language: en-US,en;q=0.9\r\n" +
+                         "Sec-WebSocket-Key: /gXWdaa3iWc5nw415P1vE03Ded8=\r\n" +
+                         "Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits";
+            byte[] bdata = Encoding.UTF8.GetBytes(req);
+            HttpReader reader = new HttpReader(ServerOptions.CreateDefault(), new HostOptions());
+            var tuple = reader.Read(new MemoryStream(bdata)).Result;
+            Console.WriteLine(tuple.Item2.StatusCode);
+        }
 
-            Console.WriteLine("done");
-            Console.ReadLine();
+        static void Tasks()
+        {
+            while (true)
+            {
+                Stopwatch sw1 = new Stopwatch();
+                sw1.Start();
+                for (int i = 0; i < 2000000; i++)
+                    W1();
+
+                sw1.Stop();
+                Console.WriteLine("sw1: " + sw1.ElapsedMilliseconds);
+                Console.ReadLine();
+
+                Stopwatch sw2 = new Stopwatch();
+                TaskCompletionSource<bool> s1 = new TaskCompletionSource<bool>();
+                ThreadPool.QueueUserWorkItem(async (c) =>
+                {
+                    sw2.Start();
+                    for (int i = 0; i < 2000000; i++)
+                        await W2();
+                    sw2.Stop();
+                    s1.SetResult(true);
+                });
+                s1.Task.Wait();
+                Console.WriteLine("sw2: " + sw2.ElapsedMilliseconds);
+                Console.ReadLine();
+
+                Stopwatch sw3 = new Stopwatch();
+                TaskCompletionSource<bool> s2 = new TaskCompletionSource<bool>();
+                ThreadPool.QueueUserWorkItem(async (c) =>
+                {
+                    sw3.Start();
+                    for (int i = 0; i < 2000000; i++)
+                        await W3();
+                    sw3.Stop();
+                    s2.SetResult(true);
+                });
+                s2.Task.Wait();
+                Console.WriteLine("sw3: " + sw3.ElapsedMilliseconds);
+                Console.ReadLine();
+            }
+        }
+
+        static int W1()
+        {
+            return Convert.ToInt32(Math.Pow(4, 5));
+        }
+
+        static async Task<int> W2()
+        {
+            return Convert.ToInt32(Math.Pow(4, 5));
+        }
+
+        static async Task<int> W3()
+        {
+            return await Task.FromResult(Convert.ToInt32(Math.Pow(4, 5)));
         }
 
         static void JsonSerializeTest()
@@ -62,8 +162,8 @@ namespace Playground
             sw.Start();
             for (int j = 0; j < 100000; j++)
             {
-                 string s = System.Text.Json.JsonSerializer.Serialize(new Foo());
-                 byte[] arr = Encoding.UTF8.GetBytes(s);
+                string s = System.Text.Json.JsonSerializer.Serialize(new Foo());
+                byte[] arr = Encoding.UTF8.GetBytes(s);
                 //byte[] arr = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new Foo());
                 bytes += arr.Length;
             }

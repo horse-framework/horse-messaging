@@ -11,8 +11,9 @@ using Twino.Server.WebSockets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Reflection;
-using System.Threading;
+using Twino.Core.Http;
 
 namespace Twino.Mvc
 {
@@ -28,6 +29,10 @@ namespace Twino.Mvc
         /// Loads all types in assembly implemented from IController and their actions with Http Method Attribute.
         /// </summary>
         public List<Route> Routes { get; private set; }
+
+        public List<FileRoute> FileRoutes { get; private set; }
+
+        public Dictionary<HttpStatusCode, IActionResult> StatusCodeResults { get; } = new Dictionary<HttpStatusCode, IActionResult>();
 
         /// <summary>
         /// HTTP server of Twino MVC
@@ -91,23 +96,46 @@ namespace Twino.Mvc
         /// <summary>
         /// Creates default MVC HTTP Server without WebSocket support.
         /// </summary>
-        public TwinoMvc() : this(default(IClientFactory), null, null)
+        public TwinoMvc() : this(default(IClientFactory), default(ServerOptions))
         {
         }
 
         /// <summary>
         /// Creates Default MVC HTTP Server with WebSocket support.
         /// </summary>
+        /// <param name="clientHandler">WebSocket client factory method. This value cannot be null. If you dont need client handling, use another overload</param>
         public TwinoMvc(ClientFactoryHandler clientHandler)
-            : this(new DefaultClientFactory(clientHandler), null, null)
+            : this(new DefaultClientFactory(clientHandler), default(ServerOptions))
+        {
+        }
+
+
+        /// <summary>
+        /// Creates Default MVC HTTP Server with WebSocket support.
+        /// </summary>
+        /// <param name="clientHandler">WebSocket client factory method. This value cannot be null. If you dont need client handling, use another overload</param>
+        /// <param name="optionsFilename">Options filename. Filename may be absolute or relative</param>
+        public TwinoMvc(ClientFactoryHandler clientHandler, string optionsFilename)
+            : this(new DefaultClientFactory(clientHandler), optionsFilename)
         {
         }
 
         /// <summary>
         /// Creates Default MVC HTTP Server with WebSocket support.
         /// </summary>
+        /// <param name="clientFactory">WebSocket client factory. If you don't use websockets, you can pass null</param>
         public TwinoMvc(IClientFactory clientFactory)
-            : this(clientFactory, null, null)
+            : this(clientFactory, default(ServerOptions))
+        {
+        }
+
+        /// <summary>
+        /// Creates Default MVC HTTP Server with WebSocket support.
+        /// </summary>
+        /// <param name="clientFactory">WebSocket client factory. If you don't use websockets, you can pass null</param>
+        /// <param name="optionsFilename">Options filename. Filename may be absolute or relative</param>
+        public TwinoMvc(IClientFactory clientFactory, string optionsFilename)
+            : this(clientFactory, null, optionsFilename)
         {
         }
 
@@ -115,8 +143,19 @@ namespace Twino.Mvc
         /// Creates Default HTTP Server without WebSocket support.
         /// Server options can be set programmatically.
         /// </summary>
+        /// <param name="options">Server options</param>
         public TwinoMvc(ServerOptions options)
             : this(default(IClientFactory), null, options)
+        {
+        }
+
+        /// <summary>
+        /// Creates Default HTTP Server without WebSocket support.
+        /// Server options can be set programmatically.
+        /// </summary>
+        /// <param name="optionsFilename">Options filename. Filename may be absolute or relative</param>
+        public TwinoMvc(string optionsFilename)
+            : this(default(IClientFactory), null, optionsFilename)
         {
         }
 
@@ -124,6 +163,8 @@ namespace Twino.Mvc
         /// Creates Default MVC HTTP Server with WebSocket support.
         /// Server options can be set programmatically.
         /// </summary>
+        /// <param name="clientHandler">WebSocket client factory method. This value cannot be null. If you dont need client handling, use another overload</param>
+        /// <param name="options">Server options</param>
         public TwinoMvc(ClientFactoryHandler clientHandler, ServerOptions options)
             : this(new DefaultClientFactory(clientHandler), null, options)
         {
@@ -133,6 +174,8 @@ namespace Twino.Mvc
         /// Creates Default MVC HTTP Server with WebSocket support.
         /// Server options can be set programmatically.
         /// </summary>
+        /// <param name="clientFactory">WebSocket client factory. If you don't use websockets, you can pass null</param>
+        /// <param name="options">Server options</param>
         public TwinoMvc(IClientFactory clientFactory, ServerOptions options)
             : this(clientFactory, null, options)
         {
@@ -141,16 +184,20 @@ namespace Twino.Mvc
         /// <summary>
         /// Creates customized HTTP and WebSocket server
         /// </summary>
+        /// <param name="clientHandler">WebSocket client factory method. This value cannot be null. If you dont need client handling, use another overload</param>
+        /// <param name="clientContainer">WebSocket client container. If you don't need client management, you can pass null</param>
         public TwinoMvc(ClientFactoryHandler clientHandler, IClientContainer clientContainer)
-            : this(new DefaultClientFactory(clientHandler), clientContainer, null)
+            : this(new DefaultClientFactory(clientHandler), clientContainer, default(ServerOptions))
         {
         }
 
         /// <summary>
         /// Creates customized HTTP and WebSocket server
         /// </summary>
+        /// <param name="clientFactory">WebSocket client factory. If you don't use websockets, you can pass null</param>
+        /// <param name="clientContainer">WebSocket client container. If you don't need client management, you can pass null</param>
         public TwinoMvc(IClientFactory clientFactory, IClientContainer clientContainer)
-            : this(clientFactory, clientContainer, null)
+            : this(clientFactory, clientContainer, default(ServerOptions))
         {
         }
 
@@ -158,6 +205,9 @@ namespace Twino.Mvc
         /// Creates customized HTTP and WebSocket server
         /// Server options can be set programmatically.
         /// </summary>
+        /// <param name="clientHandler">WebSocket client factory method. This value cannot be null. If you dont need client handling, use another overload</param>
+        /// <param name="clientContainer">WebSocket client container. If you don't need client management, you can pass null</param>
+        /// <param name="options">Server options</param>
         public TwinoMvc(ClientFactoryHandler clientHandler, IClientContainer clientContainer, ServerOptions options)
             : this(new DefaultClientFactory(clientHandler), clientContainer, options)
         {
@@ -167,6 +217,9 @@ namespace Twino.Mvc
         /// Creates customized HTTP and WebSocket server
         /// Server options can be set programmatically.
         /// </summary>
+        /// <param name="clientFactory">WebSocket client factory. If you don't use websockets, you can pass null</param>
+        /// <param name="clientContainer">WebSocket client container. If you don't need client management, you can pass null</param>
+        /// <param name="options">Server options</param>
         public TwinoMvc(IClientFactory clientFactory, IClientContainer clientContainer, ServerOptions options)
         {
             Routes = new List<Route>();
@@ -182,6 +235,42 @@ namespace Twino.Mvc
             Server = options == null
                          ? new TwinoServer(requestHandler, clientFactory, clientContainer)
                          : new TwinoServer(requestHandler, clientFactory, clientContainer, options);
+        }
+
+        /// <summary>
+        /// Creates customized HTTP and WebSocket server
+        /// Server options can be set programmatically.
+        /// </summary>
+        /// <param name="clientHandler">WebSocket client factory method. This value cannot be null. If you dont need client handling, use another overload</param>
+        /// <param name="clientContainer">WebSocket client container. If you don't need client management, you can pass null</param>
+        /// <param name="optionsFilename">Options filename. Filename may be absolute or relative</param>
+        public TwinoMvc(ClientFactoryHandler clientHandler, IClientContainer clientContainer, string optionsFilename)
+            : this(new DefaultClientFactory(clientHandler), clientContainer, optionsFilename)
+        {
+        }
+
+        /// <summary>
+        /// Creates customized HTTP and WebSocket server
+        /// Server options can be set programmatically.
+        /// </summary>
+        /// <param name="clientFactory">WebSocket client factory. If you don't use websockets, you can pass null</param>
+        /// <param name="clientContainer">WebSocket client container. If you don't need client management, you can pass null</param>
+        /// <param name="optionsFilename">Options filename. Filename may be absolute or relative</param>
+        public TwinoMvc(IClientFactory clientFactory, IClientContainer clientContainer, string optionsFilename)
+        {
+            Routes = new List<Route>();
+            Services = new ServiceContainer();
+            RouteFinder = new RouteFinder();
+            ControllerFactory = new ControllerFactory();
+            NotFoundResult = StatusCodeResult.NotFound();
+            ErrorHandler = new DefaultErrorHandler();
+            Policies = new PolicyContainer();
+
+            IHttpRequestHandler requestHandler = new MvcRequestHandler(this);
+
+            Server = optionsFilename == null
+                         ? new TwinoServer(requestHandler, clientFactory, clientContainer)
+                         : new TwinoServer(requestHandler, clientFactory, clientContainer, optionsFilename);
         }
 
         /// <summary>
@@ -212,6 +301,7 @@ namespace Twino.Mvc
         public void Init()
         {
             Routes = new List<Route>();
+            FileRoutes = new List<FileRoute>();
             CreateRoutes();
         }
 
@@ -301,8 +391,31 @@ namespace Twino.Mvc
             Server.Start();
 
             if (!async)
-                while (Server.IsRunning)
-                    Thread.Sleep(100);
+                Server.BlockWhileRunning();
+        }
+
+        #endregion
+
+        #region Use Files
+
+        public void UseFiles(string urlPath, string physicalPath)
+        {
+            FileRoutes.Add(new FileRoute(urlPath, new[] {physicalPath}));
+        }
+
+        public void UseFiles(string urlPath, string[] physicalPaths)
+        {
+            FileRoutes.Add(new FileRoute(urlPath, physicalPaths));
+        }
+
+        public void UseFiles(string urlPath, string physicalPath, Func<HttpRequest, HttpStatusCode> validation)
+        {
+            FileRoutes.Add(new FileRoute(urlPath, new[] {physicalPath}, validation));
+        }
+
+        public void UseFiles(string urlPath, string[] physicalPaths, Func<HttpRequest, HttpStatusCode> validation)
+        {
+            FileRoutes.Add(new FileRoute(urlPath, physicalPaths, validation));
         }
 
         #endregion

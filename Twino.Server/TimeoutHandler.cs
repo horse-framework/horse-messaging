@@ -9,14 +9,34 @@ namespace Twino.Server
     /// </summary>
     internal class TimeoutHandler
     {
-        private readonly List<HandshakeInfo> _incoming = new List<HandshakeInfo>();
-        private readonly List<HandshakeInfo> _handshakes = new List<HandshakeInfo>();
+        /// <summary>
+        /// newly connected clients. created for optimizing (to not lock real collection)
+        /// </summary>
+        private readonly List<ConnectionInfo> _incoming = new List<ConnectionInfo>();
+        
+        /// <summary>
+        /// active tcp clients that are checked if they are timed out
+        /// </summary>
+        private readonly List<ConnectionInfo> _connections = new List<ConnectionInfo>();
 
-        private Thread _timer;
+        /// <summary>
+        /// timeout timer
+        /// </summary>
+        private Timer _timer;
+        
+        /// <summary>
+        /// clients' timeout total milliseconds
+        /// </summary>
         private readonly int _timeoutMilliseconds;
+        
+        /// <summary>
+        /// timer interval
+        /// </summary>
         private readonly int _tickInterval;
-        private bool _running;
 
+        /// <summary>
+        /// Creates new timeout handler with specified timeout milliseconds and check timer interval
+        /// </summary>
         internal TimeoutHandler(int timeoutMilliseconds, int tickInterval)
         {
             _timeoutMilliseconds = timeoutMilliseconds;
@@ -28,25 +48,16 @@ namespace Twino.Server
         /// </summary>
         internal void Start()
         {
-            _running = true;
-            _timer = new Thread(() =>
+            _timer = new Timer(state =>
             {
-                while (_running)
+                try
                 {
-                    //don't let exit, if there is an exception, somehow
-                    try
-                    {
-                        Tick();
-                    }
-                    catch
-                    {
-                    }
+                    Tick();
                 }
-            });
-            
-            _timer.IsBackground = true;
-            _timer.Priority = ThreadPriority.BelowNormal;
-            _timer.Start();
+                catch
+                {
+                }
+            }, null, _tickInterval, _tickInterval);
         }
 
         /// <summary>
@@ -54,8 +65,7 @@ namespace Twino.Server
         /// </summary>
         internal void Stop()
         {
-            _running = false;
-            _timer.Abort();
+            _timer.Dispose();
             _timer = null;
         }
 
@@ -65,54 +75,56 @@ namespace Twino.Server
         /// </summary>
         private void Tick()
         {
-            Thread.Sleep(_tickInterval);
-
             //add incoming clients to the timeout handle list
             AddIncomingItems();
-            List<HandshakeInfo> removing = new List<HandshakeInfo>();
 
-            foreach (HandshakeInfo handshake in _handshakes)
+            if (_connections.Count == 0)
+                return;
+
+            List<ConnectionInfo> removing = new List<ConnectionInfo>();
+
+            foreach (ConnectionInfo info in _connections)
             {
                 //directly remove if client is disconnected
-                if (handshake.Client == null || !handshake.Client.Connected)
+                if (info.Client == null || !info.Client.Connected)
                 {
-                    removing.Add(handshake);
+                    removing.Add(info);
                     continue;
                 }
 
                 //if at least 1 request is responsed and the connection is http wait until for keep alive
-                if (handshake.State == ConnectionStates.Http)
+                if (info.State == ConnectionStates.Http)
                 {
-                    if (handshake.MaxAlive < DateTime.UtcNow)
-                        removing.Add(handshake);
+                    if (info.MaxAlive < DateTime.UtcNow)
+                        removing.Add(info);
                 }
 
                 //if client is websocket, we dont need handling timeout, anymore
-                else if (handshake.State == ConnectionStates.WebSocket)
-                    removing.Add(handshake);
+                else if (info.State == ConnectionStates.WebSocket)
+                    removing.Add(info);
 
                 //the request could not receive yet but time is up
-                else if (handshake.State > ConnectionStates.Pending || handshake.Timeout < DateTime.UtcNow)
-                    removing.Add(handshake);
+                else if (info.State > ConnectionStates.Pending || info.Timeout < DateTime.UtcNow)
+                    removing.Add(info);
             }
 
             if (removing.Count == 0)
                 return;
 
-            foreach (HandshakeInfo handshake in removing)
+            foreach (ConnectionInfo info in removing)
             {
                 //in removing list, there are some websocket connections.
                 //we need to check before close if they were not websocket connection
 
-                if (handshake.State == ConnectionStates.Pending && handshake.Timeout < DateTime.UtcNow)
-                    handshake.Close();
+                if (info.State == ConnectionStates.Pending && info.Timeout < DateTime.UtcNow)
+                    info.Close();
 
-                else if (handshake.State == ConnectionStates.Http && handshake.MaxAlive < DateTime.UtcNow)
-                    handshake.Close();
+                else if (info.State == ConnectionStates.Http && info.MaxAlive < DateTime.UtcNow)
+                    info.Close();
             }
 
-            foreach (HandshakeInfo state in removing)
-                _handshakes.Remove(state);
+            foreach (ConnectionInfo state in removing)
+                _connections.Remove(state);
         }
 
         /// <summary>
@@ -121,32 +133,30 @@ namespace Twino.Server
         private void AddIncomingItems()
         {
             lock (_incoming)
-            {
                 if (_incoming.Count > 0)
                 {
-                    foreach (HandshakeInfo i in _incoming)
+                    foreach (ConnectionInfo i in _incoming)
                     {
                         if (i.Client == null || !i.Client.Connected || i.State == ConnectionStates.WebSocket)
                             continue;
 
-                        _handshakes.Add(i);
+                        _connections.Add(i);
                     }
 
                     _incoming.Clear();
                 }
-            }
         }
 
         /// <summary>
         /// Adds new connection to the list.
         /// This connection's timeout will be set in this method and starts it's timeout span
         /// </summary>
-        public void Add(HandshakeInfo handshake)
+        public void Add(ConnectionInfo info)
         {
-            handshake.Timeout = DateTime.UtcNow.AddMilliseconds(_timeoutMilliseconds);
+            info.Timeout = DateTime.UtcNow.AddMilliseconds(_timeoutMilliseconds);
 
             lock (_incoming)
-                _incoming.Add(handshake);
+                _incoming.Add(info);
         }
     }
 }

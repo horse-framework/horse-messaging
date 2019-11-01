@@ -4,9 +4,16 @@ using System.Threading;
 
 namespace Twino.Server
 {
-    public class InnerServer
+    public class HostListener
     {
+        /// <summary>
+        /// Port listener object of the host
+        /// </summary>
         public TcpListener Listener { get; set; }
+        
+        /// <summary>
+        /// TCP connection accepting thread
+        /// </summary>
         public Thread Handle { get; set; }
 
         /// <summary>
@@ -15,7 +22,7 @@ namespace Twino.Server
         public X509Certificate2 Certificate { get; set; }
 
         /// <summary>
-        /// Inner server listening options
+        /// Host listener options
         /// </summary>
         public HostOptions Options { get; set; }
         

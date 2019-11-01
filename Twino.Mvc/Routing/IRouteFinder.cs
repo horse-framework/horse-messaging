@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using Twino.Core.Http;
+using Twino.Mvc.Controllers;
+using Twino.Mvc.Results;
 
 namespace Twino.Mvc.Routing
 {
@@ -10,6 +12,11 @@ namespace Twino.Mvc.Routing
     public interface IRouteFinder
     {
 
+        /// <summary>
+        /// Finds file from request url
+        /// </summary>
+        IActionResult FindFile(IEnumerable<FileRoute> routes, HttpRequest request);
+        
         /// <summary>
         /// Finds matched route from the list with specified request
         /// </summary>

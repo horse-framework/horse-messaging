@@ -1,6 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
 using Twino.Core.Http;
+using Twino.Mvc.Controllers;
+using Twino.Mvc.Results;
 
 namespace Twino.Mvc.Routing
 {
@@ -10,7 +15,46 @@ namespace Twino.Mvc.Routing
     /// </summary>
     public class RouteFinder : IRouteFinder
     {
+        
+        /// <summary>
+        /// Finds file from request url
+        /// </summary>
+        public IActionResult FindFile(IEnumerable<FileRoute> routes, HttpRequest request)
+        {
+            FileRoute route = routes.FirstOrDefault(x => request.Path.StartsWith(x.VirtualPath, StringComparison.InvariantCultureIgnoreCase));
+            if (route == null)
+                return null;
 
+            bool found = false;
+            string fullpath = null;
+            foreach (string physicalPath in route.PhysicalPaths)
+            {
+                fullpath = request.Path.Replace(route.VirtualPath, physicalPath);
+                if (File.Exists(fullpath))
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+                return null;
+
+            //check validation
+            if (route.Validation != null)
+            {
+                HttpStatusCode code = route.Validation(request);
+                if (code != HttpStatusCode.OK)
+                    return new FileResult(code);
+            }
+            
+            int fileStartIndex = fullpath.LastIndexOf('/');
+            string filename = fullpath.Substring(fileStartIndex + 1);
+
+            FileStream stream = new FileStream(fullpath, FileMode.Open, FileAccess.Read);
+            return new FileResult(stream, filename);
+        }
+        
         /// <summary>
         /// Finds matched route from the list with specified request
         /// </summary>
@@ -20,7 +64,7 @@ namespace Twino.Mvc.Routing
             match.Values = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
 
             //split path to route parts
-            string[] parts = request.GetOnlyPath().Split('/', StringSplitOptions.RemoveEmptyEntries);
+            string[] parts = request.Path.Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0)
                 parts = new string[] { "" };
 

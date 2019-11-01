@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -15,14 +16,34 @@ namespace Twino.Server
     /// </summary>
     public class ConnectionHandler
     {
+        /// <summary>
+        /// twino server of connection handler
+        /// </summary>
         private readonly TwinoServer _server;
-        private readonly InnerServer _inner;
-        private TimeSpan _minAliveHttpDuration;
 
-        public ConnectionHandler(TwinoServer server, InnerServer inner)
+        /// <summary>
+        /// Host listener object of connection handler
+        /// </summary>
+        private readonly HostListener _listener;
+
+        /// <summary>
+        /// Maximum alive duration for a client.
+        /// This value generally equals to HttpConnectionTimeMax.
+        /// But when connection keep-alive disabled, this value equals to RequestTimeout
+        /// </summary>
+        private TimeSpan _manAliveHttpDuration;
+
+        /// <summary>
+        /// Response writing is not request or client specified.
+        /// We can reuse same instance instead of creating new one for each request
+        /// </summary>
+        private readonly ResponseWriter _writer;
+
+        public ConnectionHandler(TwinoServer server, HostListener listener)
         {
             _server = server;
-            _inner = inner;
+            _listener = listener;
+            _writer = new ResponseWriter(server);
         }
 
         /// <summary>
@@ -30,81 +51,40 @@ namespace Twino.Server
         /// </summary>
         public async Task Handle()
         {
-            _inner.KeepAliveManager = new KeepAliveManager();
-            _inner.KeepAliveManager.Start(_server.Options.RequestTimeout);
+            _listener.KeepAliveManager = new KeepAliveManager();
+            _listener.KeepAliveManager.Start(_server.Options.RequestTimeout);
 
             int alive = _server.Options.RequestTimeout;
             if (_server.Options.HttpConnectionTimeMax * 1000 > alive)
                 alive = _server.Options.HttpConnectionTimeMax * 1000;
 
-            _minAliveHttpDuration = TimeSpan.FromMilliseconds(alive);
+            _manAliveHttpDuration = TimeSpan.FromMilliseconds(alive);
 
             while (_server.IsRunning)
             {
-                if (_inner.Listener == null)
+                if (_listener.Listener == null)
                     break;
 
                 try
                 {
-                    TcpClient tcp = await _inner.Listener.AcceptTcpClientAsync();
+                    TcpClient tcp = await _listener.Listener.AcceptTcpClientAsync();
                     ThreadPool.UnsafeQueueUserWorkItem(async t =>
                     {
-                        TcpClient client = (TcpClient) t;
                         try
                         {
-                            await AcceptClient(client);
+                            await AcceptClient(tcp);
                         }
                         catch (Exception ex)
                         {
                             if (_server.Logger != null)
-                                _server.Logger.LogException("ACCEPT_CLIENT", ex);
-
-                            client.Close();
+                                _server.Logger.LogException("Unhandled Exception", ex);
                         }
-                    }, tcp);
+                    }, tcp, false);
                 }
-                catch (Exception ex)
+                catch
                 {
-                    if (_server.Logger != null)
-                        _server.Logger.LogException("ACCEPT_TCP_CLIENT", ex);
                 }
             }
-        }
-
-        /// <summary>
-        /// Disposes connection handler and releases all resources
-        /// </summary>
-        public void Dispose()
-        {
-            if (_inner.Listener == null)
-                return;
-
-            _inner.Listener.Start();
-            try
-            {
-                _inner.Handle.Interrupt();
-            }
-            catch
-            {
-            }
-
-            if (_inner.KeepAliveManager != null)
-                _inner.KeepAliveManager.Stop();
-
-            _inner.KeepAliveManager = null;
-            _inner.Listener = null;
-            _inner.Handle = null;
-        }
-
-        private static SslProtocols GetProtocol(InnerServer server)
-        {
-            return server.Options.SslProtocol switch
-            {
-                "tls" => SslProtocols.Tls,
-                "tls11" => SslProtocols.Tls11,
-                "tls12" => SslProtocols.Tls12,
-                _ => SslProtocols.None
-            };
         }
 
         /// <summary>
@@ -114,131 +94,154 @@ namespace Twino.Server
         /// </summary>
         private async Task AcceptClient(TcpClient tcp)
         {
-            await Task.Yield();
-
-            if (_inner == null || tcp == null)
+            if (_listener == null)
                 return;
 
-            HandshakeInfo handshake = new HandshakeInfo(tcp, _inner)
-                                      {
-                                          State = ConnectionStates.Pending,
-                                          MaxAlive = DateTime.UtcNow + _minAliveHttpDuration
-                                      };
+            ConnectionInfo info = new ConnectionInfo(tcp, _listener)
+                                  {
+                                      State = ConnectionStates.Pending,
+                                      MaxAlive = DateTime.UtcNow + _manAliveHttpDuration
+                                  };
 
-            if (_inner.KeepAliveManager != null)
-                _inner.KeepAliveManager.Add(handshake);
-
-            //ssl handshaking
-            if (_inner.Options.SslEnabled)
-            {
-                try
-                {
-                    SslStream sslStream = _inner.Options.BypassSslValidation
-                                              ? new SslStream(tcp.GetStream(), true, (a, b, c, d) => true)
-                                              : new SslStream(tcp.GetStream(), true);
-
-                    handshake.SslStream = sslStream;
-                    SslProtocols protocol = GetProtocol(_inner);
-                    await sslStream.AuthenticateAsServerAsync(_inner.Certificate, false, protocol, false);
-                }
-                catch (Exception ex)
-                {
-                    if (_server.Logger != null)
-                        _server.Logger.LogException("SSL_HANDSHAKE", ex);
-
-                    tcp.Close();
-                    return;
-                }
-            }
-            else
-                handshake.PlainStream = tcp.GetStream();
-
-            await FinishAccept(handshake);
-        }
-
-        /// <summary>
-        /// After TCP socket is accepted and SSL handshaking is completed.
-        /// Reads the HTTP Request and finishes the operation if WebSocket or HTTP Request
-        /// </summary>
-        private async Task FinishAccept(HandshakeInfo handshake)
-        {
-            //read first request from http client
-            RequestReader reader = new RequestReader(_server, handshake);
-
-            Tuple<HttpRequest, HttpResponse> tuple = await reader.Read(handshake.GetStream());
-            HttpRequest request = tuple.Item1;
-            HttpResponse response = tuple.Item2;
+            _listener.KeepAliveManager.Add(info);
 
             try
             {
-                if (request == null)
+                //ssl handshaking
+                if (_listener.Options.SslEnabled)
                 {
-                    handshake.Close();
-                    return;
+                    SslStream sslStream = _listener.Options.BypassSslValidation
+                                              ? new SslStream(tcp.GetStream(), true, (a, b, c, d) => true)
+                                              : new SslStream(tcp.GetStream(), true);
+
+                    info.SslStream = sslStream;
+                    SslProtocols protocol = GetProtocol(_listener);
+                    await sslStream.AuthenticateAsServerAsync(_listener.Certificate, false, protocol, false);
                 }
 
-                request.IpAddress = FindIPAddress(handshake.Client);
-
-                //handle request
-                if (request.IsWebSocket)
-                    await ProcessWebSocketRequest(handshake, request);
-                else
+                //read first request from http client
+                HttpReader reader = new HttpReader(_server.Options, info.Server.Options);
+                bool keepReading;
+                do
                 {
-                    bool success = await ProcessHttpRequest(handshake, request, response);
-                    await reader.Dispose();
+                    keepReading = await ReadConnection(info, reader);
 
-                    if (success && _server.Options.HttpConnectionTimeMax > 0)
-                        await FinishAccept(handshake);
-                    else
-                        handshake.Close();
-                }
+                    if (keepReading)
+                        reader.Reset();
+                    
+                } while (keepReading);
+            }
+            catch (SocketException)
+            {
+                info.Close();
+            }
+            catch (IOException)
+            {
+                info.Close();
             }
             catch (Exception ex)
             {
                 if (_server.Logger != null)
                     _server.Logger.LogException("HANDLE_CONNECTION", ex);
 
-                handshake.Close();
-
-                await reader.Dispose();
+                info.Close();
             }
+        }
+
+        /// <summary>
+        /// After TCP socket is accepted and SSL handshaking is completed.
+        /// Reads the HTTP Request and finishes the operation if WebSocket or HTTP Request
+        /// </summary>
+        private async Task<bool> ReadConnection(ConnectionInfo info, HttpReader reader)
+        {
+            Tuple<HttpRequest, HttpResponse> tuple = await reader.Read(info.GetStream());
+            HttpRequest request = tuple.Item1;
+            HttpResponse response = tuple.Item2;
+
+            if (request == null)
+            {
+                info.Close();
+                return false;
+            }
+
+            request.ContentLength = reader.ContentLength;
+            response.Request = request;
+
+            if (response.StatusCode > 0)
+            {
+                await _writer.Write(response);
+                info.Close();
+                return false;
+            }
+
+            reader.ReadContent(request);
+            bool again = await ProcessConnection(info, request, response);
+
+            return again;
+        }
+
+        /// <summary>
+        /// Process the request and redirect it to websocket or http handler
+        /// </summary>
+        private async Task<bool> ProcessConnection(ConnectionInfo info, HttpRequest request, HttpResponse response)
+        {
+            request.IpAddress = FindIPAddress(info.Client);
+
+            //handle request
+            if (request.IsWebSocket)
+            {
+                await ProcessWebSocketRequest(info, request);
+                return false;
+            }
+
+            bool success = await ProcessHttpRequest(info, request, response);
+
+            if (!success)
+            {
+                info.Close();
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
         /// Process websocket connection and creates new session for the connection
         /// </summary>
-        private async Task ProcessWebSocketRequest(HandshakeInfo handshake, HttpRequest request)
+        private async Task ProcessWebSocketRequest(ConnectionInfo info, HttpRequest request)
         {
             //if WebSocket is not supported, close connection
             if (_server.ClientFactory == null)
             {
-                handshake.Close();
+                info.Close();
                 return;
             }
 
-            handshake.State = ConnectionStates.WebSocket;
-            SocketRequestHandler handler = new SocketRequestHandler(_server, request, handshake.Client);
+            await Task.Yield();
+
+            info.State = ConnectionStates.WebSocket;
+            SocketRequestHandler handler = new SocketRequestHandler(_server, request, info.Client);
             await handler.HandshakeClient();
         }
 
         /// <summary>
         /// Process HTTP connection, sends response.
         /// </summary>
-        private async Task<bool> ProcessHttpRequest(HandshakeInfo handshake, HttpRequest request, HttpResponse response)
+        private async Task<bool> ProcessHttpRequest(ConnectionInfo info, HttpRequest request, HttpResponse response)
         {
             //if HTTP is not supported, close connection
             if (_server.RequestHandler == null)
             {
-                handshake.Close();
+                info.Close();
                 return false;
             }
 
-            handshake.State = ConnectionStates.Http;
+            info.State = ConnectionStates.Http;
             await _server.RequestHandler.RequestAsync(_server, request, response);
-            ResponseWriter writer = new ResponseWriter(_server);
-            await writer.Write(response);
+            await _writer.Write(response);
 
-            return _server.Options.HttpConnectionTimeMax > 0;
+            //stay alive, if keep alive active and response has stream
+            return _server.Options.HttpConnectionTimeMax > 0 && response.HasStream();
         }
 
         /// <summary>
@@ -247,6 +250,45 @@ namespace Twino.Server
         private static string FindIPAddress(TcpClient tcp)
         {
             return tcp.Client.RemoteEndPoint.ToString().Split(':')[0];
+        }
+
+        /// <summary>
+        /// Disposes connection handler and releases all resources
+        /// </summary>
+        public void Dispose()
+        {
+            if (_listener.Listener == null)
+                return;
+
+            _listener.Listener.Start();
+            try
+            {
+                _listener.Handle.Interrupt();
+            }
+            catch
+            {
+            }
+
+            if (_listener.KeepAliveManager != null)
+                _listener.KeepAliveManager.Stop();
+
+            _listener.KeepAliveManager = null;
+            _listener.Listener = null;
+            _listener.Handle = null;
+        }
+
+        /// <summary>
+        /// Finds supported SSL protocol from server options
+        /// </summary>
+        private static SslProtocols GetProtocol(HostListener server)
+        {
+            return server.Options.SslProtocol switch
+            {
+                "tls" => SslProtocols.Tls,
+                "tls11" => SslProtocols.Tls11,
+                "tls12" => SslProtocols.Tls12,
+                _ => SslProtocols.None
+            };
         }
     }
 }

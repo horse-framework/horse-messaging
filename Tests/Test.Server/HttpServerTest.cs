@@ -27,8 +27,8 @@ namespace Test.Server
 
                 if (request.Method == "POST")
                 {
-                    Assert.NotNull(request.Content);
-                    Assert.True(request.Content.Length > 0);
+                    Assert.NotNull(request.ContentStream);
+                    Assert.True(request.ContentStream.Length > 0);
                 }
             }
 
@@ -97,6 +97,5 @@ namespace Test.Server
             var response = client.PostAsync("http://localhost:84/testing", content).Result;
             Assert.Equal(200, Convert.ToInt32(response.StatusCode));
         }
-
     }
 }

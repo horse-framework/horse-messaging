@@ -63,13 +63,16 @@ namespace Twino.Mvc
             }
             catch (Exception ex)
             {
+                if (request.Response.StreamSuppressed && request.Response.ResponseStream != null)
+                    GC.ReRegisterForFinalize(request.Response.ResponseStream);
+
                 if (Mvc.IsDevelopment)
                 {
                     IErrorHandler handler = new DevelopmentErrorHandler();
-                    handler.Error(request, ex);
+                    await handler.Error(request, ex);
                 }
                 else if (Mvc.ErrorHandler != null)
-                    Mvc.ErrorHandler.Error(request, ex);
+                    await Mvc.ErrorHandler.Error(request, ex);
                 else
                     WriteResponse(request.Response, StatusCodeResult.InternalServerError());
             }
@@ -80,7 +83,19 @@ namespace Twino.Mvc
         /// </summary>
         private async Task RequestMvc(TwinoServer server, HttpRequest request, HttpResponse response)
         {
-            //find route
+            //find file route
+            if (Mvc.FileRoutes.Count > 0)
+            {
+                IActionResult fileResult = Mvc.RouteFinder.FindFile(Mvc.FileRoutes, request);
+                if (fileResult != null)
+                {
+                    response.SuppressContentEncoding = true;
+                    WriteResponse(response, fileResult);
+                    return;
+                }
+            }
+
+            //find controller route
             RouteMatch match = Mvc.RouteFinder.Find(Mvc.Routes, request);
             if (match?.Route == null)
             {
@@ -187,14 +202,20 @@ namespace Twino.Mvc
             if (a == null)
             {
                 TaskCompletionSource<bool> source = new TaskCompletionSource<bool>();
-                ThreadPool.QueueUserWorkItem(async t =>
+                ThreadPool.QueueUserWorkItem(t =>
                 {
-                    await Task.Yield();
-                    IActionResult ar = (IActionResult) match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray());
-                    Action(ar);
-                    source.SetResult(true);
+                    try
+                    {
+                        IActionResult ar = (IActionResult) match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray());
+                        Action(ar);
+                        source.SetResult(true);
+                    }
+                    catch (Exception e)
+                    {
+                        source.SetException(e.InnerException ?? e);
+                    }
                 });
-                
+
                 await source.Task;
             }
             else
@@ -210,6 +231,17 @@ namespace Twino.Mvc
         /// </summary>
         public void WriteResponse(HttpResponse response, IActionResult result)
         {
+            if (!response.SuppressContentEncoding && result is FileResult)
+                response.SuppressContentEncoding = true;
+
+            if (result.Stream == null)
+            {
+                IActionResult statusAction;
+                bool found = Mvc.StatusCodeResults.TryGetValue(result.Code, out statusAction);
+                if (found && statusAction != null)
+                    result = statusAction;
+            }
+
             response.StatusCode = result.Code;
             response.ContentType = result.ContentType;
 
@@ -224,8 +256,8 @@ namespace Twino.Mvc
                         response.AdditionalHeaders.Add(header.Key, header.Value);
             }
 
-            if (!string.IsNullOrEmpty(result.Content))
-                response.Write(result.Content);
+            if (result.Stream != null && result.Stream.Length > 0)
+                response.SetStream(result.Stream, true, true);
         }
 
         /// <summary>
@@ -233,9 +265,6 @@ namespace Twino.Mvc
         /// </summary>
         private IEnumerable<ParameterValue> FillParameters(HttpRequest request, RouteMatch route)
         {
-            Dictionary<string, string> queryStrings = request.GetQueryStringValues();
-            Dictionary<string, string> formValues = request.GetFormValues();
-
             foreach (ActionParameter ap in route.Route.Parameters.OrderBy(x => x.Index))
             {
                 object value = null;
@@ -249,25 +278,28 @@ namespace Twino.Mvc
                         break;
 
                     case ParameterSource.Body:
+                    {
+                        string content = Encoding.UTF8.GetString(request.ContentStream.ToArray());
                         if (ap.FromName == "json")
-                            value = Newtonsoft.Json.JsonConvert.DeserializeObject(request.Content, ap.ParameterType);
+                            value = Newtonsoft.Json.JsonConvert.DeserializeObject(content, ap.ParameterType);
                         else if (ap.FromName == "xml")
                         {
-                            using MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(request.Content));
+                            using MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(content));
                             XmlSerializer serializer = new XmlSerializer(ap.ParameterType);
                             value = serializer.Deserialize(ms);
                         }
 
                         break;
+                    }
 
                     case ParameterSource.Form:
-                        if (formValues.ContainsKey(ap.FromName))
-                            value = formValues[ap.FromName];
+                        if (request.Form.ContainsKey(ap.FromName))
+                            value = request.Form[ap.FromName];
                         break;
 
                     case ParameterSource.QueryString:
-                        if (queryStrings.ContainsKey(ap.FromName))
-                            value = queryStrings[ap.FromName];
+                        if (request.QueryString.ContainsKey(ap.FromName))
+                            value = request.QueryString[ap.FromName];
                         break;
 
                     case ParameterSource.Header:
