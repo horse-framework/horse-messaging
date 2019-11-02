@@ -11,9 +11,9 @@
     <PackageTags>twino, http, server, mvc, websocket, lightweight, server</PackageTags>
     <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
     <Version>3.2.0</Version>
-    <FileVersion>1.2.3</FileVersion>
-    <AssemblyVersion>1.2.3</AssemblyVersion>
-    <PackageVersion>1.2.3</PackageVersion>
+    <FileVersion>1.3.0</FileVersion>
+    <AssemblyVersion>1.3.0</AssemblyVersion>
+    <PackageVersion>1.3.0</PackageVersion>
     <LangVersion>8</LangVersion>
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>

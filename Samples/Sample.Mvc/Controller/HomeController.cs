@@ -9,9 +9,9 @@ namespace Sample.Mvc.Controller
     public class HomeController : TwinoController
     {
         [HttpGet("")]
-        public IActionResult Get()
+        public async Task<IActionResult> Get()
         {
-            return String("Welcome!");
+            return await StringAsync("Welcome!");
         }
         
         [HttpPost("")]

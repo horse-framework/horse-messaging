@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using Twino.Mvc.Auth;
 using Twino.Core.Http;
 using Twino.Mvc.Middlewares;
+using Twino.Mvc.Services;
 
 namespace Twino.Mvc
 {
@@ -33,9 +34,12 @@ namespace Twino.Mvc
         /// </summary>
         public TwinoMvc Mvc { get; }
 
-        public MvcRequestHandler(TwinoMvc mvc)
+        internal MvcAppBuilder App { get; }
+
+        public MvcRequestHandler(TwinoMvc mvc, MvcAppBuilder app)
         {
             Mvc = mvc;
+            App = app;
         }
 
         /// <summary>
@@ -45,21 +49,20 @@ namespace Twino.Mvc
         {
             try
             {
-                if (Mvc.RunnerAction == null)
+                IContainerScope scope = Mvc.Services.CreateScope();
+
+                if (App.Descriptors.Count > 0)
                 {
-                    await RequestMvc(server, request, response);
-                    return;
+                    MiddlewareRunner runner = new MiddlewareRunner(Mvc, scope);
+                    await runner.RunSequence(App, request, response);
+                    if (runner.LastResult != null)
+                    {
+                        WriteResponse(response, runner.LastResult);
+                        return;
+                    }
                 }
 
-                MvcApp app = new MvcApp(request, response);
-
-                Mvc.RunnerAction(app);
-                await app.RunSequence();
-
-                if (app.LastResult != null)
-                    WriteResponse(response, app.LastResult);
-                else
-                    await RequestMvc(server, request, response);
+                await RequestMvc(server, request, response, scope);
             }
             catch (Exception ex)
             {
@@ -81,7 +84,7 @@ namespace Twino.Mvc
         /// <summary>
         /// Handles the request in MVC pattern
         /// </summary>
-        private async Task RequestMvc(TwinoServer server, HttpRequest request, HttpResponse response)
+        private async Task RequestMvc(TwinoServer server, HttpRequest request, HttpResponse response, IContainerScope scope)
         {
             //find file route
             if (Mvc.FileRoutes.Count > 0)
@@ -118,10 +121,10 @@ namespace Twino.Mvc
                                     };
 
             //check controller authorize attribute
-            AuthorizeAttribute[] authController = (AuthorizeAttribute[]) match.Route.ControllerType.GetCustomAttributes(typeof(AuthorizeAttribute), false);
-            if (authController.Length > 0)
+            AuthorizeAttribute authController = (AuthorizeAttribute) match.Route.ControllerType.GetCustomAttribute(typeof(AuthorizeAttribute));
+            if (authController != null)
             {
-                authController[0].VerifyAuthority(Mvc, null, context);
+                authController.VerifyAuthority(Mvc, null, context);
                 if (context.Result != null)
                 {
                     WriteResponse(response, context.Result);
@@ -136,7 +139,7 @@ namespace Twino.Mvc
             if (!CallFilters(response, context, controllerFilters, filter => filter.BeforeCreated(context)))
                 return;
 
-            TwinoController controller = Mvc.ControllerFactory.CreateInstance(Mvc, match.Route.ControllerType, request, response);
+            TwinoController controller = Mvc.ControllerFactory.CreateInstance(Mvc, match.Route.ControllerType, request, response, scope);
             if (controller == null)
             {
                 WriteResponse(response, Mvc.NotFoundResult);
@@ -158,14 +161,14 @@ namespace Twino.Mvc
                                               Controller = controller,
                                               Filters = actionFilters,
                                               Action = match.Route.ActionType,
-                                              Parameters = FillParameters(request, match).ToList()
+                                              Parameters = FillParameters(request, match)
                                           };
 
             //check action authorize attribute
-            AuthorizeAttribute[] authAction = (AuthorizeAttribute[]) match.Route.ActionType.GetCustomAttributes(typeof(AuthorizeAttribute), false);
-            if (authAction.Length > 0)
+            AuthorizeAttribute authAction = (AuthorizeAttribute) match.Route.ActionType.GetCustomAttribute(typeof(AuthorizeAttribute));
+            if (authAction != null)
             {
-                authAction[0].VerifyAuthority(Mvc, descriptor, context);
+                authAction.VerifyAuthority(Mvc, descriptor, context);
                 if (context.Result != null)
                 {
                     WriteResponse(response, context.Result);
@@ -231,9 +234,12 @@ namespace Twino.Mvc
         /// </summary>
         public void WriteResponse(HttpResponse response, IActionResult result)
         {
+            //disable content encoding for file download responses
             if (!response.SuppressContentEncoding && result is FileResult)
                 response.SuppressContentEncoding = true;
 
+            //if there is no body content for the result
+            //check status code results to find a body
             if (result.Stream == null)
             {
                 IActionResult statusAction;
@@ -245,17 +251,20 @@ namespace Twino.Mvc
             response.StatusCode = result.Code;
             response.ContentType = result.ContentType;
 
-            if (response.AdditionalHeaders == null)
-                response.AdditionalHeaders = result.Headers;
-            else
-            {
-                foreach (var header in result.Headers)
-                    if (response.AdditionalHeaders.ContainsKey(header.Key))
-                        response.AdditionalHeaders[header.Key] = header.Value;
-                    else
-                        response.AdditionalHeaders.Add(header.Key, header.Value);
-            }
+            //if result has headers, add these headers to response
+            if (result.Headers != null)
+                if (response.AdditionalHeaders == null)
+                    response.AdditionalHeaders = result.Headers;
+                else
+                {
+                    foreach (var header in result.Headers)
+                        if (response.AdditionalHeaders.ContainsKey(header.Key))
+                            response.AdditionalHeaders[header.Key] = header.Value;
+                        else
+                            response.AdditionalHeaders.Add(header.Key, header.Value);
+                }
 
+            //set stream if result has stream
             if (result.Stream != null && result.Stream.Length > 0)
                 response.SetStream(result.Stream, true, true);
         }
@@ -263,9 +272,10 @@ namespace Twino.Mvc
         /// <summary>
         /// Creates parameter list and sets values for the specified request to the specified route.
         /// </summary>
-        private IEnumerable<ParameterValue> FillParameters(HttpRequest request, RouteMatch route)
+        private static List<ParameterValue> FillParameters(HttpRequest request, RouteMatch route)
         {
-            foreach (ActionParameter ap in route.Route.Parameters.OrderBy(x => x.Index))
+            List<ParameterValue> values = new List<ParameterValue>();
+            foreach (ActionParameter ap in route.Route.Parameters)
             {
                 object value = null;
 
@@ -337,14 +347,16 @@ namespace Twino.Mvc
                 }
 
                 //return value
-                yield return new ParameterValue
+                values.Add(new ParameterValue
                              {
                                  Name = ap.ParameterName,
                                  Type = ap.ParameterType,
                                  Source = ap.Source,
                                  Value = casted
-                             };
+                             });
             }
+
+            return values;
         }
 
         /// <summary>

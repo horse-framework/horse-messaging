@@ -5,12 +5,34 @@ using Twino.Mvc.Results;
 
 namespace Twino.Mvc.Middlewares
 {
+    /// <summary>
+    /// CORS (Cross Origin Request Sharing) middleware
+    /// </summary>
     public class CorsMiddleware : IMiddleware
     {
+        /// <summary>
+        /// "*" for all origins. Otherwise type with comma seperator
+        /// </summary>
         public string AllowedOrigins { get; set; }
+        
+        /// <summary>
+        /// Allowed such as GET, POST, PUT
+        /// </summary>
         public string AllowedMethods { get; set; }
+        
+        /// <summary>
+        /// Allowed header keys
+        /// </summary>
         public string AllowedHeaders { get; set; }
+        
+        /// <summary>
+        /// Allowed max-age in seconds. Default is 3600.
+        /// </summary>
         public string AllowMaxAge { get; set; }
+        
+        /// <summary>
+        /// True, if need to allow credentials
+        /// </summary>
         public bool AllowCredentials { get; set; }
 
         public void AllowAll()
@@ -22,7 +44,7 @@ namespace Twino.Mvc.Middlewares
             AllowCredentials = true;
         }
 
-        public async Task Invoke(NextMiddlewareHandler next, HttpRequest request, HttpResponse response)
+        public async Task Invoke(HttpRequest request, HttpResponse response, MiddlewareResultHandler setResult)
         {
             if (AllowCredentials)
                 response.AdditionalHeaders.Add(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
@@ -51,11 +73,10 @@ namespace Twino.Mvc.Middlewares
                 if (!string.IsNullOrEmpty(AllowMaxAge))
                     response.AdditionalHeaders.Add(HttpHeaders.ACCESS_CONTROL_MAX_AGE, AllowMaxAge);
 
-                await next(StatusCodeResult.NoContent());
-                return;
+                setResult(StatusCodeResult.NoContent());
             }
 
-            await next(null);
+            await Task.CompletedTask;
         }
     }
 }

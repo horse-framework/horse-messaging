@@ -4,15 +4,29 @@ using Twino.Mvc.Auth.Jwt;
 using Twino.Mvc.Middlewares;
 using Sample.Mvc.Models;
 using System;
-using System.Linq;
 using System.Net;
-using System.Net.Http;
+using System.Threading.Tasks;
+using Twino.Core.Http;
 using Twino.Mvc.Results;
-using Twino.Server;
-using Twino.Server.WebSockets;
 
 namespace Sample.Mvc
 {
+    public class TMid : IMiddleware
+    {
+        private IFirstService _firstService;
+        public TMid(IFirstService firstService)
+        {
+            _firstService = firstService;
+        }
+        
+        public async Task Invoke(HttpRequest request, HttpResponse response, MiddlewareResultHandler setResult)
+        {
+            Console.WriteLine(_firstService.ToString());
+            
+            await Task.CompletedTask;
+        }
+    }
+    
     class Program
     {
         static void Main(string[] args)
@@ -22,7 +36,9 @@ namespace Sample.Mvc
             mvc.IsDevelopment = true;
             mvc.Init(twino =>
             {
-                twino.Services.Add<IDemoService, DemoService>();
+                twino.Services.AddScoped<IScopedService, ScopedService>();
+                twino.Services.AddTransient<IFirstService, FirstService>();
+                twino.Services.AddTransient<ISecondService, SecondService>();
 
                 twino.AddJwt(options =>
                 {
@@ -39,7 +55,6 @@ namespace Sample.Mvc
                 twino.Policies.Add(Policy.RequireClaims("IT", "Database", "Cloud", "Source"));
                 twino.Policies.Add(Policy.Custom("Custom", (d, c) => true));
 
-                twino.UseFiles("/download", "/home/mehmet/files");
 
                 twino.StatusCodeResults.Add(HttpStatusCode.Unauthorized, new JsonResult(new {Message = "Access denied"}));
             });
@@ -47,7 +62,12 @@ namespace Sample.Mvc
             CorsMiddleware cors = new CorsMiddleware();
             cors.AllowAll();
 
-            mvc.Run(app => { app.UseMiddleware(cors); });
+            mvc.Run(app =>
+            {
+                app.UseMiddleware(cors);
+                app.UseMiddleware<TMid>();
+                app.UseFiles("/download", "/home/mehmet/files");
+            });
         }
     }
 }

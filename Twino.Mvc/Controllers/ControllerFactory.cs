@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using Twino.Core.Http;
+using Twino.Mvc.Services;
 
 namespace Twino.Mvc.Controllers
 {
@@ -13,7 +14,7 @@ namespace Twino.Mvc.Controllers
         /// <summary>
         /// Creates new instance of a TwinoController object
         /// </summary>
-        public TwinoController CreateInstance(TwinoMvc mvc, Type controllerType, HttpRequest request, HttpResponse response)
+        public TwinoController CreateInstance(TwinoMvc mvc, Type controllerType, HttpRequest request, HttpResponse response, IContainerScope scope)
         {
             ConstructorInfo[] constructors = controllerType.GetConstructors();
 
@@ -32,7 +33,7 @@ namespace Twino.Mvc.Controllers
                     ParameterInfo p = parameters[i];
                     Type type = p.ParameterType;
 
-                    object value = mvc.Services.Get(type);
+                    object value = mvc.Services.Get(type, scope);
 
                     //if the parameter could not provide, we need to skip this constructor
                     if (value == null)
@@ -49,7 +50,7 @@ namespace Twino.Mvc.Controllers
 
                 //if the application comes here, we are sure all parameters are created
                 //now we can create instance with these parameter values
-                TwinoController result = (TwinoController)Activator.CreateInstance(controllerType, values);
+                TwinoController result = (TwinoController) Activator.CreateInstance(controllerType, values);
 
                 //set the controller properties
                 result.Request = request;
@@ -61,6 +62,5 @@ namespace Twino.Mvc.Controllers
 
             return null;
         }
-
     }
 }

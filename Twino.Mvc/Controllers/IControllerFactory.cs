@@ -1,5 +1,7 @@
 ﻿using System;
+using System.ComponentModel;
 using Twino.Core.Http;
+using Twino.Mvc.Services;
 
 namespace Twino.Mvc.Controllers
 {
@@ -13,7 +15,7 @@ namespace Twino.Mvc.Controllers
         /// <summary>
         /// Creates new instance of a TwinoController object
         /// </summary>
-        TwinoController CreateInstance(TwinoMvc mvc, Type controllerType, HttpRequest request, HttpResponse response);
+        TwinoController CreateInstance(TwinoMvc mvc, Type controllerType, HttpRequest request, HttpResponse response, IContainerScope scope);
 
     }
 }

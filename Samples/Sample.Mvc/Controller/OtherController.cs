@@ -11,13 +11,6 @@ namespace Sample.Mvc.Controller
     [Route("[controller]")]
     public class OtherController : TwinoController
     {
-        private IDemoService DemoService { get; set; }
-
-        public OtherController(IDemoService demoService)
-        {
-            DemoService = demoService;
-        }
-
         [HttpGet("hello")]
         public IActionResult Hello([FromQuery] string name)
         {
@@ -30,12 +23,6 @@ namespace Sample.Mvc.Controller
             return String($"Browser: {agent}!");
         }
 
-        [HttpGet("number")]
-        public IActionResult Number()
-        {
-            return String("Number is " + DemoService.GetNumber());
-        }
-        
         [HttpGet("test")]
         [TestActionFilter]
         public IActionResult Test()

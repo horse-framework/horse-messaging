@@ -19,7 +19,7 @@ namespace Sample.Full.Server
                 MaximumRequestLength = 2048,
                 PingInterval = 60000
             };
-
+            
             TwinoServer server = new TwinoServer(handler, factory, container, options);
 
             server.Start(80);
