@@ -99,11 +99,16 @@ namespace Twino.Core
         {
             try
             {
+                if (Stream == null)
+                {
+                    Disconnect();
+                    return;
+                }
+
                 Stream.BeginRead(_buffer, 0, _buffer.Length, EndRead, null);
             }
             catch (Exception ex)
             {
-                OnError("READ", ex);
                 Disconnect();
             }
         }
@@ -210,7 +215,7 @@ namespace Twino.Core
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Sends a string message to the socket client.
         /// Data must be plain text,
@@ -323,7 +328,7 @@ namespace Twino.Core
         {
             SpinWait wait = new SpinWait();
             DateTime until = DateTime.UtcNow.AddSeconds(5);
-            
+
             Task.Factory.StartNew(() =>
             {
                 while (!_writeCompleted)
@@ -332,7 +337,7 @@ namespace Twino.Core
                     if (DateTime.UtcNow > until)
                         return;
                 }
-                
+
                 Send(data);
             });
         }

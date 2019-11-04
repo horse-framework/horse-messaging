@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 
 namespace Twino.Mvc.Services
 {
@@ -23,14 +24,21 @@ namespace Twino.Mvc.Services
         /// </summary>
         public object Get(Type serviceType, IServiceContainer services)
         {
+            ServiceDescriptor descriptor = services.GetDescriptor(serviceType);
+            return Get(descriptor, services);
+        }
+        
+        /// <summary>
+        /// Gets the service from the container.
+        /// </summary>
+        public object Get(ServiceDescriptor descriptor, IServiceContainer services)
+        {
             if (_scopedServices == null)
                 _scopedServices = new Dictionary<Type, object>();
 
-            ServiceDescriptor descriptor = services.GetDescriptor(serviceType);
-
             //try to get from created instances
             object instance;
-            bool found = _scopedServices.TryGetValue(serviceType, out instance);
+            bool found = _scopedServices.TryGetValue(descriptor.ServiceType, out instance);
             if (found)
                 return instance;
 
@@ -38,7 +46,7 @@ namespace Twino.Mvc.Services
             instance = services.CreateInstance(descriptor.ImplementationType, this);
 
             if (instance != null)
-                _scopedServices.Add(serviceType, instance);
+                _scopedServices.Add(descriptor.ServiceType, instance);
 
             return instance;
         }
