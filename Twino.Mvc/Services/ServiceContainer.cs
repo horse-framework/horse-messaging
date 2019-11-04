@@ -232,7 +232,7 @@ namespace Twino.Mvc.Services
             for (int i = 0; i < parameters.Length; i++)
             {
                 ParameterInfo parameter = parameters[i];
-                object value = scope != null ? scope.Get(parameter.ParameterType, this) : Get(parameter.ParameterType);
+                object value = Get(parameter.ParameterType, scope);
                 values[i] = value;
             }
 

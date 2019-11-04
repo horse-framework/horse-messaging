@@ -18,5 +18,11 @@ namespace Twino.Mvc.Services
         /// Gets the service from the container.
         /// </summary>
         object Get(Type serviceType, IServiceContainer services);
+        
+        
+        /// <summary>
+        /// Gets the service from the container.
+        /// </summary>
+        object Get(ServiceDescriptor descriptor, IServiceContainer services);
     }
 }
