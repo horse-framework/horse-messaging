@@ -66,14 +66,5 @@ namespace Test.SocketModels
             Assert.NotNull(received2);
             Assert.Equal(502, received2.Number);
         }
-
-        [Theory]
-        [InlineData(100, 1)]
-        [InlineData(100, 50)]
-        [InlineData(250, 1)]
-        [InlineData(250, 50)]
-        public void HighTraffic(int concurrentClients, int packages)
-        {
-        }
     }
 }

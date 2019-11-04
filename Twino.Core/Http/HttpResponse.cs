@@ -76,7 +76,6 @@ namespace Twino.Core.Http
         /// </summary>
         public HttpRequest Request { get; internal set; }
 
-
         internal bool StreamSuppressed { get; private set; }
 
         #endregion

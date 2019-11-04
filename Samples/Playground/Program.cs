@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -65,8 +66,47 @@ namespace Playground
         }
     }
 
+    public class TestHandler : IHttpRequestHandler
+    {
+        public async Task RequestAsync(TwinoServer server, HttpRequest request, HttpResponse response)
+        {
+            await response.WriteAsync("Hello, World!");
+        }
+    }
+
     class Program
     {
+        static void Main(string[] args)
+        {
+
+            TwinoServer server = TwinoServer.CreateHttp(async (twino, request, response) =>
+            {
+                if (request.Path.Equals("/hi", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    response.StatusCode = HttpStatusCode.OK;
+
+                    if (request.QueryString.ContainsKey("name"))
+                        await response.WriteAsync($"Hello {request.QueryString["name"]}!");
+                    else
+                        await response.WriteAsync($"Hello someone!");
+
+                    return;
+                }
+
+                if (request.Path.Equals("/post", StringComparison.InvariantCultureIgnoreCase) &&
+                    request.Method.Equals("post", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    response.StatusCode = HttpStatusCode.OK;
+                    await response.WriteAsync($"Posted {request.Form.Count} form values!");
+                    return;
+                }
+
+                response.StatusCode = HttpStatusCode.NotFound;
+            });
+            server.Start();
+            server.BlockWhileRunning();
+        }
+
         static void Measure(int count, Action method)
         {
             Stopwatch sw = new Stopwatch();
@@ -76,25 +116,6 @@ namespace Playground
 
             sw.Stop();
             Console.WriteLine("elapsed ms: " + sw.ElapsedMilliseconds);
-        }
-
-        static void Main(string[] args)
-        {   
-            string req = "GET / HTTP/1.1\r\n" +
-                         "Host: 127.0.0.1\r\n" +
-                         "Connection: Upgrade\r\n" +
-                         "Pragma: no-cache\r\n" +
-                         "Cache-Control: no-cache\r\n" +
-                         "Upgrade: websocket\r\n" +
-                         "Sec-WebSocket-Version: 13\r\n" +
-                         "Accept-Encoding: gzip, deflate, br\r\n" +
-                         "Accept-Language: en-US,en;q=0.9\r\n" +
-                         "Sec-WebSocket-Key: /gXWdaa3iWc5nw415P1vE03Ded8=\r\n" +
-                         "Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits";
-            byte[] bdata = Encoding.UTF8.GetBytes(req);
-            HttpReader reader = new HttpReader(ServerOptions.CreateDefault(), new HostOptions());
-            var tuple = reader.Read(new MemoryStream(bdata)).Result;
-            Console.WriteLine(tuple.Item2.StatusCode);
         }
 
         static void Tasks()

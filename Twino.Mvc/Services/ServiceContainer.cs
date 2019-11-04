@@ -51,7 +51,6 @@ namespace Twino.Mvc.Services
             Items.Add(serviceType, descriptor);
         }
 
-        
         /// <summary>
         /// Adds a service to the container
         /// </summary>
@@ -81,7 +80,7 @@ namespace Twino.Mvc.Services
             Items.Add(serviceType, descriptor);
         }
 
-        
+
         /// <summary>
         /// Adds a singleton service to the container.
         /// Service will be created with first call.
@@ -163,7 +162,7 @@ namespace Twino.Mvc.Services
                 if (scope == null)
                     throw new InvalidOperationException("Type is registered as Scoped but scope parameter is null for IServiceContainer.Get method");
 
-                return scope.Get(serviceType, this);
+                return scope.Get(descriptor, this);
             }
 
             //for singleton
@@ -197,7 +196,7 @@ namespace Twino.Mvc.Services
         /// </summary>
         public ServiceDescriptor GetDescriptor(Type serviceType)
         {
-            ServiceDescriptor descriptor = null;
+            ServiceDescriptor descriptor;
 
             //finds by service type
             if (Items.ContainsKey(serviceType))

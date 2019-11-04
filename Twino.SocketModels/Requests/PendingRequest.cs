@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Twino.Core;
 
-namespace Twino.SocketModels.Models
+namespace Twino.SocketModels.Requests
 {
     /// <summary>
     /// After a request is sent, to handle the response, information about the request must be kept.
@@ -95,7 +95,7 @@ namespace Twino.SocketModels.Models
         /// Timeout date for the request
         /// </summary>
         public DateTime Deadline { get; set; }
-        
+
         /// <summary>
         /// Request's TCP client
         /// </summary>
@@ -115,17 +115,17 @@ namespace Twino.SocketModels.Models
         /// Completes the request as successful with model
         /// </summary>
         public abstract void CompleteAsSuccessful(object model);
-        
+
         /// <summary>
         /// Completes the request as timed out
         /// </summary>
         public abstract void CompleteAsTimeout();
-        
+
         /// <summary>
         /// Completes the request as error
         /// </summary>
         public abstract void CompleteAsError();
-        
+
         /// <summary>
         /// Completes the request as failed
         /// </summary>

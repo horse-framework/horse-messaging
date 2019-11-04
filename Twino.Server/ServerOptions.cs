@@ -18,15 +18,17 @@ namespace Twino.Server
         public int PingInterval { get; set; }
 
         /// <summary>
+        /// Maximum keep alive time in seconds for HTTP Requests.
+        /// In this duration, server does not close the connection and waits for next HTTP requests.
+        /// If you want to disable this feature, set value 0
+        /// </summary>
+        public int HttpConnectionTimeMax { get; set; }
+
+        /// <summary>
         /// After each TCP Client is accepted, the first data (this is the first HTTP Request) length.
         /// Default is 1024 KBs
         /// </summary>
         public long MaximumRequestLength { get; set; }
-
-        /// <summary>
-        /// Maximum bytes for Request Header. Default is 8KB
-        /// </summary>
-        public int MaximumHeaderLength { get; set; }
 
         /// <summary>
         /// Maximum URL size for Request. Default is 750 bytes.
@@ -34,11 +36,9 @@ namespace Twino.Server
         public int MaximumUriLength { get; set; }
 
         /// <summary>
-        /// Maximum keep alive time in seconds for HTTP Requests.
-        /// In this duration, server does not close the connection and waits for next HTTP requests.
-        /// If you want to disable this feature, set value 0
+        /// Maximum bytes for Request Header. Default is 8KB
         /// </summary>
-        public int HttpConnectionTimeMax { get; set; }
+        public int MaximumHeaderLength { get; set; }
 
         /// <summary>
         /// For TcpListener objects, maximum pending connections waiting for being accepted by the server.
