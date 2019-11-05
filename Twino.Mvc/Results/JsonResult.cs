@@ -63,7 +63,7 @@ namespace Twino.Mvc.Results
         /// </summary>
         public void Set(object model)
         {
-            string serialized = System.Text.Json.JsonSerializer.Serialize(model);
+            string serialized = System.Text.Json.JsonSerializer.Serialize(model, model.GetType());
             Stream = new MemoryStream(Encoding.UTF8.GetBytes(serialized));
         }
     }
