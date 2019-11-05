@@ -213,6 +213,10 @@ namespace Twino.Ioc
                 case ImplementationType.Pool:
                     IServicePool pool = (IServicePool) descriptor.Instance;
                     PoolServiceDescriptor pdesc = await pool.GetAndLock();
+
+                    if (scope != null)
+                        scope.UsePoolItem(pool, pdesc);
+
                     return pdesc.GetInstance();
 
                 default:
@@ -274,6 +278,17 @@ namespace Twino.Ioc
 
             //create with parameters found from the container
             return Activator.CreateInstance(type, values);
+        }
+
+        /// <summary>
+        /// Releases item from pool's locked item list
+        /// </summary>
+        public void ReleasePoolItem<TService>(TService service)
+        {
+            ServiceDescriptor descriptor = GetDescriptor<TService>();
+
+            IServicePool pool = (IServicePool) descriptor.Instance;
+            pool.ReleaseInstance(service);
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Twino.Ioc.Pool;
 
 namespace Twino.Ioc
 {
@@ -9,10 +10,18 @@ namespace Twino.Ioc
     /// </summary>
     internal class DefaultContainerScope : IContainerScope
     {
+        /// <summary>
+        /// All created scoped services in this scope
+        /// </summary>
         private Dictionary<Type, object> _scopedServices;
 
         /// <summary>
-        /// Gets the service from the container.
+        /// All locked pool instances in this scope
+        /// </summary>
+        private readonly Dictionary<IServicePool, List<PoolServiceDescriptor>> _poolInstances = new Dictionary<IServicePool, List<PoolServiceDescriptor>>();
+
+        /// <summary>
+        /// Gets the service from the container
         /// </summary>
         public async Task<TService> Get<TService>(IServiceContainer services) where TService : class
         {
@@ -21,7 +30,7 @@ namespace Twino.Ioc
         }
 
         /// <summary>
-        /// Gets the service from the container.
+        /// Gets the service from the container
         /// </summary>
         public async Task<object> Get(Type serviceType, IServiceContainer services)
         {
@@ -30,7 +39,7 @@ namespace Twino.Ioc
         }
 
         /// <summary>
-        /// Gets the service from the container.
+        /// Gets the service from the container
         /// </summary>
         public async Task<object> Get(ServiceDescriptor descriptor, IServiceContainer services)
         {
@@ -50,6 +59,38 @@ namespace Twino.Ioc
                 _scopedServices.Add(descriptor.ServiceType, instance);
 
             return instance;
+        }
+
+        /// <summary>
+        /// Adds a pool instance to using list
+        /// This instance will be released while disposing
+        /// </summary>
+        public void UsePoolItem(IServicePool pool, PoolServiceDescriptor descriptor)
+        {
+            lock (_poolInstances)
+            {
+                if (_poolInstances.ContainsKey(pool))
+                    _poolInstances[pool].Add(descriptor);
+                else
+                    _poolInstances.Add(pool, new List<PoolServiceDescriptor> {descriptor});
+            }
+        }
+
+        /// <summary>
+        /// Releases all source and using pool instances
+        /// </summary>
+        public void Dispose()
+        {
+            lock (_poolInstances)
+            {
+                foreach (var kv in _poolInstances)
+                {
+                    foreach (PoolServiceDescriptor descriptor in kv.Value)
+                        kv.Key.Release(descriptor);
+                }
+
+                _poolInstances.Clear();
+            }
         }
     }
 }

@@ -11,7 +11,7 @@ namespace Twino.Ioc.Pool
     /// Contains same service instances in the pool.
     /// Provides available instances to requesters and guarantees that only requester uses same instances at same time
     /// </summary>
-    public class ServicePool<TService>
+    public class ServicePool<TService> : IServicePool
         where TService : class
     {
         /// <summary>
@@ -52,9 +52,23 @@ namespace Twino.Ioc.Pool
         }
 
         /// <summary>
+        /// Releases pool item by instance
+        /// </summary>
+        /// <returns></returns>
+        public void ReleaseInstance(object instance)
+        {
+            PoolServiceDescriptor descriptor;
+            lock (_descriptors)
+                descriptor = _descriptors.Find(x => x.Instance == instance);
+
+            if (descriptor != null)
+                Release(descriptor);
+        }
+
+        /// <summary>
         /// Releases pool item for re-using
         /// </summary>
-        public void Release(PoolServiceDescriptor<TService> descriptor)
+        public void Release(PoolServiceDescriptor descriptor)
         {
             descriptor.Locked = false;
         }
@@ -63,7 +77,7 @@ namespace Twino.Ioc.Pool
         /// Get an item from pool and locks it to prevent multiple usage at same time.
         /// The item should be released with Release method.
         /// </summary>
-        public async Task<PoolServiceDescriptor<TService>> GetAndLock()
+        public async Task<PoolServiceDescriptor> GetAndLock()
         {
             PoolServiceDescriptor<TService> descriptor = GetFromCreatedItem();
 
@@ -71,8 +85,13 @@ namespace Twino.Ioc.Pool
                 return descriptor;
 
             //if there is no available instance and we have space in pool, create new
-            if (_descriptors.Count < Options.PoolMaxSize)
+            int count;
+            lock (_descriptors)
+                count = _descriptors.Count;
+
+            if (count < Options.PoolMaxSize)
                 return await CreateNew(true);
+
 
             //if there is no available instance and there is no space to create new
             TaskCompletionSource<PoolServiceDescriptor<TService>> completionSource = new TaskCompletionSource<PoolServiceDescriptor<TService>>(TaskCreationOptions.None);
@@ -133,7 +152,7 @@ namespace Twino.Ioc.Pool
             PoolServiceDescriptor<TService> descriptor = new PoolServiceDescriptor<TService>();
             descriptor.Locked = locked;
             descriptor.LockExpiration = DateTime.UtcNow.Add(Options.MaximumLockDuration);
-            
+
             object instance = await Container.CreateInstance(typeof(TService));
             descriptor.Instance = (TService) instance;
 

@@ -9,7 +9,6 @@ namespace Twino.Ioc
     /// </summary>
     public interface IServiceContainer
     {
-
         /// <summary>
         /// Adds a service to the container
         /// </summary>
@@ -33,7 +32,7 @@ namespace Twino.Ioc
         /// Adds a service to the container
         /// </summary>
         void AddScoped(Type serviceType, Type implementationType);
-        
+
         /// <summary>
         /// Adds a singleton service to the container.
         /// Service will be created with first call.
@@ -96,12 +95,12 @@ namespace Twino.Ioc
         /// Gets the service from the container.
         /// </summary>
         Task<object> Get(Type serviceType, IContainerScope scope = null);
-        
+
         /// <summary>
         /// Gets descriptor of type
         /// </summary>
         ServiceDescriptor GetDescriptor<TService>();
-        
+
         /// <summary>
         /// Gets descriptor of type
         /// </summary>
@@ -111,6 +110,11 @@ namespace Twino.Ioc
         /// Creates new instance of type
         /// </summary>
         Task<object> CreateInstance(Type type, IContainerScope scope = null);
+
+        /// <summary>
+        /// Releases item from pool's locked item list
+        /// </summary>
+        void ReleasePoolItem<TService>(TService service);
 
         /// <summary>
         /// Creates new scope belong this container.

@@ -12,6 +12,12 @@ namespace Twino.Ioc.Pool
         Task<PoolServiceDescriptor> GetAndLock();
 
         /// <summary>
+        /// Releases pool item by instance
+        /// </summary>
+        /// <returns></returns>
+        void ReleaseInstance(object instance);
+
+        /// <summary>
         /// Releases pool item for re-using. 
         /// </summary>
         void Release(PoolServiceDescriptor descriptor);
