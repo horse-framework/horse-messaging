@@ -7,7 +7,7 @@ namespace Twino.Ioc
     /// <summary>
     /// MVC Scope implementation for service container
     /// </summary>
-    internal class RequestContainerScope : IContainerScope
+    internal class DefaultContainerScope : IContainerScope
     {
         private Dictionary<Type, object> _scopedServices;
         

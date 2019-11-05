@@ -244,7 +244,7 @@ namespace Twino.Ioc
         /// </summary>
         public IContainerScope CreateScope()
         {
-            return new RequestContainerScope();
+            return new DefaultContainerScope();
         }
 
         #endregion
