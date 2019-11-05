@@ -1,6 +1,6 @@
 using System;
 
-namespace Twino.Mvc.Services
+namespace Twino.Ioc
 {
     /// <summary>
     /// Scope implementation for service containers

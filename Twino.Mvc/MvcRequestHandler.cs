@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 using Twino.Mvc.Auth;
 using Twino.Core.Http;
 using Twino.Mvc.Middlewares;
-using Twino.Mvc.Services;
+using Twino.Ioc;
 
 namespace Twino.Mvc
 {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using Twino.Core.Http;
-using Twino.Mvc.Services;
+using Twino.Ioc;
 
 namespace Twino.Mvc.Controllers
 {

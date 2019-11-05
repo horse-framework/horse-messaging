@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Twino.Mvc.Services
+namespace Twino.Ioc
 {
     /// <summary>
     /// Service container implementation for Dependency Inversion

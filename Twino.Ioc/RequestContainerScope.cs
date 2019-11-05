@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 
-namespace Twino.Mvc.Services
+namespace Twino.Ioc
 {
     /// <summary>
     /// MVC Scope implementation for service container

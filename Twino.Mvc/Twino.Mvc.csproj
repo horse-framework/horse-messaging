@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Twino.Ioc\Twino.Ioc.csproj" />
     <ProjectReference Include="..\Twino.Server\Twino.Server.csproj" />
   </ItemGroup>
 

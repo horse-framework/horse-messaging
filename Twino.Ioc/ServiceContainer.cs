@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace Twino.Mvc.Services
+namespace Twino.Ioc
 {
     /// <summary>
     /// Default service container of Twino MVC for dependency inversion
