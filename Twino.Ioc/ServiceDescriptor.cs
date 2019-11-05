@@ -21,7 +21,12 @@ namespace Twino.Ioc
         /// Instance is created only once for per scope.
         /// For different scopes, different instances are created
         /// </summary>
-        Scoped
+        Scoped,
+        
+        /// <summary>
+        /// Instance creation is managed by a pool
+        /// </summary>
+        Pool
     }
 
     /// <summary>

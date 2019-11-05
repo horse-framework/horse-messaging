@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Dynamic;
+using System.Threading.Tasks;
 
 namespace Twino.Ioc
 {
@@ -10,28 +10,29 @@ namespace Twino.Ioc
     internal class DefaultContainerScope : IContainerScope
     {
         private Dictionary<Type, object> _scopedServices;
-        
+
         /// <summary>
         /// Gets the service from the container.
         /// </summary>
-        public TService Get<TService>(IServiceContainer services) where TService : class
+        public async Task<TService> Get<TService>(IServiceContainer services) where TService : class
         {
-            return (TService) Get(typeof(TService), services);
+            object o = await Get(typeof(TService), services);
+            return (TService) o;
         }
 
         /// <summary>
         /// Gets the service from the container.
         /// </summary>
-        public object Get(Type serviceType, IServiceContainer services)
+        public async Task<object> Get(Type serviceType, IServiceContainer services)
         {
             ServiceDescriptor descriptor = services.GetDescriptor(serviceType);
-            return Get(descriptor, services);
+            return await Get(descriptor, services);
         }
-        
+
         /// <summary>
         /// Gets the service from the container.
         /// </summary>
-        public object Get(ServiceDescriptor descriptor, IServiceContainer services)
+        public async Task<object> Get(ServiceDescriptor descriptor, IServiceContainer services)
         {
             if (_scopedServices == null)
                 _scopedServices = new Dictionary<Type, object>();
@@ -43,7 +44,7 @@ namespace Twino.Ioc
                 return instance;
 
             //we couldn't find any created instance. create new.
-            instance = services.CreateInstance(descriptor.ImplementationType, this);
+            instance = await services.CreateInstance(descriptor.ImplementationType, this);
 
             if (instance != null)
                 _scopedServices.Add(descriptor.ServiceType, instance);

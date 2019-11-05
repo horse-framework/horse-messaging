@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 
 namespace Twino.Ioc
 {
@@ -11,18 +12,18 @@ namespace Twino.Ioc
         /// <summary>
         /// Gets the service from the container.
         /// </summary>
-        TService Get<TService>(IServiceContainer services)
+        Task<TService> Get<TService>(IServiceContainer services)
             where TService : class;
 
         /// <summary>
         /// Gets the service from the container.
         /// </summary>
-        object Get(Type serviceType, IServiceContainer services);
+        Task<object> Get(Type serviceType, IServiceContainer services);
         
         
         /// <summary>
         /// Gets the service from the container.
         /// </summary>
-        object Get(ServiceDescriptor descriptor, IServiceContainer services);
+        Task<object> Get(ServiceDescriptor descriptor, IServiceContainer services);
     }
 }

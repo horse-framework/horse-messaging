@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
+using Twino.Ioc.Pool;
 
 namespace Twino.Ioc
 {
@@ -80,7 +82,6 @@ namespace Twino.Ioc
             Items.Add(serviceType, descriptor);
         }
 
-
         /// <summary>
         /// Adds a singleton service to the container.
         /// Service will be created with first call.
@@ -137,6 +138,35 @@ namespace Twino.Ioc
             Items.Add(serviceType, descriptor);
         }
 
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        /// <param name="options">Options function</param>
+        public void AddPool<TService>(Action<ServicePoolOptions> options) where TService : class
+        {
+            AddPool<TService>(options, null);
+        }
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        /// <param name="options">Options function</param>
+        /// <param name="instance">After each instance is created, to do custom initialization, this method will be called.</param>
+        public void AddPool<TService>(Action<ServicePoolOptions> options, Action<TService> instance) where TService : class
+        {
+            ServicePool<TService> pool = new ServicePool<TService>(this, options, instance);
+
+            ServiceDescriptor descriptor = new ServiceDescriptor
+                                           {
+                                               ServiceType = typeof(TService),
+                                               ImplementationType = typeof(ServicePool<TService>),
+                                               Instance = pool,
+                                               Implementation = ImplementationType.Pool
+                                           };
+
+            Items.Add(typeof(TService), descriptor);
+        }
+
         #endregion
 
         #region Get
@@ -144,43 +174,50 @@ namespace Twino.Ioc
         /// <summary>
         /// Gets the service from the container.
         /// </summary>
-        public TService Get<TService>(IContainerScope scope = null)
+        public async Task<TService> Get<TService>(IContainerScope scope = null)
             where TService : class
         {
-            return (TService) Get(typeof(TService), scope);
+            object o = await Get(typeof(TService), scope);
+            return (TService) o;
         }
 
         /// <summary>
         /// Gets the service from the container.
         /// </summary>
-        public object Get(Type serviceType, IContainerScope scope = null)
+        public async Task<object> Get(Type serviceType, IContainerScope scope = null)
         {
             ServiceDescriptor descriptor = GetDescriptor(serviceType);
 
-            if (descriptor.Implementation == ImplementationType.Scoped)
+            switch (descriptor.Implementation)
             {
-                if (scope == null)
-                    throw new InvalidOperationException("Type is registered as Scoped but scope parameter is null for IServiceContainer.Get method");
+                //create new instance
+                case ImplementationType.Transient:
+                    return await CreateInstance(descriptor.ImplementationType, scope);
 
-                return scope.Get(descriptor, this);
+                case ImplementationType.Scoped:
+                    if (scope == null)
+                        throw new InvalidOperationException("Type is registered as Scoped but scope parameter is null for IServiceContainer.Get method");
+
+                    return await scope.Get(descriptor, this);
+
+                case ImplementationType.Singleton:
+                    //if instance already created return
+                    if (descriptor.Instance != null)
+                        return descriptor.Instance;
+
+                    //create instance for first time and set Instance property of descriptor to prevent re-create for next times
+                    object instance = await CreateInstance(descriptor.ImplementationType, scope);
+                    descriptor.Instance = instance;
+                    return instance;
+
+                case ImplementationType.Pool:
+                    IServicePool pool = (IServicePool) descriptor.Instance;
+                    PoolServiceDescriptor pdesc = await pool.GetAndLock();
+                    return pdesc.GetInstance();
+
+                default:
+                    return null;
             }
-
-            //for singleton
-            if (descriptor.Implementation == ImplementationType.Singleton)
-            {
-                //if instance already created return
-                if (descriptor.Instance != null)
-                    return descriptor.Instance;
-
-                //create instance for first time and set Instance property of descriptor to prevent re-create for next times
-                object instance = CreateInstance(descriptor.ImplementationType, scope);
-                descriptor.Instance = instance;
-
-                return instance;
-            }
-
-            //create instance non-singleton
-            return CreateInstance(descriptor.ImplementationType, scope);
         }
 
         /// <summary>
@@ -216,7 +253,7 @@ namespace Twino.Ioc
         /// Creates instance of type.
         /// If it has constructor parameters, finds these parameters from the container
         /// </summary>
-        public object CreateInstance(Type type, IContainerScope scope = null)
+        public async Task<object> CreateInstance(Type type, IContainerScope scope = null)
         {
             ConstructorInfo constructor = type.GetConstructors()[0];
             ParameterInfo[] parameters = constructor.GetParameters();
@@ -231,7 +268,7 @@ namespace Twino.Ioc
             for (int i = 0; i < parameters.Length; i++)
             {
                 ParameterInfo parameter = parameters[i];
-                object value = Get(parameter.ParameterType, scope);
+                object value = await Get(parameter.ParameterType, scope);
                 values[i] = value;
             }
 

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading.Tasks;
+using Twino.Ioc.Pool;
 
 namespace Twino.Ioc
 {
@@ -59,6 +61,21 @@ namespace Twino.Ioc
         void AddSingleton(Type serviceType, object instance);
 
         /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        /// <param name="options">Options function</param>
+        void AddPool<TService>(Action<ServicePoolOptions> options)
+            where TService : class;
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        /// <param name="options">Options function</param>
+        /// <param name="instance">After each instance is created, to do custom initialization, this method will be called.</param>
+        void AddPool<TService>(Action<ServicePoolOptions> options, Action<TService> instance)
+            where TService : class;
+
+        /// <summary>
         /// Removes the service from the container
         /// </summary>
         void Remove<TService>()
@@ -72,13 +89,13 @@ namespace Twino.Ioc
         /// <summary>
         /// Gets the service from the container.
         /// </summary>
-        TService Get<TService>(IContainerScope scope = null)
+        Task<TService> Get<TService>(IContainerScope scope = null)
             where TService : class;
 
         /// <summary>
         /// Gets the service from the container.
         /// </summary>
-        object Get(Type serviceType, IContainerScope scope = null);
+        Task<object> Get(Type serviceType, IContainerScope scope = null);
         
         /// <summary>
         /// Gets descriptor of type
@@ -93,7 +110,7 @@ namespace Twino.Ioc
         /// <summary>
         /// Creates new instance of type
         /// </summary>
-        object CreateInstance(Type type, IContainerScope scope = null);
+        Task<object> CreateInstance(Type type, IContainerScope scope = null);
 
         /// <summary>
         /// Creates new scope belong this container.
