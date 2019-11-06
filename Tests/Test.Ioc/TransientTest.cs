@@ -1,3 +1,4 @@
+using Twino.Ioc;
 using Xunit;
 
 namespace Test.Ioc
@@ -8,6 +9,7 @@ namespace Test.Ioc
         [Fact]
         public void Single()
         {
+            ServiceContainer container = new ServiceContainer();
         }
         
         [Fact]
