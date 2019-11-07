@@ -142,11 +142,25 @@ namespace Test.Ioc
             Assert.Equal(parent.First.Foo, p1.First.Foo);
             Assert.Equal(parent.Second.Foo, p1.Second.Foo);
 
+            //in same scope, individual scoped items should equal
+            IFirstChildService f1 = await services.Get<IFirstChildService>(scope);
+            ISecondChildService s1 = await services.Get<ISecondChildService>(scope);
+            Assert.Equal(parent.First.Foo, f1.Foo);
+            Assert.Equal(parent.Second.Foo, s1.Foo);
+            
+            //scoped services in singleton should equal (because parent is same)
             IContainerScope scope2 = services.CreateScope();
             IParentService p2 = await services.Get<IParentService>(scope2);
             Assert.Equal(parent.Foo, p2.Foo);
-            Assert.NotEqual(parent.First.Foo, p2.First.Foo);
-            Assert.NotEqual(parent.Second.Foo, p2.Second.Foo);
+            Assert.Equal(parent.First.Foo, p2.First.Foo);
+            Assert.Equal(parent.Second.Foo, p2.Second.Foo);
+            
+            //but individual created scoped items in different scope should not equal
+            IFirstChildService f2 = await services.Get<IFirstChildService>(scope2);
+            ISecondChildService s2 = await services.Get<ISecondChildService>(scope2);
+            Assert.NotEqual(parent.First.Foo, f2.Foo);
+            Assert.NotEqual(parent.Second.Foo, s2.Foo);
+            
         }
 
         [Fact]
