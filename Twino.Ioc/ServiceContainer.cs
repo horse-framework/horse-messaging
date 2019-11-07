@@ -22,7 +22,7 @@ namespace Twino.Ioc
             Items = new Dictionary<Type, ServiceDescriptor>();
         }
 
-        #region Add
+        #region Add Transient
 
         /// <summary>
         /// Adds a service to the container
@@ -53,6 +53,10 @@ namespace Twino.Ioc
             Items.Add(serviceType, descriptor);
         }
 
+        #endregion
+
+        #region Add Scoped
+
         /// <summary>
         /// Adds a service to the container
         /// </summary>
@@ -82,6 +86,10 @@ namespace Twino.Ioc
             Items.Add(serviceType, descriptor);
         }
 
+        #endregion
+
+        #region Add Singleton
+
         /// <summary>
         /// Adds a singleton service to the container.
         /// Service will be created with first call.
@@ -101,6 +109,15 @@ namespace Twino.Ioc
             where TImplementation : class, TService
         {
             AddSingleton(typeof(TService), instance);
+        }
+
+        /// <summary>
+        /// Adds a singleton service with instance to the container.
+        /// </summary>
+        public void AddSingleton<TService>(TService instance)
+            where TService : class
+        {
+            AddSingleton<TService, TService>(instance);
         }
 
         /// <summary>
@@ -138,13 +155,26 @@ namespace Twino.Ioc
             Items.Add(serviceType, descriptor);
         }
 
+        #endregion
+
+        #region Add Pool
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        public void AddTransientPool<TService>() where TService : class
+        {
+            AddTransientPool<TService, TService>(null);
+        }
+
         /// <summary>
         /// Adds a service pool to the container
         /// </summary>
         /// <param name="options">Options function</param>
-        public void AddPool<TService>(Action<ServicePoolOptions> options) where TService : class
+        public void AddTransientPool<TService>(Action<ServicePoolOptions> options)
+            where TService : class
         {
-            AddPool<TService>(options, null);
+            AddPool<TService, TService>(ImplementationType.Transient, options, null);
         }
 
         /// <summary>
@@ -152,16 +182,119 @@ namespace Twino.Ioc
         /// </summary>
         /// <param name="options">Options function</param>
         /// <param name="instance">After each instance is created, to do custom initialization, this method will be called.</param>
-        public void AddPool<TService>(Action<ServicePoolOptions> options, Action<TService> instance) where TService : class
+        public void AddTransientPool<TService>(Action<ServicePoolOptions> options, Action<TService> instance)
+            where TService : class
         {
-            ServicePool<TService> pool = new ServicePool<TService>(this, options, instance);
+            AddPool<TService, TService>(ImplementationType.Transient, options, instance);
+        }
 
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        public void AddTransientPool<TService, TImplementation>() where TService : class where TImplementation : class, TService
+        {
+            AddTransientPool<TService, TImplementation>(null);
+        }
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        /// <param name="options">Options function</param>
+        public void AddTransientPool<TService, TImplementation>(Action<ServicePoolOptions> options)
+            where TService : class
+            where TImplementation : class, TService
+        {
+            AddPool<TService, TImplementation>(ImplementationType.Transient, options, null);
+        }
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        /// <param name="options">Options function</param>
+        /// <param name="instance">After each instance is created, to do custom initialization, this method will be called.</param>
+        public void AddTransientPool<TService, TImplementation>(Action<ServicePoolOptions> options, Action<TService> instance)
+            where TService : class
+            where TImplementation : class, TService
+        {
+            AddPool<TService, TImplementation>(ImplementationType.Transient, options, instance);
+        }
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        public void AddScopedPool<TService>() where TService : class
+        {
+            AddScopedPool<TService, TService>(null);
+        }
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        /// <param name="options">Options function</param>
+        public void AddScopedPool<TService>(Action<ServicePoolOptions> options)
+            where TService : class
+        {
+            AddPool<TService, TService>(ImplementationType.Scoped, options, null);
+        }
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        /// <param name="options">Options function</param>
+        /// <param name="instance">After each instance is created, to do custom initialization, this method will be called.</param>
+        public void AddScopedPool<TService>(Action<ServicePoolOptions> options, Action<TService> instance)
+            where TService : class
+        {
+            AddPool<TService, TService>(ImplementationType.Scoped, options, instance);
+        }
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        public void AddScopedPool<TService, TImplementation>() where TService : class where TImplementation : class, TService
+        {
+            AddScopedPool<TService, TImplementation>(null);
+        }
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        /// <param name="options">Options function</param>
+        public void AddScopedPool<TService, TImplementation>(Action<ServicePoolOptions> options)
+            where TService : class
+            where TImplementation : class, TService
+        {
+            AddPool<TService, TImplementation>(ImplementationType.Scoped, options, null);
+        }
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        /// <param name="options">Options function</param>
+        /// <param name="instance">After each instance is created, to do custom initialization, this method will be called.</param>
+        public void AddScopedPool<TService, TImplementation>(Action<ServicePoolOptions> options, Action<TService> instance)
+            where TService : class
+            where TImplementation : class, TService
+        {
+            AddPool<TService, TImplementation>(ImplementationType.Scoped, options, instance);
+        }
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        /// <param name="type">Implementation type</param>
+        /// <param name="options">Options function</param>
+        /// <param name="instance">After each instance is created, to do custom initialization, this method will be called.</param>
+        private void AddPool<TService, TImplementation>(ImplementationType type, Action<ServicePoolOptions> options, Action<TService> instance)
+            where TService : class
+            where TImplementation : class, TService
+        {
+            ServicePool<TService, TImplementation> pool = new ServicePool<TService, TImplementation>(type, this, options, instance);
             ServiceDescriptor descriptor = new ServiceDescriptor
                                            {
                                                ServiceType = typeof(TService),
-                                               ImplementationType = typeof(ServicePool<TService>),
-                                               Instance = pool,
-                                               Implementation = ImplementationType.Pool
+                                               ImplementationType = typeof(ServicePool<TService, TImplementation>),
+                                               Instance = pool
                                            };
 
             Items.Add(typeof(TService), descriptor);
@@ -192,13 +325,32 @@ namespace Twino.Ioc
             {
                 //create new instance
                 case ImplementationType.Transient:
-                    return await CreateInstance(descriptor.ImplementationType, scope);
+                    if (descriptor.IsPool)
+                    {
+                        IServicePool pool = (IServicePool) descriptor.Instance;
+                        PoolServiceDescriptor pdesc = await pool.GetAndLock();
+
+                        if (scope != null)
+                            scope.UsePoolItem(pool, pdesc);
+
+                        return pdesc.GetInstance();
+                    }
+                    else
+                        return await CreateInstance(descriptor.ImplementationType, scope);
 
                 case ImplementationType.Scoped:
                     if (scope == null)
                         throw new InvalidOperationException("Type is registered as Scoped but scope parameter is null for IServiceContainer.Get method");
 
-                    return await scope.Get(descriptor, this);
+                    if (descriptor.IsPool)
+                    {
+                        IServicePool pool = (IServicePool) descriptor.Instance;
+                        PoolServiceDescriptor pdesc = await pool.GetAndLock();
+                        scope.UsePoolItem(pool, pdesc);
+                        return pdesc.GetInstance();
+                    }
+                    else
+                        return await scope.Get(descriptor, this);
 
                 case ImplementationType.Singleton:
                     //if instance already created return
@@ -209,15 +361,6 @@ namespace Twino.Ioc
                     object instance = await CreateInstance(descriptor.ImplementationType, scope);
                     descriptor.Instance = instance;
                     return instance;
-
-                case ImplementationType.Pool:
-                    IServicePool pool = (IServicePool) descriptor.Instance;
-                    PoolServiceDescriptor pdesc = await pool.GetAndLock();
-
-                    if (scope != null)
-                        scope.UsePoolItem(pool, pdesc);
-
-                    return pdesc.GetInstance();
 
                 default:
                     return null;

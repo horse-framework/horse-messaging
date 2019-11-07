@@ -17,6 +17,8 @@ namespace Twino.Ioc.Pool
     {
         public DateTime LockExpiration { get; internal set; }
         public bool Locked { get; internal set; }
+        
+        public IContainerScope Scope { get; internal set; }
 
         public abstract object GetInstance();
     }

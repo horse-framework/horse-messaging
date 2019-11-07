@@ -11,9 +11,15 @@ namespace Twino.Ioc.Pool
     /// Contains same service instances in the pool.
     /// Provides available instances to requesters and guarantees that only requester uses same instances at same time
     /// </summary>
-    public class ServicePool<TService> : IServicePool
+    public class ServicePool<TService, TImplementation> : IServicePool
         where TService : class
+        where TImplementation : class, TService
     {
+        /// <summary>
+        /// Pool instance implementation type
+        /// </summary>
+        public ImplementationType Type { get; internal set; }
+
         /// <summary>
         /// Active instances
         /// </summary>
@@ -37,16 +43,24 @@ namespace Twino.Ioc.Pool
         /// <summary>
         /// Crates new service pool belong the container with options and after instance creation functions
         /// </summary>
+        /// <param name="type">Implementation type</param>
         /// <param name="container">Parent container</param>
         /// <param name="ofunc">Options function</param>
         /// <param name="func">After each instance is created, to do custom initialization, this method will be called.</param>
-        public ServicePool(IServiceContainer container, Action<ServicePoolOptions> ofunc, Action<TService> func)
+        public ServicePool(ImplementationType type, IServiceContainer container, Action<ServicePoolOptions> ofunc, Action<TService> func)
         {
+            Type = type;
             Container = container;
             _func = func;
 
             Options = new ServicePoolOptions();
-            ofunc(Options);
+            Options.PoolMaxSize = 128;
+            Options.MaximumLockDuration = TimeSpan.FromSeconds(60);
+            Options.ExceedLimitWhenWaitTimeout = false;
+            Options.WaitAvailableDuration = TimeSpan.Zero;
+
+            if (ofunc != null)
+                ofunc(Options);
 
             container.AddTransient<TService, TService>();
         }
@@ -77,9 +91,9 @@ namespace Twino.Ioc.Pool
         /// Get an item from pool and locks it to prevent multiple usage at same time.
         /// The item should be released with Release method.
         /// </summary>
-        public async Task<PoolServiceDescriptor> GetAndLock()
+        public async Task<PoolServiceDescriptor> GetAndLock(IContainerScope scope = null)
         {
-            PoolServiceDescriptor<TService> descriptor = GetFromCreatedItem();
+            PoolServiceDescriptor<TService> descriptor = GetFromCreatedItem(scope);
 
             if (descriptor != null)
                 return descriptor;
@@ -90,12 +104,11 @@ namespace Twino.Ioc.Pool
                 count = _descriptors.Count;
 
             if (count < Options.PoolMaxSize)
-                return await CreateNew(true);
-
+                return await CreateNew(scope, true);
 
             //if there is no available instance and there is no space to create new
             TaskCompletionSource<PoolServiceDescriptor<TService>> completionSource = new TaskCompletionSource<PoolServiceDescriptor<TService>>(TaskCreationOptions.None);
-            ThreadPool.UnsafeQueueUserWorkItem(async state => await WaitForAvailable(state), completionSource, false);
+            ThreadPool.UnsafeQueueUserWorkItem(async state => await WaitForAvailable(scope, state), completionSource, false);
 
             return await completionSource.Task;
         }
@@ -104,57 +117,69 @@ namespace Twino.Ioc.Pool
         /// Waits until an item is available.
         /// If any available item cannot be found, creates new if exceed possible. Otherwise returns null
         /// </summary>
-        private async Task WaitForAvailable(TaskCompletionSource<PoolServiceDescriptor<TService>> state)
+        private async Task WaitForAvailable(IContainerScope scope, TaskCompletionSource<PoolServiceDescriptor<TService>> state)
         {
             //try to get when available
-            DateTime waitMax = DateTime.UtcNow.Add(Options.WaitAvailableDuration);
-            while (DateTime.UtcNow < waitMax)
+            if (Options.WaitAvailableDuration > TimeSpan.Zero)
             {
-                await Task.Delay(5);
-                PoolServiceDescriptor<TService> pdesc = GetFromCreatedItem();
-                if (pdesc != null)
+                DateTime waitMax = DateTime.UtcNow.Add(Options.WaitAvailableDuration);
+                while (DateTime.UtcNow < waitMax)
                 {
-                    state.SetResult(pdesc);
-                    break;
+                    await Task.Delay(5);
+                    PoolServiceDescriptor<TService> pdesc = GetFromCreatedItem(scope);
+                    if (pdesc != null)
+                    {
+                        state.SetResult(pdesc);
+                        break;
+                    }
                 }
             }
 
             //tried to get but timed out, if we can exceed limit, create new one and return
-            PoolServiceDescriptor<TService> result = Options.ExceedLimitWhenWaitTimeout ? (await CreateNew(true)) : null;
+            PoolServiceDescriptor<TService> result = Options.ExceedLimitWhenWaitTimeout ? (await CreateNew(scope, true)) : null;
             state.SetResult(result);
         }
 
         /// <summary>
         /// Gets service descriptor for re-use from already created services list
         /// </summary>
-        private PoolServiceDescriptor<TService> GetFromCreatedItem()
+        private PoolServiceDescriptor<TService> GetFromCreatedItem(IContainerScope scope)
         {
             lock (_descriptors)
             {
-                PoolServiceDescriptor<TService> descriptor = _descriptors.FirstOrDefault(x => !x.Locked || x.LockExpiration < DateTime.UtcNow);
-
-                if (descriptor != null)
+                if (Type == ImplementationType.Scoped)
                 {
-                    descriptor.Locked = true;
-                    descriptor.LockExpiration = DateTime.UtcNow.Add(Options.MaximumLockDuration);
-                    return descriptor;
+                    PoolServiceDescriptor<TService> scoped = _descriptors.FirstOrDefault(x => x.Scope == scope);
+                    return scoped;
                 }
-            }
 
-            return null;
+                PoolServiceDescriptor<TService> transient = _descriptors.FirstOrDefault(x => !x.Locked || x.LockExpiration < DateTime.UtcNow);
+                if (transient == null)
+                    return null;
+
+                transient.Scope = scope;
+                transient.Locked = true;
+                transient.LockExpiration = DateTime.UtcNow.Add(Options.MaximumLockDuration);
+                return transient;
+            }
         }
 
         /// <summary>
         /// Creates new instance and adds to pool
         /// </summary>
-        private async Task<PoolServiceDescriptor<TService>> CreateNew(bool locked)
+        private async Task<PoolServiceDescriptor<TService>> CreateNew(IContainerScope scope, bool locked)
         {
             PoolServiceDescriptor<TService> descriptor = new PoolServiceDescriptor<TService>();
             descriptor.Locked = locked;
             descriptor.LockExpiration = DateTime.UtcNow.Add(Options.MaximumLockDuration);
 
-            object instance = await Container.CreateInstance(typeof(TService));
-            descriptor.Instance = (TService) instance;
+            if (Type == ImplementationType.Scoped && scope != null)
+                descriptor.Instance = await scope.Get<TService>(Container);
+            else
+            {
+                object instance = await Container.CreateInstance(typeof(TImplementation));
+                descriptor.Instance = (TService) instance;
+            }
 
             if (_func != null)
                 _func(descriptor.Instance);

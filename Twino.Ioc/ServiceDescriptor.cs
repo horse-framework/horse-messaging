@@ -21,12 +21,7 @@ namespace Twino.Ioc
         /// Instance is created only once for per scope.
         /// For different scopes, different instances are created
         /// </summary>
-        Scoped,
-        
-        /// <summary>
-        /// Instance creation is managed by a pool
-        /// </summary>
-        Pool
+        Scoped
     }
 
     /// <summary>
@@ -56,6 +51,11 @@ namespace Twino.Ioc
         /// Implementation method
         /// </summary>
         public ImplementationType Implementation { get; set; }
+
+        /// <summary>
+        /// If true, implementation is pool. Instance is type of IServicePool<TService>
+        /// </summary>
+        public bool IsPool { get; set; }
     }
 
 }
