@@ -46,14 +46,11 @@ namespace Test.Ioc
 
             IParentService p1 = await services.Get<IParentService>();
             Assert.NotEqual(parent.Foo, p1.Foo);
-            Assert.NotEqual(parent.First, p1.First);
-            Assert.NotEqual(parent.Second, p1.Second);
             Assert.NotEqual(parent.First.Foo, p1.First.Foo);
             Assert.NotEqual(parent.Second.Foo, p1.Second.Foo);
 
             IFirstChildService first = await services.Get<IFirstChildService>();
             ISecondChildService second = await services.Get<ISecondChildService>();
-            Assert.NotEqual(parent.First, first);
             Assert.NotEqual(parent.First.Foo, first.Foo);
             Assert.NotEqual(parent.Second.Foo, second.Foo);
 
