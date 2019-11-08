@@ -11,6 +11,9 @@ namespace Twino.SocketModels.Requests
         /// </summary>
         private readonly Dictionary<SocketBase, RequestClientHandler> _clients = new Dictionary<SocketBase, RequestClientHandler>();
 
+        /// <summary>
+        /// Removing client lists
+        /// </summary>
         private readonly List<RequestClientHandler> _removing = new List<RequestClientHandler>();
 
         private static RequestClientPool _instance;
@@ -32,6 +35,9 @@ namespace Twino.SocketModels.Requests
             }
         }
 
+        /// <summary>
+        /// Timer for cleaning up disconnected clients
+        /// </summary>
         private Timer _cleanupTimer;
 
         private RequestClientPool()
@@ -43,6 +49,9 @@ namespace Twino.SocketModels.Requests
             _cleanupTimer = new Timer(Tick, null, 1000, 1000);
         }
 
+        /// <summary>
+        /// Ticks, checks active connections and remove if they are disconnected
+        /// </summary>
         private void Tick(object state)
         {
             if (_removing.Count > 0)
@@ -69,6 +78,9 @@ namespace Twino.SocketModels.Requests
             _removing.Clear();
         }
 
+        /// <summary>
+        /// Finds handler of the specified socket
+        /// </summary>
         internal RequestClientHandler GetHandler(SocketBase socket)
         {
             RequestClientHandler handler;

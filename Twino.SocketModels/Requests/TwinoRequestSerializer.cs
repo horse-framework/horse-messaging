@@ -5,6 +5,9 @@ using Twino.SocketModels.Serialization;
 
 namespace Twino.SocketModels.Requests
 {
+    /// <summary>
+    /// Serializes and deserializes WebSocket requests and responses
+    /// </summary>
     internal class TwinoRequestSerializer
     {
         /// <summary>

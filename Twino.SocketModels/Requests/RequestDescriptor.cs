@@ -10,9 +10,19 @@ namespace Twino.SocketModels.Requests
         where TRequest : ISocketModel, new()
         where TResponse : ISocketModel, new()
     {
+        /// <summary>
+        /// Sync response method
+        /// </summary>
         public Func<TRequest, TResponse> Action { get; set; }
+
+        /// <summary>
+        /// Async response method
+        /// </summary>
         public Func<TRequest, Task<TResponse>> ActionAsync { get; set; }
 
+        /// <summary>
+        /// Calls user's response method for the request
+        /// </summary>
         public override async Task<object> Do(object request)
         {
             if (IsAsync)
@@ -55,6 +65,9 @@ namespace Twino.SocketModels.Requests
         /// </summary>
         internal bool IsAsync { get; set; }
 
+        /// <summary>
+        /// Calls user's response method for the request
+        /// </summary>
         public virtual async Task<object> Do(object request)
         {
             return await Task.FromResult((object) null);

@@ -4,6 +4,9 @@ using Twino.Core;
 
 namespace Twino.SocketModels.Requests
 {
+    /// <summary>
+    /// Sends WebSocket Request to a twino websocket server
+    /// </summary>
     public static class TwinoRequest
     {
         /// <summary>
