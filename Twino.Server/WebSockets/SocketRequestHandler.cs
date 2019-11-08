@@ -29,15 +29,15 @@ namespace Twino.Server.WebSockets
         internal HttpRequest Request { get; set; }
 
         /// <summary>
-        /// Connected client's TCP Socket class
+        /// Connection info
         /// </summary>
-        internal TcpClient Client { get; set; }
+        internal ConnectionInfo Info { get; set; }
 
-        public SocketRequestHandler(TwinoServer server, HttpRequest request, TcpClient tcp)
+        public SocketRequestHandler(TwinoServer server, HttpRequest request, ConnectionInfo info)
         {
             Server = server;
             Request = request;
-            Client = tcp;
+            Info = info;
         }
 
         /// <summary>
@@ -57,7 +57,13 @@ namespace Twino.Server.WebSockets
 
             ms.WriteTo(Request.Response.NetworkStream);
 
-            ServerSocket client = await Server.ClientFactory.Create(Server, Request, Client);
+            ServerSocket client = await Server.ClientFactory.Create(Server, Request, Info.Client);
+            if (client == null)
+            {
+                Info.Close();
+                return;
+            }
+            
             Server.SetClientConnected(client);
             client.Start();
             Server.Pinger.AddClient(client);

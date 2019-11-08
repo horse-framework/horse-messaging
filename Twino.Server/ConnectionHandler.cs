@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -208,7 +207,7 @@ namespace Twino.Server
             await Task.Yield();
 
             info.State = ConnectionStates.WebSocket;
-            SocketRequestHandler handler = new SocketRequestHandler(_server, request, info.Client);
+            SocketRequestHandler handler = new SocketRequestHandler(_server, request, info);
             await handler.HandshakeClient();
         }
 
