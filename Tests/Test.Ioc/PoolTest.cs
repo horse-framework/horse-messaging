@@ -61,16 +61,16 @@ namespace Test.Ioc
             {
                 IContainerScope scope1 = services.CreateScope();
                 IContainerScope scope2 = services.CreateScope();
-                
+
                 ISingleService service1 = await services.Get<ISingleService>(scope1);
                 ISingleService service2 = await services.Get<ISingleService>(scope2);
-                
+
                 Assert.NotNull(service1);
                 Assert.NotNull(service2);
                 Assert.NotEqual(service1, service2);
-                
+
                 await Task.Delay(10);
-                
+
                 scope1.Dispose();
                 scope2.Dispose();
             }
@@ -80,8 +80,8 @@ namespace Test.Ioc
         public async Task WaitLimitAndGet()
         {
             ServiceContainer services = new ServiceContainer();
-            services.AddScopedPool<ISingleService, SingleService>();
-
+            services.AddTransientPool<ISingleService, SingleService>(o => o.PoolMaxSize = 10);
+            
             throw new NotImplementedException();
         }
 
@@ -89,9 +89,27 @@ namespace Test.Ioc
         public async Task WaitLimitAndTimeout()
         {
             ServiceContainer services = new ServiceContainer();
-            services.AddScopedPool<ISingleService, SingleService>();
+            services.AddTransientPool<ISingleService, SingleService>(o =>
+            {
+                o.PoolMaxSize = 10;
+                o.ExceedLimitWhenWaitTimeout = false;
+                o.WaitAvailableDuration = TimeSpan.FromMilliseconds(1500);
+            });
 
-            throw new NotImplementedException();
+            IContainerScope scope = services.CreateScope();
+            for (int i = 0; i < 10; i++)
+            {
+                ISingleService service = await services.Get<ISingleService>(scope);
+                Assert.NotNull(service);
+            }
+
+            DateTime start = DateTime.UtcNow;
+            await Assert.ThrowsAsync<NullReferenceException>(async () =>
+            {
+                ISingleService s = await services.Get<ISingleService>(scope);
+            });
+            DateTime end = DateTime.UtcNow;
+            Assert.True(end - start > TimeSpan.FromMilliseconds(1490));
         }
     }
 }

@@ -313,6 +313,9 @@ namespace Twino.Ioc
             where TService : class
         {
             object o = await Get(typeof(TService), scope);
+            if (o == null)
+                throw new NullReferenceException("Could not get service from container");
+            
             return (TService) o;
         }
 
@@ -326,6 +329,9 @@ namespace Twino.Ioc
             {
                 IServicePool pool = (IServicePool) descriptor.Instance;
                 PoolServiceDescriptor pdesc = await pool.GetAndLock(scope);
+
+                if (pdesc == null)
+                    throw new NullReferenceException("Could not get service from container");
                 
                 if (pool.Type == ImplementationType.Scoped && scope == null)
                     throw new InvalidOperationException("Type is registered as Scoped but scope parameter is null for IServiceContainer.Get method");
