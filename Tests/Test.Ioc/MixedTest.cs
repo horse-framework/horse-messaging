@@ -22,10 +22,11 @@ namespace Test.Ioc
             parent.First.Foo = "first";
             parent.Second.Foo = "second";
 
+            //services in scoped service is created only once (cuz they created via parent)
             IParentService p = await services.Get<IParentService>(scope);
             Assert.Equal(parent.Foo, p.Foo);
-            Assert.NotEqual(parent.First.Foo, p.First.Foo);
-            Assert.NotEqual(parent.Second.Foo, p.Second.Foo);
+            Assert.Equal(parent.First.Foo, p.First.Foo);
+            Assert.Equal(parent.Second.Foo, p.Second.Foo);
 
             IFirstChildService first = await services.Get<IFirstChildService>(scope);
             Assert.NotEqual(parent.First.Foo, first.Foo);
@@ -47,10 +48,11 @@ namespace Test.Ioc
             parent.First.Foo = "first";
             parent.Second.Foo = "second";
 
+            //services in singleton service is created only once (cuz they created via parent)
             IParentService p = await services.Get<IParentService>();
             Assert.Equal(parent.Foo, p.Foo);
-            Assert.NotEqual(parent.First.Foo, p.First.Foo);
-            Assert.NotEqual(parent.Second.Foo, p.Second.Foo);
+            Assert.Equal(parent.First.Foo, p.First.Foo);
+            Assert.Equal(parent.Second.Foo, p.Second.Foo);
 
             IFirstChildService first = await services.Get<IFirstChildService>();
             Assert.NotEqual(parent.First.Foo, first.Foo);

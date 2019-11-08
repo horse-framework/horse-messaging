@@ -292,9 +292,11 @@ namespace Twino.Ioc
             ServicePool<TService, TImplementation> pool = new ServicePool<TService, TImplementation>(type, this, options, instance);
             ServiceDescriptor descriptor = new ServiceDescriptor
                                            {
+                                               IsPool = true,
                                                ServiceType = typeof(TService),
                                                ImplementationType = typeof(ServicePool<TService, TImplementation>),
-                                               Instance = pool
+                                               Instance = pool,
+                                               Implementation = ImplementationType.Singleton
                                            };
 
             Items.Add(typeof(TService), descriptor);
@@ -320,37 +322,31 @@ namespace Twino.Ioc
         public async Task<object> Get(Type serviceType, IContainerScope scope = null)
         {
             ServiceDescriptor descriptor = GetDescriptor(serviceType);
+            if (descriptor.IsPool)
+            {
+                IServicePool pool = (IServicePool) descriptor.Instance;
+                PoolServiceDescriptor pdesc = await pool.GetAndLock(scope);
+                
+                if (pool.Type == ImplementationType.Scoped && scope == null)
+                    throw new InvalidOperationException("Type is registered as Scoped but scope parameter is null for IServiceContainer.Get method");
+
+                if (scope != null)
+                    scope.UsePoolItem(pool, pdesc);
+
+                return pdesc.GetInstance();
+            }
 
             switch (descriptor.Implementation)
             {
                 //create new instance
                 case ImplementationType.Transient:
-                    if (descriptor.IsPool)
-                    {
-                        IServicePool pool = (IServicePool) descriptor.Instance;
-                        PoolServiceDescriptor pdesc = await pool.GetAndLock();
-
-                        if (scope != null)
-                            scope.UsePoolItem(pool, pdesc);
-
-                        return pdesc.GetInstance();
-                    }
-                    else
-                        return await CreateInstance(descriptor.ImplementationType, scope);
+                    return await CreateInstance(descriptor.ImplementationType, scope);
 
                 case ImplementationType.Scoped:
                     if (scope == null)
                         throw new InvalidOperationException("Type is registered as Scoped but scope parameter is null for IServiceContainer.Get method");
 
-                    if (descriptor.IsPool)
-                    {
-                        IServicePool pool = (IServicePool) descriptor.Instance;
-                        PoolServiceDescriptor pdesc = await pool.GetAndLock();
-                        scope.UsePoolItem(pool, pdesc);
-                        return pdesc.GetInstance();
-                    }
-                    else
-                        return await scope.Get(descriptor, this);
+                    return await scope.Get(descriptor, this);
 
                 case ImplementationType.Singleton:
                     //if instance already created return

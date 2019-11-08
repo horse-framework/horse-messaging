@@ -61,8 +61,6 @@ namespace Twino.Ioc.Pool
 
             if (ofunc != null)
                 ofunc(Options);
-
-            container.AddTransient<TService, TService>();
         }
 
         /// <summary>
@@ -177,7 +175,7 @@ namespace Twino.Ioc.Pool
                 descriptor.Instance = await scope.Get<TService>(Container);
             else
             {
-                object instance = await Container.CreateInstance(typeof(TImplementation));
+                object instance = await Container.CreateInstance(typeof(TImplementation), scope);
                 descriptor.Instance = (TService) instance;
             }
 
