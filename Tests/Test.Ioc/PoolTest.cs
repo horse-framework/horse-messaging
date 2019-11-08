@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Test.Ioc.Services;
 using Twino.Ioc;
@@ -80,9 +81,37 @@ namespace Test.Ioc
         public async Task WaitLimitAndGet()
         {
             ServiceContainer services = new ServiceContainer();
-            services.AddTransientPool<ISingleService, SingleService>(o => o.PoolMaxSize = 10);
+            services.AddTransientPool<ISingleService, SingleService>(o =>
+            {
+                o.PoolMaxSize = 10;
+                o.ExceedLimitWhenWaitTimeout = false;
+                o.WaitAvailableDuration = TimeSpan.FromMilliseconds(5000);
+            });
+
+            IContainerScope scope = services.CreateScope();
+            for (int i = 0; i < 10; i++)
+            {
+                ISingleService service = await services.Get<ISingleService>(scope);
+                Assert.NotNull(service);
+            }
+
+            DateTime start = DateTime.UtcNow;
+            Thread th = new Thread(() =>
+            {
+                Thread.Sleep(500);
+                scope.Dispose();
+            });
+            th.Start();
+
+            IContainerScope scope2 = services.CreateScope();
+            ISingleService s = await services.Get<ISingleService>(scope2);
+            Assert.NotNull(s);
             
-            throw new NotImplementedException();
+            DateTime end = DateTime.UtcNow;
+            TimeSpan time = end - start;
+            
+            Assert.True(time > TimeSpan.FromMilliseconds(490));
+            Assert.True(time < TimeSpan.FromMilliseconds(750));
         }
 
         [Fact]

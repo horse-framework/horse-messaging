@@ -125,10 +125,11 @@ namespace Twino.Ioc.Pool
                 {
                     await Task.Delay(5);
                     PoolServiceDescriptor<TService> pdesc = GetFromCreatedItem(scope);
+                    
                     if (pdesc != null)
                     {
                         state.SetResult(pdesc);
-                        break;
+                        return;
                     }
                 }
             }
