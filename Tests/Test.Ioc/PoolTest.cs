@@ -21,7 +21,7 @@ namespace Test.Ioc
 
             ISingleService s1 = await services.Get<ISingleService>(scope);
             Assert.NotEqual(single.Foo, s1.Foo);
-            
+
             ISingleService s2 = await services.Get<ISingleService>();
             Assert.NotEqual(single.Foo, s2.Foo);
 
@@ -38,7 +38,17 @@ namespace Test.Ioc
 
             IContainerScope scope = services.CreateScope();
 
-            throw new NotImplementedException();
+            ISingleService single = await services.Get<ISingleService>(scope);
+            single.Foo = "single";
+
+            ISingleService s1 = await services.Get<ISingleService>(scope);
+            Assert.Equal(single.Foo, s1.Foo);
+
+            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<ISingleService>());
+
+            IContainerScope scope2 = services.CreateScope();
+            ISingleService s3 = await services.Get<ISingleService>(scope2);
+            Assert.NotEqual(single.Foo, s3.Foo);
         }
 
         [Fact]
