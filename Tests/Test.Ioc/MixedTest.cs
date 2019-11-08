@@ -97,7 +97,34 @@ namespace Test.Ioc
         public async Task TransientInScopedPool()
         {
             ServiceContainer services = new ServiceContainer();
-            throw new NotImplementedException();
+            services.AddScopedPool<IParentService, ParentService>();
+            services.AddTransient<IFirstChildService, FirstChildService>();
+            services.AddTransient<ISecondChildService, SecondChildService>();
+
+            IContainerScope scope = services.CreateScope();
+            IParentService parent = await services.Get<IParentService>(scope);
+            parent.Foo = "parent";
+            parent.First.Foo = "first";
+            parent.Second.Foo = "second";
+
+            IParentService p = await services.Get<IParentService>(scope);
+            Assert.Equal(parent.Foo, p.Foo);
+            Assert.NotEqual(parent.First.Foo, p.First.Foo);
+            Assert.NotEqual(parent.Second.Foo, p.Second.Foo);
+
+            IFirstChildService f1 = await services.Get<IFirstChildService>();
+            IFirstChildService f2 = await services.Get<IFirstChildService>(scope);
+            Assert.NotEqual(parent.First.Foo, f1.Foo);
+            Assert.NotEqual(parent.First.Foo, f2.Foo);
+
+            ISecondChildService s1 = await services.Get<ISecondChildService>();
+            ISecondChildService s2 = await services.Get<ISecondChildService>(scope);
+            Assert.NotEqual(parent.Second.Foo, s1.Foo);
+            Assert.NotEqual(parent.Second.Foo, s2.Foo);
+
+            IContainerScope scope2 = services.CreateScope();
+            IParentService p2 = await services.Get<IParentService>(scope2);
+            Assert.NotEqual(parent.Foo, p2.Foo);
         }
 
         #endregion
@@ -245,7 +272,32 @@ namespace Test.Ioc
         public async Task SingletonInScoped()
         {
             ServiceContainer services = new ServiceContainer();
-            throw new NotImplementedException();
+            services.AddScoped<IParentService, ParentService>();
+            services.AddSingleton<IFirstChildService, FirstChildService>();
+            services.AddSingleton<ISecondChildService, SecondChildService>();
+            IContainerScope scope = services.CreateScope();
+
+            IFirstChildService first = await services.Get<IFirstChildService>(scope);
+            first.Foo = "first";
+
+            IParentService parent = await services.Get<IParentService>(scope);
+            parent.Foo = "parent";
+            parent.Second.Foo = "second";
+            Assert.Equal(first.Foo, parent.First.Foo);
+
+            ISecondChildService second = await services.Get<ISecondChildService>(scope);
+            Assert.Equal(second.Foo, parent.Second.Foo);
+
+            IParentService p1 = await services.Get<IParentService>(scope);
+            Assert.Equal(p1.Foo, parent.Foo);
+            Assert.Equal(p1.First.Foo, parent.First.Foo);
+            Assert.Equal(p1.Second.Foo, parent.Second.Foo);
+
+            IContainerScope scope2 = services.CreateScope();
+            IParentService p2 = await services.Get<IParentService>(scope2);
+            Assert.NotEqual(p2.Foo, parent.Foo);
+            Assert.Equal(p2.First.Foo, parent.First.Foo);
+            Assert.Equal(p2.Second.Foo, parent.Second.Foo);
         }
 
         [Fact]
