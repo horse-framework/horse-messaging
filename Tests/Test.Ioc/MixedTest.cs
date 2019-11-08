@@ -8,6 +8,8 @@ namespace Test.Ioc
 {
     public class MixedTest
     {
+        #region Transient
+
         [Fact]
         public async Task TransientInScoped()
         {
@@ -92,6 +94,17 @@ namespace Test.Ioc
         }
 
         [Fact]
+        public async Task TransientInScopedPool()
+        {
+            ServiceContainer services = new ServiceContainer();
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+        #region Scoped
+
+        [Fact]
         public async Task ScopedInTransient()
         {
             ServiceContainer services = new ServiceContainer();
@@ -149,20 +162,19 @@ namespace Test.Ioc
             ISecondChildService s1 = await services.Get<ISecondChildService>(scope);
             Assert.Equal(parent.First.Foo, f1.Foo);
             Assert.Equal(parent.Second.Foo, s1.Foo);
-            
+
             //scoped services in singleton should equal (because parent is same)
             IContainerScope scope2 = services.CreateScope();
             IParentService p2 = await services.Get<IParentService>(scope2);
             Assert.Equal(parent.Foo, p2.Foo);
             Assert.Equal(parent.First.Foo, p2.First.Foo);
             Assert.Equal(parent.Second.Foo, p2.Second.Foo);
-            
+
             //but individual created scoped items in different scope should not equal
             IFirstChildService f2 = await services.Get<IFirstChildService>(scope2);
             ISecondChildService s2 = await services.Get<ISecondChildService>(scope2);
             Assert.NotEqual(parent.First.Foo, f2.Foo);
             Assert.NotEqual(parent.Second.Foo, s2.Foo);
-            
         }
 
         [Fact]
@@ -194,39 +206,112 @@ namespace Test.Ioc
         }
 
         [Fact]
+        public async Task ScopedInScopedPool()
+        {
+            ServiceContainer services = new ServiceContainer();
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+        #region Singleton
+
+        [Fact]
         public async Task SingletonInTransient()
         {
             ServiceContainer services = new ServiceContainer();
+            services.AddTransient<IParentService, ParentService>();
+            services.AddSingleton<IFirstChildService, FirstChildService>();
+            services.AddSingleton<ISecondChildService, SecondChildService>();
+
+            IFirstChildService first = await services.Get<IFirstChildService>();
+            first.Foo = "first";
+
+            IParentService parent = await services.Get<IParentService>();
+            parent.Foo = "parent";
+            parent.Second.Foo = "second";
+            Assert.Equal(first.Foo, parent.First.Foo);
+
+            ISecondChildService second = await services.Get<ISecondChildService>();
+            Assert.Equal(second.Foo, parent.Second.Foo);
+
+            IParentService p = await services.Get<IParentService>();
+            Assert.NotEqual(p.Foo, parent.Foo);
+            Assert.Equal(p.First.Foo, parent.First.Foo);
+            Assert.Equal(p.Second.Foo, parent.Second.Foo);
         }
 
         [Fact]
         public async Task SingletonInScoped()
         {
             ServiceContainer services = new ServiceContainer();
+            throw new NotImplementedException();
         }
 
         [Fact]
-        public async Task SingletonInPool()
+        public async Task SingletonInTransientPool()
         {
             ServiceContainer services = new ServiceContainer();
+            throw new NotImplementedException();
         }
 
         [Fact]
-        public async Task PoolInTransient()
+        public async Task SingletonInScopedPool()
         {
             ServiceContainer services = new ServiceContainer();
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+        #region Transient Pool
+
+        [Fact]
+        public async Task TransientPoolInTransient()
+        {
+            ServiceContainer services = new ServiceContainer();
+            throw new NotImplementedException();
         }
 
         [Fact]
-        public async Task PoolInScoped()
+        public async Task TransientPoolInScoped()
         {
             ServiceContainer services = new ServiceContainer();
+            throw new NotImplementedException();
         }
 
         [Fact]
-        public async Task PoolInSingleton()
+        public async Task TransientPoolInSingleton()
         {
             ServiceContainer services = new ServiceContainer();
+            throw new NotImplementedException();
         }
+
+        #endregion
+
+        #region Scoped Pool
+
+        [Fact]
+        public async Task ScopedPoolInTransient()
+        {
+            ServiceContainer services = new ServiceContainer();
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public async Task ScopedPoolInScoped()
+        {
+            ServiceContainer services = new ServiceContainer();
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public async Task ScopedPoolInSingleton()
+        {
+            ServiceContainer services = new ServiceContainer();
+            throw new NotImplementedException();
+        }
+
+        #endregion
     }
 }
