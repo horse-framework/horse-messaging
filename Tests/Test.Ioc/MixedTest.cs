@@ -492,6 +492,59 @@ namespace Test.Ioc
 
             IContainerScope scope = services.CreateScope();
 
+            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<IParentService>());
+            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<ISecondChildService>());
+
+            IParentService parent = await services.Get<IParentService>(scope);
+            parent.Foo = "parent";
+            parent.First.Foo = "first";
+            parent.Second.Foo = "second";
+
+            //getting same parent instance (cuz of singleton) so, transients in the same parent instances should be same
+            IParentService p1 = await services.Get<IParentService>(scope);
+            Assert.Equal(parent.Foo, p1.Foo);
+            Assert.Equal(parent.First.Foo, p1.First.Foo);
+            Assert.Equal(parent.Second.Foo, p1.Second.Foo);
+
+            IFirstChildService first = await services.Get<IFirstChildService>(scope);
+            IFirstChildService f2 = await services.Get<IFirstChildService>();
+            Assert.NotEqual(parent.First.Foo, first.Foo);
+            Assert.NotEqual(parent.First.Foo, f2.Foo);
+
+            ISecondChildService second = await services.Get<ISecondChildService>(scope);
+            Assert.Equal(parent.Second.Foo, second.Foo);
+
+            //children in same singleton instance are same
+            IContainerScope scope2 = services.CreateScope();
+            IParentService p2 = await services.Get<IParentService>(scope2);
+            Assert.Equal(parent.Foo, p2.Foo);
+            Assert.Equal(parent.First.Foo, p2.First.Foo);
+            Assert.Equal(parent.Second.Foo, p2.Second.Foo);
+        }
+
+        [Fact]
+        public async Task PoolsInTransientPool()
+        {
+            ServiceContainer services = new ServiceContainer();
+            services.AddTransientPool<IParentService, ParentService>();
+            services.AddTransientPool<IFirstChildService, FirstChildService>();
+            services.AddScopedPool<ISecondChildService, SecondChildService>();
+
+            IContainerScope scope = services.CreateScope();
+
+            throw new NotImplementedException();
+        }
+
+        [Fact]
+        public async Task PoolsInScopedPool()
+        {
+            ServiceContainer services = new ServiceContainer();
+            services.AddScopedPool<IParentService, ParentService>();
+            services.AddTransientPool<IFirstChildService, FirstChildService>();
+            services.AddScopedPool<ISecondChildService, SecondChildService>();
+
+            IContainerScope scope = services.CreateScope();
+
             throw new NotImplementedException();
         }
 
