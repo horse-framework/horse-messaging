@@ -23,8 +23,4 @@
         <ProjectReference Include="..\..\Twino.SocketModels\Twino.SocketModels.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Requests" />
-    </ItemGroup>
-
 </Project>

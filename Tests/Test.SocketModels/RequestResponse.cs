@@ -36,18 +36,17 @@ namespace Test.SocketModels
         [Fact]
         public void ResponseFail()
         {
-            RequestManager requestManager = new RequestManager();
-            TestServer server = new TestServer(312, 100);
+            TestServer server = new TestServer(382, 100);
             server.Run();
             Thread.Sleep(250);
 
             TwinoClient client = new TwinoClient();
-            client.Connect("127.0.0.1", 312, false);
+            client.Connect("127.0.0.1", 382, false);
             RequestModel model = new RequestModel();
             model.Delay = 100;
             model.Value = "FAIL";
 
-            SocketResponse<ResponseModel> response = client.Request<ResponseModel>(model, 5).Result;
+            SocketResponse<ResponseModel> response = client.Request<ResponseModel>(model, 50).Result;
 
             Assert.Equal(ResponseStatus.Failed, response.Status);
             client.Disconnect();
@@ -99,11 +98,8 @@ namespace Test.SocketModels
         [InlineData(10, 1, 321)]
         [InlineData(10, -200, 322)]
         [InlineData(10, -2000, 323)]
-        [InlineData(25, -100, 324)]
-        [InlineData(25, -2000, 325)]
         public void HighTraffic(int concurrentClients, int requestDelay, int port)
         {
-            RequestManager requestManager = new RequestManager();
             TestServer server = new TestServer(port, requestDelay);
             server.Run();
             Thread.Sleep(250);

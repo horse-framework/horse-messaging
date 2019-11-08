@@ -134,13 +134,17 @@ namespace Twino.SocketModels.Requests
                 writer.EndObject();
             }
             else
-                await writer.Writer.WriteRawAsync(System.Text.Json.JsonSerializer.Serialize(model, model.GetType()));
+            {
+                if (model == null)
+                    await writer.Writer.WriteRawAsync("null");
+                else
+                    await writer.Writer.WriteRawAsync(System.Text.Json.JsonSerializer.Serialize(model, model.GetType()));
+            }
 
             await writer.Writer.WriteEndArrayAsync();
 
             string message = writer.GetResult();
             return await WebSocketWriter.CreateFromUTF8Async(message);
         }
-
     }
 }
