@@ -54,18 +54,43 @@ namespace Test.Ioc
         [Fact]
         public async Task LongRunning()
         {
-            throw new NotImplementedException();
+            ServiceContainer services = new ServiceContainer();
+            services.AddScopedPool<ISingleService, SingleService>();
+
+            for (int i = 0; i < 50; i++)
+            {
+                IContainerScope scope1 = services.CreateScope();
+                IContainerScope scope2 = services.CreateScope();
+                
+                ISingleService service1 = await services.Get<ISingleService>(scope1);
+                ISingleService service2 = await services.Get<ISingleService>(scope2);
+                
+                Assert.NotNull(service1);
+                Assert.NotNull(service2);
+                Assert.NotEqual(service1, service2);
+                
+                await Task.Delay(10);
+                
+                scope1.Dispose();
+                scope2.Dispose();
+            }
         }
 
         [Fact]
         public async Task WaitLimitAndGet()
         {
+            ServiceContainer services = new ServiceContainer();
+            services.AddScopedPool<ISingleService, SingleService>();
+
             throw new NotImplementedException();
         }
 
         [Fact]
         public async Task WaitLimitAndTimeout()
         {
+            ServiceContainer services = new ServiceContainer();
+            services.AddScopedPool<ISingleService, SingleService>();
+
             throw new NotImplementedException();
         }
     }
