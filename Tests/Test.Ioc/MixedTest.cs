@@ -334,7 +334,35 @@ namespace Test.Ioc
         public async Task SingletonInTransientPool()
         {
             ServiceContainer services = new ServiceContainer();
-            throw new NotImplementedException();
+            services.AddTransientPool<IParentService, ParentService>();
+            services.AddSingleton<IFirstChildService, FirstChildService>();
+            services.AddSingleton<ISecondChildService, SecondChildService>();
+
+            IContainerScope scope = services.CreateScope();
+            IParentService parent = await services.Get<IParentService>(scope);
+            parent.Foo = "parent";
+            parent.First.Foo = "first";
+            parent.Second.Foo = "second";
+
+            IParentService p = await services.Get<IParentService>(scope);
+            Assert.NotEqual(parent.Foo, p.Foo);
+            Assert.Equal(parent.First.Foo, p.First.Foo);
+            Assert.Equal(parent.Second.Foo, p.Second.Foo);
+
+            IFirstChildService f2 = await services.Get<IFirstChildService>(scope);
+            IFirstChildService f3 = await services.Get<IFirstChildService>();
+            Assert.Equal(parent.First.Foo, f2.Foo);
+            Assert.Equal(parent.First.Foo, f3.Foo);
+
+            ISecondChildService s2 = await services.Get<ISecondChildService>(scope);
+            ISecondChildService s3 = await services.Get<ISecondChildService>();
+            Assert.Equal(parent.Second.Foo, s2.Foo);
+            Assert.Equal(parent.Second.Foo, s3.Foo);
+
+            IParentService p2 = await services.Get<IParentService>();
+            Assert.NotEqual(parent.Foo, p2.Foo);
+            Assert.Equal(parent.First.Foo, p2.First.Foo);
+            Assert.Equal(parent.Second.Foo, p2.Second.Foo);
         }
 
         [Fact]
