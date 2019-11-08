@@ -10,6 +10,13 @@ namespace Twino.Ioc
     public interface IContainerScope : IDisposable
     {
         /// <summary>
+        /// Puts and instance into the scope
+        /// </summary>
+        /// <param name="serviceType">Item service type</param>
+        /// <param name="instance">Item instance</param>
+        void PutItem(Type serviceType, object instance);
+
+        /// <summary>
         /// Gets the service from the container.
         /// </summary>
         Task<TService> Get<TService>(IServiceContainer services)

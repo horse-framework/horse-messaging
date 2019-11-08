@@ -21,6 +21,20 @@ namespace Twino.Ioc
         private readonly Dictionary<IServicePool, List<PoolServiceDescriptor>> _poolInstances = new Dictionary<IServicePool, List<PoolServiceDescriptor>>();
 
         /// <summary>
+        /// Puts and instance into the scope
+        /// </summary>
+        /// <param name="serviceType">Item service type</param>
+        /// <param name="instance">Item instance</param>
+        public void PutItem(Type serviceType, object instance)
+        {
+            if (_scopedServices == null)
+                _scopedServices = new Dictionary<Type, object>();
+
+            lock (_scopedServices)
+                _scopedServices.Add(serviceType, instance);
+        }
+
+        /// <summary>
         /// Gets the service from the container
         /// </summary>
         public async Task<TService> Get<TService>(IServiceContainer services) where TService : class
@@ -70,7 +84,10 @@ namespace Twino.Ioc
             lock (_poolInstances)
             {
                 if (_poolInstances.ContainsKey(pool))
-                    _poolInstances[pool].Add(descriptor);
+                {
+                    if (pool.Type == ImplementationType.Transient)
+                        _poolInstances[pool].Add(descriptor);
+                }
                 else
                     _poolInstances.Add(pool, new List<PoolServiceDescriptor> {descriptor});
             }

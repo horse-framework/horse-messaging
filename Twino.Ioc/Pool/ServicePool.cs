@@ -169,10 +169,16 @@ namespace Twino.Ioc.Pool
         {
             PoolServiceDescriptor<TService> descriptor = new PoolServiceDescriptor<TService>();
             descriptor.Locked = locked;
+            descriptor.Scope = scope;
             descriptor.LockExpiration = DateTime.UtcNow.Add(Options.MaximumLockDuration);
 
             if (Type == ImplementationType.Scoped && scope != null)
-                descriptor.Instance = await scope.Get<TService>(Container);
+            {
+                //we couldn't find any created instance. create new.
+                object instance = await Container.CreateInstance(typeof(TImplementation), scope);
+                scope.PutItem(typeof(TService), instance);
+                descriptor.Instance = (TService) instance;
+            }
             else
             {
                 object instance = await Container.CreateInstance(typeof(TImplementation), scope);

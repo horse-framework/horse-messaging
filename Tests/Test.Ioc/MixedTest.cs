@@ -107,16 +107,19 @@ namespace Test.Ioc
             parent.First.Foo = "first";
             parent.Second.Foo = "second";
 
+            //we are getting same instance of parent. so, children are same.
             IParentService p = await services.Get<IParentService>(scope);
             Assert.Equal(parent.Foo, p.Foo);
-            Assert.NotEqual(parent.First.Foo, p.First.Foo);
-            Assert.NotEqual(parent.Second.Foo, p.Second.Foo);
+            Assert.Equal(parent.First.Foo, p.First.Foo);
+            Assert.Equal(parent.Second.Foo, p.Second.Foo);
 
+            //we are getting individual children, so they are created new and different
             IFirstChildService f1 = await services.Get<IFirstChildService>();
             IFirstChildService f2 = await services.Get<IFirstChildService>(scope);
             Assert.NotEqual(parent.First.Foo, f1.Foo);
             Assert.NotEqual(parent.First.Foo, f2.Foo);
 
+            //we are getting individual children, so they are created new and different
             ISecondChildService s1 = await services.Get<ISecondChildService>();
             ISecondChildService s2 = await services.Get<ISecondChildService>(scope);
             Assert.NotEqual(parent.Second.Foo, s1.Foo);
