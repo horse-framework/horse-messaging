@@ -20,12 +20,5 @@ namespace Test.Connector
                 return await Task.FromResult(socket);
             });
         }
-
-        [Fact]
-        public void SendDataWhenOffline()
-        {
-            throw new NotImplementedException();
-        }
-
     }
 }
