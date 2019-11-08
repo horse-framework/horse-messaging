@@ -570,7 +570,33 @@ namespace Test.Ioc
 
             IContainerScope scope = services.CreateScope();
 
-            throw new NotImplementedException();
+            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<IParentService>());
+            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<ISecondChildService>());
+
+            IParentService parent = await services.Get<IParentService>(scope);
+            parent.Foo = "parent";
+            parent.First.Foo = "first";
+            parent.Second.Foo = "second";
+
+            //getting same parent instance (cuz of scoped) so, transients in the same parent instances should be same
+            IParentService p1 = await services.Get<IParentService>(scope);
+            Assert.Equal(parent.Foo, p1.Foo);
+            Assert.Equal(parent.First.Foo, p1.First.Foo);
+            Assert.Equal(parent.Second.Foo, p1.Second.Foo);
+
+            IFirstChildService first = await services.Get<IFirstChildService>(scope);
+            IFirstChildService f2 = await services.Get<IFirstChildService>();
+            Assert.NotEqual(parent.First.Foo, first.Foo);
+            Assert.NotEqual(parent.First.Foo, f2.Foo);
+
+            ISecondChildService second = await services.Get<ISecondChildService>(scope);
+            Assert.Equal(parent.Second.Foo, second.Foo);
+
+            IContainerScope scope2 = services.CreateScope();
+            IParentService p2 = await services.Get<IParentService>(scope2);
+            Assert.NotEqual(parent.Foo, p2.Foo);
+            Assert.NotEqual(parent.First.Foo, p2.First.Foo);
+            Assert.NotEqual(parent.Second.Foo, p2.Second.Foo);
         }
 
         #endregion
