@@ -95,105 +95,71 @@ namespace Twino.Core
         /// <summary>
         /// Starts to read from the TCP socket
         /// </summary>
-        protected void Read()
+        protected async Task Read()
         {
-            try
-            {
-                if (Stream == null)
-                {
-                    Disconnect();
-                    return;
-                }
-
-                Stream.BeginRead(_buffer, 0, _buffer.Length, EndRead, null);
-            }
-            catch (Exception ex)
+            if (Stream == null)
             {
                 Disconnect();
-            }
-        }
-
-        /// <summary>
-        /// Ends reading from the TCP socket and process the package
-        /// </summary>
-        private void EndRead(IAsyncResult ar)
-        {
-            int read;
-            try
-            {
-                read = Stream.EndRead(ar);
-            }
-            catch
-            {
-                read = 0;
+                return;
             }
 
+            int read = await Stream.ReadAsync(_buffer, 0, _buffer.Length);
             if (read < 1)
             {
                 Disconnect();
                 return;
             }
 
-            try
+            int offset = 0;
+            while (offset < read)
             {
-                int offset = 0;
-                while (offset < read)
+                //reads to the end of the package
+                //package does not mean received data
+                //package is the websocket protocol package.
+                //there can be multiple packages on network stream waiting for receiving
+                //or package may be larger than received
+                offset += _reader.Read(_buffer, offset, read);
+
+                //if reader is ready, we have ready websocket package, just deliver
+                if (_reader.IsReady)
                 {
-                    //reads to the end of the package
-                    //package does not mean received data
-                    //package is the websocket protocol package.
-                    //there can be multiple packages on network stream waiting for receiving
-                    //or package may be larger than received
-                    offset += _reader.Read(_buffer, offset, read);
-
-                    //if reader is ready, we have ready websocket package, just deliver
-                    if (_reader.IsReady)
+                    switch (_reader.OpCode)
                     {
-                        switch (_reader.OpCode)
-                        {
-                            //PING received, send PONG asap
-                            case SocketOpCode.Ping:
-                                byte[] pong = WebSocketWriter.CreatePong();
-                                Send(pong);
-                                break;
+                        //PING received, send PONG asap
+                        case SocketOpCode.Ping:
+                            byte[] pong = WebSocketWriter.CreatePong();
+                            Send(pong);
+                            break;
 
-                            case SocketOpCode.Pong:
-                                PongTime = DateTime.UtcNow;
-                                break;
+                        case SocketOpCode.Pong:
+                            PongTime = DateTime.UtcNow;
+                            break;
 
-                            //UTF8 OP Code text message received
-                            case SocketOpCode.UTF8:
-                                string result = Encoding.UTF8.GetString(_reader.Payload);
-                                OnMessageReceived(result);
-                                break;
+                        //UTF8 OP Code text message received
+                        case SocketOpCode.UTF8:
+                            string result = Encoding.UTF8.GetString(_reader.Payload);
+                            OnMessageReceived(result);
+                            break;
 
-                            //Binary OP Code binary received
-                            case SocketOpCode.Binary:
-                                byte[] payload = _reader.Payload;
-                                OnBinaryReceived(payload);
-                                break;
+                        //Binary OP Code binary received
+                        case SocketOpCode.Binary:
+                            byte[] payload = _reader.Payload;
+                            OnBinaryReceived(payload);
+                            break;
 
-                            //Terminate OP code tells us to disconnect
-                            case SocketOpCode.Terminate:
-                                Disconnect();
-                                return;
+                        //Terminate OP code tells us to disconnect
+                        case SocketOpCode.Terminate:
+                            Disconnect();
+                            return;
 
-                            default:
-                                Disconnect();
-                                return;
-                        }
-
-                        _reader = new WebSocketReader();
+                        default:
+                            Disconnect();
+                            return;
                     }
+
+                    _reader = new WebSocketReader();
                 }
             }
-            catch (Exception ex)
-            {
-                OnError("WSPROTOCOL_READ", ex);
-                Disconnect();
-            }
-
-            Read();
         }
 
         /// <summary>
