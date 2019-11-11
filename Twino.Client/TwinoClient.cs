@@ -147,7 +147,7 @@ namespace Twino.Client
                 byte[] buffer = new byte[8192];
                 int len = Stream.Read(buffer, 0, buffer.Length);
                 string response = Encoding.UTF8.GetString(buffer, 0, len);
-                
+
                 string first = response.Substring(0, 50).Trim();
                 int i1 = first.IndexOf(' ');
                 if (i1 < 1)
@@ -184,7 +184,19 @@ namespace Twino.Client
                 }
 
                 //fire connected events and start to read data from the server until disconnected
-                Thread thread = new Thread(Read);
+                Thread thread = new Thread(async () =>
+                {
+                    try
+                    {
+                        while (IsConnected)
+                            await Read();
+                    }
+                    catch (Exception ex)
+                    {
+                        Disconnect();
+                    }
+                });
+
                 thread.IsBackground = true;
                 thread.Start();
 

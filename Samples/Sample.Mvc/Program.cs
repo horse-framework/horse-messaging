@@ -8,30 +8,31 @@ using System.Net;
 using System.Threading.Tasks;
 using Twino.Core.Http;
 using Twino.Mvc.Results;
+using Twino.Server.WebSockets;
 
 namespace Sample.Mvc
 {
     public class TMid : IMiddleware
     {
         private IFirstService _firstService;
+
         public TMid(IFirstService firstService)
         {
             _firstService = firstService;
         }
-        
+
         public async Task Invoke(HttpRequest request, HttpResponse response, MiddlewareResultHandler setResult)
         {
-            Console.WriteLine(_firstService.ToString());
-            
+            Console.WriteLine("tmid");
             await Task.CompletedTask;
         }
     }
-    
+
     class Program
     {
         static void Main(string[] args)
         {
-            using TwinoMvc mvc = new TwinoMvc();
+            using TwinoMvc mvc = new TwinoMvc(async (s, r, c) => new ServerSocket(s, r, c));
 
             mvc.IsDevelopment = true;
             mvc.Init(twino =>
@@ -54,7 +55,6 @@ namespace Sample.Mvc
                 twino.Policies.Add(Policy.RequireRole("Admin", "Admin"));
                 twino.Policies.Add(Policy.RequireClaims("IT", "Database", "Cloud", "Source"));
                 twino.Policies.Add(Policy.Custom("Custom", (d, c) => true));
-
 
                 twino.StatusCodeResults.Add(HttpStatusCode.Unauthorized, new JsonResult(new {Message = "Access denied"}));
             });
