@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <Version>3.2.0</Version>
-    <AssemblyVersion>1.5.2</AssemblyVersion>
+    <AssemblyVersion>1.5.3</AssemblyVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Mehmet Helvacıköylü</Authors>
     <Company>Mehmet Helvacıköylü</Company>
@@ -12,10 +12,11 @@
     <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
     <RepositoryUrl>https://github.com/mhelvacikoylu/twino.git</RepositoryUrl>
     <PackageTags>websocket, http, server, client, core, mvc</PackageTags>
-    <FileVersion>1.5.2</FileVersion>
-    <PackageVersion>1.5.2</PackageVersion>
+    <FileVersion>1.5.3</FileVersion>
+    <PackageVersion>1.5.3</PackageVersion>
     <LangVersion>8</LangVersion>
     <NeutralLanguage>en</NeutralLanguage>
+    <Title>Twino.Core</Title>
   </PropertyGroup>
 
   <ItemGroup>

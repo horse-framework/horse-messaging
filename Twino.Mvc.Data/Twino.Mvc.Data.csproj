@@ -1,16 +1,28 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <LangVersion>8</LangVersion>
         <TargetFramework>netcoreapp3.0</TargetFramework>
+        <PackageVersion>1.5.3</PackageVersion>
+        <AssemblyVersion>1.5.3</AssemblyVersion>
+        <FileVersion>1.5.3</FileVersion>
+        <RepositoryUrl>https://github.com/mhelvacikoylu/twino.git</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
+        <Description>Data Context pool extensions for twino MVC</Description>
+        <Authors>Mehmet Helvacıköylü</Authors>
+        <Company>Mehmet Helvacıköylü</Company>
+        <PackageTags>twino, mvc, ioc, data, entity, mssql, postgresql</PackageTags>
+        <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
+        <Title>Twino.Mvc.Data</Title>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="3.0.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="2.2.4" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Twino.Ioc\Twino.Ioc.csproj" />
-      <ProjectReference Include="..\Twino.Mvc\Twino.Mvc.csproj" />
+        <ProjectReference Include="..\Twino.Ioc\Twino.Ioc.csproj" />
+        <ProjectReference Include="..\Twino.Mvc\Twino.Mvc.csproj" />
     </ItemGroup>
 
 </Project>

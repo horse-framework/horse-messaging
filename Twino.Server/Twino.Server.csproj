@@ -15,8 +15,9 @@
     <PackageTags>twino, websocket, server, http, tcp, lightweight, mq</PackageTags>
     <AssemblyVersion>1.5.2</AssemblyVersion>
     <FileVersion>1.5.2</FileVersion>
-    <PackageVersion>1.5.2</PackageVersion>
+    <PackageVersion>1.5.3</PackageVersion>
     <LangVersion>8</LangVersion>
+    <Title>Twino.Server</Title>
   </PropertyGroup>
 
   <ItemGroup>

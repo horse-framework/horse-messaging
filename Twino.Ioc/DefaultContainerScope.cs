@@ -72,6 +72,9 @@ namespace Twino.Ioc
             if (instance != null)
                 _scopedServices.Add(descriptor.ServiceType, instance);
 
+            if (descriptor.AfterCreatedMethod != null)
+                descriptor.AfterCreatedMethod.DynamicInvoke(instance);
+
             return instance;
         }
 
