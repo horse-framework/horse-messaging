@@ -81,6 +81,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Ioc", "Twino.Ioc\Twin
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Ioc", "Tests\Test.Ioc\Test.Ioc.csproj", "{DABA0200-161B-46FB-934D-FAC2843DE25F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Mvc.Data", "Twino.Mvc.Data\Twino.Mvc.Data.csproj", "{0031281F-ABD5-4905-92CE-E7688732FF84}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -223,6 +225,10 @@ Global
 		{DABA0200-161B-46FB-934D-FAC2843DE25F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DABA0200-161B-46FB-934D-FAC2843DE25F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DABA0200-161B-46FB-934D-FAC2843DE25F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0031281F-ABD5-4905-92CE-E7688732FF84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0031281F-ABD5-4905-92CE-E7688732FF84}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0031281F-ABD5-4905-92CE-E7688732FF84}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0031281F-ABD5-4905-92CE-E7688732FF84}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
