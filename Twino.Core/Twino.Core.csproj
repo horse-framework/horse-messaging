@@ -13,7 +13,7 @@
     <RepositoryUrl>https://github.com/mhelvacikoylu/twino.git</RepositoryUrl>
     <PackageTags>websocket, http, server, client, core, mvc</PackageTags>
     <FileVersion>1.5.2</FileVersion>
-    <PackageVersion>1.5.2-beta</PackageVersion>
+    <PackageVersion>1.5.2</PackageVersion>
     <LangVersion>8</LangVersion>
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.0</TargetFramework>
-    <PackageVersion>1.5.2-beta</PackageVersion>
+    <PackageVersion>1.5.2</PackageVersion>
     <AssemblyVersion>1.5.2</AssemblyVersion>
     <FileVersion>1.5.2</FileVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
