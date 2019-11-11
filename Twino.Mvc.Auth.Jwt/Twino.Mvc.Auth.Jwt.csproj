@@ -10,10 +10,10 @@
     <Authors>Mehmet Helvacıköylü</Authors>
     <PackageTags>twino, websocket, http, mvc, jwt, token, authorization, authentication</PackageTags>
     <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
-    <AssemblyVersion>1.3.1</AssemblyVersion>
-    <FileVersion>1.3.1</FileVersion>
+    <AssemblyVersion>1.5.2</AssemblyVersion>
+    <FileVersion>1.5.2</FileVersion>
     <Version>3.2.0</Version>
-    <PackageVersion>1.3.1</PackageVersion>
+    <PackageVersion>1.5.2</PackageVersion>
     <LangVersion>8</LangVersion>
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>

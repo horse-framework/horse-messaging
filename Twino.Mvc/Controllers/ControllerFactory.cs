@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Reflection;
+using System.Threading.Tasks;
 using Twino.Core.Http;
-using Twino.Mvc.Services;
+using Twino.Ioc;
 
 namespace Twino.Mvc.Controllers
 {
@@ -14,7 +15,7 @@ namespace Twino.Mvc.Controllers
         /// <summary>
         /// Creates new instance of a TwinoController object
         /// </summary>
-        public TwinoController CreateInstance(TwinoMvc mvc, Type controllerType, HttpRequest request, HttpResponse response, IContainerScope scope)
+        public async Task<TwinoController> CreateInstance(TwinoMvc mvc, Type controllerType, HttpRequest request, HttpResponse response, IContainerScope scope)
         {
             ConstructorInfo[] constructors = controllerType.GetConstructors();
 
@@ -33,7 +34,7 @@ namespace Twino.Mvc.Controllers
                     ParameterInfo p = parameters[i];
                     Type type = p.ParameterType;
 
-                    object value = mvc.Services.Get(type, scope);
+                    object value = await mvc.Services.Get(type, scope);
 
                     //if the parameter could not provide, we need to skip this constructor
                     if (value == null)

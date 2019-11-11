@@ -18,6 +18,7 @@ Twino provides advanced WebSocket server management, messaging queue infrastruct
 **Twino.Client:** Twino WebSocket Client. Also includes connectors for specific purposes: AbsoluteConnector, StickyConnector, SingleMessageConnector etc.<br>
 **Twino.Mvc:** MVC Architecture for Twino.Server. It's quite similar to ASP.NET Core. Supports most useful attributes of ASP.NET Core, has its own authentication, authorization and policy management system. Has its own Service container, Middleware system and action filters.<br>
 **Twino.Mvc.Auth.Jwt:** JSON Web Token implementation for Twino.Mvc library<br>
+**Twino.Ioc:** IOC, dependency injection library. Created to use in Twino.Mvc. It's also can be used independently.<br>
 **Twino.SocketModels:** Makes WebSocket communication super easy and event/model based. With Twino.SocketModels, you do not need any knowledge about WebSocket protocol to use it.<br>
 
 ##### NuGet Packages
@@ -27,6 +28,7 @@ Twino provides advanced WebSocket server management, messaging queue infrastruct
 [Twino.Client NuGet Package](https://www.nuget.org/packages/Twino.Client)<br>
 [Twino.Mvc NuGet Package](https://www.nuget.org/packages/Twino.Mvc)<br>
 [Twino.Mvc.Auth.Jwt NuGet Package](https://www.nuget.org/packages/Twino.Mvc.Auth.Jwt)<br>
+[Twino.Ioc NuGet Package](https://www.nuget.org/packages/Twino.Ioc)<br>
 [Twino.SocketModels NuGet Package](https://www.nuget.org/packages/Twino.SocketModels)<br>
 <br>
 

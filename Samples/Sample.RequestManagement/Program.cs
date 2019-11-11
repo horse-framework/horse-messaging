@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.Mvc;
 using Twino.Server;
@@ -10,6 +11,7 @@ using Twino.SocketModels.Models;
 using Sample.RequestManagement.Models;
 using Twino.Client;
 using Twino.Core.Http;
+using Twino.SocketModels.Requests;
 
 namespace Sample.RequestManagement
 {
@@ -33,26 +35,38 @@ namespace Sample.RequestManagement
             StartClient();
         }
 
+        private static TwinoMvc _mvc;
+        private static TaskCompletionSource<DemoResponseModel> source;
+
+        static void FuncFromSomewhere(DemoRequestModel request)
+        {
+            Thread.Sleep(4000);
+            Console.WriteLine($"Request: {request.Text} > {request.Number}");
+
+            DemoResponseModel response = new DemoResponseModel();
+            response.Id = 1;
+            response.ResultCode = 200;
+            response.Message = "Success";
+
+            Thread.Sleep(4000);
+            Console.WriteLine("Setting result");
+            source.SetResult(response);
+        }
+
         static void StartServer()
         {
             R = new RequestManager();
-            R.On<DemoRequestModel, DemoResponseModel>(request =>
+            R.OnScheduled<DemoRequestModel, DemoResponseModel>(request =>
             {
-                Console.WriteLine($"Request: {request.Text} > {request.Number}");
-
-                DemoResponseModel response = new DemoResponseModel();
-                response.Id = 1;
-                response.ResultCode = 200;
-                response.Message = "Success";
-
-                return response;
+                Console.WriteLine("Request received");
+                source = new TaskCompletionSource<DemoResponseModel>(TaskCreationOptions.None);
+                ThreadPool.QueueUserWorkItem(FuncFromSomewhere, request, false);
+                return source.Task;
             });
 
-            using (TwinoMvc mvc = new TwinoMvc(new CF()))
-            {
-                mvc.Init();
-                mvc.RunAsync();
-            }
+            _mvc = new TwinoMvc(new CF());
+            _mvc.Init();
+            _mvc.RunAsync();
         }
 
         static void StartClient()
@@ -72,13 +86,19 @@ namespace Sample.RequestManagement
 
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
-                var task = R.Request<DemoResponseModel>(client, request, 500);
+                var task = client.Request<DemoResponseModel>(request, 25000);
 
                 SocketResponse<DemoResponseModel> response = task.Result;
                 sw.Stop();
 
                 Console.WriteLine(response.Status + " > " + response.Unique + " in " + sw.ElapsedMilliseconds);
-                Console.ReadLine();
+                while (true)
+                {
+                    Console.Write("running...");
+                    string q = Console.ReadLine();
+                    if (q == "q")
+                        break;
+                }
             }
         }
     }

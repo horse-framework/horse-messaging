@@ -16,7 +16,6 @@ namespace Test.SocketModels
             _reader = new CustomModelReader();
         }
 
-
         [Fact]
         public void Write()
         {
@@ -39,10 +38,10 @@ namespace Test.SocketModels
 
             Assert.Equal(123, model.Type);
             Assert.Equal(123, gmodel.Type);
-            
+
             Assert.Equal(500, model.Number);
             Assert.Equal(500, gmodel.Number);
-            
+
             Assert.Equal("Default", model.Name);
             Assert.Equal("Default", gmodel.Name);
         }
@@ -56,16 +55,16 @@ namespace Test.SocketModels
             smodel.Name = "Default";
 
             string serialized = _writer.Serialize(smodel);
-            
+
             DefaultModel model = (DefaultModel) _reader.Read(typeof(DefaultModel), serialized);
             DefaultModel gmodel = _reader.Read<DefaultModel>(serialized);
 
             Assert.Equal(123, model.Type);
             Assert.Equal(123, gmodel.Type);
-            
+
             Assert.Equal(500, model.Number);
             Assert.Equal(500, gmodel.Number);
-            
+
             Assert.Equal("Default", model.Name);
             Assert.Equal("Default", gmodel.Name);
         }

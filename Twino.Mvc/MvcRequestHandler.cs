@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 using Twino.Mvc.Auth;
 using Twino.Core.Http;
 using Twino.Mvc.Middlewares;
-using Twino.Mvc.Services;
+using Twino.Ioc;
 
 namespace Twino.Mvc
 {
@@ -47,10 +47,9 @@ namespace Twino.Mvc
         /// </summary>
         public async Task RequestAsync(TwinoServer server, HttpRequest request, HttpResponse response)
         {
+            IContainerScope scope = Mvc.Services.CreateScope();
             try
             {
-                IContainerScope scope = Mvc.Services.CreateScope();
-
                 if (App.Descriptors.Count > 0)
                 {
                     MiddlewareRunner runner = new MiddlewareRunner(Mvc, scope);
@@ -78,6 +77,10 @@ namespace Twino.Mvc
                     await Mvc.ErrorHandler.Error(request, ex);
                 else
                     WriteResponse(request.Response, StatusCodeResult.InternalServerError());
+            }
+            finally
+            {
+                scope.Dispose();
             }
         }
 
@@ -139,7 +142,7 @@ namespace Twino.Mvc
             if (!CallFilters(response, context, controllerFilters, filter => filter.BeforeCreated(context)))
                 return;
 
-            TwinoController controller = Mvc.ControllerFactory.CreateInstance(Mvc, match.Route.ControllerType, request, response, scope);
+            TwinoController controller = await Mvc.ControllerFactory.CreateInstance(Mvc, match.Route.ControllerType, request, response, scope);
             if (controller == null)
             {
                 WriteResponse(response, Mvc.NotFoundResult);
@@ -348,12 +351,12 @@ namespace Twino.Mvc
 
                 //return value
                 values.Add(new ParameterValue
-                             {
-                                 Name = ap.ParameterName,
-                                 Type = ap.ParameterType,
-                                 Source = ap.Source,
-                                 Value = casted
-                             });
+                           {
+                               Name = ap.ParameterName,
+                               Type = ap.ParameterType,
+                               Source = ap.Source,
+                               Value = casted
+                           });
             }
 
             return values;

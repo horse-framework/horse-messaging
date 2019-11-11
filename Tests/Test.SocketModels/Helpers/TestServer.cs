@@ -3,8 +3,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Twino.Server;
 using Twino.Server.WebSockets;
-using Twino.SocketModels;
 using Test.SocketModels.Models;
+using Twino.SocketModels.Requests;
 
 namespace Test.SocketModels.Helpers
 {

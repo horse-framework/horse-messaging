@@ -72,8 +72,19 @@ namespace Twino.Core.Http
         /// </summary>
         public string ContentType { get; set; }
 
+        /// <summary>
+        /// Request query string key and values
+        /// </summary>
         public Dictionary<string, string> QueryString { get; internal set; }
+        
+        /// <summary>
+        /// Request form data
+        /// </summary>
         public Dictionary<string, string> Form { get; internal set; }
+        
+        /// <summary>
+        /// Request files
+        /// </summary>
         public IEnumerable<IFormFile> Files { get; internal set; }
 
         /// <summary>
@@ -91,6 +102,9 @@ namespace Twino.Core.Http
         /// </summary>
         internal string QueryStringData { get; set; }
 
+        /// <summary>
+        /// Multipart form data root boundary
+        /// </summary>
         internal string Boundary { get; set; }
 
         /// <summary>

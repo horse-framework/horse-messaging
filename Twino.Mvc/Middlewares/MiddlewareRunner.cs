@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Twino.Core.Http;
 using Twino.Mvc.Controllers;
-using Twino.Mvc.Services;
+using Twino.Ioc;
 
 namespace Twino.Mvc.Middlewares
 {
@@ -38,7 +38,7 @@ namespace Twino.Mvc.Middlewares
         {
             foreach (MiddlewareDescriptor descriptor in app.Descriptors)
             {
-                IMiddleware middleware = CreateInstance(descriptor);
+                IMiddleware middleware = await CreateInstance(descriptor);
                 await middleware.Invoke(request, response, SetResult);
 
                 if (LastResult != null)
@@ -49,7 +49,7 @@ namespace Twino.Mvc.Middlewares
         /// <summary>
         /// Creates middleware object from descriptor
         /// </summary>
-        private IMiddleware CreateInstance(MiddlewareDescriptor descriptor)
+        private async Task<IMiddleware> CreateInstance(MiddlewareDescriptor descriptor)
         {
             if (descriptor.Instance != null)
                 return descriptor.Instance;
@@ -61,7 +61,7 @@ namespace Twino.Mvc.Middlewares
             for (int i = 0; i < descriptor.ConstructorParameters.Length; i++)
             {
                 Type type = descriptor.ConstructorParameters[i];
-                object o = _mvc.Services.Get(type, _scope);
+                object o = await _mvc.Services.Get(type, _scope);
                 parameters[i] = o;
             }
 

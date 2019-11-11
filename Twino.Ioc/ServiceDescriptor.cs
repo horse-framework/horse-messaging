@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Twino.Mvc.Services
+namespace Twino.Ioc
 {
     /// <summary>
     /// Service creation and keep types
@@ -51,6 +51,11 @@ namespace Twino.Mvc.Services
         /// Implementation method
         /// </summary>
         public ImplementationType Implementation { get; set; }
+
+        /// <summary>
+        /// If true, implementation is pool. Instance is type of IServicePool<TService>
+        /// </summary>
+        public bool IsPool { get; set; }
     }
 
 }

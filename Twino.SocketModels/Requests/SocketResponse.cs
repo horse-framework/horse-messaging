@@ -1,6 +1,7 @@
+using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
-namespace Twino.SocketModels.Models
+namespace Twino.SocketModels.Requests
 {
     /// <summary>
     /// Response types
@@ -37,6 +38,7 @@ namespace Twino.SocketModels.Models
         /// Process model
         /// </summary>
         [JsonProperty("model")]
+        [JsonPropertyName("model")]
         public TModel Model { get; set; }
     }
     
@@ -49,24 +51,28 @@ namespace Twino.SocketModels.Models
         /// Unique id, same with it's request unique id
         /// </summary>
         [JsonProperty("unique")]
+        [JsonPropertyName("unique")]
         public string Unique { get; set; }
 
         /// <summary>
         /// Requested type code
         /// </summary>
         [JsonProperty("requestType")]
+        [JsonPropertyName("requestType")]
         public int RequestType { get; set; }
 
         /// <summary>
         /// Response type code
         /// </summary>
         [JsonProperty("responseType")]
+        [JsonPropertyName("responseType")]
         public int ResponseType { get; set; }
 
         /// <summary>
         /// Response status
         /// </summary>
         [JsonProperty("status")]
+        [JsonPropertyName("status")]
         public ResponseStatus Status { get; set; }
     }
 }
