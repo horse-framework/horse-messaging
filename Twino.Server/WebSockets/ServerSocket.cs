@@ -71,7 +71,7 @@ namespace Twino.Server.WebSockets
                 while (IsConnected)
                     await Read();
             }
-            catch (Exception ex)
+            catch
             {
                 Disconnect();
             }

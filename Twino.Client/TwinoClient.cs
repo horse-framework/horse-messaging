@@ -191,7 +191,7 @@ namespace Twino.Client
                         while (IsConnected)
                             await Read();
                     }
-                    catch (Exception ex)
+                    catch
                     {
                         Disconnect();
                     }

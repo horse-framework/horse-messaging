@@ -325,6 +325,9 @@ namespace Twino.Ioc
         public async Task<object> Get(Type serviceType, IContainerScope scope = null)
         {
             ServiceDescriptor descriptor = GetDescriptor(serviceType);
+            if (descriptor == null)
+                throw new KeyNotFoundException("Service type is not found");
+
             if (descriptor.IsPool)
             {
                 IServicePool pool = (IServicePool) descriptor.Instance;
@@ -391,9 +394,6 @@ namespace Twino.Ioc
             //if could not find by service type, tries to find by implementation type
             else
                 descriptor = Items.Values.FirstOrDefault(x => x.ImplementationType == serviceType);
-
-            if (descriptor == null)
-                throw new KeyNotFoundException("Service type is not found");
 
             return descriptor;
         }

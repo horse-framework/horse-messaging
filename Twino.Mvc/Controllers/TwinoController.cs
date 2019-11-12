@@ -5,6 +5,7 @@ using Twino.Server;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Twino.Core.Http;
+using Twino.Ioc;
 
 namespace Twino.Mvc.Controllers
 {
@@ -36,6 +37,11 @@ namespace Twino.Mvc.Controllers
         /// Get Claims for user associated for executing request
         /// </summary>
         public ClaimsPrincipal User { get; internal set; }
+        
+        /// <summary>
+        /// Gets IOC scope of the request
+        /// </summary>
+        public IContainerScope CurrentScope { get; internal set; }
 
         #endregion
         

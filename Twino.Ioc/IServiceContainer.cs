@@ -216,7 +216,7 @@ namespace Twino.Ioc
         /// Gets descriptor of type
         /// </summary>
         ServiceDescriptor GetDescriptor(Type serviceType);
-
+        
         #endregion
 
         #region Instance - Scope

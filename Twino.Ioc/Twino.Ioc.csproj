@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.0</TargetFramework>
-    <PackageVersion>1.5.2</PackageVersion>
-    <AssemblyVersion>1.5.2</AssemblyVersion>
-    <FileVersion>1.5.2</FileVersion>
+    <PackageVersion>1.5.3</PackageVersion>
+    <AssemblyVersion>1.5.3</AssemblyVersion>
+    <FileVersion>1.5.3</FileVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Mehmet Helvacıköylü</Authors>
     <Description>Twino IOC Service containers and scopes </Description>

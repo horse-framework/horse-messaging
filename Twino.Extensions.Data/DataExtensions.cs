@@ -3,12 +3,15 @@ using Microsoft.EntityFrameworkCore;
 using Twino.Ioc;
 using Twino.Ioc.Pool;
 
-namespace Twino.Mvc.Data
+namespace Twino.Extensions.Data
 {
-    public static class AddExtensions
+    public static class DataExtensions
     {
         #region Add Context
 
+        /// <summary>
+        /// Adds database context as scoped
+        /// </summary>
         public static IServiceContainer AddDataContextScoped<TContext>(this IServiceContainer services,
                                                                        Action<DbContextOptionsBuilder<TContext>> contextOptions)
             where TContext : DbContext
@@ -23,6 +26,9 @@ namespace Twino.Mvc.Data
             return services;
         }
 
+        /// <summary>
+        /// Adds database context as transient
+        /// </summary>
         public static IServiceContainer AddDataContextTransient<TContext>(this IServiceContainer services,
                                                                           Action<DbContextOptionsBuilder<TContext>> contextOptions)
             where TContext : DbContext
@@ -41,6 +47,9 @@ namespace Twino.Mvc.Data
 
         #region Add Scoped Pool
 
+        /// <summary>
+        /// Adds database context as scoped pool. Pool options are default.
+        /// </summary>
         public static IServiceContainer AddDataContextScopedPool<TContext>(this IServiceContainer services,
                                                                            Action<DbContextOptionsBuilder<TContext>> contextOptions)
             where TContext : DbContext
@@ -55,6 +64,10 @@ namespace Twino.Mvc.Data
             return services;
         }
 
+        /// <summary>
+        /// Adds database context as scoped pool.
+        /// Pool options will be decided in method specified in 3rd parameter.
+        /// </summary>
         public static IServiceContainer AddDataContextScopedPool<TContext>(this IServiceContainer services,
                                                                            Action<DbContextOptionsBuilder<TContext>> contextOptions,
                                                                            Action<ServicePoolOptions> poolOptions)
@@ -70,6 +83,11 @@ namespace Twino.Mvc.Data
             return services;
         }
 
+        /// <summary>
+        /// Adds database context as scoped pool.
+        /// Pool options will be decided in method specified in 3rd parameter.
+        /// In last parameter will be called after each instance is created.
+        /// </summary>
         public static IServiceContainer AddDataContextScopedPool<TContext>(this IServiceContainer services,
                                                                            Action<DbContextOptionsBuilder<TContext>> contextOptions,
                                                                            Action<ServicePoolOptions> poolOptions,
@@ -90,6 +108,9 @@ namespace Twino.Mvc.Data
 
         #region Add Transient Pool
 
+        /// <summary>
+        /// Adds database context as transient pool. Pool options are default.
+        /// </summary>
         public static IServiceContainer AddDataContextTransientPool<TContext>(this IServiceContainer services,
                                                                               Action<DbContextOptionsBuilder<TContext>> contextOptions)
             where TContext : DbContext
@@ -104,6 +125,10 @@ namespace Twino.Mvc.Data
             return services;
         }
 
+        /// <summary>
+        /// Adds database context as transient pool.
+        /// Pool options will be decided in method specified in 3rd parameter.
+        /// </summary>
         public static IServiceContainer AddDataContextTransientPool<TContext>(this IServiceContainer services,
                                                                               Action<DbContextOptionsBuilder<TContext>> contextOptions,
                                                                               Action<ServicePoolOptions> poolOptions)
@@ -119,6 +144,11 @@ namespace Twino.Mvc.Data
             return services;
         }
 
+        /// <summary>
+        /// Adds database context as transient pool.
+        /// Pool options will be decided in method specified in 3rd parameter.
+        /// In last parameter will be called after each instance is created.
+        /// </summary>
         public static IServiceContainer AddDataContextTransientPool<TContext>(this IServiceContainer services,
                                                                               Action<DbContextOptionsBuilder<TContext>> contextOptions,
                                                                               Action<ServicePoolOptions> poolOptions,
