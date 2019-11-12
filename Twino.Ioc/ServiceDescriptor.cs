@@ -56,6 +56,11 @@ namespace Twino.Ioc
         /// If true, implementation is pool. Instance is type of IServicePool<TService>
         /// </summary>
         public bool IsPool { get; set; }
+        
+        /// <summary>
+        /// This method is called after instance is created
+        /// </summary>
+        public Delegate AfterCreatedMethod { get; set; }
     }
 
 }

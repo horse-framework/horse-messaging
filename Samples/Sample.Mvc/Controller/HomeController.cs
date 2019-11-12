@@ -13,7 +13,7 @@ namespace Sample.Mvc.Controller
         {
             return await StringAsync("Welcome!");
         }
-        
+
         [HttpPost("")]
         public async Task<IActionResult> Post()
         {

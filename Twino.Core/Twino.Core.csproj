@@ -16,6 +16,7 @@
     <PackageVersion>1.5.3</PackageVersion>
     <LangVersion>8</LangVersion>
     <NeutralLanguage>en</NeutralLanguage>
+    <Title>Twino.Core</Title>
   </PropertyGroup>
 
   <ItemGroup>

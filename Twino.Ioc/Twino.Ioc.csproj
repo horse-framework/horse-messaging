@@ -12,6 +12,7 @@
     <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
     <RepositoryUrl>https://github.com/mhelvacikoylu/twino.git</RepositoryUrl>
     <PackageTags>twino, ioc, dependency, injection, service, container, scope</PackageTags>
+    <Title>Twino.Ioc</Title>
   </PropertyGroup>
 
 </Project>
