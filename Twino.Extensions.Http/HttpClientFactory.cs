@@ -94,8 +94,7 @@ namespace Twino.Extensions.Http
             //this code id executed when we are not using pool or pool is full.
             //for both cases, we need to create an independent instance and return
             HttpClient instance = new HttpClient();
-            if (descriptor.OptionsAction != null)
-                descriptor.OptionsAction(instance);
+            descriptor.OptionsAction?.Invoke(instance);
 
             return instance;
         }

@@ -7,7 +7,7 @@ using System;
 using System.Net;
 using System.Threading.Tasks;
 using Twino.Core.Http;
-using Twino.Extensions.Data;
+using Twino.Extensions.Http;
 using Twino.Mvc.Results;
 using Twino.Server.WebSockets;
 
@@ -56,8 +56,9 @@ namespace Sample.Mvc
                 twino.Policies.Add(Policy.RequireRole("Admin", "Admin"));
                 twino.Policies.Add(Policy.RequireClaims("IT", "Database", "Cloud", "Source"));
                 twino.Policies.Add(Policy.Custom("Custom", (d, c) => true));
+                twino.Services.AddHttpClient();
 
-                twino.StatusCodeResults.Add(HttpStatusCode.Unauthorized, new JsonResult(new {Message = "Access denied"}));
+                twino.StatusCodeResults.Add(HttpStatusCode.Unauthorized, new JsonResult(new { Message = "Access denied" }));
             });
 
             CorsMiddleware cors = new CorsMiddleware();

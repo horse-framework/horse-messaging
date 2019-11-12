@@ -12,6 +12,14 @@ namespace Twino.Extensions.Http
         /// <summary>
         /// Adds application default transient HttpClient factory
         /// </summary>
+        public static IServiceContainer AddHttpClient(this IServiceContainer services)
+        {
+            return AddHttpClient(services, "default", null);
+        }
+
+        /// <summary>
+        /// Adds application default transient HttpClient factory with configurable action
+        /// </summary>
         public static IServiceContainer AddHttpClient(this IServiceContainer services, Action<HttpClient> configureClient)
         {
             return AddHttpClient(services, "default", configureClient);
@@ -24,7 +32,7 @@ namespace Twino.Extensions.Http
         {
             return AddHttpClient(services, "default", poolSize, configureClient);
         }
-        
+
         /// <summary>
         /// Adds name specified transient HttpClient factory
         /// </summary>
@@ -32,7 +40,7 @@ namespace Twino.Extensions.Http
         {
             return AddHttpClient(services, name, 0, configureClient);
         }
-        
+
         /// <summary>
         /// Adds name specified transient pool HttpClient factory
         /// </summary>
@@ -43,15 +51,15 @@ namespace Twino.Extensions.Http
             if (descriptor == null)
             {
                 factory = new HttpClientFactory();
-                services.AddSingleton(factory);
+                services.AddSingleton<IHttpClientFactory>(factory);
             }
             else
-                factory = (HttpClientFactory) descriptor.Instance;
+                factory = (HttpClientFactory)descriptor.Instance;
 
             factory.AddConfiguration(name, poolSize, configureClient);
 
             return services;
         }
-        
+
     }
 }
