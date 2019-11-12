@@ -6,9 +6,8 @@ using Sample.Mvc.Models;
 using System;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Twino.Core.Http;
-using Twino.Mvc.Data;
+using Twino.Extensions.Data;
 using Twino.Mvc.Results;
 using Twino.Server.WebSockets;
 

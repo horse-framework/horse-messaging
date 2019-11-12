@@ -7,8 +7,8 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\Twino.Extensions.Data\Twino.Extensions.Data.csproj" />
         <ProjectReference Include="..\..\Twino.Mvc.Auth.Jwt\Twino.Mvc.Auth.Jwt.csproj" />
-        <ProjectReference Include="..\..\Twino.Mvc.Data\Twino.Mvc.Data.csproj" />
         <ProjectReference Include="..\..\Twino.Mvc\Twino.Mvc.csproj" />
     </ItemGroup>
 
