@@ -114,6 +114,11 @@ namespace Twino.Server
         public event TwinoServerClientEventHandler ClientDisconnected;
 
         /// <summary>
+        /// Triggred when raised unhandled exception
+        /// </summary>
+        public event TwinoServerUnhandledExceptionEventHandler OnException;
+
+        /// <summary>
         /// Trigger client connected event
         /// </summary>
         internal void SetClientConnected(ServerSocket client)
@@ -128,6 +133,16 @@ namespace Twino.Server
         {
             ClientDisconnected?.Invoke(this, client);
         }
+
+        #endregion
+
+        #region Delegates
+        // TODO: Maybe this handler parameter can be detailed object like "ExceptionContext".
+        /// <summary>
+        /// Unhandled exceptions delegate.
+        /// </summary>
+        /// <param name="exception">Raised exception instance.</param>
+        public delegate void TwinoServerUnhandledExceptionEventHandler(Exception exception);
 
         #endregion
 
@@ -383,10 +398,10 @@ namespace Twino.Server
         {
             Options.Hosts = new List<HostOptions>();
             HostOptions host = new HostOptions
-                               {
-                                   Port = port,
-                                   SslEnabled = false
-                               };
+            {
+                Port = port,
+                SslEnabled = false
+            };
 
             Options.Hosts.Add(host);
 
@@ -450,7 +465,7 @@ namespace Twino.Server
 
             IsRunning = true;
             Started?.Invoke(this);
-
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             //if websocket ping is activated, starts pinger
             if (Options.PingInterval > 0)
             {
@@ -490,6 +505,18 @@ namespace Twino.Server
 
             _handlers.Clear();
             Stopped?.Invoke(this);
+        }
+
+
+        /// <summary>
+        /// For global exception handling.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            Exception ex = e.ExceptionObject as Exception;
+            OnException.Invoke(ex);
         }
 
         #endregion
