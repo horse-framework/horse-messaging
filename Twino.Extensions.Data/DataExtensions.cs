@@ -34,10 +34,10 @@ namespace Twino.Extensions.Data
         {
             DbContextOptionsBuilder<TContext> builder = new DbContextOptionsBuilder<TContext>();
             contextOptions(builder);
-            
+
             services.AddSingleton(builder.Options);
             services.AddTransient<TContext, TContext>();
-            
+
             return services;
         }
 
@@ -54,7 +54,7 @@ namespace Twino.Extensions.Data
         {
             DbContextOptionsBuilder<TContext> builder = new DbContextOptionsBuilder<TContext>();
             contextOptions(builder);
-            
+
             services.AddSingleton(builder.Options);
             services.AddScopedPool<TContext, TContext>();
 

@@ -6,12 +6,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\Twino.Client\Twino.Client.csproj"/>
-        <ProjectReference Include="..\..\Twino.Core\Twino.Core.csproj"/>
-        <ProjectReference Include="..\..\Twino.Mvc.Auth.Jwt\Twino.Mvc.Auth.Jwt.csproj"/>
-        <ProjectReference Include="..\..\Twino.Mvc\Twino.Mvc.csproj"/>
-        <ProjectReference Include="..\..\Twino.Server\Twino.Server.csproj"/>
-        <ProjectReference Include="..\..\Twino.SocketModels\Twino.SocketModels.csproj"/>
+        <ProjectReference Include="..\..\Twino.Client\Twino.Client.csproj" />
+        <ProjectReference Include="..\..\Twino.Core\Twino.Core.csproj" />
+        <ProjectReference Include="..\..\Twino.MQ\Twino.MQ.csproj" />
+        <ProjectReference Include="..\..\Twino.Mvc.Auth.Jwt\Twino.Mvc.Auth.Jwt.csproj" />
+        <ProjectReference Include="..\..\Twino.Mvc\Twino.Mvc.csproj" />
+        <ProjectReference Include="..\..\Twino.Server\Twino.Server.csproj" />
+        <ProjectReference Include="..\..\Twino.SocketModels\Twino.SocketModels.csproj" />
     </ItemGroup>
 
 </Project>

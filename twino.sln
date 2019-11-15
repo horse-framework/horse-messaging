@@ -87,6 +87,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Mvc.Explorer", "Twino
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Extensions.Http", "Twino.Extensions.Http\Twino.Extensions.Http.csproj", "{972D19A9-019E-4EDA-A8D0-18808E737838}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.MQ", "Twino.MQ\Twino.MQ.csproj", "{CFB19F80-FBC0-4999-BD95-44CF0B916B86}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -241,6 +243,10 @@ Global
 		{972D19A9-019E-4EDA-A8D0-18808E737838}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{972D19A9-019E-4EDA-A8D0-18808E737838}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{972D19A9-019E-4EDA-A8D0-18808E737838}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CFB19F80-FBC0-4999-BD95-44CF0B916B86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CFB19F80-FBC0-4999-BD95-44CF0B916B86}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CFB19F80-FBC0-4999-BD95-44CF0B916B86}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CFB19F80-FBC0-4999-BD95-44CF0B916B86}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

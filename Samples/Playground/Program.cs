@@ -1,10 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Net.Sockets;
 using System.Runtime.Loader;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core.Http;
+using Twino.MQ.Core;
+using Twino.MQ.Models;
 using Twino.Server;
 using Twino.Server.WebSockets;
 using Twino.SocketModels;
@@ -48,14 +53,41 @@ namespace Playground
         }
     }
 
+
     class Program
     {
         static void Main(string[] args)
         {
+            QueueMessage msg = new QueueMessage
+                               {
+                                   ResponseRequired = true,
+                                   HighPriority = true,
+                                   FirstAcquirer = true,
+                                   Type = MessageType.Channel,
+                                   MessageId = "8Qm3Slx1",
+                                   Target = "twino",
+                                   Source = "mehmet",
+                                   Content = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"))
+                               };
+            
+            msg.PrepareFirstUse();
+
+            MessageWriter writer = new MessageWriter();
+            MemoryStream ms = new MemoryStream();
+            writer.Write(msg, ms).Wait();
+            ms.Position = 0;
+
+            MessageReader reader = new MessageReader();
+            QueueMessage msg2 = reader.Read(ms).Result;
+            Console.WriteLine(msg2.Length);
+            Console.ReadLine();
+            return;
+
+
             ServerOptions options = ServerOptions.CreateDefault();
             options.Hosts[0].Port = 85; //listen port 85
             options.PingInterval = 120000; //120 seconds
-            
+
             IClientFactory clientFactory = new WebSocketClientFactory();
             TwinoServer server = TwinoServer.CreateWebSocket(clientFactory, options);
             server.Start();
