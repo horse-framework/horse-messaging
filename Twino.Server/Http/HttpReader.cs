@@ -16,9 +16,8 @@ namespace Twino.Server.Http
     /// </summary>
     public class HttpReader
     {
-        
         #region Constants
-        
+
         public const byte CR = (byte) '\r';
         public const byte LF = (byte) '\n';
         public const byte COLON = (byte) ':';
@@ -31,34 +30,34 @@ namespace Twino.Server.Http
         public static readonly byte[] COLON_SPACE = {COLON, SPACE};
 
         #endregion
-        
+
         #region Fields - Properties
-        
+
         /// <summary>
         /// If true, the first line is being read
         /// </summary>
         private bool _firstLine = true;
-        
+
         /// <summary>
         /// If true, reader is reading headers from network stream. Otherwise content is being read.
         /// </summary>
         private bool _readingHeaders = true;
-        
+
         /// <summary>
         /// Network stream read buffer
         /// </summary>
-        private readonly byte[] _buffer = new byte[256];
-        
+        private byte[] _buffer = new byte[256];
+
         /// <summary>
         /// Request stream, buffer is writted to this stream while reading from network stream
         /// </summary>
-        private readonly MemoryStream _stream = new MemoryStream(256);
+        private MemoryStream _stream = new MemoryStream(256);
 
         /// <summary>
         /// Is kept for checking if header length exceeds maximum header length option
         /// </summary>
         public int HeaderLength { get; private set; }
-        
+
         /// <summary>
         /// Is kept for recognize content length
         /// </summary>
@@ -68,14 +67,14 @@ namespace Twino.Server.Http
         /// Twino server options
         /// </summary>
         private readonly ServerOptions _options;
-        
+
         /// <summary>
         /// Connection handler's host options
         /// </summary>
         private readonly HostOptions _hostOptions;
 
         #endregion
-        
+
         public HttpReader(ServerOptions options, HostOptions hostOptions)
         {
             _options = options;
@@ -90,6 +89,19 @@ namespace Twino.Server.Http
             ContentLength = 0;
             _stream.Position = 0;
             _stream.SetLength(0);
+        }
+
+        /// <summary>
+        /// Removes and releases stream and buffer
+        /// </summary>
+        public void Dispose()
+        {
+            if (_stream == null)
+                return;
+            
+            _stream.Dispose();
+            _buffer = null;
+            _stream = null;
         }
 
         /// <summary>
@@ -252,7 +264,7 @@ namespace Twino.Server.Http
                     _readingHeaders = false;
                     return start + 1;
                 }
-                
+
                 //keep last read, read more and come here again
                 requiredMoreData = true;
                 return start;

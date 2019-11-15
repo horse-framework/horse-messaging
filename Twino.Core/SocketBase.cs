@@ -107,7 +107,7 @@ namespace Twino.Core
 
                 Stream.BeginRead(_buffer, 0, _buffer.Length, EndRead, null);
             }
-            catch (Exception ex)
+            catch
             {
                 Disconnect();
             }

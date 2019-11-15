@@ -57,6 +57,7 @@ namespace Twino.Mvc.Controllers
                 result.Request = request;
                 result.Response = response;
                 result.Server = mvc.Server;
+                result.CurrentScope = scope;
 
                 return result;
             }

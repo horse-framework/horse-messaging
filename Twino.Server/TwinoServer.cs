@@ -450,7 +450,7 @@ namespace Twino.Server
 
             IsRunning = true;
             Started?.Invoke(this);
-
+            
             //if websocket ping is activated, starts pinger
             if (Options.PingInterval > 0)
             {

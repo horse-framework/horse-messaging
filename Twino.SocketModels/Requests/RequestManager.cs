@@ -142,7 +142,7 @@ namespace Twino.SocketModels.Requests
                 byte[] prepared = await TwinoRequestSerializer.SerializeResponse(response, (ISocketModel) responseModel);
                 sender.Send(prepared);
             }
-            catch (Exception e)
+            catch
             {
                 SocketResponse err = new SocketResponse
                                      {

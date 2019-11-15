@@ -37,7 +37,25 @@ namespace Twino.Ioc
         /// <summary>
         /// Adds a service to the container
         /// </summary>
+        public void AddTransient<TService, TImplementation>(Action<TImplementation> afterCreated)
+            where TService : class
+            where TImplementation : class, TService
+        {
+            AddTransient(typeof(TService), typeof(TImplementation), afterCreated);
+        }
+
+        /// <summary>
+        /// Adds a service to the container
+        /// </summary>
         public void AddTransient(Type serviceType, Type implementationType)
+        {
+            AddTransient(serviceType, implementationType, null);
+        }
+
+        /// <summary>
+        /// Adds a service to the container
+        /// </summary>
+        public void AddTransient(Type serviceType, Type implementationType, Delegate afterCreated)
         {
             if (Items.ContainsKey(serviceType))
                 throw new InvalidOperationException("Specified service type is already added into service container");
@@ -47,7 +65,8 @@ namespace Twino.Ioc
                                                ServiceType = serviceType,
                                                ImplementationType = implementationType,
                                                Instance = null,
-                                               Implementation = ImplementationType.Transient
+                                               Implementation = ImplementationType.Transient,
+                                               AfterCreatedMethod = afterCreated
                                            };
 
             Items.Add(serviceType, descriptor);
@@ -67,10 +86,23 @@ namespace Twino.Ioc
             AddScoped(typeof(TService), typeof(TImplementation));
         }
 
+        public void AddScoped<TService, TImplementation>(Action<TImplementation> afterCreated) where TService : class where TImplementation : class, TService
+        {
+            AddScoped(typeof(TService), typeof(TImplementation), afterCreated);
+        }
+
         /// <summary>
         /// Adds a service to the container
         /// </summary>
         public void AddScoped(Type serviceType, Type implementationType)
+        {
+            AddScoped(serviceType, implementationType, null);
+        }
+
+        /// <summary>
+        /// Adds a service to the container
+        /// </summary>
+        public void AddScoped(Type serviceType, Type implementationType, Delegate afterCreated)
         {
             if (Items.ContainsKey(serviceType))
                 throw new InvalidOperationException("Specified service type is already added into service container");
@@ -80,7 +112,8 @@ namespace Twino.Ioc
                                                ServiceType = serviceType,
                                                ImplementationType = implementationType,
                                                Instance = null,
-                                               Implementation = ImplementationType.Scoped
+                                               Implementation = ImplementationType.Scoped,
+                                               AfterCreatedMethod = afterCreated
                                            };
 
             Items.Add(serviceType, descriptor);
@@ -325,6 +358,9 @@ namespace Twino.Ioc
         public async Task<object> Get(Type serviceType, IContainerScope scope = null)
         {
             ServiceDescriptor descriptor = GetDescriptor(serviceType);
+            if (descriptor == null)
+                throw new KeyNotFoundException("Service type is not found");
+
             if (descriptor.IsPool)
             {
                 IServicePool pool = (IServicePool) descriptor.Instance;
@@ -346,7 +382,13 @@ namespace Twino.Ioc
             {
                 //create new instance
                 case ImplementationType.Transient:
-                    return await CreateInstance(descriptor.ImplementationType, scope);
+                {
+                    object o = await CreateInstance(descriptor.ImplementationType, scope);
+                    if (descriptor.AfterCreatedMethod != null)
+                        descriptor.AfterCreatedMethod.DynamicInvoke(o);
+                    
+                    return o;
+                }
 
                 case ImplementationType.Scoped:
                     if (scope == null)
@@ -362,6 +404,9 @@ namespace Twino.Ioc
                     //create instance for first time and set Instance property of descriptor to prevent re-create for next times
                     object instance = await CreateInstance(descriptor.ImplementationType, scope);
                     descriptor.Instance = instance;
+                    if (descriptor.AfterCreatedMethod != null)
+                        descriptor.AfterCreatedMethod.DynamicInvoke(instance);
+
                     return instance;
 
                 default:
@@ -391,9 +436,6 @@ namespace Twino.Ioc
             //if could not find by service type, tries to find by implementation type
             else
                 descriptor = Items.Values.FirstOrDefault(x => x.ImplementationType == serviceType);
-
-            if (descriptor == null)
-                throw new KeyNotFoundException("Service type is not found");
 
             return descriptor;
         }

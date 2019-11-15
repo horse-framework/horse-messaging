@@ -49,6 +49,9 @@ namespace Twino.Ioc
         public async Task<object> Get(Type serviceType, IServiceContainer services)
         {
             ServiceDescriptor descriptor = services.GetDescriptor(serviceType);
+            if (descriptor == null)
+                throw new KeyNotFoundException("Service type is not found");
+
             return await Get(descriptor, services);
         }
 
@@ -71,6 +74,9 @@ namespace Twino.Ioc
 
             if (instance != null)
                 _scopedServices.Add(descriptor.ServiceType, instance);
+
+            if (descriptor.AfterCreatedMethod != null)
+                descriptor.AfterCreatedMethod.DynamicInvoke(instance);
 
             return instance;
         }
