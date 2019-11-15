@@ -162,6 +162,9 @@ namespace Twino.Server
             }
 
             reader.ReadContent(request);
+            if (request.IsWebSocket)
+                reader.Dispose();
+            
             bool again = await ProcessConnection(info, request, response);
 
             return again;
