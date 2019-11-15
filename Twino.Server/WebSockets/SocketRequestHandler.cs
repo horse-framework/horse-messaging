@@ -63,8 +63,8 @@ namespace Twino.Server.WebSockets
             }
 
             Server.SetClientConnected(client);
+            client.Start();
             Server.Pinger.AddClient(client);
-            await client.Start();
         }
 
         /// <summary>

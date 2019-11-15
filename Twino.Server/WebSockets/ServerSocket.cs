@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Threading;
-using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Core.Http;
 
 namespace Twino.Server.WebSockets
 {
+
     #region Event Delegates
 
     /// <summary>
@@ -22,6 +21,7 @@ namespace Twino.Server.WebSockets
     /// </summary>
     public class ServerSocket : SocketBase
     {
+
         #region Events - Properties
 
         /// <summary>
@@ -38,7 +38,7 @@ namespace Twino.Server.WebSockets
         /// Triggered when the client is connected
         /// </summary>
         public event ServerSocketStatusHandler Connected;
-
+        
         /// <summary>
         /// Triggered when the client is disconnected
         /// </summary>
@@ -59,23 +59,14 @@ namespace Twino.Server.WebSockets
         /// <summary>
         /// Init the clients first operations and starts to read until disconnect
         /// </summary>
-        internal async Task Start()
+        internal void Start()
         {
             if (Server.Container != null)
                 Server.Container.Add(this);
 
             IsConnected = true;
             OnConnected();
-
-            try
-            {
-                while (IsConnected)
-                    await Read();
-            }
-            catch
-            {
-                Disconnect();
-            }
+            Read();
         }
 
         /// <summary>
@@ -124,5 +115,6 @@ namespace Twino.Server.WebSockets
             Disconnected?.Invoke(this);
             Server.SetClientDisconnected(this);
         }
+
     }
 }
