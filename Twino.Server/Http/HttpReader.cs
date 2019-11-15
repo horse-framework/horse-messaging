@@ -96,6 +96,9 @@ namespace Twino.Server.Http
         /// </summary>
         public void Dispose()
         {
+            if (_stream == null)
+                return;
+            
             _stream.Dispose();
             _buffer = null;
             _stream = null;

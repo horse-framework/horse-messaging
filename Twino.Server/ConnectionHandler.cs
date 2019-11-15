@@ -127,7 +127,10 @@ namespace Twino.Server
 
                     if (keepReading)
                         reader.Reset();
+                    
                 } while (keepReading);
+
+                reader.Dispose();
             }
             catch
             {

@@ -28,19 +28,8 @@ namespace Sample.Full.Server
             TwinoServer server = new TwinoServer(handler, factory, container, options);
 
             server.Start(8080);
-
-            server.OnException += Server_OnException;
-
             // Remove comment signs for exception test
             // throw new CustomException("Simple exception");
-        }
-
-        private static void Server_OnException(Exception exception)
-        {
-            if(exception is CustomException customException)
-            {
-                Console.WriteLine(customException.Message);
-            }
         }
     }
 }
