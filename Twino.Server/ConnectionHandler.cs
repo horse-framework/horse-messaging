@@ -127,7 +127,6 @@ namespace Twino.Server
 
                     if (keepReading)
                         reader.Reset();
-                    
                 } while (keepReading);
 
                 reader.Dispose();
@@ -165,9 +164,6 @@ namespace Twino.Server
             }
 
             reader.ReadContent(request);
-            if (request.IsWebSocket)
-                reader.Dispose();
-            
             bool again = await ProcessConnection(info, request, response);
 
             return again;
