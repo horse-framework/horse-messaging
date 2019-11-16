@@ -1,0 +1,29 @@
+
+
+    /* TYPE OCTET
+     * type byte: [abcxxxxx] -> a = 1:first acquirer 0:not first acquirer
+     *                          b = 1:high priority 0:default
+     *                          x = 5 bits message type
+     */
+
+    /* TTL OCTET
+     * [axxxxxxx] -> a = 1:sender waiting response
+     *               x = 7 bits TTL
+     */
+
+    /* MESSAGE LENGTH
+     * x: first byte;
+     *    x < 253     => x = length
+     *    x = 253     => next 2 bytes ushort length
+     *    x = 254     => next 4 bytes uint length
+     *    x = 255     => next 8 bytes ulong length
+     */
+
+    /* FRAME
+     * ========
+     * [type:octet] [ttl:octet]
+     * [id-length:octet] [source-length:octet] [target-length:octet] [message-length:flex]
+     * [id-payload:ilen] [source-data:slen] [target-data:tlen] [payload:len]
+     *
+     * NOTE: Min 6 bytes required: (type,ttl,ilen,slen,tlen,len)
+     */

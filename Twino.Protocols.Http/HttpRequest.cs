@@ -2,11 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 [assembly: InternalsVisibleTo("Twino.Server")]
 
-namespace Twino.Core.Http
+namespace Twino.Protocols.Http
 {
     /// <summary>
     /// HttpRequest for HttpServer object.
@@ -76,12 +75,12 @@ namespace Twino.Core.Http
         /// Request query string key and values
         /// </summary>
         public Dictionary<string, string> QueryString { get; internal set; }
-        
+
         /// <summary>
         /// Request form data
         /// </summary>
         public Dictionary<string, string> Form { get; internal set; }
-        
+
         /// <summary>
         /// Request files
         /// </summary>
@@ -96,7 +95,7 @@ namespace Twino.Core.Http
         /// Response of the request
         /// </summary>
         public HttpResponse Response { get; internal set; }
-        
+
         /// <summary>
         /// Full querystring data, such as a=1&b=2&c=3...
         /// </summary>

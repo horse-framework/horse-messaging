@@ -2,43 +2,16 @@
 using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
+using Twino.Core;
+using Twino.Core.Protocols;
 
 namespace Twino.Server
 {
     /// <summary>
-    /// States for each request.
-    /// </summary>
-    public enum ConnectionStates
-    {
-        /// <summary>
-        /// Request still handling.
-        /// Server has no information what the request for.
-        /// HTTP, WebSocket or something different.
-        /// </summary>
-        Pending,
-
-        /// <summary>
-        /// Connection is completed.
-        /// </summary>
-        Closed,
-
-        /// <summary>
-        /// Connection is accepted as web socket. It's still alive and will.
-        /// </summary>
-        WebSocket,
-
-        /// <summary>
-        /// Connection is accepted and first response is sent.
-        /// Keeping alive and waiting next HTTP requests via same TCP connection.
-        /// </summary>
-        Http
-    }
-
-    /// <summary>
     /// After handshaking completed the state object will be passed to the callback function.
     /// In Twino SSL Handshaking this object type is HandshakeState class
     /// </summary>
-    internal class ConnectionInfo
+    internal class ConnectionInfo : IConnectionInfo
     {
         /// <summary>
         /// TCP Client of the connection
@@ -76,6 +49,11 @@ namespace Twino.Server
         /// Host listener object of the connection
         /// </summary>
         public HostListener Server { get; private set; }
+
+        /// <summary>
+        /// Current data transfer protocol of the active connection
+        /// </summary>
+        public TwinoProtocol Protocol { get; set; }
 
         public ConnectionInfo(TcpClient client, HostListener server)
         {

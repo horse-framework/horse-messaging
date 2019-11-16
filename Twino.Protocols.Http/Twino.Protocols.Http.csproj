@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Twino.Core\Twino.Core.csproj" />
+      <ProjectReference Include="..\Twino.Server\Twino.Server.csproj" />
+    </ItemGroup>
+
+</Project>

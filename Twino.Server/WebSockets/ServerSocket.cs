@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Core.Http;
+using Twino.Core.WebSocket;
 
 namespace Twino.Server.WebSockets
 {
@@ -19,7 +20,7 @@ namespace Twino.Server.WebSockets
     /// <summary>
     /// Server-Side Socket class
     /// </summary>
-    public class ServerSocket : SocketBase
+    public class ServerSocket : TwinoWebSocket
     {
         #region Events - Properties
 
@@ -42,7 +43,7 @@ namespace Twino.Server.WebSockets
         /// Triggered when the client is disconnected
         /// </summary>
         public event ServerSocketStatusHandler Disconnected;
-
+        
         #endregion
 
         public ServerSocket(TwinoServer server, HttpRequest request, TcpClient client)

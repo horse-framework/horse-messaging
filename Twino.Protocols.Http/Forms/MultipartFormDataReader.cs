@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Twino.Core.Http;
+using Twino.Server.Http;
 
-namespace Twino.Server.Http
+namespace Twino.Protocols.Http.Forms
 {
     /// <summary>
     /// multipart/form-data parser
@@ -65,7 +65,7 @@ namespace Twino.Server.Http
 
                 do
                 {
-                    int lineIndex = itemSpan.IndexOf(HttpReader.CRLF);
+                    int lineIndex = itemSpan.IndexOf(PredefinedMessages.CRLF);
                     if (lineIndex < 1)
                         headersCompleted = true;
 

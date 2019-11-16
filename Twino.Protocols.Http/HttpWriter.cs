@@ -1,25 +1,43 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Twino.Core.Http;
+using Twino.Core.Protocols;
+using Twino.Server.Http;
 
-namespace Twino.Server.Http
+namespace Twino.Protocols.Http
 {
-    /// <summary>
-    /// Writes plain HTTP Response data from the HttpResponse class
-    /// </summary>
-    internal class ResponseWriter
+    public class HttpWriter : IProtocolMessageWriter<HttpMessage>
     {
-        private readonly TwinoServer _server;
         private readonly ContentWriter _writer;
+        private readonly HttpOptions _options;
 
-        public ResponseWriter(TwinoServer server)
+        public HttpWriter(HttpOptions options)
         {
-            _server = server;
-            _writer = new ContentWriter(server);
+            _options = options;
+            _writer = new ContentWriter(_options.SupportedEncodings);
         }
 
+        public async Task Write(HttpMessage value, Stream stream)
+        {
+            await Write(value.Response);
+        }
+
+        public Task<byte[]> Create(HttpMessage value)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<byte[]> CreateFrame(HttpMessage value)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<byte[]> CreateContent(HttpMessage value)
+        {
+            throw new NotSupportedException();
+        }
+        
         /// <summary>
         /// Writes string value to specified stream
         /// </summary>
@@ -49,7 +67,7 @@ namespace Twino.Server.Http
 
             if (hasStream)
             {
-                if (!response.SuppressContentEncoding && _server.SupportedEncodings.Length > 0)
+                if (!response.SuppressContentEncoding && _options.SupportedEncodings.Length > 0)
                     resultStream = await _writer.WriteAsync(response.Request, response);
                 else
                 {
@@ -96,7 +114,7 @@ namespace Twino.Server.Http
                 }
 
                 //connection keep alive or close
-                if (_server.Options.HttpConnectionTimeMax > 0)
+                if (_options.HttpConnectionTimeMax > 0)
                     await m.WriteAsync(PredefinedHeaders.CONNECTION_KEEP_ALIVE_CRLF);
                 else
                     await m.WriteAsync(PredefinedHeaders.CONNECTION_CLOSE_CRLF);
@@ -128,19 +146,19 @@ namespace Twino.Server.Http
             foreach (var header in response.AdditionalHeaders)
                 await Write(m, header.Key, header.Value);
 
-            await m.WriteAsync(HttpReader.CRLF, 0, 2);
+            await m.WriteAsync(PredefinedMessages.CRLF, 0, 2);
 
             if (hasStream)
             {
                 resultStream.Position = 0;
-                
+
                 //if data is greater than 5KB, don't waste memory and send it to network as partial
                 if (resultStream.Length > 5120)
                 {
                     m.WriteTo(stream);
                     await resultStream.CopyToAsync(stream);
                 }
-                
+
                 //write small data to memory stream and send all data to network at once for better response time
                 else
                 {

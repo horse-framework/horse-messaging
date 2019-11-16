@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using Twino.Core;
 
 namespace Twino.Server
 {
@@ -100,7 +101,7 @@ namespace Twino.Server
                 }
 
                 //if client is websocket, we dont need handling timeout, anymore
-                else if (info.State == ConnectionStates.WebSocket)
+                else if (info.State == ConnectionStates.Pipe)
                     removing.Add(info);
 
                 //the request could not receive yet but time is up
@@ -137,7 +138,7 @@ namespace Twino.Server
                 {
                     foreach (ConnectionInfo i in _incoming)
                     {
-                        if (i.Client == null || !i.Client.Connected || i.State == ConnectionStates.WebSocket)
+                        if (i.Client == null || !i.Client.Connected || i.State == ConnectionStates.Pipe)
                             continue;
 
                         _connections.Add(i);

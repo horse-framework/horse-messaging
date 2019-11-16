@@ -3,21 +3,21 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using Twino.MQ.Models;
+using Twino.Core.Protocols;
 
-namespace Twino.MQ.Core
+namespace Twino.Protocols.TMQ
 {
-    public class MessageReader
+    public class TmqReader : IProtocolMessageReader<TmqMessage>
     {
         private readonly byte[] _buffer = new byte[256];
 
-        public async Task<QueueMessage> Read(Stream stream)
+        public async Task<TmqMessage> Read(Stream stream)
         {
             byte[] bytes = await ReadRequiredFrame(stream);
             if (bytes == null || bytes.Length < 6)
                 return null;
 
-            QueueMessage message = new QueueMessage();
+            TmqMessage message = new TmqMessage();
             await ProcessRequiredFrame(message, bytes, stream);
             await ReadContent(message, stream);
 
@@ -44,7 +44,7 @@ namespace Twino.MQ.Core
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task ProcessRequiredFrame(QueueMessage message, byte[] bytes, Stream stream)
+        private async Task ProcessRequiredFrame(TmqMessage message, byte[] bytes, Stream stream)
         {
             byte type = bytes[0];
             if (type >= 128)
@@ -96,7 +96,7 @@ namespace Twino.MQ.Core
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task ReadContent(QueueMessage message, Stream stream)
+        private async Task ReadContent(TmqMessage message, Stream stream)
         {
             if (message.MessageIdLength > 0)
                 message.MessageId = await ReadOctetSizeData(stream, message.MessageIdLength);

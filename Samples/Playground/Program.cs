@@ -1,18 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
-using System.Runtime.Loader;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core.Http;
-using Twino.MQ.Core;
-using Twino.MQ.Models;
+using Twino.Core.Tmq;
 using Twino.Server;
 using Twino.Server.WebSockets;
-using Twino.SocketModels;
 
 namespace Playground
 {
@@ -72,12 +66,12 @@ namespace Playground
             
             msg.PrepareFirstUse();
 
-            MessageWriter writer = new MessageWriter();
+            TmqWriter writer = new TmqWriter();
             MemoryStream ms = new MemoryStream();
             writer.Write(msg, ms).Wait();
             ms.Position = 0;
 
-            MessageReader reader = new MessageReader();
+            TmqReader reader = new TmqReader();
             QueueMessage msg2 = reader.Read(ms).Result;
             Console.WriteLine(msg2.Length);
             Console.ReadLine();

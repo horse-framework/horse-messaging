@@ -1,0 +1,81 @@
+using System;
+using System.IO;
+using System.Threading.Tasks;
+using Twino.Core.Protocols;
+
+namespace Twino.Protocols.WebSocket
+{
+    public class WebSocketWriter : IProtocolMessageWriter<WebSocketMessage>
+    {
+        public async Task Write(WebSocketMessage value, Stream stream)
+        {
+            //fin and op code
+            stream.WriteByte(value.OpCode == SocketOpCode.Binary ? (byte) 0x82 : (byte) 0x81);
+
+            //length
+            await WriteLengthAsync(stream, (ulong) value.Content.Length);
+            await value.Content.CopyToAsync(stream);
+        }
+
+        public async Task<byte[]> Create(WebSocketMessage value)
+        {
+            await using MemoryStream ms = new MemoryStream();
+
+            //fin and op code
+            ms.WriteByte(value.OpCode == SocketOpCode.Binary ? (byte) 0x82 : (byte) 0x81);
+
+            //length
+            await WriteLengthAsync(ms, (ulong) value.Content.Length);
+
+            await value.Content.CopyToAsync(ms);
+            return ms.ToArray();
+        }
+
+        public async Task<byte[]> CreateFrame(WebSocketMessage value)
+        {
+            await using MemoryStream ms = new MemoryStream();
+
+            //fin and op code
+            ms.WriteByte(value.OpCode == SocketOpCode.Binary ? (byte) 0x82 : (byte) 0x81);
+
+            //length
+            await WriteLengthAsync(ms, (ulong) value.Content.Length);
+            return ms.ToArray();
+        }
+
+        public async Task<byte[]> CreateContent(WebSocketMessage value)
+        {
+            await using MemoryStream ms = new MemoryStream();
+            await value.Content.CopyToAsync(ms);
+            return ms.ToArray();
+        }
+
+        /// <summary>
+        /// Writes length of the message with websocket protocol
+        /// </summary>
+        private static async Task WriteLengthAsync(Stream stream, ulong length)
+        {
+            //1 byte length
+            if (length < 126)
+                stream.WriteByte((byte) length);
+
+            //3 (1 + ushort) bytes length
+            else if (length <= UInt16.MaxValue)
+            {
+                stream.WriteByte(126);
+                ushort len = (ushort) length;
+                byte[] lenbytes = BitConverter.GetBytes(len);
+                await stream.WriteAsync(new[] {lenbytes[1], lenbytes[0]}, 0, 2);
+            }
+
+            //9 (1 + ulong) bytes length
+            else
+            {
+                stream.WriteByte(127);
+                ulong len = length;
+                byte[] lb = BitConverter.GetBytes(len);
+                await stream.WriteAsync(new[] {lb[7], lb[6], lb[5], lb[4], lb[3], lb[2], lb[1], lb[0]}, 0, 8);
+            }
+        }
+    }
+}

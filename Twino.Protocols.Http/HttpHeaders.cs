@@ -1,8 +1,6 @@
-﻿using System;
-using System.Runtime.CompilerServices;
-using System.Text;
+﻿using System.Runtime.CompilerServices;
 
-namespace Twino.Core.Http
+namespace Twino.Protocols.Http
 {
     /// <summary>
     /// HTTP Header known key and value list.

@@ -5,8 +5,9 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Twino.Core;
 
-namespace Twino.Core.Http
+namespace Twino.Protocols.Http
 {
     public enum ContentEncodings
     {

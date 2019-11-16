@@ -1,7 +1,6 @@
 ﻿using System.Threading.Tasks;
-using Twino.Core.Http;
 
-namespace Twino.Server.Http
+namespace Twino.Protocols.Http
 {
     /// <summary>
     /// Handles all non-websocket Http Requests
@@ -11,6 +10,6 @@ namespace Twino.Server.Http
         /// <summary>
         /// Triggered when a non-websocket request available.
         /// </summary>
-        Task RequestAsync(TwinoServer server, HttpRequest request, HttpResponse response);
+        Task RequestAsync(HttpRequest request, HttpResponse response);
     }
 }

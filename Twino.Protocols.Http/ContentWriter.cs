@@ -2,9 +2,8 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
-using Twino.Core.Http;
 
-namespace Twino.Server.Http
+namespace Twino.Protocols.Http
 {
     /// <summary>
     /// Response content writer class.
@@ -12,11 +11,11 @@ namespace Twino.Server.Http
     /// </summary>
     public class ContentWriter
     {
-        private readonly TwinoServer _server;
+        private readonly ContentEncodings[] _supportedEncodings;
 
-        public ContentWriter(TwinoServer server)
+        public ContentWriter(ContentEncodings[] supportedEncodings)
         {
-            _server = server;
+            _supportedEncodings = supportedEncodings;
         }
 
         /// <summary>
@@ -30,7 +29,7 @@ namespace Twino.Server.Http
                 return response.ResponseStream;
             }
 
-            foreach (ContentEncodings encoding in _server.SupportedEncodings)
+            foreach (ContentEncodings encoding in _supportedEncodings)
             {
                 if (EncodingIsAccepted(request, encoding))
                     return await WriteEncoded(response, encoding);
@@ -66,7 +65,7 @@ namespace Twino.Server.Http
             Stream encodingStream = CreateEncodingStream(ms, encoding);
             await response.ResponseStream.CopyToAsync(encodingStream);
             await encodingStream.FlushAsync();
-            
+
             ms.Position = 0;
             return ms;
         }

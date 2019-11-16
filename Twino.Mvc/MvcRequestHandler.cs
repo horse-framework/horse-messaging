@@ -20,6 +20,7 @@ using Twino.Mvc.Auth;
 using Twino.Core.Http;
 using Twino.Mvc.Middlewares;
 using Twino.Ioc;
+using Twino.Protocols.Http;
 
 namespace Twino.Mvc
 {

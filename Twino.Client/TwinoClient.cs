@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using Twino.Core;
 using Twino.Core.Http;
+using Twino.Core.WebSocket;
 
 namespace Twino.Client
 {
@@ -30,7 +31,7 @@ namespace Twino.Client
     /// Can be used directly with event subscriptions
     /// Or can be base class to a derived Client class and provides virtual methods for all events
     /// </summary>
-    public class TwinoClient : SocketBase
+    public class TwinoClient : TwinoWebSocket
     {
         #region Events - Properties
 

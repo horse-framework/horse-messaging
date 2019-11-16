@@ -2,31 +2,43 @@ using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Twino.MQ.Models;
+using Twino.Core.Protocols;
 
-namespace Twino.MQ.Core
+namespace Twino.Protocols.TMQ
 {
-    public class MessageWriter
+    public class TmqWriter : IProtocolMessageWriter<TmqMessage>
     {
-        public async Task Write(QueueMessage message, Stream stream)
+        public async Task Write(TmqMessage value, Stream stream)
         {
             await using MemoryStream ms = new MemoryStream();
-            await WriteFrame(ms, message);
-            WriteContent(ms, message);
-            
+            await WriteFrame(ms, value);
+            WriteContent(ms, value);
             ms.WriteTo(stream);
         }
 
-        public async Task<byte[]> PrepareBytes(QueueMessage message)
+        public async Task<byte[]> Create(TmqMessage value)
         {
             await using MemoryStream ms = new MemoryStream();
-            await WriteFrame(ms, message);
-            WriteContent(ms, message);
-            
+            await WriteFrame(ms, value);
+            WriteContent(ms, value);
             return ms.ToArray();
         }
 
-        public async Task WriteFrame(MemoryStream ms, QueueMessage message)
+        public async Task<byte[]> CreateFrame(TmqMessage value)
+        {
+            await using MemoryStream ms = new MemoryStream();
+            await WriteFrame(ms, value);
+            return ms.ToArray();
+        }
+
+        public async Task<byte[]> CreateContent(TmqMessage value)
+        {
+            await using MemoryStream ms = new MemoryStream();
+            WriteContent(ms, value);
+            return ms.ToArray();
+        }
+
+        private static async Task WriteFrame(MemoryStream ms, TmqMessage message)
         {
             byte type = (byte) message.Type;
             if (message.FirstAcquirer)
@@ -84,7 +96,7 @@ namespace Twino.MQ.Core
             }
         }
 
-        public void WriteContent(MemoryStream ms, QueueMessage message)
+        private static void WriteContent(MemoryStream ms, TmqMessage message)
         {
             if (message.Length > 0 && message.Content != null)
                 message.Content.WriteTo(ms);

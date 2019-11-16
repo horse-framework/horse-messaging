@@ -4,7 +4,9 @@ using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Threading;
 using System.Threading.Tasks;
+using Twino.Core;
 using Twino.Core.Http;
+using Twino.Core.Tmq;
 using Twino.Server.Http;
 using Twino.Server.WebSockets;
 
@@ -118,8 +120,26 @@ namespace Twino.Server
                     await sslStream.AuthenticateAsServerAsync(_listener.Certificate, false, protocol, false);
                 }
 
+                //read one byte and recognize the protocol
+                byte[] pbytes = new byte[1];
+                int rc = await info.GetStream().ReadAsync(pbytes, 0, pbytes.Length);
+                if (rc == 0)
+                {
+                    info.Close();
+                    return;
+                }
+
+                //TMQ Protocol
+                if (pbytes[0] == QueueMessage.HELLO_BYTE)
+                {
+                    info.Protocol = Protocols.TMQ;
+                    return;
+                }
+                
                 //read first request from http client
                 HttpReader reader = new HttpReader(_server.Options, info.Server.Options);
+                reader.SetFirstByte(pbytes[0]);
+                
                 bool keepReading;
                 do
                 {
@@ -177,10 +197,12 @@ namespace Twino.Server
             //handle request
             if (request.IsWebSocket)
             {
+                info.Protocol = Protocols.WebSocket;
                 await ProcessWebSocketRequest(info, request);
                 return false;
             }
 
+            info.Protocol = Protocols.HTTP;
             bool success = await ProcessHttpRequest(info, request, response);
 
             if (!success)
@@ -206,9 +228,14 @@ namespace Twino.Server
 
             await Task.Yield();
 
-            info.State = ConnectionStates.WebSocket;
+            info.State = ConnectionStates.Pipe;
             SocketRequestHandler handler = new SocketRequestHandler(_server, request, info);
             await handler.HandshakeClient();
+        }
+
+        private async Task ProcessTmqSocket()
+        {
+            
         }
 
         /// <summary>

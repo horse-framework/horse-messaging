@@ -1,54 +1,36 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using Twino.Core.Http;
+using Twino.Core.Protocols;
+using Twino.Protocols.Http.Forms;
+using Twino.Server.Http;
 
-namespace Twino.Server.Http
+namespace Twino.Protocols.Http
 {
-    /// <summary>
-    /// Http 1.1 Request reader and parser
-    /// </summary>
-    public class HttpReader
+    public class HttpReader : IProtocolMessageReader<HttpMessage>
     {
-        
-        #region Constants
-        
-        public const byte CR = (byte) '\r';
-        public const byte LF = (byte) '\n';
-        public const byte COLON = (byte) ':';
-        public const byte SEMICOLON = (byte) ';';
-        public const byte QMARK = (byte) '?';
-        public const byte AND = (byte) '&';
-        public const byte EQUALS = (byte) '=';
-        public const byte SPACE = (byte) ' ';
-        public static readonly byte[] CRLF = {CR, LF};
-        public static readonly byte[] COLON_SPACE = {COLON, SPACE};
-
-        #endregion
-        
         #region Fields - Properties
-        
+
         /// <summary>
         /// If true, the first line is being read
         /// </summary>
         private bool _firstLine = true;
-        
+
         /// <summary>
         /// If true, reader is reading headers from network stream. Otherwise content is being read.
         /// </summary>
         private bool _readingHeaders = true;
-        
+
         /// <summary>
         /// Network stream read buffer
         /// </summary>
         private readonly byte[] _buffer = new byte[256];
-        
+
         /// <summary>
         /// Request stream, buffer is writted to this stream while reading from network stream
         /// </summary>
@@ -58,28 +40,19 @@ namespace Twino.Server.Http
         /// Is kept for checking if header length exceeds maximum header length option
         /// </summary>
         public int HeaderLength { get; private set; }
-        
+
         /// <summary>
         /// Is kept for recognize content length
         /// </summary>
         public int ContentLength { get; private set; }
 
-        /// <summary>
-        /// Twino server options
-        /// </summary>
-        private readonly ServerOptions _options;
-        
-        /// <summary>
-        /// Connection handler's host options
-        /// </summary>
-        private readonly HostOptions _hostOptions;
+        private readonly HttpOptions _options;
 
         #endregion
-        
-        public HttpReader(ServerOptions options, HostOptions hostOptions)
+
+        public HttpReader(HttpOptions options)
         {
             _options = options;
-            _hostOptions = hostOptions;
         }
 
         public void Reset()
@@ -88,6 +61,7 @@ namespace Twino.Server.Http
             _readingHeaders = true;
             HeaderLength = 0;
             ContentLength = 0;
+            _buffer[0] = 0;
             _stream.Position = 0;
             _stream.SetLength(0);
         }
@@ -95,7 +69,7 @@ namespace Twino.Server.Http
         /// <summary>
         /// Reads, parses and creates request from stream and creates response for the request
         /// </summary>
-        public async Task<Tuple<HttpRequest, HttpResponse>> Read(Stream stream)
+        public async Task<HttpMessage> Read(Stream stream)
         {
             HttpRequest request = new HttpRequest();
             HttpResponse response = new HttpResponse();
@@ -103,8 +77,11 @@ namespace Twino.Server.Http
             request.Response = response;
             response.NetworkStream = stream;
 
-            int readLength = 0;
+            int readLength;
             int start = 0;
+            int bufferLength = _buffer.Length;
+            if (_buffer[0] != 0)
+                bufferLength--;
 
             //this value will be true, if small buffer isn't enough and tells us to use large buffer
             bool requiredMoreData = false;
@@ -115,9 +92,11 @@ namespace Twino.Server.Http
                 if (!_readingHeaders && ContentLength >= request.ContentLength)
                     break;
 
-                readLength = await stream.ReadAsync(_buffer, 0, _buffer.Length);
+                readLength = await stream.ReadAsync(_buffer, _buffer.Length - bufferLength, bufferLength);
+                bufferLength = _buffer.Length;
+
                 if (readLength < 1)
-                    return new Tuple<HttpRequest, HttpResponse>(null, null);
+                    return null;
 
                 if (requiredMoreData)
                 {
@@ -171,12 +150,12 @@ namespace Twino.Server.Http
                     {
                         bool ok = AnalyzeHeaders(request, response);
                         if (!ok)
-                            return new Tuple<HttpRequest, HttpResponse>(request, response);
+                            return new HttpMessage(request, response);
                     }
                 }
             } while (readLength > 0);
 
-            return new Tuple<HttpRequest, HttpResponse>(request, response);
+            return new HttpMessage(request, response);
         }
 
         /// <summary>
@@ -185,7 +164,7 @@ namespace Twino.Server.Http
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int ReadRequestInfo(HttpRequest request, byte[] buffer, int length, out bool requiredMoreData)
         {
-            ReadOnlySpan<byte> crlf = new ReadOnlySpan<byte>(CRLF);
+            ReadOnlySpan<byte> crlf = new ReadOnlySpan<byte>(PredefinedMessages.CRLF);
 
             Span<byte> span = new Span<byte>(buffer, 0, length);
             int endOfLine = span.IndexOf(crlf);
@@ -202,16 +181,16 @@ namespace Twino.Server.Http
             requiredMoreData = false;
 
             //read http method
-            int index = span.IndexOf(SPACE);
+            int index = span.IndexOf(PredefinedMessages.SPACE);
             Span<byte> method = span.Slice(0, index);
             request.Method = Encoding.UTF8.GetString(method);
             span = span.Slice(index + 1);
 
             //read url
-            index = span.IndexOf(SPACE);
+            index = span.IndexOf(PredefinedMessages.SPACE);
             Span<byte> url = span.Slice(0, index);
 
-            int qmarkIndex = url.IndexOf(QMARK);
+            int qmarkIndex = url.IndexOf(PredefinedMessages.QMARK);
 
             //url has no querystring
             if (qmarkIndex < 0)
@@ -239,20 +218,20 @@ namespace Twino.Server.Http
         {
             Span<byte> span = new Span<byte>(buffer, start, length);
 
-            ReadOnlySpan<byte> crlf = new ReadOnlySpan<byte>(CRLF);
+            ReadOnlySpan<byte> crlf = new ReadOnlySpan<byte>(PredefinedMessages.CRLF);
             int endOfLine = span.IndexOf(crlf);
 
             //if buffer doesn't contain CRLF, we need load more data and come back here again 
             if (endOfLine < 0)
             {
                 //last empty line
-                if (buffer[start] == LF)
+                if (buffer[start] == PredefinedMessages.LF)
                 {
                     requiredMoreData = false;
                     _readingHeaders = false;
                     return start + 1;
                 }
-                
+
                 //keep last read, read more and come here again
                 requiredMoreData = true;
                 return start;
@@ -269,18 +248,18 @@ namespace Twino.Server.Http
             }
 
             //read header key
-            int index = span.IndexOf(COLON);
+            int index = span.IndexOf(PredefinedMessages.COLON);
             Span<byte> key = span.Slice(0, index);
 
             //trim value (left)
             index++;
-            while (span[index] == SPACE && index < endOfLine)
+            while (span[index] == PredefinedMessages.SPACE && index < endOfLine)
                 index++;
 
             //trim value (right)
             int valueLength = endOfLine - index;
             int last = span.Length - 1;
-            while (span[last] == SPACE && valueLength > 0)
+            while (span[last] == PredefinedMessages.SPACE && valueLength > 0)
             {
                 valueLength--;
                 last--;
@@ -318,7 +297,7 @@ namespace Twino.Server.Http
             SetKnownHeaders(request);
 
             //check content length
-            if (request.ContentLength > _options.MaximumRequestLength)
+            if (_options.MaximumRequestLength > 0 && request.ContentLength > _options.MaximumRequestLength)
             {
                 response.StatusCode = HttpStatusCode.RequestEntityTooLarge;
                 return false;
@@ -335,12 +314,12 @@ namespace Twino.Server.Http
             }
 
             //checks if hostname is allowed
-            if (_hostOptions.Hostnames != null)
+            if (_options.Hostnames != null)
             {
-                if (!(_hostOptions.Hostnames.Length == 1 && _hostOptions.Hostnames[0] == "*"))
+                if (!(_options.Hostnames.Length == 1 && _options.Hostnames[0] == "*"))
                 {
                     bool allowed = false;
-                    foreach (string ah in _hostOptions.Hostnames)
+                    foreach (string ah in _options.Hostnames)
                     {
                         if (string.Equals(request.Host, ah, StringComparison.InvariantCultureIgnoreCase))
                         {
