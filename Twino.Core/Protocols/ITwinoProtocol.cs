@@ -13,9 +13,9 @@ namespace Twino.Core.Protocols
         /// <summary>
         /// Checks if data is belong this protocol.
         /// </summary>
-        /// <param name="data">Data is first 6 bytes of the first received message from the client</param>
+        /// <param name="data">Data is first 8 bytes of the first received message from the client</param>
         /// <returns></returns>
-        Task<bool> Check(byte[] data);
+        Task<ProtocolHandshakeResult> Check(byte[] data);
     }
 
     public interface ITwinoProtocol<TMessage> : ITwinoProtocol

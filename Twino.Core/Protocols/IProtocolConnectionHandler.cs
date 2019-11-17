@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace Twino.Core
+namespace Twino.Core.Protocols
 {
     public interface IProtocolConnectionHandler<in TMessage>
     {

@@ -48,6 +48,8 @@ namespace Twino.Protocols.Http
 
         private readonly HttpOptions _options;
 
+        public ProtocolHandshakeResult HandshakeResult { get; set; }
+
         #endregion
 
         public HttpReader(HttpOptions options)
@@ -61,7 +63,6 @@ namespace Twino.Protocols.Http
             _readingHeaders = true;
             HeaderLength = 0;
             ContentLength = 0;
-            _buffer[0] = 0;
             _stream.Position = 0;
             _stream.SetLength(0);
         }
@@ -79,9 +80,6 @@ namespace Twino.Protocols.Http
 
             int readLength;
             int start = 0;
-            int bufferLength = _buffer.Length;
-            if (_buffer[0] != 0)
-                bufferLength--;
 
             //this value will be true, if small buffer isn't enough and tells us to use large buffer
             bool requiredMoreData = false;
@@ -92,8 +90,18 @@ namespace Twino.Protocols.Http
                 if (!_readingHeaders && ContentLength >= request.ContentLength)
                     break;
 
-                readLength = await stream.ReadAsync(_buffer, _buffer.Length - bufferLength, bufferLength);
-                bufferLength = _buffer.Length;
+                if (HandshakeResult.ReadAfter && HandshakeResult.PreviouslyRead != null)
+                {
+                    HandshakeResult.PreviouslyRead.CopyTo(_buffer, 0);
+                    readLength = await stream.ReadAsync(_buffer,
+                                                        HandshakeResult.PreviouslyRead.Length,
+                                                        _buffer.Length - HandshakeResult.PreviouslyRead.Length);
+                    
+                    HandshakeResult.PreviouslyRead = null;
+                    HandshakeResult.ReadAfter = false;
+                }
+                else
+                    readLength = await stream.ReadAsync(_buffer, 0, _buffer.Length);
 
                 if (readLength < 1)
                     return null;

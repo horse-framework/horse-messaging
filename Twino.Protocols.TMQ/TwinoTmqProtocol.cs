@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Twino.Core.Protocols;
 
@@ -9,12 +10,22 @@ namespace Twino.Protocols.TMQ
         public byte[] PingMessage => PredefinedMessages.PING;
         public byte[] PongMessage => PredefinedMessages.PONG;
 
-        public async Task<bool> Check(byte[] data)
+        public async Task<ProtocolHandshakeResult> Check(byte[] data)
         {
-            if (data.Length < 6)
-                return await Task.FromResult(false);
+            ProtocolHandshakeResult result = new ProtocolHandshakeResult();
+            if (data.Length < 8)
+                return await Task.FromResult(result);
 
-            return data[0] == PredefinedMessages.HELLO_BYTE;
+            result.Accepted = CheckProtocol(data);
+            result.Response = PredefinedMessages.PROTOCOL_BYTES;
+
+            return result;
+        }
+
+        private static bool CheckProtocol(byte[] data)
+        {
+            ReadOnlySpan<byte> span = data;
+            return span.StartsWith(PredefinedMessages.PROTOCOL_BYTES);
         }
 
         public IProtocolMessageReader<TmqMessage> CreateReader()

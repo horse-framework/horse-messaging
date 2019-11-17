@@ -11,6 +11,8 @@ namespace Twino.Protocols.TMQ
     {
         private readonly byte[] _buffer = new byte[256];
 
+        public ProtocolHandshakeResult HandshakeResult { get; set; }
+
         public async Task<TmqMessage> Read(Stream stream)
         {
             byte[] bytes = await ReadRequiredFrame(stream);

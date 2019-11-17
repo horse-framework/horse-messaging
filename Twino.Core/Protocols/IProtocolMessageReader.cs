@@ -5,6 +5,8 @@ namespace Twino.Core.Protocols
 {
     public interface IProtocolMessageReader<TMessage>
     {
+        ProtocolHandshakeResult HandshakeResult { get; set; }
+        
         Task<TMessage> Read(Stream stream);
     }
 }

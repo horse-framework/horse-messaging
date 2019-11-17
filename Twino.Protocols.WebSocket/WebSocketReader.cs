@@ -10,6 +10,8 @@ namespace Twino.Protocols.WebSocket
     {
         private readonly byte[] _buffer = new byte[128];
 
+        public ProtocolHandshakeResult HandshakeResult { get; set; }
+
         public async Task<WebSocketMessage> Read(Stream stream)
         {
             byte[] frames = new byte[2];

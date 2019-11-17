@@ -10,9 +10,9 @@ namespace Twino.Protocols.WebSocket
         public byte[] PingMessage => PredefinedMessages.PING;
         public byte[] PongMessage => PredefinedMessages.PONG;
 
-        public async Task<bool> Check(byte[] data)
+        public async Task<ProtocolHandshakeResult> Check(byte[] data)
         {
-            return await Task.FromResult(false);
+            return await Task.FromResult(new ProtocolHandshakeResult());
         }
 
         public IProtocolMessageReader<WebSocketMessage> CreateReader()
