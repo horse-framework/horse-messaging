@@ -18,6 +18,7 @@ namespace Twino.Protocols.TMQ
 
             result.Accepted = CheckProtocol(data);
             result.Response = PredefinedMessages.PROTOCOL_BYTES;
+            result.PipeConnection = true;
 
             return result;
         }

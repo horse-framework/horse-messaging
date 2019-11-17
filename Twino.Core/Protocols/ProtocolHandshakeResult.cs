@@ -16,6 +16,13 @@ namespace Twino.Core.Protocols
         /// If this value is true, it means, we read some part of first message. Read part is in PreviouslyRead array.
         /// </summary>
         public bool ReadAfter { get; set; }
+        
+        /// <summary>
+        /// If true, connection will be kept alive and handler's connected method will be called to create new socket instance.
+        /// If false, client connection handlers will not be called.
+        /// An example, HTTP protocol is not piped but TMQ and WebSocket connections are piped
+        /// </summary>
+        public bool PipeConnection { get; set; }
 
         /// <summary>
         /// First 8 bytes of first received data from the connection 
