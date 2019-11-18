@@ -20,7 +20,6 @@ namespace Twino.Protocols.Http
     public class TwinoHttpProtocol : ITwinoProtocol<HttpMessage>
     {
         public string Name => "http";
-        public ProtocolHandshakeResult HandshakeResult { get; private set; }
         public byte[] PingMessage => null;
         public byte[] PongMessage => null;
 
@@ -61,7 +60,6 @@ namespace Twino.Protocols.Http
             if (result.Accepted)
                 result.ReadAfter = true;
 
-            HandshakeResult = result;
             info.State = ConnectionStates.Http;
             return await Task.FromResult(result);
         }
@@ -70,26 +68,25 @@ namespace Twino.Protocols.Http
         {
             throw new NotSupportedException();
         }
-        
-        public async Task HandleConnection(IConnectionInfo info)
+
+        public async Task HandleConnection(IConnectionInfo info, ProtocolHandshakeResult handshakeResult)
         {
             HttpReader reader = new HttpReader(Options);
             HttpWriter writer = new HttpWriter(Options);
-            reader.HandshakeResult = HandshakeResult;
+            reader.HandshakeResult = handshakeResult;
 
             HandleStatus status;
             do
             {
                 HttpMessage message = await reader.Read(info.GetStream());
-                
+
                 if (message.Request != null)
                     message.Request.IpAddress = FindIPAddress(info.Client);
-                
+
                 status = await ProcessMessage(info, reader, writer, message, reader.ContentLength);
 
                 if (status == HandleStatus.ReadAgain)
                     reader.Reset();
-                
             } while (status == HandleStatus.ReadAgain);
 
             if (status == HandleStatus.Close)
@@ -111,7 +108,6 @@ namespace Twino.Protocols.Http
         public IProtocolMessageReader<HttpMessage> CreateReader()
         {
             HttpReader reader = new HttpReader(Options);
-            reader.HandshakeResult = HandshakeResult;
             return reader;
         }
 
@@ -168,7 +164,7 @@ namespace Twino.Protocols.Http
             bool keep = Options.HttpConnectionTimeMax > 0 && message.Response.HasStream();
             return keep ? HandleStatus.ReadAgain : HandleStatus.Close;
         }
-        
+
         /// <summary>
         /// Finds the IP Address of the TCP client socket
         /// </summary>

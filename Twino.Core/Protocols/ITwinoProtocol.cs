@@ -12,11 +12,6 @@ namespace Twino.Core.Protocols
         string Name { get; }
 
         /// <summary>
-        /// Handshake result of the protocol
-        /// </summary>
-        ProtocolHandshakeResult HandshakeResult { get; }
-
-        /// <summary>
         /// Checks if data is belong this protocol.
         /// </summary>
         /// <param name="info"></param>
@@ -32,7 +27,7 @@ namespace Twino.Core.Protocols
         /// <summary>
         /// After protocol handshake is completed, this method is called to handle events for the specified client
         /// </summary>
-        Task HandleConnection(IConnectionInfo info);
+        Task HandleConnection(IConnectionInfo info, ProtocolHandshakeResult handshakeResult);
     }
 
     public interface ITwinoProtocol<TMessage> : ITwinoProtocol

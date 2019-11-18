@@ -30,6 +30,7 @@ namespace Playground
             server.UseMvc(mvc, options);
 
             server.Start(82);
+            server.BlockWhileRunning();
         }
     }
 }

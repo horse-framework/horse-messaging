@@ -9,7 +9,6 @@ namespace Twino.Protocols.TMQ
     public class TwinoTmqProtocol : ITwinoProtocol<TmqMessage>
     {
         public string Name => "tmq";
-        public ProtocolHandshakeResult HandshakeResult { get; private set; }
         public byte[] PingMessage => PredefinedMessages.PING;
         public byte[] PongMessage => PredefinedMessages.PONG;
         public IProtocolConnectionHandler<TmqMessage> Handler { get; }
@@ -24,7 +23,6 @@ namespace Twino.Protocols.TMQ
         public async Task<ProtocolHandshakeResult> Handshake(IConnectionInfo info, byte[] data)
         {
             ProtocolHandshakeResult result = new ProtocolHandshakeResult();
-            HandshakeResult = result;
 
             if (data.Length < 8)
                 return await Task.FromResult(result);
@@ -41,7 +39,7 @@ namespace Twino.Protocols.TMQ
             throw new NotSupportedException();
         }
 
-        public async Task HandleConnection(IConnectionInfo info)
+        public async Task HandleConnection(IConnectionInfo info, ProtocolHandshakeResult handshakeResult)
         {
             TmqReader reader = new TmqReader();
             while (info.Client != null && info.Client.Connected)

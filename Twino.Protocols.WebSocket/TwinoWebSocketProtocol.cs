@@ -17,7 +17,6 @@ namespace Twino.Protocols.WebSocket
         public byte[] PongMessage => PredefinedMessages.PONG;
 
         public IProtocolConnectionHandler<WebSocketMessage> Handler { get; }
-        public ProtocolHandshakeResult HandshakeResult { get; private set; }
 
         private readonly ITwinoServer _server;
 
@@ -29,8 +28,7 @@ namespace Twino.Protocols.WebSocket
 
         public async Task<ProtocolHandshakeResult> Handshake(IConnectionInfo info, byte[] data)
         {
-            HandshakeResult = new ProtocolHandshakeResult();
-            return await Task.FromResult(HandshakeResult);
+            return await Task.FromResult(new ProtocolHandshakeResult());
         }
 
         public async Task<ProtocolHandshakeResult> SwitchTo(IConnectionInfo info, Dictionary<string, string> properties)
@@ -69,7 +67,7 @@ namespace Twino.Protocols.WebSocket
             return result;
         }
 
-        public async Task HandleConnection(IConnectionInfo info)
+        public async Task HandleConnection(IConnectionInfo info, ProtocolHandshakeResult handshakeResult)
         {
             WebSocketReader reader = new WebSocketReader();
             while (info.Client != null && info.Client.Connected)

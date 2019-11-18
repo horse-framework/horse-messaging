@@ -246,7 +246,7 @@ namespace Twino.Server
                     if (hsresult.Response != null)
                         await info.GetStream().WriteAsync(hsresult.Response);
 
-                    await protocol.HandleConnection(info);
+                    await protocol.HandleConnection(info, hsresult);
                     return;
                 }
             }

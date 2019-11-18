@@ -106,17 +106,23 @@ namespace Twino.Server
                     return;
                 }
 
+                //find matched protocol with client protocol
                 foreach (ITwinoProtocol protocol in _server.Protocols)
                 {
                     ProtocolHandshakeResult hsresult = await protocol.Handshake(info, pbytes);
+
+                    //matched
                     if (hsresult.Accepted)
                     {
                         info.Protocol = protocol;
+                        hsresult.PreviouslyRead = pbytes;
 
+                        //if protocol required to send protocol message from server to client, send it
                         if (hsresult.Response != null)
                             await info.GetStream().WriteAsync(hsresult.Response);
 
-                        await protocol.HandleConnection(info);
+                        //handle connection events for the connection
+                        await protocol.HandleConnection(info, hsresult);
                         return;
                     }
                 }
