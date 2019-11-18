@@ -78,9 +78,17 @@ namespace Twino.Protocols.Http
             request.Response = response;
             response.NetworkStream = stream;
 
+            int streamPad = 0;
             int readLength;
             int start = 0;
 
+            if (HandshakeResult.ReadAfter && HandshakeResult.PreviouslyRead != null)
+            {
+                await _stream.WriteAsync(HandshakeResult.PreviouslyRead);
+                streamPad = HandshakeResult.PreviouslyRead.Length;
+                HandshakeResult.PreviouslyRead = null;
+            }
+            
             //this value will be true, if small buffer isn't enough and tells us to use large buffer
             bool requiredMoreData = false;
 
@@ -90,18 +98,7 @@ namespace Twino.Protocols.Http
                 if (!_readingHeaders && ContentLength >= request.ContentLength)
                     break;
 
-                if (HandshakeResult.ReadAfter && HandshakeResult.PreviouslyRead != null)
-                {
-                    HandshakeResult.PreviouslyRead.CopyTo(_buffer, 0);
-                    readLength = await stream.ReadAsync(_buffer,
-                                                        HandshakeResult.PreviouslyRead.Length,
-                                                        _buffer.Length - HandshakeResult.PreviouslyRead.Length);
-                    
-                    HandshakeResult.PreviouslyRead = null;
-                    HandshakeResult.ReadAfter = false;
-                }
-                else
-                    readLength = await stream.ReadAsync(_buffer, 0, _buffer.Length);
+                readLength = await stream.ReadAsync(_buffer, 0, _buffer.Length);
 
                 if (readLength < 1)
                     return null;
@@ -113,8 +110,12 @@ namespace Twino.Protocols.Http
                 }
                 else
                 {
-                    if (_stream.Position > 0)
-                        _stream.Position = 0;
+                    if (_stream.Position > streamPad)
+                    {
+                        _stream.Position = streamPad;
+                        if (streamPad > 0)
+                            streamPad = 0;
+                    }
 
                     if (_stream.Length > readLength)
                         _stream.SetLength(readLength);

@@ -23,6 +23,7 @@ namespace Playground
         static void Main(string[] args)
         {
             HttpOptions options = new HttpOptions();
+            options.SupportedEncodings = new ContentEncodings[0];
             TwinoMvc mvc = new TwinoMvc();
             mvc.Init(m => { });
 
