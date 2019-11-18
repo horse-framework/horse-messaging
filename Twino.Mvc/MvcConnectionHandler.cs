@@ -42,17 +42,17 @@ namespace Twino.Mvc
             App = app;
         }
 
-        public async Task<ServerSocketBase> Connected(ITwinoServer server, IConnectionInfo connection, Dictionary<string, string> properties)
+        public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, Dictionary<string, string> properties)
         {
-            return await Task.FromResult((ServerSocketBase) null);
+            return await Task.FromResult((SocketBase) null);
         }
 
-        public async Task Disconnected(ITwinoServer server, IConnectionInfo info, ServerSocketBase client)
+        public async Task Disconnected(ITwinoServer server, SocketBase client)
         {
             await Task.CompletedTask;
         }
 
-        public async Task Received(ITwinoServer server, IConnectionInfo info, HttpMessage message)
+        public async Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, HttpMessage message)
         {
             await RequestAsync(server, message.Request, message.Response);
         }
@@ -63,7 +63,7 @@ namespace Twino.Mvc
         private async Task RequestAsync(ITwinoServer server, HttpRequest request, HttpResponse response)
         {
             IContainerScope scope = Mvc.Services.CreateScope();
-            
+
             try
             {
                 if (App.Descriptors.Count > 0)

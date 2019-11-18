@@ -39,8 +39,8 @@ namespace Twino.Client.Connectors
     /// it keeps the message and sends when connected.
     /// Each message has it's own maximum try count and expire time.
     /// </summary>
-    public class AbsoluteConnector<TClient> : StickyConnector<TClient>
-        where TClient : ClientSocketBase, new()
+    public class AbsoluteConnector<TClient, TMessage> : StickyConnector<TClient, TMessage>
+        where TClient : ClientSocketBase<TMessage>, new()
     {
         #region Properties
 
@@ -146,7 +146,7 @@ namespace Twino.Client.Connectors
         /// <summary>
         /// Fired when connection is establies.
         /// </summary>
-        private void AbsoluteConnector_Connected(ClientSocketBase client)
+        private void AbsoluteConnector_Connected(SocketBase client)
         {
             ProcessFailedMessages();
         }

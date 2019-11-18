@@ -61,6 +61,11 @@ namespace Twino.Core
         /// Current data transfer protocol of the active connection
         /// </summary>
         ITwinoProtocol Protocol { get; set; }
+        
+        /// <summary>
+        /// Socket object of the connection
+        /// </summary>
+        SocketBase Socket { get; set; }
 
         /// <summary>
         /// Closes connection and releases all sources
@@ -72,5 +77,10 @@ namespace Twino.Core
         /// </summary>
         /// <returns></returns>
         Stream GetStream();
+
+        /// <summary>
+        /// call when client sends pong message as ping asnwer
+        /// </summary>
+        void PongReceived();
     }
 }

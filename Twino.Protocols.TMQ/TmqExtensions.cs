@@ -5,7 +5,7 @@ namespace Twino.Protocols.TMQ
 {
     public static class TmqExtensions
     {
-        public static ITwinoServer UseWebSockets(this ITwinoServer server, IProtocolConnectionHandler<TmqMessage> handler)
+        public static ITwinoServer UseTmq(this ITwinoServer server, IProtocolConnectionHandler<TmqMessage> handler)
         {
             TwinoTmqProtocol protocol = new TwinoTmqProtocol(server, handler);
             server.UseProtocol(protocol);

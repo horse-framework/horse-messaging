@@ -45,7 +45,7 @@ namespace Twino.Protocols.TMQ
             while (info.Client != null && info.Client.Connected)
             {
                 TmqMessage message = await reader.Read(info.GetStream());
-                await Handler.Received(_server, info, message);
+                await Handler.Received(_server, info, handshakeResult.Socket, message);
             }
         }
 

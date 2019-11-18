@@ -19,16 +19,16 @@ namespace Twino.Server.Containers
         /// <summary>
         /// Adds the client to the online clients container
         /// </summary>
-        void Add(ServerSocketBase client);
+        void Add(SocketBase client);
 
         /// <summary>
         /// Removes the client from the online clients container
         /// </summary>
-        void Remove(ServerSocketBase client);
+        void Remove(SocketBase client);
 
         /// <summary>
         /// Gets all online clients
         /// </summary>
-        IEnumerable<ServerSocketBase> List();
+        IEnumerable<SocketBase> List();
     }
 }

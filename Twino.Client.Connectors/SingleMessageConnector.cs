@@ -6,8 +6,8 @@ namespace Twino.Client.Connectors
     /// Only connects to the server, when Send is called.
     /// After send the message, disconnected from the server.
     /// </summary>
-    public class SingleMessageConnector<TClient> : NecessityConnector<TClient>
-        where TClient : ClientSocketBase, new()
+    public class SingleMessageConnector<TClient, TMessage> : NecessityConnector<TClient, TMessage>
+        where TClient : ClientSocketBase<TMessage>, new()
     {
         /// <summary>
         /// Connects to the server, sends the message and disconnects after message is sent.

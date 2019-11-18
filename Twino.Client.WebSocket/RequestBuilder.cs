@@ -5,7 +5,6 @@ using Twino.Protocols.Http;
 
 namespace Twino.Client.WebSocket
 {
-
     /// <summary>
     /// Reads full string request data and creates new HttpRequest object
     /// </summary>
@@ -48,10 +47,10 @@ namespace Twino.Client.WebSocket
                         continue;
 
                     string key = line.Substring(0, index);
-                    
+
                     if (line[index + 1] == ' ')
                         index++;
-                    
+
                     string value = line.Substring(index + 1);
                     AddHeader(request, key, value);
                 }
@@ -78,7 +77,7 @@ namespace Twino.Client.WebSocket
 
             if (key.Equals(HttpHeaders.HOST, StringComparison.InvariantCultureIgnoreCase))
                 request.Host = value;
-            
+
             else if (key.Equals(HttpHeaders.WEBSOCKET_KEY, StringComparison.InvariantCultureIgnoreCase))
             {
                 request.WebSocketKey = value;

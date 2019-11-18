@@ -224,11 +224,11 @@ namespace Twino.Server
         public void UseProtocol<TMessage>(ITwinoProtocol<TMessage> protocol)
         {
             List<ITwinoProtocol> list = Protocols.ToList();
-            
+
             ITwinoProtocol old = list.FirstOrDefault(x => x.Name.Equals(protocol.Name, StringComparison.InvariantCultureIgnoreCase));
             if (old != null)
                 list.Remove(old);
-            
+
             list.Add(protocol);
             Protocols = list.ToArray();
         }
@@ -247,6 +247,7 @@ namespace Twino.Server
                     }
 
                     info.Protocol = protocol;
+                    info.Socket = hsresult.Socket;
 
                     if (hsresult.Response != null)
                         await info.GetStream().WriteAsync(hsresult.Response);

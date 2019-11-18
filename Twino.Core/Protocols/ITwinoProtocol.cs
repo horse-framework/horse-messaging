@@ -33,16 +33,6 @@ namespace Twino.Core.Protocols
     public interface ITwinoProtocol<TMessage> : ITwinoProtocol
     {
         /// <summary>
-        /// Ping message for the specified protocol
-        /// </summary>
-        byte[] PingMessage { get; }
-
-        /// <summary>
-        /// Pong message for the specified protocol
-        /// </summary>
-        byte[] PongMessage { get; }
-
-        /// <summary>
         /// Client and message handler for the protocol
         /// </summary>
         IProtocolConnectionHandler<TMessage> Handler { get; }

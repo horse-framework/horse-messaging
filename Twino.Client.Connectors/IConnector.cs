@@ -5,8 +5,8 @@ namespace Twino.Client.Connectors
     /// <summary>
     /// Connector interface for managing specified case connection types.
     /// </summary>
-    public interface IConnector<out TClient>
-        where TClient : ClientSocketBase, new()
+    public interface IConnector<out TClient, TMessage>
+        where TClient : ClientSocketBase<TMessage>, new()
     {
         /// <summary>
         /// If true, connector is running

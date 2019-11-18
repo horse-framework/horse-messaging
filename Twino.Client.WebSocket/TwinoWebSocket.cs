@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography;
@@ -9,62 +8,23 @@ using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Protocols.Http;
+using Twino.Protocols.WebSocket;
 
 namespace Twino.Client.WebSocket
 {
-    #region Event Delegates
-
-    /// <summary>
-    /// Function definition for parameterless web sockets
-    /// </summary>
-    public delegate void SocketStatusHandler(TwinoWsClient client);
-
-    /// <summary>
-    /// Function definition for End-Write error handling
-    /// </summary>
-    public delegate void SocketWriteErrorHandler(TwinoWsClient client, byte[] data);
-
-    #endregion
-
     /// <summary>
     /// WebSocket Client class
     /// Can be used directly with event subscriptions
     /// Or can be base class to a derived Client class and provides virtual methods for all events
     /// </summary>
-    public class TwinoWsClient : SocketBase
+    public class TwinoWebSocket : ClientSocketBase<WebSocketMessage>
     {
         #region Events - Properties
-
-        /// <summary>
-        /// Invokes when client connects
-        /// </summary>
-        public event SocketStatusHandler Connected;
-
-        /// <summary>
-        /// Invokes when client disconnects
-        /// </summary>
-        public event SocketStatusHandler Disconnected;
-
-        /// <summary>
-        /// Invokes when an error is occured while attempting to write the data
-        /// </summary>
-        public event SocketWriteErrorHandler WriteFailed;
 
         /// <summary>
         /// Key value for the websocket connection
         /// </summary>
         public string WebSocketKey { get; private set; }
-
-        /// <summary>
-        /// Client certificate for SSL client connections.
-        /// If null, Twino uses default certificate.
-        /// </summary>
-        public X509Certificate2 Certificate { get; set; }
-
-        /// <summary>
-        /// Additional Request headers
-        /// </summary>
-        public Dictionary<string, string> Headers { get; } = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 
         #endregion
 
@@ -78,7 +38,7 @@ namespace Twino.Client.WebSocket
         /// wss://domain.com
         /// ws://domain.com:154/path
         /// </summary>
-        public void Connect(string uri)
+        public override void Connect(string uri)
         {
             DnsResolver resolver = new DnsResolver();
             DnsInfo info = resolver.Resolve(uri);
@@ -104,11 +64,6 @@ namespace Twino.Client.WebSocket
 
             IsSsl = secure;
             Connect(info);
-        }
-
-        private static bool CertificateCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
-        {
-            return true;
         }
 
         /// <summary>
@@ -233,7 +188,7 @@ namespace Twino.Client.WebSocket
                              HttpHeaders.Create(HttpHeaders.WEBSOCKET_KEY, WebSocketKey) +
                              HttpHeaders.Create(HttpHeaders.WEBSOCKET_EXTENSIONS, HttpHeaders.VALUE_WEBSOCKET_EXTENSIONS);
 
-            foreach (var kv in Headers)
+            foreach (var kv in Properties)
                 request += HttpHeaders.Create(kv.Key, kv.Value);
 
             request += "\r\n";
@@ -244,38 +199,46 @@ namespace Twino.Client.WebSocket
 
         #region Abstract Methods
 
-        protected override Task Read()
+        protected override async Task Read()
         {
-            throw new NotImplementedException();
+            WebSocketReader reader = new WebSocketReader();
+            WebSocketMessage message = await reader.Read(Stream);
+            if (message == null)
+            {
+                Disconnect();
+                return;
+            }
+
+            switch (message.OpCode)
+            {
+                case SocketOpCode.Binary:
+                case SocketOpCode.UTF8:
+                    SetOnMessageReceived(message);
+                    break;
+
+                case SocketOpCode.Terminate:
+                    Disconnect();
+                    break;
+
+                case SocketOpCode.Ping:
+                    Pong();
+                    break;
+            }
         }
 
-        public override Task Ping()
+        public sealed override void Ping()
         {
-            throw new NotImplementedException();
+            Send(Protocols.WebSocket.PredefinedMessages.PING);
         }
 
-        public override Task Pong()
+        public sealed override void Pong()
         {
-            throw new NotImplementedException();
+            Send(Protocols.WebSocket.PredefinedMessages.PONG);
         }
 
         public bool Send(string message)
         {
             throw new NotImplementedException();
-        }
-
-        protected override void OnConnected()
-        {
-            Connected?.Invoke(this);
-        }
-
-        protected override void OnDisconnected()
-        {
-            Disconnected?.Invoke(this);
-        }
-
-        protected override void OnError(string hint, Exception ex)
-        {
         }
 
         #endregion

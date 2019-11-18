@@ -10,9 +10,9 @@ using System.Threading.Tasks;
 namespace Twino.Core
 {
     /// <summary>
-    /// Handler for events when a message received from socket
+    /// Function definition for parameterless web sockets
     /// </summary>
-    public delegate void SocketMessageHandler(SocketBase client, byte[] payload);
+    public delegate void SocketStatusHandler(SocketBase client);
 
     /// <summary>
     /// Base class for web socket clients.
@@ -67,9 +67,14 @@ namespace Twino.Core
         private volatile bool _writeCompleted = true;
 
         /// <summary>
-        /// Triggered when a message received
+        /// Triggered when the client is connected
         /// </summary>
-        public event SocketMessageHandler MessageReceived;
+        public event SocketStatusHandler Connected;
+
+        /// <summary>
+        /// Triggered when the client is disconnected
+        /// </summary>
+        public event SocketStatusHandler Disconnected;
 
         #endregion
 
@@ -79,23 +84,6 @@ namespace Twino.Core
         }
 
         #region Methods
-
-        /// <summary>
-        /// Starts to read from the TCP socket
-        /// </summary>
-        protected abstract Task Read();
-
-        /// <summary>
-        /// Sends ping
-        /// </summary>
-        /// <returns></returns>
-        public abstract Task Ping();
-
-        /// <summary>
-        /// Sends pong
-        /// </summary>
-        /// <returns></returns>
-        public abstract Task Pong();
 
         private void EndWrite(IAsyncResult ar)
         {
@@ -140,7 +128,6 @@ namespace Twino.Core
             catch (Exception ex)
             {
                 _writeCompleted = true;
-                OnError("SEND_BYTES", ex);
                 Disconnect();
                 return false;
             }
@@ -199,14 +186,6 @@ namespace Twino.Core
             });
         }
 
-        /// <summary>
-        /// Fires all events that waiting message received
-        /// </summary>
-        protected void SetOnMessageReceived(byte[] data)
-        {
-            MessageReceived?.Invoke(this, data);
-        }
-        
         #endregion
 
         #region Abstract Methods
@@ -214,17 +193,30 @@ namespace Twino.Core
         /// <summary>
         /// Triggered when client is connected
         /// </summary>
-        protected abstract void OnConnected();
+        protected virtual void OnConnected()
+        {
+            Connected?.Invoke(this);
+        }
 
         /// <summary>
         /// Triggered when client is disconnected
         /// </summary>
-        protected abstract void OnDisconnected();
+        protected virtual void OnDisconnected()
+        {
+            Disconnected?.Invoke(this);
+        }
 
         /// <summary>
-        /// Triggered when an error is occured in this client operations
+        /// Sends ping
         /// </summary>
-        protected abstract void OnError(string hint, Exception ex);
+        /// <returns></returns>
+        public abstract void Ping();
+
+        /// <summary>
+        /// Sends pong
+        /// </summary>
+        /// <returns></returns>
+        public abstract void Pong();
 
         #endregion
     }

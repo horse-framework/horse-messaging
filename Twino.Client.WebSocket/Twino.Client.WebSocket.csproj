@@ -5,7 +5,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Twino.Protocols.Http\Twino.Protocols.Http.csproj" />
+      <ProjectReference Include="..\Twino.Client.Connectors\Twino.Client.Connectors.csproj" />
+      <ProjectReference Include="..\Twino.Protocols.WebSocket\Twino.Protocols.WebSocket.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="Twino.Client, Version=1.5.3.0, Culture=neutral, PublicKeyToken=null">
+        <HintPath>..\Twino.Client\bin\Debug\netcoreapp3.0\Twino.Client.dll</HintPath>
+      </Reference>
     </ItemGroup>
 
 </Project>

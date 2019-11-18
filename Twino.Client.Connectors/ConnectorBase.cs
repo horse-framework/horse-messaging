@@ -8,14 +8,14 @@ namespace Twino.Client.Connectors
     /// When an excaption thrown in connector lifecycle and event is fired.
     /// The event's delegate is this delegate.
     /// </summary>
-    public delegate void ConnectorExceptionHandler<in TClient>(IConnector<TClient> connector, Exception ex)
-        where TClient : ClientSocketBase, new();
+    public delegate void ConnectorExceptionHandler<in TClient, TMessage>(IConnector<TClient, TMessage> connector, Exception ex)
+        where TClient : ClientSocketBase<TMessage>, new();
 
     /// <summary>
     /// Base class for all connectors
     /// </summary>
-    public abstract class ConnectorBase<TClient> : IConnector<TClient>
-        where TClient : ClientSocketBase, new()
+    public abstract class ConnectorBase<TClient, TMessage> : IConnector<TClient, TMessage>
+        where TClient : ClientSocketBase<TMessage>, new()
     {
         #region Properties
 
@@ -49,8 +49,8 @@ namespace Twino.Client.Connectors
 
         public event SocketStatusHandler Connected;
         public event SocketStatusHandler Disconnected;
-        public event SocketMessageHandler MessageReceived;
-        public event ConnectorExceptionHandler<TClient> ExceptionThrown;
+        public event ClientMessageHandler<TMessage> MessageReceived;
+        public event ConnectorExceptionHandler<TClient, TMessage> ExceptionThrown;
 
         /// <summary>
         /// If true, connector is connected to specified host
@@ -183,14 +183,19 @@ namespace Twino.Client.Connectors
             _client.Disconnected += ClientDisconnected;
             _client.MessageReceived += ClientMessageReceived;
 
-            if (_hosts.Count == 0)
-                throw new InvalidOperationException("Connector needs a host to connect");
+            string host;
+            lock (_hosts)
+            {
+                if (_hosts.Count == 0)
+                    throw new InvalidOperationException("Connector needs a host to connect");
 
-            if (_hostIndex >= _hosts.Count)
-                _hostIndex = 0;
 
-            string host = _hosts[_hostIndex];
-            _hostIndex++;
+                if (_hostIndex >= _hosts.Count)
+                    _hostIndex = 0;
+
+                host = _hosts[_hostIndex];
+                _hostIndex++;
+            }
 
             _client.Connect(host);
         }
@@ -244,7 +249,7 @@ namespace Twino.Client.Connectors
         /// <summary>
         /// Raises client message received event
         /// </summary>
-        protected virtual void ClientMessageReceived(SocketBase client, byte[] payload)
+        protected virtual void ClientMessageReceived(ClientSocketBase<TMessage> client, TMessage payload)
         {
             MessageReceived?.Invoke(client, payload);
         }
@@ -252,7 +257,7 @@ namespace Twino.Client.Connectors
         /// <summary>
         /// Raises client disconnected event
         /// </summary>
-        protected virtual void ClientDisconnected(ClientSocketBase client)
+        protected virtual void ClientDisconnected(SocketBase client)
         {
             Disconnected?.Invoke(client);
         }
@@ -260,7 +265,7 @@ namespace Twino.Client.Connectors
         /// <summary>
         /// Raises client connected event
         /// </summary>
-        protected virtual void ClientConnected(ClientSocketBase client)
+        protected virtual void ClientConnected(SocketBase client)
         {
             _connectionCount++;
             _lastConnection = DateTime.UtcNow;

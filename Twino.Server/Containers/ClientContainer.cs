@@ -11,17 +11,17 @@ namespace Twino.Server.Containers
         /// <summary>
         /// Online clients
         /// </summary>
-        private List<ServerSocketBase> Clients { get; }
+        private List<SocketBase> Clients { get; }
 
         public ClientContainer()
         {
-            Clients = new List<ServerSocketBase>();
+            Clients = new List<SocketBase>();
         }
 
         /// <summary>
         /// Adds the client to the online clients container
         /// </summary>
-        public void Add(ServerSocketBase client)
+        public void Add(SocketBase client)
         {
             lock (Clients)
                 Clients.Add(client);
@@ -38,12 +38,12 @@ namespace Twino.Server.Containers
         /// <summary>
         /// Gets all online clients
         /// </summary>
-        public IEnumerable<ServerSocketBase> List()
+        public IEnumerable<SocketBase> List()
         {
-            List<ServerSocketBase> clients = new List<ServerSocketBase>();
+            List<SocketBase> clients = new List<SocketBase>();
 
             lock (Clients)
-                foreach (ServerSocketBase client in Clients)
+                foreach (SocketBase client in Clients)
                     clients.Add(client);
 
             return clients;
@@ -52,7 +52,7 @@ namespace Twino.Server.Containers
         /// <summary>
         /// Removes the client from the online clients container
         /// </summary>
-        public void Remove(ServerSocketBase client)
+        public void Remove(SocketBase client)
         {
             lock (Clients)
                 Clients.Remove(client);

@@ -10,8 +10,8 @@ namespace Twino.Client.Connectors
     /// It reconnects. If the reconnection is failed, it waits for interval and re-tries.
     /// This connector is always keeps the connection up.
     /// </summary>
-    public class StickyConnector<TClient> : ConnectorBase<TClient>
-        where TClient : ClientSocketBase, new()
+    public class StickyConnector<TClient, TMessage> : ConnectorBase<TClient, TMessage>
+        where TClient : ClientSocketBase<TMessage>, new()
     {
         /// <summary>
         /// True when trying to connect.

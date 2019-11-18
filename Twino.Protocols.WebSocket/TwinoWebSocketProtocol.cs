@@ -13,9 +13,6 @@ namespace Twino.Protocols.WebSocket
     {
         public string Name => "websocket";
 
-        public byte[] PingMessage => PredefinedMessages.PING;
-        public byte[] PongMessage => PredefinedMessages.PONG;
-
         public IProtocolConnectionHandler<WebSocketMessage> Handler { get; }
 
         private readonly ITwinoServer _server;
@@ -48,14 +45,14 @@ namespace Twino.Protocols.WebSocket
             result.PreviouslyRead = null;
             result.Response = await CreateWebSocketHandshakeResponse(key);
 
-            ServerSocketBase socket = await Handler.Connected(_server, info, properties);
+            SocketBase socket = await Handler.Connected(_server, info, properties);
 
             if (socket == null)
                 return await Task.FromResult(new ProtocolHandshakeResult());
 
-            void socketDisconnected(ServerSocketBase socketBase)
+            void socketDisconnected(SocketBase socketBase)
             {
-                Handler.Disconnected(_server, info, socketBase);
+                Handler.Disconnected(_server, socketBase);
                 _server.Pinger.Remove(socket);
                 socket.Disconnected -= socketDisconnected;
             }
@@ -73,7 +70,7 @@ namespace Twino.Protocols.WebSocket
             while (info.Client != null && info.Client.Connected)
             {
                 WebSocketMessage message = await reader.Read(info.GetStream());
-                await Handler.Received(_server, info, message);
+                await ProcessMessage(info, handshakeResult.Socket, message);
             }
         }
 
@@ -109,6 +106,28 @@ namespace Twino.Protocols.WebSocket
         {
             byte[] keybytes = Encoding.UTF8.GetBytes(key + PredefinedMessages.WEBSOCKET_GUID);
             return Convert.ToBase64String(SHA1.Create().ComputeHash(keybytes));
+        }
+
+        /// <summary>
+        /// Process websocket message
+        /// </summary>
+        private async Task ProcessMessage(IConnectionInfo info, SocketBase socket, WebSocketMessage message)
+        {
+            switch (message.OpCode)
+            {
+                case SocketOpCode.Binary:
+                case SocketOpCode.UTF8:
+                    await Handler.Received(_server, info, socket, message);
+                    break;
+
+                case SocketOpCode.Terminate:
+                    info.Close();
+                    break;
+
+                case SocketOpCode.Pong:
+                    info.PongReceived();
+                    break;
+            }
         }
     }
 }

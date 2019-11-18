@@ -116,6 +116,7 @@ namespace Twino.Server
                     {
                         info.Protocol = protocol;
                         hsresult.PreviouslyRead = pbytes;
+                        info.Socket = hsresult.Socket;
 
                         //if protocol required to send protocol message from server to client, send it
                         if (hsresult.Response != null)

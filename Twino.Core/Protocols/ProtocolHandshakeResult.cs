@@ -33,5 +33,10 @@ namespace Twino.Core.Protocols
         /// If protocol handshaking required a message from server to client, this value contains the message
         /// </summary>
         public byte[] Response { get; set; }
+        
+        /// <summary>
+        /// Connection socket
+        /// </summary>
+        public SocketBase Socket { get; set; }
     }
 }

@@ -10,8 +10,8 @@ namespace Twino.Client.Connectors
     /// But if the connection is closed because of some reason.
     /// Does not connect until next Send method is called.
     /// </summary>
-    public class NecessityConnector<TClient> : ConnectorBase<TClient>
-        where TClient : ClientSocketBase, new()
+    public class NecessityConnector<TClient, TMessage> : ConnectorBase<TClient, TMessage>
+        where TClient : ClientSocketBase<TMessage>, new()
     {
         /// <summary>
         /// Disconnects from the server

@@ -55,6 +55,11 @@ namespace Twino.Server
         /// </summary>
         public ITwinoProtocol Protocol { get; set; }
 
+        /// <summary>
+        /// Socket object of the connection info
+        /// </summary>
+        public SocketBase Socket { get; set; }
+
         public ConnectionInfo(TcpClient client, HostListener server)
         {
             Client = client;
@@ -74,6 +79,11 @@ namespace Twino.Server
             return PlainStream;
         }
 
+        public void PongReceived()
+        {
+            Socket.PongTime = DateTime.UtcNow;
+        }
+
         /// <summary>
         /// Closes and disposes all resources of the request
         /// </summary>
@@ -81,7 +91,7 @@ namespace Twino.Server
         {
             if (State == ConnectionStates.Closed)
                 return;
-            
+
             State = ConnectionStates.Closed;
 
             try

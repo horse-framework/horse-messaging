@@ -99,6 +99,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Client.WebSocket", "T
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Client.TMQ", "Twino.Client.TMQ\Twino.Client.TMQ.csproj", "{A75CABEB-197E-457A-AAC9-4C59D49DDF68}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Protocols.WebSocket.Requests", "Twino.Protocols.WebSocket.Requests\Twino.Protocols.WebSocket.Requests.csproj", "{B0D23C44-6DE3-4792-A9D1-33AB907B171D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -277,6 +279,10 @@ Global
 		{A75CABEB-197E-457A-AAC9-4C59D49DDF68}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A75CABEB-197E-457A-AAC9-4C59D49DDF68}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A75CABEB-197E-457A-AAC9-4C59D49DDF68}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B0D23C44-6DE3-4792-A9D1-33AB907B171D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0D23C44-6DE3-4792-A9D1-33AB907B171D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0D23C44-6DE3-4792-A9D1-33AB907B171D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0D23C44-6DE3-4792-A9D1-33AB907B171D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
