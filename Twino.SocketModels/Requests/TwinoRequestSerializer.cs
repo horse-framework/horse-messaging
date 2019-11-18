@@ -1,6 +1,8 @@
 using System;
+using System.IO;
+using System.Text;
 using System.Threading.Tasks;
-using Twino.Core;
+using Twino.Protocols.WebSocket;
 using Twino.SocketModels.Serialization;
 
 namespace Twino.SocketModels.Requests
@@ -10,6 +12,8 @@ namespace Twino.SocketModels.Requests
     /// </summary>
     internal class TwinoRequestSerializer
     {
+        private static readonly WebSocketWriter _writer = new WebSocketWriter();
+
         /// <summary>
         /// Definition of serialized package as request if it starts with "REQ="
         /// </summary>
@@ -106,7 +110,14 @@ namespace Twino.SocketModels.Requests
             await writer.Writer.WriteEndArrayAsync();
 
             string message = writer.GetResult();
-            return await WebSocketWriter.CreateFromUTF8Async(message);
+            WebSocketMessage wsmsg = new WebSocketMessage
+                                     {
+                                         OpCode = SocketOpCode.UTF8,
+                                         Content = new MemoryStream(Encoding.UTF8.GetBytes(message))
+                                     };
+            wsmsg.Length = (ulong) wsmsg.Content.Length;
+
+            return await _writer.Create(wsmsg);
         }
 
         /// <summary>
@@ -144,7 +155,14 @@ namespace Twino.SocketModels.Requests
             await writer.Writer.WriteEndArrayAsync();
 
             string message = writer.GetResult();
-            return await WebSocketWriter.CreateFromUTF8Async(message);
+            WebSocketMessage wsmsg = new WebSocketMessage
+                                     {
+                                         OpCode = SocketOpCode.UTF8,
+                                         Content = new MemoryStream(Encoding.UTF8.GetBytes(message))
+                                     };
+            wsmsg.Length = (ulong) wsmsg.Content.Length;
+
+            return await _writer.Create(wsmsg);
         }
     }
 }

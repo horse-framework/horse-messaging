@@ -1,3 +1,4 @@
+using System.IO;
 using Newtonsoft.Json;
 
 namespace Twino.SocketModels.Serialization
@@ -29,7 +30,7 @@ namespace Twino.SocketModels.Serialization
         public string Serialize(ISocketModel model)
         {
             string body;
-            
+
             if (model is IPerformanceCriticalModel critical)
             {
                 LightJsonWriter writer = new LightJsonWriter();
@@ -40,6 +41,5 @@ namespace Twino.SocketModels.Serialization
 
             return $"[{model.Type},{body}]";
         }
-
     }
 }
