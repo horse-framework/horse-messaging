@@ -2,6 +2,7 @@
 using System;
 using System.Net;
 using System.Text;
+using Twino.Protocols.Http;
 
 namespace Sample.Http.Server
 {
@@ -9,7 +10,8 @@ namespace Sample.Http.Server
     {
         static void Main(string[] args)
         {
-            TwinoServer server = TwinoServer.CreateHttp(async (twinoServer, request, response) =>
+            TwinoServer server = new TwinoServer(ServerOptions.CreateDefault());
+            server.UseHttp(async (request, response) =>
             {
                 if (request.Path.Equals("/plaintext", StringComparison.InvariantCultureIgnoreCase))
                 {
@@ -18,12 +20,9 @@ namespace Sample.Http.Server
                 }
                 else
                     response.StatusCode = HttpStatusCode.NotFound;
-            }, ServerOptions.CreateDefault());
+            });
 
-            server.Options.ContentEncoding = null;
-            server.Options.Hosts[0].Port = 82;
-
-            server.Start();
+            server.Start(82);
             server.BlockWhileRunning();
         }
     }

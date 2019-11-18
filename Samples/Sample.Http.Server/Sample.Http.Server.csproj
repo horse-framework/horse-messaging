@@ -7,6 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\Twino.Protocols.Http\Twino.Protocols.Http.csproj" />
       <ProjectReference Include="..\..\Twino.Server\Twino.Server.csproj" />
     </ItemGroup>
 
