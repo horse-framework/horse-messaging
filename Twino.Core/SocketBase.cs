@@ -10,6 +10,11 @@ using System.Threading.Tasks;
 namespace Twino.Core
 {
     /// <summary>
+    /// Handler for events when a message received from socket
+    /// </summary>
+    public delegate void SocketMessageHandler(SocketBase client, byte[] payload);
+
+    /// <summary>
     /// Base class for web socket clients.
     /// Server-side client and Client-side client classes are derived from this class
     /// </summary>
@@ -61,6 +66,11 @@ namespace Twino.Core
         /// </summary>
         private volatile bool _writeCompleted = true;
 
+        /// <summary>
+        /// Triggered when a message received
+        /// </summary>
+        public event SocketMessageHandler MessageReceived;
+
         #endregion
 
         protected SocketBase()
@@ -87,16 +97,6 @@ namespace Twino.Core
         /// <returns></returns>
         public abstract Task Pong();
 
-        /// <summary>
-        /// Sends a string message to the socket client.
-        /// </summary>
-        public abstract bool Send(string message);
-
-        /// <summary>
-        /// Sends a string message to the socket client.
-        /// </summary>
-        public abstract Task<bool> SendAsync(string message);
-
         private void EndWrite(IAsyncResult ar)
         {
             try
@@ -110,16 +110,12 @@ namespace Twino.Core
             catch
             {
                 _writeCompleted = true;
-                byte[] state = ar.AsyncState as byte[];
-                WriteError(state);
                 Disconnect();
             }
         }
 
         /// <summary>
         /// Sends prepared byte array message to the socket client.
-        /// Data must be prepared for WebSocket protocol.
-        /// It will be sent without any operation
         /// </summary>
         public bool Send(byte[] preparedData)
         {
@@ -203,6 +199,14 @@ namespace Twino.Core
             });
         }
 
+        /// <summary>
+        /// Fires all events that waiting message received
+        /// </summary>
+        protected void SetOnMessageReceived(byte[] data)
+        {
+            MessageReceived?.Invoke(this, data);
+        }
+        
         #endregion
 
         #region Abstract Methods
@@ -221,14 +225,6 @@ namespace Twino.Core
         /// Triggered when an error is occured in this client operations
         /// </summary>
         protected abstract void OnError(string hint, Exception ex);
-
-        /// <summary>
-        /// Will be called when a write error has occured.
-        /// Data is the message trying to send
-        /// </summary>
-        protected virtual void WriteError(byte[] data)
-        {
-        }
 
         #endregion
     }

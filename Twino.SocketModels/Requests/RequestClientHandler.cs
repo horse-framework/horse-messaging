@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading;
 using Twino.Core;
 
@@ -126,8 +127,9 @@ namespace Twino.SocketModels.Requests
         /// Called when a message received from the socket.
         /// If message is a response, it's proceed.
         /// </summary>
-        private void SenderOnMessageReceived(SocketBase client, string message)
+        private void SenderOnMessageReceived(SocketBase client, byte[] data)
         {
+            string message = Encoding.UTF8.GetString(data);
             SocketResponse header = TwinoRequestSerializer.DeserializeHeader<SocketResponse>(TwinoRequestSerializer.RESPONSE_CODE, message);
 
             if (header == null || string.IsNullOrEmpty(header.Unique))

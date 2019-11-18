@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using Twino.Core;
 
 namespace Twino.Client.Connectors
 {
@@ -9,7 +10,8 @@ namespace Twino.Client.Connectors
     /// It reconnects. If the reconnection is failed, it waits for interval and re-tries.
     /// This connector is always keeps the connection up.
     /// </summary>
-    public class StickyConnector : ConnectorBase
+    public class StickyConnector<TClient> : ConnectorBase<TClient>
+        where TClient : ClientSocketBase, new()
     {
         /// <summary>
         /// True when trying to connect.

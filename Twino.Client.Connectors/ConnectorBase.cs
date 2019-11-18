@@ -8,12 +8,14 @@ namespace Twino.Client.Connectors
     /// When an excaption thrown in connector lifecycle and event is fired.
     /// The event's delegate is this delegate.
     /// </summary>
-    public delegate void ConnectorExceptionHandler(IConnector connector, Exception ex);
+    public delegate void ConnectorExceptionHandler<in TClient>(IConnector<TClient> connector, Exception ex)
+        where TClient : ClientSocketBase, new();
 
     /// <summary>
     /// Base class for all connectors
     /// </summary>
-    public abstract class ConnectorBase : IConnector
+    public abstract class ConnectorBase<TClient> : IConnector<TClient>
+        where TClient : ClientSocketBase, new()
     {
         #region Properties
 
@@ -25,12 +27,12 @@ namespace Twino.Client.Connectors
         /// <summary>
         /// Current client instance.
         /// </summary>
-        private TwinoClient _client;
+        private TClient _client;
 
         /// <summary>
-        /// Headers for the HTTP Request
+        /// Properties for the client
         /// </summary>
-        private readonly Dictionary<string, string> _headers;
+        private readonly Dictionary<string, string> _properties;
 
         /// <summary>
         /// Next hostname in the host list
@@ -48,7 +50,7 @@ namespace Twino.Client.Connectors
         public event SocketStatusHandler Connected;
         public event SocketStatusHandler Disconnected;
         public event SocketMessageHandler MessageReceived;
-        public event ConnectorExceptionHandler ExceptionThrown;
+        public event ConnectorExceptionHandler<TClient> ExceptionThrown;
 
         /// <summary>
         /// If true, connector is connected to specified host
@@ -72,7 +74,7 @@ namespace Twino.Client.Connectors
         /// </summary>
         public bool IsRunning => _running;
 
-        public TwinoClient GetClient()
+        public TClient GetClient()
         {
             return _client;
         }
@@ -81,7 +83,7 @@ namespace Twino.Client.Connectors
 
         protected ConnectorBase()
         {
-            _headers = new Dictionary<string, string>();
+            _properties = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
             _hosts = new List<string>();
         }
 
@@ -122,12 +124,12 @@ namespace Twino.Client.Connectors
         /// </summary>
         public void AddHeader(string key, string value)
         {
-            lock (_headers)
+            lock (_properties)
             {
-                if (_headers.ContainsKey(key))
-                    _headers[key] = value;
+                if (_properties.ContainsKey(key))
+                    _properties[key] = value;
                 else
-                    _headers.Add(key, value);
+                    _properties.Add(key, value);
             }
         }
 
@@ -136,8 +138,8 @@ namespace Twino.Client.Connectors
         /// </summary>
         public void RemoveHeader(string key)
         {
-            lock (_headers)
-                _headers.Remove(key);
+            lock (_properties)
+                _properties.Remove(key);
         }
 
         /// <summary>
@@ -145,8 +147,8 @@ namespace Twino.Client.Connectors
         /// </summary>
         public void ClearHeaders()
         {
-            lock (_headers)
-                _headers.Clear();
+            lock (_properties)
+                _properties.Clear();
         }
 
         #endregion
@@ -171,16 +173,15 @@ namespace Twino.Client.Connectors
         {
             Disconnect();
 
-            _client = new TwinoClient();
+            _client = new TClient();
 
-            lock (_headers)
-                foreach (var kv in _headers)
-                    _client.Headers.Add(kv.Key, kv.Value);
+            lock (_properties)
+                foreach (var kv in _properties)
+                    _client.Properties.Add(kv.Key, kv.Value);
 
             _client.Connected += ClientConnected;
             _client.Disconnected += ClientDisconnected;
             _client.MessageReceived += ClientMessageReceived;
-            _client.WriteFailed += WriteError;
 
             if (_hosts.Count == 0)
                 throw new InvalidOperationException("Connector needs a host to connect");
@@ -243,15 +244,15 @@ namespace Twino.Client.Connectors
         /// <summary>
         /// Raises client message received event
         /// </summary>
-        protected virtual void ClientMessageReceived(SocketBase client, string message)
+        protected virtual void ClientMessageReceived(SocketBase client, byte[] payload)
         {
-            MessageReceived?.Invoke(client, message);
+            MessageReceived?.Invoke(client, payload);
         }
 
         /// <summary>
         /// Raises client disconnected event
         /// </summary>
-        protected virtual void ClientDisconnected(TwinoClient client)
+        protected virtual void ClientDisconnected(ClientSocketBase client)
         {
             Disconnected?.Invoke(client);
         }
@@ -259,7 +260,7 @@ namespace Twino.Client.Connectors
         /// <summary>
         /// Raises client connected event
         /// </summary>
-        protected virtual void ClientConnected(TwinoClient client)
+        protected virtual void ClientConnected(ClientSocketBase client)
         {
             _connectionCount++;
             _lastConnection = DateTime.UtcNow;
@@ -267,27 +268,12 @@ namespace Twino.Client.Connectors
             Connected?.Invoke(client);
         }
 
-        protected virtual void WriteError(TwinoClient client, byte[] data)
-        {
-        }
-
         /// <summary>
-        /// Sends the message to the server.
+        /// Sends the message to the server
         /// </summary>
-        public virtual bool Send(string message)
+        public virtual bool Send(byte[] data)
         {
-            return Send(WebSocketWriter.CreateFromUTF8(message));
-        }
-
-        /// <summary>
-        /// Sends the prepared websocket protocol message to the server
-        /// </summary>
-        public virtual bool Send(byte[] preparedData)
-        {
-            if (_client == null)
-                return false;
-
-            return _client.Send(preparedData);
+            return _client != null && _client.Send(data);
         }
 
         #endregion

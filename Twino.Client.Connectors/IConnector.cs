@@ -1,9 +1,12 @@
-﻿namespace Twino.Client.Connectors
+﻿using Twino.Core;
+
+namespace Twino.Client.Connectors
 {
     /// <summary>
     /// Connector interface for managing specified case connection types.
     /// </summary>
-    public interface IConnector
+    public interface IConnector<out TClient>
+        where TClient : ClientSocketBase, new()
     {
         /// <summary>
         /// If true, connector is running
@@ -50,7 +53,7 @@
         /// Gets the current client socket that connected to the host
         /// </summary>
         /// <returns></returns>
-        TwinoClient GetClient();
+        TClient GetClient();
 
         /// <summary>
         /// Runs the connector
@@ -63,13 +66,8 @@
         void Abort();
 
         /// <summary>
-        /// Sends the message to the server.
+        /// Sends the message to the server
         /// </summary>
-        bool Send(string message);
-
-        /// <summary>
-        /// Sends the prepared websocket protocol message to the server
-        /// </summary>
-        bool Send(byte[] preparedData);
+        bool Send(byte[] data);
     }
 }

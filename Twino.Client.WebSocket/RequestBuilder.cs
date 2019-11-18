@@ -3,7 +3,7 @@ using System.IO;
 using System.Text;
 using Twino.Protocols.Http;
 
-namespace Twino.Client
+namespace Twino.Client.WebSocket
 {
 
     /// <summary>

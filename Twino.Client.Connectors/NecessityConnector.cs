@@ -1,4 +1,5 @@
 ﻿using System;
+using Twino.Core;
 
 namespace Twino.Client.Connectors
 {
@@ -9,7 +10,8 @@ namespace Twino.Client.Connectors
     /// But if the connection is closed because of some reason.
     /// Does not connect until next Send method is called.
     /// </summary>
-    public class NecessityConnector : ConnectorBase
+    public class NecessityConnector<TClient> : ConnectorBase<TClient>
+        where TClient : ClientSocketBase, new()
     {
         /// <summary>
         /// Disconnects from the server

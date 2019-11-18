@@ -6,23 +6,23 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Twino.Core;
-using Twino.Core.Http;
-using Twino.Core.WebSocket;
+using Twino.Protocols.Http;
 
-namespace Twino.Client
+namespace Twino.Client.WebSocket
 {
     #region Event Delegates
 
     /// <summary>
     /// Function definition for parameterless web sockets
     /// </summary>
-    public delegate void SocketStatusHandler(TwinoClient client);
+    public delegate void SocketStatusHandler(TwinoWsClient client);
 
     /// <summary>
     /// Function definition for End-Write error handling
     /// </summary>
-    public delegate void SocketWriteErrorHandler(TwinoClient client, byte[] data);
+    public delegate void SocketWriteErrorHandler(TwinoWsClient client, byte[] data);
 
     #endregion
 
@@ -31,7 +31,7 @@ namespace Twino.Client
     /// Can be used directly with event subscriptions
     /// Or can be base class to a derived Client class and provides virtual methods for all events
     /// </summary>
-    public class TwinoClient : TwinoWebSocket
+    public class TwinoWsClient : SocketBase
     {
         #region Events - Properties
 
@@ -203,10 +203,10 @@ namespace Twino.Client
 
                 OnConnected();
             }
-            catch (Exception ex)
+            catch
             {
                 Disconnect();
-                throw ex;
+                throw;
             }
         }
 
@@ -244,6 +244,26 @@ namespace Twino.Client
 
         #region Abstract Methods
 
+        protected override Task Read()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Task Ping()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Task Pong()
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool Send(string message)
+        {
+            throw new NotImplementedException();
+        }
+
         protected override void OnConnected()
         {
             Connected?.Invoke(this);
@@ -256,11 +276,6 @@ namespace Twino.Client
 
         protected override void OnError(string hint, Exception ex)
         {
-        }
-
-        protected override void WriteError(byte[] data)
-        {
-            WriteFailed?.Invoke(this, data);
         }
 
         #endregion

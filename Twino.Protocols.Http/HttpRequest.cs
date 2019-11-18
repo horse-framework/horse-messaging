@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Twino.Server")]
+[assembly: InternalsVisibleTo("Twino.Client.WebSocket")]
 
 namespace Twino.Protocols.Http
 {

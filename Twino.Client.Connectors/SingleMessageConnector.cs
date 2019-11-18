@@ -1,10 +1,13 @@
-﻿namespace Twino.Client.Connectors
+﻿using Twino.Core;
+
+namespace Twino.Client.Connectors
 {
     /// <summary>
     /// Only connects to the server, when Send is called.
     /// After send the message, disconnected from the server.
     /// </summary>
-    public class SingleMessageConnector : NecessityConnector
+    public class SingleMessageConnector<TClient> : NecessityConnector<TClient>
+        where TClient : ClientSocketBase, new()
     {
         /// <summary>
         /// Connects to the server, sends the message and disconnects after message is sent.

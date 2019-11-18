@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Timers;
+using Twino.Core;
 
 namespace Twino.Client.Connectors
 {
@@ -38,7 +39,8 @@ namespace Twino.Client.Connectors
     /// it keeps the message and sends when connected.
     /// Each message has it's own maximum try count and expire time.
     /// </summary>
-    public class AbsoluteConnector : StickyConnector
+    public class AbsoluteConnector<TClient> : StickyConnector<TClient>
+        where TClient : ClientSocketBase, new()
     {
         #region Properties
 
@@ -92,7 +94,7 @@ namespace Twino.Client.Connectors
             if (_messagesProcessing || _failedMessages.Count == 0)
                 return;
 
-            TwinoClient client = GetClient();
+            TClient client = GetClient();
             if (client == null || !client.IsConnected)
                 return;
 
@@ -108,7 +110,7 @@ namespace Twino.Client.Connectors
         /// </summary>
         public override bool Send(byte[] preparedData)
         {
-            TwinoClient client = GetClient();
+            TClient client = GetClient();
             if (client == null || !client.IsConnected)
             {
                 AddFailedMessage(preparedData);
@@ -144,14 +146,9 @@ namespace Twino.Client.Connectors
         /// <summary>
         /// Fired when connection is establies.
         /// </summary>
-        private void AbsoluteConnector_Connected(TwinoClient client)
+        private void AbsoluteConnector_Connected(ClientSocketBase client)
         {
             ProcessFailedMessages();
-        }
-
-        protected override void WriteError(TwinoClient client, byte[] data)
-        {
-            AddFailedMessage(data);
         }
 
         /// <summary>
@@ -190,7 +187,7 @@ namespace Twino.Client.Connectors
                     try
                     {
                         fm.TryCount++;
-                        TwinoClient _client = GetClient();
+                        TClient _client = GetClient();
 
                         if (_client != null && _client.IsConnected)
                             fm.Sent = _client.Send(fm.Data);
