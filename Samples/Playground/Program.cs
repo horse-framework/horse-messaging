@@ -1,90 +1,35 @@
-﻿using System;
-using System.IO;
-using System.Net.Sockets;
-using System.Text;
+﻿using System.IO;
 using System.Threading.Tasks;
-using Twino.Core.Http;
-using Twino.Core.Tmq;
+using Twino.Mvc;
+using Twino.Mvc.Controllers;
+using Twino.Mvc.Filters.Route;
+using Twino.Protocols.Http;
 using Twino.Server;
 
 namespace Playground
 {
-    public class CustomClient : ServerSocket
+    [Route("")]
+    public class HomeController : TwinoController
     {
-        public CustomClient(TwinoServer server, HttpRequest request, TcpClient client) : base(server, request, client)
+        [HttpGet("")]
+        public async Task<IActionResult> Get()
         {
-        }
-
-        protected override void OnConnected()
-        {
-            base.OnConnected();
-            Console.WriteLine($"Client connected from {Request.IpAddress}");
-        }
-
-        public override void Disconnect()
-        {
-            base.Disconnect();
-            Console.WriteLine("Client disconnected");
-        }
-
-        protected override void OnMessageReceived(string message)
-        {
-            Console.WriteLine($"Received: {message}");
-            base.OnMessageReceived(message);
+            return await StringAsync("Hello, world!");
         }
     }
-
-    public class WebSocketClientFactory : IClientFactory
-    {
-        public async Task<ServerSocket> Create(TwinoServer server, HttpRequest request, TcpClient client)
-        {
-            if (!request.Headers.ContainsKey(HttpHeaders.AUTHORIZATION))
-                return await Task.FromResult((ServerSocket) null);
-
-            CustomClient socket = new CustomClient(server, request, client);
-            return await Task.FromResult(socket);
-        }
-    }
-
 
     class Program
     {
         static void Main(string[] args)
         {
-            QueueMessage msg = new QueueMessage
-                               {
-                                   ResponseRequired = true,
-                                   HighPriority = true,
-                                   FirstAcquirer = true,
-                                   Type = MessageType.Channel,
-                                   MessageId = "8Qm3Slx1",
-                                   Target = "twino",
-                                   Source = "mehmet",
-                                   Content = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"))
-                               };
-            
-            msg.PrepareFirstUse();
+            HttpOptions options = new HttpOptions();
+            TwinoMvc mvc = new TwinoMvc();
+            mvc.Init(m => { });
 
-            TmqWriter writer = new TmqWriter();
-            MemoryStream ms = new MemoryStream();
-            writer.Write(msg, ms).Wait();
-            ms.Position = 0;
+            TwinoServer server = new TwinoServer(ServerOptions.CreateDefault());
+            server.UseMvc(mvc, options);
 
-            TmqReader reader = new TmqReader();
-            QueueMessage msg2 = reader.Read(ms).Result;
-            Console.WriteLine(msg2.Length);
-            Console.ReadLine();
-            return;
-
-
-            ServerOptions options = ServerOptions.CreateDefault();
-            options.Hosts[0].Port = 85; //listen port 85
-            options.PingInterval = 120000; //120 seconds
-
-            IClientFactory clientFactory = new WebSocketClientFactory();
-            TwinoServer server = TwinoServer.CreateWebSocket(clientFactory, options);
-            server.Start();
-            server.BlockWhileRunning();
+            server.Start(82);
         }
     }
 }

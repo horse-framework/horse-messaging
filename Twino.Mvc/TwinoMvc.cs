@@ -184,7 +184,7 @@ namespace Twino.Mvc
         /// <summary>
         /// Runs Twino MVC Server as async, with middleware implementation
         /// </summary>
-        public void Use(Action<IMvcAppBuilder> action = null)
+        public void Use(Action<IMvcAppBuilder> action)
         {
             if (action != null)
                 action(AppBuilder);

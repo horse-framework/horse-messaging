@@ -6,13 +6,22 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\Twino.Client\Twino.Client.csproj" />
-        <ProjectReference Include="..\..\Twino.Core\Twino.Core.csproj" />
-        <ProjectReference Include="..\..\Twino.MQ\Twino.MQ.csproj" />
-        <ProjectReference Include="..\..\Twino.Mvc.Auth.Jwt\Twino.Mvc.Auth.Jwt.csproj" />
-        <ProjectReference Include="..\..\Twino.Mvc\Twino.Mvc.csproj" />
-        <ProjectReference Include="..\..\Twino.Server\Twino.Server.csproj" />
-        <ProjectReference Include="..\..\Twino.SocketModels\Twino.SocketModels.csproj" />
+      <ProjectReference Include="..\..\Twino.Client.Connectors\Twino.Client.Connectors.csproj" />
+      <ProjectReference Include="..\..\Twino.Client.TMQ\Twino.Client.TMQ.csproj" />
+      <ProjectReference Include="..\..\Twino.Client.WebSocket\Twino.Client.WebSocket.csproj" />
+      <ProjectReference Include="..\..\Twino.Core\Twino.Core.csproj" />
+      <ProjectReference Include="..\..\Twino.Extensions.Data\Twino.Extensions.Data.csproj" />
+      <ProjectReference Include="..\..\Twino.Extensions.Http\Twino.Extensions.Http.csproj" />
+      <ProjectReference Include="..\..\Twino.Ioc\Twino.Ioc.csproj" />
+      <ProjectReference Include="..\..\Twino.MQ\Twino.MQ.csproj" />
+      <ProjectReference Include="..\..\Twino.Mvc.Auth.Jwt\Twino.Mvc.Auth.Jwt.csproj" />
+      <ProjectReference Include="..\..\Twino.Mvc.Explorer\Twino.Mvc.Explorer.csproj" />
+      <ProjectReference Include="..\..\Twino.Mvc\Twino.Mvc.csproj" />
+      <ProjectReference Include="..\..\Twino.Protocols.Http\Twino.Protocols.Http.csproj" />
+      <ProjectReference Include="..\..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
+      <ProjectReference Include="..\..\Twino.Protocols.WebSocket\Twino.Protocols.WebSocket.csproj" />
+      <ProjectReference Include="..\..\Twino.Server\Twino.Server.csproj" />
+      <ProjectReference Include="..\..\Twino.SocketModels\Twino.SocketModels.csproj" />
     </ItemGroup>
 
 </Project>
