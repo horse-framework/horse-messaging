@@ -13,5 +13,7 @@ namespace Twino.Core
         void UseProtocol<TMessage>(ITwinoProtocol<TMessage> protocol);
 
         Task SwitchProtocol(IConnectionInfo info, string newProtocolName, Dictionary<string, string> properties);
+
+        ITwinoProtocol FindProtocol(string name);
     }
 }

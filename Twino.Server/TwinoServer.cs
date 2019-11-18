@@ -223,7 +223,12 @@ namespace Twino.Server
 
         public void UseProtocol<TMessage>(ITwinoProtocol<TMessage> protocol)
         {
-            var list = Protocols.ToList();
+            List<ITwinoProtocol> list = Protocols.ToList();
+            
+            ITwinoProtocol old = list.FirstOrDefault(x => x.Name.Equals(protocol.Name, StringComparison.InvariantCultureIgnoreCase));
+            if (old != null)
+                list.Remove(old);
+            
             list.Add(protocol);
             Protocols = list.ToArray();
         }
@@ -250,6 +255,11 @@ namespace Twino.Server
                     return;
                 }
             }
+        }
+
+        public ITwinoProtocol FindProtocol(string name)
+        {
+            return Protocols.FirstOrDefault(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
         }
 
         #endregion
