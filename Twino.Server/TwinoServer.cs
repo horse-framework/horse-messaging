@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
@@ -31,35 +32,6 @@ namespace Twino.Server
         /// Enable only in development or maintenance mode.
         /// </summary>
         public ILogger Logger { get; set; }
-
-        public IProtocolConnectionHandler<TMessage> UseProtocol<TMessage>(ITwinoProtocol<TMessage> protocol)
-        {
-            throw new NotImplementedException();
-        }
-
-        public async Task SwitchProtocol(IConnectionInfo info, string newProtocolName, Dictionary<string, string> properties)
-        {
-            foreach (ITwinoProtocol protocol in Protocols)
-            {
-                if (protocol.Name.Equals(newProtocolName, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    ProtocolHandshakeResult hsresult = await protocol.SwitchTo(info, properties);
-                    if (!hsresult.Accepted)
-                    {
-                        info.Close();
-                        return;
-                    }
-
-                    info.Protocol = protocol;
-
-                    if (hsresult.Response != null)
-                        await info.GetStream().WriteAsync(hsresult.Response);
-
-                    await protocol.HandleConnection(info);
-                    return;
-                }
-            }
-        }
 
         /// <summary>
         /// Server options. Can set programmatically with constructor parameter
@@ -243,6 +215,41 @@ namespace Twino.Server
                 handler.Dispose();
 
             _handlers.Clear();
+        }
+
+        #endregion
+
+        #region Protocols
+
+        public void UseProtocol<TMessage>(ITwinoProtocol<TMessage> protocol)
+        {
+            var list = Protocols.ToList();
+            list.Add(protocol);
+            Protocols = list.ToArray();
+        }
+
+        public async Task SwitchProtocol(IConnectionInfo info, string newProtocolName, Dictionary<string, string> properties)
+        {
+            foreach (ITwinoProtocol protocol in Protocols)
+            {
+                if (protocol.Name.Equals(newProtocolName, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    ProtocolHandshakeResult hsresult = await protocol.SwitchTo(info, properties);
+                    if (!hsresult.Accepted)
+                    {
+                        info.Close();
+                        return;
+                    }
+
+                    info.Protocol = protocol;
+
+                    if (hsresult.Response != null)
+                        await info.GetStream().WriteAsync(hsresult.Response);
+
+                    await protocol.HandleConnection(info);
+                    return;
+                }
+            }
         }
 
         #endregion

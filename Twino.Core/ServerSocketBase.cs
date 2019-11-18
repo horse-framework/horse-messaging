@@ -62,17 +62,6 @@ namespace Twino.Core
         }
 
         /// <summary>
-        /// Disconnects the connection between server socket and client socket
-        /// </summary>
-        public override void Disconnect()
-        {
-            base.Disconnect();
-
-            if (Server.Pinger != null)
-                Server.Pinger.Remove(this);
-        }
-
-        /// <summary>
         /// Called when an error has occured
         /// </summary>
         protected override void OnError(string hint, Exception ex)

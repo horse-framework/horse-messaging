@@ -54,7 +54,7 @@ namespace Twino.Protocols.Http
             _timeTimer = new Timer(s => PredefinedHeaders.SERVER_TIME_CRLF = Encoding.UTF8.GetBytes("Date: " + DateTime.UtcNow.ToString("R") + "\r\n"), "", 1000, 1000);
         }
 
-        public async Task<ProtocolHandshakeResult> Handshake(byte[] data)
+        public async Task<ProtocolHandshakeResult> Handshake(IConnectionInfo info, byte[] data)
         {
             ProtocolHandshakeResult result = new ProtocolHandshakeResult();
             result.Accepted = CheckSync(data);
@@ -62,6 +62,7 @@ namespace Twino.Protocols.Http
                 result.ReadAfter = true;
 
             HandshakeResult = result;
+            info.State = ConnectionStates.Http;
             return await Task.FromResult(result);
         }
 
@@ -140,6 +141,8 @@ namespace Twino.Protocols.Http
                 message.Request.Headers.TryGetValue(HttpHeaders.UPGRADE, out protocolName);
                 if (!string.IsNullOrEmpty(protocolName))
                 {
+                    message.Request.Headers.Add("Twino-Method", message.Request.Method);
+                    message.Request.Headers.Add("Twino-Path", message.Request.Path);
                     await _server.SwitchProtocol(info, protocolName, message.Request.Headers);
                     return HandleStatus.ExitWithoutClosing;
                 }
@@ -151,7 +154,7 @@ namespace Twino.Protocols.Http
 
             try
             {
-                await Handler.Received(_server, message);
+                await Handler.Received(_server, info, message);
             }
             catch (Exception ex)
             {

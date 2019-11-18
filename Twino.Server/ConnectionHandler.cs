@@ -108,7 +108,7 @@ namespace Twino.Server
 
                 foreach (ITwinoProtocol protocol in _server.Protocols)
                 {
-                    ProtocolHandshakeResult hsresult = await protocol.Handshake(pbytes);
+                    ProtocolHandshakeResult hsresult = await protocol.Handshake(info, pbytes);
                     if (hsresult.Accepted)
                     {
                         info.Protocol = protocol;

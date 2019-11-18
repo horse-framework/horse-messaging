@@ -21,11 +21,11 @@ namespace Twino.Protocols.TMQ
             Handler = handler;
         }
 
-        public async Task<ProtocolHandshakeResult> Handshake(byte[] data)
+        public async Task<ProtocolHandshakeResult> Handshake(IConnectionInfo info, byte[] data)
         {
             ProtocolHandshakeResult result = new ProtocolHandshakeResult();
             HandshakeResult = result;
-            
+
             if (data.Length < 8)
                 return await Task.FromResult(result);
 
@@ -43,7 +43,12 @@ namespace Twino.Protocols.TMQ
 
         public async Task HandleConnection(IConnectionInfo info)
         {
-            throw new NotImplementedException();
+            TmqReader reader = new TmqReader();
+            while (info.Client != null && info.Client.Connected)
+            {
+                TmqMessage message = await reader.Read(info.GetStream());
+                await Handler.Received(_server, info, message);
+            }
         }
 
         private static bool CheckProtocol(byte[] data)

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,7 +27,7 @@ namespace Twino.Protocols.WebSocket
             Handler = handler;
         }
 
-        public async Task<ProtocolHandshakeResult> Handshake(byte[] data)
+        public async Task<ProtocolHandshakeResult> Handshake(IConnectionInfo info, byte[] data)
         {
             HandshakeResult = new ProtocolHandshakeResult();
             return await Task.FromResult(HandshakeResult);
@@ -43,38 +42,41 @@ namespace Twino.Protocols.WebSocket
             bool hasKey = properties.TryGetValue(PredefinedMessages.WEBSOCKET_KEY, out key);
             if (!hasKey)
                 return await Task.FromResult(new ProtocolHandshakeResult());
-            
+
             ProtocolHandshakeResult result = new ProtocolHandshakeResult();
             result.PipeConnection = true;
             result.Accepted = true;
             result.ReadAfter = false;
             result.PreviouslyRead = null;
             result.Response = await CreateWebSocketHandshakeResponse(key);
-            
-            return result;
-/*
 
-            ServerSocket client = await Server.ClientFactory.Create(Server, Request, Info.Client);
-            if (client == null)
+            ServerSocketBase socket = await Handler.Connected(_server, info, properties);
+
+            if (socket == null)
+                return await Task.FromResult(new ProtocolHandshakeResult());
+
+            void socketDisconnected(ServerSocketBase socketBase)
             {
-                Info.Close();
-                return;
+                Handler.Disconnected(_server, info, socketBase);
+                _server.Pinger.Remove(socket);
+                socket.Disconnected -= socketDisconnected;
             }
 
-            Server.SetClientConnected(client);
-            Server.Pinger.AddClient(client);
-            await client.Start();*/
-
-            /*
             info.State = ConnectionStates.Pipe;
-            SocketRequestHandler handler = new SocketRequestHandler(_server, request, info);
-            await handler.HandshakeClient();
-            */
+            socket.Disconnected += socketDisconnected;
+            _server.Pinger.Add(socket);
+
+            return result;
         }
 
         public async Task HandleConnection(IConnectionInfo info)
         {
-            throw new System.NotImplementedException();
+            WebSocketReader reader = new WebSocketReader();
+            while (info.Client != null && info.Client.Connected)
+            {
+                WebSocketMessage message = await reader.Read(info.GetStream());
+                await Handler.Received(_server, info, message);
+            }
         }
 
         public IProtocolMessageReader<WebSocketMessage> CreateReader()
