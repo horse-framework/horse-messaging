@@ -1,6 +1,4 @@
-﻿using Twino.Server;
-using Twino.Server.Http;
-using Twino.Mvc.Controllers;
+﻿using Twino.Mvc.Controllers;
 using Twino.Mvc.Filters;
 using Twino.Mvc.Routing;
 using System.Collections.Generic;
@@ -16,8 +14,9 @@ using Twino.Mvc.Errors;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using Twino.Core;
 using Twino.Mvc.Auth;
-using Twino.Core.Http;
+using Twino.Core.Protocols;
 using Twino.Mvc.Middlewares;
 using Twino.Ioc;
 using Twino.Protocols.Http;
@@ -28,7 +27,7 @@ namespace Twino.Mvc
     /// HTTP Request Handler implementation of Twino.Server for Twino.Mvc project.
     /// All HTTP Requests starts in here in Request method.
     /// </summary>
-    internal class MvcRequestHandler : IHttpRequestHandler
+    internal class MvcRequestHandler : IProtocolConnectionHandler<HttpMessage>
     {
         /// <summary>
         /// Twino.Mvc Facade object
@@ -43,12 +42,28 @@ namespace Twino.Mvc
             App = app;
         }
 
+        public async Task<ServerSocketBase> Connected(ITwinoServer server, IConnectionInfo connection, Dictionary<string, string> properties)
+        {
+            return await Task.FromResult((ServerSocketBase) null);
+        }
+
+        public async Task Disconnected(ITwinoServer server, IConnectionInfo info, ServerSocketBase client)
+        {
+            await Task.CompletedTask;
+        }
+
+        public async Task Received(ITwinoServer server, IConnectionInfo info, HttpMessage message)
+        {
+            await RequestAsync(server, message.Request, message.Response);
+        }
+
         /// <summary>
         /// Triggered when a non-websocket request available.
         /// </summary>
-        public async Task RequestAsync(TwinoServer server, HttpRequest request, HttpResponse response)
+        private async Task RequestAsync(ITwinoServer server, HttpRequest request, HttpResponse response)
         {
             IContainerScope scope = Mvc.Services.CreateScope();
+            
             try
             {
                 if (App.Descriptors.Count > 0)
@@ -88,7 +103,7 @@ namespace Twino.Mvc
         /// <summary>
         /// Handles the request in MVC pattern
         /// </summary>
-        private async Task RequestMvc(TwinoServer server, HttpRequest request, HttpResponse response, IContainerScope scope)
+        private async Task RequestMvc(ITwinoServer server, HttpRequest request, HttpResponse response, IContainerScope scope)
         {
             //find file route
             if (Mvc.FileRoutes.Count > 0)

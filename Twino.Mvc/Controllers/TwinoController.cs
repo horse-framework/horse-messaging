@@ -1,11 +1,11 @@
 ﻿using System.IO;
 using System.Net;
 using Twino.Mvc.Results;
-using Twino.Server;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using Twino.Core.Http;
+using Twino.Core;
 using Twino.Ioc;
+using Twino.Protocols.Http;
 
 namespace Twino.Mvc.Controllers
 {
@@ -15,9 +15,8 @@ namespace Twino.Mvc.Controllers
     /// </summary>
     public class TwinoController : IController
     {
-        
         #region Properties
-        
+
         /// <summary>
         /// Gets HTTP Request information for the specified request
         /// </summary>
@@ -31,22 +30,22 @@ namespace Twino.Mvc.Controllers
         /// <summary>
         /// Gets Underlying HTTP Server object
         /// </summary>
-        public TwinoServer Server { get; internal set; }
+        public ITwinoServer Server { get; internal set; }
 
         /// <summary>
         /// Get Claims for user associated for executing request
         /// </summary>
         public ClaimsPrincipal User { get; internal set; }
-        
+
         /// <summary>
         /// Gets IOC scope of the request
         /// </summary>
         public IContainerScope CurrentScope { get; internal set; }
 
         #endregion
-        
+
         #region Return Results
-        
+
         /// <summary>
         /// Creates new JSON result from the object. Status code will be set to 200.
         /// </summary>
@@ -124,9 +123,9 @@ namespace Twino.Mvc.Controllers
         }
 
         #endregion
-        
+
         #region Status Code - Json
-        
+
         /// <summary>
         /// Returns JSON result with 200 HTTP status code
         /// </summary>
@@ -134,7 +133,7 @@ namespace Twino.Mvc.Controllers
         {
             return await JsonAsync(model);
         }
- 
+
         /// <summary>
         /// Returns JSON result with Created HTTP status code
         /// </summary>
@@ -142,7 +141,7 @@ namespace Twino.Mvc.Controllers
         {
             return await JsonAsync(model, HttpStatusCode.Created);
         }
-        
+
         /// <summary>
         /// Returns JSON result with Accepted HTTP status code
         /// </summary>
@@ -150,7 +149,7 @@ namespace Twino.Mvc.Controllers
         {
             return await JsonAsync(model, HttpStatusCode.Accepted);
         }
-        
+
         /// <summary>
         /// Returns JSON result with BadRequest HTTP status code
         /// </summary>
@@ -182,7 +181,7 @@ namespace Twino.Mvc.Controllers
         {
             return await JsonAsync(model, HttpStatusCode.PaymentRequired);
         }
-        
+
         /// <summary>
         /// Returns JSON result with Forbidden HTTP status code
         /// </summary>
@@ -190,7 +189,7 @@ namespace Twino.Mvc.Controllers
         {
             return await JsonAsync(model, HttpStatusCode.Forbidden);
         }
-        
+
         /// <summary>
         /// Returns JSON result with NotFound HTTP status code
         /// </summary>
@@ -206,7 +205,7 @@ namespace Twino.Mvc.Controllers
         {
             return await JsonAsync(model, HttpStatusCode.MethodNotAllowed);
         }
-        
+
         /// <summary>
         /// Returns JSON result with NotAcceptable HTTP status code
         /// </summary>
@@ -214,7 +213,7 @@ namespace Twino.Mvc.Controllers
         {
             return await JsonAsync(model, HttpStatusCode.NotAcceptable);
         }
-        
+
         /// <summary>
         /// Returns JSON result with Conflict HTTP status code
         /// </summary>
@@ -222,7 +221,7 @@ namespace Twino.Mvc.Controllers
         {
             return await JsonAsync(model, HttpStatusCode.Conflict);
         }
-        
+
         /// <summary>
         /// Returns JSON result with Gone HTTP status code
         /// </summary>
@@ -230,7 +229,7 @@ namespace Twino.Mvc.Controllers
         {
             return await JsonAsync(model, HttpStatusCode.Gone);
         }
-        
+
         /// <summary>
         /// Returns JSON result with LengthRequired HTTP status code
         /// </summary>
@@ -238,7 +237,7 @@ namespace Twino.Mvc.Controllers
         {
             return await JsonAsync(model, HttpStatusCode.LengthRequired);
         }
-        
+
         /// <summary>
         /// Returns JSON result with PreconditionFailed HTTP status code
         /// </summary>
@@ -246,7 +245,7 @@ namespace Twino.Mvc.Controllers
         {
             return await JsonAsync(model, HttpStatusCode.PreconditionFailed);
         }
-        
+
         /// <summary>
         /// Returns JSON result with RequestEntityTooLarge HTTP status code
         /// </summary>
@@ -254,7 +253,7 @@ namespace Twino.Mvc.Controllers
         {
             return await JsonAsync(model, HttpStatusCode.RequestEntityTooLarge);
         }
-        
+
         /// <summary>
         /// Returns JSON result with UnsupportedMediaType HTTP status code
         /// </summary>
@@ -280,6 +279,5 @@ namespace Twino.Mvc.Controllers
         }
 
         #endregion
-        
     }
 }

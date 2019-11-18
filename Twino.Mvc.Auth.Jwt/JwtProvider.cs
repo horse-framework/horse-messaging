@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
-using Twino.Core.Http;
+using Twino.Protocols.Http;
 
 namespace Twino.Mvc.Auth.Jwt
 {
@@ -46,13 +46,13 @@ namespace Twino.Mvc.Auth.Jwt
             string tokenString = new JwtSecurityTokenHandler().WriteToken(token);
 
             return new JwtToken
-            {
-                Created = token.ValidFrom,
-                Expires = token.ValidTo,
-                Issuer = token.Issuer,
-                Token = tokenString,
-                Scheme = HttpHeaders.BEARER
-            };
+                   {
+                       Created = token.ValidFrom,
+                       Expires = token.ValidTo,
+                       Issuer = token.Issuer,
+                       Token = tokenString,
+                       Scheme = HttpHeaders.BEARER
+                   };
         }
 
         /// <summary>
@@ -80,7 +80,7 @@ namespace Twino.Mvc.Auth.Jwt
             foreach (Claim claim in principal.Claims)
                 if (claim.Type != JwtRegisteredClaimNames.Jti && claim.Type != JwtRegisteredClaimNames.Sub)
                     claims.Add(claim);
-            
+
             JwtToken refreshToken = Create(idClaim.Value, usernameClaim.Value, claims);
             return refreshToken;
         }
@@ -93,6 +93,5 @@ namespace Twino.Mvc.Auth.Jwt
             JwtClaimsPrincipalValidator validator = new JwtClaimsPrincipalValidator(Options);
             return validator.Get(request);
         }
-
     }
 }

@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using Twino.Core.Http;
 using Twino.Mvc.Routing;
+using Twino.Protocols.Http;
 
 namespace Twino.Mvc.Middlewares
 {

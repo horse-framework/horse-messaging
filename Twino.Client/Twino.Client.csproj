@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Twino.Core\Twino.Core.csproj" />
+    <ProjectReference Include="..\Twino.Protocols.Http\Twino.Protocols.Http.csproj" />
   </ItemGroup>
 
 </Project>

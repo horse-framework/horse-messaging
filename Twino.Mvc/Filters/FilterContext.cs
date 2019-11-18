@@ -1,7 +1,7 @@
 ﻿using Twino.Mvc.Controllers;
-using Twino.Server;
 using System.Security.Claims;
-using Twino.Core.Http;
+using Twino.Core;
+using Twino.Protocols.Http;
 
 namespace Twino.Mvc.Filters
 {
@@ -13,7 +13,7 @@ namespace Twino.Mvc.Filters
         /// <summary>
         /// Underlying HTTP Server
         /// </summary>
-        public TwinoServer Server { get; internal set; }
+        public ITwinoServer Server { get; internal set; }
 
         /// <summary>
         /// HTTP Request

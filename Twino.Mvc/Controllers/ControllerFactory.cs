@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Reflection;
 using System.Threading.Tasks;
-using Twino.Core.Http;
 using Twino.Ioc;
+using Twino.Protocols.Http;
 
 namespace Twino.Mvc.Controllers
 {

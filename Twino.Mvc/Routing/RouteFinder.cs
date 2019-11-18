@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using Twino.Core.Http;
 using Twino.Mvc.Controllers;
 using Twino.Mvc.Results;
+using Twino.Protocols.Http;
 
 namespace Twino.Mvc.Routing
 {
@@ -66,7 +66,7 @@ namespace Twino.Mvc.Routing
             //split path to route parts
             string[] parts = request.Path.Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0)
-                parts = new string[] { "" };
+                parts = new[] { "" };
 
             foreach (Route route in routes)
             {

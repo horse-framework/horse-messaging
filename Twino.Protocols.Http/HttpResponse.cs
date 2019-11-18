@@ -3,9 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Twino.Core;
+
+[assembly: InternalsVisibleTo("Twino.Mvc")]
 
 namespace Twino.Protocols.Http
 {

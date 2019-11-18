@@ -1,6 +1,6 @@
-﻿using Twino.Server;
-using System.Security.Claims;
-using Twino.Core.Http;
+﻿using System.Security.Claims;
+using Twino.Core;
+using Twino.Protocols.Http;
 
 namespace Twino.Mvc.Controllers
 {
@@ -9,12 +9,11 @@ namespace Twino.Mvc.Controllers
     /// </summary>
     public interface IController
     {
-
         /// <summary>
         /// HTTP Request
         /// </summary>
         HttpRequest Request { get; }
-    
+
         /// <summary>
         /// HTTP Response
         /// </summary>
@@ -23,12 +22,11 @@ namespace Twino.Mvc.Controllers
         /// <summary>
         /// Underlying HTTP Server object of Twino MVC
         /// </summary>
-        TwinoServer Server { get; }
+        ITwinoServer Server { get; }
 
         /// <summary>
         /// Get Claims for user associated for executing request
         /// </summary>
         ClaimsPrincipal User { get; }
-
     }
 }

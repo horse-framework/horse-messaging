@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Twino.Core.Http;
 using Twino.Mvc.Results;
+using Twino.Protocols.Http;
 
 namespace Twino.Mvc.Middlewares
 {

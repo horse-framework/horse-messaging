@@ -25,7 +25,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Twino.Mvc\Twino.Mvc.csproj" />
-    <ProjectReference Include="..\Twino.Server\Twino.Server.csproj" />
   </ItemGroup>
 
 </Project>

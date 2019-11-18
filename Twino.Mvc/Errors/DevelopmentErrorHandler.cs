@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Text;
 using System.Threading.Tasks;
-using Twino.Core.Http;
 using Twino.Mvc.Controllers;
 using Twino.Mvc.Results;
+using Twino.Protocols.Http;
 
 namespace Twino.Mvc.Errors
 {

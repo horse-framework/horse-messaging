@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Security.Claims;
-using Twino.Core.Http;
+using Twino.Protocols.Http;
 
 namespace Twino.Mvc.Auth.Jwt
 {
