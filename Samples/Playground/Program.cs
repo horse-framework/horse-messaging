@@ -12,6 +12,7 @@ using Twino.Mvc.Filters.Route;
 using Twino.Protocols.Http;
 using Twino.Protocols.WebSocket;
 using Twino.Server;
+using Twino.SocketModels;
 
 namespace Playground
 {
@@ -29,7 +30,9 @@ namespace Playground
     {
         public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, Dictionary<string, string> properties)
         {
-            return await Task.FromResult(new WsServerSocket(server, connection));
+            WsServerSocket socket = new WsServerSocket(server, connection);
+            Program.Socket = socket;
+            return await Task.FromResult(socket);
         }
 
         public async Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, WebSocketMessage message)
@@ -47,6 +50,8 @@ namespace Playground
 
     class Program
     {
+        public static WsServerSocket Socket { get; set; }
+        
         static void Main(string[] args)
         {
             HttpOptions options = new HttpOptions();
@@ -59,9 +64,13 @@ namespace Playground
             server.UseWebSockets(new WebSocketHandler());
 
             server.Start(82);
-            server.BlockWhileRunning();
 
-            StickyConnector<TwinoWebSocket, WebSocketMessage> connector = new StickyConnector<TwinoWebSocket, WebSocketMessage>(TimeSpan.FromSeconds(10));
+            while (true)
+            {
+                string line = Console.ReadLine();
+                if (Socket != null)
+                    Socket.Send(line);
+            }
         }
     }
 }

@@ -131,19 +131,14 @@ namespace Twino.Protocols.Http
                 return HandleStatus.Close;
             }
 
-            if (message.Response.StatusCode == HttpStatusCode.SwitchingProtocols)
+            string protocolName;
+            message.Request.Headers.TryGetValue(HttpHeaders.UPGRADE, out protocolName);
+            if (!string.IsNullOrEmpty(protocolName))
             {
-                string protocolName;
-                message.Request.Headers.TryGetValue(HttpHeaders.UPGRADE, out protocolName);
-                if (!string.IsNullOrEmpty(protocolName))
-                {
-                    message.Request.Headers.Add("Twino-Method", message.Request.Method);
-                    message.Request.Headers.Add("Twino-Path", message.Request.Path);
-                    await _server.SwitchProtocol(info, protocolName, message.Request.Headers);
-                    return HandleStatus.ExitWithoutClosing;
-                }
-
-                return HandleStatus.Close;
+                message.Request.Headers.Add("Twino-Method", message.Request.Method);
+                message.Request.Headers.Add("Twino-Path", message.Request.Path);
+                await _server.SwitchProtocol(info, protocolName, message.Request.Headers);
+                return HandleStatus.ExitWithoutClosing;
             }
 
             reader.ReadContent(message.Request);

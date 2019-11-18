@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text;
 
 namespace Twino.Protocols.WebSocket
 {
@@ -45,5 +46,14 @@ namespace Twino.Protocols.WebSocket
         public byte[] Mask { get; set; }
         public ulong Length { get; set; }
         public MemoryStream Content { get; set; }
+
+        public static WebSocketMessage FromString(string message)
+        {
+            return new WebSocketMessage
+                   {
+                       OpCode = SocketOpCode.UTF8,
+                       Content = new MemoryStream(Encoding.UTF8.GetBytes(message))
+                   };
+        }
     }
 }
