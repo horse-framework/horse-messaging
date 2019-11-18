@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net.Sockets;
 using Twino.Core.Protocols;
 
@@ -59,11 +60,17 @@ namespace Twino.Core
         /// <summary>
         /// Current data transfer protocol of the active connection
         /// </summary>
-        TwinoProtocol Protocol { get; set; }
+        ITwinoProtocol Protocol { get; set; }
 
         /// <summary>
         /// Closes connection and releases all sources
         /// </summary>
         void Close();
+
+        /// <summary>
+        /// Gets the network stream
+        /// </summary>
+        /// <returns></returns>
+        Stream GetStream();
     }
 }

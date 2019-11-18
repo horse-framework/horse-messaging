@@ -1,7 +1,7 @@
 using System;
 using System.Text;
 
-namespace Twino.Server.Http
+namespace Twino.Protocols.Http
 {
     /// <summary>
     /// Predefined response and request header partial data for optimization

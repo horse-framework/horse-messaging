@@ -8,5 +8,7 @@ namespace Twino.Core.Protocols
         ProtocolHandshakeResult HandshakeResult { get; set; }
         
         Task<TMessage> Read(Stream stream);
+
+        void Reset();
     }
 }

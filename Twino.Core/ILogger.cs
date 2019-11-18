@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Twino.Server
+namespace Twino.Core
 {
     /// <summary>
     /// Error Logging implementation for HttpServer, ClientSocket, ServerSocket, Firewall, ClientContainer and HttpRequestHandler objects

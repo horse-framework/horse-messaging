@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Twino.Core.Protocols
@@ -11,11 +12,26 @@ namespace Twino.Core.Protocols
         string Name { get; }
 
         /// <summary>
+        /// Handshake result of the protocol
+        /// </summary>
+        ProtocolHandshakeResult HandshakeResult { get; }
+
+        /// <summary>
         /// Checks if data is belong this protocol.
         /// </summary>
         /// <param name="data">Data is first 8 bytes of the first received message from the client</param>
         /// <returns></returns>
-        Task<ProtocolHandshakeResult> Check(byte[] data);
+        Task<ProtocolHandshakeResult> Handshake(byte[] data);
+
+        /// <summary>
+        /// When protocol is switched to this protocol from another protocol
+        /// </summary>
+        Task<ProtocolHandshakeResult> SwitchTo(IConnectionInfo info, Dictionary<string, string> properties);
+
+        /// <summary>
+        /// After protocol handshake is completed, this method is called to handle events for the specified client
+        /// </summary>
+        Task HandleConnection(IConnectionInfo info);
     }
 
     public interface ITwinoProtocol<TMessage> : ITwinoProtocol
@@ -29,6 +45,11 @@ namespace Twino.Core.Protocols
         /// Pong message for the specified protocol
         /// </summary>
         byte[] PongMessage { get; }
+
+        /// <summary>
+        /// Client and message handler for the protocol
+        /// </summary>
+        IProtocolConnectionHandler<TMessage> Handler { get; }
 
         /// <summary>
         /// Creates a protocol reader for the specific client

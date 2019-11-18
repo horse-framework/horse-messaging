@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Twino.Core;
 using Twino.Core.Protocols;
 
 namespace Twino.Protocols.TMQ
@@ -7,12 +9,23 @@ namespace Twino.Protocols.TMQ
     public class TwinoTmqProtocol : ITwinoProtocol<TmqMessage>
     {
         public string Name => "tmq";
+        public ProtocolHandshakeResult HandshakeResult { get; private set; }
         public byte[] PingMessage => PredefinedMessages.PING;
         public byte[] PongMessage => PredefinedMessages.PONG;
+        public IProtocolConnectionHandler<TmqMessage> Handler { get; }
+        private readonly ITwinoServer _server;
 
-        public async Task<ProtocolHandshakeResult> Check(byte[] data)
+        public TwinoTmqProtocol(ITwinoServer server, IProtocolConnectionHandler<TmqMessage> handler)
+        {
+            _server = server;
+            Handler = handler;
+        }
+
+        public async Task<ProtocolHandshakeResult> Handshake(byte[] data)
         {
             ProtocolHandshakeResult result = new ProtocolHandshakeResult();
+            HandshakeResult = result;
+            
             if (data.Length < 8)
                 return await Task.FromResult(result);
 
@@ -21,6 +34,16 @@ namespace Twino.Protocols.TMQ
             result.PipeConnection = true;
 
             return result;
+        }
+
+        public Task<ProtocolHandshakeResult> SwitchTo(IConnectionInfo info, Dictionary<string, string> properties)
+        {
+            throw new NotSupportedException();
+        }
+
+        public async Task HandleConnection(IConnectionInfo info)
+        {
+            throw new NotImplementedException();
         }
 
         private static bool CheckProtocol(byte[] data)

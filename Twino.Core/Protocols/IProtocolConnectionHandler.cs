@@ -4,10 +4,10 @@ namespace Twino.Core.Protocols
 {
     public interface IProtocolConnectionHandler<in TMessage>
     {
-        Task<SocketBase> Connected(IConnectionInfo connection);
+        Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection);
 
-        Task Received(TMessage message);
+        Task Received(ITwinoServer server, TMessage message);
 
-        Task Disconnected();
+        Task Disconnected(ITwinoServer server, SocketBase client);
     }
 }

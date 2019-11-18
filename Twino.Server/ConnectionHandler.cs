@@ -5,10 +5,7 @@ using System.Security.Authentication;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core;
-using Twino.Core.Http;
-using Twino.Core.Tmq;
-using Twino.Server.Http;
-using Twino.Server.WebSockets;
+using Twino.Core.Protocols;
 
 namespace Twino.Server
 {
@@ -27,24 +24,10 @@ namespace Twino.Server
         /// </summary>
         private readonly HostListener _listener;
 
-        /// <summary>
-        /// Maximum alive duration for a client.
-        /// This value generally equals to HttpConnectionTimeMax.
-        /// But when connection keep-alive disabled, this value equals to RequestTimeout
-        /// </summary>
-        private TimeSpan _manAliveHttpDuration;
-
-        /// <summary>
-        /// Response writing is not request or client specified.
-        /// We can reuse same instance instead of creating new one for each request
-        /// </summary>
-        private readonly ResponseWriter _writer;
-
         public ConnectionHandler(TwinoServer server, HostListener listener)
         {
             _server = server;
             _listener = listener;
-            _writer = new ResponseWriter(server);
         }
 
         /// <summary>
@@ -53,13 +36,7 @@ namespace Twino.Server
         public async Task Handle()
         {
             _listener.KeepAliveManager = new KeepAliveManager();
-            _listener.KeepAliveManager.Start(_server.Options.RequestTimeout);
-
-            int alive = _server.Options.RequestTimeout;
-            if (_server.Options.HttpConnectionTimeMax * 1000 > alive)
-                alive = _server.Options.HttpConnectionTimeMax * 1000;
-
-            _manAliveHttpDuration = TimeSpan.FromMilliseconds(alive);
+            _listener.KeepAliveManager.Start(_server.Options.RequestTimeout * 1000);
 
             while (_server.IsRunning)
             {
@@ -101,7 +78,7 @@ namespace Twino.Server
             ConnectionInfo info = new ConnectionInfo(tcp, _listener)
                                   {
                                       State = ConnectionStates.Pending,
-                                      MaxAlive = DateTime.UtcNow + _manAliveHttpDuration
+                                      MaxAlive = DateTime.UtcNow + TimeSpan.FromSeconds(_server.Options.RequestTimeout)
                                   };
 
             _listener.KeepAliveManager.Add(info);
@@ -121,7 +98,7 @@ namespace Twino.Server
                 }
 
                 //read one byte and recognize the protocol
-                byte[] pbytes = new byte[1];
+                byte[] pbytes = new byte[8];
                 int rc = await info.GetStream().ReadAsync(pbytes, 0, pbytes.Length);
                 if (rc == 0)
                 {
@@ -129,150 +106,27 @@ namespace Twino.Server
                     return;
                 }
 
-                //TMQ Protocol
-                if (pbytes[0] == QueueMessage.HELLO_BYTE)
+                foreach (ITwinoProtocol protocol in _server.Protocols)
                 {
-                    info.Protocol = Protocols.TMQ;
-                    return;
-                }
-                
-                //read first request from http client
-                HttpReader reader = new HttpReader(_server.Options, info.Server.Options);
-                reader.SetFirstByte(pbytes[0]);
-                
-                bool keepReading;
-                do
-                {
-                    keepReading = await ReadConnection(info, reader);
+                    ProtocolHandshakeResult hsresult = await protocol.Handshake(pbytes);
+                    if (hsresult.Accepted)
+                    {
+                        info.Protocol = protocol;
 
-                    if (keepReading)
-                        reader.Reset();
-                } while (keepReading);
+                        if (hsresult.Response != null)
+                            await info.GetStream().WriteAsync(hsresult.Response);
+
+                        await protocol.HandleConnection(info);
+                        return;
+                    }
+                }
+
+                info.Close();
             }
             catch
             {
                 info.Close();
             }
-        }
-
-        /// <summary>
-        /// After TCP socket is accepted and SSL handshaking is completed.
-        /// Reads the HTTP Request and finishes the operation if WebSocket or HTTP Request
-        /// </summary>
-        private async Task<bool> ReadConnection(ConnectionInfo info, HttpReader reader)
-        {
-            Tuple<HttpRequest, HttpResponse> tuple = await reader.Read(info.GetStream());
-            HttpRequest request = tuple.Item1;
-            HttpResponse response = tuple.Item2;
-
-            if (request == null)
-            {
-                info.Close();
-                return false;
-            }
-
-            request.ContentLength = reader.ContentLength;
-            response.Request = request;
-
-            if (response.StatusCode > 0)
-            {
-                await _writer.Write(response);
-                info.Close();
-                return false;
-            }
-
-            reader.ReadContent(request);
-            bool again = await ProcessConnection(info, request, response);
-
-            return again;
-        }
-
-        /// <summary>
-        /// Process the request and redirect it to websocket or http handler
-        /// </summary>
-        private async Task<bool> ProcessConnection(ConnectionInfo info, HttpRequest request, HttpResponse response)
-        {
-            request.IpAddress = FindIPAddress(info.Client);
-
-            //handle request
-            if (request.IsWebSocket)
-            {
-                info.Protocol = Protocols.WebSocket;
-                await ProcessWebSocketRequest(info, request);
-                return false;
-            }
-
-            info.Protocol = Protocols.HTTP;
-            bool success = await ProcessHttpRequest(info, request, response);
-
-            if (!success)
-            {
-                info.Close();
-                return false;
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// Process websocket connection and creates new session for the connection
-        /// </summary>
-        private async Task ProcessWebSocketRequest(ConnectionInfo info, HttpRequest request)
-        {
-            //if WebSocket is not supported, close connection
-            if (_server.ClientFactory == null)
-            {
-                info.Close();
-                return;
-            }
-
-            await Task.Yield();
-
-            info.State = ConnectionStates.Pipe;
-            SocketRequestHandler handler = new SocketRequestHandler(_server, request, info);
-            await handler.HandshakeClient();
-        }
-
-        private async Task ProcessTmqSocket()
-        {
-            
-        }
-
-        /// <summary>
-        /// Process HTTP connection, sends response.
-        /// </summary>
-        private async Task<bool> ProcessHttpRequest(ConnectionInfo info, HttpRequest request, HttpResponse response)
-        {
-            //if HTTP is not supported, close connection
-            if (_server.RequestHandler == null)
-            {
-                info.Close();
-                return false;
-            }
-
-            info.State = ConnectionStates.Http;
-            try
-            {
-                await _server.RequestHandler.RequestAsync(_server, request, response);
-            }
-            catch (Exception ex)
-            {
-                if (_server.Logger != null)
-                    _server.Logger.LogException("Unhandled Exception", ex);
-            }
-
-            await _writer.Write(response);
-
-            //stay alive, if keep alive active and response has stream
-            return _server.Options.HttpConnectionTimeMax > 0 && response.HasStream();
-        }
-
-        /// <summary>
-        /// Finds the IP Address of the TCP client socket
-        /// </summary>
-        private static string FindIPAddress(TcpClient tcp)
-        {
-            return tcp.Client.RemoteEndPoint.ToString().Split(':')[0];
         }
 
         /// <summary>

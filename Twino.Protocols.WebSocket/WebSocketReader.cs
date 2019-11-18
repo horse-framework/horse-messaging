@@ -12,6 +12,10 @@ namespace Twino.Protocols.WebSocket
 
         public ProtocolHandshakeResult HandshakeResult { get; set; }
 
+        public void Reset()
+        {
+        }
+
         public async Task<WebSocketMessage> Read(Stream stream)
         {
             byte[] frames = new byte[2];

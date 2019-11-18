@@ -53,7 +53,7 @@ namespace Twino.Server
         /// <summary>
         /// Current data transfer protocol of the active connection
         /// </summary>
-        public TwinoProtocol Protocol { get; set; }
+        public ITwinoProtocol Protocol { get; set; }
 
         public ConnectionInfo(TcpClient client, HostListener server)
         {
@@ -66,7 +66,7 @@ namespace Twino.Server
         /// Returns the using network stream
         /// </summary>
         /// <returns></returns>
-        internal Stream GetStream()
+        public Stream GetStream()
         {
             if (SslStream != null)
                 return SslStream;

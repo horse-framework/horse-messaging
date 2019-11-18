@@ -3,12 +3,10 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Twino.Core.Http;
+using Twino.Core;
 using Twino.Core.Protocols;
-using Twino.Server.Http;
 using Twino.Server.WebSockets;
 using Timer = System.Timers.Timer;
 
@@ -29,7 +27,7 @@ namespace Twino.Server
     /// Listens all HTTP Connection Requests and Manages them.
     /// Handshakes with requsts and figures out if they are HTTP Request or WebSocket Request.
     /// </summary>
-    public class TwinoServer
+    public class TwinoServer : ITwinoServer
     {
         #region Properties
 
@@ -45,6 +43,35 @@ namespace Twino.Server
         /// </summary>
         public ILogger Logger { get; set; }
 
+        public IProtocolConnectionHandler<TMessage> UseProtocol<TMessage>(ITwinoProtocol<TMessage> protocol)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task SwitchProtocol(IConnectionInfo info, string newProtocolName, Dictionary<string, string> properties)
+        {
+            foreach (ITwinoProtocol protocol in Protocols)
+            {
+                if (protocol.Name.Equals(newProtocolName, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    ProtocolHandshakeResult hsresult = await protocol.SwitchTo(info, properties);
+                    if (!hsresult.Accepted)
+                    {
+                        info.Close();
+                        return;
+                    }
+
+                    info.Protocol = protocol;
+                    
+                    if (hsresult.Response != null)
+                        await info.GetStream().WriteAsync(hsresult.Response);
+
+                    await protocol.HandleConnection(info);
+                    return;
+                }
+            }
+        }
+
         /// <summary>
         /// Server options. Can set programmatically with constructor parameter
         /// Or can set with "rimserver.json", "server.json" or "rim.json" options filename
@@ -56,7 +83,10 @@ namespace Twino.Server
         /// </summary>
         public bool IsRunning { get; private set; }
 
-        private TwinoProtocol[] _protocols;
+        /// <summary>
+        /// Server's supported protocols
+        /// </summary>
+        internal ITwinoProtocol[] Protocols { get; private set; } = new ITwinoProtocol[0];
 
         //creating string from DateTime object per request uses some cpu and time (1 sec full cpu for 10million times)
         /// <summary>
@@ -123,7 +153,7 @@ namespace Twino.Server
         /// <summary>
         /// Creates new TwinoServer instance.
         /// </summary>
-        /// <param name="optionsFile">Server options</param>
+        /// <param name="optionsFilename">Server options</param>
         public TwinoServer(string optionsFilename)
         {
             Options = ServerOptions.LoadFromFile(optionsFilename);
@@ -139,7 +169,7 @@ namespace Twino.Server
         }
 
         #endregion
-        
+
         #region Start - Stop
 
         /// <summary>
@@ -195,15 +225,7 @@ namespace Twino.Server
                 _timeTimer.Dispose();
             }
 
-            //start ping timer, this is required for request/response optimization
-            PredefinedHeaders.SERVER_TIME_CRLF = Encoding.UTF8.GetBytes("Date: " + DateTime.UtcNow.ToString("R") + "\r\n");
-            _timeTimer = new Timer(1000);
-            _timeTimer.Elapsed += (sender, args) => PredefinedHeaders.SERVER_TIME_CRLF = Encoding.UTF8.GetBytes("Date: " + DateTime.UtcNow.ToString("R") + "\r\n");
-            _timeTimer.AutoReset = true;
-            _timeTimer.Start();
-
             IsRunning = true;
-            InitSupportedEncodings();
             _handlers = new List<ConnectionHandler>();
 
             foreach (HostOptions host in Options.Hosts)
@@ -278,33 +300,5 @@ namespace Twino.Server
         }
 
         #endregion
-
-        /// <summary>
-        /// Load supported content encodings for server and make ready for response writing
-        /// </summary>
-        private void InitSupportedEncodings()
-        {
-            if (string.IsNullOrEmpty(Options.ContentEncoding))
-            {
-                SupportedEncodings = new ContentEncodings[0];
-                return;
-            }
-
-            List<ContentEncodings> result = new List<ContentEncodings>();
-            string[] encodings = Options.ContentEncoding.Replace(" ", "").Split(',');
-            foreach (var encoding in encodings)
-            {
-                if (encoding.Equals("br", StringComparison.InvariantCultureIgnoreCase))
-                    result.Add(ContentEncodings.Brotli);
-
-                else if (encoding.Equals("gzip", StringComparison.InvariantCultureIgnoreCase))
-                    result.Add(ContentEncodings.Gzip);
-
-                else if (encoding.Equals("deflate", StringComparison.InvariantCultureIgnoreCase))
-                    result.Add(ContentEncodings.Deflate);
-            }
-
-            SupportedEncodings = result.ToArray();
-        }
     }
 }

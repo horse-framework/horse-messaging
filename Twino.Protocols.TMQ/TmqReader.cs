@@ -26,6 +26,10 @@ namespace Twino.Protocols.TMQ
             return message;
         }
 
+        public void Reset()
+        {
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<byte[]> ReadRequiredFrame(Stream stream)
         {

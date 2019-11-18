@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using Twino.Server.WebSockets;
 
-namespace Twino.Server.WebSockets
+namespace Twino.Server
 {
     /// <summary>
     /// Manages ping and pong messages for connected websocket clients
