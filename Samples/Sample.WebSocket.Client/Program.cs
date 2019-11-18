@@ -6,7 +6,6 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
 using Twino.Client;
-using Twino.Server.WebSockets;
 
 namespace Sample.WebSocket.Client
 {

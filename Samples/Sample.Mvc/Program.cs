@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Twino.Core.Http;
 using Twino.Extensions.Http;
 using Twino.Mvc.Results;
-using Twino.Server.WebSockets;
 
 namespace Sample.Mvc
 {

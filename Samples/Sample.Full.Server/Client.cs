@@ -2,7 +2,6 @@
 using System;
 using System.Net.Sockets;
 using Twino.Core.Http;
-using Twino.Server.WebSockets;
 
 namespace Sample.Full.Server
 {

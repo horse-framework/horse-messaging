@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Twino.Server.WebSockets;
+using Twino.Core;
 
 namespace Twino.Server
 {
     /// <summary>
     /// Manages ping and pong messages for connected websocket clients
     /// </summary>
-    internal class Pinger
+    internal class Pinger : IPinger
     {
         /// <summary>
         /// Connected websocket clients
@@ -23,7 +23,7 @@ namespace Twino.Server
         /// <summary>
         /// Disconnected clients that they are not removed from the container yet
         /// </summary>
-        private readonly List<ServerSocket> _outgoing = new List<ServerSocket>();
+        private readonly List<SocketBase> _outgoing = new List<SocketBase>();
 
         /// <summary>
         /// Pinger timer
@@ -76,7 +76,7 @@ namespace Twino.Server
         /// <summary>
         /// Add new client to pinger
         /// </summary>
-        public void AddClient(ServerSocket socket)
+        public void Add(SocketBase socket)
         {
             lock (_incoming)
                 _incoming.Add(new SocketPingInfo(socket));
@@ -85,7 +85,7 @@ namespace Twino.Server
         /// <summary>
         /// Remove a client from pinger
         /// </summary>
-        public void RemoveClient(ServerSocket socket)
+        public void Remove(SocketBase socket)
         {
             lock (_outgoing)
                 _outgoing.Add(socket);
@@ -136,7 +136,7 @@ namespace Twino.Server
             {
                 if (info.Socket == null || !info.Socket.IsConnected)
                 {
-                    RemoveClient(info.Socket);
+                    Remove(info.Socket);
                     continue;
                 }
 

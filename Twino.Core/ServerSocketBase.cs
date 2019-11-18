@@ -1,38 +1,25 @@
-﻿using System;
+using System;
+using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using Twino.Core;
-using Twino.Core.Http;
-using Twino.Core.WebSocket;
 
-namespace Twino.Server.WebSockets
+namespace Twino.Core
 {
-    #region Event Delegates
-
     /// <summary>
     /// Function definition for parameterless web sockets
     /// </summary>
-    public delegate void ServerSocketStatusHandler(ServerSocket client);
+    public delegate void ServerSocketStatusHandler(ServerSocketBase client);
 
-    #endregion
 
-    /// <summary>
-    /// Server-Side Socket class
-    /// </summary>
-    public class ServerSocket : TwinoWebSocket
+    public abstract class ServerSocketBase : SocketBase
     {
         #region Events - Properties
 
         /// <summary>
         /// Server of the server-side client socket class
         /// </summary>
-        public TwinoServer Server { get; }
-
-        /// <summary>
-        /// Client's HTTP Request information
-        /// </summary>
-        public HttpRequest Request { get; }
+        public ITwinoServer Server { get; }
 
         /// <summary>
         /// Triggered when the client is connected
@@ -43,14 +30,13 @@ namespace Twino.Server.WebSockets
         /// Triggered when the client is disconnected
         /// </summary>
         public event ServerSocketStatusHandler Disconnected;
-        
+
         #endregion
 
-        public ServerSocket(TwinoServer server, HttpRequest request, TcpClient client)
+        protected ServerSocketBase(ITwinoServer server, Stream stream, TcpClient client)
         {
             Server = server;
-            Stream = request.Response.NetworkStream;
-            Request = request;
+            Stream = stream;
             Client = client;
             IsConnected = true;
             IsSsl = Stream is SslStream;
@@ -61,9 +47,6 @@ namespace Twino.Server.WebSockets
         /// </summary>
         internal async Task Start()
         {
-            if (Server.Container != null)
-                Server.Container.Add(this);
-
             IsConnected = true;
             OnConnected();
 
@@ -79,24 +62,14 @@ namespace Twino.Server.WebSockets
         }
 
         /// <summary>
-        /// Sends ping to the remote client
-        /// </summary>
-        public void Ping()
-        {
-            byte[] data = WebSocketWriter.CreatePing();
-            Send(data);
-        }
-
-        /// <summary>
         /// Disconnects the connection between server socket and client socket
         /// </summary>
         public override void Disconnect()
         {
-            Server.Pinger.RemoveClient(this);
             base.Disconnect();
 
-            if (Server.Container != null)
-                Server.Container.Remove(this);
+            if (Server.Pinger != null)
+                Server.Pinger.Remove(this);
         }
 
         /// <summary>
@@ -122,7 +95,6 @@ namespace Twino.Server.WebSockets
         protected override void OnDisconnected()
         {
             Disconnected?.Invoke(this);
-            Server.SetClientDisconnected(this);
         }
     }
 }

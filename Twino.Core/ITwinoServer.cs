@@ -7,6 +7,8 @@ namespace Twino.Core
     public interface ITwinoServer
     {
         ILogger Logger { get; }
+        
+        IPinger Pinger { get; }
 
         IProtocolConnectionHandler<TMessage> UseProtocol<TMessage>(ITwinoProtocol<TMessage> protocol);
 

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
+using Twino.Core;
 
-namespace Twino.Server.WebSockets
+namespace Twino.Server.Containers
 {
     /// <summary>
     /// WebSocket Client container implementation of the HttpServer class
@@ -18,16 +19,16 @@ namespace Twino.Server.WebSockets
         /// <summary>
         /// Adds the client to the online clients container
         /// </summary>
-        void Add(ServerSocket client);
+        void Add(ServerSocketBase client);
 
         /// <summary>
         /// Removes the client from the online clients container
         /// </summary>
-        void Remove(ServerSocket client);
+        void Remove(ServerSocketBase client);
 
         /// <summary>
         /// Gets all online clients
         /// </summary>
-        IEnumerable<ServerSocket> List();
+        IEnumerable<ServerSocketBase> List();
     }
 }

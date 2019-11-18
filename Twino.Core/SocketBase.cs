@@ -1,22 +1,14 @@
 ﻿using System;
 using System.IO;
 using System.Net.Sockets;
-using System.Text;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
+[assembly: InternalsVisibleTo("Twino.Server")]
+
 namespace Twino.Core
 {
-    /// <summary>
-    /// Function definition for string message receiving events of web sockets
-    /// </summary>
-    public delegate void SocketMessageHandler(SocketBase client, string message);
-
-    /// <summary>
-    /// Function definition for binary message receiving events of web sockets
-    /// </summary>
-    public delegate void SocketBinaryHandler(SocketBase client, byte[] payload);
-
     /// <summary>
     /// Base class for web socket clients.
     /// Server-side client and Client-side client classes are derived from this class
@@ -24,9 +16,6 @@ namespace Twino.Core
     public abstract class SocketBase
     {
         #region Properties
-
-        public event SocketMessageHandler MessageReceived;
-        public event SocketBinaryHandler BinaryReceived;
 
         /// <summary>
         /// TcpClient class of the socket class
@@ -85,6 +74,18 @@ namespace Twino.Core
         /// Starts to read from the TCP socket
         /// </summary>
         protected abstract Task Read();
+
+        /// <summary>
+        /// Sends ping
+        /// </summary>
+        /// <returns></returns>
+        public abstract Task Ping();
+
+        /// <summary>
+        /// Sends pong
+        /// </summary>
+        /// <returns></returns>
+        public abstract Task Pong();
 
         /// <summary>
         /// Sends a string message to the socket client.
@@ -215,22 +216,6 @@ namespace Twino.Core
         /// Triggered when client is disconnected
         /// </summary>
         protected abstract void OnDisconnected();
-
-        /// <summary>
-        /// Triggered when client is received text message
-        /// </summary>
-        protected virtual void OnMessageReceived(string message)
-        {
-            MessageReceived?.Invoke(this, message);
-        }
-
-        /// <summary>
-        /// Triggered when client is received binary message
-        /// </summary>
-        protected virtual void OnBinaryReceived(byte[] payload)
-        {
-            BinaryReceived?.Invoke(this, payload);
-        }
 
         /// <summary>
         /// Triggered when an error is occured in this client operations

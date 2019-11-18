@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Twino.Server;
-using Twino.Server.WebSockets;
 using Xunit;
 
 namespace Test.Connector

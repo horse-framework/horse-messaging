@@ -1,6 +1,7 @@
 using System;
+using Twino.Core;
 
-namespace Twino.Server.WebSockets
+namespace Twino.Server
 {
     /// <summary>
     /// Ping info for the web socket connection
@@ -10,7 +11,7 @@ namespace Twino.Server.WebSockets
         /// <summary>
         /// The client
         /// </summary>
-        public ServerSocket Socket { get; }
+        public SocketBase Socket { get; }
         
         /// <summary>
         /// Last ping time
@@ -22,7 +23,7 @@ namespace Twino.Server.WebSockets
         /// </summary>
         public bool New { get; private set; }
         
-        public SocketPingInfo(ServerSocket socket)
+        public SocketPingInfo(SocketBase socket)
         {
             Socket = socket;
             Last = DateTime.UtcNow;

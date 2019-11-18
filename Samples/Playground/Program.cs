@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Twino.Core.Http;
 using Twino.Core.Tmq;
 using Twino.Server;
-using Twino.Server.WebSockets;
 
 namespace Playground
 {

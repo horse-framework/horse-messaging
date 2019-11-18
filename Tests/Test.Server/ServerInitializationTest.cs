@@ -2,7 +2,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Twino.Server;
 using Twino.Server.Http;
-using Twino.Server.WebSockets;
 using Test.Server.Helpers;
 using Twino.Client;
 using Xunit;

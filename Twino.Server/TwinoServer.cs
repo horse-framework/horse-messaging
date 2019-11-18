@@ -7,21 +7,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Core.Protocols;
-using Twino.Server.WebSockets;
 using Timer = System.Timers.Timer;
 
 namespace Twino.Server
 {
-    /// <summary>
-    /// Event handler delegate for general purpose of HttpServer
-    /// </summary>
-    public delegate void TwinoServerEventHandler(TwinoServer server);
-
-    /// <summary>
-    /// Server handler for client events such as connect, disconnect
-    /// </summary>
-    public delegate void TwinoServerClientEventHandler(TwinoServer server, ServerSocket client);
-
     /// <summary>
     /// HttpServer of Twino.Server Library.
     /// Listens all HTTP Connection Requests and Manages them.
@@ -34,7 +23,7 @@ namespace Twino.Server
         /// <summary>
         /// Pinger for websocket clients
         /// </summary>
-        internal Pinger Pinger { get; private set; }
+        public IPinger Pinger { get; private set; }
 
         /// <summary>
         /// Logger class for HttpServer operations.
@@ -62,7 +51,7 @@ namespace Twino.Server
                     }
 
                     info.Protocol = protocol;
-                    
+
                     if (hsresult.Response != null)
                         await info.GetStream().WriteAsync(hsresult.Response);
 
@@ -98,46 +87,6 @@ namespace Twino.Server
         /// TcpListener for HttpServer
         /// </summary>
         private List<ConnectionHandler> _handlers = new List<ConnectionHandler>();
-
-        #endregion
-
-        #region Events
-
-        /// <summary>
-        /// Raises when server starts to listen and accept TCP connections
-        /// </summary>
-        public event TwinoServerEventHandler Started;
-
-        /// <summary>
-        /// Raises when servers stops by programmatically or due to an error
-        /// </summary>
-        public event TwinoServerEventHandler Stopped;
-
-        /// <summary>
-        /// Triggered when a client is connected
-        /// </summary>
-        public event TwinoServerClientEventHandler ClientConnected;
-
-        /// <summary>
-        /// Triggered when a client is disconnected
-        /// </summary>
-        public event TwinoServerClientEventHandler ClientDisconnected;
-
-        /// <summary>
-        /// Trigger client connected event
-        /// </summary>
-        internal void SetClientConnected(ServerSocket client)
-        {
-            ClientConnected?.Invoke(this, client);
-        }
-
-        /// <summary>
-        /// Trigger client disconnected event
-        /// </summary>
-        internal void SetClientDisconnected(ServerSocket client)
-        {
-            ClientDisconnected?.Invoke(this, client);
-        }
 
         #endregion
 
@@ -256,8 +205,6 @@ namespace Twino.Server
             }
 
             IsRunning = true;
-            Started?.Invoke(this);
-
             //if websocket ping is activated, starts pinger
             if (Options.PingInterval > 0)
             {
@@ -296,7 +243,6 @@ namespace Twino.Server
                 handler.Dispose();
 
             _handlers.Clear();
-            Stopped?.Invoke(this);
         }
 
         #endregion

@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Twino.Client.Connectors;
 using Twino.Core;
 using Twino.Server;
-using Twino.Server.WebSockets;
 using Xunit;
 
 namespace Test.Connector

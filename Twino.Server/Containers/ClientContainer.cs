@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
+using Twino.Core;
 
-namespace Twino.Server.WebSockets
+namespace Twino.Server.Containers
 {
     /// <summary>
     /// Default client container for HttpServer
@@ -10,17 +11,17 @@ namespace Twino.Server.WebSockets
         /// <summary>
         /// Online clients
         /// </summary>
-        private List<ServerSocket> Clients { get; }
+        private List<ServerSocketBase> Clients { get; }
 
         public ClientContainer()
         {
-            Clients = new List<ServerSocket>();
+            Clients = new List<ServerSocketBase>();
         }
 
         /// <summary>
         /// Adds the client to the online clients container
         /// </summary>
-        public void Add(ServerSocket client)
+        public void Add(ServerSocketBase client)
         {
             lock (Clients)
                 Clients.Add(client);
@@ -37,12 +38,12 @@ namespace Twino.Server.WebSockets
         /// <summary>
         /// Gets all online clients
         /// </summary>
-        public IEnumerable<ServerSocket> List()
+        public IEnumerable<ServerSocketBase> List()
         {
-            List<ServerSocket> clients = new List<ServerSocket>();
+            List<ServerSocketBase> clients = new List<ServerSocketBase>();
 
             lock (Clients)
-                foreach (ServerSocket client in Clients)
+                foreach (ServerSocketBase client in Clients)
                     clients.Add(client);
 
             return clients;
@@ -51,7 +52,7 @@ namespace Twino.Server.WebSockets
         /// <summary>
         /// Removes the client from the online clients container
         /// </summary>
-        public void Remove(ServerSocket client)
+        public void Remove(ServerSocketBase client)
         {
             lock (Clients)
                 Clients.Remove(client);

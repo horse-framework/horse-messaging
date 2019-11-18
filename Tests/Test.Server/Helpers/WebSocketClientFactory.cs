@@ -2,7 +2,6 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using Twino.Core.Http;
 using Twino.Server;
-using Twino.Server.WebSockets;
 
 namespace Test.Server.Helpers
 {

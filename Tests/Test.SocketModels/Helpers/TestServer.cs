@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Twino.Server;
-using Twino.Server.WebSockets;
 using Test.SocketModels.Models;
 using Twino.SocketModels.Requests;
 
