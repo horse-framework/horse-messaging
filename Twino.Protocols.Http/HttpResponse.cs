@@ -53,6 +53,9 @@ namespace Twino.Protocols.Http
         /// </summary>
         public Dictionary<string, string> AdditionalHeaders { get; set; } = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
 
+        /// <summary>
+        /// Response stream (encoded, ssl or plain)
+        /// </summary>
         private Stream _responseStream;
 
         /// <summary>
@@ -80,6 +83,10 @@ namespace Twino.Protocols.Http
         /// </summary>
         public HttpRequest Request { get; internal set; }
 
+        /// <summary>
+        /// Set true when stream dispose is prevented by GC.
+        /// If this value is true, Re-register of GC will be called after response write operation completed
+        /// </summary>
         internal bool StreamSuppressed { get; private set; }
 
         #endregion

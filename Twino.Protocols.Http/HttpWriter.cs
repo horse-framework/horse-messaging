@@ -7,9 +7,19 @@ using Twino.Server.Http;
 
 namespace Twino.Protocols.Http
 {
+    /// <summary>
+    /// Response of writing HTTP Responses to network streams
+    /// </summary>
     public class HttpWriter : IProtocolMessageWriter<HttpMessage>
     {
+        /// <summary>
+        /// Content writer for HTTP response
+        /// </summary>
         private readonly ContentWriter _writer;
+        
+        /// <summary>
+        /// Twino HTTP Server options
+        /// </summary>
         private readonly HttpOptions _options;
 
         public HttpWriter(HttpOptions options)
@@ -18,26 +28,38 @@ namespace Twino.Protocols.Http
             _writer = new ContentWriter(_options.SupportedEncodings);
         }
 
+        /// <summary>
+        /// Writes http message to specified stream
+        /// </summary>
         public async Task Write(HttpMessage value, Stream stream)
         {
             await Write(value.Response);
         }
 
+        /// <summary>
+        /// Creating byte array from HTTP Message is not supported
+        /// </summary>
         public Task<byte[]> Create(HttpMessage value)
         {
             throw new NotSupportedException();
         }
 
+        /// <summary>
+        /// Creating byte array from HTTP Message is not supported
+        /// </summary>
         public Task<byte[]> CreateFrame(HttpMessage value)
         {
             throw new NotSupportedException();
         }
 
+        /// <summary>
+        /// Creating byte array from HTTP Message is not supported
+        /// </summary>
         public Task<byte[]> CreateContent(HttpMessage value)
         {
             throw new NotSupportedException();
         }
-        
+
         /// <summary>
         /// Writes string value to specified stream
         /// </summary>

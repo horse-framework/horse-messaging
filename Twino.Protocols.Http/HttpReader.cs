@@ -45,8 +45,14 @@ namespace Twino.Protocols.Http
         /// </summary>
         public int ContentLength { get; private set; }
 
+        /// <summary>
+        /// Server HTTP Options
+        /// </summary>
         private readonly HttpOptions _options;
 
+        /// <summary>
+        /// Handshake result of the TCP connection
+        /// </summary>
         public ProtocolHandshakeResult HandshakeResult { get; set; }
 
         #endregion
@@ -394,7 +400,7 @@ namespace Twino.Protocols.Http
         /// <summary>
         /// Reads query string from header and form - file data from content, sets values to request's QueryString, Form and Files properties
         /// </summary>
-        internal void ReadContent(HttpRequest request)
+        internal static void ReadContent(HttpRequest request)
         {
             request.QueryString = !string.IsNullOrEmpty(request.QueryStringData)
                                       ? EncodedFormDataReader.Read(request.QueryStringData)

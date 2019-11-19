@@ -5,31 +5,31 @@ namespace Twino.Protocols.Http.Forms
     /// <summary>
     /// HTTP Posted form file
     /// </summary>
-    public interface IFormFile
+    internal class FormFile : IFormFile
     {
         /// <summary>
         /// File size in bytes
         /// </summary>
-        int Size { get; }
+        public int Size { get; internal set; }
 
         /// <summary>
         /// File content type
         /// </summary>
-        string ContentType { get; }
+        public string ContentType { get; internal set; }
 
         /// <summary>
         /// File Form name
         /// </summary>
-        string Name { get; }
+        public string Name { get; internal set; }
 
         /// <summary>
         /// File pyhsical filename
         /// </summary>
-        string Filename { get; }
+        public string Filename { get; internal set; }
 
         /// <summary>
         /// File content stream
         /// </summary>
-        Stream Stream { get; }
+        public Stream Stream { get; internal set; }
     }
 }

@@ -11,6 +11,9 @@ namespace Twino.Protocols.Http
     /// </summary>
     public class ContentWriter
     {
+        /// <summary>
+        /// Supported encoding for the content write operation
+        /// </summary>
         private readonly ContentEncodings[] _supportedEncodings;
 
         public ContentWriter(ContentEncodings[] supportedEncodings)
