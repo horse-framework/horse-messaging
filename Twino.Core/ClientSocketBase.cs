@@ -20,7 +20,7 @@ namespace Twino.Core
         /// <summary>
         /// Connection data, path, method, properties (if http used directly or indirectly, properties may be header key/values)
         /// </summary>
-        public ConnectionData Data { get; set; }
+        public ConnectionData Data { get; } = new ConnectionData();
         
         /// <summary>
         /// Triggered when a message is received from the network stream

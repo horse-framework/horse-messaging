@@ -40,6 +40,7 @@ namespace Playground
         {
             string msg = Encoding.UTF8.GetString(message.Content.ToArray());
             Console.WriteLine("# " + msg);
+            ((WsServerSocket) client).Send("response from server");
             await Task.CompletedTask;
         }
 
@@ -53,7 +54,7 @@ namespace Playground
     class Program
     {
         public static WsServerSocket Socket { get; set; }
-        
+
         static void Main(string[] args)
         {
             HttpOptions options = new HttpOptions();
@@ -62,16 +63,20 @@ namespace Playground
             mvc.Init(m => { });
 
             TwinoServer server = new TwinoServer(ServerOptions.CreateDefault());
-           // server.UseMvc(mvc, options);
+            // server.UseMvc(mvc, options);
             server.UseWebSockets(new WebSocketHandler());
 
             server.Start(82);
 
+            Console.ReadLine();
+            TwinoWebSocket client = new TwinoWebSocket();
+            client.MessageReceived += (c, m) => { Console.WriteLine(">> " + m); };
+            client.Connect("ws://127.0.0.1:82");
+
             while (true)
             {
                 string line = Console.ReadLine();
-                if (Socket != null)
-                    Socket.Send(line);
+                client.Send(line);
             }
         }
     }

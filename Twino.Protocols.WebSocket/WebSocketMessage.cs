@@ -48,22 +48,22 @@ namespace Twino.Protocols.WebSocket
         /// WebSocket protocol OpCode (message type)
         /// </summary>
         public SocketOpCode OpCode { get; set; }
-        
+
         /// <summary>
         /// True, if message is masking with a key
         /// </summary>
         public bool Masking { get; set; }
-        
+
         /// <summary>
         /// If message is masking, 4 bytes key value. Otherwise null.
         /// </summary>
         public byte[] Mask { get; set; }
-        
+
         /// <summary>
         /// Message length
         /// </summary>
         public long Length => Content != null ? Content.Length : 0;
-        
+
         /// <summary>
         /// Message content stream
         /// </summary>
@@ -79,6 +79,14 @@ namespace Twino.Protocols.WebSocket
                        OpCode = SocketOpCode.UTF8,
                        Content = new MemoryStream(Encoding.UTF8.GetBytes(message))
                    };
+        }
+
+        public override string ToString()
+        {
+            if (Content != null)
+                return Encoding.UTF8.GetString(Content.ToArray());
+
+            return string.Empty;
         }
     }
 }

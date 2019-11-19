@@ -21,6 +21,8 @@ namespace Twino.Client.WebSocket
     {
         #region Events - Properties
 
+        private static readonly WebSocketWriter _writer = new WebSocketWriter();
+
         /// <summary>
         /// Key value for the websocket connection
         /// </summary>
@@ -239,9 +241,10 @@ namespace Twino.Client.WebSocket
 
         public bool Send(string message)
         {
-            throw new NotImplementedException();
+            byte[] data = _writer.Create(message).Result;
+            return Send(data);
         }
-
+        
         #endregion
     }
 }
