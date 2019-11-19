@@ -11,6 +11,16 @@ namespace Twino.Protocols.WebSocket
             return UseWebSockets(server, handler, HttpOptions.CreateDefault());
         }
 
+        public static ITwinoServer UseWebSockets(this ITwinoServer server, WebSocketMessageRecievedHandler handlerAction)
+        {
+            return UseWebSockets(server, new MethodWebSocketConnectionHandler(handlerAction), HttpOptions.CreateDefault());
+        }
+
+        public static ITwinoServer UseWebSockets(this ITwinoServer server, WebSocketMessageRecievedHandler handlerAction, HttpOptions options)
+        {
+            return UseWebSockets(server, new MethodWebSocketConnectionHandler(handlerAction), options);
+        }
+
         public static ITwinoServer UseWebSockets(this ITwinoServer server, IProtocolConnectionHandler<WebSocketMessage> handler, HttpOptions options)
         {
             //we need http protocol is added

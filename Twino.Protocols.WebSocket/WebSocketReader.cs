@@ -28,6 +28,7 @@ namespace Twino.Protocols.WebSocket
             byte code = frames[0];
             if (code > 127)
                 code -= 128;
+            
             message.OpCode = (SocketOpCode) code;
 
             byte maskbyte = frames[1];
