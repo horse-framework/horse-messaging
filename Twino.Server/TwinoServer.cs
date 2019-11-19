@@ -233,13 +233,13 @@ namespace Twino.Server
             Protocols = list.ToArray();
         }
 
-        public async Task SwitchProtocol(IConnectionInfo info, string newProtocolName, Dictionary<string, string> properties)
+        public async Task SwitchProtocol(IConnectionInfo info, string newProtocolName, ConnectionData data)
         {
             foreach (ITwinoProtocol protocol in Protocols)
             {
                 if (protocol.Name.Equals(newProtocolName, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    ProtocolHandshakeResult hsresult = await protocol.SwitchTo(info, properties);
+                    ProtocolHandshakeResult hsresult = await protocol.SwitchTo(info, data);
                     if (!hsresult.Accepted)
                     {
                         info.Close();

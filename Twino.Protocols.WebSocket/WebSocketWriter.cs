@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using Twino.Core.Protocols;
 
@@ -28,6 +29,16 @@ namespace Twino.Protocols.WebSocket
             await WriteLengthAsync(ms, (ulong) value.Content.Length);
 
             await value.Content.CopyToAsync(ms);
+            return ms.ToArray();
+        }
+
+        public async Task<byte[]> Create(string message)
+        {
+            await using MemoryStream ms = new MemoryStream();
+            ms.WriteByte(0x81);
+            byte[] bytes = Encoding.UTF8.GetBytes(message);
+            await WriteLengthAsync(ms, (ulong) bytes.Length);
+            await ms.WriteAsync(bytes);
             return ms.ToArray();
         }
 

@@ -5,7 +5,7 @@ namespace Twino.Core.Protocols
 {
     public interface IProtocolConnectionHandler<in TMessage>
     {
-        Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, Dictionary<string, string> properties);
+        Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data);
 
         Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, TMessage message);
 

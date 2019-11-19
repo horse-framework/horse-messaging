@@ -28,13 +28,13 @@ namespace Twino.Protocols.WebSocket
             return await Task.FromResult(new ProtocolHandshakeResult());
         }
 
-        public async Task<ProtocolHandshakeResult> SwitchTo(IConnectionInfo info, Dictionary<string, string> properties)
+        public async Task<ProtocolHandshakeResult> SwitchTo(IConnectionInfo info, ConnectionData data)
         {
             if (!info.Protocol.Name.Equals("http", StringComparison.InvariantCultureIgnoreCase))
                 return await Task.FromResult(new ProtocolHandshakeResult());
 
             string key;
-            bool hasKey = properties.TryGetValue(PredefinedMessages.WEBSOCKET_KEY, out key);
+            bool hasKey = data.Properties.TryGetValue(PredefinedMessages.WEBSOCKET_KEY, out key);
             if (!hasKey)
                 return await Task.FromResult(new ProtocolHandshakeResult());
 
@@ -45,7 +45,7 @@ namespace Twino.Protocols.WebSocket
             result.PreviouslyRead = null;
             result.Response = await CreateWebSocketHandshakeResponse(key);
 
-            SocketBase socket = await Handler.Connected(_server, info, properties);
+            SocketBase socket = await Handler.Connected(_server, info, data);
 
             if (socket == null)
                 return await Task.FromResult(new ProtocolHandshakeResult());

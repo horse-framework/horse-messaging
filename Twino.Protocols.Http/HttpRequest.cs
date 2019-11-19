@@ -40,10 +40,10 @@ namespace Twino.Protocols.Http
         public string IpAddress { get; internal set; }
 
         /// <summary>
-        /// If true, request has web socket key header and it's websocket request
+        /// If request needs to switch protocol, this value is the requested protocol name
         /// </summary>
-        public bool IsWebSocket { get; set; }
-
+        public string Upgrade { get; internal set; }
+        
         /// <summary>
         /// For web socket requests, includes key for websocket client. Otherwise it's null
         /// </summary>

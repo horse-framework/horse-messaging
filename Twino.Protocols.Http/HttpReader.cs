@@ -381,10 +381,13 @@ namespace Twino.Protocols.Http
                     request.ContentLengthSpecified = true;
                 }
 
+                else if (key.Equals(HttpHeaders.UPGRADE, StringComparison.InvariantCultureIgnoreCase))
+                    request.Upgrade = value;
+
                 else if (key.Equals(HttpHeaders.WEBSOCKET_KEY, StringComparison.InvariantCultureIgnoreCase))
                 {
                     request.WebSocketKey = value;
-                    request.IsWebSocket = true;
+                    request.Upgrade = "websocket";
                 }
             }
         }

@@ -94,6 +94,9 @@ namespace Twino.Server
 
             State = ConnectionStates.Closed;
 
+            if (Socket != null)
+                Socket.Disconnect();
+
             try
             {
                 Stream stream = GetStream();

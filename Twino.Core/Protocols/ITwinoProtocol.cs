@@ -22,7 +22,7 @@ namespace Twino.Core.Protocols
         /// <summary>
         /// When protocol is switched to this protocol from another protocol
         /// </summary>
-        Task<ProtocolHandshakeResult> SwitchTo(IConnectionInfo info, Dictionary<string, string> properties);
+        Task<ProtocolHandshakeResult> SwitchTo(IConnectionInfo info, ConnectionData data);
 
         /// <summary>
         /// After protocol handshake is completed, this method is called to handle events for the specified client

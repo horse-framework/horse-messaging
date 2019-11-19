@@ -34,7 +34,7 @@ namespace Twino.Protocols.TMQ
             return result;
         }
 
-        public Task<ProtocolHandshakeResult> SwitchTo(IConnectionInfo info, Dictionary<string, string> properties)
+        public Task<ProtocolHandshakeResult> SwitchTo(IConnectionInfo info, ConnectionData data)
         {
             throw new NotSupportedException();
         }

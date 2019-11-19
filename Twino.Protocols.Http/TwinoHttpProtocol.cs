@@ -64,7 +64,7 @@ namespace Twino.Protocols.Http
             return await Task.FromResult(result);
         }
 
-        public Task<ProtocolHandshakeResult> SwitchTo(IConnectionInfo info, Dictionary<string, string> properties)
+        public Task<ProtocolHandshakeResult> SwitchTo(IConnectionInfo info, ConnectionData data)
         {
             throw new NotSupportedException();
         }
@@ -131,14 +131,18 @@ namespace Twino.Protocols.Http
                 return HandleStatus.Close;
             }
 
-            string protocolName;
-            message.Request.Headers.TryGetValue(HttpHeaders.UPGRADE, out protocolName);
-            if (!string.IsNullOrEmpty(protocolName))
+            if (!string.IsNullOrEmpty(message.Request.Upgrade))
             {
-                message.Request.Headers.Add("Twino-Method", message.Request.Method);
-                message.Request.Headers.Add("Twino-Path", message.Request.Path);
-                await _server.SwitchProtocol(info, protocolName, message.Request.Headers);
-                return HandleStatus.ExitWithoutClosing;
+                if (!string.IsNullOrEmpty(message.Request.Upgrade))
+                {
+                    ConnectionData data = new ConnectionData();
+                    data.Path = message.Request.Path;
+                    data.Method = message.Request.Method;
+                    data.Properties = message.Request.Headers;
+
+                    await _server.SwitchProtocol(info, message.Request.Upgrade, data);
+                    return HandleStatus.ExitWithoutClosing;
+                }
             }
 
             reader.ReadContent(message.Request);

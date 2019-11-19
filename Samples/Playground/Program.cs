@@ -28,8 +28,9 @@ namespace Playground
 
     public class WebSocketHandler : IProtocolConnectionHandler<WebSocketMessage>
     {
-        public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, Dictionary<string, string> properties)
+        public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
+            Console.WriteLine("> Connected");
             WsServerSocket socket = new WsServerSocket(server, connection);
             Program.Socket = socket;
             return await Task.FromResult(socket);
@@ -44,6 +45,7 @@ namespace Playground
 
         public async Task Disconnected(ITwinoServer server, SocketBase client)
         {
+            Console.WriteLine("> Disconnected");
             await Task.CompletedTask;
         }
     }

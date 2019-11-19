@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Twino.Core.Protocols;
 
@@ -12,7 +11,7 @@ namespace Twino.Core
 
         void UseProtocol<TMessage>(ITwinoProtocol<TMessage> protocol);
 
-        Task SwitchProtocol(IConnectionInfo info, string newProtocolName, Dictionary<string, string> properties);
+        Task SwitchProtocol(IConnectionInfo info, string newProtocolName, ConnectionData data);
 
         ITwinoProtocol FindProtocol(string name);
     }

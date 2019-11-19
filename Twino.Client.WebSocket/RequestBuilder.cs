@@ -81,7 +81,7 @@ namespace Twino.Client.WebSocket
             else if (key.Equals(HttpHeaders.WEBSOCKET_KEY, StringComparison.InvariantCultureIgnoreCase))
             {
                 request.WebSocketKey = value;
-                request.IsWebSocket = true;
+                request.Upgrade = "websocket";
             }
 
             else if (key.Equals(HttpHeaders.ACCEPT_ENCODING, StringComparison.InvariantCultureIgnoreCase))
