@@ -9,12 +9,21 @@ using Twino.Core.Protocols;
 
 namespace Twino.Protocols.WebSocket
 {
+    /// <summary>
+    /// Twino WebSocket Server protocol
+    /// </summary>
     public class TwinoWebSocketProtocol : ITwinoProtocol<WebSocketMessage>
     {
         public string Name => "websocket";
 
+        /// <summary>
+        /// WebSocket protocol connection handler
+        /// </summary>
         public IProtocolConnectionHandler<WebSocketMessage> Handler { get; }
 
+        /// <summary>
+        /// Twino server
+        /// </summary>
         private readonly ITwinoServer _server;
 
         public TwinoWebSocketProtocol(ITwinoServer server, IProtocolConnectionHandler<WebSocketMessage> handler)
@@ -23,11 +32,20 @@ namespace Twino.Protocols.WebSocket
             Handler = handler;
         }
 
+        /// <summary>
+        /// Checks if data is belong this protocol.
+        /// </summary>
+        /// <param name="info">Connection information</param>
+        /// <param name="data">Data is first 8 bytes of the first received message from the client</param>
+        /// <returns></returns>
         public async Task<ProtocolHandshakeResult> Handshake(IConnectionInfo info, byte[] data)
         {
             return await Task.FromResult(new ProtocolHandshakeResult());
         }
 
+        /// <summary>
+        /// When protocol is switched to this protocol from another protocol
+        /// </summary>
         public async Task<ProtocolHandshakeResult> SwitchTo(IConnectionInfo info, ConnectionData data)
         {
             if (!info.Protocol.Name.Equals("http", StringComparison.InvariantCultureIgnoreCase))
@@ -65,6 +83,9 @@ namespace Twino.Protocols.WebSocket
             return result;
         }
 
+        /// <summary>
+        /// After protocol handshake is completed, this method is called to handle events for the specified client
+        /// </summary>
         public async Task HandleConnection(IConnectionInfo info, ProtocolHandshakeResult handshakeResult)
         {
             WebSocketReader reader = new WebSocketReader();
@@ -75,16 +96,25 @@ namespace Twino.Protocols.WebSocket
             }
         }
 
+        /// <summary>
+        /// Creates and returns new WebSocketReader instance
+        /// </summary>
         public IProtocolMessageReader<WebSocketMessage> CreateReader()
         {
             return new WebSocketReader();
         }
 
+        /// <summary>
+        /// Creates and returns new WebSocketWriter instance
+        /// </summary>
         public IProtocolMessageWriter<WebSocketMessage> CreateWriter()
         {
             return new WebSocketWriter();
         }
 
+        /// <summary>
+        /// Creates websocket response protocol message
+        /// </summary>
         private static async Task<byte[]> CreateWebSocketHandshakeResponse(string websocketKey)
         {
             await using MemoryStream ms = new MemoryStream();

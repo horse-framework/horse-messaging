@@ -39,14 +39,39 @@ namespace Twino.Protocols.WebSocket
         Pong = 0x0A
     }
 
+    /// <summary>
+    /// WebSocket Message
+    /// </summary>
     public class WebSocketMessage
     {
+        /// <summary>
+        /// WebSocket protocol OpCode (message type)
+        /// </summary>
         public SocketOpCode OpCode { get; set; }
+        
+        /// <summary>
+        /// True, if message is masking with a key
+        /// </summary>
         public bool Masking { get; set; }
+        
+        /// <summary>
+        /// If message is masking, 4 bytes key value. Otherwise null.
+        /// </summary>
         public byte[] Mask { get; set; }
-        public ulong Length { get; set; }
+        
+        /// <summary>
+        /// Message length
+        /// </summary>
+        public long Length => Content != null ? Content.Length : 0;
+        
+        /// <summary>
+        /// Message content stream
+        /// </summary>
         public MemoryStream Content { get; set; }
 
+        /// <summary>
+        /// Creates new message from string
+        /// </summary>
         public static WebSocketMessage FromString(string message)
         {
             return new WebSocketMessage

@@ -9,6 +9,9 @@ namespace Twino.Protocols.TMQ
 {
     public class TmqReader : IProtocolMessageReader<TmqMessage>
     {
+        /// <summary>
+        /// Buffer. Should be at least 256 bytes (reading once some values smaller 257 bytes)
+        /// </summary>
         private readonly byte[] _buffer = new byte[256];
 
         public ProtocolHandshakeResult HandshakeResult { get; set; }

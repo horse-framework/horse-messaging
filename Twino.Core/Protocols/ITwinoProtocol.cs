@@ -1,8 +1,10 @@
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Twino.Core.Protocols
 {
+    /// <summary>
+    /// Twino Protocol implementation
+    /// </summary>
     public interface ITwinoProtocol
     {
         /// <summary>
@@ -30,6 +32,9 @@ namespace Twino.Core.Protocols
         Task HandleConnection(IConnectionInfo info, ProtocolHandshakeResult handshakeResult);
     }
 
+    /// <summary>
+    /// Twino message type specified protocol
+    /// </summary>
     public interface ITwinoProtocol<TMessage> : ITwinoProtocol
     {
         /// <summary>

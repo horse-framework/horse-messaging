@@ -6,8 +6,14 @@ using Twino.Core.Protocols;
 
 namespace Twino.Protocols.WebSocket
 {
+    /// <summary>
+    /// WebSocket Protocol message writer
+    /// </summary>
     public class WebSocketWriter : IProtocolMessageWriter<WebSocketMessage>
     {
+        /// <summary>
+        /// Writes message to specified stream.
+        /// </summary>
         public async Task Write(WebSocketMessage value, Stream stream)
         {
             //fin and op code
@@ -18,6 +24,9 @@ namespace Twino.Protocols.WebSocket
             await value.Content.CopyToAsync(stream);
         }
 
+        /// <summary>
+        /// Creates byte array data of the message
+        /// </summary>
         public async Task<byte[]> Create(WebSocketMessage value)
         {
             await using MemoryStream ms = new MemoryStream();
@@ -32,6 +41,9 @@ namespace Twino.Protocols.WebSocket
             return ms.ToArray();
         }
 
+        /// <summary>
+        /// Creates byte array data of the message
+        /// </summary>
         public async Task<byte[]> Create(string message)
         {
             await using MemoryStream ms = new MemoryStream();
@@ -42,6 +54,9 @@ namespace Twino.Protocols.WebSocket
             return ms.ToArray();
         }
 
+        /// <summary>
+        /// Creates byte array data of only message header frame
+        /// </summary>
         public async Task<byte[]> CreateFrame(WebSocketMessage value)
         {
             await using MemoryStream ms = new MemoryStream();
@@ -54,6 +69,9 @@ namespace Twino.Protocols.WebSocket
             return ms.ToArray();
         }
 
+        /// <summary>
+        /// Creates byte array data of only message content
+        /// </summary>
         public async Task<byte[]> CreateContent(WebSocketMessage value)
         {
             await using MemoryStream ms = new MemoryStream();

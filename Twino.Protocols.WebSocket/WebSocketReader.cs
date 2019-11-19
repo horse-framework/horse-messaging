@@ -6,16 +6,34 @@ using Twino.Core.Protocols;
 
 namespace Twino.Protocols.WebSocket
 {
+    /// <summary>
+    /// WebSocket Protocol message reader
+    /// </summary>
     public class WebSocketReader : IProtocolMessageReader<WebSocketMessage>
     {
+        /// <summary>
+        /// Buffer. 128 not a specific number, can be changed.
+        /// </summary>
         private readonly byte[] _buffer = new byte[128];
 
+        /// <summary>
+        /// Handshake result for websocket protocol.
+        /// This value created right after 101 switching protocols response.
+        /// Includes HTTP request's information.
+        /// </summary>
         public ProtocolHandshakeResult HandshakeResult { get; set; }
 
+        /// <summary>
+        /// Resets reader status for next reading operation.
+        /// Method is empty, because Websocket reader does not require any reset operation.
+        /// </summary>
         public void Reset()
         {
         }
 
+        /// <summary>
+        /// Reads a WebSocketMessage from stream
+        /// </summary>
         public async Task<WebSocketMessage> Read(Stream stream)
         {
             byte[] frames = new byte[2];
@@ -28,7 +46,7 @@ namespace Twino.Protocols.WebSocket
             byte code = frames[0];
             if (code > 127)
                 code -= 128;
-            
+
             message.OpCode = (SocketOpCode) code;
 
             byte maskbyte = frames[1];
@@ -38,18 +56,21 @@ namespace Twino.Protocols.WebSocket
                 maskbyte -= 128;
             }
 
-            message.Length = await ReadLength(maskbyte, stream);
+            long length = await ReadLength(maskbyte, stream);
 
             if (message.Masking)
                 message.Mask = await ReadMask(stream);
 
-            await ReadContent(stream, message);
+            await ReadContent(stream, message, length);
 
             return message;
         }
 
+        /// <summary>
+        /// Reads websocket protocol content length from stream 
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static async Task<ulong> ReadLength(byte first, Stream stream)
+        private static async Task<long> ReadLength(byte first, Stream stream)
         {
             //reads 1 byte length
             if (first < 126)
@@ -68,12 +89,15 @@ namespace Twino.Protocols.WebSocket
             {
                 byte[] sbytes = new byte[8];
                 await stream.ReadAsync(sbytes, 0, 8);
-                return BitConverter.ToUInt64(sbytes, 0);
+                return BitConverter.ToInt64(sbytes, 0);
             }
 
             return 0;
         }
 
+        /// <summary>
+        /// Reads masking status and masking key from stream
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<byte[]> ReadMask(Stream stream)
         {
@@ -82,28 +106,31 @@ namespace Twino.Protocols.WebSocket
             return mask;
         }
 
+        /// <summary>
+        /// Reads message content from stream
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task ReadContent(Stream stream, WebSocketMessage message)
+        private async Task ReadContent(Stream stream, WebSocketMessage message, long length)
         {
-            ulong total = 0;
+            long total = 0;
             if (message.Content == null)
                 message.Content = new MemoryStream();
 
             do
             {
-                int size = _buffer.Length;
-                if (total + (uint) size > message.Length)
-                    size = (int) (message.Length - total);
+                long size = _buffer.Length;
+                if (total + size > length)
+                    size = (length - total);
 
-                int read = await stream.ReadAsync(_buffer, 0, size);
-                total += (uint) read;
+                int read = await stream.ReadAsync(_buffer, 0, (int) size);
+                total += read;
 
                 if (message.Masking)
                     for (int i = 0; i < read; i++)
                         _buffer[i] = (byte) (_buffer[i] ^ message.Mask[i % 4]);
 
                 await message.Content.WriteAsync(_buffer, 0, read);
-            } while (total < message.Length);
+            } while (total < length);
         }
     }
 }

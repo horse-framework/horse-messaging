@@ -31,7 +31,6 @@ namespace Twino.SocketModels
                                            OpCode = SocketOpCode.UTF8,
                                            Content = new MemoryStream(Encoding.UTF8.GetBytes(writer.Serialize(model)))
                                        };
-            message.Length = (ulong) message.Content.Length;
 
             socket.Send(_writer.Create(message).Result);
         }
@@ -56,7 +55,6 @@ namespace Twino.SocketModels
                                            OpCode = SocketOpCode.UTF8,
                                            Content = new MemoryStream(Encoding.UTF8.GetBytes(writer.Serialize(model)))
                                        };
-            message.Length = (ulong) message.Content.Length;
 
             socket.Send(await _writer.Create(message));
         }
@@ -72,7 +70,6 @@ namespace Twino.SocketModels
                                            OpCode = SocketOpCode.UTF8,
                                            Content = new MemoryStream(Encoding.UTF8.GetBytes(_twriter.Serialize(model)))
                                        };
-            message.Length = (ulong) message.Content.Length;
 
             return _writer.Create(message).Result;
         }
@@ -88,7 +85,6 @@ namespace Twino.SocketModels
                                            OpCode = SocketOpCode.UTF8,
                                            Content = new MemoryStream(Encoding.UTF8.GetBytes(_twriter.Serialize(model)))
                                        };
-            message.Length = (ulong) message.Content.Length;
 
             return await _writer.Create(message);
         }
