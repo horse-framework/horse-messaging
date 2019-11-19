@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace Twino.Server.Http
+namespace Twino.Protocols.Http.Forms
 {
     /// <summary>
     /// multipart/form-data item

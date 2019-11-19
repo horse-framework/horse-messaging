@@ -188,8 +188,9 @@ namespace Twino.Client.WebSocket
                              HttpHeaders.Create(HttpHeaders.WEBSOCKET_KEY, WebSocketKey) +
                              HttpHeaders.Create(HttpHeaders.WEBSOCKET_EXTENSIONS, HttpHeaders.VALUE_WEBSOCKET_EXTENSIONS);
 
-            foreach (var kv in Properties)
-                request += HttpHeaders.Create(kv.Key, kv.Value);
+            lock (Data)
+                foreach (var kv in Data.Properties)
+                    request += HttpHeaders.Create(kv.Key, kv.Value);
 
             request += "\r\n";
             return Encoding.UTF8.GetBytes(request);

@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace Twino.Protocols.Http
+namespace Twino.Protocols.Http.Forms
 {
     public interface IFormFile
     {

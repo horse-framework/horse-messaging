@@ -4,6 +4,9 @@ using System.Threading;
 
 namespace Twino.Server
 {
+    /// <summary>
+    /// Listener object model for TCP port listening operation 
+    /// </summary>
     public class HostListener
     {
         /// <summary>

@@ -42,16 +42,6 @@ namespace Twino.Core
         TcpClient Client { get; }
 
         /// <summary>
-        /// The time the connection dispose if operation can't complete
-        /// </summary>
-        DateTime Timeout { get; set; }
-
-        /// <summary>
-        /// The max alive time for HTTP Requests
-        /// </summary>
-        DateTime MaxAlive { get; set; }
-
-        /// <summary>
         /// If true, request read and proceed successfuly.
         /// If false, timeout timer is waiting for the process.
         /// </summary>

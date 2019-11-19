@@ -79,6 +79,9 @@ namespace Twino.Server
             return PlainStream;
         }
 
+        /// <summary>
+        /// Completes socket pong receive operations 
+        /// </summary>
         public void PongReceived()
         {
             Socket.PongTime = DateTime.UtcNow;

@@ -8,7 +8,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Twino.Core.Protocols;
 using Twino.Protocols.Http.Forms;
-using Twino.Server.Http;
 
 namespace Twino.Protocols.Http
 {

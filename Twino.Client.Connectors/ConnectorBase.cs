@@ -30,9 +30,9 @@ namespace Twino.Client.Connectors
         private TClient _client;
 
         /// <summary>
-        /// Properties for the client
+        /// Connection data and properties for the client
         /// </summary>
-        private readonly Dictionary<string, string> _properties;
+        private readonly ConnectionData _data = new ConnectionData();
 
         /// <summary>
         /// Next hostname in the host list
@@ -83,7 +83,6 @@ namespace Twino.Client.Connectors
 
         protected ConnectorBase()
         {
-            _properties = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
             _hosts = new List<string>();
         }
 
@@ -119,36 +118,36 @@ namespace Twino.Client.Connectors
         }
 
         /// <summary>
-        /// Add a new custom header.
-        /// If the header is already exists, it will be changed.
+        /// Add a new custom property.
+        /// If the property is already exists, it will be changed.
         /// </summary>
-        public void AddHeader(string key, string value)
+        public void AddProperty(string key, string value)
         {
-            lock (_properties)
+            lock (_data)
             {
-                if (_properties.ContainsKey(key))
-                    _properties[key] = value;
+                if (_data.Properties.ContainsKey(key))
+                    _data.Properties[key] = value;
                 else
-                    _properties.Add(key, value);
+                    _data.Properties.Add(key, value);
             }
         }
 
         /// <summary>
-        /// Removes custom the header
+        /// Removes a custom property
         /// </summary>
-        public void RemoveHeader(string key)
+        public void RemoveProperty(string key)
         {
-            lock (_properties)
-                _properties.Remove(key);
+            lock (_data)
+                _data.Properties.Remove(key);
         }
 
         /// <summary>
-        /// Clears all custom headers
+        /// Clears all custom properties
         /// </summary>
-        public void ClearHeaders()
+        public void ClearProperties()
         {
-            lock (_properties)
-                _properties.Clear();
+            lock (_data)
+                _data.Properties.Clear();
         }
 
         #endregion
@@ -175,9 +174,10 @@ namespace Twino.Client.Connectors
 
             _client = new TClient();
 
-            lock (_properties)
-                foreach (var kv in _properties)
-                    _client.Properties.Add(kv.Key, kv.Value);
+            if (_data != null && _data.Properties != null)
+                lock (_data)
+                    foreach (var kv in _data.Properties)
+                        _client.Data.Properties.Add(kv.Key, kv.Value);
 
             _client.Connected += ClientConnected;
             _client.Disconnected += ClientDisconnected;

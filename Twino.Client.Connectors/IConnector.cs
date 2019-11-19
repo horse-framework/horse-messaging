@@ -34,20 +34,20 @@ namespace Twino.Client.Connectors
         void ClearHosts();
 
         /// <summary>
-        /// Add a new custom header.
-        /// If the header is already exists, it will be changed.
+        /// Add a new custom property.
+        /// If the property is already exists, it will be changed.
         /// </summary>
-        void AddHeader(string key, string value);
+        void AddProperty(string key, string value);
 
         /// <summary>
-        /// Removes custom the header
+        /// Removes custom the property
         /// </summary>
-        void RemoveHeader(string key);
+        void RemoveProperty(string key);
 
         /// <summary>
-        /// Clears all custom headers
+        /// Clears all custom properties
         /// </summary>
-        void ClearHeaders();
+        void ClearProperties();
 
         /// <summary>
         /// Gets the current client socket that connected to the host

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using Twino.Protocols.Http.Forms;
 
 [assembly: InternalsVisibleTo("Twino.Server")]
 [assembly: InternalsVisibleTo("Twino.Client.WebSocket")]

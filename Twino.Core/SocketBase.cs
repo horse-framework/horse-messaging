@@ -85,6 +85,9 @@ namespace Twino.Core
 
         #region Methods
 
+        /// <summary>
+        /// Ends write operation and completed callback
+        /// </summary>
         private void EndWrite(IAsyncResult ar)
         {
             try

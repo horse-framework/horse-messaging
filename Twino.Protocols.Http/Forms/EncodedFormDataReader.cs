@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace Twino.Server.Http
+namespace Twino.Protocols.Http.Forms
 {
     /// <summary>
     /// Reads and parses url-encoded

@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -17,12 +15,21 @@ namespace Twino.Core
         /// Client certificate for SSL client connections.
         /// If null, Twino uses default certificate.
         /// </summary>
-        public X509Certificate2 Certificate { get; set; }
+        protected X509Certificate2 Certificate { get; set; }
 
-        public Dictionary<string, string> Properties { get; } = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
-
+        /// <summary>
+        /// Connection data, path, method, properties (if http used directly or indirectly, properties may be header key/values)
+        /// </summary>
+        public ConnectionData Data { get; set; }
+        
+        /// <summary>
+        /// Triggered when a message is received from the network stream
+        /// </summary>
         public event ClientMessageHandler<TMessage> MessageReceived;
 
+        /// <summary>
+        /// Connects to the server
+        /// </summary>
         public abstract void Connect(string host);
 
         /// <summary>
@@ -30,11 +37,17 @@ namespace Twino.Core
         /// </summary>
         protected abstract Task Read();
 
+        /// <summary>
+        /// certificate invocation always true method
+        /// </summary>
         protected static bool CertificateCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             return true;
         }
 
+        /// <summary>
+        /// If message received event should be triggered to derived classes, this method can be used.
+        /// </summary>
         protected void SetOnMessageReceived(TMessage message)
         {
             MessageReceived?.Invoke(this, message);

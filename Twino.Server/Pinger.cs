@@ -6,17 +6,17 @@ using Twino.Core;
 namespace Twino.Server
 {
     /// <summary>
-    /// Manages ping and pong messages for connected websocket clients
+    /// Manages ping and pong messages for connected piped clients
     /// </summary>
     internal class Pinger : IPinger
     {
         /// <summary>
-        /// Connected websocket clients
+        /// Connected piped clients
         /// </summary>
         private readonly List<SocketPingInfo> _clients = new List<SocketPingInfo>();
 
         /// <summary>
-        /// Newly connected websocket clients
+        /// Newly connected piped clients
         /// </summary>
         private readonly List<SocketPingInfo> _incoming = new List<SocketPingInfo>();
 

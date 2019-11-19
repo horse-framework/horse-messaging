@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -138,7 +136,7 @@ namespace Twino.Protocols.Http
                     ConnectionData data = new ConnectionData();
                     data.Path = message.Request.Path;
                     data.Method = message.Request.Method;
-                    data.Properties = message.Request.Headers;
+                    data.SetProperties(message.Request.Headers);
 
                     await _server.SwitchProtocol(info, message.Request.Upgrade, data);
                     return HandleStatus.ExitWithoutClosing;

@@ -13,23 +13,20 @@ using Timer = System.Timers.Timer;
 namespace Twino.Server
 {
     /// <summary>
-    /// HttpServer of Twino.Server Library.
-    /// Listens all HTTP Connection Requests and Manages them.
-    /// Handshakes with requsts and figures out if they are HTTP Request or WebSocket Request.
+    /// Twino TCP Server
+    /// Listens all TCP Connections and routes to requests protocols
     /// </summary>
     public class TwinoServer : ITwinoServer
     {
         #region Properties
 
         /// <summary>
-        /// Pinger for websocket clients
+        /// Pinger for piped clients that connect and stay alive for a long time
         /// </summary>
         public IPinger Pinger { get; private set; }
 
         /// <summary>
-        /// Logger class for HttpServer operations.
-        /// This Logger can hurt performance when Enabled.
-        /// Enable only in development or maintenance mode.
+        /// Logger class for Server operations.
         /// </summary>
         public ILogger Logger { get; set; }
 
@@ -221,6 +218,9 @@ namespace Twino.Server
 
         #region Protocols
 
+        /// <summary>
+        /// Uses the protocol for new TCP connections that request the protocol
+        /// </summary>
         public void UseProtocol<TMessage>(ITwinoProtocol<TMessage> protocol)
         {
             List<ITwinoProtocol> list = Protocols.ToList();
@@ -233,6 +233,9 @@ namespace Twino.Server
             Protocols = list.ToArray();
         }
 
+        /// <summary>
+        /// Switches client's protocol to new protocol (finds by name)
+        /// </summary>
         public async Task SwitchProtocol(IConnectionInfo info, string newProtocolName, ConnectionData data)
         {
             foreach (ITwinoProtocol protocol in Protocols)
@@ -258,6 +261,9 @@ namespace Twino.Server
             }
         }
 
+        /// <summary>
+        /// Finds protocol by name
+        /// </summary>
         public ITwinoProtocol FindProtocol(string name)
         {
             return Protocols.FirstOrDefault(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
