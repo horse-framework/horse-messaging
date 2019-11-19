@@ -62,7 +62,7 @@ namespace Playground
             mvc.Init(m => { });
 
             TwinoServer server = new TwinoServer(ServerOptions.CreateDefault());
-            server.UseMvc(mvc, options);
+           // server.UseMvc(mvc, options);
             server.UseWebSockets(new WebSocketHandler());
 
             server.Start(82);
