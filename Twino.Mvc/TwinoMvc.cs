@@ -86,6 +86,9 @@ namespace Twino.Mvc
         /// </summary>
         public bool IsDevelopment { get; set; }
 
+        /// <summary>
+        /// Mvc application builder
+        /// </summary>
         internal MvcAppBuilder AppBuilder { get; private set; }
 
         #endregion
@@ -175,6 +178,14 @@ namespace Twino.Mvc
                 foreach (Route route in routes)
                     Routes.Add(route);
             }
+        }
+
+        /// <summary>
+        /// Loads all IController types from the assembly
+        /// </summary>
+        public void ImportAssembly(Assembly assembly)
+        {
+            CreateRoutes(assembly);
         }
 
         #endregion

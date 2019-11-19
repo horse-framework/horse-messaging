@@ -42,16 +42,25 @@ namespace Twino.Mvc
             App = app;
         }
 
+        /// <summary>
+        /// HTTP Protocol does not support piped connections
+        /// </summary>
         public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
             return await Task.FromResult((SocketBase) null);
         }
 
+        /// <summary>
+        /// HTTP Protocol does not support piped connections
+        /// </summary>
         public async Task Disconnected(ITwinoServer server, SocketBase client)
         {
             await Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Triggered when an HTTP request is received
+        /// </summary>
         public async Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, HttpMessage message)
         {
             await RequestAsync(server, message.Request, message.Response);

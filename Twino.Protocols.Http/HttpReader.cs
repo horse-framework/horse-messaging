@@ -93,7 +93,7 @@ namespace Twino.Protocols.Http
                 streamPad = HandshakeResult.PreviouslyRead.Length;
                 HandshakeResult.PreviouslyRead = null;
             }
-            
+
             //this value will be true, if small buffer isn't enough and tells us to use large buffer
             bool requiredMoreData = false;
 
