@@ -47,6 +47,24 @@ namespace Twino.Protocols.WebSocket
         }
 
         /// <summary>
+        /// Sends websocket message to client
+        /// </summary>
+        public bool Send(WebSocketMessage message)
+        {
+            byte[] data = _writer.Create(message).Result;
+            return Send(data);
+        }
+
+        /// <summary>
+        /// Sends websocket message to client
+        /// </summary>
+        public async Task<bool> SendAsync(WebSocketMessage message)
+        {
+            byte[] data = await _writer.Create(message);
+            return Send(data);
+        }
+
+        /// <summary>
         /// Sends string message to client
         /// </summary>
         public void Send(string message)

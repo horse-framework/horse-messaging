@@ -41,7 +41,7 @@ namespace Twino.Protocols.TMQ
         public void PrepareFirstUse()
         {
             if (Ttl == 0)
-                Ttl = 64;
+                Ttl = 32;
 
             if (MessageId != null)
                 MessageIdLength = MessageId.Length;
