@@ -28,9 +28,50 @@ namespace Twino.Core
         public event ClientMessageHandler<TMessage> MessageReceived;
 
         /// <summary>
+        /// Connects to specified url.
+        /// Url can be like;
+        /// ws://10.20.30.40
+        /// wss://10.20.30.40/path
+        /// tmqs://domain.com
+        /// tmq://domain.com:154/path
+        /// </summary>
+        public void Connect(string uri)
+        {
+            DnsResolver resolver = new DnsResolver();
+            DnsInfo info = resolver.Resolve(uri);
+
+            Connect(info);
+        }
+
+        /// <summary>
+        /// Connects to an IP address on specified port.
+        /// If secure is true, connects with SSL
+        /// </summary>
+        public void Connect(string ip, int port, bool secure)
+        {
+            DnsInfo info = new DnsInfo
+                           {
+                               IPAddress = ip,
+                               Hostname = ip,
+                               Port = port,
+                               Path = "/",
+                               Protocol = Protocol.WebSocket,
+                               SSL = secure
+                           };
+
+            IsSsl = secure;
+            Connect(info);
+        }
+
+        /// <summary>
         /// Connects to the server
         /// </summary>
-        public abstract void Connect(string host);
+        public abstract void Connect(DnsInfo host);
+        
+        /// <summary>
+        /// Connects to the server
+        /// </summary>
+        public abstract Task ConnectAsync(DnsInfo host);
 
         /// <summary>
         /// Starts to read from the TCP socket

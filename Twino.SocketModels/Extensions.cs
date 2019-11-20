@@ -56,7 +56,7 @@ namespace Twino.SocketModels
                                            Content = new MemoryStream(Encoding.UTF8.GetBytes(writer.Serialize(model)))
                                        };
 
-            socket.Send(await _writer.Create(message));
+            await socket.SendAsync(await _writer.Create(message));
         }
 
         /// <summary>

@@ -33,54 +33,18 @@ namespace Twino.Client.WebSocket
         #region Connect
 
         /// <summary>
-        /// Connects to specified url.
-        /// Url can be like;
-        /// ws://10.20.30.40
-        /// wss://10.20.30.40/path
-        /// wss://domain.com
-        /// ws://domain.com:154/path
-        /// </summary>
-        public override void Connect(string uri)
-        {
-            DnsResolver resolver = new DnsResolver();
-            DnsInfo info = resolver.Resolve(uri);
-
-            Connect(info);
-        }
-
-        /// <summary>
-        /// Connects to an IP address on specified port.
-        /// If secure is true, connects with SSL
-        /// </summary>
-        public void Connect(string ip, int port, bool secure)
-        {
-            DnsInfo info = new DnsInfo
-                           {
-                               IPAddress = ip,
-                               Hostname = ip,
-                               Port = port,
-                               Path = "/",
-                               Protocol = Protocol.WebSocket,
-                               SSL = secure
-                           };
-
-            IsSsl = secure;
-            Connect(info);
-        }
-
-        /// <summary>
         /// Connects to well defined remote host
         /// </summary>
-        public void Connect(DnsInfo dns)
+        public override void Connect(DnsInfo host)
         {
             try
             {
                 Client = new TcpClient();
-                Client.Connect(dns.IPAddress, dns.Port);
+                Client.Connect(host.IPAddress, host.Port);
                 IsConnected = true;
 
                 //creates SSL Stream or Insecure stream
-                if (dns.SSL)
+                if (host.SSL)
                 {
                     SslStream sslStream = new SslStream(Client.GetStream(), true, CertificateCallback);
 
@@ -91,80 +55,133 @@ namespace Twino.Client.WebSocket
                         certificates.Add(Certificate);
                     }
 
-                    sslStream.AuthenticateAsClient(dns.Hostname, certificates, false);
+                    sslStream.AuthenticateAsClient(host.Hostname, certificates, false);
                     Stream = sslStream;
                 }
                 else
                     Stream = Client.GetStream();
 
                 //creates new HTTP Request and sends via Stream
-                byte[] request = CreateRequest(dns);
+                byte[] request = CreateRequest(host);
                 Stream.Write(request, 0, request.Length);
 
                 //Reads the response. Expected response is 101 Switching Protocols (if the server supports web sockets)
                 byte[] buffer = new byte[8192];
                 int len = Stream.Read(buffer, 0, buffer.Length);
-                string response = Encoding.UTF8.GetString(buffer, 0, len);
 
-                string first = response.Substring(0, 50).Trim();
-                int i1 = first.IndexOf(' ');
-                if (i1 < 1)
-                    throw new InvalidOperationException("Unexpected server response");
-
-                int i2 = first.IndexOf(' ', i1 + 1);
-                if (i1 < 0 || i2 < 0 || i2 <= i1)
-                    throw new InvalidOperationException("Unexpected server response");
-
-                string statusCode = first.Substring(i1, i2 - i1).Trim();
-                if (statusCode.StartsWith("4"))
-                    throw new NotSupportedException("Server doesn't support web socket protocol: " + statusCode);
-
-                if (statusCode != "101")
-                    throw new InvalidOperationException("Connection Error: " + statusCode);
-
-                //Creates HttpRequest class from the response message
-                RequestBuilder reader = new RequestBuilder();
-                HttpRequest requestResponse = reader.Build(response.Split(new[] {"\r\n"}, StringSplitOptions.RemoveEmptyEntries));
-
-                //server must send the web socket accept key for the websocket protocol
-                if (!requestResponse.Headers.ContainsKey(HttpHeaders.WEBSOCKET_ACCEPT))
-                    throw new InvalidOperationException("Handshaking error, server didn't response Sec-WebSocket-Accept");
-
-                string rkey = requestResponse.Headers[HttpHeaders.WEBSOCKET_ACCEPT];
-
-                //check if the key is valid
-                using (SHA1 sha1 = SHA1.Create())
-                {
-                    byte[] hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(WebSocketKey + HttpHeaders.WEBSOCKET_GUID));
-                    string fkey = Convert.ToBase64String(hash);
-                    if (rkey != fkey)
-                        throw new InvalidOperationException("Handshaking error, Invalid Key");
-                }
-
-                //fire connected events and start to read data from the server until disconnected
-                Thread thread = new Thread(async () =>
-                {
-                    try
-                    {
-                        while (IsConnected)
-                            await Read();
-                    }
-                    catch
-                    {
-                        Disconnect();
-                    }
-                });
-
-                thread.IsBackground = true;
-                thread.Start();
-
-                OnConnected();
+                CheckProtocolResponse(buffer, len);
+                Start();
             }
             catch
             {
                 Disconnect();
                 throw;
             }
+        }
+
+        public override async Task ConnectAsync(DnsInfo host)
+        {
+            try
+            {
+                Client = new TcpClient();
+                await Client.ConnectAsync(host.IPAddress, host.Port);
+                IsConnected = true;
+
+                //creates SSL Stream or Insecure stream
+                if (host.SSL)
+                {
+                    SslStream sslStream = new SslStream(Client.GetStream(), true, CertificateCallback);
+
+                    X509Certificate2Collection certificates = null;
+                    if (Certificate != null)
+                    {
+                        certificates = new X509Certificate2Collection();
+                        certificates.Add(Certificate);
+                    }
+
+                    await sslStream.AuthenticateAsClientAsync(host.Hostname, certificates, false);
+                    Stream = sslStream;
+                }
+                else
+                    Stream = Client.GetStream();
+
+                //creates new HTTP Request and sends via Stream
+                byte[] request = CreateRequest(host);
+                await Stream.WriteAsync(request);
+
+                //Reads the response. Expected response is 101 Switching Protocols (if the server supports web sockets)
+                byte[] buffer = new byte[8192];
+                int len = await Stream.ReadAsync(buffer, 0, buffer.Length);
+
+                CheckProtocolResponse(buffer, len);
+                Start();
+            }
+            catch
+            {
+                Disconnect();
+                throw;
+            }
+        }
+
+        private void CheckProtocolResponse(byte[] buffer, int length)
+        {
+            string response = Encoding.UTF8.GetString(buffer, 0, length);
+
+            string first = response.Substring(0, 50).Trim();
+            int i1 = first.IndexOf(' ');
+            if (i1 < 1)
+                throw new InvalidOperationException("Unexpected server response");
+
+            int i2 = first.IndexOf(' ', i1 + 1);
+            if (i1 < 0 || i2 < 0 || i2 <= i1)
+                throw new InvalidOperationException("Unexpected server response");
+
+            string statusCode = first.Substring(i1, i2 - i1).Trim();
+            if (statusCode.StartsWith("4"))
+                throw new NotSupportedException("Server doesn't support web socket protocol: " + statusCode);
+
+            if (statusCode != "101")
+                throw new InvalidOperationException("Connection Error: " + statusCode);
+
+            //Creates HttpRequest class from the response message
+            RequestBuilder reader = new RequestBuilder();
+            HttpRequest requestResponse = reader.Build(response.Split(new[] {"\r\n"}, StringSplitOptions.RemoveEmptyEntries));
+
+            //server must send the web socket accept key for the websocket protocol
+            if (!requestResponse.Headers.ContainsKey(HttpHeaders.WEBSOCKET_ACCEPT))
+                throw new InvalidOperationException("Handshaking error, server didn't response Sec-WebSocket-Accept");
+
+            string rkey = requestResponse.Headers[HttpHeaders.WEBSOCKET_ACCEPT];
+
+            //check if the key is valid
+            using SHA1 sha1 = SHA1.Create();
+            byte[] hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(WebSocketKey + HttpHeaders.WEBSOCKET_GUID));
+            string fkey = Convert.ToBase64String(hash);
+            
+            if (rkey != fkey)
+                throw new InvalidOperationException("Handshaking error, Invalid Key");
+        }
+
+        private void Start()
+        {
+            //fire connected events and start to read data from the server until disconnected
+            Thread thread = new Thread(async () =>
+            {
+                try
+                {
+                    while (IsConnected)
+                        await Read();
+                }
+                catch
+                {
+                    Disconnect();
+                }
+            });
+
+            thread.IsBackground = true;
+            thread.Start();
+
+            OnConnected();
         }
 
         /// <summary>
@@ -244,7 +261,7 @@ namespace Twino.Client.WebSocket
             byte[] data = _writer.Create(message).Result;
             return Send(data);
         }
-        
+
         #endregion
     }
 }

@@ -58,7 +58,7 @@ namespace Twino.Protocols.TMQ
         public async Task<bool> SendAsync(TmqMessage message)
         {
             byte[] data = await _writer.Create(message);
-            return Send(data);
+            return await SendAsync(data);
         }
     }
 }

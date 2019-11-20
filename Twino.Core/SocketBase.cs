@@ -106,62 +106,61 @@ namespace Twino.Core
         }
 
         /// <summary>
-        /// Sends prepared byte array message to the socket client.
+        /// Sends byte array message to the socket client.
         /// </summary>
-        public bool Send(byte[] preparedData)
+        public async Task<bool> SendAsync(byte[] data)
         {
+            if (IsSsl)
+                return await Task.FromResult(Send(data));
+
             try
             {
-                if (Stream == null || preparedData == null)
+                if (Stream == null || data == null)
                     return false;
 
-                lock (Stream)
-                {
-                    if (!_writeCompleted)
-                        SendQueue(preparedData);
-                    else
-                    {
-                        _writeCompleted = false;
-                        Stream.BeginWrite(preparedData, 0, preparedData.Length, EndWrite, preparedData);
-                    }
-                }
-
+                await Stream.WriteAsync(data);
                 return true;
             }
-            catch (Exception ex)
+            catch
             {
-                _writeCompleted = true;
                 Disconnect();
                 return false;
             }
         }
 
         /// <summary>
-        /// Disconnects client and disposes all streams belongs it
+        /// Sends byte array message to the socket client.
         /// </summary>
-        public virtual void Disconnect()
+        public bool Send(byte[] data)
         {
             try
             {
-                IsConnected = false;
+                if (Stream == null || data == null)
+                    return false;
 
-                if (Stream != null)
-                    Stream.Dispose();
+                if (IsSsl)
+                {
+                    lock (Stream)
+                    {
+                        if (!_writeCompleted)
+                            SendQueue(data);
+                        else
+                        {
+                            _writeCompleted = false;
+                            Stream.BeginWrite(data, 0, data.Length, EndWrite, data);
+                        }
+                    }
+                }
+                else
+                    Stream.BeginWrite(data, 0, data.Length, EndWrite, data);
 
-                if (Client != null)
-                    Client.Close();
-
-                Client = null;
-                Stream = null;
+                return true;
             }
             catch
             {
-            }
-
-            if (!_disconnectedWarn)
-            {
-                _disconnectedWarn = true;
-                OnDisconnected();
+                _writeCompleted = true;
+                Disconnect();
+                return false;
             }
         }
 
@@ -192,6 +191,35 @@ namespace Twino.Core
         #endregion
 
         #region Abstract Methods
+
+        /// <summary>
+        /// Disconnects client and disposes all streams belongs it
+        /// </summary>
+        public virtual void Disconnect()
+        {
+            try
+            {
+                IsConnected = false;
+
+                if (Stream != null)
+                    Stream.Dispose();
+
+                if (Client != null)
+                    Client.Close();
+
+                Client = null;
+                Stream = null;
+            }
+            catch
+            {
+            }
+
+            if (!_disconnectedWarn)
+            {
+                _disconnectedWarn = true;
+                OnDisconnected();
+            }
+        }
 
         /// <summary>
         /// Triggered when client is connected

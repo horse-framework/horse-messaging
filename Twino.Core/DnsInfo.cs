@@ -18,7 +18,12 @@
         /// <summary>
         /// ws:// or wss://
         /// </summary>
-        WebSocket
+        WebSocket,
+        
+        /// <summary>
+        /// tmq:// or tmqs://
+        /// </summary>
+        Tmq
     }
 
     /// <summary>

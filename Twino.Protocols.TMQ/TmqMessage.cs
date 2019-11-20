@@ -5,7 +5,6 @@ namespace Twino.Protocols.TMQ
     public enum MessageType : byte
     {
         Other = 0x00,
-        Hello = 0x01,
         Terminate = 0x08,
         Server = 0x10,
         Channel = 0x11,
