@@ -3,7 +3,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using Twino.Core.Protocols;
 
 namespace Twino.Protocols.TMQ
 {
@@ -14,8 +13,9 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         private readonly byte[] _buffer = new byte[256];
 
-        public ProtocolHandshakeResult HandshakeResult { get; set; }
-
+        /// <summary>
+        /// Reads TMQ message from stream
+        /// </summary>
         public async Task<TmqMessage> Read(Stream stream)
         {
             byte[] bytes = await ReadRequiredFrame(stream);
@@ -25,18 +25,17 @@ namespace Twino.Protocols.TMQ
             TmqMessage message = new TmqMessage();
             await ProcessRequiredFrame(message, bytes, stream);
             message.Ttl--;
-            
+
             await ReadContent(message, stream);
-            
+
             return message;
         }
 
-        public void Reset()
-        {
-        }
-
+        /// <summary>
+        /// Reads required frame of the message
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<byte[]> ReadRequiredFrame(Stream stream)
+        private static async Task<byte[]> ReadRequiredFrame(Stream stream)
         {
             byte[] bytes = new byte[6];
 
@@ -54,8 +53,11 @@ namespace Twino.Protocols.TMQ
             return bytes;
         }
 
+        /// <summary>
+        /// Process required frame data of message
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task ProcessRequiredFrame(TmqMessage message, byte[] bytes, Stream stream)
+        private static async Task ProcessRequiredFrame(TmqMessage message, byte[] bytes, Stream stream)
         {
             byte type = bytes[0];
             if (type >= 128)
@@ -106,6 +108,9 @@ namespace Twino.Protocols.TMQ
                 message.Length = length;
         }
 
+        /// <summary>
+        /// Reads message content
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task ReadContent(TmqMessage message, Stream stream)
         {
@@ -133,6 +138,9 @@ namespace Twino.Protocols.TMQ
             } while (total < message.Length);
         }
 
+        /// <summary>
+        /// Reads octet size data and returns as string
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<string> ReadOctetSizeData(Stream stream, int length)
         {
