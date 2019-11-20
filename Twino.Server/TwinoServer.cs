@@ -83,7 +83,10 @@ namespace Twino.Server
         /// <param name="options">Server options</param>
         public TwinoServer(ServerOptions options)
         {
-            Options = options;
+            if (options == null)
+                Options = ServerOptions.LoadFromFile();
+            else
+                Options = options;
         }
 
         #endregion

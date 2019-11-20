@@ -1,65 +1,49 @@
 ﻿using Twino.Server;
 using System;
-using System.Net.Sockets;
 using System.Threading.Tasks;
-using Twino.Core.Http;
+using Twino.Core;
+using Twino.Core.Protocols;
+using Twino.Protocols.WebSocket;
 
 namespace Sample.WebSocket.Server
 {
     /// <summary>
-    /// Server-Side WebSocket Client
-    /// </summary>
-    public class Client : ServerSocket
-    {
-        public Client(TwinoServer server, HttpRequest request, TcpClient client) : base(server, request, client)
-        {
-        }
-
-        protected override void OnBinaryReceived(byte[] payload)
-        {
-        }
-
-        protected override void OnConnected()
-        {
-            Console.WriteLine("Client Connected");
-        }
-
-        protected override void OnDisconnected()
-        {
-            Console.WriteLine("Client Disconnected");
-        }
-
-        protected override void OnMessageReceived(string message)
-        {
-            Console.WriteLine("# " + message);
-        }
-    }
-
-    /// <summary>
     /// WebSocket Client Factory
     /// </summary>
-    public class ClientFactory : IClientFactory
+    public class ServerWsHandler : IProtocolConnectionHandler<WebSocketMessage>
     {
-        private Random rnd = new Random();
-
-        public async Task<ServerSocket> Create(TwinoServer server, HttpRequest request, TcpClient client)
+        public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
-            Client c = new Client(server, request, client);
+            WsServerSocket socket = new WsServerSocket(server, connection);
+            Program.ServerClient = socket;
+            Console.WriteLine("> Connected");
 
-            Program.ServerClient = c;
-            return await Task.FromResult(c);
+            return await Task.FromResult(socket);
+        }
+
+        public async Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, WebSocketMessage message)
+        {
+            Console.WriteLine(message);
+            await Task.CompletedTask;
+        }
+
+        public async Task Disconnected(ITwinoServer server, SocketBase client)
+        {
+            Console.WriteLine("> Disconnected");
+            await Task.CompletedTask;
         }
     }
 
     class Program
     {
-        public static ServerSocket ServerClient { get; set; }
+        public static WsServerSocket ServerClient { get; set; }
 
         static void Main(string[] args)
         {
-            IClientFactory factory = new ClientFactory();
-            TwinoServer server = TwinoServer.CreateWebSocket(factory);
-            server.Start();
+            TwinoServer server = new TwinoServer();
+            server.UseWebSockets(new ServerWsHandler());
+
+            server.Start(82);
 
             while (true)
             {

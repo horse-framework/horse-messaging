@@ -6,9 +6,11 @@ using Sample.Mvc.Models;
 using System;
 using System.Net;
 using System.Threading.Tasks;
-using Twino.Core.Http;
+using Twino.Core;
 using Twino.Extensions.Http;
 using Twino.Mvc.Results;
+using Twino.Protocols.Http;
+using Twino.Server;
 
 namespace Sample.Mvc
 {
@@ -32,7 +34,7 @@ namespace Sample.Mvc
     {
         static void Main(string[] args)
         {
-            using TwinoMvc mvc = new TwinoMvc(async (s, r, c) => new ServerSocket(s, r, c));
+            using TwinoMvc mvc = new TwinoMvc();
 
             mvc.IsDevelopment = true;
             mvc.Init(twino =>
@@ -57,18 +59,22 @@ namespace Sample.Mvc
                 twino.Policies.Add(Policy.Custom("Custom", (d, c) => true));
                 twino.Services.AddHttpClient();
 
-                twino.StatusCodeResults.Add(HttpStatusCode.Unauthorized, new JsonResult(new { Message = "Access denied" }));
+                twino.StatusCodeResults.Add(HttpStatusCode.Unauthorized, new JsonResult(new {Message = "Access denied"}));
             });
 
             CorsMiddleware cors = new CorsMiddleware();
             cors.AllowAll();
 
-            mvc.Run(app =>
+            mvc.Use(app =>
             {
                 app.UseMiddleware(cors);
                 app.UseMiddleware<TMid>();
                 app.UseFiles("/download", "/home/mehmet/files");
             });
+
+            TwinoServer server = new TwinoServer();
+            server.UseMvc(mvc, HttpOptions.CreateDefault());
+            server.Start(82);
         }
     }
 }

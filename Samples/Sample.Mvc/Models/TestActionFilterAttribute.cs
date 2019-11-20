@@ -1,6 +1,7 @@
 ﻿using Twino.Mvc.Controllers;
 using Twino.Mvc.Filters;
 using System;
+using Twino.Mvc;
 
 namespace Sample.Mvc.Models
 {

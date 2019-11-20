@@ -11,6 +11,7 @@
         <ProjectReference Include="..\..\Twino.Extensions.Http\Twino.Extensions.Http.csproj" />
         <ProjectReference Include="..\..\Twino.Mvc.Auth.Jwt\Twino.Mvc.Auth.Jwt.csproj" />
         <ProjectReference Include="..\..\Twino.Mvc\Twino.Mvc.csproj" />
+        <ProjectReference Include="..\..\Twino.Server\Twino.Server.csproj" />
     </ItemGroup>
 
     <ItemGroup>
