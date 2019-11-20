@@ -92,10 +92,20 @@ namespace Twino.Core
         {
             try
             {
-                lock (Stream)
+                if (IsSsl)
                 {
-                    Stream.EndWrite(ar);
-                    _writeCompleted = true;
+                    lock (Stream)
+                    {
+                        Stream.EndWrite(ar);
+                        _writeCompleted = true;
+                    }
+                }
+                else
+                {
+                    Stream.EndRead(ar);
+                    
+                    if (!_writeCompleted)
+                        _writeCompleted = true;
                 }
             }
             catch
