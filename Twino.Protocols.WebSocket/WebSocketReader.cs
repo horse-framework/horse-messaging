@@ -9,7 +9,7 @@ namespace Twino.Protocols.WebSocket
     /// <summary>
     /// WebSocket Protocol message reader
     /// </summary>
-    public class WebSocketReader : IProtocolMessageReader<WebSocketMessage>
+    public class WebSocketReader
     {
         /// <summary>
         /// Buffer. 128 not a specific number, can be changed.

@@ -9,7 +9,7 @@ namespace Twino.Protocols.WebSocket
     /// <summary>
     /// WebSocket Protocol message writer
     /// </summary>
-    public class WebSocketWriter : IProtocolMessageWriter<WebSocketMessage>
+    public class WebSocketWriter
     {
         /// <summary>
         /// Writes message to specified stream.

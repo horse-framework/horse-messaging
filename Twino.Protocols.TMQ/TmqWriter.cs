@@ -6,8 +6,14 @@ using Twino.Core.Protocols;
 
 namespace Twino.Protocols.TMQ
 {
-    public class TmqWriter : IProtocolMessageWriter<TmqMessage>
+    /// <summary>
+    /// TMQ Message writer
+    /// </summary>
+    public class TmqWriter
     {
+        /// <summary>
+        /// Writes a TMQ message to stream
+        /// </summary>
         public async Task Write(TmqMessage value, Stream stream)
         {
             await using MemoryStream ms = new MemoryStream();
@@ -16,6 +22,9 @@ namespace Twino.Protocols.TMQ
             ms.WriteTo(stream);
         }
 
+        /// <summary>
+        /// Creates byte array of TMQ message
+        /// </summary>
         public async Task<byte[]> Create(TmqMessage value)
         {
             await using MemoryStream ms = new MemoryStream();
@@ -24,6 +33,9 @@ namespace Twino.Protocols.TMQ
             return ms.ToArray();
         }
 
+        /// <summary>
+        /// Creates byte array of only TMQ message frame
+        /// </summary>
         public async Task<byte[]> CreateFrame(TmqMessage value)
         {
             await using MemoryStream ms = new MemoryStream();
@@ -31,6 +43,9 @@ namespace Twino.Protocols.TMQ
             return ms.ToArray();
         }
 
+        /// <summary>
+        /// Creates byte array of only TMQ message content
+        /// </summary>
         public async Task<byte[]> CreateContent(TmqMessage value)
         {
             await using MemoryStream ms = new MemoryStream();
@@ -38,6 +53,9 @@ namespace Twino.Protocols.TMQ
             return ms.ToArray();
         }
 
+        /// <summary>
+        /// Writes frame to stream
+        /// </summary>
         private static async Task WriteFrame(MemoryStream ms, TmqMessage message)
         {
             byte type = (byte) message.Type;
@@ -96,6 +114,9 @@ namespace Twino.Protocols.TMQ
             }
         }
 
+        /// <summary>
+        /// Writes content to stream
+        /// </summary>
         private static void WriteContent(MemoryStream ms, TmqMessage message)
         {
             if (message.Length > 0 && message.Content != null)

@@ -7,7 +7,7 @@ using Twino.Core.Protocols;
 
 namespace Twino.Protocols.TMQ
 {
-    public class TmqReader : IProtocolMessageReader<TmqMessage>
+    public class TmqReader
     {
         /// <summary>
         /// Buffer. Should be at least 256 bytes (reading once some values smaller 257 bytes)

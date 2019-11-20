@@ -11,7 +11,7 @@ using Twino.Protocols.Http.Forms;
 
 namespace Twino.Protocols.Http
 {
-    public class HttpReader : IProtocolMessageReader<HttpMessage>
+    public class HttpReader
     {
         #region Fields - Properties
 

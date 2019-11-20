@@ -10,13 +10,13 @@ namespace Twino.Protocols.Http
     /// <summary>
     /// Response of writing HTTP Responses to network streams
     /// </summary>
-    public class HttpWriter : IProtocolMessageWriter<HttpMessage>
+    public class HttpWriter
     {
         /// <summary>
         /// Content writer for HTTP response
         /// </summary>
         private readonly ContentWriter _writer;
-        
+
         /// <summary>
         /// Twino HTTP Server options
         /// </summary>
@@ -34,30 +34,6 @@ namespace Twino.Protocols.Http
         public async Task Write(HttpMessage value, Stream stream)
         {
             await Write(value.Response);
-        }
-
-        /// <summary>
-        /// Creating byte array from HTTP Message is not supported
-        /// </summary>
-        public Task<byte[]> Create(HttpMessage value)
-        {
-            throw new NotSupportedException();
-        }
-
-        /// <summary>
-        /// Creating byte array from HTTP Message is not supported
-        /// </summary>
-        public Task<byte[]> CreateFrame(HttpMessage value)
-        {
-            throw new NotSupportedException();
-        }
-
-        /// <summary>
-        /// Creating byte array from HTTP Message is not supported
-        /// </summary>
-        public Task<byte[]> CreateContent(HttpMessage value)
-        {
-            throw new NotSupportedException();
         }
 
         /// <summary>
