@@ -24,6 +24,11 @@ namespace Twino.Protocols.TMQ
 
             TmqMessage message = new TmqMessage();
             await ProcessRequiredFrame(message, bytes, stream);
+            
+            message.Ttl--;
+            if (message.Ttl < 0)
+                return null;
+            
             await ReadContent(message, stream);
 
             return message;

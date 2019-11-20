@@ -22,7 +22,7 @@ namespace Twino.Protocols.TMQ
         public bool HighPriority { get; set; }
         public MessageType Type { get; set; }
         public bool ResponseRequired { get; set; }
-        public int Ttl { get; set; }
+        public int Ttl { get; set; } = 32;
 
         public int MessageIdLength { get; set; }
         public string MessageId { get; set; }
@@ -37,11 +37,8 @@ namespace Twino.Protocols.TMQ
 
         public MemoryStream Content { get; set; }
 
-        public void PrepareFirstUse()
+        public void CalculateLengths()
         {
-            if (Ttl == 0)
-                Ttl = 32;
-
             if (MessageId != null)
                 MessageIdLength = MessageId.Length;
 

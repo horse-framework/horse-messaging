@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
@@ -12,6 +13,14 @@ namespace Twino.Client.TMQ
 {
     public class TmqClient : ClientSocketBase<TmqMessage>
     {
+        private static readonly TmqWriter _writer = new TmqWriter();
+        private readonly string _clientId;
+
+        public TmqClient()
+        {
+            _clientId = Guid.NewGuid().ToString().Replace("-", "");
+        }
+
         #region Connect - Read
 
         public override void Connect(DnsInfo host)
@@ -136,7 +145,23 @@ namespace Twino.Client.TMQ
 
         private async Task SendInfoMessage()
         {
-            throw new NotImplementedException();
+            if (Data?.Properties == null)
+                return;
+
+            TmqMessage message = new TmqMessage();
+            message.FirstAcquirer = true;
+            message.Type = MessageType.Server;
+            message.Target = KnownTargets.HEADER;
+
+            message.Content = new MemoryStream();
+            foreach (var prop in Data.Properties)
+            {
+                string line = prop.Key + ": " + prop.Value + "\r\n";
+                byte[] lineData = Encoding.UTF8.GetBytes(line);
+                await message.Content.WriteAsync(lineData);
+            }
+
+            await SendAsync(message);
         }
 
         protected override async Task Read()
@@ -185,12 +210,20 @@ namespace Twino.Client.TMQ
 
         public bool Send(TmqMessage message)
         {
-            throw new NotImplementedException();
+            message.Source = _clientId;
+            message.CalculateLengths();
+
+            byte[] data = _writer.Create(message).Result;
+            return Send(data);
         }
 
         public async Task<bool> SendAsync(TmqMessage message)
         {
-            throw new NotImplementedException();
+            message.Source = _clientId;
+            message.CalculateLengths();
+
+            byte[] data = await _writer.Create(message);
+            return await SendAsync(data);
         }
 
         #endregion
