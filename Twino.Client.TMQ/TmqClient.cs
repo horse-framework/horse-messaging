@@ -19,11 +19,18 @@ namespace Twino.Client.TMQ
     public class TmqClient : ClientSocketBase<TmqMessage>
     {
         private static readonly TmqWriter _writer = new TmqWriter();
-        
+
         /// <summary>
         /// Unique Id generator for sending messages
         /// </summary>
         public IUniqueIdGenerator UniqueIdGenerator { get; set; } = new DefaultUniqueIdGenerator();
+
+        /// <summary>
+        /// If true, each message has it's own unique message id.
+        /// IF false, message unique id value will be sent as empty.
+        /// Default value is true
+        /// </summary>
+        public bool UseUniqueMessageId { get; set; } = true;
 
         /// <summary>
         /// Unique client id
@@ -282,7 +289,10 @@ namespace Twino.Client.TMQ
         public bool Send(TmqMessage message)
         {
             message.Source = _clientId;
-            message.MessageId = UniqueIdGenerator.Create();
+
+            if (UseUniqueMessageId)
+                message.MessageId = UniqueIdGenerator.Create();
+
             message.CalculateLengths();
 
             byte[] data = _writer.Create(message).Result;
@@ -295,7 +305,10 @@ namespace Twino.Client.TMQ
         public async Task<bool> SendAsync(TmqMessage message)
         {
             message.Source = _clientId;
-            message.MessageId = UniqueIdGenerator.Create();
+
+            if (UseUniqueMessageId)
+                message.MessageId = UniqueIdGenerator.Create();
+
             message.CalculateLengths();
 
             byte[] data = await _writer.Create(message);

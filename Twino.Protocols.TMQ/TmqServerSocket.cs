@@ -23,6 +23,13 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public IConnectionInfo Info { get; }
 
+        /// <summary>
+        /// If true, each message has it's own unique message id.
+        /// IF false, message unique id value will be sent as empty.
+        /// Default value is true
+        /// </summary>
+        public bool UseUniqueMessageId { get; set; }
+
         private readonly IUniqueIdGenerator _uniqueIdGenerator;
 
         public TmqServerSocket(ITwinoServer server, IConnectionInfo info)
@@ -30,12 +37,13 @@ namespace Twino.Protocols.TMQ
         {
         }
 
-        public TmqServerSocket(ITwinoServer server, IConnectionInfo info, IUniqueIdGenerator generator)
+        public TmqServerSocket(ITwinoServer server, IConnectionInfo info, IUniqueIdGenerator generator, bool useUniqueMessageId = true)
         {
             Server = server;
             Info = info;
             Stream = info.GetStream();
             _uniqueIdGenerator = generator;
+            UseUniqueMessageId = useUniqueMessageId;
         }
 
         /// <summary>
@@ -62,7 +70,7 @@ namespace Twino.Protocols.TMQ
             if (string.IsNullOrEmpty(message.Source))
                 message.Source = KnownTargets.HEADER;
 
-            if (string.IsNullOrEmpty(message.MessageId))
+            if (UseUniqueMessageId && string.IsNullOrEmpty(message.MessageId))
                 message.MessageId = _uniqueIdGenerator.Create();
 
             message.CalculateLengths();
@@ -79,7 +87,7 @@ namespace Twino.Protocols.TMQ
             if (string.IsNullOrEmpty(message.Source))
                 message.Source = KnownTargets.HEADER;
 
-            if (string.IsNullOrEmpty(message.MessageId))
+            if (UseUniqueMessageId && string.IsNullOrEmpty(message.MessageId))
                 message.MessageId = _uniqueIdGenerator.Create();
 
             message.CalculateLengths();
