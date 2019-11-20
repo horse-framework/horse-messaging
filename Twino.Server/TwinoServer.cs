@@ -224,7 +224,7 @@ namespace Twino.Server
         /// <summary>
         /// Uses the protocol for new TCP connections that request the protocol
         /// </summary>
-        public void UseProtocol<TMessage>(ITwinoProtocol<TMessage> protocol)
+        public void UseProtocol(ITwinoProtocol protocol)
         {
             List<ITwinoProtocol> list = Protocols.ToList();
 

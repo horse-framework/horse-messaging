@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -12,14 +11,14 @@ namespace Twino.Protocols.WebSocket
     /// <summary>
     /// Twino WebSocket Server protocol
     /// </summary>
-    public class TwinoWebSocketProtocol : ITwinoProtocol<WebSocketMessage>
+    public class TwinoWebSocketProtocol : ITwinoProtocol
     {
         public string Name => "websocket";
 
         /// <summary>
         /// WebSocket protocol connection handler
         /// </summary>
-        public IProtocolConnectionHandler<WebSocketMessage> Handler { get; }
+        private readonly IProtocolConnectionHandler<WebSocketMessage> _handler;
 
         /// <summary>
         /// Twino server
@@ -29,7 +28,7 @@ namespace Twino.Protocols.WebSocket
         public TwinoWebSocketProtocol(ITwinoServer server, IProtocolConnectionHandler<WebSocketMessage> handler)
         {
             _server = server;
-            Handler = handler;
+            _handler = handler;
         }
 
         /// <summary>
@@ -63,14 +62,14 @@ namespace Twino.Protocols.WebSocket
             result.PreviouslyRead = null;
             result.Response = await CreateWebSocketHandshakeResponse(key);
 
-            SocketBase socket = await Handler.Connected(_server, info, data);
+            SocketBase socket = await _handler.Connected(_server, info, data);
 
             if (socket == null)
                 return await Task.FromResult(new ProtocolHandshakeResult());
 
             void socketDisconnected(SocketBase socketBase)
             {
-                Handler.Disconnected(_server, socketBase);
+                _handler.Disconnected(_server, socketBase);
                 _server.Pinger.Remove(socket);
                 socket.Disconnected -= socketDisconnected;
             }
@@ -94,22 +93,6 @@ namespace Twino.Protocols.WebSocket
                 WebSocketMessage message = await reader.Read(info.GetStream());
                 await ProcessMessage(info, handshakeResult.Socket, message);
             }
-        }
-
-        /// <summary>
-        /// Creates and returns new WebSocketReader instance
-        /// </summary>
-        public IProtocolMessageReader<WebSocketMessage> CreateReader()
-        {
-            return new WebSocketReader();
-        }
-
-        /// <summary>
-        /// Creates and returns new WebSocketWriter instance
-        /// </summary>
-        public IProtocolMessageWriter<WebSocketMessage> CreateWriter()
-        {
-            return new WebSocketWriter();
         }
 
         /// <summary>
@@ -148,7 +131,7 @@ namespace Twino.Protocols.WebSocket
             {
                 case SocketOpCode.Binary:
                 case SocketOpCode.UTF8:
-                    await Handler.Received(_server, info, socket, message);
+                    await _handler.Received(_server, info, socket, message);
                     break;
 
                 case SocketOpCode.Terminate:

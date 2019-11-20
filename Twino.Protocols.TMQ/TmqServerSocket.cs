@@ -3,6 +3,9 @@ using Twino.Core;
 
 namespace Twino.Protocols.TMQ
 {
+    /// <summary>
+    /// TMQ Protocol socket object for TMQ servers
+    /// </summary>
     public class TmqServerSocket : SocketBase
     {
         /// <summary>

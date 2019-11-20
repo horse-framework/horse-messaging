@@ -18,7 +18,7 @@ namespace Twino.Core
         /// <summary>
         /// Uses the protocol for new TCP connections that request the protocol
         /// </summary>
-        void UseProtocol<TMessage>(ITwinoProtocol<TMessage> protocol);
+        void UseProtocol(ITwinoProtocol protocol);
 
         /// <summary>
         /// Switches client's protocol to new protocol (finds by name)

@@ -3,41 +3,80 @@ using System.Text;
 
 namespace Twino.Protocols.TMQ
 {
-    public enum MessageType : byte
-    {
-        Other = 0x00,
-        Terminate = 0x08,
-        Server = 0x10,
-        Channel = 0x11,
-        Client = 0x12,
-        Delivery = 0x13,
-        Response = 0x14,
-        Redirect = 0x15,
-        Ping = 0x89,
-        Pong = 0x8A
-    }
-
+    /// <summary>
+    /// TMQ Protocol message
+    /// </summary>
     public class TmqMessage
     {
+        /// <summary>
+        /// If true, receiver is the first acquirer of the message
+        /// </summary>
         public bool FirstAcquirer { get; set; }
-        public bool HighPriority { get; set; }
-        public MessageType Type { get; set; }
-        public bool ResponseRequired { get; set; }
-        public int Ttl { get; set; } = 32;
 
+        /// <summary>
+        /// If true, message should be at first element in the queue
+        /// </summary>
+        public bool HighPriority { get; set; }
+
+        /// <summary>
+        /// Message type
+        /// </summary>
+        public MessageType Type { get; set; }
+
+        /// <summary>
+        /// True means, client is pending a response. Sending response is not mandatory but it SHOULD sent.
+        /// </summary>
+        public bool ResponseRequired { get; set; }
+
+        /// <summary>
+        /// Message TTL value. Default is 16
+        /// </summary>
+        public int Ttl { get; set; } = 16;
+
+        /// <summary>
+        /// Message Id length
+        /// </summary>
         public int MessageIdLength { get; set; }
+
+        /// <summary>
+        /// Message unique id
+        /// </summary>
         public string MessageId { get; set; }
 
+        /// <summary>
+        /// Message target id length
+        /// </summary>
         public int TargetLength { get; set; }
+
+        /// <summary>
+        /// Message target (channel name, client name or server)
+        /// </summary>
         public string Target { get; set; }
 
+        /// <summary>
+        /// Message source length
+        /// </summary>
         public int SourceLength { get; set; }
+
+        /// <summary>
+        /// Message source client unique id, channel unique id or server
+        /// </summary>
         public string Source { get; set; }
 
+        /// <summary>
+        /// Message content length
+        /// </summary>
         public ulong Length { get; set; }
 
+        /// <summary>
+        /// Message content stream
+        /// </summary>
         public MemoryStream Content { get; set; }
 
+        /// <summary>
+        /// Checks message id, source, target and content properties.
+        /// If they have a value, sets to length properties to their lengths
+        /// </summary>
         public void CalculateLengths()
         {
             if (MessageId != null)

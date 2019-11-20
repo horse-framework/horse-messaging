@@ -31,27 +31,4 @@ namespace Twino.Core.Protocols
         /// </summary>
         Task HandleConnection(IConnectionInfo info, ProtocolHandshakeResult handshakeResult);
     }
-
-    /// <summary>
-    /// Twino message type specified protocol
-    /// </summary>
-    public interface ITwinoProtocol<TMessage> : ITwinoProtocol
-    {
-        /// <summary>
-        /// Client and message handler for the protocol
-        /// </summary>
-        IProtocolConnectionHandler<TMessage> Handler { get; }
-
-        /// <summary>
-        /// Creates a protocol reader for the specific client
-        /// </summary>
-        /// <returns></returns>
-        IProtocolMessageReader<TMessage> CreateReader();
-
-        /// <summary>
-        /// Creates a protocol writer for the specific client
-        /// </summary>
-        /// <returns></returns>
-        IProtocolMessageWriter<TMessage> CreateWriter();
-    }
 }

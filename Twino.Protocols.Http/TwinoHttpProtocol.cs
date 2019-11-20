@@ -34,7 +34,7 @@ namespace Twino.Protocols.Http
     /// <summary>
     /// HTTP Protocol handler for Twino Server
     /// </summary>
-    public class TwinoHttpProtocol : ITwinoProtocol<HttpMessage>
+    public class TwinoHttpProtocol : ITwinoProtocol
     {
         /// <summary>
         /// Protocol name
@@ -44,7 +44,7 @@ namespace Twino.Protocols.Http
         /// <summary>
         /// Protocol's connection handler
         /// </summary>
-        public IProtocolConnectionHandler<HttpMessage> Handler { get; }
+        private readonly IProtocolConnectionHandler<HttpMessage> _handler;
 
         /// <summary>
         /// Server time updater for response time data
@@ -83,7 +83,7 @@ namespace Twino.Protocols.Http
         {
             Options = options;
             _server = server;
-            Handler = handler;
+            _handler = handler;
 
             PredefinedHeaders.SERVER_TIME_CRLF = Encoding.UTF8.GetBytes("Date: " + DateTime.UtcNow.ToString("R") + "\r\n");
             _timeTimer = new Timer(s => PredefinedHeaders.SERVER_TIME_CRLF = Encoding.UTF8.GetBytes("Date: " + DateTime.UtcNow.ToString("R") + "\r\n"), "", 1000, 1000);
@@ -157,24 +157,6 @@ namespace Twino.Protocols.Http
         }
 
         /// <summary>
-        /// Creates and returns new HttpReader instance
-        /// </summary>
-        public IProtocolMessageReader<HttpMessage> CreateReader()
-        {
-            HttpReader reader = new HttpReader(Options);
-            return reader;
-        }
-
-        /// <summary>
-        /// Creates and returns new HttpWriter instance
-        /// </summary>
-        public IProtocolMessageWriter<HttpMessage> CreateWriter()
-        {
-            HttpWriter writer = new HttpWriter(Options);
-            return writer;
-        }
-
-        /// <summary>
         /// Process the HTTP message
         /// </summary>
         private async Task<HandleStatus> ProcessMessage(IConnectionInfo info, HttpWriter writer, HttpMessage message, int contentLength)
@@ -209,7 +191,7 @@ namespace Twino.Protocols.Http
 
             try
             {
-                await Handler.Received(_server, info, null, message);
+                await _handler.Received(_server, info, null, message);
             }
             catch (Exception ex)
             {
