@@ -79,6 +79,9 @@ namespace Twino.Client.WebSocket
             }
         }
 
+        /// <summary>
+        /// Connects to well defined remote host
+        /// </summary>
         public override async Task ConnectAsync(DnsInfo host)
         {
             try
@@ -123,6 +126,9 @@ namespace Twino.Client.WebSocket
             }
         }
 
+        /// <summary>
+        /// Checks if data is a valid protocol message
+        /// </summary>
         private void CheckProtocolResponse(byte[] buffer, int length)
         {
             string response = Encoding.UTF8.GetString(buffer, 0, length);
@@ -157,11 +163,14 @@ namespace Twino.Client.WebSocket
             using SHA1 sha1 = SHA1.Create();
             byte[] hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(WebSocketKey + HttpHeaders.WEBSOCKET_GUID));
             string fkey = Convert.ToBase64String(hash);
-            
+
             if (rkey != fkey)
                 throw new InvalidOperationException("Handshaking error, Invalid Key");
         }
 
+        /// <summary>
+        /// Starts to read received messages from stream
+        /// </summary>
         private void Start()
         {
             //fire connected events and start to read data from the server until disconnected
@@ -219,6 +228,9 @@ namespace Twino.Client.WebSocket
 
         #region Abstract Methods
 
+        /// <summary>
+        /// Reads next message from stream
+        /// </summary>
         protected override async Task Read()
         {
             WebSocketReader reader = new WebSocketReader();
@@ -246,16 +258,25 @@ namespace Twino.Client.WebSocket
             }
         }
 
+        /// <summary>
+        /// Sends websocekt ping message
+        /// </summary>
         public sealed override void Ping()
         {
             Send(Protocols.WebSocket.PredefinedMessages.PING);
         }
 
+        /// <summary>
+        /// Sends websocekt pong message
+        /// </summary>
         public sealed override void Pong()
         {
             Send(Protocols.WebSocket.PredefinedMessages.PONG);
         }
 
+        /// <summary>
+        /// Sends a string websocket message
+        /// </summary>
         public bool Send(string message)
         {
             byte[] data = _writer.Create(message).Result;

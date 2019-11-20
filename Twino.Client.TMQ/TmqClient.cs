@@ -19,8 +19,15 @@ namespace Twino.Client.TMQ
     public class TmqClient : ClientSocketBase<TmqMessage>
     {
         private static readonly TmqWriter _writer = new TmqWriter();
+        
+        /// <summary>
+        /// Unique Id generator for sending messages
+        /// </summary>
         public IUniqueIdGenerator UniqueIdGenerator { get; set; } = new DefaultUniqueIdGenerator();
 
+        /// <summary>
+        /// Unique client id
+        /// </summary>
         private string _clientId;
 
         /// <summary>
