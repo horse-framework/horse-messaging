@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Twino.Client.TMQ;
+using Twino.Core;
 using Twino.Protocols.TMQ;
 using Twino.Server;
 
@@ -19,9 +20,14 @@ namespace Sample.Tmq
             server.Start(82);
 
             TmqClient client = new TmqClient();
-            client.Connect("tmq://localhost:82");
+            client.Data.Method = "GET";
+            client.Data.Path = "/sample";
+            client.Data.Properties.Add("Host", "localhost");
+            client.ClientId = "123";
             
-            Console.WriteLine("Hello World!");
+            client.Connect("tmq://localhost:82");
+
+            Console.ReadLine();
         }
     }
 }

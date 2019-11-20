@@ -14,17 +14,29 @@ namespace Twino.Client.TMQ
     public class TmqClient : ClientSocketBase<TmqMessage>
     {
         private static readonly TmqWriter _writer = new TmqWriter();
-        private readonly string _clientId;
+        public IUniqueIdGenerator UniqueIdGenerator { get; set; } = new DefaultUniqueIdGenerator();
 
-        public TmqClient()
+        private string _clientId;
+
+        public string ClientId
         {
-            _clientId = Guid.NewGuid().ToString().Replace("-", "");
+            get => _clientId;
+            set
+            {
+                if (!string.IsNullOrEmpty(_clientId))
+                    throw new InvalidOperationException("Client Id cannot be change after connection established");
+
+                _clientId = value;
+            }
         }
 
         #region Connect - Read
 
         public override void Connect(DnsInfo host)
         {
+            if (string.IsNullOrEmpty(_clientId))
+                _clientId = UniqueIdGenerator.Create();
+
             try
             {
                 Client = new TcpClient();
@@ -219,6 +231,7 @@ namespace Twino.Client.TMQ
         public bool Send(TmqMessage message)
         {
             message.Source = _clientId;
+            message.MessageId = UniqueIdGenerator.Create();
             message.CalculateLengths();
 
             byte[] data = _writer.Create(message).Result;
@@ -228,6 +241,7 @@ namespace Twino.Client.TMQ
         public async Task<bool> SendAsync(TmqMessage message)
         {
             message.Source = _clientId;
+            message.MessageId = UniqueIdGenerator.Create();
             message.CalculateLengths();
 
             byte[] data = await _writer.Create(message);
