@@ -188,11 +188,15 @@ namespace Twino.Client.TMQ
         {
             TmqReader reader = new TmqReader();
             TmqMessage message = await reader.Read(Stream);
+
             if (message == null)
             {
                 Disconnect();
                 return;
             }
+
+            if (message.Ttl < 0)
+                return;
 
             switch (message.Type)
             {

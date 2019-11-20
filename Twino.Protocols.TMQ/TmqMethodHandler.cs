@@ -8,6 +8,7 @@ namespace Twino.Protocols.TMQ
 
     public class TmqMethodHandler : IProtocolConnectionHandler<TmqMessage>
     {
+        private readonly IUniqueIdGenerator _uniqueIdGenerator = new DefaultUniqueIdGenerator();
         private readonly TmqMessageHandler _action;
 
         public TmqMethodHandler(TmqMessageHandler action)
@@ -17,7 +18,7 @@ namespace Twino.Protocols.TMQ
 
         public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
-            return await Task.FromResult(new TmqServerSocket(server, connection));
+            return await Task.FromResult(new TmqServerSocket(server, connection, _uniqueIdGenerator));
         }
 
         public async Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, TmqMessage message)

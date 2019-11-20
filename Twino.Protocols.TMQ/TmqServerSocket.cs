@@ -20,11 +20,19 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public IConnectionInfo Info { get; }
 
+        private readonly IUniqueIdGenerator _uniqueIdGenerator;
+
         public TmqServerSocket(ITwinoServer server, IConnectionInfo info)
+            : this(server, info, new DefaultUniqueIdGenerator())
+        {
+        }
+
+        public TmqServerSocket(ITwinoServer server, IConnectionInfo info, IUniqueIdGenerator generator)
         {
             Server = server;
             Info = info;
             Stream = info.GetStream();
+            _uniqueIdGenerator = generator;
         }
 
         /// <summary>
@@ -48,6 +56,14 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public bool Send(TmqMessage message)
         {
+            if (string.IsNullOrEmpty(message.Source))
+                message.Source = KnownTargets.HEADER;
+
+            if (string.IsNullOrEmpty(message.MessageId))
+                message.MessageId = _uniqueIdGenerator.Create();
+
+            message.CalculateLengths();
+
             byte[] data = _writer.Create(message).Result;
             return Send(data);
         }
@@ -57,6 +73,14 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public async Task<bool> SendAsync(TmqMessage message)
         {
+            if (string.IsNullOrEmpty(message.Source))
+                message.Source = KnownTargets.HEADER;
+
+            if (string.IsNullOrEmpty(message.MessageId))
+                message.MessageId = _uniqueIdGenerator.Create();
+
+            message.CalculateLengths();
+
             byte[] data = await _writer.Create(message);
             return await SendAsync(data);
         }
