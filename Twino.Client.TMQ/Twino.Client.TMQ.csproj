@@ -5,6 +5,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Twino.Client.Connectors\Twino.Client.Connectors.csproj" />
       <ProjectReference Include="..\Twino.Core\Twino.Core.csproj" />
       <ProjectReference Include="..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
     </ItemGroup>

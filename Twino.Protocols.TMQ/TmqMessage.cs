@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text;
 
 namespace Twino.Protocols.TMQ
 {
@@ -50,6 +51,14 @@ namespace Twino.Protocols.TMQ
 
             if (Content != null)
                 Length = (ulong) Content.Length;
+        }
+
+        public override string ToString()
+        {
+            if (Content == null)
+                return string.Empty;
+
+            return Encoding.UTF8.GetString(Content.ToArray());
         }
     }
 }

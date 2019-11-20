@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Twino.Client.TMQ;
 using Twino.Core;
 using Twino.Protocols.TMQ;
+using Twino.Protocols.WebSocket;
 using Twino.Server;
 
 namespace Sample.Tmq
@@ -24,7 +25,7 @@ namespace Sample.Tmq
             client.Data.Path = "/sample";
             client.Data.Properties.Add("Host", "localhost");
             client.ClientId = "123";
-            
+
             client.Connect("tmq://localhost:82");
 
             Console.ReadLine();
