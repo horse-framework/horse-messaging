@@ -67,6 +67,12 @@ namespace Twino.Protocols.TMQ
         /// Message content length
         /// </summary>
         public ulong Length { get; set; }
+        
+        /// <summary>
+        /// Content type code.
+        /// May be useful to know how content should be read, convert, serialize/deserialize
+        /// </summary>
+        public ushort ContentType { get; set; }
 
         /// <summary>
         /// Message content stream

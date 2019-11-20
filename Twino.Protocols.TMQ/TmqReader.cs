@@ -13,13 +13,15 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         private readonly byte[] _buffer = new byte[256];
 
+        private const int REQUIRED_SIZE = 8;
+
         /// <summary>
         /// Reads TMQ message from stream
         /// </summary>
         public async Task<TmqMessage> Read(Stream stream)
         {
             byte[] bytes = await ReadRequiredFrame(stream);
-            if (bytes == null || bytes.Length < 6)
+            if (bytes == null || bytes.Length < REQUIRED_SIZE)
                 return null;
 
             TmqMessage message = new TmqMessage();
@@ -37,16 +39,16 @@ namespace Twino.Protocols.TMQ
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static async Task<byte[]> ReadRequiredFrame(Stream stream)
         {
-            byte[] bytes = new byte[6];
+            byte[] bytes = new byte[REQUIRED_SIZE];
 
             int read = await stream.ReadAsync(bytes, 0, bytes.Length);
             if (read == 0)
                 return null;
 
-            if (read < 6)
+            if (read < REQUIRED_SIZE)
             {
-                int reread = await stream.ReadAsync(bytes, read, bytes.Length - 6);
-                if (reread + read < 6)
+                int reread = await stream.ReadAsync(bytes, read, bytes.Length - REQUIRED_SIZE);
+                if (reread + read < REQUIRED_SIZE)
                     return null;
             }
 
@@ -87,7 +89,9 @@ namespace Twino.Protocols.TMQ
             message.SourceLength = bytes[3];
             message.TargetLength = bytes[4];
 
-            byte length = bytes[5];
+            message.ContentType = BitConverter.ToUInt16(new[] {bytes[6], bytes[5]}, 0);
+
+            byte length = bytes[7];
             if (length == 253)
             {
                 await stream.ReadAsync(bytes, 0, 2);

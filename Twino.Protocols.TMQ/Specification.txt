@@ -22,8 +22,8 @@
     /* FRAME
      * ========
      * [type:octet] [ttl:octet]
-     * [id-length:octet] [source-length:octet] [target-length:octet] [message-length:flex]
+     * [id-length:octet] [source-length:octet] [target-length:octet] [content-type:short] [content-length:flex]
      * [id-payload:ilen] [source-data:slen] [target-data:tlen] [payload:len]
      *
-     * NOTE: Min 6 bytes required: (type,ttl,ilen,slen,tlen,len)
+     * NOTE: Min 8 bytes required: (type,ttl,ilen,slen,tlen,ctype,ctype,len)
      */
