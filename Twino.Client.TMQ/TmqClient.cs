@@ -145,7 +145,7 @@ namespace Twino.Client.TMQ
 
         private async Task SendInfoMessage()
         {
-            if (Data?.Properties == null)
+            if (Data?.Properties == null || Data.Properties.Count < 1 && string.IsNullOrEmpty(Data.Method) && string.IsNullOrEmpty(Data.Path))
                 return;
 
             TmqMessage message = new TmqMessage();
@@ -154,6 +154,14 @@ namespace Twino.Client.TMQ
             message.Target = KnownTargets.HEADER;
 
             message.Content = new MemoryStream();
+
+            string path = "/";
+            if (!string.IsNullOrEmpty(Data.Path))
+                path = Data.Path.Replace(" ", "+");
+
+            string first = (Data.Method ?? "NONE") + " " + path + "\r\n";
+            await message.Content.WriteAsync(Encoding.UTF8.GetBytes(first));
+
             foreach (var prop in Data.Properties)
             {
                 string line = prop.Key + ": " + prop.Value + "\r\n";
