@@ -1,4 +1,5 @@
 ﻿using Twino.Mvc;
+using Twino.Protocols.Http;
 using Twino.Server;
 
 namespace Benchmark.Mvc.PlainText
@@ -7,10 +8,12 @@ namespace Benchmark.Mvc.PlainText
     {
         static void Main(string[] args)
         {
-            using TwinoMvc mvc = new TwinoMvc(ServerOptions.CreateDefault());
-            mvc.Server.Options.Hosts[0].Port = 82;
+            TwinoMvc mvc = new TwinoMvc();
+            TwinoServer server = new TwinoServer(ServerOptions.CreateDefault());
             mvc.Init();
-            mvc.Run();
+            server.UseMvc(mvc, HttpOptions.CreateDefault());
+            server.Start();
+            server.BlockWhileRunning();
         }
     }
 }

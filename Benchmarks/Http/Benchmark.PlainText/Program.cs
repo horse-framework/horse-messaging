@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Twino.Protocols.Http;
 using Twino.Server;
 
 namespace Benchmark.PlainText
@@ -10,7 +11,8 @@ namespace Benchmark.PlainText
     {
         static void Main(string[] args)
         {
-            TwinoServer server = TwinoServer.CreateHttp(async (twinoServer, request, response) =>
+            TwinoServer server = new TwinoServer(ServerOptions.CreateDefault());
+            server.UseHttp(async (request, response) =>
             {
                 if (request.Path.Equals("/plaintext", StringComparison.InvariantCultureIgnoreCase))
                 {
@@ -21,7 +23,7 @@ namespace Benchmark.PlainText
                     response.StatusCode = HttpStatusCode.NotFound;
 
                 await Task.CompletedTask;
-            }, ServerOptions.CreateDefault());
+            }, HttpOptions.CreateDefault());
 
             server.Start();
             server.BlockWhileRunning();

@@ -1,4 +1,5 @@
 ﻿using Twino.Mvc;
+using Twino.Protocols.Http;
 using Twino.Server;
 
 namespace Benchmark.Mvc.Json
@@ -7,9 +8,12 @@ namespace Benchmark.Mvc.Json
     {
         static void Main(string[] args)
         {
-            using TwinoMvc mvc = new TwinoMvc(ServerOptions.CreateDefault());
+            TwinoMvc mvc = new TwinoMvc();
+            TwinoServer server = new TwinoServer();
             mvc.Init();
-            mvc.Run();
+            server.UseMvc(mvc, HttpOptions.CreateDefault());
+            server.Start();
+            server.BlockWhileRunning();
         }
     }
 }
