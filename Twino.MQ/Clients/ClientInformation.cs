@@ -1,4 +1,4 @@
-namespace Twino.MQ.Models
+namespace Twino.MQ.Clients
 {
     public class ClientInformation
     {
@@ -6,7 +6,7 @@ namespace Twino.MQ.Models
         public string Name { get; set; }
         public string Type { get; set; }
         public string Token { get; set; }
-        
-        public string[] Channels { get; set; }
+
+        public ClientSubscriptionInfo[] Subscriptions { get; set; }
     }
 }
