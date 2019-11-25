@@ -386,6 +386,8 @@ namespace Twino.Ioc
         /// </summary>
         public async Task<object> Get(Type serviceType, IContainerScope scope = null)
         {
+            if (serviceType == typeof(IServiceContainer)) return this;
+
             ServiceDescriptor descriptor = GetDescriptor(serviceType);
             if (descriptor == null)
                 throw new KeyNotFoundException("Service type is not found");
