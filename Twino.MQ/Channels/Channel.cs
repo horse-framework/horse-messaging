@@ -1,5 +1,6 @@
-using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Threading.Tasks;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
 using Twino.MQ.Security;
@@ -107,8 +108,19 @@ namespace Twino.MQ.Channels
         /// <summary>
         /// Sets status of the channel
         /// </summary>
-        public void SetStatus(ChannelStatus status)
+        public async Task SetStatus(ChannelStatus status)
         {
+            ChannelStatus old = Status;
+            if (old == status)
+                return;
+
+            if (EventHandler != null)
+            {
+                bool allowed = await EventHandler.OnStatusChanged(this, old, status);
+                if (!allowed)
+                    return;
+            }
+
             Status = status;
         }
 
@@ -117,23 +129,61 @@ namespace Twino.MQ.Channels
         #region Queue Actions
 
         /// <summary>
+        /// Creates new queue in the channel with default options and default handlers
+        /// </summary>
+        public async Task<ChannelQueue> CreateQueue(ushort contentType)
+        {
+            return await CreateQueue(contentType,
+                                     Options,
+                                     Server.DefaultQueueAuthenticator,
+                                     Server.DefaultQueueEventHandler,
+                                     Server.DefaultDeliveryHandler);
+        }
+
+
+        /// <summary>
+        /// Creates new queue in the channel with default handlers
+        /// </summary>
+        public async Task<ChannelQueue> CreateQueue(ushort contentType, ChannelQueueOptions options)
+        {
+            return await CreateQueue(contentType,
+                                     options,
+                                     Server.DefaultQueueAuthenticator,
+                                     Server.DefaultQueueEventHandler,
+                                     Server.DefaultDeliveryHandler);
+        }
+
+        /// <summary>
         /// Creates new queue in the channel
         /// </summary>
-        public void CreateQueue(ushort contentType,
-                                ChannelQueueOptions options,
-                                IQueueAuthenticator authenticator,
-                                IQueueEventHandler eventHandler,
-                                IMessageDeliveryHandler deliveryHandler)
+        public async Task<ChannelQueue> CreateQueue(ushort contentType,
+                                                    ChannelQueueOptions options,
+                                                    IQueueAuthenticator authenticator,
+                                                    IQueueEventHandler eventHandler,
+                                                    IMessageDeliveryHandler deliveryHandler)
         {
-            throw new NotImplementedException();
+            ChannelQueue queue = _queues.Find(x => x.ContentType == contentType);
+            if (queue != null)
+                throw new DuplicateNameException($"The channel has already a queue with same content type: {contentType}");
+
+            queue = new ChannelQueue(this, contentType, options, authenticator, eventHandler, deliveryHandler);
+            _queues.Add(queue);
+
+            if (EventHandler != null)
+                await EventHandler.OnQueueCreated(queue, this);
+
+            return queue;
         }
 
         /// <summary>
         /// Removes a queue from the channel
         /// </summary>
-        public void RemoveQueue(ChannelQueue queue)
+        public async Task RemoveQueue(ChannelQueue queue)
         {
-            throw new NotImplementedException();
+            _queues.Remove(queue);
+
+            if (EventHandler != null)
+                await EventHandler.OnQueueRemoved(queue, this);
         }
 
         #endregion

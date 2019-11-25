@@ -19,8 +19,9 @@ namespace Twino.MQ.Channels
         Task OnQueueRemoved(ChannelQueue queue, Channel channel);
 
         /// <summary>
-        /// Called when a channel's status is changed
+        /// Called when a channel's status is changed.
+        /// If returns false, status change operation will be canceled.
         /// </summary>
-        Task OnStatusChanged(Channel channel, ChannelStatus from, ChannelStatus to);
+        Task<bool> OnStatusChanged(Channel channel, ChannelStatus from, ChannelStatus to);
     }
 }

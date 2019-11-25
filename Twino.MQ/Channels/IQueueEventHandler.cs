@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Twino.MQ.Clients;
 
 namespace Twino.MQ.Channels
@@ -10,26 +11,26 @@ namespace Twino.MQ.Channels
         /// <summary>
         /// Called when a client is subscribed to the queue
         /// </summary>
-        void OnSubscription(ChannelQueue queue, QueueClient client);
+        Task OnSubscription(ChannelQueue queue, QueueClient client);
 
         /// <summary>
         /// Called when a client is unsubscribed from the queue
         /// </summary>
-        void OnUnsubscription(ChannelQueue queue, QueueClient client);
+        Task OnUnsubscription(ChannelQueue queue, QueueClient client);
 
         /// <summary>
         /// Called when a new message is added to the queue
         /// </summary>
-        void OnMessageAdded(ChannelQueue queue, QueueMessage message);
+        Task OnMessageAdded(ChannelQueue queue, QueueMessage message);
 
         /// <summary>
         /// Called when a message removed from the queue
         /// </summary>
-        void OnMessageRemoved(ChannelQueue queue, QueueMessage message);
+        Task OnMessageRemoved(ChannelQueue queue, QueueMessage message);
 
         /// <summary>
         /// Called when queue status has changed
         /// </summary>
-        void OnStatusChanged(ChannelQueue queue, QueueStatus from, QueueStatus to);
+        Task<bool> OnStatusChanged(ChannelQueue queue, QueueStatus from, QueueStatus to);
     }
 }
