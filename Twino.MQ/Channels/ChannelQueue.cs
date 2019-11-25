@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Twino.MQ.Clients;
+using Twino.MQ.Helpers;
 using Twino.MQ.Options;
 using Twino.MQ.Security;
 
@@ -17,21 +18,48 @@ namespace Twino.MQ.Channels
 
     public class ChannelQueue
     {
-        public ushort ContentType { get; set; }
+        #region Properties
 
-        public Channel Channel { get; set; }
+        public Channel Channel { get; }
+        public ushort ContentType { get; }
+        public ChannelQueueOptions Options { get; }
 
-        public ChannelQueueOptions Options { get; set; }
+        public IQueueAuthenticator Authenticator { get; }
+        public IQueueEventHandler EventHandler { get; }
+        public IMessageDeliveryHandler DeliveryHandler { get; }
 
-        public IQueueAuthenticator Authenticator { get; set; }
 
-        public IEnumerable<QueueClient> Clients { get; set; }
+        private readonly FlexArray<QueueClient> _clients;
+        public IEnumerable<QueueClient> Clients => _clients.All();
 
-        public Queue<QueueMessage> Messages { get; set; }
+        private readonly List<QueueMessage> _messages = new List<QueueMessage>();
+        public IEnumerable<QueueMessage> Messages => _messages;
 
-        public IQueueEventHandler EventHandler { get; set; }
-        
-        public IMessageDeliveryHandler DeliveryHandler { get; set; }
+        #endregion
+
+        #region Constructors
+
+        public ChannelQueue(Channel channel,
+                            ushort contentType,
+                            ChannelQueueOptions options,
+                            IQueueAuthenticator authenticator,
+                            IQueueEventHandler eventHandler,
+                            IMessageDeliveryHandler deliveryHandler)
+        {
+            Channel = channel;
+            ContentType = contentType;
+            Options = options;
+
+            Authenticator = authenticator;
+            EventHandler = eventHandler;
+            DeliveryHandler = deliveryHandler;
+
+            _clients = new FlexArray<QueueClient>(channel.Server.Options.ClientCapacity);
+        }
+
+        #endregion
+
+        #region Messaging Actions
 
         public void AddMessage()
         {
@@ -43,6 +71,10 @@ namespace Twino.MQ.Channels
             throw new NotImplementedException();
         }
 
+        #endregion
+
+        #region Subscription Actions
+
         public void Subscribe()
         {
             throw new NotImplementedException();
@@ -52,5 +84,7 @@ namespace Twino.MQ.Channels
         {
             throw new NotImplementedException();
         }
+
+        #endregion
     }
 }

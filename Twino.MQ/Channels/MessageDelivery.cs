@@ -5,16 +5,54 @@ namespace Twino.MQ.Channels
 {
     public class MessageDelivery
     {
-        public QueueMessage Message { get; set; }
+        #region Properties
 
-        public QueueClient Receiver { get; set; }
+        public QueueMessage Message { get; }
 
-        public bool IsSent { get; set; }
-        public DateTime SendDate { get; set; }
+        public QueueClient Receiver { get; }
 
-        public bool IsDelivered { get; set; }
-        public DateTime DeliveryDate { get; set; }
-        
+        public bool IsSent { get; private set; }
+        public DateTime SendDate { get; private set; }
+
+        public bool IsDelivered { get; private set; }
+        public DateTime DeliveryDate { get; private set; }
+
         public DateTime DeliveryDeadline { get; set; }
+
+        #endregion
+
+        #region Constructurs
+
+        public MessageDelivery(QueueMessage message, QueueClient receiver)
+            : this(message, receiver, DateTime.MinValue)
+        {
+            Message = message;
+            Receiver = receiver;
+        }
+
+        public MessageDelivery(QueueMessage message, QueueClient receiver, DateTime deliveryDeadline)
+        {
+            Message = message;
+            Receiver = receiver;
+            DeliveryDeadline = deliveryDeadline;
+        }
+
+        #endregion
+
+        #region Actions
+
+        public void MarkAsSent()
+        {
+            IsSent = true;
+            SendDate = DateTime.UtcNow;
+        }
+
+        public void MarkAsDelivered()
+        {
+            IsDelivered = true;
+            DeliveryDate = DateTime.UtcNow;
+        }
+
+        #endregion
     }
 }

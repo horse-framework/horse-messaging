@@ -1,5 +1,8 @@
 namespace Twino.MQ.Options
 {
+    /// <summary>
+    /// Client options
+    /// </summary>
     public class ClientOptions
     {
         /// <summary>

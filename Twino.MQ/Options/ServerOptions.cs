@@ -1,5 +1,8 @@
 namespace Twino.MQ.Options
 {
+    /// <summary>
+    /// Server default options
+    /// </summary>
     public class ServerOptions : ChannelOptions
     {
         /// <summary>
@@ -11,5 +14,15 @@ namespace Twino.MQ.Options
         /// Server port listening options
         /// </summary>
         public ListenerOptions[] Listeners { get; set; }
+        
+        /// <summary>
+        /// Maximum client count
+        /// </summary>
+        public int ClientCapacity { get; set; }
+        
+        /// <summary>
+        /// Maximum channel count
+        /// </summary>
+        public int ChannelCapacity { get; set; }
     }
 }

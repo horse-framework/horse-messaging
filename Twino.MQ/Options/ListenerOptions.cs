@@ -1,5 +1,8 @@
 namespace Twino.MQ.Options
 {
+    /// <summary>
+    /// Listener and host binding options
+    /// </summary>
     public class ListenerOptions
     {
         /// <summary>

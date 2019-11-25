@@ -2,6 +2,9 @@ using System;
 
 namespace Twino.MQ.Options
 {
+    /// <summary>
+    /// Queue options
+    /// </summary>
     public class ChannelQueueOptions
     {
         /// <summary>

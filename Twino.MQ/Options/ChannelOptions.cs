@@ -1,5 +1,8 @@
 namespace Twino.MQ.Options
 {
+    /// <summary>
+    /// Channel options
+    /// </summary>
     public class ChannelOptions : ChannelQueueOptions
     {
         /// <summary>
@@ -14,8 +17,8 @@ namespace Twino.MQ.Options
         public ushort[] AllowedContentTypes { get; set; }
 
         /// <summary>
-        /// Maximum queue count for the channel
+        /// Maximum queue count
         /// </summary>
-        public int MaximumQueueCount { get; set; }
+        public int QueueCapacity { get; set; }
     }
 }
