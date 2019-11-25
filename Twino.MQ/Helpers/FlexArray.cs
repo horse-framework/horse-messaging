@@ -59,6 +59,9 @@ namespace Twino.MQ.Helpers
             CreateArrays();
         }
 
+        /// <summary>
+        /// Creates array objects with specified sizes
+        /// </summary>
         private void CreateArrays()
         {
             _arrays = new T[MaxArrayCount][];
@@ -135,6 +138,29 @@ namespace Twino.MQ.Helpers
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Finds the element from the array
+        /// </summary>
+        public T Find(Func<T, bool> predicate)
+        {
+            foreach (var array in _arrays)
+            {
+                if (array == null)
+                    return default;
+
+                foreach (var item in array)
+                {
+                    if (item.Equals(default))
+                        continue;
+
+                    if (predicate(item))
+                        return item;
+                }
+            }
+
+            return default;
         }
     }
 }

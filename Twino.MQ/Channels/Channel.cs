@@ -27,9 +27,8 @@ namespace Twino.MQ.Channels
 
         public IChannelAuthenticator Authenticator { get; }
 
-        private readonly FlexArray<ushort> _allowedContentTypes = new FlexArray<ushort>(50000);
+        private readonly FlexArray<ushort> _allowedContentTypes = new FlexArray<ushort>(264, 250);
         public IEnumerable<ushort> AllowedContentTypes => _allowedContentTypes.All();
-
 
         public IChannelEventHandler EventHandler { get; }
 
