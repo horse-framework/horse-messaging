@@ -10,9 +10,9 @@ namespace Twino.MQ.Clients
     public class MqClient : TmqServerSocket
     {
         /// <summary>
-        /// Queues that client is subscribed
+        /// Channels that client is in
         /// </summary>
-        private readonly List<QueueClient> _queues = new List<QueueClient>();
+        private readonly List<ChannelClient> _channels = new List<ChannelClient>();
 
         /// <summary>
         /// Connection data of the client.
@@ -21,14 +21,32 @@ namespace Twino.MQ.Clients
         public ConnectionData Data { get; internal set; }
 
         /// <summary>
-        /// Client information
-        /// </summary>
-        public ClientInformation Info { get; internal set; }
-
-        /// <summary>
         /// If true, client authenticated by server's IClientAuthenticator implementation
         /// </summary>
         public bool IsAuthenticated { get; internal set; }
+
+        /// <summary>
+        /// Client's unique id.
+        /// If it's null or empty, server will create new unique id for the client.
+        /// </summary>
+        public string UniqueId { get; internal set; }
+
+        /// <summary>
+        /// Client name.
+        /// </summary>
+        public string Name { get; internal set; }
+
+        /// <summary>
+        /// Client type.
+        /// If different type of clients join your server, you can categorize them with this type value.
+        /// </summary>
+        public string Type { get; internal set; }
+
+        /// <summary>
+        /// Client auhentication token.
+        /// Usually bearer token.
+        /// </summary>
+        public string Token { get; internal set; }
 
         /// <summary>
         /// Extra tag object for developer-usage and is not used by Twino MQ
@@ -46,14 +64,14 @@ namespace Twino.MQ.Clients
         }
 
         /// <summary>
-        /// Gets all queues of the client
+        /// Gets all channels of the client
         /// </summary>
-        public IEnumerable<QueueClient> GetQueues()
+        public IEnumerable<ChannelClient> GetChannels()
         {
-            List<QueueClient> list = new List<QueueClient>();
-            lock (_queues)
-                foreach (QueueClient queue in _queues)
-                    list.Add(queue);
+            List<ChannelClient> list = new List<ChannelClient>();
+            lock (_channels)
+                foreach (ChannelClient ch in _channels)
+                    list.Add(ch);
 
             return list;
         }

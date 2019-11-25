@@ -13,6 +13,6 @@ namespace Twino.MQ.Security
         /// Checks if a client can join to the channel.
         /// It should return true if allowed.
         /// </summary>
-        Task<bool> Authenticate(Channel channel, MqClient client, ClientInformation information);
+        Task<bool> Authenticate(Channel channel, MqClient client);
     }
 }

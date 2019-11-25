@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Threading.Tasks;
 using Twino.MQ.Channels;
 using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
@@ -68,13 +69,6 @@ namespace Twino.MQ
         public IChannelAuthenticator DefaultChannelAuthenticator { get; private set; }
 
         /// <summary>
-        /// Default queue authenticator
-        /// If queues do not have their own custom authenticator and this value is not null,
-        /// this authenticator will authenticate the clients
-        /// </summary>
-        public IQueueAuthenticator DefaultQueueAuthenticator { get; private set; }
-
-        /// <summary>
         /// Default queue event handler.
         /// If queues do not have their own custom event handlers, will event handler will run for them
         /// </summary>
@@ -84,6 +78,16 @@ namespace Twino.MQ
         /// Default message delivery handler for queues, if they do not have their custom delivery handler
         /// </summary>
         public IMessageDeliveryHandler DefaultDeliveryHandler { get; private set; }
+
+        /// <summary>
+        /// Id generator for messages from server 
+        /// </summary>
+        public IUniqueIdGenerator MessageIdGenerator { get; set; } = new DefaultUniqueIdGenerator();
+
+        /// <summary>
+        /// Id generator for clients which has no specified unique id 
+        /// </summary>
+        public IUniqueIdGenerator ClientIdGenerator { get; set; } = new DefaultUniqueIdGenerator();
 
         #endregion
 
@@ -109,8 +113,7 @@ namespace Twino.MQ
         /// <summary>
         /// Sets default channel event handler and authenticator
         /// </summary>
-        public void SetDefaultChannelHandlers(IChannelEventHandler eventHandler,
-                                              IChannelAuthenticator authenticator)
+        public void SetDefaultChannelHandlers(IChannelEventHandler eventHandler, IChannelAuthenticator authenticator)
         {
             if (DefaultChannelEventHandler != null)
                 throw new ReadOnlyException("Default channel event handler can be set only once");
@@ -126,19 +129,12 @@ namespace Twino.MQ
         /// <summary>
         /// Sets default queue event handler, authenticator and message delivery handler
         /// </summary>
-        public void SetDefaultQueueHandlers(IQueueEventHandler handler,
-                                            IQueueAuthenticator authenticator,
-                                            IMessageDeliveryHandler deliveryHandler)
+        public void SetDefaultQueueHandlers(IQueueEventHandler handler, IMessageDeliveryHandler deliveryHandler)
         {
             if (DefaultQueueEventHandler != null)
                 throw new ReadOnlyException("Default queue event handler can be set only once");
 
             DefaultQueueEventHandler = handler;
-
-            if (DefaultQueueAuthenticator != null)
-                throw new ReadOnlyException("Default queue authenticator can be set only once");
-
-            DefaultQueueAuthenticator = authenticator;
 
             if (DefaultDeliveryHandler != null)
                 throw new ReadOnlyException("Default message delivery handler can be set only once");
@@ -155,17 +151,18 @@ namespace Twino.MQ
         /// </summary>
         public Channel CreateChannel(string name)
         {
-            return CreateChannel(name, DefaultChannelEventHandler, DefaultChannelAuthenticator);
+            return CreateChannel(name, DefaultChannelAuthenticator, DefaultChannelEventHandler, DefaultDeliveryHandler);
         }
 
         /// <summary>
         /// Creates new channel with custom event handler, authenticator and default options
         /// </summary>
         public Channel CreateChannel(string name,
+                                     IChannelAuthenticator authenticator,
                                      IChannelEventHandler eventHandler,
-                                     IChannelAuthenticator authenticator)
+                                     IMessageDeliveryHandler deliveryHandler)
         {
-            return CreateChannel(name, Options, eventHandler, authenticator);
+            return CreateChannel(name, Options, authenticator, eventHandler, deliveryHandler);
         }
 
         /// <summary>
@@ -173,14 +170,15 @@ namespace Twino.MQ
         /// </summary>
         public Channel CreateChannel(string name,
                                      ChannelOptions options,
+                                     IChannelAuthenticator authenticator,
                                      IChannelEventHandler eventHandler,
-                                     IChannelAuthenticator authenticator)
+                                     IMessageDeliveryHandler deliveryHandler)
         {
             Channel channel = _channels.Find(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
             if (channel != null)
                 throw new DuplicateNameException("There is already a channel with same name: " + name);
 
-            channel = new Channel(this, options, name, authenticator, eventHandler);
+            channel = new Channel(this, options, name, authenticator, eventHandler, deliveryHandler);
             _channels.Add(channel);
             return channel;
         }
@@ -192,21 +190,28 @@ namespace Twino.MQ
         /// <summary>
         /// Adds new client to the server
         /// </summary>
-        public void AddClient(MqClient client)
+        internal void AddClient(MqClient client)
         {
             _clients.Add(client);
-
-            throw new NotImplementedException();
         }
 
         /// <summary>
         /// Removes the client from the server
         /// </summary>
-        public void RemoveClient(MqClient client)
+        internal async Task RemoveClient(MqClient client)
         {
             _clients.Remove(client);
 
-            throw new NotImplementedException();
+            foreach (Channel channel in _channels.All())
+                await channel.RemoveClient(client);
+        }
+
+        /// <summary>
+        /// Finds client from unique id
+        /// </summary>
+        public MqClient FindClient(string uniqueId)
+        {
+            return _clients.Find(x => x.UniqueId == uniqueId);
         }
 
         #endregion

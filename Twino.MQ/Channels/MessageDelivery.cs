@@ -18,7 +18,7 @@ namespace Twino.MQ.Channels
         /// <summary>
         /// Message receiver client
         /// </summary>
-        public QueueClient Receiver { get; }
+        public ChannelClient Receiver { get; }
 
         /// <summary>
         /// If true, message is sent
@@ -53,7 +53,7 @@ namespace Twino.MQ.Channels
         /// <summary>
         /// Creates new message without delivery deadline
         /// </summary>
-        internal MessageDelivery(QueueMessage message, QueueClient receiver)
+        internal MessageDelivery(QueueMessage message, ChannelClient receiver)
             : this(message, receiver, DateTime.MinValue)
         {
             Message = message;
@@ -63,7 +63,7 @@ namespace Twino.MQ.Channels
         /// <summary>
         /// Creates new message with delivery deadline
         /// </summary>
-        internal MessageDelivery(QueueMessage message, QueueClient receiver, DateTime deliveryDeadline)
+        internal MessageDelivery(QueueMessage message, ChannelClient receiver, DateTime deliveryDeadline)
         {
             Message = message;
             Receiver = receiver;

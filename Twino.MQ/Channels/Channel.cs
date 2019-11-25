@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
+using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
 using Twino.MQ.Security;
@@ -73,12 +74,25 @@ namespace Twino.MQ.Channels
         /// </summary>
         public IChannelEventHandler EventHandler { get; }
 
-        private readonly FlexArray<ChannelQueue> _queues;
+        /// <summary>
+        /// Channel messaging delivery handler.
+        /// If queue does not have it's own delivery handler, this one is used.
+        /// </summary>
+        public IMessageDeliveryHandler DeliveryHandler { get; }
 
         /// <summary>
         /// Active channel queues
         /// </summary>
         public IEnumerable<ChannelQueue> Queues => _queues.All();
+
+        private readonly FlexArray<ChannelQueue> _queues;
+
+        /// <summary>
+        /// Clients in the channel
+        /// </summary>
+        public IEnumerable<ChannelClient> Clients => _clients.All();
+
+        private readonly FlexArray<ChannelClient> _clients;
 
         #endregion
 
@@ -88,7 +102,8 @@ namespace Twino.MQ.Channels
                          ChannelOptions options,
                          string name,
                          IChannelAuthenticator authenticator,
-                         IChannelEventHandler eventHandler)
+                         IChannelEventHandler eventHandler,
+                         IMessageDeliveryHandler deliveryHandler)
         {
             Server = server;
             Options = options;
@@ -97,8 +112,10 @@ namespace Twino.MQ.Channels
 
             Authenticator = authenticator;
             EventHandler = eventHandler;
+            DeliveryHandler = deliveryHandler;
 
             _queues = new FlexArray<ChannelQueue>(options.QueueCapacity);
+            _clients = new FlexArray<ChannelClient>(server.Options.ClientCapacity);
         }
 
         #endregion
@@ -135,7 +152,6 @@ namespace Twino.MQ.Channels
         {
             return await CreateQueue(contentType,
                                      Options,
-                                     Server.DefaultQueueAuthenticator,
                                      Server.DefaultQueueEventHandler,
                                      Server.DefaultDeliveryHandler);
         }
@@ -148,7 +164,6 @@ namespace Twino.MQ.Channels
         {
             return await CreateQueue(contentType,
                                      options,
-                                     Server.DefaultQueueAuthenticator,
                                      Server.DefaultQueueEventHandler,
                                      Server.DefaultDeliveryHandler);
         }
@@ -158,7 +173,6 @@ namespace Twino.MQ.Channels
         /// </summary>
         public async Task<ChannelQueue> CreateQueue(ushort contentType,
                                                     ChannelQueueOptions options,
-                                                    IQueueAuthenticator authenticator,
                                                     IQueueEventHandler eventHandler,
                                                     IMessageDeliveryHandler deliveryHandler)
         {
@@ -166,7 +180,7 @@ namespace Twino.MQ.Channels
             if (queue != null)
                 throw new DuplicateNameException($"The channel has already a queue with same content type: {contentType}");
 
-            queue = new ChannelQueue(this, contentType, options, authenticator, eventHandler, deliveryHandler);
+            queue = new ChannelQueue(this, contentType, options, eventHandler, deliveryHandler);
             _queues.Add(queue);
 
             if (EventHandler != null)
@@ -184,6 +198,53 @@ namespace Twino.MQ.Channels
 
             if (EventHandler != null)
                 await EventHandler.OnQueueRemoved(queue, this);
+        }
+
+        #endregion
+
+        #region Client Actions
+
+        /// <summary>
+        /// Adds the client to the channel
+        /// </summary>
+        public async Task<bool> AddClient(MqClient client)
+        {
+            if (Authenticator != null)
+            {
+                bool allowed = await Authenticator.Authenticate(this, client);
+                if (!allowed)
+                    return false;
+            }
+
+            ChannelClient cc = new ChannelClient(this, client);
+            _clients.Add(cc);
+
+            if (EventHandler != null)
+                await EventHandler.ClientJoined(cc);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Removes client from the channel
+        /// </summary>
+        public async Task RemoveClient(ChannelClient client)
+        {
+            _clients.Remove(client);
+
+            if (EventHandler != null)
+                await EventHandler.ClientLeft(client);
+        }
+
+        /// <summary>
+        /// Removes client from the channel
+        /// </summary>
+        public async Task RemoveClient(MqClient client)
+        {
+            ChannelClient cc = _clients.RemoveAndGet(x => x.Client == client);
+
+            if (cc != null && EventHandler != null)
+                await EventHandler.ClientLeft(cc);
         }
 
         #endregion

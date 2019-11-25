@@ -1,11 +1,7 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using Twino.MQ.Clients;
+using System.Threading.Tasks;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
-using Twino.MQ.Security;
-using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Channels
 {
@@ -44,6 +40,11 @@ namespace Twino.MQ.Channels
         public Channel Channel { get; }
 
         /// <summary>
+        /// Queue status
+        /// </summary>
+        public QueueStatus Status { get; private set; }
+
+        /// <summary>
         /// Queue content type
         /// </summary>
         public ushort ContentType { get; }
@@ -53,13 +54,6 @@ namespace Twino.MQ.Channels
         /// If null, channel default options will be used
         /// </summary>
         public ChannelQueueOptions Options { get; }
-
-        /// <summary>
-        /// Queue authenticator.
-        /// If null, authentication will be disabled for the queue.
-        /// This value does not affected by channel authenticator.
-        /// </summary>
-        public IQueueAuthenticator Authenticator { get; }
 
         /// <summary>
         /// Queue event handler.
@@ -74,20 +68,18 @@ namespace Twino.MQ.Channels
         /// </summary>
         public IMessageDeliveryHandler DeliveryHandler { get; }
 
-
-        private readonly FlexArray<QueueClient> _clients;
-
-        /// <summary>
-        /// Subscribed clients of the queue
-        /// </summary>
-        public IEnumerable<QueueClient> Clients => _clients.All();
-
-        private readonly List<QueueMessage> _messages = new List<QueueMessage>();
+        private readonly FlexArray<QueueMessage> _prefentialMessages;
+        private readonly FlexArray<QueueMessage> _standardMessages;
 
         /// <summary>
-        /// Queued messages
+        /// Standard prefential messages
         /// </summary>
-        public IEnumerable<QueueMessage> Messages => _messages;
+        public IEnumerable<QueueMessage> PrefentialMessages => _prefentialMessages.All();
+
+        /// <summary>
+        /// Standard queued messages
+        /// </summary>
+        public IEnumerable<QueueMessage> StandardMessages => _standardMessages.All();
 
         #endregion
 
@@ -96,7 +88,6 @@ namespace Twino.MQ.Channels
         internal ChannelQueue(Channel channel,
                               ushort contentType,
                               ChannelQueueOptions options,
-                              IQueueAuthenticator authenticator,
                               IQueueEventHandler eventHandler,
                               IMessageDeliveryHandler deliveryHandler)
         {
@@ -104,11 +95,34 @@ namespace Twino.MQ.Channels
             ContentType = contentType;
             Options = options;
 
-            Authenticator = authenticator;
             EventHandler = eventHandler;
             DeliveryHandler = deliveryHandler;
 
-            _clients = new FlexArray<QueueClient>(channel.Server.Options.ClientCapacity);
+            _prefentialMessages = new FlexArray<QueueMessage>(options.PrefentialQueueCapacity);
+            _standardMessages = new FlexArray<QueueMessage>(options.StandardQueueCapacity);
+        }
+
+        #endregion
+
+        #region Status Actions
+
+        /// <summary>
+        /// Sets status of the queue
+        /// </summary>
+        public async Task SetStatus(QueueStatus status)
+        {
+            QueueStatus old = Status;
+            if (old == status)
+                return;
+
+            if (EventHandler != null)
+            {
+                bool allowed = await EventHandler.OnStatusChanged(this, old, status);
+                if (!allowed)
+                    return;
+            }
+
+            Status = status;
         }
 
         #endregion
@@ -118,37 +132,35 @@ namespace Twino.MQ.Channels
         /// <summary>
         /// Adds a new message into the queue
         /// </summary>
-        public void AddMessage(QueueMessage message)
+        public async Task AddMessage(QueueMessage message)
         {
-            throw new NotImplementedException();
+            if (message.Message.HighPriority)
+                _prefentialMessages.Add(message);
+            else
+                _standardMessages.Add(message);
+
+            if (EventHandler != null)
+                await EventHandler.OnMessageAdded(this, message);
         }
 
         /// <summary>
-        /// Removes the message from the queue
+        /// Removes the message from the queue.
+        /// Remove operation will be canceled If force is false and message is not sent
         /// </summary>
-        public void RemoveMessage(QueueMessage message)
+        public async Task<bool> RemoveMessage(QueueMessage message, bool force = false)
         {
-            throw new NotImplementedException();
-        }
+            if (!force && !message.IsSent())
+                return false;
 
-        #endregion
+            if (message.Message.HighPriority)
+                _prefentialMessages.Remove(message);
+            else
+                _standardMessages.Remove(message);
 
-        #region Subscription Actions
+            if (EventHandler != null)
+                await EventHandler.OnMessageRemoved(this, message);
 
-        /// <summary>
-        /// Subscribes the client to the queue
-        /// </summary>
-        public ChannelQueue Subscribe(MqClient client)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Unsubscribes the client from the queue
-        /// </summary>
-        public ChannelQueue Unsubscribe(MqClient client)
-        {
-            throw new NotImplementedException();
+            return true;
         }
 
         #endregion

@@ -132,6 +132,9 @@ namespace Twino.MQ.Helpers
 
                 for (int j = 0; j < array.Length; j++)
                 {
+                    if (array[j] == null)
+                        continue;
+
                     if (array[j].Equals(item))
                     {
                         array[j] = null;
@@ -142,22 +145,83 @@ namespace Twino.MQ.Helpers
         }
 
         /// <summary>
-        /// Finds the element from the array
+        /// Removes objects from the array
         /// </summary>
-        public T Find(Func<T, bool> predicate)
+        public void Remove(Func<T, bool> predicate, bool removeOnlyFirst)
+        {
+            foreach (var array in _arrays)
+            {
+                if (array == null)
+                    return;
+
+                for (int j = 0; j < array.Length; j++)
+                {
+                    T item = array[j];
+                    if (item == null)
+                        continue;
+
+                    if (predicate(item))
+                    {
+                        array[j] = null;
+
+                        if (removeOnlyFirst)
+                            return;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Removes objects from the array
+        /// </summary>
+        public T RemoveAndGet(Func<T, bool> predicate)
         {
             foreach (var array in _arrays)
             {
                 if (array == null)
                     return null;
 
-                foreach (var item in array)
+                for (int j = 0; j < array.Length; j++)
                 {
+                    T item = array[j];
                     if (item == null)
                         continue;
 
                     if (predicate(item))
+                    {
+                        array[j] = null;
                         return item;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Finds the element from the array
+        /// </summary>
+        public T Find(Func<T, bool> predicate, bool removeFromList = false)
+        {
+            foreach (var array in _arrays)
+            {
+                if (array == null)
+                    return null;
+
+                for (int i = 0; i < array.Length; i++)
+                {
+                    T item = array[i];
+
+                    if (item == null)
+                        continue;
+
+                    if (predicate(item))
+                    {
+                        if (removeFromList)
+                            array[i] = null;
+
+                        return item;
+                    }
                 }
             }
 

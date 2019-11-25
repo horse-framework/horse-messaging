@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Channels
@@ -13,7 +14,7 @@ namespace Twino.MQ.Channels
         /// Message creation date
         /// </summary>
         public DateTime CreatedDate { get; set; }
-        
+
         /// <summary>
         /// TMQ Message
         /// </summary>
@@ -25,7 +26,7 @@ namespace Twino.MQ.Channels
         public bool IsSaved { get; set; }
 
         private readonly List<MessageDelivery> _deliveries = new List<MessageDelivery>();
-        
+
         /// <summary>
         /// Message deliveries
         /// </summary>
@@ -39,6 +40,26 @@ namespace Twino.MQ.Channels
             CreatedDate = DateTime.UtcNow;
             Message = message;
             IsSaved = isSaved;
+        }
+
+        /// <summary>
+        /// True, if message is sent at least one client
+        /// </summary>
+        /// <returns></returns>
+        public bool IsSent()
+        {
+            lock (_deliveries)
+                return _deliveries.Any(x => x.IsSent);
+        }
+
+        /// <summary>
+        /// True, if at last one delivery message is received.
+        /// </summary>
+        /// <returns></returns>
+        public bool IsDelivered()
+        {
+            lock (_deliveries)
+                return _deliveries.Any(x => x.IsDelivered);
         }
     }
 }
