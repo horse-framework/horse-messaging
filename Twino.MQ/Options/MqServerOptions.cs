@@ -3,7 +3,7 @@ namespace Twino.MQ.Options
     /// <summary>
     /// Server default options
     /// </summary>
-    public class ServerOptions : ChannelOptions
+    public class MqServerOptions : ChannelOptions
     {
         /// <summary>
         /// Server default TTL value

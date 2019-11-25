@@ -6,10 +6,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Internal" />
+      <ProjectReference Include="..\Twino.Server\Twino.Server.csproj" />
     </ItemGroup>
 
 </Project>

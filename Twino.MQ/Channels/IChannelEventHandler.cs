@@ -9,16 +9,6 @@ namespace Twino.MQ.Channels
     public interface IChannelEventHandler
     {
         /// <summary>
-        /// Called when a client is joined to a channel
-        /// </summary>
-        Task OnJoin(ChannelClient client);
-
-        /// <summary>
-        /// Called when a client is left from a channel
-        /// </summary>
-        Task OnLeave(ChannelClient client);
-
-        /// <summary>
         /// Called when a new queue is created in a channel
         /// </summary>
         Task OnQueueCreated(ChannelQueue queue, Channel channel);

@@ -9,6 +9,7 @@ namespace Twino.MQ.Helpers
     /// And supports multi-threaded enumeration without locking arrays.
     /// </summary>
     public class FlexArray<T>
+        where T : class
     {
         /// <summary>
         /// Data
@@ -77,7 +78,7 @@ namespace Twino.MQ.Helpers
             foreach (var array in _arrays)
             {
                 if (array == null)
-                    continue;
+                    yield break;
 
                 foreach (var item in array)
                 {
@@ -133,7 +134,7 @@ namespace Twino.MQ.Helpers
                 {
                     if (array[j].Equals(item))
                     {
-                        array[j] = default;
+                        array[j] = null;
                         return;
                     }
                 }
@@ -148,11 +149,11 @@ namespace Twino.MQ.Helpers
             foreach (var array in _arrays)
             {
                 if (array == null)
-                    return default;
+                    return null;
 
                 foreach (var item in array)
                 {
-                    if (item.Equals(default))
+                    if (item == null)
                         continue;
 
                     if (predicate(item))
@@ -160,7 +161,7 @@ namespace Twino.MQ.Helpers
                 }
             }
 
-            return default;
+            return null;
         }
     }
 }
