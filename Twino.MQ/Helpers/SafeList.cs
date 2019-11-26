@@ -107,6 +107,9 @@ namespace Twino.MQ.Helpers
                 _list.RemoveAll(predicate);
         }
 
+        /// <summary>
+        /// Removes the object, at specified index, from the last
+        /// </summary>
         public void RemoveAt(int index)
         {
             lock (_list)

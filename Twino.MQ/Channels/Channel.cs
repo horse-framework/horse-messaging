@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
@@ -92,7 +91,7 @@ namespace Twino.MQ.Channels
         /// Clients in the channel as thread-unsafe list
         /// </summary>
         public IEnumerable<ChannelClient> ClientsUnsafe => _clients.GetUnsafeList();
-        
+
         /// <summary>
         /// Clients in the channel as cloned list
         /// </summary>
@@ -168,6 +167,9 @@ namespace Twino.MQ.Channels
         /// </summary>
         public async Task<ChannelQueue> CreateQueue(ushort contentType, ChannelQueueOptions options)
         {
+            if (DeliveryHandler == null)
+                throw new NoNullAllowedException("There is no default delivery handler defined for the channel. Queue must have it's own delivery handler.");
+
             return await CreateQueue(contentType,
                                      options,
                                      Server.DefaultQueueEventHandler,
@@ -182,7 +184,11 @@ namespace Twino.MQ.Channels
                                                     IQueueEventHandler eventHandler,
                                                     IMessageDeliveryHandler deliveryHandler)
         {
+            if (deliveryHandler == null)
+                throw new NoNullAllowedException("Delivery handler cannot be null.");
+
             ChannelQueue queue = _queues.Find(x => x.ContentType == contentType);
+
             if (queue != null)
                 throw new DuplicateNameException($"The channel has already a queue with same content type: {contentType}");
 

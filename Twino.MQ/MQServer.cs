@@ -51,11 +51,6 @@ namespace Twino.MQ
         public IClientAuthenticator Authenticator { get; }
 
         /// <summary>
-        /// Complete message flow implementation, from receiving until delivery reported.
-        /// </summary>
-        public IMessageProcessFlow Flow { get; }
-
-        /// <summary>
         /// Default channel event handler.
         /// If channels do not have their own custom event handlers, will event handler will run for them
         /// </summary>
@@ -96,10 +91,9 @@ namespace Twino.MQ
         /// <summary>
         /// Creates new Messaging Queue Server
         /// </summary>
-        public MQServer(MqServerOptions options, IMessageProcessFlow flow, IClientAuthenticator authenticator = null)
+        public MQServer(MqServerOptions options, IClientAuthenticator authenticator = null)
         {
             Options = options;
-            Flow = flow;
             Authenticator = authenticator;
 
             _channels = new SafeList<Channel>(options.ChannelCapacity);
@@ -151,6 +145,9 @@ namespace Twino.MQ
         /// </summary>
         public Channel CreateChannel(string name)
         {
+            if (DefaultDeliveryHandler == null)
+                throw new NoNullAllowedException("There is no default delivery handler defined. Channel must have it's own delivery handler.");
+
             return CreateChannel(name, DefaultChannelAuthenticator, DefaultChannelEventHandler, DefaultDeliveryHandler);
         }
 
@@ -224,9 +221,6 @@ namespace Twino.MQ
         /// </summary>
         public void Start()
         {
-            if (Flow == null)
-                throw new NoNullAllowedException("Message process flow should be implemented");
-
             ServerOptions serverOptions = new ServerOptions();
             Server = new TwinoServer(serverOptions);
             MqConnectionHandler handler = new MqConnectionHandler(this);

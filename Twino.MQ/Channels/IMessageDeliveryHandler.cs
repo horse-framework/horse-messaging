@@ -13,7 +13,7 @@ namespace Twino.MQ.Channels
         /// Allow to send the message to the client
         /// </summary>
         Allow,
-        
+
         /// <summary>
         /// Skip the send operation of the message to the client
         /// </summary>
@@ -29,17 +29,17 @@ namespace Twino.MQ.Channels
         /// Do nothing to keep going on
         /// </summary>
         Nothing,
-        
+
         /// <summary>
         /// Save the message
         /// </summary>
         SaveMessage,
-        
+
         /// <summary>
         /// Remove the message
         /// </summary>
         RemoveMessage,
-        
+
         /// <summary>
         /// Save and remove the message
         /// </summary>
@@ -53,24 +53,29 @@ namespace Twino.MQ.Channels
     public interface IMessageDeliveryHandler
     {
         /// <summary>
+        /// When a client sends a message to the server.
+        /// </summary>
+        Task<DeliveryDecision> OnReceived(ChannelQueue queue, QueueMessage message, MqClient sender);
+
+        /// <summary>
         /// Before send the message.
-        /// When this method is called, message isn't sent to anyone
+        /// When this method is called, message isn't sent to anyone.
         /// </summary>
         Task<DeliveryDecision> OnSendStarting(ChannelQueue queue, QueueMessage message);
-        
+
         /// <summary>
         /// Before sending message to a receiver.
         /// This method is called for each message and each receiver.
         /// This method decides if it is sent.
         /// </summary>
         Task<DeliveryDecision> OnBeforeSend(ChannelQueue queue, QueueMessage message, MqClient receiver);
-        
+
         /// <summary>
         /// After sending message to a receiver.
         /// This method is called for each message and each receiver.
         /// </summary>
         Task<DeliveryOperation> OnAfterSend(ChannelQueue queue, MessageDelivery delivery, MqClient receiver);
-        
+
         /// <summary>
         /// Called when a message sending operation is completed.
         /// </summary>
@@ -85,21 +90,21 @@ namespace Twino.MQ.Channels
         /// Called when a receiver sends a response message.
         /// </summary>
         Task<DeliveryOperation> OnResponse(ChannelQueue queue, MessageDelivery delivery, TmqMessage response);
-        
+
         /// <summary>
         /// Message is queued but no receiver found and time is up
         /// </summary>
         Task OnTimeUp(ChannelQueue queue, QueueMessage message);
-        
-        /// <summary>
-        /// Message is about to remove
-        /// </summary>
-        Task OnRemove(ChannelQueue queue, QueueMessage message);
 
         /// <summary>
         /// Called when message requested delivery but delivery message isn't received in time
         /// </summary>
         /// <returns></returns>
         Task OnDeliveryTimeUp(ChannelQueue queue, MessageDelivery delivery);
+
+        /// <summary>
+        /// Message is about to remove
+        /// </summary>
+        Task OnRemove(ChannelQueue queue, QueueMessage message);
     }
 }
