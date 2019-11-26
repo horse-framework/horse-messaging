@@ -25,19 +25,19 @@ namespace Twino.MQ
         /// </summary>
         public MqServerOptions Options { get; }
 
-        private readonly FlexArray<Channel> _channels;
+        private readonly SafeList<Channel> _channels;
 
         /// <summary>
         /// All channels of the server
         /// </summary>
-        public IEnumerable<Channel> Channels => _channels.All();
+        public IEnumerable<Channel> Channels => _channels.GetUnsafeList();
 
-        private readonly FlexArray<MqClient> _clients;
+        private readonly SafeList<MqClient> _clients;
 
         /// <summary>
         /// All connected clients in the server
         /// </summary>
-        public IEnumerable<MqClient> Clients => _clients.All();
+        public IEnumerable<MqClient> Clients => _clients.GetUnsafeList();
 
         /// <summary>
         /// Underlying Twino Server
@@ -102,8 +102,8 @@ namespace Twino.MQ
             Flow = flow;
             Authenticator = authenticator;
 
-            _channels = new FlexArray<Channel>(options.ChannelCapacity);
-            _clients = new FlexArray<MqClient>(options.ClientCapacity);
+            _channels = new SafeList<Channel>(options.ChannelCapacity);
+            _clients = new SafeList<MqClient>(options.ClientCapacity);
         }
 
         #endregion
@@ -202,7 +202,8 @@ namespace Twino.MQ
         {
             _clients.Remove(client);
 
-            foreach (Channel channel in _channels.All())
+            IEnumerable<Channel> list = _channels.GetAsClone();
+            foreach (Channel channel in list)
                 await channel.RemoveClient(client);
         }
 

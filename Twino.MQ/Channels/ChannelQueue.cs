@@ -68,18 +68,18 @@ namespace Twino.MQ.Channels
         /// </summary>
         public IMessageDeliveryHandler DeliveryHandler { get; }
 
-        private readonly FlexArray<QueueMessage> _prefentialMessages;
-        private readonly FlexArray<QueueMessage> _standardMessages;
+        private readonly SafeList<QueueMessage> _prefentialMessages;
+        private readonly SafeList<QueueMessage> _standardMessages;
 
         /// <summary>
         /// Standard prefential messages
         /// </summary>
-        public IEnumerable<QueueMessage> PrefentialMessages => _prefentialMessages.All();
+        public IEnumerable<QueueMessage> PrefentialMessages => _prefentialMessages.GetUnsafeList();
 
         /// <summary>
         /// Standard queued messages
         /// </summary>
-        public IEnumerable<QueueMessage> StandardMessages => _standardMessages.All();
+        public IEnumerable<QueueMessage> StandardMessages => _standardMessages.GetUnsafeList();
 
         #endregion
 
@@ -98,8 +98,8 @@ namespace Twino.MQ.Channels
             EventHandler = eventHandler;
             DeliveryHandler = deliveryHandler;
 
-            _prefentialMessages = new FlexArray<QueueMessage>(options.PrefentialQueueCapacity);
-            _standardMessages = new FlexArray<QueueMessage>(options.StandardQueueCapacity);
+            _prefentialMessages = new SafeList<QueueMessage>(options.PrefentialQueueCapacity);
+            _standardMessages = new SafeList<QueueMessage>(options.StandardQueueCapacity);
         }
 
         #endregion

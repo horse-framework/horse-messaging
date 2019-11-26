@@ -62,12 +62,12 @@ namespace Twino.MQ.Channels
         /// </summary>
         public IChannelAuthenticator Authenticator { get; }
 
-        private readonly FlexArray<QueueContentType> _allowedContentTypes = new FlexArray<QueueContentType>(264, 250);
+        private readonly SafeList<QueueContentType> _allowedContentTypes = new SafeList<QueueContentType>(32);
 
         /// <summary>
         /// Allowed content type in this channel
         /// </summary>
-        public IEnumerable<QueueContentType> AllowedContentTypes => _allowedContentTypes.All();
+        public IEnumerable<QueueContentType> AllowedContentTypes => _allowedContentTypes.GetUnsafeList();
 
         /// <summary>
         /// Channel event handler
@@ -83,16 +83,16 @@ namespace Twino.MQ.Channels
         /// <summary>
         /// Active channel queues
         /// </summary>
-        public IEnumerable<ChannelQueue> Queues => _queues.All();
+        public IEnumerable<ChannelQueue> Queues => _queues.GetUnsafeList();
 
-        private readonly FlexArray<ChannelQueue> _queues;
+        private readonly SafeList<ChannelQueue> _queues;
 
         /// <summary>
         /// Clients in the channel
         /// </summary>
-        public IEnumerable<ChannelClient> Clients => _clients.All();
+        public IEnumerable<ChannelClient> Clients => _clients.GetUnsafeList();
 
-        private readonly FlexArray<ChannelClient> _clients;
+        private readonly SafeList<ChannelClient> _clients;
 
         #endregion
 
@@ -114,8 +114,8 @@ namespace Twino.MQ.Channels
             EventHandler = eventHandler;
             DeliveryHandler = deliveryHandler;
 
-            _queues = new FlexArray<ChannelQueue>(options.QueueCapacity);
-            _clients = new FlexArray<ChannelClient>(server.Options.ClientCapacity);
+            _queues = new SafeList<ChannelQueue>(options.QueueCapacity);
+            _clients = new SafeList<ChannelClient>(server.Options.ClientCapacity);
         }
 
         #endregion
@@ -241,7 +241,7 @@ namespace Twino.MQ.Channels
         /// </summary>
         public async Task RemoveClient(MqClient client)
         {
-            ChannelClient cc = _clients.RemoveAndGet(x => x.Client == client);
+            ChannelClient cc = _clients.FindAndRemove(x => x.Client == client);
 
             if (cc != null && EventHandler != null)
                 await EventHandler.ClientLeft(cc);
