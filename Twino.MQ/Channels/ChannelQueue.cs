@@ -209,7 +209,8 @@ namespace Twino.MQ.Channels
             if (decision == DeliveryDecision.Skip)
             {
                 DeliveryOperation skipOperation = await DeliveryHandler.OnSendCompleted(this, message);
-
+                //todo: skip operation decision
+                
                 if (Options.MessageQueuing)
                 {
                     if (message.Message.HighPriority)
