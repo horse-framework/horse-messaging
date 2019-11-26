@@ -1,12 +1,9 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
-using Twino.MQ.Helpers;
 using Twino.MQ.Options;
+using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Channels
 {
@@ -73,23 +70,20 @@ namespace Twino.MQ.Channels
         /// </summary>
         public IMessageDeliveryHandler DeliveryHandler { get; }
 
-        private readonly Queue<QueueMessage> _prefentialMessages = new Queue<QueueMessage>();
-        private readonly Queue<QueueMessage> _standardMessages = new Queue<QueueMessage>();
+        private readonly LinkedList<QueueMessage> _prefentialMessages = new LinkedList<QueueMessage>();
+        private readonly LinkedList<QueueMessage> _standardMessages = new LinkedList<QueueMessage>();
 
         /// <summary>
         /// Standard prefential messages
         /// </summary>
-        public Queue<QueueMessage> PrefentialMessages => _prefentialMessages;
+        public IEnumerable<QueueMessage> PrefentialMessages => _prefentialMessages;
 
         /// <summary>
         /// Standard queued messages
         /// </summary>
         public IEnumerable<QueueMessage> StandardMessages => _standardMessages;
 
-        /// <summary>
-        /// Locker object for trigger
-        /// </summary>
-        private object _locker = new object();
+        private static readonly TmqWriter _writer = new TmqWriter();
 
         #endregion
 
@@ -174,41 +168,26 @@ namespace Twino.MQ.Channels
         /// </summary>
         internal async Task Trigger(QueueMessage message)
         {
-            Monitor.Enter(_locker);
+            QueueMessage held = null;
             try
             {
                 if (Options.MessageQueuing)
                 {
-                    QueueMessage peeked;
-                    if (message.Message.HighPriority)
-                    {
-                        lock (_prefentialMessages)
-                        {
-                            _prefentialMessages.Enqueue(message);
-                            peeked = _prefentialMessages.Peek();
-                        }
-                    }
-                    else
-                    {
-                        lock (_standardMessages)
-                        {
-                            _standardMessages.Enqueue(message);
-                            peeked = _standardMessages.Peek();
-                        }
-                    }
-
-                    await ProcesssMessage(peeked, true);
+                    held = PullMessage(message);
+                    await ProcesssMessage(held, true);
                 }
                 else
                     await ProcesssMessage(message, false);
             }
             catch (Exception ex)
             {
-            }
-            finally
-            {
-                if (Monitor.IsEntered(_locker))
-                    Monitor.Exit(_locker);
+                try
+                {
+                    await DeliveryHandler.OnException(this, Options.MessageQueuing ? held : message, ex);
+                }
+                catch //if developer does wrong operation, we should not stop
+                {
+                }
             }
         }
 
@@ -219,102 +198,211 @@ namespace Twino.MQ.Channels
         /// </summary>
         internal async Task Trigger(ChannelClient subscribedClient)
         {
+            if (!Options.MessageQueuing)
+                return;
+
             if (_prefentialMessages.Count > 0)
-            {
-            }
+                await ProcessPendingMessages(_prefentialMessages);
 
             if (_standardMessages.Count > 0)
-            {
-            }
+                await ProcessPendingMessages(_standardMessages);
+        }
 
-            throw new NotImplementedException();
+        /// <summary>
+        /// Start to process all pending messages.
+        /// This method is called after a client is subscribed to the queue.
+        /// </summary>
+        private async Task ProcessPendingMessages(LinkedList<QueueMessage> list)
+        {
+            while (true)
+            {
+                QueueMessage message;
+                lock (list)
+                {
+                    if (list.Count == 0)
+                        return;
+
+                    message = list.First.Value;
+                    list.RemoveFirst();
+                }
+
+                try
+                {
+                    DeliveryOperation operation = await ProcesssMessage(message, Options.MessageQueuing);
+                    if (operation == DeliveryOperation.Keep)
+                        return;
+                }
+                catch (Exception ex)
+                {
+                    try
+                    {
+                        await DeliveryHandler.OnException(this, message, ex);
+                    }
+                    catch //if developer does wrong operation, we should not stop
+                    {
+                    }
+                }
+            }
         }
 
         /// <summary>
         /// Searches receivers of the message and process the send operation
         /// </summary>
-        private async Task ProcesssMessage(QueueMessage message, bool peeked)
+        private async Task<DeliveryOperation> ProcesssMessage(QueueMessage message, bool onheld)
         {
             DeliveryDecision decision = await DeliveryHandler.OnSendStarting(this, message);
+
+            //if user skips the message, complete operation as skipped
             if (decision == DeliveryDecision.Skip)
             {
+                message.IsSkipped = true;
                 DeliveryOperation skipOperation = await DeliveryHandler.OnSendCompleted(this, message);
-                //todo: skip operation decision
 
-                if (Options.MessageQueuing && peeked)
-                {
-                    if (message.Message.HighPriority)
-                    {
-                        _prefentialMessages.Remove(message);
-                    }
-                    else
-                        _standardMessages.Remove(message);
-                }
+                await CompleteOperation(message, skipOperation);
 
-                if (skipOperation == DeliveryOperation.RemoveMessage || skipOperation == DeliveryOperation.SaveAndRemoveMessage)
-                {
-                    if (Options.MessageQueuing && peeked)
-                    {
-                        if (message.Message.HighPriority)
-                        {
-                            lock (_prefentialMessages)
-                                _prefentialMessages.Dequeue();
-                        }
-                        else
-                            lock (_standardMessages)
-                                _standardMessages.Dequeue();
-                    }
-                }
+                if (Options.MessageQueuing && onheld && skipOperation == DeliveryOperation.Keep)
+                    PutMessageBack(message);
 
-                Monitor.Exit(_locker);
-
-                await DeliveryHandler.OnRemove(this, message);
-                return;
+                return skipOperation;
             }
 
             List<ChannelClient> clients = Channel.ClientsClone;
             if (clients.Count == 0)
             {
-                //there is no receiver
-                //todo: do something useful
-                return;
+                await CompleteOperation(message, DeliveryOperation.Keep);
+
+                //if we are queuing, put the message back
+                if (Options.MessageQueuing)
+                    PutMessageBack(message);
+
+                return DeliveryOperation.Keep;
             }
 
-            byte[] messageData; //todo: create first acquirer data
+            //todo: where is the value?
+            DateTime? deadline = null;
 
+            //create prepared message data
+            byte[] messageData = await _writer.Create(message.Message);
+
+            //to all receivers
             foreach (ChannelClient client in clients)
             {
+                //to only online receivers
                 if (!client.Client.IsConnected)
                     continue;
 
+                //call before send and check decision
                 DeliveryDecision beforeSend = await DeliveryHandler.OnBeforeSend(this, message, client.Client);
                 if (beforeSend == DeliveryDecision.Skip)
-                {
-                    //todo: do cleaning
-                    return;
-                }
+                    continue;
 
-                //todo: delivery deadline?
-                MessageDelivery delivery = new MessageDelivery(message, client);
+                //create delivery object
+                MessageDelivery delivery = new MessageDelivery(message, client, deadline);
+                delivery.FirstAcquirer = message.Message.FirstAcquirer;
 
-                //todo: send
+                //send the message
+                await client.Client.SendAsync(messageData);
 
-                Monitor.Exit(_locker);
-
+                //set as sent, if message is sent to it's first acquirer,
+                //set message first acquirer false and re-create byte array data of the message
                 bool firstAcquirer = message.Message.FirstAcquirer;
                 message.AddSend(delivery);
 
                 if (firstAcquirer && clients.Count > 1)
-                {
-                    messageData = null; //todo: set new data for next acquirers
-                }
+                    messageData = await _writer.Create(message.Message);
 
-                DeliveryOperation afterSend = await DeliveryHandler.OnAfterSend(this, delivery, client.Client);
+                //do after send operations for per message
+                await DeliveryHandler.OnAfterSend(this, delivery, client.Client);
             }
 
-            DeliveryOperation sendCompleted = await DeliveryHandler.OnSendCompleted(this, message);
+            //after all sending operations completed, calls implementation send completed method and complete the operation
+            DeliveryOperation operation = await DeliveryHandler.OnSendCompleted(this, message);
 
-            //todo: do something useful with send completion
+            await CompleteOperation(message, operation);
+
+            if (operation == DeliveryOperation.Keep)
+                PutMessageBack(message);
+
+            return operation;
+        }
+
+        /// <summary>
+        /// Adds the message to the queue and pulls first message from the queue.
+        /// Usually first message equals message itself.
+        /// But sometimes, previous messages might be pending in the queue.
+        /// </summary>
+        private QueueMessage PullMessage(QueueMessage message)
+        {
+            QueueMessage held;
+            if (message.Message.HighPriority)
+            {
+                lock (_prefentialMessages)
+                {
+                    //we don't need push and pull
+                    if (_prefentialMessages.Count == 0)
+                        return message;
+
+                    _prefentialMessages.AddLast(message);
+                    held = _prefentialMessages.First.Value;
+                    _prefentialMessages.RemoveFirst();
+                }
+            }
+            else
+            {
+                lock (_standardMessages)
+                {
+                    //we don't need push and pull
+                    if (_standardMessages.Count == 0)
+                        return message;
+
+                    _standardMessages.AddLast(message);
+                    held = _standardMessages.First.Value;
+                    _standardMessages.RemoveFirst();
+                }
+            }
+
+            return held;
+        }
+
+        /// <summary>
+        /// If there is no available receiver when after a message is helded to send to receivers,
+        /// This methods puts the message back.
+        /// </summary>
+        private void PutMessageBack(QueueMessage message)
+        {
+            if (!Options.MessageQueuing)
+                return;
+
+            if (message.IsFirstQueue)
+                message.IsFirstQueue = false;
+
+            if (message.Message.HighPriority)
+            {
+                lock (_prefentialMessages)
+                    _prefentialMessages.AddFirst(message);
+            }
+            else
+            {
+                lock (_standardMessages)
+                    _standardMessages.AddFirst(message);
+            }
+        }
+
+        /// <summary>
+        /// Process and completes the delivery operation
+        /// </summary>
+        private async Task CompleteOperation(QueueMessage message, DeliveryOperation operation)
+        {
+            //keep the message in the queue, do nothing
+            if (operation == DeliveryOperation.Keep)
+                return;
+
+            //save the message
+            if (operation == DeliveryOperation.SaveMessage)
+                message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
+
+            //remove the message
+            await DeliveryHandler.OnRemove(this, message);
         }
 
         #endregion

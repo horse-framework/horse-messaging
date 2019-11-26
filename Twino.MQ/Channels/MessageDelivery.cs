@@ -9,6 +9,11 @@ namespace Twino.MQ.Channels
     public class MessageDelivery
     {
         #region Properties
+        
+        /// <summary>
+        /// True, if receiver is the first acquirer of the message
+        /// </summary>
+        public bool FirstAcquirer { get; internal set; }
 
         /// <summary>
         /// The message
@@ -63,7 +68,7 @@ namespace Twino.MQ.Channels
         /// <summary>
         /// Creates new message with delivery deadline
         /// </summary>
-        internal MessageDelivery(QueueMessage message, ChannelClient receiver, DateTime deliveryDeadline)
+        internal MessageDelivery(QueueMessage message, ChannelClient receiver, DateTime? deliveryDeadline)
         {
             Message = message;
             Receiver = receiver;

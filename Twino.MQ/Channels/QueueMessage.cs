@@ -23,10 +23,21 @@ namespace Twino.MQ.Channels
         /// <summary>
         /// If true, message is saved to DB or Disk
         /// </summary>
-        public bool IsSaved { get; set; }
+        public bool IsSaved { get; internal set; }
+        
+        /// <summary>
+        /// True, if message sending skipped by user
+        /// </summary>
+        public bool IsSkipped { get; internal set; }
+        
+        /// <summary>
+        /// True, if message is first in queue.
+        /// If first operation skipped, or remove is skipped, message will be still in the queue but this value will be false. 
+        /// </summary>
+        public bool IsFirstQueue { get; set; }
 
         private readonly List<MessageDelivery> _deliveries = new List<MessageDelivery>();
-
+        
         /// <summary>
         /// Message deliveries
         /// </summary>

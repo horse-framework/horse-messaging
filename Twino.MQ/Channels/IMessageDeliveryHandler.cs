@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.Protocols.TMQ;
@@ -26,24 +27,20 @@ namespace Twino.MQ.Channels
     public enum DeliveryOperation
     {
         /// <summary>
-        /// Do nothing to keep going on
+        /// Operation completed but sending operation is skipped,
+        /// Message is going to be re-added in front of the queue.
         /// </summary>
-        Nothing,
+        Keep,
+
+        /// <summary>
+        /// Remove message from the list and do not save
+        /// </summary>
+        DontSaveMesage,
 
         /// <summary>
         /// Save the message
         /// </summary>
-        SaveMessage,
-
-        /// <summary>
-        /// Remove the message
-        /// </summary>
-        RemoveMessage,
-
-        /// <summary>
-        /// Save and remove the message
-        /// </summary>
-        SaveAndRemoveMessage
+        SaveMessage
     }
 
     /// <summary>
@@ -74,7 +71,7 @@ namespace Twino.MQ.Channels
         /// After sending message to a receiver.
         /// This method is called for each message and each receiver.
         /// </summary>
-        Task<DeliveryOperation> OnAfterSend(ChannelQueue queue, MessageDelivery delivery, MqClient receiver);
+        Task OnAfterSend(ChannelQueue queue, MessageDelivery delivery, MqClient receiver);
 
         /// <summary>
         /// Called when a message sending operation is completed.
@@ -84,12 +81,12 @@ namespace Twino.MQ.Channels
         /// <summary>
         /// Called when a receiver sends a delivery message.
         /// </summary>
-        Task<DeliveryOperation> OnDelivery(ChannelQueue queue, MessageDelivery delivery);
+        Task OnDelivery(ChannelQueue queue, MessageDelivery delivery);
 
         /// <summary>
         /// Called when a receiver sends a response message.
         /// </summary>
-        Task<DeliveryOperation> OnResponse(ChannelQueue queue, MessageDelivery delivery, TmqMessage response);
+        Task OnResponse(ChannelQueue queue, MessageDelivery delivery, TmqMessage response);
 
         /// <summary>
         /// Message is queued but no receiver found and time is up
@@ -106,5 +103,18 @@ namespace Twino.MQ.Channels
         /// Message is about to remove
         /// </summary>
         Task OnRemove(ChannelQueue queue, QueueMessage message);
+
+        /// <summary>
+        /// Called when an exception is thrown
+        /// </summary>
+        Task OnException(ChannelQueue queue, QueueMessage message, Exception exception);
+
+        /// <summary>
+        /// After the operation of the message is completed, if save is selected, this method is called.
+        /// Returns true if save operation is successful.
+        /// After save operation, OnRemove will be called.
+        /// You can check if IsSaved true or not. 
+        /// </summary>
+        Task<bool> SaveMessage(ChannelQueue queue, QueueMessage message);
     }
 }

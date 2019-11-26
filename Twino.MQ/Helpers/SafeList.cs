@@ -38,13 +38,10 @@ namespace Twino.MQ.Helpers
         /// <returns></returns>
         public List<T> GetAsClone()
         {
-            List<T> list = new List<T>(_list.Capacity);
+            List<T> list;
 
             lock (_list)
-            {
-                foreach (T item in _list)
-                    list.Add(item);
-            }
+                list = new List<T>(_list);
 
             return list;
         }
