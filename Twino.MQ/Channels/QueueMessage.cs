@@ -61,5 +61,20 @@ namespace Twino.MQ.Channels
             lock (_deliveries)
                 return _deliveries.Any(x => x.IsDelivered);
         }
+
+        public void AddSend(MessageDelivery delivery)
+        {
+            if (Message.FirstAcquirer)
+                Message.FirstAcquirer = false;
+
+            delivery.MarkAsSent();
+            
+            lock (_deliveries)
+                _deliveries.Add(delivery);
+        }
+
+        public void AddDelivery()
+        {
+        }
     }
 }

@@ -8,9 +8,14 @@ namespace Twino.MQ.Channels
     public interface IQueueEventHandler
     {
         /// <summary>
-        /// Called when a new message is added to the queue
+        /// Called when a new message is received to the queue.
         /// </summary>
-        Task OnMessageAdded(ChannelQueue queue, QueueMessage message);
+        Task OnMessageReceived(ChannelQueue queue, QueueMessage message);
+
+        /// <summary>
+        /// Called when a new message is received, no receiver found and queued.
+        /// </summary>
+        Task OnMessageQueued(ChannelQueue queue, QueueMessage message);
 
         /// <summary>
         /// Called when a message removed from the queue

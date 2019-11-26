@@ -15,19 +15,9 @@ namespace Twino.MQ.Channels
         Allow,
         
         /// <summary>
-        /// Allow to send the message to all clients
-        /// </summary>
-        AllowAll,
-        
-        /// <summary>
         /// Skip the send operation of the message to the client
         /// </summary>
-        Skip,
-        
-        /// <summary>
-        /// Skip the send operation of the message to all clients
-        /// </summary>
-        SkipAll
+        Skip
     }
 
     /// <summary>
@@ -73,13 +63,13 @@ namespace Twino.MQ.Channels
         /// This method is called for each message and each receiver.
         /// This method decides if it is sent.
         /// </summary>
-        Task<DeliveryDecision> OnBeforeSend(ChannelQueue queue, TmqMessage message, MqClient receiver);
+        Task<DeliveryDecision> OnBeforeSend(ChannelQueue queue, QueueMessage message, MqClient receiver);
         
         /// <summary>
         /// After sending message to a receiver.
         /// This method is called for each message and each receiver.
         /// </summary>
-        Task<DeliveryOperation> OnAfterSend(ChannelQueue queue, MessageDelivery delivery);
+        Task<DeliveryOperation> OnAfterSend(ChannelQueue queue, MessageDelivery delivery, MqClient receiver);
         
         /// <summary>
         /// Called when a message sending operation is completed.
@@ -104,7 +94,7 @@ namespace Twino.MQ.Channels
         /// <summary>
         /// Message is about to remove
         /// </summary>
-        Task OnRemove(ChannelQueue queue, QueueMessage delivery);
+        Task OnRemove(ChannelQueue queue, QueueMessage message);
 
         /// <summary>
         /// Called when message requested delivery but delivery message isn't received in time

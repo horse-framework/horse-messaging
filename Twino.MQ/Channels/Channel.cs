@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
@@ -88,9 +89,14 @@ namespace Twino.MQ.Channels
         private readonly SafeList<ChannelQueue> _queues;
 
         /// <summary>
-        /// Clients in the channel
+        /// Clients in the channel as thread-unsafe list
         /// </summary>
-        public IEnumerable<ChannelClient> Clients => _clients.GetUnsafeList();
+        public IEnumerable<ChannelClient> ClientsUnsafe => _clients.GetUnsafeList();
+        
+        /// <summary>
+        /// Clients in the channel as cloned list
+        /// </summary>
+        public List<ChannelClient> ClientsClone => _clients.GetAsClone();
 
         private readonly SafeList<ChannelClient> _clients;
 
@@ -221,6 +227,10 @@ namespace Twino.MQ.Channels
 
             if (EventHandler != null)
                 await EventHandler.ClientJoined(cc);
+
+            IEnumerable<ChannelQueue> list = _queues.GetAsClone();
+            foreach (ChannelQueue queue in list)
+                await queue.Trigger(cc);
 
             return true;
         }

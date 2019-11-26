@@ -1,5 +1,9 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
 
@@ -134,13 +138,10 @@ namespace Twino.MQ.Channels
         /// </summary>
         public async Task AddMessage(QueueMessage message)
         {
-            if (message.Message.HighPriority)
-                _prefentialMessages.Add(message);
-            else
-                _standardMessages.Add(message);
-
             if (EventHandler != null)
-                await EventHandler.OnMessageAdded(this, message);
+                await EventHandler.OnMessageReceived(this, message);
+
+            await Trigger(message);
         }
 
         /// <summary>
@@ -161,6 +162,107 @@ namespace Twino.MQ.Channels
                 await EventHandler.OnMessageRemoved(this, message);
 
             return true;
+        }
+
+        /// <summary>
+        /// Checks all pending messages and subscribed receivers.
+        /// If they should receive the messages, runs the process. 
+        /// Should be called when a new message is added.
+        /// </summary>
+        internal async Task Trigger(QueueMessage message)
+        {
+            if (Options.MessageQueuing)
+            {
+                if (message.Message.HighPriority)
+                    _prefentialMessages.Add(message);
+                else
+                    _standardMessages.Add(message);
+            }
+
+            await ProcesssMessage(message);
+        }
+
+        /// <summary>
+        /// Checks all pending messages and subscribed receivers.
+        /// If they should receive the messages, runs the process. 
+        /// Should be called when a new client is subscribed to the channel.
+        /// </summary>
+        internal async Task Trigger(ChannelClient subscribedClient)
+        {
+            if (_prefentialMessages.Count > 0)
+            {
+            }
+
+            if (_standardMessages.Count > 0)
+            {
+            }
+
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Searches receivers of the message and process the send operation
+        /// </summary>
+        private async Task ProcesssMessage(QueueMessage message)
+        {
+            DeliveryDecision decision = await DeliveryHandler.OnSendStarting(this, message);
+            if (decision == DeliveryDecision.Skip)
+            {
+                DeliveryOperation skipOperation = await DeliveryHandler.OnSendCompleted(this, message);
+
+                if (Options.MessageQueuing)
+                {
+                    if (message.Message.HighPriority)
+                        _prefentialMessages.Remove(message);
+                    else
+                        _standardMessages.Remove(message);
+                }
+
+                await DeliveryHandler.OnRemove(this, message);
+                return;
+            }
+
+            List<ChannelClient> clients = Channel.ClientsClone;
+            if (clients.Count == 0)
+            {
+                //there is no receiver
+                //todo: do something useful
+                return;
+            }
+
+            byte[] messageData; //todo: create first acquirer data
+
+            foreach (ChannelClient client in clients)
+            {
+                if (!client.Client.IsConnected)
+                    continue;
+
+                DeliveryDecision beforeSend = await DeliveryHandler.OnBeforeSend(this, message, client.Client);
+                if (beforeSend == DeliveryDecision.Skip)
+                {
+                    //todo: do cleaning
+                    return;
+                }
+
+                //todo: delivery deadline?
+                MessageDelivery delivery = new MessageDelivery(message, client);
+
+                //todo: send
+
+                bool firstAcquirer = message.Message.FirstAcquirer;
+                message.AddSend(delivery);
+
+                if (firstAcquirer && clients.Count > 1)
+                {
+                    messageData = null; //todo: set new data for next acquirers
+                }
+
+                DeliveryOperation afterSend = await DeliveryHandler.OnAfterSend(this, delivery, client.Client);
+            }
+
+            DeliveryOperation sendCompleted = await DeliveryHandler.OnSendCompleted(this, message);
+
+            //todo: do something useful with send completion
         }
 
         #endregion
