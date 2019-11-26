@@ -37,15 +37,5 @@ namespace Twino.MQ.Options
         /// If true, server creates unique id for each message.
         /// </summary>
         public bool UseMessageId { get; set; }
-        
-        /// <summary>
-        /// Queue capacity of prefential messages
-        /// </summary>
-        public int PrefentialQueueCapacity { get; set; }
-        
-        /// <summary>
-        /// Queue capacity of standart messages
-        /// </summary>
-        public int StandardQueueCapacity { get; set; }
     }
 }

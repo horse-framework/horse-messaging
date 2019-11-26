@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
@@ -72,18 +73,23 @@ namespace Twino.MQ.Channels
         /// </summary>
         public IMessageDeliveryHandler DeliveryHandler { get; }
 
-        private readonly SafeList<QueueMessage> _prefentialMessages;
-        private readonly SafeList<QueueMessage> _standardMessages;
+        private readonly Queue<QueueMessage> _prefentialMessages = new Queue<QueueMessage>();
+        private readonly Queue<QueueMessage> _standardMessages = new Queue<QueueMessage>();
 
         /// <summary>
         /// Standard prefential messages
         /// </summary>
-        public IEnumerable<QueueMessage> PrefentialMessages => _prefentialMessages.GetUnsafeList();
+        public Queue<QueueMessage> PrefentialMessages => _prefentialMessages;
 
         /// <summary>
         /// Standard queued messages
         /// </summary>
-        public IEnumerable<QueueMessage> StandardMessages => _standardMessages.GetUnsafeList();
+        public IEnumerable<QueueMessage> StandardMessages => _standardMessages;
+
+        /// <summary>
+        /// Locker object for trigger
+        /// </summary>
+        private object _locker = new object();
 
         #endregion
 
@@ -101,9 +107,6 @@ namespace Twino.MQ.Channels
 
             EventHandler = eventHandler;
             DeliveryHandler = deliveryHandler;
-
-            _prefentialMessages = new SafeList<QueueMessage>(options.PrefentialQueueCapacity);
-            _standardMessages = new SafeList<QueueMessage>(options.StandardQueueCapacity);
         }
 
         #endregion
@@ -171,15 +174,42 @@ namespace Twino.MQ.Channels
         /// </summary>
         internal async Task Trigger(QueueMessage message)
         {
-            if (Options.MessageQueuing)
+            Monitor.Enter(_locker);
+            try
             {
-                if (message.Message.HighPriority)
-                    _prefentialMessages.Add(message);
-                else
-                    _standardMessages.Add(message);
-            }
+                if (Options.MessageQueuing)
+                {
+                    QueueMessage peeked;
+                    if (message.Message.HighPriority)
+                    {
+                        lock (_prefentialMessages)
+                        {
+                            _prefentialMessages.Enqueue(message);
+                            peeked = _prefentialMessages.Peek();
+                        }
+                    }
+                    else
+                    {
+                        lock (_standardMessages)
+                        {
+                            _standardMessages.Enqueue(message);
+                            peeked = _standardMessages.Peek();
+                        }
+                    }
 
-            await ProcesssMessage(message);
+                    await ProcesssMessage(peeked, true);
+                }
+                else
+                    await ProcesssMessage(message, false);
+            }
+            catch (Exception ex)
+            {
+            }
+            finally
+            {
+                if (Monitor.IsEntered(_locker))
+                    Monitor.Exit(_locker);
+            }
         }
 
         /// <summary>
@@ -203,21 +233,40 @@ namespace Twino.MQ.Channels
         /// <summary>
         /// Searches receivers of the message and process the send operation
         /// </summary>
-        private async Task ProcesssMessage(QueueMessage message)
+        private async Task ProcesssMessage(QueueMessage message, bool peeked)
         {
             DeliveryDecision decision = await DeliveryHandler.OnSendStarting(this, message);
             if (decision == DeliveryDecision.Skip)
             {
                 DeliveryOperation skipOperation = await DeliveryHandler.OnSendCompleted(this, message);
                 //todo: skip operation decision
-                
-                if (Options.MessageQueuing)
+
+                if (Options.MessageQueuing && peeked)
                 {
                     if (message.Message.HighPriority)
+                    {
                         _prefentialMessages.Remove(message);
+                    }
                     else
                         _standardMessages.Remove(message);
                 }
+
+                if (skipOperation == DeliveryOperation.RemoveMessage || skipOperation == DeliveryOperation.SaveAndRemoveMessage)
+                {
+                    if (Options.MessageQueuing && peeked)
+                    {
+                        if (message.Message.HighPriority)
+                        {
+                            lock (_prefentialMessages)
+                                _prefentialMessages.Dequeue();
+                        }
+                        else
+                            lock (_standardMessages)
+                                _standardMessages.Dequeue();
+                    }
+                }
+
+                Monitor.Exit(_locker);
 
                 await DeliveryHandler.OnRemove(this, message);
                 return;
@@ -249,6 +298,8 @@ namespace Twino.MQ.Channels
                 MessageDelivery delivery = new MessageDelivery(message, client);
 
                 //todo: send
+
+                Monitor.Exit(_locker);
 
                 bool firstAcquirer = message.Message.FirstAcquirer;
                 message.AddSend(delivery);
