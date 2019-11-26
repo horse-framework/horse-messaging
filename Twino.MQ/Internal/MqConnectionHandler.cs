@@ -37,8 +37,8 @@ namespace Twino.MQ.Internal
 
             if (_server.Authenticator != null)
             {
-                bool allowed = await _server.Authenticator.Authenticate(_server, client);
-                if (!allowed)
+                client.IsAuthenticated = await _server.Authenticator.Authenticate(_server, client);
+                if (!client.IsAuthenticated)
                     return null;
             }
 
@@ -53,6 +53,11 @@ namespace Twino.MQ.Internal
 
         public Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, TmqMessage message)
         {
+            //check message target
+            //todo: target, another client
+            //todo: target, channel
+            //todo: target, server
+            
             throw new System.NotImplementedException();
         }
 
