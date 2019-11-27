@@ -73,6 +73,9 @@ namespace Twino.MQ.Channels
                 return _deliveries.Any(x => x.IsDelivered);
         }
 
+        /// <summary>
+        /// Sets message as sent and adds delivery to message deliveries
+        /// </summary>
         public void AddSend(MessageDelivery delivery)
         {
             if (Message.FirstAcquirer)
@@ -84,8 +87,12 @@ namespace Twino.MQ.Channels
                 _deliveries.Add(delivery);
         }
 
+        /// <summary>
+        /// Sets message as delivered and updates deliveries
+        /// </summary>
         public void AddDelivery()
         {
+            throw new NotImplementedException();
         }
     }
 }

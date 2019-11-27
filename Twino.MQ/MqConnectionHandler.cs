@@ -5,7 +5,7 @@ using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
 using Twino.Protocols.TMQ;
 
-namespace Twino.MQ.Internal
+namespace Twino.MQ
 {
     public class MqConnectionHandler : IProtocolConnectionHandler<TmqMessage>
     {
