@@ -1,5 +1,4 @@
 using System.Threading.Tasks;
-using Twino.MQ.Channels;
 using Twino.MQ.Clients;
 using Twino.Protocols.TMQ;
 
@@ -8,7 +7,7 @@ namespace Twino.MQ.Security
     /// <summary>
     /// Implementation of the object that checks authority of client operations
     /// </summary>
-    public interface IAuthoritative
+    public interface IClientAuthorization
     {
         /// <summary>
         /// Returns true, if client is allowed to join to the channel

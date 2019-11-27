@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Twino.Protocols.TMQ;
 
-namespace Twino.MQ.Channels
+namespace Twino.MQ
 {
     /// <summary>
     /// Queue TMQ Message
@@ -14,6 +14,11 @@ namespace Twino.MQ.Channels
         /// Message creation date
         /// </summary>
         public DateTime CreatedDate { get; set; }
+        
+        /// <summary>
+        /// The deadline that message expires
+        /// </summary>
+        public DateTime? Deadline { get; internal set; }
 
         /// <summary>
         /// TMQ Message
@@ -29,6 +34,12 @@ namespace Twino.MQ.Channels
         /// True, if message sending skipped by user
         /// </summary>
         public bool IsSkipped { get; internal set; }
+        
+        /// <summary>
+        /// If in pending duration, there is no available receivers, this value will be true.
+        /// That means, message isn't sent to anyone.
+        /// </summary>
+        public bool IsTimedOut { get; internal set; }
         
         /// <summary>
         /// True, if message is first in queue.

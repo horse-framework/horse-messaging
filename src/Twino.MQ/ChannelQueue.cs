@@ -5,7 +5,7 @@ using Twino.MQ.Clients;
 using Twino.MQ.Options;
 using Twino.Protocols.TMQ;
 
-namespace Twino.MQ.Channels
+namespace Twino.MQ
 {
     /// <summary>
     /// Queue status
@@ -74,7 +74,7 @@ namespace Twino.MQ.Channels
         /// High priority message list
         /// </summary>
         private readonly LinkedList<QueueMessage> _prefentialMessages = new LinkedList<QueueMessage>();
-        
+
         /// <summary>
         /// Low/Standard priority message list
         /// </summary>
@@ -95,6 +95,12 @@ namespace Twino.MQ.Channels
         /// </summary>
         private static readonly TmqWriter _writer = new TmqWriter();
 
+        /// <summary>
+        /// Time keeper for the queue.
+        /// Checks message receiver deadlines and delivery deadlines.
+        /// </summary>
+        private readonly QueueTimeKeeper _timeKeeper;
+
         #endregion
 
         #region Constructors
@@ -111,6 +117,9 @@ namespace Twino.MQ.Channels
 
             EventHandler = eventHandler;
             DeliveryHandler = deliveryHandler;
+
+            _timeKeeper = new QueueTimeKeeper(this, _prefentialMessages, _standardMessages);
+            _timeKeeper.Run();
         }
 
         #endregion
@@ -178,14 +187,34 @@ namespace Twino.MQ.Channels
         /// </summary>
         internal async Task Trigger(QueueMessage message)
         {
+            //if we have an option maximum wait duration for message, set it after message joined to the queue.
+            //time keeper will check this value and if message time is up, it will remove message from the queue.
+            if (Options.ReceiverWaitMaxDuration > TimeSpan.Zero)
+                message.Deadline = DateTime.UtcNow.Add(Options.ReceiverWaitMaxDuration);
+
+            //if message doesn't have message id and "UseMessageId" option is enabled, create new message id for the message
+            if (Options.UseMessageId && string.IsNullOrEmpty(message.Message.MessageId))
+                message.Message.MessageId = Channel.Server.MessageIdGenerator.Create();
+
+            //if we are hiding client names and message have it, remove client name from the message
+            if (Channel.Server.Options.HideClientNames && !string.IsNullOrEmpty(message.Message.Source))
+            {
+                message.Message.Source = null;
+                message.Message.SourceLength = 0;
+            }
+
+            //process the message
             QueueMessage held = null;
             try
             {
+                //queue the message
                 if (Options.MessageQueuing)
                 {
                     held = PullMessage(message);
                     await ProcesssMessage(held, true);
                 }
+
+                //process like MQTT
                 else
                     await ProcesssMessage(message, false);
             }
@@ -260,6 +289,9 @@ namespace Twino.MQ.Channels
         /// </summary>
         private async Task<DeliveryOperation> ProcesssMessage(QueueMessage message, bool onheld)
         {
+            //if we need delivery, we are sending this information to receivers that we require response
+            message.Message.ResponseRequired = Options.RequestDelivery;
+
             MessageDecision decision = await DeliveryHandler.OnSendStarting(this, message);
 
             //we save is chosen, save the message (if it's not saved before)
@@ -293,8 +325,10 @@ namespace Twino.MQ.Channels
                 return DeliveryOperation.Keep;
             }
 
-            //todo: where is the value?
+            //if we need delivery from receiver, it has a deadline.
             DateTime? deadline = null;
+            if (Options.RequestDelivery)
+                deadline = DateTime.UtcNow.Add(Options.DeliveryWaitMaxDuration);
 
             //create prepared message data
             byte[] messageData = await _writer.Create(message.Message);
@@ -306,6 +340,10 @@ namespace Twino.MQ.Channels
                 if (!client.Client.IsConnected)
                     continue;
 
+                //somehow if code comes here (it should not cuz of last "break" in this foreach, break
+                if (!message.Message.FirstAcquirer && Options.SendOnlyFirstAcquirer)
+                    break;
+
                 //call before send and check decision
                 DeliveryDecision beforeSend = await DeliveryHandler.OnBeforeSend(this, message, client.Client);
                 if (beforeSend == DeliveryDecision.Skip)
@@ -315,6 +353,9 @@ namespace Twino.MQ.Channels
                 MessageDelivery delivery = new MessageDelivery(message, client, deadline);
                 delivery.FirstAcquirer = message.Message.FirstAcquirer;
 
+                //adds the delivery to time keeper to check timing up
+                _timeKeeper.AddDeliveryCheck(delivery);
+
                 //send the message
                 await client.Client.SendAsync(messageData);
 
@@ -323,11 +364,15 @@ namespace Twino.MQ.Channels
                 bool firstAcquirer = message.Message.FirstAcquirer;
                 message.AddSend(delivery);
 
-                if (firstAcquirer && clients.Count > 1)
-                    messageData = await _writer.Create(message.Message);
-
                 //do after send operations for per message
                 await DeliveryHandler.OnAfterSend(this, delivery, client.Client);
+
+                //if we are sending to only first acquirer, break
+                if (Options.SendOnlyFirstAcquirer && firstAcquirer)
+                    break;
+
+                if (firstAcquirer && clients.Count > 1)
+                    messageData = await _writer.Create(message.Message);
             }
 
             //after all sending operations completed, calls implementation send completed method and complete the operation

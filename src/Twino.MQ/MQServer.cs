@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
-using Twino.MQ.Channels;
 using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
@@ -55,6 +54,11 @@ namespace Twino.MQ
         public IClientAuthenticator Authenticator { get; }
 
         /// <summary>
+        /// Authorization implementation for client operations
+        /// </summary>
+        public IClientAuthorization Authorization { get; }
+
+        /// <summary>
         /// Default channel event handler.
         /// If channels do not have their own custom event handlers, will event handler will run for them
         /// </summary>
@@ -95,11 +99,15 @@ namespace Twino.MQ
         /// <summary>
         /// Creates new Messaging Queue Server
         /// </summary>
-        public MQServer(ServerOptions serverOptions, MqServerOptions options, IClientAuthenticator authenticator = null)
+        public MQServer(ServerOptions serverOptions,
+                        MqServerOptions options,
+                        IClientAuthenticator authenticator = null,
+                        IClientAuthorization authorization = null)
         {
             ServerOptions = serverOptions;
             Options = options;
             Authenticator = authenticator;
+            Authorization = authorization;
 
             _channels = new SafeList<Channel>(256);
             _clients = new SafeList<MqClient>(2048);

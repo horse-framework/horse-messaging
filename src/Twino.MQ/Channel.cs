@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
 using Twino.MQ.Security;
 
-namespace Twino.MQ.Channels
+namespace Twino.MQ
 {
     /// <summary>
     /// Channel status
@@ -186,6 +187,15 @@ namespace Twino.MQ.Channels
         {
             if (deliveryHandler == null)
                 throw new NoNullAllowedException("Delivery handler cannot be null.");
+
+            //multiple queues are not allowed
+            if (!Options.AllowMultipleQueues && _queues.Count > 0)
+                return null;
+
+            //if content type is not allowed for this channel, return null
+            if (Options.AllowedContentTypes != null && Options.AllowedContentTypes.Length > 0)
+                if (!Options.AllowedContentTypes.Contains(contentType))
+                    return null;
 
             ChannelQueue queue = _queues.Find(x => x.ContentType == contentType);
 

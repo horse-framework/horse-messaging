@@ -1,5 +1,4 @@
 using System.Threading.Tasks;
-using Twino.MQ.Channels;
 using Twino.MQ.Clients;
 
 namespace Twino.MQ.Security

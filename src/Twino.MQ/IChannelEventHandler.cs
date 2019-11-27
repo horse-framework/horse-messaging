@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 
-namespace Twino.MQ.Channels
+namespace Twino.MQ
 {
     /// <summary>
     /// Channel event handler implementation (client join/leave, queue created/removed, status changes)

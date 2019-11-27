@@ -1,5 +1,4 @@
 using System;
-using Twino.MQ.Channels;
 
 namespace Twino.MQ.Clients
 {

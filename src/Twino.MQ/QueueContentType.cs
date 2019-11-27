@@ -1,4 +1,4 @@
-namespace Twino.MQ.Channels
+namespace Twino.MQ
 {
     /// <summary>
     /// Queue content type object

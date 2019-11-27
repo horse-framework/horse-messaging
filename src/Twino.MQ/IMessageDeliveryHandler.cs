@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.Protocols.TMQ;
 
-namespace Twino.MQ.Channels
+namespace Twino.MQ
 {
     /// <summary>
     /// Message sending decisions

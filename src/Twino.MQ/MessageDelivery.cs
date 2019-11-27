@@ -1,7 +1,7 @@
 using System;
 using Twino.MQ.Clients;
 
-namespace Twino.MQ.Channels
+namespace Twino.MQ
 {
     /// <summary>
     /// Message delivery data for a single message to a single receiver
@@ -39,6 +39,11 @@ namespace Twino.MQ.Channels
         /// If true, delivery is received (or response)
         /// </summary>
         public bool IsDelivered { get; private set; }
+        
+        /// <summary>
+        /// If true, receivers does not send delivery message in delivery pending duration.
+        /// </summary>
+        public bool IsDeliveryTimedUp { get; private set; }
 
         /// <summary>
         /// Delivery receive time
@@ -95,6 +100,12 @@ namespace Twino.MQ.Channels
         {
             IsDelivered = true;
             DeliveryDate = DateTime.UtcNow;
+        }
+
+        public void MarkAsDeliveryTimedUp()
+        {
+            IsDelivered = false;
+            IsDeliveryTimedUp = true;
         }
 
         #endregion

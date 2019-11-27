@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace Twino.MQ.Channels
+namespace Twino.MQ
 {
     /// <summary>
     /// Messaging queue event handler implementation (subs, unsubs, message add/remove, status changes)

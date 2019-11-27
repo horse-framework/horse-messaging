@@ -7,7 +7,7 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.MQ
 {
-    public class MqConnectionHandler : IProtocolConnectionHandler<TmqMessage>
+    internal class MqConnectionHandler : IProtocolConnectionHandler<TmqMessage>
     {
         private readonly MQServer _server;
 
@@ -54,7 +54,7 @@ namespace Twino.MQ
         public Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, TmqMessage message)
         {
             //check message target
-            //todo: target, another client
+            //todo: target, another client (if hide client names active, do not process the message)
             //todo: target, channel
             //todo: target, server
             
