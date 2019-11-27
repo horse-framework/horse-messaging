@@ -25,6 +25,11 @@ namespace Twino.MQ
         /// </summary>
         public MqServerOptions Options { get; }
 
+        /// <summary>
+        /// Twino Server options
+        /// </summary>
+        public ServerOptions ServerOptions { get; }
+
         private readonly SafeList<Channel> _channels;
 
         /// <summary>
@@ -91,13 +96,41 @@ namespace Twino.MQ
         /// <summary>
         /// Creates new Messaging Queue Server
         /// </summary>
-        public MQServer(MqServerOptions options, IClientAuthenticator authenticator = null)
+        public MQServer(ServerOptions serverOptions, MqServerOptions options, IClientAuthenticator authenticator = null)
         {
+            ServerOptions = serverOptions;
             Options = options;
             Authenticator = authenticator;
 
             _channels = new SafeList<Channel>(256);
             _clients = new SafeList<MqClient>(2048);
+        }
+
+        #endregion
+
+        #region Start - Stop
+
+        /// <summary>
+        /// Starts server and accepts the TCP connections
+        /// </summary>
+        public void Start()
+        {
+            Server = new TwinoServer(ServerOptions);
+            MqConnectionHandler handler = new MqConnectionHandler(this);
+            Server.UseTmq(handler);
+            Server.Start();
+        }
+
+        /// <summary>
+        /// Stops server
+        /// </summary>
+        public void Stop()
+        {
+            if (Server == null)
+                throw new InvalidOperationException("Server stop error: Server is not running.");
+
+            Server.Stop();
+            Server = null;
         }
 
         #endregion
@@ -210,34 +243,6 @@ namespace Twino.MQ
         public MqClient FindClient(string uniqueId)
         {
             return _clients.Find(x => x.UniqueId == uniqueId);
-        }
-
-        #endregion
-
-        #region Start - Stop
-
-        /// <summary>
-        /// Starts server and accepts the TCP connections
-        /// </summary>
-        public void Start()
-        {
-            ServerOptions serverOptions = new ServerOptions();
-            Server = new TwinoServer(serverOptions);
-            MqConnectionHandler handler = new MqConnectionHandler(this);
-            Server.UseTmq(handler);
-            Server.Start();
-        }
-
-        /// <summary>
-        /// Stops server
-        /// </summary>
-        public void Stop()
-        {
-            if (Server == null)
-                throw new InvalidOperationException("Server stop error: Server is not running.");
-
-            Server.Stop();
-            Server = null;
         }
 
         #endregion
