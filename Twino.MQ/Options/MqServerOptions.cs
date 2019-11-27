@@ -6,23 +6,8 @@ namespace Twino.MQ.Options
     public class MqServerOptions : ChannelOptions
     {
         /// <summary>
-        /// Server default TTL value
-        /// </summary>
-        public int Ttl { get; set; }
-
-        /// <summary>
         /// Server port listening options
         /// </summary>
         public ListenerOptions[] Listeners { get; set; }
-        
-        /// <summary>
-        /// Maximum client count
-        /// </summary>
-        public int ClientCapacity { get; set; }
-        
-        /// <summary>
-        /// Maximum channel count
-        /// </summary>
-        public int ChannelCapacity { get; set; }
     }
 }

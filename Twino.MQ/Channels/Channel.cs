@@ -119,8 +119,8 @@ namespace Twino.MQ.Channels
             EventHandler = eventHandler;
             DeliveryHandler = deliveryHandler;
 
-            _queues = new SafeList<ChannelQueue>(options.QueueCapacity);
-            _clients = new SafeList<ChannelClient>(server.Options.ClientCapacity);
+            _queues = new SafeList<ChannelQueue>(8);
+            _clients = new SafeList<ChannelClient>(256);
         }
 
         #endregion

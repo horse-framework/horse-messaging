@@ -15,10 +15,5 @@ namespace Twino.MQ.Options
         /// Allowed content type for the channel
         /// </summary>
         public ushort[] AllowedContentTypes { get; set; }
-
-        /// <summary>
-        /// Maximum queue count
-        /// </summary>
-        public int QueueCapacity { get; set; }
     }
 }

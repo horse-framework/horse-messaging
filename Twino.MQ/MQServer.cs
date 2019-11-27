@@ -96,8 +96,8 @@ namespace Twino.MQ
             Options = options;
             Authenticator = authenticator;
 
-            _channels = new SafeList<Channel>(options.ChannelCapacity);
-            _clients = new SafeList<MqClient>(options.ClientCapacity);
+            _channels = new SafeList<Channel>(256);
+            _clients = new SafeList<MqClient>(2048);
         }
 
         #endregion

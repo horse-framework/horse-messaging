@@ -6,11 +6,6 @@ namespace Twino.MQ.Options
     public class ClientOptions
     {
         /// <summary>
-        /// If true, bypass authentication and clients can create channels
-        /// </summary>
-        public bool AllowCreateChannels { get; set; }
-
-        /// <summary>
         /// If true, bypass authentication and clients can create new queues
         /// </summary>
         public bool AllowCreateQueues { get; set; }
@@ -19,11 +14,6 @@ namespace Twino.MQ.Options
         /// If true, bypass authentication and clients can join all channels
         /// </summary>
         public bool AllowJoinChannels { get; set; }
-
-        /// <summary>
-        /// If true, bypass authentication and clients can subscribe to all queues
-        /// </summary>
-        public bool AllowSubscribeQueues { get; set; }
 
         /// <summary>
         /// If true, clients can send direct messages between
