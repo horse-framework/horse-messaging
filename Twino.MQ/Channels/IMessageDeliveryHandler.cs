@@ -8,6 +8,32 @@ namespace Twino.MQ.Channels
     /// <summary>
     /// Message sending decisions
     /// </summary>
+    public enum MessageDecision
+    {
+        /// <summary>
+        /// Allow to send the message to the client
+        /// </summary>
+        Allow,
+
+        /// <summary>
+        /// Saves message and allows to send
+        /// </summary>
+        AllowAndSave,
+
+        /// <summary>
+        /// Skips the send operation of the message to the client
+        /// </summary>
+        Skip,
+
+        /// <summary>
+        /// Saves message and  skips the send operation of the message to the client
+        /// </summary>
+        SkipAndSave
+    }
+
+    /// <summary>
+    /// Message sending decisions
+    /// </summary>
     public enum DeliveryDecision
     {
         /// <summary>
@@ -52,13 +78,13 @@ namespace Twino.MQ.Channels
         /// <summary>
         /// When a client sends a message to the server.
         /// </summary>
-        Task<DeliveryDecision> OnReceived(ChannelQueue queue, QueueMessage message, MqClient sender);
+        Task<MessageDecision> OnReceived(ChannelQueue queue, QueueMessage message, MqClient sender);
 
         /// <summary>
         /// Before send the message.
         /// When this method is called, message isn't sent to anyone.
         /// </summary>
-        Task<DeliveryDecision> OnSendStarting(ChannelQueue queue, QueueMessage message);
+        Task<MessageDecision> OnSendStarting(ChannelQueue queue, QueueMessage message);
 
         /// <summary>
         /// Before sending message to a receiver.

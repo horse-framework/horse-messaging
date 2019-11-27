@@ -70,7 +70,14 @@ namespace Twino.MQ.Channels
         /// </summary>
         public IMessageDeliveryHandler DeliveryHandler { get; }
 
+        /// <summary>
+        /// High priority message list
+        /// </summary>
         private readonly LinkedList<QueueMessage> _prefentialMessages = new LinkedList<QueueMessage>();
+        
+        /// <summary>
+        /// Low/Standard priority message list
+        /// </summary>
         private readonly LinkedList<QueueMessage> _standardMessages = new LinkedList<QueueMessage>();
 
         /// <summary>
@@ -83,6 +90,9 @@ namespace Twino.MQ.Channels
         /// </summary>
         public IEnumerable<QueueMessage> StandardMessages => _standardMessages;
 
+        /// <summary>
+        /// Default TMQ Writer class for the queue
+        /// </summary>
         private static readonly TmqWriter _writer = new TmqWriter();
 
         #endregion
@@ -250,10 +260,15 @@ namespace Twino.MQ.Channels
         /// </summary>
         private async Task<DeliveryOperation> ProcesssMessage(QueueMessage message, bool onheld)
         {
-            DeliveryDecision decision = await DeliveryHandler.OnSendStarting(this, message);
+            MessageDecision decision = await DeliveryHandler.OnSendStarting(this, message);
+
+            //we save is chosen, save the message (if it's not saved before)
+            if (decision == MessageDecision.AllowAndSave || decision == MessageDecision.SkipAndSave)
+                if (!message.IsSaved)
+                    message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
 
             //if user skips the message, complete operation as skipped
-            if (decision == DeliveryDecision.Skip)
+            if (decision == MessageDecision.Skip || decision == MessageDecision.SkipAndSave)
             {
                 message.IsSkipped = true;
                 DeliveryOperation skipOperation = await DeliveryHandler.OnSendCompleted(this, message);
