@@ -1,36 +1,21 @@
 # Twino
 
-**Twino** is a .NET Core Web Server.<br>
-Twino provides advanced WebSocket server management, messaging queue infrastructure, HTTP Server, MVC pattern similar to ASP.NET Core and WebSocket clients.
+**Twino** is a .NET Core TCP Server provides multiple protocols on same host.<br>
+Twino supports HTTP, WebSocket and TMQ (Twino messaging queue) protocols. Also other protocols can be implemented.<br><br>
+
+Twino HTTP Server supports MVC architecture.<br>
+Twino WebSockets provides advanced WebSocket server management<br>
+Twino MQ provides quick messaging queue server library<br>
+Twino IOC can be used on all protocols.
 
 ## Why Twino?
 
 - High performance (in many cases, as fast as kestrel)
-- Twino is high scalable advanced websocket server with amazing client management.
-- WebSocket and HTTP server on same project, same port, same host.
+- Twino has high scalable advanced websocket server with amazing client management.
+- Multiple protocols can be used on same project, same port, same host.
 - Twino.Mvc has nearly all features ASP.NET MVC has, and you write nearly same code.
-- Websocket Clients with sweet connectors and you can send and receive objects via websocket.
-
-### Libraries
-
-**Twino.Core:** Twino Core contains all common features for all Twino libraries. TCP connection handling, DNS resolving, HTTP Procotol implementation, WebSocket Protocol implementation etc.<br>
-**Twino.Server:** Basic HTTP and WebSocket server. Accepts HTTP and WebSocket requests and process these requests.<br>
-**Twino.Client:** Twino WebSocket Client. Also includes connectors for specific purposes: AbsoluteConnector, StickyConnector, SingleMessageConnector etc.<br>
-**Twino.Mvc:** MVC Architecture for Twino.Server. It's quite similar to ASP.NET Core. Supports most useful attributes of ASP.NET Core, has its own authentication, authorization and policy management system. Has its own Service container, Middleware system and action filters.<br>
-**Twino.Mvc.Auth.Jwt:** JSON Web Token implementation for Twino.Mvc library<br>
-**Twino.Ioc:** IOC, dependency injection library. Created to use in Twino.Mvc. It's also can be used independently.<br>
-**Twino.SocketModels:** Makes WebSocket communication super easy and event/model based. With Twino.SocketModels, you do not need any knowledge about WebSocket protocol to use it.<br>
-
-##### NuGet Packages
-
-[Twino.Core NuGet Package](https://www.nuget.org/packages/Twino.Core)<br>
-[Twino.Server NuGet Package](https://www.nuget.org/packages/Twino.Server)<br>
-[Twino.Client NuGet Package](https://www.nuget.org/packages/Twino.Client)<br>
-[Twino.Mvc NuGet Package](https://www.nuget.org/packages/Twino.Mvc)<br>
-[Twino.Mvc.Auth.Jwt NuGet Package](https://www.nuget.org/packages/Twino.Mvc.Auth.Jwt)<br>
-[Twino.Ioc NuGet Package](https://www.nuget.org/packages/Twino.Ioc)<br>
-[Twino.SocketModels NuGet Package](https://www.nuget.org/packages/Twino.SocketModels)<br>
-<br>
+- Twino has sweet client connectors for WebSocket and TMQ protocols.
+- Twino MQ is not a executable messaging queue server. It's library and you can create your own MQ server with a few interface implementations.
 
 ### Features
 
@@ -69,6 +54,9 @@ Some of Twino features are listed below:
 - Object based data transfer with IModelWriter and IModelReader interfaces
 - Custom and fast serialization helper libarary for objects
 
+#### MQ
+
+- todo...
 
 ### Basic MVC Example
 
