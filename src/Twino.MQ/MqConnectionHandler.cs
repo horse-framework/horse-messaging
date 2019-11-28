@@ -1,3 +1,5 @@
+using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Core.Protocols;
@@ -10,6 +12,7 @@ namespace Twino.MQ
     internal class MqConnectionHandler : IProtocolConnectionHandler<TmqMessage>
     {
         private readonly MQServer _server;
+        private static readonly TmqWriter _writer = new TmqWriter();
 
         public MqConnectionHandler(MQServer server)
         {
@@ -18,6 +21,8 @@ namespace Twino.MQ
 
         public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
+            HeaderMessageBuilder builder = HeaderMessageBuilder.Create();
+
             string clientId;
             bool found = data.Properties.TryGetValue(TmqHeaders.CLIENT_ID, out clientId);
             if (!found)
@@ -26,7 +31,11 @@ namespace Twino.MQ
             //if another client with same unique id is online, do not accept new client
             MqClient foundClient = _server.FindClient(clientId);
             if (foundClient != null)
+            {
+                builder.Add(TmqHeaders.CLIENT_ACCEPT, TmqHeaders.VALUE_BUSY);
+                await connection.Socket.SendAsync(await _writer.Create(builder.Get()));
                 return null;
+            }
 
             MqClient client = new MqClient(server, connection, _server.MessageIdGenerator, true);
             client.Data = data;
@@ -39,15 +48,21 @@ namespace Twino.MQ
             {
                 client.IsAuthenticated = await _server.Authenticator.Authenticate(_server, client);
                 if (!client.IsAuthenticated)
+                {
+                    builder.Add(TmqHeaders.CLIENT_ACCEPT, TmqHeaders.VALUE_UNAUTHORIZED);
+                    await client.SendAsync(builder.Get());
                     return null;
+                }
             }
 
             _server.AddClient(client);
 
-            //todo:
-            //send client info to client as response
-            //if client's unique id has changed, client must be notified
+            //send response message to the client, client should check unique id,
+            //if client's unique id isn't permitted, server will create new id for client and send it as response
+            builder.Add(TmqHeaders.CLIENT_ACCEPT, TmqHeaders.VALUE_ACCEPTED);
+            builder.Add(TmqHeaders.CLIENT_ID, client.UniqueId);
 
+            await client.SendAsync(builder.Get());
             return client;
         }
 
@@ -57,7 +72,7 @@ namespace Twino.MQ
             //todo: target, another client (if hide client names active, do not process the message)
             //todo: target, channel
             //todo: target, server
-            
+
             throw new System.NotImplementedException();
         }
 

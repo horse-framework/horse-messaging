@@ -67,7 +67,7 @@ namespace Twino.Protocols.TMQ
         /// Message content length
         /// </summary>
         public ulong Length { get; set; }
-        
+
         /// <summary>
         /// Content type code.
         /// May be useful to know how content should be read, convert, serialize/deserialize
@@ -104,6 +104,15 @@ namespace Twino.Protocols.TMQ
                 return string.Empty;
 
             return Encoding.UTF8.GetString(Content.ToArray());
+        }
+
+        public void SetStringContent(string content)
+        {
+            if (string.IsNullOrEmpty(content))
+                return;
+
+            Content = new MemoryStream(Encoding.UTF8.GetBytes(content));
+            CalculateLengths();
         }
     }
 }
