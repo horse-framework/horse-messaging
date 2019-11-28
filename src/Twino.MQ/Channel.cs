@@ -152,6 +152,14 @@ namespace Twino.MQ
         #region Queue Actions
 
         /// <summary>
+        /// Finds queue by content type
+        /// </summary>
+        public ChannelQueue FindQueue(ushort contentType)
+        {
+            return _queues.Find(x => x.ContentType == contentType);
+        }
+        
+        /// <summary>
         /// Creates new queue in the channel with default options and default handlers
         /// </summary>
         public async Task<ChannelQueue> CreateQueue(ushort contentType)

@@ -67,9 +67,6 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public bool Send(TmqMessage message)
         {
-            if (string.IsNullOrEmpty(message.Source))
-                message.Source = KnownTargets.HEADER;
-
             if (UseUniqueMessageId && string.IsNullOrEmpty(message.MessageId))
                 message.MessageId = _uniqueIdGenerator.Create();
 
@@ -84,9 +81,6 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public async Task<bool> SendAsync(TmqMessage message)
         {
-            if (string.IsNullOrEmpty(message.Source))
-                message.Source = KnownTargets.HEADER;
-
             if (UseUniqueMessageId && string.IsNullOrEmpty(message.MessageId))
                 message.MessageId = _uniqueIdGenerator.Create();
 

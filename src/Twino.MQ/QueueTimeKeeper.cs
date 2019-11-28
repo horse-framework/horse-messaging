@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Twino.MQ.Clients;
 
 namespace Twino.MQ
 {
@@ -131,5 +132,21 @@ namespace Twino.MQ
             lock (_addingDeliveries)
                 _addingDeliveries.Add(delivery);
         }
+
+        /// <summary>
+        /// Finds delivery from message id
+        /// </summary>
+        public MessageDelivery FindDelivery(MqClient client, string messageId)
+        {
+            MessageDelivery delivery;
+            
+            lock (_deliveries)
+                delivery = _deliveries.Find(x => x.Receiver != null
+                                                 && x.Receiver.Client.UniqueId == client.UniqueId
+                                                 && x.Message.Message.MessageId == messageId);
+
+            return delivery;
+        }
+        
     }
 }

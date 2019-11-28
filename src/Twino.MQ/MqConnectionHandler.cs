@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Core.Protocols;
@@ -9,6 +10,8 @@ namespace Twino.MQ
 {
     internal class MqConnectionHandler : IProtocolConnectionHandler<TmqMessage>
     {
+        #region Fields
+
         private readonly MQServer _server;
         private static readonly TmqWriter _writer = new TmqWriter();
 
@@ -17,13 +20,15 @@ namespace Twino.MQ
             _server = server;
         }
 
+        #endregion
+
+        #region Connection
+
         /// <summary>
         /// Called when a new client is connected via TMQ protocol
         /// </summary>
         public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
-            HeaderMessageBuilder builder = HeaderMessageBuilder.Create();
-
             string clientId;
             bool found = data.Properties.TryGetValue(TmqHeaders.CLIENT_ID, out clientId);
             if (!found)
@@ -33,13 +38,12 @@ namespace Twino.MQ
             MqClient foundClient = _server.FindClient(clientId);
             if (foundClient != null)
             {
-                builder.Add(TmqHeaders.CLIENT_ACCEPT, TmqHeaders.VALUE_BUSY);
-                await connection.Socket.SendAsync(await _writer.Create(builder.Get()));
+                await connection.Socket.SendAsync(await _writer.Create(MessageBuilder.Busy()));
                 return null;
             }
 
             //creates new mq client object 
-            MqClient client = new MqClient(server, connection, _server.MessageIdGenerator, true);
+            MqClient client = new MqClient(server, connection, _server.MessageIdGenerator, _server.Options.UseMessageId);
             client.Data = data;
             client.UniqueId = clientId;
             client.Token = data.Properties.GetStringValue(TmqHeaders.CLIENT_TOKEN);
@@ -52,8 +56,7 @@ namespace Twino.MQ
                 client.IsAuthenticated = await _server.Authenticator.Authenticate(_server, client);
                 if (!client.IsAuthenticated)
                 {
-                    builder.Add(TmqHeaders.CLIENT_ACCEPT, TmqHeaders.VALUE_UNAUTHORIZED);
-                    await client.SendAsync(builder.Get());
+                    await client.SendAsync(MessageBuilder.Unauthorized());
                     return null;
                 }
             }
@@ -63,65 +66,8 @@ namespace Twino.MQ
 
             //send response message to the client, client should check unique id,
             //if client's unique id isn't permitted, server will create new id for client and send it as response
-            builder.Add(TmqHeaders.CLIENT_ACCEPT, TmqHeaders.VALUE_ACCEPTED);
-            builder.Add(TmqHeaders.CLIENT_ID, client.UniqueId);
-
-            await client.SendAsync(builder.Get());
+            await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
             return client;
-        }
-
-        /// <summary>
-        /// Called when a new message received from the client
-        /// </summary>
-        public Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, TmqMessage message)
-        {
-            //check message target
-            //todo: target, another client (if hide client names active, do not process the message)
-            //todo: target, channel
-            //todo: target, server
-
-            switch (message.Type)
-            {
-                //client sends a queue message in a channel
-                case MessageType.Channel:
-                    break;
-
-                //clients sends a message to another client
-                case MessageType.Client:
-                    break;
-
-                //client sends a delivery message of a message
-                case MessageType.Delivery:
-                    break;
-
-                //client sends PONG message
-                case MessageType.Pong:
-                    break;
-
-                //client sends a response message for a message
-                case MessageType.Response:
-                    break;
-
-                //client sends a message to the server
-                //this message may be join, header, info, some another server message
-                case MessageType.Server:
-                    break;
-
-                //close the client's connection
-                case MessageType.Terminate:
-                    break;
-
-                //PING messages are sent from servers, not from clients
-                //case MessageType.Ping: break;
-
-                //Twino.MQ does not support redirection
-                //case MessageType.Redirect: break;
-
-                //Twino.MQ does not support other message types
-                //case MessageType.Other: break;
-            }
-
-            throw new System.NotImplementedException();
         }
 
         /// <summary>
@@ -132,5 +78,180 @@ namespace Twino.MQ
             MqClient mqClient = (MqClient) client;
             await _server.RemoveClient(mqClient);
         }
+
+        #endregion
+
+        #region Receive
+
+        /// <summary>
+        /// Called when a new message received from the client
+        /// </summary>
+        public async Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, TmqMessage message)
+        {
+            MqClient mc = (MqClient) client;
+
+            //if client sends anonymous messages and server needs message id, generate new
+            if (string.IsNullOrEmpty(message.Source))
+            {
+                //anonymous messages can't be responsed, do not wait response
+                if (message.ResponseRequired)
+                    message.ResponseRequired = false;
+
+                if (_server.Options.UseMessageId)
+                {
+                    message.MessageId = _server.MessageIdGenerator.Create();
+                    message.SourceLength = message.MessageId.Length;
+                }
+            }
+
+            //if client sending messages like someone another, kick him
+            else if (message.Source != mc.UniqueId)
+            {
+                client.Disconnect();
+                return;
+            }
+
+            switch (message.Type)
+            {
+                //client sends a queue message in a channel
+                case MessageType.Channel:
+                    await ChannelMessageReceived(server, mc, message);
+                    break;
+
+                //clients sends a message to another client
+                case MessageType.Client:
+                    await ClientMessageReceived(server, mc, message);
+                    break;
+
+                //client sends a delivery message of a message
+                case MessageType.Delivery:
+                    await DeliveryMessageReceived(server, mc, message);
+                    break;
+
+                //client sends a response message for a message
+                case MessageType.Response:
+                    await ResponseMessageReceived(server, mc, message);
+                    break;
+
+                //client sends a message to the server
+                //this message may be join, header, info, some another server message
+                case MessageType.Server:
+                    await ServerMessageReceived(server, mc, message);
+                    break;
+
+                //client sends PONG message
+                case MessageType.Pong:
+                    mc.Pong();
+                    break;
+
+                //close the client's connection
+                case MessageType.Terminate:
+                    mc.Disconnect();
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Clients send a server message
+        /// </summary>
+        private async Task ServerMessageReceived(ITwinoServer server, MqClient client, TmqMessage message)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        /// <summary>
+        /// Client sends a message to another client
+        /// </summary>
+        private async Task ClientMessageReceived(ITwinoServer server, MqClient client, TmqMessage message)
+        {
+            //peer to peer messaging disabled the clients hiding names
+            if (_server.Options.HideClientNames)
+                await client.SendAsync(MessageBuilder.Unauthorized());
+
+            //find the receiver
+            MqClient other = _server.FindClient(message.Target);
+            if (other == null)
+            {
+                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                return;
+            }
+
+            //check sending message authority
+            if (_server.Authorization != null)
+            {
+                bool grant = await _server.Authorization.CanMessageToPeer(client, message, other);
+                if (!grant)
+                {
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                    return;
+                }
+            }
+
+            //send the message
+            await other.SendAsync(message);
+        }
+
+        /// <summary>
+        /// Client sends a message to the queue
+        /// </summary>
+        private async Task ChannelMessageReceived(ITwinoServer server, MqClient client, TmqMessage message)
+        {
+            //find channel and queue
+            Channel channel = _server.FindChannel(message.Target);
+            if (channel == null)
+            {
+                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                return;
+            }
+
+            ChannelQueue queue = channel.FindQueue(message.ContentType);
+            if (queue == null)
+            {
+                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                return;
+            }
+
+            //check authority
+            if (_server.Authorization != null)
+            {
+                bool grant = await _server.Authorization.CanMessageToQueue(client, queue, message);
+                if (!grant)
+                {
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                    return;
+                }
+            }
+
+            //push the message
+            QueueMessage queueMessage = new QueueMessage(message);
+            await queue.Push(queueMessage);
+        }
+
+        /// <summary>
+        /// Client sends a delivery message
+        /// </summary>
+        private async Task DeliveryMessageReceived(ITwinoServer server, MqClient client, TmqMessage message)
+        {
+            //find channel and queue
+            Channel channel = _server.FindChannel(message.Target);
+            if (channel == null)
+                return;
+
+            ChannelQueue queue = channel.FindQueue(message.ContentType);
+            if (queue == null)
+                return;
+
+            await queue.MessageDelivered(client, message);
+        }
+
+        /// <summary>
+        /// Client sends a response message
+        /// </summary>
+        private async Task ResponseMessageReceived(ITwinoServer server, MqClient client, TmqMessage message)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        #endregion
     }
 }

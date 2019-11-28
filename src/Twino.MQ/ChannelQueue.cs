@@ -150,17 +150,6 @@ namespace Twino.MQ
         #region Messaging Actions
 
         /// <summary>
-        /// Adds a new message into the queue
-        /// </summary>
-        public async Task AddMessage(QueueMessage message)
-        {
-            if (EventHandler != null)
-                await EventHandler.OnMessageReceived(this, message);
-
-            await Trigger(message);
-        }
-
-        /// <summary>
         /// Removes the message from the queue.
         /// Remove operation will be canceled If force is false and message is not sent
         /// </summary>
@@ -181,12 +170,14 @@ namespace Twino.MQ
         }
 
         /// <summary>
-        /// Checks all pending messages and subscribed receivers.
-        /// If they should receive the messages, runs the process. 
-        /// Should be called when a new message is added.
+        /// Pushes a message into the queue.
         /// </summary>
-        internal async Task Trigger(QueueMessage message)
+        internal async Task Push(QueueMessage message)
         {
+            //fire message receive event
+            if (EventHandler != null)
+                await EventHandler.OnMessageReceived(this, message);
+
             //if we have an option maximum wait duration for message, set it after message joined to the queue.
             //time keeper will check this value and if message time is up, it will remove message from the queue.
             if (Options.ReceiverWaitMaxDuration > TimeSpan.Zero)
@@ -463,6 +454,19 @@ namespace Twino.MQ
 
             //remove the message
             await DeliveryHandler.OnRemove(this, message);
+        }
+
+        /// <summary>
+        /// Called when a delivery message is received from the client
+        /// </summary>
+        internal async Task MessageDelivered(MqClient from, TmqMessage deliveryMessage)
+        {
+            MessageDelivery delivery = _timeKeeper.FindDelivery(from, deliveryMessage.MessageId);
+            
+            if (delivery != null)
+                delivery.MarkAsDelivered();
+
+            await DeliveryHandler.OnDelivery(this, deliveryMessage, delivery);
         }
 
         #endregion

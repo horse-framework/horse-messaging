@@ -107,7 +107,7 @@ namespace Twino.MQ
         /// <summary>
         /// Called when a receiver sends a delivery message.
         /// </summary>
-        Task OnDelivery(ChannelQueue queue, MessageDelivery delivery);
+        Task OnDelivery(ChannelQueue queue, TmqMessage deliveryMessage, MessageDelivery delivery);
 
         /// <summary>
         /// Called when a receiver sends a response message.

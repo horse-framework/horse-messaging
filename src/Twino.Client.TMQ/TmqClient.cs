@@ -204,7 +204,7 @@ namespace Twino.Client.TMQ
             TmqMessage message = new TmqMessage();
             message.FirstAcquirer = true;
             message.Type = MessageType.Server;
-            message.Target = KnownTargets.HEADER;
+            message.ContentType = KnownContentTypes.Hello;
 
             message.Content = new MemoryStream();
 

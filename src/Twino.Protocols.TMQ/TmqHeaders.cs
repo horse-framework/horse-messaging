@@ -1,4 +1,4 @@
-namespace Twino.MQ.Helpers
+namespace Twino.Protocols.TMQ
 {
     public class TmqHeaders
     {
@@ -11,9 +11,5 @@ namespace Twino.MQ.Helpers
         public static readonly string VALUE_ACCEPTED = "Accepted";
         public static readonly string VALUE_UNAUTHORIZED = "Unauthorized";
         public static readonly string VALUE_BUSY = "Busy";
-
-        public static readonly string SOURCE_TARGET_SERVER = "SERVER";
-
-        public static readonly ushort HEADER_CONTENT_TYPE = 101;
     }
 }

@@ -27,7 +27,7 @@ namespace Twino.MQ.Security
         /// <summary>
         /// Returns true, if client can send a peer message
         /// </summary>
-        Task<bool> CanMessageToPeer(MqClient client, TmqMessage message);
+        Task<bool> CanMessageToPeer(MqClient sender, TmqMessage message, MqClient receiver);
 
         /// <summary>
         /// Returns true, if client can send a message to the queue

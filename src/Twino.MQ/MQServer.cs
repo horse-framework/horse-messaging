@@ -219,6 +219,15 @@ namespace Twino.MQ
             _channels.Add(channel);
             return channel;
         }
+        
+        /// <summary>
+        /// Finds the channel by name
+        /// </summary>
+        public Channel FindChannel(string name)
+        {
+            Channel channel = _channels.Find(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+            return channel;
+        }
 
         #endregion
 
