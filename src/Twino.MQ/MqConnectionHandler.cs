@@ -1,5 +1,3 @@
-using System.IO;
-using System.Text;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Core.Protocols;
@@ -19,6 +17,9 @@ namespace Twino.MQ
             _server = server;
         }
 
+        /// <summary>
+        /// Called when a new client is connected via TMQ protocol
+        /// </summary>
         public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
             HeaderMessageBuilder builder = HeaderMessageBuilder.Create();
@@ -37,6 +38,7 @@ namespace Twino.MQ
                 return null;
             }
 
+            //creates new mq client object 
             MqClient client = new MqClient(server, connection, _server.MessageIdGenerator, true);
             client.Data = data;
             client.UniqueId = clientId;
@@ -44,6 +46,7 @@ namespace Twino.MQ
             client.Name = data.Properties.GetStringValue(TmqHeaders.CLIENT_NAME);
             client.Type = data.Properties.GetStringValue(TmqHeaders.CLIENT_TYPE);
 
+            //authenticates client
             if (_server.Authenticator != null)
             {
                 client.IsAuthenticated = await _server.Authenticator.Authenticate(_server, client);
@@ -55,6 +58,7 @@ namespace Twino.MQ
                 }
             }
 
+            //client authenticated, add it into the connected clients list
             _server.AddClient(client);
 
             //send response message to the client, client should check unique id,
@@ -66,6 +70,9 @@ namespace Twino.MQ
             return client;
         }
 
+        /// <summary>
+        /// Called when a new message received from the client
+        /// </summary>
         public Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, TmqMessage message)
         {
             //check message target
@@ -73,9 +80,53 @@ namespace Twino.MQ
             //todo: target, channel
             //todo: target, server
 
+            switch (message.Type)
+            {
+                //client sends a queue message in a channel
+                case MessageType.Channel:
+                    break;
+
+                //clients sends a message to another client
+                case MessageType.Client:
+                    break;
+
+                //client sends a delivery message of a message
+                case MessageType.Delivery:
+                    break;
+
+                //client sends PONG message
+                case MessageType.Pong:
+                    break;
+
+                //client sends a response message for a message
+                case MessageType.Response:
+                    break;
+
+                //client sends a message to the server
+                //this message may be join, header, info, some another server message
+                case MessageType.Server:
+                    break;
+
+                //close the client's connection
+                case MessageType.Terminate:
+                    break;
+
+                //PING messages are sent from servers, not from clients
+                //case MessageType.Ping: break;
+
+                //Twino.MQ does not support redirection
+                //case MessageType.Redirect: break;
+
+                //Twino.MQ does not support other message types
+                //case MessageType.Other: break;
+            }
+
             throw new System.NotImplementedException();
         }
 
+        /// <summary>
+        /// Called when connected client is connected in TMQ protocol
+        /// </summary>
         public async Task Disconnected(ITwinoServer server, SocketBase client)
         {
             MqClient mqClient = (MqClient) client;
