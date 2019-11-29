@@ -92,15 +92,79 @@ Message content as byte array. That value can be everything you want.
 ...
 
 ## Message Types
-...
-
+Twino TMQ is a protocol not a server. Twino has a Messaging Queue library as Twino.MQ. Twino.MQ processes message types and you can use Twino.MQ with a few interface implementation. Message types are examined with Twino.MQ. If you create your own messaging queue server WITHOUT using Twino.MQ, message types can be proceed in different ways. I highly recommend you to read message types even if you don't wanna use Twino.MQ, these messages will tell you how to TMQ should be used.
 
 ### Server Message
-...
+Server messages are created to handle communication between clients and servers. For example, client sends key/value pairs to server (like http headers), server sends some information its' clients (for example server status etc), client sends a channel join request to server, in some situations, server may remove client from a channel and sends the information of operation.
+
+FirstAcquirer, HighPriority, DeliveryRequired are not used. Response Required can be used for some situations, server or client may want to know if the sent message is proceed or not. 
+
+In server messages, source isn't required, server already know the unique id of the client. and target isn't required, because target it server's itself. Because of this, in server messages source and target might have different meanings. Twino MQ has some server messages and uses target as channel name or message kind. In here, we will discuss these messages and how a client join to channel or leave from a channel and more. For example if client joins to a channel, content type tells to server this is a subscription, target is channel name.
+
+<table>
+<thead>
+     <tr>
+          <th>Content Type</th>
+          <th>Target</th>
+          <th>Content</th>
+          <th>Description</th>
+     </tr>
+</thead>
+<tbody>
+     <tr>
+          <td>101</td>
+          <td></td>
+          <td>Key/Pair values HTTP header-like</td>
+          <td>Client sends to server after connected.<br>Works like request headers</td>
+     </tr>
+     <tr>
+          <td>202</td>
+          <td></td>
+          <td>Key/Pair values HTTP header-like</td>
+          <td>After client's 101 message, server responses.<br>202 means accepted.</td>
+     </tr>
+     <tr>
+          <td>400</td>
+          <td></td>
+          <td></td>
+          <td>Bad request</td>
+     </tr>     
+     <tr>
+          <td>401</td>
+          <td></td>
+          <td></td>
+          <td>Unauthorized</td>
+     </tr>
+     <tr>
+          <td>404</td>
+          <td></td>
+          <td></td>
+          <td>Client, channel or content type not found</td>
+     </tr>
+     <tr>
+          <td>503</td>
+          <td></td>
+          <td></td>
+          <td>Server is too busy to complete the operation</td>
+     </tr>
+     <tr>
+          <td>601</td>
+          <td>[channel_name]</td>
+          <td></td>
+          <td>Joins to a channel<br>subscribes to all queues of the channel</td>
+     </tr>
+     <tr>
+          <td>602</td>
+          <td>[channel_name]</td>
+          <td></td>
+          <td>Leave from a channel<br>Unsubscribes from all queues of the channel</td>
+     </tr>
+</tbody>
+</table>
 
 
 ### Channel Message
-Channel messages are send from procuder clients. When producer sends the message to the server, server puts the message into the queue and starts to send it's receivers. A channel message has two transmission, first from producer to server, second from server to consumer. So, when you see a message is being sent from somewhere to somewhere, you can recognize the workflow by learning if sender was client or server.
+Channel messages are sent from procuder clients. When producer sends the message to the server, server puts the message into the queue and starts to send it's receivers. A channel message has two transmission, first from producer to server, second from server to consumer. So, when you see a message is being sent from somewhere to somewhere, you can recognize the workflow by learning if sender was client or server.
 
 **First Acquirer:** While client sending a message to the channel, server does not care the value, it sets this value as True. Then, starts to send this message to it's receivers. True to first receiver, False to others. If message is tried to send before and somehow message sending operation is skipped, on next try False to all receivers.
 
