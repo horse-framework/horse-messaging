@@ -9,7 +9,7 @@ namespace Twino.MQ
     public class MessageDelivery
     {
         #region Properties
-        
+
         /// <summary>
         /// True, if receiver is the first acquirer of the message
         /// </summary>
@@ -39,7 +39,7 @@ namespace Twino.MQ
         /// If true, delivery is received (or response)
         /// </summary>
         public bool IsDelivered { get; private set; }
-        
+
         /// <summary>
         /// If true, receivers does not send delivery message in delivery pending duration.
         /// </summary>
@@ -89,6 +89,9 @@ namespace Twino.MQ
         /// </summary>
         public void MarkAsSent()
         {
+            if (!Message.IsSent)
+                Message.IsSent = true;
+
             IsSent = true;
             SendDate = DateTime.UtcNow;
         }
@@ -100,8 +103,12 @@ namespace Twino.MQ
         {
             IsDelivered = true;
             DeliveryDate = DateTime.UtcNow;
+            Message.IsDelivered = true;
         }
 
+        /// <summary>
+        /// Marks delivery is timed up
+        /// </summary>
         public void MarkAsDeliveryTimedUp()
         {
             IsDelivered = false;

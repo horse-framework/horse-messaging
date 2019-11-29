@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Text;
 
@@ -105,6 +106,9 @@ namespace Twino.Protocols.TMQ
                 Length = (ulong) Content.Length;
         }
 
+        /// <summary>
+        /// Converts content to string and returns
+        /// </summary>
         public override string ToString()
         {
             if (Content == null)
@@ -113,6 +117,9 @@ namespace Twino.Protocols.TMQ
             return Encoding.UTF8.GetString(Content.ToArray());
         }
 
+        /// <summary>
+        /// Sets message content as string content
+        /// </summary>
         public void SetStringContent(string content)
         {
             if (string.IsNullOrEmpty(content))
@@ -120,6 +127,24 @@ namespace Twino.Protocols.TMQ
 
             Content = new MemoryStream(Encoding.UTF8.GetBytes(content));
             CalculateLengths();
+        }
+
+        /// <summary>
+        /// Create delivery message of the message
+        /// </summary>
+        public TmqMessage CreateDelivery()
+        {
+            TmqMessage delivery = new TmqMessage();
+
+            delivery.FirstAcquirer = FirstAcquirer;
+            delivery.HighPriority = HighPriority;
+            delivery.Type = MessageType.Delivery;
+            delivery.MessageId = MessageId;
+            delivery.Target = Target;
+            delivery.ContentType = ContentType;
+            delivery.CalculateLengths();
+
+            return delivery;
         }
     }
 }

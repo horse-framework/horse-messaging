@@ -158,7 +158,7 @@ namespace Twino.MQ
         {
             return _queues.Find(x => x.ContentType == contentType);
         }
-        
+
         /// <summary>
         /// Creates new queue in the channel with default options and default handlers
         /// </summary>
@@ -273,12 +273,17 @@ namespace Twino.MQ
         /// <summary>
         /// Removes client from the channel
         /// </summary>
-        public async Task RemoveClient(MqClient client)
+        public async Task<bool> RemoveClient(MqClient client)
         {
             ChannelClient cc = _clients.FindAndRemove(x => x.Client == client);
+            
+            if (cc == null)
+                return false;
 
-            if (cc != null && EventHandler != null)
+            if (EventHandler != null)
                 await EventHandler.ClientLeft(cc);
+
+            return true;
         }
 
         #endregion

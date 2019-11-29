@@ -155,7 +155,7 @@ namespace Twino.MQ
         /// </summary>
         public async Task<bool> RemoveMessage(QueueMessage message, bool force = false)
         {
-            if (!force && !message.IsSent())
+            if (!force && !message.IsSent)
                 return false;
 
             if (message.Message.HighPriority)
@@ -353,7 +353,9 @@ namespace Twino.MQ
                 //set as sent, if message is sent to it's first acquirer,
                 //set message first acquirer false and re-create byte array data of the message
                 bool firstAcquirer = message.Message.FirstAcquirer;
-                message.AddSend(delivery);
+
+                //mark message is sent
+                delivery.MarkAsSent();
 
                 //do after send operations for per message
                 await DeliveryHandler.OnAfterSend(this, delivery, client.Client);
@@ -462,7 +464,7 @@ namespace Twino.MQ
         internal async Task MessageDelivered(MqClient from, TmqMessage deliveryMessage)
         {
             MessageDelivery delivery = _timeKeeper.FindDelivery(from, deliveryMessage.MessageId);
-            
+
             if (delivery != null)
                 delivery.MarkAsDelivered();
 
