@@ -94,20 +94,43 @@ Message content as byte array. That value can be everything you want.
 ## Message Types
 ...
 
-#### Server Message
+### Server Message
 ...
 
-#### Channel Message
+### Channel Message
+Channel messages are send from procuder clients. When producer sends the message to the server, server puts the message into the queue and starts to send it's receivers. A channel message has two transmission, first from producer to server, second from server to consumer. So, when you see a message is being sent from somewhere to somewhere, you can recognize the workflow by learning if sender was client or server.
+
+**First Acquirer:** While client sending a message to the channel, server does not care the value, it sets this value as True. Then, starts to send this message to it's receivers. True to first receiver, False to others. If message is tried to send before and somehow message sending operation is skipped, on next try False to all receivers.
+
+**High Priority:** Producer client sends the message with a priority flag. If it's high priority, server puts the message at the beginning of the queue. While server sending message to it's consumers, server does not change this value. So, consumers can see if the message has high priority.
+
+**Type:** In channel messages, message type is always Channel (0x11) even from producer to server or from server to consumer.
+
+**ResponseRequired:** Usually, response required flag is used for peer to peer messaging. But this can be used in queues too. If producer sends message with response required flag, server will transmit the message to consumers with this flag. Consumers will try to response. You should do this in client-side manually. When response is sent from consumer, server will trigger response received method. In the method, you need to verify if response should send to producer or not.
+
+**DeliveryRequired:** After server send the message to consumer, if delivery requested, consumer will send a delivery message to the server and server will trigger delivery received methods. Delivery required option is set in server side. Server does not care what was the value from producer.
+
+**MessageId:** Message unique id, can be null from producer, if in server options, UseMessageId is false, server will not set a unique message id. If you want to lower your bandwidth, increase your performance and responses and deliveries are not important, just don't use message id.
+
+**SourceId:** Source Id is the producer id. If HideClientNames option is enabled in server, value will be null.
+
+**TargetId:** Target Id is the channel id.
+
+### Client Message
 ...
 
-#### Client Message
+### Delivery Message
+Delivery messages have some values same with delivered message such as MessageId, ContentType. They should not be confused with real messages. If the type of the message delvery, you should know these values are delivered message's values.
+
+FirstAcquirer, High Priority, ResponseRequired and DeliveryRequired values are not important and they are usually false.
+
+**Type:** Delivery is always Delivery (0x13)
+**MessageId:** Delivery message doesn't have it's own MessageId, MessageId value is the id of the delivered message.
+**TargetId:** Delivered message's channel name
+**ContentType:** Delivered message's content type.
+
+### Response Message
 ...
 
-#### Delivery Message
-...
-
-#### Response Message
-...
-
-#### PING and PONG
+### PING and PONG
 ...
