@@ -18,7 +18,7 @@
     -----------------------
     |     Content Type    | -> 2 Octets (unsigned short)
     -----------------------
-    |    Payload Length   | -> 7-n bit encoded, min 1 byte, max 9 bytes
+    |    Payload Length   | -> Flexible length, min 1 octet, max 9 octets
     -----------------------
     |        Payload      | -> n bytes (n: payload length)
     -----------------------
@@ -56,20 +56,25 @@ TMQ Protocol TTL value in 6 bits (0-63)
 #### Message Id Length
 Message id length is unsigned byte. If message doesn't have a unique id, this value can be ZERO. If message has a unique id, this message can be between (0-255]. Message Unique Id value can't be larger than 255 bytes.
 
-## Source Id Length
-Length of message sender's Id value in bytes. Works like message id length. If message is sending from it's real source (from client) to the server, source CAN be empty, so source id will be ZERO. Server will set message source as sender's unique id. If message is sent from server to a receiver, source SHOULD NOT be empty if message's real source is not server's itself. This information will be explained in Source Id section.
+#### Source Id Length
+Length of message sender's id value in bytes. Works like message id length. If message is sending from it's real source (from client) to the server, source CAN be empty, so source id will be ZERO. Server will set message source as sender's unique id. If message is sent from server to a receiver, source SHOULD NOT be empty if message's real source is not server's itself. This information will be explained in Source Id section.
 
 #### Target Id Length
-..
+Length of message target's id value. When message is sending directly to the server, this value can be zero. Because Server message type does not require a target, type of the message tells us the target. But if message is sent to a queue, target MUST be the channel name of the queue. If message is sent to another client, target MUST be the unique id of the client.
 
 #### Content Type
-..
+Content type is unsigned short value. Gives us a description of the content, what type it is. Each channel has it's own content types. You can define different type of message with same content types in different channels. Peer to peer messages have their own content types, and server messages have their own content types such as hello, join channel, leave channel etc.
 
 #### Payload Length
-..
+Flexible size content length. If value is less than 253 bytes, the value is the content length. If value is 253, next two octets contains payload length as unsigned short. If value is 254, next four octets contains payload length as unsigned int32. If value is 255, next eight octets contains payload length as unsigned int64.
+
+          Value < 253 => Payload length is value
+          Value = 253 => Payload is in next 2 bytes contains unsigned short.
+          Value = 254 => Payload is in next 4 bytes contains unsigned int32.
+          Value = 255 => Payload is in next 8 bytes contains unsigned int64.
 
 #### Payload
-..
+Message content as byte array. That value can be everything you want.
 
 ## TMQ Protocol Handshaking
 ...
