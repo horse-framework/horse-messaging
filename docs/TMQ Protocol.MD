@@ -120,13 +120,21 @@ Channel messages are send from procuder clients. When producer sends the message
 
 
 ### Client Message
-...
+Client messages are peer to peer messages. They are sent to server, server finds the receiver and transmit the message. In client messages, server does not care anything. Everything is in between clients.
+
+First Acquirer, High Priority, Response Required and Delivery Required are same with what client sends, server does not touch these values, so sender and receiver can tell each other some messages with these values.
+
+**MessageId:** Message id can be null if not required
+
+**SourceId:** Should be sender unique id.
+
+**TargetId:** Should be receiver unique id. This is the most important value in client messages. If you type this value wrong, message will sent to another receiver (if unique id matches, depends on your id generator system)
 
 
 ### Delivery Message
 Delivery messages have some values same with delivered message such as MessageId, ContentType. They should not be confused with real messages. If the type of the message delvery, you should know these values are delivered message's values.
 
-FirstAcquirer, High Priority, ResponseRequired and DeliveryRequired values are not important and they are usually false.
+FirstAcquirer and High Priority are same with delivered message. ResponseRequired and DeliveryRequired values are not important and they are usually false.
 
 **Type:** Delivery is always Delivery (0x13)
 
@@ -139,6 +147,10 @@ FirstAcquirer, High Priority, ResponseRequired and DeliveryRequired values are n
 
 ### Response Message
 Response message does not have it's own MessageId. The message id value of the message is same with the message that requested the response.
+
+FirstAcquirer and High Priority are same with delivered message. DeliveryRequired value are not important and they are usually false.
+
+**ResponseRequired:** True, if response requires another response. Next response MessageId will be same again.
 
 **Type:** Type is always Response (0x14)
 
