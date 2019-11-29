@@ -125,8 +125,11 @@ Delivery messages have some values same with delivered message such as MessageId
 FirstAcquirer, High Priority, ResponseRequired and DeliveryRequired values are not important and they are usually false.
 
 **Type:** Delivery is always Delivery (0x13)
+
 **MessageId:** Delivery message doesn't have it's own MessageId, MessageId value is the id of the delivered message.
+
 **TargetId:** Delivered message's channel name
+
 **ContentType:** Delivered message's content type.
 
 ### Response Message
