@@ -153,6 +153,16 @@ In server messages, source isn't required, server already know the unique id of 
           <td></td>
           <td>Leave from a channel<br>Unsubscribes from all queues of the channel</td>
      </tr>
+     <tr>
+          <td>610</td>
+          <td>[channel_name]</td>
+          <td>[content_type]</td>
+          <td>
+               Creates new queue.<br>
+               If channel doesn't exists, it's created.<br>
+               content is binary 2 bytes unsigned short.
+          </td>
+     </tr>
 </tbody>
 </table>
 
