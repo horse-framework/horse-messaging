@@ -136,6 +136,12 @@ In server messages, source isn't required, server already know the unique id of 
           <td>Client, channel or content type not found</td>
      </tr>
      <tr>
+          <td>481</td>
+          <td></td>
+          <td></td>
+          <td>The data that requestes to create is already created</td>
+     </tr>
+     <tr>
           <td>503</td>
           <td></td>
           <td></td>
