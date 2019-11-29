@@ -136,6 +136,12 @@ In server messages, source isn't required, server already know the unique id of 
           <td>Client, channel or content type not found</td>
      </tr>
      <tr>
+          <td>481</td>
+          <td></td>
+          <td></td>
+          <td>The data that requestes to create is already created</td>
+     </tr>
+     <tr>
           <td>503</td>
           <td></td>
           <td></td>
@@ -152,6 +158,16 @@ In server messages, source isn't required, server already know the unique id of 
           <td>[channel_name]</td>
           <td></td>
           <td>Leave from a channel<br>Unsubscribes from all queues of the channel</td>
+     </tr>
+     <tr>
+          <td>610</td>
+          <td>[channel_name]</td>
+          <td>[content_type]</td>
+          <td>
+               Creates new queue.<br>
+               If channel doesn't exists, it's created.<br>
+               content is binary 2 bytes unsigned short.
+          </td>
      </tr>
 </tbody>
 </table>
