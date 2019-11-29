@@ -67,8 +67,14 @@ namespace Twino.Protocols.TMQ
             ms.WriteByte(type);
 
             byte ttl = (byte) message.Ttl;
+            if (ttl > 63)
+                ttl = 63;
+            
             if (message.ResponseRequired)
                 ttl += 128;
+            
+            if (message.DeliveryRequired)
+                ttl += 64;
 
             ms.WriteByte(ttl);
 

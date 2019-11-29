@@ -24,9 +24,16 @@ namespace Twino.Protocols.TMQ
         public MessageType Type { get; set; }
 
         /// <summary>
-        /// True means, client is pending a response. Sending response is not mandatory but it SHOULD sent.
+        /// True means, client is pending a response.
+        /// Sending response is not mandatory but it SHOULD sent.
         /// </summary>
         public bool ResponseRequired { get; set; }
+
+        /// <summary>
+        /// True means, client is pending a response.
+        /// If delivery is'nt sent, server will complete process as not delivered.
+        /// </summary>
+        public bool DeliveryRequired { get; set; }
 
         /// <summary>
         /// Message TTL value. Default is 16

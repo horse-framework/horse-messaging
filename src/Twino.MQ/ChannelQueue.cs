@@ -281,7 +281,12 @@ namespace Twino.MQ
         private async Task<DeliveryOperation> ProcesssMessage(QueueMessage message, bool onheld)
         {
             //if we need delivery, we are sending this information to receivers that we require response
-            message.Message.ResponseRequired = Options.RequestDelivery;
+            message.Message.DeliveryRequired = Options.RequestDelivery;
+
+            //if we need delivery from receiver, it has a deadline.
+            DateTime? deadline = null;
+            if (Options.RequestDelivery)
+                deadline = DateTime.UtcNow.Add(Options.DeliveryWaitMaxDuration);
 
             MessageDecision decision = await DeliveryHandler.OnSendStarting(this, message);
 
@@ -315,11 +320,6 @@ namespace Twino.MQ
 
                 return DeliveryOperation.Keep;
             }
-
-            //if we need delivery from receiver, it has a deadline.
-            DateTime? deadline = null;
-            if (Options.RequestDelivery)
-                deadline = DateTime.UtcNow.Add(Options.DeliveryWaitMaxDuration);
 
             //create prepared message data
             byte[] messageData = await _writer.Create(message.Message);

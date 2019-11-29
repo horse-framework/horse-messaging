@@ -83,6 +83,12 @@ namespace Twino.Protocols.TMQ
                 ttl -= 128;
             }
 
+            if (ttl >= 64)
+            {
+                message.DeliveryRequired = true;
+                ttl -= 64;
+            }
+
             message.Ttl = ttl;
 
             message.MessageIdLength = bytes[2];

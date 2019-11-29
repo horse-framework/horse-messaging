@@ -91,18 +91,23 @@ namespace Twino.MQ
             MqClient mc = (MqClient) client;
 
             //if client sends anonymous messages and server needs message id, generate new
-            if (string.IsNullOrEmpty(message.Source))
+            if (string.IsNullOrEmpty(message.MessageId))
             {
                 //anonymous messages can't be responsed, do not wait response
                 if (message.ResponseRequired)
                     message.ResponseRequired = false;
 
+                //if server want to use message id anyway, generate new.
                 if (_server.Options.UseMessageId)
                 {
                     message.MessageId = _server.MessageIdGenerator.Create();
                     message.SourceLength = message.MessageId.Length;
                 }
             }
+
+            //if message does not have a source information, source will be set to sender's unique id
+            if (string.IsNullOrEmpty(message.Source))
+                message.Source = mc.UniqueId;
 
             //if client sending messages like someone another, kick him
             else if (message.Source != mc.UniqueId)
