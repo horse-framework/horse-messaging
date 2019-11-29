@@ -94,8 +94,10 @@ Message content as byte array. That value can be everything you want.
 ## Message Types
 ...
 
+
 ### Server Message
 ...
+
 
 ### Channel Message
 Channel messages are send from procuder clients. When producer sends the message to the server, server puts the message into the queue and starts to send it's receivers. A channel message has two transmission, first from producer to server, second from server to consumer. So, when you see a message is being sent from somewhere to somewhere, you can recognize the workflow by learning if sender was client or server.
@@ -116,8 +118,10 @@ Channel messages are send from procuder clients. When producer sends the message
 
 **TargetId:** Target Id is the channel id.
 
+
 ### Client Message
 ...
+
 
 ### Delivery Message
 Delivery messages have some values same with delivered message such as MessageId, ContentType. They should not be confused with real messages. If the type of the message delvery, you should know these values are delivered message's values.
@@ -132,8 +136,20 @@ FirstAcquirer, High Priority, ResponseRequired and DeliveryRequired values are n
 
 **ContentType:** Delivered message's content type.
 
+
 ### Response Message
-...
+Response message does not have it's own MessageId. The message id value of the message is same with the message that requested the response.
+
+**Type:** Type is always Response (0x14)
+
+**MessageId:** Same with requested message id.
+
+**SourceId:** Id of the client that sending response message.
+
+**TargetId:** Id of the client that sent request message.
+
+**ContentType:** Response message's own content type. Requested client will use this value to recognize message type.
+
 
 ### PING and PONG
 PING and PONG messages are constant messages. PING is sent from server and PONG is sent from client. TMQ procotol required minimum 8 octets frame header data. Because of this, PING and PONG messages should be 8 octets. PING and PONG definition in first byte, second byte is 0xFF and all other 6 bytes should be filled as 0x00.
