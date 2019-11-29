@@ -33,16 +33,16 @@ Priority bit. If ONE, message is high priority message SHOULD be added to the be
 #### Type
 Message type in 6 bits. In TMQ 1.0, supported types are below,
 
-  (0x00) Other     : All other message types<br>
-  (0x08) Terminate : Client requests to terminate the connection.<br>
-  (0x09) Ping      : PING message from server to client<br>
-  (0x0A) Pong      : PONG message from client to server<br>
-  (0x10) Server    : Client sends a message to directly server. Message SHOULD process in server.<br>
-  (0x11) Channel   : Client sends a message to a queue. Message SHOULD be transmitted to queue observers.<br>
-  (0x12) Client    : Client sends a message to another client. Server SHOULD find the receiver and transmit the message.<br>
-  (0x13) Delivery  : Client sends a delivery message for another message that received before.<br>
-  (0x14) Response  : Client sends a response message for another message that received before.<br>
-  (0x15) Redirect  : Client or server redirects the message another receiver.<br>
+     (0x00) Other     : All other message types.
+     (0x08) Terminate : Client requests to terminate the connection.
+     (0x09) Ping      : PING message from server to client.
+     (0x0A) Pong      : PONG message from client to server.
+     (0x10) Server    : Client sends a message to directly server. Message SHOULD process in server.
+     (0x11) Channel   : Client sends a message to a queue. Message SHOULD be transmitted to queue observers.
+     (0x12) Client    : Client sends a message to another client. Server SHOULD find the receiver and transmit the message.
+     (0x13) Delivery  : Client sends a delivery message for another message that received before.
+     (0x14) Response  : Client sends a response message for another message that received before.
+     (0x15) Redirect  : Client or server redirects the message another receiver.
 
 #### RS: Response Required
 If message needs a response this MUST be ONE, If response isn't waited, this value MUST be ZERO.
