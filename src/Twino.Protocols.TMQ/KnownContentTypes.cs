@@ -9,5 +9,8 @@ namespace Twino.Protocols.TMQ
         public const ushort Unauthorized = 401;
         public const ushort NotFound = 404;
         public const ushort Busy = 503;
+
+        public const ushort Join = 601;
+        public const ushort Leave = 602;
     }
 }
