@@ -201,6 +201,9 @@ namespace Twino.MQ
         /// </summary>
         private async Task ChannelMessageReceived(ITwinoServer server, MqClient client, TmqMessage message)
         {
+            //if client sends this value false accidently, set it true.
+            message.FirstAcquirer = true;
+            
             //find channel and queue
             Channel channel = _server.FindChannel(message.Target);
             if (channel == null)
