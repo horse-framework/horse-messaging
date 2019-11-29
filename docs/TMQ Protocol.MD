@@ -77,19 +77,13 @@ Flexible size content length. If value is less than 253 bytes, the value is the 
 Message content as byte array. That value can be everything you want.
 
 ## TMQ Protocol Handshaking
-...
+TMQ Handshaking is completed over TCP connection. TMQ Protocol message length is 8 bytes. Right after server accepts TCP connection of the client, client MUST send a TMQ protocol message to the server. Message contains protocol version. If server supports the TMQ protocol and requested version, sends same message to the client. If server does not support the TMQ protocol version, server SHOULD response with supported HIGHEST version to client and terminate connection.
 
-#### Protocol Message From Client
-...
+Sample protocol message for version 1.01
 
-#### Protocol Message From Server
-...
+     TMQ/1.01
 
-#### Hello From Client
-...
-
-#### Hello From Server
-...
+When protocol handshaking completed, client SHOULD send Hello (Server message with 101 content type) to the server as soon as possible. If server accepts the connection, it will response with Accepted (Server message with 202 content type)
 
 ## Message Types
 Twino TMQ is a protocol not a server. Twino has a Messaging Queue library as Twino.MQ. Twino.MQ processes message types and you can use Twino.MQ with a few interface implementation. Message types are examined with Twino.MQ. If you create your own messaging queue server WITHOUT using Twino.MQ, message types can be proceed in different ways. I highly recommend you to read message types even if you don't wanna use Twino.MQ, these messages will tell you how to TMQ should be used.
