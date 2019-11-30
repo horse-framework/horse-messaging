@@ -115,6 +115,7 @@ namespace Twino.MQ
                     _removingDeliveries.Add(delivery);
                     delivery.MarkAsAcknowledgeTimedUp();
                     await _queue.DeliveryHandler.OnAcknowledgeTimeUp(_queue, delivery);
+                    _queue.ReleaseAcknowledgeLock();
                 }
             }
 

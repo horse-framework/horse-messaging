@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Options;
@@ -101,6 +102,17 @@ namespace Twino.MQ
         /// </summary>
         private readonly QueueTimeKeeper _timeKeeper;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        private readonly SemaphoreSlim _semaphore;
+
+        /// <summary>
+        /// Waiting acknowledge status.
+        /// This value will be true right after a message is sent, until it's delivery process completed (timeout or ack)
+        /// </summary>
+        private volatile bool _waitingAcknowledge;
+
         #endregion
 
         #region Constructors
@@ -120,6 +132,9 @@ namespace Twino.MQ
 
             _timeKeeper = new QueueTimeKeeper(this, _prefentialMessages, _standardMessages);
             _timeKeeper.Run();
+
+            if (options.WaitAcknowledge)
+                _semaphore = new SemaphoreSlim(1, 1024);
         }
 
         #endregion
@@ -174,30 +189,30 @@ namespace Twino.MQ
         /// </summary>
         internal async Task Push(QueueMessage message)
         {
-            //fire message receive event
-            if (EventHandler != null)
-                await EventHandler.OnMessageReceived(this, message);
-
-            //if we have an option maximum wait duration for message, set it after message joined to the queue.
-            //time keeper will check this value and if message time is up, it will remove message from the queue.
-            if (Options.ReceiverWaitMaxDuration > TimeSpan.Zero)
-                message.Deadline = DateTime.UtcNow.Add(Options.ReceiverWaitMaxDuration);
-
-            //if message doesn't have message id and "UseMessageId" option is enabled, create new message id for the message
-            if (Options.UseMessageId && string.IsNullOrEmpty(message.Message.MessageId))
-                message.Message.MessageId = Channel.Server.MessageIdGenerator.Create();
-
-            //if we are hiding client names and message have it, remove client name from the message
-            if (Channel.Server.Options.HideClientNames && !string.IsNullOrEmpty(message.Message.Source))
-            {
-                message.Message.Source = null;
-                message.Message.SourceLength = 0;
-            }
-
             //process the message
             QueueMessage held = null;
             try
             {
+                //fire message receive event
+                if (EventHandler != null)
+                    await EventHandler.OnMessageReceived(this, message);
+
+                //if we have an option maximum wait duration for message, set it after message joined to the queue.
+                //time keeper will check this value and if message time is up, it will remove message from the queue.
+                if (Options.ReceiverWaitMaxDuration > TimeSpan.Zero)
+                    message.Deadline = DateTime.UtcNow.Add(Options.ReceiverWaitMaxDuration);
+
+                //if message doesn't have message id and "UseMessageId" option is enabled, create new message id for the message
+                if (Options.UseMessageId && string.IsNullOrEmpty(message.Message.MessageId))
+                    message.Message.MessageId = Channel.Server.MessageIdGenerator.Create();
+
+                //if we are hiding client names and message have it, remove client name from the message
+                if (Channel.Server.Options.HideClientNames && !string.IsNullOrEmpty(message.Message.Source))
+                {
+                    message.Message.Source = null;
+                    message.Message.SourceLength = 0;
+                }
+
                 //queue the message
                 if (Options.MessageQueuing)
                 {
@@ -276,16 +291,45 @@ namespace Twino.MQ
         }
 
         /// <summary>
+        /// When wait for acknowledge is active, this method locks the queue until acknowledge is received
+        /// </summary>
+        private async Task WaitForAcknowledge(QueueMessage message)
+        {
+            //if we will lock the queue until ack received, we must request ack
+            if (!message.Message.AcknowledgeRequired)
+                message.Message.AcknowledgeRequired = true;
+
+            //lock the object, because pending ack message should be queued
+            await _semaphore.WaitAsync();
+
+            try
+            {
+                //if there is no queue in ack delivery
+                //this message is sent and sets the waiting true until it's process completed
+                if (!_waitingAcknowledge)
+                {
+                    _waitingAcknowledge = true;
+                    return;
+                }
+
+                //if waiting already true, this message should wait until delivery process completed
+                while (_waitingAcknowledge)
+                    await Task.Delay(1);
+
+                //now, it's this message turn, set wait true and go on.
+                _waitingAcknowledge = true;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        /// <summary>
         /// Searches receivers of the message and process the send operation
         /// </summary>
         private async Task<DeliveryOperation> ProcesssMessage(QueueMessage message, bool onheld)
         {
-            //if to process next message is requires previous message acknowledge, wait here
-            if (Options.WaitAcknowledge)
-            {
-                //todo: wait with some reset event, locker, or something
-            }
-            
             //if we need acknowledge, we are sending this information to receivers that we require response
             message.Message.AcknowledgeRequired = Options.RequestAcknowledge;
 
@@ -293,6 +337,10 @@ namespace Twino.MQ
             DateTime? deadline = null;
             if (Options.RequestAcknowledge)
                 deadline = DateTime.UtcNow.Add(Options.DeliveryWaitMaxDuration);
+
+            //if to process next message is requires previous message acknowledge, wait here
+            if (Options.RequestAcknowledge && Options.WaitAcknowledge)
+                await WaitForAcknowledge(message);
 
             MessageDecision decision = await DeliveryHandler.OnSendStarting(this, message);
 
@@ -475,6 +523,15 @@ namespace Twino.MQ
                 delivery.MarkAsAcknowledged();
 
             await DeliveryHandler.OnAcknowledge(this, deliveryMessage, delivery);
+            ReleaseAcknowledgeLock();
+        }
+
+        /// <summary>
+        /// If acknowledge lock option is enabled, releases the lock
+        /// </summary>
+        internal void ReleaseAcknowledgeLock()
+        {
+            _waitingAcknowledge = false;
         }
 
         #endregion
