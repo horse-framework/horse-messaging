@@ -8,11 +8,21 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.MQ
 {
+    /// <summary>
+    /// Message queue server handler
+    /// </summary>
     internal class MqConnectionHandler : IProtocolConnectionHandler<TmqMessage>
     {
         #region Fields
 
+        /// <summary>
+        /// Messaging Queue Server
+        /// </summary>
         private readonly MQServer _server;
+        
+        /// <summary>
+        /// Default TMQ protocol message writer
+        /// </summary>
         private static readonly TmqWriter _writer = new TmqWriter();
 
         public MqConnectionHandler(MQServer server)

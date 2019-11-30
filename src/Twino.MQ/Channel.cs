@@ -248,6 +248,7 @@ namespace Twino.MQ
 
             ChannelClient cc = new ChannelClient(this, client);
             _clients.Add(cc);
+            client.Join(cc);
 
             if (EventHandler != null)
                 await EventHandler.ClientJoined(cc);
@@ -265,6 +266,7 @@ namespace Twino.MQ
         public async Task RemoveClient(ChannelClient client)
         {
             _clients.Remove(client);
+            client.Client.Leave(client);
 
             if (EventHandler != null)
                 await EventHandler.ClientLeft(client);
@@ -276,9 +278,11 @@ namespace Twino.MQ
         public async Task<bool> RemoveClient(MqClient client)
         {
             ChannelClient cc = _clients.FindAndRemove(x => x.Client == client);
-            
+
             if (cc == null)
                 return false;
+
+            client.Leave(cc);
 
             if (EventHandler != null)
                 await EventHandler.ClientLeft(cc);

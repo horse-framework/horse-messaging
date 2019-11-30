@@ -75,5 +75,23 @@ namespace Twino.MQ.Clients
 
             return list;
         }
+
+        /// <summary>
+        /// Adds channel into client's channel list
+        /// </summary>
+        internal void Join(ChannelClient channel)
+        {
+            lock (_channels)
+                _channels.Add(channel);
+        }
+
+        /// <summary>
+        /// Removes channel from client's channel list
+        /// </summary>
+        internal void Leave(ChannelClient channel)
+        {
+            lock (_channels)
+                _channels.Remove(channel);
+        }
     }
 }
