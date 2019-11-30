@@ -19,9 +19,9 @@ namespace Twino.MQ.Options
         public bool SendOnlyFirstAcquirer { get; set; }
 
         /// <summary>
-        /// If true, messages will request delivery from receivers
+        /// If true, messages will request acknowledge from receivers
         /// </summary>
-        public bool RequestDelivery { get; set; }
+        public bool RequestAcknowledge { get; set; }
 
         /// <summary>
         /// When delivery is required, maximum duration for waiting delivery message
@@ -37,5 +37,10 @@ namespace Twino.MQ.Options
         /// If true, server creates unique id for each message.
         /// </summary>
         public bool UseMessageId { get; set; }
+        
+        /// <summary>
+        /// If true, queue does not send next message to receivers until acknowledge message received
+        /// </summary>
+        public bool WaitAcknowledge { get; set; }
     }
 }

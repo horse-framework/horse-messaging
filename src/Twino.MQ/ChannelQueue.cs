@@ -280,12 +280,12 @@ namespace Twino.MQ
         /// </summary>
         private async Task<DeliveryOperation> ProcesssMessage(QueueMessage message, bool onheld)
         {
-            //if we need delivery, we are sending this information to receivers that we require response
-            message.Message.DeliveryRequired = Options.RequestDelivery;
+            //if we need acknowledge, we are sending this information to receivers that we require response
+            message.Message.AcknowledgeRequired = Options.RequestAcknowledge;
 
-            //if we need delivery from receiver, it has a deadline.
+            //if we need acknowledge from receiver, it has a deadline.
             DateTime? deadline = null;
-            if (Options.RequestDelivery)
+            if (Options.RequestAcknowledge)
                 deadline = DateTime.UtcNow.Add(Options.DeliveryWaitMaxDuration);
 
             MessageDecision decision = await DeliveryHandler.OnSendStarting(this, message);
@@ -345,7 +345,7 @@ namespace Twino.MQ
                 delivery.FirstAcquirer = message.Message.FirstAcquirer;
 
                 //adds the delivery to time keeper to check timing up
-                _timeKeeper.AddDeliveryCheck(delivery);
+                _timeKeeper.AddAcknowledgeCheck(delivery);
 
                 //send the message
                 await client.Client.SendAsync(messageData);
@@ -459,16 +459,16 @@ namespace Twino.MQ
         }
 
         /// <summary>
-        /// Called when a delivery message is received from the client
+        /// Called when a acknowledge message is received from the client
         /// </summary>
-        internal async Task MessageDelivered(MqClient from, TmqMessage deliveryMessage)
+        internal async Task AcknowledgeDelivered(MqClient from, TmqMessage deliveryMessage)
         {
             MessageDelivery delivery = _timeKeeper.FindDelivery(from, deliveryMessage.MessageId);
 
             if (delivery != null)
-                delivery.MarkAsDelivered();
+                delivery.MarkAsAcknowledged();
 
-            await DeliveryHandler.OnDelivery(this, deliveryMessage, delivery);
+            await DeliveryHandler.OnAcknowledge(this, deliveryMessage, delivery);
         }
 
         #endregion

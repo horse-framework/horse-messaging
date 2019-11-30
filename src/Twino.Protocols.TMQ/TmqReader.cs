@@ -85,7 +85,7 @@ namespace Twino.Protocols.TMQ
 
             if (ttl >= 64)
             {
-                message.DeliveryRequired = true;
+                message.AcknowledgeRequired = true;
                 ttl -= 64;
             }
 

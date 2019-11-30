@@ -73,7 +73,7 @@ namespace Twino.Protocols.TMQ
             if (message.ResponseRequired)
                 ttl += 128;
             
-            if (message.DeliveryRequired)
+            if (message.AcknowledgeRequired)
                 ttl += 64;
 
             ms.WriteByte(ttl);

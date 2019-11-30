@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ
@@ -36,9 +34,9 @@ namespace Twino.MQ
         public bool IsSkipped { get; internal set; }
 
         /// <summary>
-        /// True, if delivery message for the message is received
+        /// True, if acknowledge message for the message is received
         /// </summary>
-        public bool IsDelivered { get; internal set; }
+        public bool IsAcknowledged { get; internal set; }
 
         /// <summary>
         /// True, if is sent
@@ -68,7 +66,7 @@ namespace Twino.MQ
         }
 
         /// <summary>
-        /// Sets message as sent and adds delivery to message deliveries
+        /// Sets message as sent
         /// </summary>
         public void MarkAsSent()
         {

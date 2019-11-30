@@ -105,9 +105,9 @@ namespace Twino.MQ
         Task<DeliveryOperation> OnSendCompleted(ChannelQueue queue, QueueMessage message);
 
         /// <summary>
-        /// Called when a receiver sends a delivery message.
+        /// Called when a receiver sends an acknowledge message.
         /// </summary>
-        Task OnDelivery(ChannelQueue queue, TmqMessage deliveryMessage, MessageDelivery delivery);
+        Task OnAcknowledge(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery);
 
         /// <summary>
         /// Called when a receiver sends a response message.
@@ -120,10 +120,10 @@ namespace Twino.MQ
         Task OnTimeUp(ChannelQueue queue, QueueMessage message);
 
         /// <summary>
-        /// Called when message requested delivery but delivery message isn't received in time
+        /// Called when message requested acknowledge but acknowledge message isn't received in time
         /// </summary>
         /// <returns></returns>
-        Task OnDeliveryTimeUp(ChannelQueue queue, MessageDelivery delivery);
+        Task OnAcknowledgeTimeUp(ChannelQueue queue, MessageDelivery delivery);
 
         /// <summary>
         /// Message is about to remove

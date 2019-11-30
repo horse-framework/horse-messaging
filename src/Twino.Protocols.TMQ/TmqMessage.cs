@@ -32,9 +32,9 @@ namespace Twino.Protocols.TMQ
 
         /// <summary>
         /// True means, client is pending a response.
-        /// If delivery is'nt sent, server will complete process as not delivered.
+        /// If acknowledge isn't sent, server will complete process as not acknowledged
         /// </summary>
-        public bool DeliveryRequired { get; set; }
+        public bool AcknowledgeRequired { get; set; }
 
         /// <summary>
         /// Message TTL value. Default is 16
@@ -130,21 +130,21 @@ namespace Twino.Protocols.TMQ
         }
 
         /// <summary>
-        /// Create delivery message of the message
+        /// Create an acknowledge message of the message
         /// </summary>
-        public TmqMessage CreateDelivery()
+        public TmqMessage CreateAcknowledge()
         {
-            TmqMessage delivery = new TmqMessage();
+            TmqMessage message = new TmqMessage();
 
-            delivery.FirstAcquirer = FirstAcquirer;
-            delivery.HighPriority = HighPriority;
-            delivery.Type = MessageType.Delivery;
-            delivery.MessageId = MessageId;
-            delivery.Target = Target;
-            delivery.ContentType = ContentType;
-            delivery.CalculateLengths();
+            message.FirstAcquirer = FirstAcquirer;
+            message.HighPriority = HighPriority;
+            message.Type = MessageType.Acknowledge;
+            message.MessageId = MessageId;
+            message.Target = Target;
+            message.ContentType = ContentType;
+            message.CalculateLengths();
 
-            return delivery;
+            return message;
         }
     }
 }

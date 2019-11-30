@@ -32,9 +32,9 @@ namespace Twino.Protocols.TMQ
         Client = 0x12,
 
         /// <summary>
-        /// A delivery message, points to a message received before.
+        /// A acknowledge message, points to a message received before.
         /// </summary>
-        Delivery = 0x13,
+        Acknowledge = 0x13,
 
         /// <summary>
         /// A response message, point to a message received before.

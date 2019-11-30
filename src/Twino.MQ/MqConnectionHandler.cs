@@ -128,9 +128,9 @@ namespace Twino.MQ
                     await ClientMessageReceived(mc, message);
                     break;
 
-                //client sends a delivery message of a message
-                case MessageType.Delivery:
-                    await DeliveryMessageReceived(mc, message);
+                //client sends an acknowledge message of a message
+                case MessageType.Acknowledge:
+                    await AcknowledgeMessageReceived(mc, message);
                     break;
 
                 //client sends a response message for a message
@@ -252,9 +252,9 @@ namespace Twino.MQ
         }
 
         /// <summary>
-        /// Client sends a delivery message
+        /// Client sends a acknowledge message
         /// </summary>
-        private async Task DeliveryMessageReceived(MqClient client, TmqMessage message)
+        private async Task AcknowledgeMessageReceived(MqClient client, TmqMessage message)
         {
             //find channel and queue
             Channel channel = _server.FindChannel(message.Target);
@@ -265,7 +265,7 @@ namespace Twino.MQ
             if (queue == null)
                 return;
 
-            await queue.MessageDelivered(client, message);
+            await queue.AcknowledgeDelivered(client, message);
         }
 
         /// <summary>

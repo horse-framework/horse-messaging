@@ -102,19 +102,19 @@ namespace Twino.MQ
 
             foreach (MessageDelivery delivery in _deliveries)
             {
-                //message delivered or came here accidently :)
-                if (delivery.IsDelivered || !delivery.DeliveryDeadline.HasValue)
+                //message acknowledge or came here accidently :)
+                if (delivery.IsAcknowledged || !delivery.AcknowledgeDeadline.HasValue)
                 {
                     _removingDeliveries.Add(delivery);
                     continue;
                 }
 
                 //expired
-                if (DateTime.UtcNow > delivery.DeliveryDeadline.Value)
+                if (DateTime.UtcNow > delivery.AcknowledgeDeadline.Value)
                 {
                     _removingDeliveries.Add(delivery);
-                    delivery.MarkAsDeliveryTimedUp();
-                    await _queue.DeliveryHandler.OnDeliveryTimeUp(_queue, delivery);
+                    delivery.MarkAsAcknowledgeTimedUp();
+                    await _queue.DeliveryHandler.OnAcknowledgeTimeUp(_queue, delivery);
                 }
             }
 
@@ -122,11 +122,11 @@ namespace Twino.MQ
         }
 
         /// <summary>
-        /// Adds delivery to check it's timeout
+        /// Adds acknowledge to check it's timeout
         /// </summary>
-        public void AddDeliveryCheck(MessageDelivery delivery)
+        public void AddAcknowledgeCheck(MessageDelivery delivery)
         {
-            if (!delivery.DeliveryDeadline.HasValue)
+            if (!delivery.AcknowledgeDeadline.HasValue)
                 return;
 
             lock (_addingDeliveries)

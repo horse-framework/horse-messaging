@@ -36,32 +36,32 @@ namespace Twino.MQ
         public DateTime SendDate { get; private set; }
 
         /// <summary>
-        /// If true, delivery is received (or response)
+        /// If true, acknowledge is received
         /// </summary>
-        public bool IsDelivered { get; private set; }
+        public bool IsAcknowledged { get; private set; }
 
         /// <summary>
-        /// If true, receivers does not send delivery message in delivery pending duration.
+        /// If true, receivers does not send acknowledge message in acknowledge pending duration.
         /// </summary>
-        public bool IsDeliveryTimedUp { get; private set; }
+        public bool IsAcknowledgeTimedUp { get; private set; }
 
         /// <summary>
-        /// Delivery receive time
+        /// Acknowledge receive time
         /// </summary>
-        public DateTime DeliveryDate { get; private set; }
+        public DateTime AcknowledgeDate { get; private set; }
 
         /// <summary>
-        /// Delivery wait deadline.
-        /// If this value is set and delivery isn't received, time up methods will be called.
+        /// Acknowledge wait deadline.
+        /// If this value is set and acknowledge isn't received, time up methods will be called.
         /// </summary>
-        public DateTime? DeliveryDeadline { get; }
+        public DateTime? AcknowledgeDeadline { get; }
 
         #endregion
 
         #region Constructurs
 
         /// <summary>
-        /// Creates new message without delivery deadline
+        /// Creates new message without acknowledge deadline
         /// </summary>
         internal MessageDelivery(QueueMessage message, ChannelClient receiver)
             : this(message, receiver, DateTime.MinValue)
@@ -71,13 +71,13 @@ namespace Twino.MQ
         }
 
         /// <summary>
-        /// Creates new message with delivery deadline
+        /// Creates new message with acknowledge deadline
         /// </summary>
-        internal MessageDelivery(QueueMessage message, ChannelClient receiver, DateTime? deliveryDeadline)
+        internal MessageDelivery(QueueMessage message, ChannelClient receiver, DateTime? acknowledgeDeadline)
         {
             Message = message;
             Receiver = receiver;
-            DeliveryDeadline = deliveryDeadline;
+            AcknowledgeDeadline = acknowledgeDeadline;
         }
 
         #endregion
@@ -89,30 +89,29 @@ namespace Twino.MQ
         /// </summary>
         public void MarkAsSent()
         {
-            if (!Message.IsSent)
-                Message.IsSent = true;
+            Message.MarkAsSent();
 
             IsSent = true;
             SendDate = DateTime.UtcNow;
         }
 
         /// <summary>
-        /// Marks message as delivered
+        /// Marks message as acknowledged
         /// </summary>
-        public void MarkAsDelivered()
+        public void MarkAsAcknowledged()
         {
-            IsDelivered = true;
-            DeliveryDate = DateTime.UtcNow;
-            Message.IsDelivered = true;
+            IsAcknowledged = true;
+            AcknowledgeDate = DateTime.UtcNow;
+            Message.IsAcknowledged = true;
         }
 
         /// <summary>
-        /// Marks delivery is timed up
+        /// Marks acknowledge is timed up
         /// </summary>
-        public void MarkAsDeliveryTimedUp()
+        public void MarkAsAcknowledgeTimedUp()
         {
-            IsDelivered = false;
-            IsDeliveryTimedUp = true;
+            IsAcknowledged = false;
+            IsAcknowledgeTimedUp = true;
         }
 
         #endregion
