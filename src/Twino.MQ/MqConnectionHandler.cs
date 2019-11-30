@@ -135,7 +135,7 @@ namespace Twino.MQ
 
                 //client sends a response message for a message
                 case MessageType.Response:
-                    await ResponseMessageReceived(mc, message);
+                    await ResponseMessageReceived(message);
                     break;
 
                 //client sends a message to the server
@@ -271,9 +271,16 @@ namespace Twino.MQ
         /// <summary>
         /// Client sends a response message
         /// </summary>
-        private async Task ResponseMessageReceived(MqClient client, TmqMessage message)
+        private async Task ResponseMessageReceived(TmqMessage message)
         {
-            throw new System.NotImplementedException();
+            //server does not care response messages
+            //if receiver could be found, message is sent to it's receiver
+            //if receiver isn't available, response will be thrown
+
+            MqClient receiver = _server.FindClient(message.Target);
+
+            if (receiver != null)
+                await receiver.SendAsync(message);
         }
 
         #endregion

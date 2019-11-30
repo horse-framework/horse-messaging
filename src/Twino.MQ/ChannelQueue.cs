@@ -280,6 +280,12 @@ namespace Twino.MQ
         /// </summary>
         private async Task<DeliveryOperation> ProcesssMessage(QueueMessage message, bool onheld)
         {
+            //if to process next message is requires previous message acknowledge, wait here
+            if (Options.WaitAcknowledge)
+            {
+                //todo: wait with some reset event, locker, or something
+            }
+            
             //if we need acknowledge, we are sending this information to receivers that we require response
             message.Message.AcknowledgeRequired = Options.RequestAcknowledge;
 

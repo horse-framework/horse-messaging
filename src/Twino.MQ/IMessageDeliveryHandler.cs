@@ -110,11 +110,6 @@ namespace Twino.MQ
         Task OnAcknowledge(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery);
 
         /// <summary>
-        /// Called when a receiver sends a response message.
-        /// </summary>
-        Task OnResponse(ChannelQueue queue, MessageDelivery delivery, TmqMessage response);
-
-        /// <summary>
         /// Message is queued but no receiver found and time is up
         /// </summary>
         Task OnTimeUp(ChannelQueue queue, QueueMessage message);
