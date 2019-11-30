@@ -31,6 +31,11 @@ namespace Twino.Client.TMQ
         /// Default value is true
         /// </summary>
         public bool UseUniqueMessageId { get; set; } = true;
+        
+        /// <summary>
+        /// If true, acknowledge message will be sent automatically if message requires.
+        /// </summary>
+        public bool AutoAcknowledge { get; set; }
 
         /// <summary>
         /// Unique client id
@@ -254,6 +259,9 @@ namespace Twino.Client.TMQ
                     break;
 
                 default:
+                    if (message.AcknowledgeRequired && AutoAcknowledge)
+                        await SendAsync(message.CreateAcknowledge());
+                    
                     SetOnMessageReceived(message);
                     break;
             }
