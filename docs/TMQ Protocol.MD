@@ -7,8 +7,8 @@
 
      0 1 234567 8 9 012345
     +-+-+------+-+-+------+
-    |F|P| TYPE |R|D| TTL  | -> 2 Octets
-    |A|R|  (6) |S|E| (6)  |
+    |F|P| TYPE |R|A| TTL  | -> 2 Octets
+    |A|R|  (6) |S|C| (6)  |
     -----------------------
     |  Message ID Length  | -> 1 Octet
     -----------------------
@@ -33,22 +33,22 @@ Priority bit. If ONE, message is high priority message SHOULD be added to the be
 #### Type
 Message type in 6 bits. In TMQ 1.0, supported types are below,
 
-     (0x00) Other     : All other message types.
-     (0x08) Terminate : Client requests to terminate the connection.
-     (0x09) Ping      : PING message from server to client.
-     (0x0A) Pong      : PONG message from client to server.
-     (0x10) Server    : Client sends a message to directly server. Message SHOULD process in server.
-     (0x11) Channel   : Client sends a message to a queue. Message SHOULD be transmitted to observers.
-     (0x12) Client    : Client sends a message to another client. Server SHOULD transmit the message.
-     (0x13) Delivery  : Client sends a delivery message for another message that received before.
-     (0x14) Response  : Client sends a response message for another message that received before.
-     (0x15) Redirect  : Client or server redirects the message another receiver.
+     (0x00) Other       : All other message types.
+     (0x08) Terminate   : Client requests to terminate the connection.
+     (0x09) Ping        : PING message from server to client.
+     (0x0A) Pong        : PONG message from client to server.
+     (0x10) Server      : Client sends a message to directly server. Message SHOULD process in server.
+     (0x11) Channel     : Client sends a message to a queue. Message SHOULD be transmitted to observers.
+     (0x12) Client      : Client sends a message to another client. Server SHOULD transmit the message.
+     (0x13) Acknowledge : Client sends an acknowledge message for another message that received before.
+     (0x14) Response    : Client sends a response message for another message that received before.
+     (0x15) Redirect    : Client or server redirects the message another receiver.
 
 #### RS: Response Required
 If message needs a response this MUST be ONE, If response isn't waited, this value MUST be ZERO.
 
-#### DE: Delivery Required
-If message needs a delivery message this MUST be ONE, If delivery is not required, this value MUST be ZERO.
+#### AC: Acknowledge Required
+If message needs an acknowledge message this MUST be ONE, If acknowledge is not required, this value MUST be ZERO.
 
 #### TT: Time To Live
 TMQ Protocol TTL value in 6 bits (0-63)
@@ -91,7 +91,7 @@ Twino TMQ is a protocol not a server. Twino has a Messaging Queue library as Twi
 ### Server Message
 Server messages are created to handle communication between clients and servers. For example, client sends key/value pairs to server (like http headers), server sends some information its' clients (for example server status etc), client sends a channel join request to server, in some situations, server may remove client from a channel and sends the information of operation.
 
-FirstAcquirer, HighPriority, DeliveryRequired are not used. Response Required can be used for some situations, server or client may want to know if the sent message is proceed or not. 
+FirstAcquirer, HighPriority, AcknowledgeRequired are not used. Response Required can be used for some situations, server or client may want to know if the sent message is proceed or not. 
 
 In server messages, source isn't required, server already know the unique id of the client. and target isn't required, because target it server's itself. Because of this, in server messages source and target might have different meanings. Twino MQ has some server messages and uses target as channel name or message kind. In here, we will discuss these messages and how a client join to channel or leave from a channel and more. For example if client joins to a channel, content type tells to server this is a subscription, target is channel name.
 
@@ -184,7 +184,7 @@ Channel messages are sent from procuder clients. When producer sends the message
 
 **ResponseRequired:** Usually, response required flag is used for peer to peer messaging. But this can be used in queues too. If producer sends message with response required flag, server will transmit the message to consumers with this flag. Consumers will try to response. You should do this in client-side manually. When response is sent from consumer, server will trigger response received method. In the method, you need to verify if response should send to producer or not.
 
-**DeliveryRequired:** After server send the message to consumer, if delivery requested, consumer will send a delivery message to the server and server will trigger delivery received methods. Delivery required option is set in server side. Server does not care what was the value from producer.
+**AcknowledgeRequired:** After server send the message to consumer, if acknowledge requested, consumer will send an acknowledge message to the server and server will trigger acknowledge received methods. Acknowledge required option is set in server side. Server does not care what was the value from producer.
 
 **MessageId:** Message unique id, can be null from producer, if in server options, UseMessageId is false, server will not set a unique message id. If you want to lower your bandwidth, increase your performance and responses and deliveries are not important, just don't use message id.
 
@@ -196,7 +196,7 @@ Channel messages are sent from procuder clients. When producer sends the message
 ### Client Message
 Client messages are peer to peer messages. They are sent to server, server finds the receiver and transmit the message. In client messages, server does not care anything. Everything is in between clients.
 
-First Acquirer, High Priority, Response Required and Delivery Required are same with what client sends, server does not touch these values, so sender and receiver can tell each other some messages with these values.
+First Acquirer, High Priority, Response Required and Acknowledge Required are same with what client sends, server does not touch these values, so sender and receiver can tell each other some messages with these values.
 
 **MessageId:** Message id can be null if not required
 
@@ -205,14 +205,14 @@ First Acquirer, High Priority, Response Required and Delivery Required are same 
 **TargetId:** Should be receiver unique id. This is the most important value in client messages. If you type this value wrong, message will sent to another receiver (if unique id matches, depends on your id generator system)
 
 
-### Delivery Message
-Delivery messages have some values same with delivered message such as MessageId, ContentType. They should not be confused with real messages. If the type of the message delvery, you should know these values are delivered message's values.
+### Acknowledge Message
+Acknowledge messages have some values same with delivered message such as MessageId, ContentType. They should not be confused with real messages. If the type of the message delvery, you should know these values are delivered message's values.
 
-FirstAcquirer and High Priority are same with delivered message. ResponseRequired and DeliveryRequired values are not important and they are usually false.
+FirstAcquirer and High Priority are same with delivered message. ResponseRequired and AcknowledgeRequired values are not important and they are usually false.
 
-**Type:** Delivery is always Delivery (0x13)
+**Type:** Acknowledge is always Acknowledge (0x13)
 
-**MessageId:** Delivery message doesn't have it's own MessageId, MessageId value is the id of the delivered message.
+**MessageId:** Acknowledge message doesn't have it's own MessageId, MessageId value is the id of the delivered message.
 
 **TargetId:** Delivered message's channel name
 
@@ -222,7 +222,7 @@ FirstAcquirer and High Priority are same with delivered message. ResponseRequire
 ### Response Message
 Response message does not have it's own MessageId. The message id value of the message is same with the message that requested the response.
 
-FirstAcquirer and High Priority are same with delivered message. DeliveryRequired value are not important and they are usually false.
+FirstAcquirer and High Priority are same with delivered message. AcknowledgeRequired value are not important and they are usually false.
 
 **ResponseRequired:** True, if response requires another response. Next response MessageId will be same again.
 
