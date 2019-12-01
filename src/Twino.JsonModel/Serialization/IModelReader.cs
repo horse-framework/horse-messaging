@@ -1,6 +1,6 @@
 using System;
 
-namespace Twino.SocketModels.Serialization
+namespace Twino.JsonModel.Serialization
 {
     /// <summary>
     /// Model reading inteface for web socket string messages
@@ -10,22 +10,22 @@ namespace Twino.SocketModels.Serialization
         /// <summary>
         /// Reads T model from serialized string message
         /// </summary>
-        T Read<T>(string serialized) where T : ISocketModel, new();
+        T Read<T>(string serialized) where T : IJsonModel, new();
 
         /// <summary>
         /// Reads T model from serialized string message
         /// </summary>
-        T Read<T>(string serialized, bool verify) where T : ISocketModel, new();
+        T Read<T>(string serialized, bool verify) where T : IJsonModel, new();
 
         /// <summary>
         /// Reads T model from serialized string message
         /// </summary>
-        ISocketModel Read(Type type, string serialized);
+        IJsonModel Read(Type type, string serialized);
 
         /// <summary>
         /// Reads T model from serialized string message
         /// </summary>
-        ISocketModel Read(Type type, string serialized, bool verify);
+        IJsonModel Read(Type type, string serialized, bool verify);
 
         /// <summary>
         /// Reads only model type from serialized message

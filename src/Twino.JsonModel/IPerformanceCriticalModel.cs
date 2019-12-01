@@ -1,15 +1,15 @@
-using Twino.SocketModels.Serialization;
+using Twino.JsonModel.Serialization;
 
-namespace Twino.SocketModels
+namespace Twino.JsonModel
 {
     /// <summary>
     /// Used by Model Reader and Writer classes.
     /// When serialization and deserialization performance is critical,
     /// This interface provides you to manage serialization manually.
-    /// If your model is implemented from ISocketModel and IPerformanceCritical model,
+    /// If your model is implemented from IJsonModel and IPerformanceCritical model,
     /// Model Reader and Writer classes are called Serialize and Deserialize methods.
     /// </summary>
-    public interface IPerformanceCriticalModel : ISocketModel
+    public interface IPerformanceCriticalModel : IJsonModel
     {
         /// <summary>
         /// Serializes the object as JSON

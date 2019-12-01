@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using Twino.Core;
-using Twino.SocketModels.Models;
-using Twino.SocketModels.Serialization;
+using Twino.JsonModel.Models;
+using Twino.JsonModel.Serialization;
 
-namespace Twino.SocketModels
+namespace Twino.JsonModel
 {
     /// <summary>
-    /// Manages network packages that implement from ISocketModel interface.
+    /// Manages network packages that implement from JsonModel interface.
     /// Each client type must has own package reader generic type.
     /// </summary>
     public class PackageReader
@@ -34,7 +34,7 @@ namespace Twino.SocketModels
         /// When TModel message is received to TClient clients.
         /// The parameter of this method will be called.
         /// </summary>
-        public virtual void On<TModel>(Action<SocketBase, TModel> func) where TModel : class, ISocketModel, new()
+        public virtual void On<TModel>(Action<SocketBase, TModel> func) where TModel : class, IJsonModel, new()
         {
             TModel sample = new TModel();
             On(sample.Type, func);
@@ -45,7 +45,7 @@ namespace Twino.SocketModels
         /// It will be read as TModel message.
         /// The parameter of this method will be called.
         /// </summary>
-        public virtual void On<TModel>(int type, Action<SocketBase, TModel> func) where TModel : class, ISocketModel, new()
+        public virtual void On<TModel>(int type, Action<SocketBase, TModel> func) where TModel : class, IJsonModel, new()
         {
             if (_descriptors.ContainsKey(type))
                 _descriptors[type].Actions.Add(func);
@@ -75,7 +75,7 @@ namespace Twino.SocketModels
 
             PackageDescriptor descriptor = _descriptors[type];
 
-            ISocketModel model = Reader.Read(descriptor.Type, message, true);
+            IJsonModel model = Reader.Read(descriptor.Type, message, true);
 
             if (model == null)
                 return;

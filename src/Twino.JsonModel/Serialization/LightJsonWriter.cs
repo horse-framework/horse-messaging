@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using Newtonsoft.Json;
 
-namespace Twino.SocketModels.Serialization
+namespace Twino.JsonModel.Serialization
 {
     /// <summary>
     /// Wrapper class for Newtonsoft JsonTextWriter.

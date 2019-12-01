@@ -1,11 +1,11 @@
 ﻿using Newtonsoft.Json;
 
-namespace Twino.SocketModels
+namespace Twino.JsonModel
 {
     /// <summary>
     /// Type and data specified socket model, created for compact usage
     /// </summary>
-    public class SocketModel<T> : ISocketModel where T : class, new()
+    public class JsonModel<T> : IJsonModel where T : class, new()
     {
         /// <summary>
         /// Type code for model

@@ -1,11 +1,11 @@
-﻿namespace Twino.SocketModels
+﻿namespace Twino.JsonModel
 {
     /// <summary>
     /// Network package interface.
-    /// In order to use Twino.SocketModels library,
+    /// In order to use Twino.JsonModel library,
     /// all models must be implemented from this interface
     /// </summary>
-    public interface ISocketModel
+    public interface IJsonModel
     {
         /// <summary>
         /// Model type as integer.

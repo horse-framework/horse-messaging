@@ -2,10 +2,10 @@
 using System.Text;
 using System.Threading.Tasks;
 using Twino.Core;
+using Twino.JsonModel.Serialization;
 using Twino.Protocols.WebSocket;
-using Twino.SocketModels.Serialization;
 
-namespace Twino.SocketModels
+namespace Twino.JsonModel
 {
     public static class Extensions
     {
@@ -16,7 +16,7 @@ namespace Twino.SocketModels
         /// Creates web socket message from model and sends to specified client.
         /// TwinoModelWriter is used as IModelWriter. Use overload to customize.
         /// </summary>
-        public static void Send<TModel>(this SocketBase socket, TModel model) where TModel : ISocketModel
+        public static void Send<TModel>(this SocketBase socket, TModel model) where TModel : IJsonModel
         {
             Send(socket, model, _twriter);
         }
@@ -24,7 +24,7 @@ namespace Twino.SocketModels
         /// <summary>
         /// Creates web socket message from model and sends to specified client
         /// </summary>
-        public static void Send<TModel>(this SocketBase socket, TModel model, IModelWriter writer) where TModel : ISocketModel
+        public static void Send<TModel>(this SocketBase socket, TModel model, IModelWriter writer) where TModel : IJsonModel
         {
             WebSocketMessage message = new WebSocketMessage
                                        {
@@ -40,7 +40,7 @@ namespace Twino.SocketModels
         /// Creates web socket message from model and sends to specified client.
         /// TwinoModelWriter is used as IModelWriter. Use overload to customize.
         /// </summary>
-        public static async Task SendAsync<TModel>(this SocketBase socket, TModel model) where TModel : ISocketModel
+        public static async Task SendAsync<TModel>(this SocketBase socket, TModel model) where TModel : IJsonModel
         {
             await SendAsync(socket, model, _twriter);
         }
@@ -48,7 +48,7 @@ namespace Twino.SocketModels
         /// <summary>
         /// Creates web socket message from model and sends to specified client
         /// </summary>
-        public static async Task SendAsync<TModel>(this SocketBase socket, TModel model, IModelWriter writer) where TModel : ISocketModel
+        public static async Task SendAsync<TModel>(this SocketBase socket, TModel model, IModelWriter writer) where TModel : IJsonModel
         {
             WebSocketMessage message = new WebSocketMessage
                                        {
@@ -63,7 +63,7 @@ namespace Twino.SocketModels
         /// Uses default TwinoModelWriter and WebSocketWriter classes.
         /// Creates websocket protocol byte array data of serialized model string. 
         /// </summary>
-        public static byte[] ToWebSocketUTF8Data(this ISocketModel model)
+        public static byte[] ToWebSocketUTF8Data(this IJsonModel model)
         {
             WebSocketMessage message = new WebSocketMessage
                                        {
@@ -78,7 +78,7 @@ namespace Twino.SocketModels
         /// Uses default TwinoModelWriter and WebSocketWriter classes.
         /// Creates websocket protocol byte array data of serialized model string. 
         /// </summary>
-        public static async Task<byte[]> ToWebSocketUTF8DataAsync(this ISocketModel model)
+        public static async Task<byte[]> ToWebSocketUTF8DataAsync(this IJsonModel model)
         {
             WebSocketMessage message = new WebSocketMessage
                                        {

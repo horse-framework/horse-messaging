@@ -1,4 +1,4 @@
-namespace Twino.SocketModels.Serialization
+namespace Twino.JsonModel.Serialization
 {
     /// <summary>
     /// Model writing inteface for web socket string messages
@@ -8,7 +8,7 @@ namespace Twino.SocketModels.Serialization
         /// <summary>
         /// Creates serialized string message from T model
         /// </summary>
-        string Serialize(ISocketModel model);
+        string Serialize(IJsonModel model);
 
     }
 }

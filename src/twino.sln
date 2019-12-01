@@ -11,7 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Twino.Mvc", "Twino.Mvc\Twin
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Twino.Mvc.Auth.Jwt", "Twino.Mvc.Auth.Jwt\Twino.Mvc.Auth.Jwt.csproj", "{9C623698-A2C8-4C8E-B5A4-0CDE712EF243}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Twino.SocketModels", "Twino.SocketModels\Twino.SocketModels.csproj", "{9F20F90E-B004-47CD-8B0D-ACF78FC29641}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Twino.JsonModel", "Twino.JsonModel\Twino.JsonModel.csproj", "{9F20F90E-B004-47CD-8B0D-ACF78FC29641}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{41761E68-E2ED-4BFE-BBE1-D294A3967EB4}"
 EndProject

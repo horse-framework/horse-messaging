@@ -1,4 +1,4 @@
-﻿namespace Twino.SocketModels
+﻿namespace Twino.JsonModel
 {
     /// <summary>
     /// Must used model types for general purpose

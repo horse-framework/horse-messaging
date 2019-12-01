@@ -1,7 +1,6 @@
-using System.IO;
 using Newtonsoft.Json;
 
-namespace Twino.SocketModels.Serialization
+namespace Twino.JsonModel.Serialization
 {
     /// <summary>
     /// Default model writer for Twino libraries
@@ -27,7 +26,7 @@ namespace Twino.SocketModels.Serialization
         /// <summary>
         /// Creates serialized string message from T model
         /// </summary>
-        public string Serialize(ISocketModel model)
+        public string Serialize(IJsonModel model)
         {
             string body;
 
