@@ -139,7 +139,7 @@ namespace Twino.MQ
 
             if (EventHandler != null)
             {
-                bool allowed = await EventHandler.OnStatusChanged(this, old, status);
+                bool allowed = await EventHandler.OnChannelStatusChanged(this, old, status);
                 if (!allowed)
                     return;
             }
@@ -166,7 +166,6 @@ namespace Twino.MQ
         {
             return await CreateQueue(contentType,
                                      Options,
-                                     Server.DefaultQueueEventHandler,
                                      Server.DefaultDeliveryHandler);
         }
 
@@ -181,7 +180,6 @@ namespace Twino.MQ
 
             return await CreateQueue(contentType,
                                      options,
-                                     Server.DefaultQueueEventHandler,
                                      Server.DefaultDeliveryHandler);
         }
 
@@ -190,7 +188,6 @@ namespace Twino.MQ
         /// </summary>
         public async Task<ChannelQueue> CreateQueue(ushort contentType,
                                                     ChannelQueueOptions options,
-                                                    IQueueEventHandler eventHandler,
                                                     IMessageDeliveryHandler deliveryHandler)
         {
             if (deliveryHandler == null)
@@ -210,7 +207,7 @@ namespace Twino.MQ
             if (queue != null)
                 throw new DuplicateNameException($"The channel has already a queue with same content type: {contentType}");
 
-            queue = new ChannelQueue(this, contentType, options, eventHandler, deliveryHandler);
+            queue = new ChannelQueue(this, contentType, options, deliveryHandler);
             _queues.Add(queue);
 
             if (EventHandler != null)

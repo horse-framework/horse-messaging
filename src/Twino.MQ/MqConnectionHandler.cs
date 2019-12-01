@@ -258,7 +258,7 @@ namespace Twino.MQ
 
             //push the message
             QueueMessage queueMessage = new QueueMessage(message);
-            await queue.Push(queueMessage);
+            await queue.Push(queueMessage, client);
         }
 
         /// <summary>

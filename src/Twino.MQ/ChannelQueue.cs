@@ -59,13 +59,6 @@ namespace Twino.MQ
         public ChannelQueueOptions Options { get; }
 
         /// <summary>
-        /// Queue event handler.
-        /// If not null, all methods will be called when events are occured.
-        /// If null, server's default event handler will be used.
-        /// </summary>
-        public IQueueEventHandler EventHandler { get; }
-
-        /// <summary>
         /// Queue messaging handler.
         /// If null, server's default delivery will be used.
         /// </summary>
@@ -120,14 +113,12 @@ namespace Twino.MQ
         internal ChannelQueue(Channel channel,
                               ushort contentType,
                               ChannelQueueOptions options,
-                              IQueueEventHandler eventHandler,
                               IMessageDeliveryHandler deliveryHandler)
         {
             Channel = channel;
             ContentType = contentType;
             Options = options;
 
-            EventHandler = eventHandler;
             DeliveryHandler = deliveryHandler;
 
             _timeKeeper = new QueueTimeKeeper(this, _prefentialMessages, _standardMessages);
@@ -150,9 +141,9 @@ namespace Twino.MQ
             if (old == status)
                 return;
 
-            if (EventHandler != null)
+            if (Channel.EventHandler != null)
             {
-                bool allowed = await EventHandler.OnStatusChanged(this, old, status);
+                bool allowed = await Channel.EventHandler.OnQueueStatusChanged(this, old, status);
                 if (!allowed)
                     return;
             }
@@ -178,8 +169,8 @@ namespace Twino.MQ
             else
                 _standardMessages.Remove(message);
 
-            if (EventHandler != null)
-                await EventHandler.OnMessageRemoved(this, message);
+            if (DeliveryHandler != null)
+                await DeliveryHandler.OnRemove(this, message);
 
             return true;
         }
@@ -187,15 +178,22 @@ namespace Twino.MQ
         /// <summary>
         /// Pushes a message into the queue.
         /// </summary>
-        internal async Task Push(QueueMessage message)
+        internal async Task Push(QueueMessage message, MqClient sender)
         {
             //process the message
             QueueMessage held = null;
             try
             {
                 //fire message receive event
-                if (EventHandler != null)
-                    await EventHandler.OnMessageReceived(this, message);
+                MessageDecision decision = await DeliveryHandler.OnReceived(this, message, sender);
+                
+                //if message should save at the beginning, save the message
+                if (decision == MessageDecision.SkipAndSave || decision == MessageDecision.AllowAndSave)
+                    message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
+
+                //if message is skipped on first step, dont push the message any queue and do not process
+                if (decision == MessageDecision.Skip || decision == MessageDecision.SkipAndSave)
+                    return;
 
                 //if we have an option maximum wait duration for message, set it after message joined to the queue.
                 //time keeper will check this value and if message time is up, it will remove message from the queue.

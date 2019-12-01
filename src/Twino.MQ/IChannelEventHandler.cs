@@ -32,6 +32,11 @@ namespace Twino.MQ
         /// Called when a channel's status is changed.
         /// If returns false, status change operation will be canceled.
         /// </summary>
-        Task<bool> OnStatusChanged(Channel channel, ChannelStatus from, ChannelStatus to);
+        Task<bool> OnChannelStatusChanged(Channel channel, ChannelStatus from, ChannelStatus to);
+        
+        /// <summary>
+        /// Called when queue status has changed
+        /// </summary>
+        Task<bool> OnQueueStatusChanged(ChannelQueue queue, QueueStatus from, QueueStatus to);
     }
 }

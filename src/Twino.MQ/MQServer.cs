@@ -45,7 +45,7 @@ namespace Twino.MQ
         /// <summary>
         /// Underlying Twino Server
         /// </summary>
-        internal TwinoServer Server { get; private set; }
+        public TwinoServer Server { get; private set; }
 
         /// <summary>
         /// Client authenticator implementation.
@@ -70,12 +70,6 @@ namespace Twino.MQ
         /// this authenticator will authenticate the clients
         /// </summary>
         public IChannelAuthenticator DefaultChannelAuthenticator { get; private set; }
-
-        /// <summary>
-        /// Default queue event handler.
-        /// If queues do not have their own custom event handlers, will event handler will run for them
-        /// </summary>
-        public IQueueEventHandler DefaultQueueEventHandler { get; private set; }
 
         /// <summary>
         /// Default message delivery handler for queues, if they do not have their custom delivery handler
@@ -163,13 +157,8 @@ namespace Twino.MQ
         /// <summary>
         /// Sets default queue event handler, authenticator and message delivery handler
         /// </summary>
-        public void SetDefaultQueueHandlers(IQueueEventHandler handler, IMessageDeliveryHandler deliveryHandler)
+        public void SetDefaultDeliveryHandler(IMessageDeliveryHandler deliveryHandler)
         {
-            if (DefaultQueueEventHandler != null)
-                throw new ReadOnlyException("Default queue event handler can be set only once");
-
-            DefaultQueueEventHandler = handler;
-
             if (DefaultDeliveryHandler != null)
                 throw new ReadOnlyException("Default message delivery handler can be set only once");
 
@@ -219,7 +208,7 @@ namespace Twino.MQ
             _channels.Add(channel);
             return channel;
         }
-        
+
         /// <summary>
         /// Finds the channel by name
         /// </summary>
