@@ -10,10 +10,9 @@
         <Company>Mehmet Helvacıköylü</Company>
         <PackageTags>twino, entityframework, data, context, factory, extension, ioc</PackageTags>
         <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
-        <Version>3.2.0</Version>
-        <FileVersion>1.5.3</FileVersion>
-        <AssemblyVersion>1.5.3</AssemblyVersion>
-        <PackageVersion>1.5.3</PackageVersion>
+        <AssemblyVersion>2.0.1</AssemblyVersion>
+        <FileVersion>2.0.1</FileVersion>
+        <PackageVersion>2.0.1</PackageVersion>
         <LangVersion>8</LangVersion>
         <NeutralLanguage>en</NeutralLanguage>
     </PropertyGroup>
