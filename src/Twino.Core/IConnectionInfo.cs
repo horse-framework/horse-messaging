@@ -51,7 +51,7 @@ namespace Twino.Core
         /// Current data transfer protocol of the active connection
         /// </summary>
         ITwinoProtocol Protocol { get; set; }
-        
+
         /// <summary>
         /// Socket object of the connection
         /// </summary>

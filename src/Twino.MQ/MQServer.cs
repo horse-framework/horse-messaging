@@ -141,7 +141,7 @@ namespace Twino.MQ
         /// <summary>
         /// Sets default channel event handler and authenticator
         /// </summary>
-        public void SetDefaultChannelHandlers(IChannelEventHandler eventHandler, IChannelAuthenticator authenticator)
+        public void SetDefaultChannelHandler(IChannelEventHandler eventHandler, IChannelAuthenticator authenticator)
         {
             if (DefaultChannelEventHandler != null)
                 throw new ReadOnlyException("Default channel event handler can be set only once");

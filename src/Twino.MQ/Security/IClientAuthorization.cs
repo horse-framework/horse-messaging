@@ -10,11 +10,6 @@ namespace Twino.MQ.Security
     public interface IClientAuthorization
     {
         /// <summary>
-        /// Returns true, if client is allowed to join to the channel
-        /// </summary>
-        Task<bool> CanJoin(MqClient client, Channel channel);
-
-        /// <summary>
         /// Returns true, if user can client the channel
         /// </summary>
         Task<bool> CanCreateChannel(MqClient client, MQServer server, string channelName);

@@ -42,10 +42,58 @@ namespace Twino.Protocols.TMQ
                 return await Task.FromResult(result);
 
             result.Accepted = CheckProtocol(data);
-            result.Response = PredefinedMessages.PROTOCOL_BYTES;
+            if (!result.Accepted)
+                return result;
+
+            //sends protocol message
+            await info.GetStream().WriteAsync(PredefinedMessages.PROTOCOL_BYTES);
+
+            bool alive = await ReadFirstMessage(info, result);
+            if (!alive)
+                return result;
+
             result.PipeConnection = true;
+            info.State = ConnectionStates.Pipe;
 
             return result;
+        }
+
+        /// <summary>
+        /// Reads first Hello message from client
+        /// </summary>
+        private async Task<bool> ReadFirstMessage(IConnectionInfo info, ProtocolHandshakeResult handshakeResult)
+        {
+            TmqReader reader = new TmqReader();
+            TmqMessage message = await reader.Read(info.GetStream());
+
+            if (message.Type == MessageType.Server && message.ContentType == KnownContentTypes.Hello)
+            {
+                ConnectionData connectionData = new ConnectionData();
+                message.Content.Position = 0;
+                await connectionData.ReadFromStream(message.Content);
+
+                SocketBase socket = await _handler.Connected(_server, info, connectionData);
+                if (socket == null)
+                {
+                    info.Close();
+                    return false;
+                }
+
+                void socketDisconnected(SocketBase socketBase)
+                {
+                    _handler.Disconnected(_server, socketBase);
+                    _server.Pinger.Remove(socket);
+                    socket.Disconnected -= socketDisconnected;
+                }
+
+                handshakeResult.Socket = socket;
+                info.State = ConnectionStates.Pipe;
+                socket.Disconnected += socketDisconnected;
+                _server.Pinger.Add(socket);
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>

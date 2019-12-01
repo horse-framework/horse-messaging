@@ -19,7 +19,7 @@ namespace Twino.MQ
         /// Messaging Queue Server
         /// </summary>
         private readonly MQServer _server;
-        
+
         /// <summary>
         /// Default TMQ protocol message writer
         /// </summary>
@@ -311,22 +311,10 @@ namespace Twino.MQ
                 return;
             }
 
-            if (_server.Authorization != null)
-            {
-                bool grant = await _server.Authorization.CanJoin(client, channel);
-                if (!grant)
-                {
-                    if (message.ResponseRequired)
-                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
-
-                    return;
-                }
-            }
-
-            bool done = await channel.AddClient(client);
+            bool grant = await channel.AddClient(client);
 
             if (message.ResponseRequired)
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, done ? KnownContentTypes.Ok : KnownContentTypes.Unauthorized));
+                await client.SendAsync(MessageBuilder.ResponseStatus(message, grant ? KnownContentTypes.Ok : KnownContentTypes.Unauthorized));
         }
 
         /// <summary>
