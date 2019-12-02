@@ -30,10 +30,13 @@ namespace Sample.MqServer
             TmqClient client = new TmqClient();
             client.Data.Method = "GET";
             client.Data.Path = "/";
-            client.Data.Properties.Add("Client-Id", "test-client");
+            client.ClientId = "test-client";
             client.Connect("tmq://localhost:83");
             Console.ReadLine();
 
+            bool joined = client.Join("demo", false).Result;
+            Console.WriteLine(joined);
+            
             server.Server.BlockWhileRunning();
         }
     }

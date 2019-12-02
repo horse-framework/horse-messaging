@@ -55,7 +55,7 @@ namespace Twino.MQ
             //creates new mq client object 
             MqClient client = new MqClient(server, connection, _server.MessageIdGenerator, _server.Options.UseMessageId);
             client.Data = data;
-            client.UniqueId = clientId;
+            client.UniqueId = clientId.Trim();
             client.Token = data.Properties.GetStringValue(TmqHeaders.CLIENT_TOKEN);
             client.Name = data.Properties.GetStringValue(TmqHeaders.CLIENT_NAME);
             client.Type = data.Properties.GetStringValue(TmqHeaders.CLIENT_TYPE);

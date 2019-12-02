@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Twino.MQ;
 using Twino.MQ.Clients;
@@ -6,34 +7,40 @@ namespace Sample.MqServer
 {
     public class ChannelHandler : IChannelEventHandler
     {
-        public Task OnQueueCreated(ChannelQueue queue, Channel channel)
+        public async Task OnQueueCreated(ChannelQueue queue, Channel channel)
         {
-            throw new System.NotImplementedException();
+            Console.WriteLine($"{queue.ContentType} is created in {channel.Name}");
+            await Task.CompletedTask;
         }
 
-        public Task OnQueueRemoved(ChannelQueue queue, Channel channel)
+        public async Task OnQueueRemoved(ChannelQueue queue, Channel channel)
         {
-            throw new System.NotImplementedException();
+            Console.WriteLine($"{queue.ContentType} queue removed from {channel.Name}");
+            await Task.CompletedTask;
         }
 
-        public Task ClientJoined(ChannelClient client)
+        public async Task ClientJoined(ChannelClient client)
         {
-            throw new System.NotImplementedException();
+            Console.WriteLine($"{client.Client.UniqueId} joined to {client.Channel.Name}");
+            await Task.CompletedTask;
         }
 
-        public Task ClientLeft(ChannelClient client)
+        public async Task ClientLeft(ChannelClient client)
         {
-            throw new System.NotImplementedException();
+            Console.WriteLine($"{client.Client.UniqueId} left from {client.Channel.Name}");
+            await Task.CompletedTask;
         }
 
-        public Task<bool> OnChannelStatusChanged(Channel channel, ChannelStatus @from, ChannelStatus to)
+        public async Task<bool> OnChannelStatusChanged(Channel channel, ChannelStatus from, ChannelStatus to)
         {
-            throw new System.NotImplementedException();
+            Console.WriteLine($"{channel.Name} channel status changed from {from} to {to}");
+            return await Task.FromResult(true);
         }
 
-        public Task<bool> OnQueueStatusChanged(ChannelQueue queue, QueueStatus @from, QueueStatus to)
+        public async Task<bool> OnQueueStatusChanged(ChannelQueue queue, QueueStatus from, QueueStatus to)
         {
-            throw new System.NotImplementedException();
+            Console.WriteLine($"{queue.ContentType} queue status changed from {from} to {to}");
+            return await Task.FromResult(true);
         }
     }
 }

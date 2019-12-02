@@ -8,59 +8,70 @@ namespace Sample.MqServer
 {
     public class DeliveryHandler : IMessageDeliveryHandler
     {
-        public Task<MessageDecision> OnReceived(ChannelQueue queue, QueueMessage message, MqClient sender)
+        public async Task<MessageDecision> OnReceived(ChannelQueue queue, QueueMessage message, MqClient sender)
         {
-            throw new NotImplementedException();
+            Console.WriteLine($"Message received to {queue.ContentType} queue in {queue.Channel.Name}");
+            return await Task.FromResult(MessageDecision.Allow);
         }
 
-        public Task<MessageDecision> OnSendStarting(ChannelQueue queue, QueueMessage message)
+        public async Task<MessageDecision> OnSendStarting(ChannelQueue queue, QueueMessage message)
         {
-            throw new NotImplementedException();
+            Console.WriteLine($"Message send operation is starting in {queue.ContentType} queue in {queue.Channel.Name}");
+            return await Task.FromResult(MessageDecision.Allow);
         }
 
-        public Task<DeliveryDecision> OnBeforeSend(ChannelQueue queue, QueueMessage message, MqClient receiver)
+        public async Task<DeliveryDecision> OnBeforeSend(ChannelQueue queue, QueueMessage message, MqClient receiver)
         {
-            throw new NotImplementedException();
+            Console.WriteLine($"Message is going to to {receiver.UniqueId} in {queue.ContentType} queue in {queue.Channel.Name}");
+            return await Task.FromResult(DeliveryDecision.Allow);
         }
 
-        public Task OnAfterSend(ChannelQueue queue, MessageDelivery delivery, MqClient receiver)
+        public async Task OnAfterSend(ChannelQueue queue, MessageDelivery delivery, MqClient receiver)
         {
-            throw new NotImplementedException();
+            Console.WriteLine($"Message is sent to {receiver.UniqueId} in {queue.ContentType} queue in {queue.Channel.Name}");
+            await Task.CompletedTask;
         }
 
-        public Task<DeliveryOperation> OnSendCompleted(ChannelQueue queue, QueueMessage message)
+        public async Task<DeliveryOperation> OnSendCompleted(ChannelQueue queue, QueueMessage message)
         {
-            throw new NotImplementedException();
+            Console.WriteLine($"Send operation completed in {queue.ContentType} queue in {queue.Channel.Name}");
+            return await Task.FromResult(DeliveryOperation.SaveMessage);
         }
 
-        public Task OnAcknowledge(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery)
+        public async Task OnAcknowledge(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery)
         {
-            throw new NotImplementedException();
+            Console.WriteLine($"Acknowledge received in {queue.ContentType} queue in {queue.Channel.Name}");
+            await Task.CompletedTask;
         }
 
-        public Task OnTimeUp(ChannelQueue queue, QueueMessage message)
+        public async Task OnTimeUp(ChannelQueue queue, QueueMessage message)
         {
-            throw new NotImplementedException();
+            Console.WriteLine($"Message timed out in {queue.ContentType} queue in {queue.Channel.Name}");
+            await Task.CompletedTask;
         }
 
-        public Task OnAcknowledgeTimeUp(ChannelQueue queue, MessageDelivery delivery)
+        public async Task OnAcknowledgeTimeUp(ChannelQueue queue, MessageDelivery delivery)
         {
-            throw new NotImplementedException();
+            Console.WriteLine($"Acknowledge timed out in {queue.ContentType} queue in {queue.Channel.Name}");
+            await Task.CompletedTask;
         }
 
-        public Task OnRemove(ChannelQueue queue, QueueMessage message)
+        public async Task OnRemove(ChannelQueue queue, QueueMessage message)
         {
-            throw new NotImplementedException();
+            Console.WriteLine($"Message removed from {queue.ContentType} queue in {queue.Channel.Name}");
+            await Task.CompletedTask;
         }
 
-        public Task OnException(ChannelQueue queue, QueueMessage message, Exception exception)
+        public async Task OnException(ChannelQueue queue, QueueMessage message, Exception exception)
         {
-            throw new NotImplementedException();
+            Console.WriteLine("Exception thrown: " + exception);
+            await Task.CompletedTask;
         }
 
-        public Task<bool> SaveMessage(ChannelQueue queue, QueueMessage message)
+        public async Task<bool> SaveMessage(ChannelQueue queue, QueueMessage message)
         {
-            throw new NotImplementedException();
+            Console.WriteLine($"{queue.ContentType} message saved in {queue.Channel.Name}");
+            return await Task.FromResult(true);
         }
     }
 }
