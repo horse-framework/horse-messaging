@@ -18,6 +18,12 @@ namespace Twino.Client.TMQ
     /// </summary>
     public class TmqClient : ClientSocketBase<TmqMessage>, IDisposable
     {
+        
+        #region Properties
+        
+        /// <summary>
+        /// TMQ Procotol message writer
+        /// </summary>
         private static readonly TmqWriter _writer = new TmqWriter();
 
         /// <summary>
@@ -73,6 +79,10 @@ namespace Twino.Client.TMQ
         /// Acknowledge and Response message follower of the client
         /// </summary>
         private readonly MessageFollower _follower;
+        
+        #endregion
+        
+        #region Constructors - Destructors
 
         public TmqClient()
         {
@@ -87,6 +97,8 @@ namespace Twino.Client.TMQ
         {
             _follower?.Dispose();
         }
+        
+        #endregion
 
         #region Connect - Read
 
