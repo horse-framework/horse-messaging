@@ -18,9 +18,8 @@ namespace Twino.Client.TMQ
     /// </summary>
     public class TmqClient : ClientSocketBase<TmqMessage>, IDisposable
     {
-        
         #region Properties
-        
+
         /// <summary>
         /// TMQ Procotol message writer
         /// </summary>
@@ -46,12 +45,12 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Maximum time to wait acknowledge message
         /// </summary>
-        public TimeSpan AcknowledgeWaitMax { get; set; }
+        public TimeSpan AcknowledgeWaitMax { get; set; } = TimeSpan.FromSeconds(5);
 
         /// <summary>
         /// Maximum time to wait response message
         /// </summary>
-        public TimeSpan ResponseWaitMax { get; set; }
+        public TimeSpan ResponseWaitMax { get; set; } = TimeSpan.FromSeconds(15);
 
         /// <summary>
         /// Unique client id
@@ -79,13 +78,15 @@ namespace Twino.Client.TMQ
         /// Acknowledge and Response message follower of the client
         /// </summary>
         private readonly MessageFollower _follower;
-        
+
         #endregion
-        
+
         #region Constructors - Destructors
 
         public TmqClient()
         {
+            Data.Method = "CONNECT";
+            Data.Path = "/";
             _follower = new MessageFollower(this);
             _follower.Run();
         }
@@ -97,7 +98,7 @@ namespace Twino.Client.TMQ
         {
             _follower?.Dispose();
         }
-        
+
         #endregion
 
         #region Connect - Read
@@ -372,21 +373,24 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Joins to a channel
         /// </summary>
-        public async Task<bool> Join(string channel, bool waitAcknowledge)
+        public async Task<bool> Join(string channel, bool verifyResponse)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.Join;
             message.Target = channel;
-            message.AcknowledgeRequired = waitAcknowledge;
+            message.ResponseRequired = verifyResponse;
             message.MessageId = UniqueIdGenerator.Create();
 
             bool sent = await SendAsync(message);
             if (!sent)
                 return false;
 
-            if (waitAcknowledge)
-                return await _follower.FollowAcknowledge(message);
+            if (verifyResponse)
+            {
+                TmqMessage response = await _follower.FollowResponse(message);
+                return response != null && response.ContentType == KnownContentTypes.Ok;
+            }
 
             return true;
         }
@@ -394,20 +398,24 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Leaves from a channel
         /// </summary>
-        public async Task<bool> Leave(string channel, bool waitAcknowledge)
+        public async Task<bool> Leave(string channel, bool verifyResponse)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.Leave;
             message.Target = channel;
+            message.ResponseRequired = verifyResponse;
             message.MessageId = UniqueIdGenerator.Create();
 
             bool sent = await SendAsync(message);
             if (!sent)
                 return false;
 
-            if (waitAcknowledge)
-                return await _follower.FollowAcknowledge(message);
+            if (verifyResponse)
+            {
+                TmqMessage response = await _follower.FollowResponse(message);
+                return response != null && response.ContentType == KnownContentTypes.Ok;
+            }
 
             return true;
         }

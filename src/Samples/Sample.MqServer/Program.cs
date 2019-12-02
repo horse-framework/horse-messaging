@@ -26,16 +26,17 @@ namespace Sample.MqServer
             Channel demoChannel = server.CreateChannel("demo");
             demoChannel.CreateQueue(100);
             Console.WriteLine("Server started");
+            
 
             TmqClient client = new TmqClient();
-            client.Data.Method = "GET";
-            client.Data.Path = "/";
             client.ClientId = "test-client";
             client.Connect("tmq://localhost:83");
             Console.ReadLine();
 
-            bool joined = client.Join("demo", false).Result;
+            bool joined = client.Join("demo", true).Result;
             Console.WriteLine(joined);
+            
+            Console.ReadLine();
             
             server.Server.BlockWhileRunning();
         }
