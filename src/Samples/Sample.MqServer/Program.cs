@@ -2,6 +2,7 @@
 using Twino.Client.TMQ;
 using Twino.MQ;
 using Twino.MQ.Options;
+using Twino.Protocols.TMQ;
 using Twino.Server;
 
 namespace Sample.MqServer
@@ -31,7 +32,8 @@ namespace Sample.MqServer
             client.Data.Path = "/";
             client.Data.Properties.Add("Client-Id", "test-client");
             client.Connect("tmq://localhost:83");
-            
+            Console.ReadLine();
+
             server.Server.BlockWhileRunning();
         }
     }

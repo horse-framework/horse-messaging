@@ -16,7 +16,7 @@ namespace Twino.Client.TMQ
     /// Can be used directly with event subscriptions
     /// Or can be base class to a derived Client class and provides virtual methods for all events
     /// </summary>
-    public class TmqClient : ClientSocketBase<TmqMessage>
+    public class TmqClient : ClientSocketBase<TmqMessage>, IDisposable
     {
         private static readonly TmqWriter _writer = new TmqWriter();
 
@@ -31,11 +31,21 @@ namespace Twino.Client.TMQ
         /// Default value is true
         /// </summary>
         public bool UseUniqueMessageId { get; set; } = true;
-        
+
         /// <summary>
         /// If true, acknowledge message will be sent automatically if message requires.
         /// </summary>
         public bool AutoAcknowledge { get; set; }
+
+        /// <summary>
+        /// Maximum time to wait acknowledge message
+        /// </summary>
+        public TimeSpan AcknowledgeWaitMax { get; set; }
+
+        /// <summary>
+        /// Maximum time to wait response message
+        /// </summary>
+        public TimeSpan ResponseWaitMax { get; set; }
 
         /// <summary>
         /// Unique client id
@@ -57,6 +67,25 @@ namespace Twino.Client.TMQ
 
                 _clientId = value;
             }
+        }
+
+        /// <summary>
+        /// Acknowledge and Response message follower of the client
+        /// </summary>
+        private readonly MessageFollower _follower;
+
+        public TmqClient()
+        {
+            _follower = new MessageFollower(this);
+            _follower.Run();
+        }
+
+        /// <summary>
+        /// Releases all resources of the client
+        /// </summary>
+        public void Dispose()
+        {
+            _follower?.Dispose();
         }
 
         #region Connect - Read
@@ -261,7 +290,7 @@ namespace Twino.Client.TMQ
                 default:
                     if (message.AcknowledgeRequired && AutoAcknowledge)
                         await SendAsync(message.CreateAcknowledge());
-                    
+
                     SetOnMessageReceived(message);
                     break;
             }
@@ -298,7 +327,7 @@ namespace Twino.Client.TMQ
         {
             message.Source = _clientId;
 
-            if (UseUniqueMessageId)
+            if (string.IsNullOrEmpty(message.MessageId) && UseUniqueMessageId)
                 message.MessageId = UniqueIdGenerator.Create();
 
             message.CalculateLengths();
@@ -314,13 +343,82 @@ namespace Twino.Client.TMQ
         {
             message.Source = _clientId;
 
-            if (UseUniqueMessageId)
+            if (string.IsNullOrEmpty(message.MessageId) && UseUniqueMessageId)
                 message.MessageId = UniqueIdGenerator.Create();
 
             message.CalculateLengths();
 
             byte[] data = await _writer.Create(message);
             return await SendAsync(data);
+        }
+
+        #endregion
+
+        #region MQ Operations
+
+        /// <summary>
+        /// Joins to a channel
+        /// </summary>
+        public async Task<bool> Join(string channel, bool waitAcknowledge)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ContentType = KnownContentTypes.Join;
+            message.Target = channel;
+            message.AcknowledgeRequired = waitAcknowledge;
+            message.MessageId = UniqueIdGenerator.Create();
+
+            bool sent = await SendAsync(message);
+            if (!sent)
+                return false;
+
+            if (waitAcknowledge)
+                return await _follower.FollowAcknowledge(message);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Leaves from a channel
+        /// </summary>
+        public async Task<bool> Leave(string channel, bool waitAcknowledge)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ContentType = KnownContentTypes.Leave;
+            message.Target = channel;
+            message.MessageId = UniqueIdGenerator.Create();
+
+            bool sent = await SendAsync(message);
+            if (!sent)
+                return false;
+
+            if (waitAcknowledge)
+                return await _follower.FollowAcknowledge(message);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Pushes a message to a queue
+        /// </summary>
+        public async Task<bool> Push(string channel, ushort contentType, MemoryStream content, bool waitAcknowledge)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Channel;
+            message.ContentType = contentType;
+            message.Target = channel;
+            message.MessageId = UniqueIdGenerator.Create();
+            message.Content = content;
+
+            bool sent = await SendAsync(message);
+            if (!sent)
+                return false;
+
+            if (waitAcknowledge)
+                return await _follower.FollowAcknowledge(message);
+
+            return true;
         }
 
         #endregion
