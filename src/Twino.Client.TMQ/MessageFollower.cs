@@ -126,7 +126,7 @@ namespace Twino.Client.TMQ
             if (!message.AcknowledgeRequired || string.IsNullOrEmpty(message.MessageId))
                 return false;
 
-            DateTime expiration = DateTime.UtcNow + _client.AcknowledgeWaitMax;
+            DateTime expiration = DateTime.UtcNow + _client.AcknowledgeTimeout;
             AcknowledgeMessageDescriptor descriptor = new AcknowledgeMessageDescriptor(message, expiration);
 
             lock (_descriptors)
@@ -143,7 +143,7 @@ namespace Twino.Client.TMQ
             if (!message.ResponseRequired || string.IsNullOrEmpty(message.MessageId))
                 return default;
 
-            DateTime expiration = DateTime.UtcNow + _client.AcknowledgeWaitMax;
+            DateTime expiration = DateTime.UtcNow + _client.ResponseTimeout;
             ResponseMessageDescriptor descriptor = new ResponseMessageDescriptor(message, expiration);
 
             lock (_descriptors)

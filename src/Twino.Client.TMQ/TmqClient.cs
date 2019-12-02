@@ -43,14 +43,20 @@ namespace Twino.Client.TMQ
         public bool AutoAcknowledge { get; set; }
 
         /// <summary>
+        /// If true, response messages will trigger on message received events.
+        /// If false, response messages are proceed silently.
+        /// </summary>
+        public bool CatchResponseMessages { get; set; }
+
+        /// <summary>
         /// Maximum time to wait acknowledge message
         /// </summary>
-        public TimeSpan AcknowledgeWaitMax { get; set; } = TimeSpan.FromSeconds(5);
+        public TimeSpan AcknowledgeTimeout { get; set; } = TimeSpan.FromSeconds(5);
 
         /// <summary>
         /// Maximum time to wait response message
         /// </summary>
-        public TimeSpan ResponseWaitMax { get; set; } = TimeSpan.FromSeconds(15);
+        public TimeSpan ResponseTimeout { get; set; } = TimeSpan.FromSeconds(15);
 
         /// <summary>
         /// Unique client id
@@ -299,6 +305,17 @@ namespace Twino.Client.TMQ
 
                 case MessageType.Ping:
                     Pong();
+                    break;
+
+                case MessageType.Acknowledge:
+                    _follower.ProcessAcknowledge(message);
+                    break;
+
+                case MessageType.Response:
+                    _follower.ProcessResponse(message);
+
+                    if (CatchResponseMessages)
+                        SetOnMessageReceived(message);
                     break;
 
                 default:

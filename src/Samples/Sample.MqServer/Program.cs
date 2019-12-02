@@ -31,6 +31,8 @@ namespace Sample.MqServer
             TmqClient client = new TmqClient();
             client.ClientId = "test-client";
             client.Connect("tmq://localhost:83");
+            client.AcknowledgeTimeout = TimeSpan.FromSeconds(180);
+            client.ResponseTimeout = TimeSpan.FromSeconds(300);
             Console.ReadLine();
 
             bool joined = client.Join("demo", true).Result;
