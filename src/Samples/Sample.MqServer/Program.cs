@@ -7,6 +7,11 @@ using Twino.Server;
 
 namespace Sample.MqServer
 {
+    public class HelloModel
+    {
+        public string M { get; set; }
+    }
+
     class Program
     {
         static void Main(string[] args)
@@ -26,7 +31,6 @@ namespace Sample.MqServer
             Channel demoChannel = server.CreateChannel("demo");
             demoChannel.CreateQueue(100);
             Console.WriteLine("Server started");
-            
 
             TmqClient client = new TmqClient();
             client.ClientId = "test-client";
@@ -37,9 +41,27 @@ namespace Sample.MqServer
 
             bool joined = client.Join("demo", true).Result;
             Console.WriteLine(joined);
-            
+
+            MessageReader reader = new MessageReader((mx, type) =>
+            {
+                return Newtonsoft.Json.JsonConvert.DeserializeObject(mx.ToString(), type);
+            });
+            reader.On<HelloModel>("demo", 100, m =>
+            {
+                Console.WriteLine("Message received: " + m.M);
+            });
+            reader.Attach(client);
+
             Console.ReadLine();
-            
+
+            TmqMessage msg = new TmqMessage();
+            msg.Type = MessageType.Channel;
+            msg.Target = "demo";
+            msg.ContentType = 100;
+            HelloModel hm = new HelloModel {M = "Hello World"};
+            msg.SetStringContent(Newtonsoft.Json.JsonConvert.SerializeObject(hm));
+            client.Send(msg);
+
             server.Server.BlockWhileRunning();
         }
     }

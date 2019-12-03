@@ -47,6 +47,11 @@ namespace Twino.Client.TMQ
         /// If false, response messages are proceed silently.
         /// </summary>
         public bool CatchResponseMessages { get; set; }
+        
+        /// <summary>
+        /// If true, client ignores it's own messages in subscribed queues
+        /// </summary>
+        public bool IgnoreMyQueueMessages { get; set; }
 
         /// <summary>
         /// Maximum time to wait acknowledge message

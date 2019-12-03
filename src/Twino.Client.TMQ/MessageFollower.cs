@@ -6,6 +6,10 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.Client.TMQ
 {
+    /// <summary>
+    /// Message follower, follows the messages which required acknowledge or response.
+    /// If their acknowledge or response messages isn't received, fires timeout actions.
+    /// </summary>
     internal class MessageFollower : IDisposable
     {
         /// <summary>

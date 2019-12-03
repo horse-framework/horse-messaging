@@ -44,6 +44,7 @@ namespace Twino.Protocols.TMQ
             Stream = info.GetStream();
             _uniqueIdGenerator = generator;
             UseUniqueMessageId = useUniqueMessageId;
+            IsConnected = true;
         }
 
         /// <summary>
