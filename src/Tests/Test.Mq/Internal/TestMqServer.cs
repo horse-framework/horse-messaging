@@ -1,5 +1,6 @@
-using System;
 using Twino.MQ;
+using Twino.MQ.Options;
+using Twino.Server;
 
 namespace Test.Mq.Internal
 {
@@ -26,9 +27,19 @@ namespace Test.Mq.Internal
         public int OnException { get; set; }
         public int SaveMessage { get; set; }
 
-        internal void Run(int port)
+        internal void Initialize(int port)
         {
-            throw new NotImplementedException();
+            ServerOptions serverOptions = new ServerOptions();
+            MqServerOptions mqOptions = new MqServerOptions();
+
+            Server = new MQServer(serverOptions, mqOptions);
+            Server.SetDefaultChannelHandler(new TestChannelHandler(this), null);
+            Server.SetDefaultDeliveryHandler(new TestDeliveryHandler(this));
+        }
+
+        public void Start()
+        {
+            Server.Start();
         }
     }
 }
