@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Test.Mq
@@ -10,7 +9,7 @@ namespace Test.Mq
         /// Clients subscribes to a queue and reads message with message reader
         /// </summary>
         [Fact]
-        public async Task ClientReadsMessageFromQueue()
+        public void ClientReadsMessageFromQueue()
         {
             throw new NotImplementedException();
         }
@@ -19,7 +18,7 @@ namespace Test.Mq
         /// Client reads messages from multiple channels
         /// </summary>
         [Fact]
-        public async Task ClientReadsMessagesFromMultipleChannels()
+        public void ClientReadsMessagesFromMultipleChannels()
         {
             throw new NotImplementedException();
         }
@@ -28,7 +27,7 @@ namespace Test.Mq
         /// Client reads messages from multiple queues in same channel
         /// </summary>
         [Fact]
-        public async Task ClientReadsMessagesFromMultipleQueues()
+        public void ClientReadsMessagesFromMultipleQueues()
         {
             throw new NotImplementedException();
         }
@@ -37,7 +36,7 @@ namespace Test.Mq
         /// Reader attaches multiple clients
         /// </summary>
         [Fact]
-        public async Task MultipleAttachOnSameReader()
+        public void MultipleAttachOnSameReader()
         {
             throw new NotImplementedException();
         }
@@ -46,7 +45,7 @@ namespace Test.Mq
         /// End user throws an unhandled exception in attached method
         /// </summary>
         [Fact]
-        public async Task ExceptionOnBindMethod()
+        public void ExceptionOnBindMethod()
         {
             throw new NotImplementedException();
         }

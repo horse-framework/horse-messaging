@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Test.Mq
@@ -12,7 +11,7 @@ namespace Test.Mq
         /// Sends message from client to server and wait for acknowledge from server to client by AutoAcknowledge property
         /// </summary>
         [Fact]
-        public async Task FromServerToClientAuto()
+        public void FromServerToClientAuto()
         {
             throw new NotImplementedException();
         }
@@ -21,7 +20,7 @@ namespace Test.Mq
         /// Sends message from client to server and wait for acknowledge from server to client by manuel
         /// </summary>
         [Fact]
-        public async Task FromServerToClientManuel()
+        public void FromServerToClientManuel()
         {
             throw new NotImplementedException();
         }
@@ -30,7 +29,7 @@ namespace Test.Mq
         /// Sends message from client to server and wait for acknowledge from server to client until timed out
         /// </summary>
         [Fact]
-        public async Task FromServerToClientTimeout()
+        public void FromServerToClientTimeout()
         {
             throw new NotImplementedException();
         }
@@ -43,7 +42,7 @@ namespace Test.Mq
         /// Sends message from server to client and wait for acknowledge from client to server by AutoAcknowledge property
         /// </summary>
         [Fact]
-        public async Task FromClientToServerAuto()
+        public void FromClientToServerAuto()
         {
             throw new NotImplementedException();
         }
@@ -52,7 +51,7 @@ namespace Test.Mq
         /// Sends message from server to client and wait for acknowledge from client to server by manuel
         /// </summary>
         [Fact]
-        public async Task FromClientToServerManuel()
+        public void FromClientToServerManuel()
         {
             throw new NotImplementedException();
         }
@@ -61,7 +60,7 @@ namespace Test.Mq
         /// Sends message from server to client and wait for acknowledge from client to server until timed out
         /// </summary>
         [Fact]
-        public async Task FromClientToServerTimeout()
+        public void FromClientToServerTimeout()
         {
             throw new NotImplementedException();
         }
@@ -74,7 +73,7 @@ namespace Test.Mq
         /// Sends message from client to other client and wait for acknowledge from other client to client by AutoAcknowledge property
         /// </summary>
         [Fact]
-        public async Task FromClientToClientAuto()
+        public void FromClientToClientAuto()
         {
             throw new NotImplementedException();
         }
@@ -83,7 +82,7 @@ namespace Test.Mq
         /// Sends message from client to other client and wait for acknowledge from other client to client by manuel
         /// </summary>
         [Fact]
-        public async Task FromClientToClientManuel()
+        public void FromClientToClientManuel()
         {
             throw new NotImplementedException();
         }
@@ -92,7 +91,7 @@ namespace Test.Mq
         /// Sends message from client to other client and wait for acknowledge from other client to client until timed out
         /// </summary>
         [Fact]
-        public async Task FromClientToClientTimeout()
+        public void FromClientToClientTimeout()
         {
             throw new NotImplementedException();
         }
@@ -105,7 +104,7 @@ namespace Test.Mq
         /// Sends message from channel to client and wait for acknowledge from client to channel by AutoAcknowledge property
         /// </summary>
         [Fact]
-        public async Task FromClientToChannelAuto()
+        public void FromClientToChannelAuto()
         {
             throw new NotImplementedException();
         }
@@ -114,7 +113,7 @@ namespace Test.Mq
         /// Sends message from channel to client and wait for acknowledge from client to channel by manuel
         /// </summary>
         [Fact]
-        public async Task FromClientToChannelManuel()
+        public void FromClientToChannelManuel()
         {
             throw new NotImplementedException();
         }
@@ -123,7 +122,7 @@ namespace Test.Mq
         /// Sends message from channel to client and wait for acknowledge from client to channel until timed out
         /// </summary>
         [Fact]
-        public async Task FromClientToChannelTimeout()
+        public void FromClientToChannelTimeout()
         {
             throw new NotImplementedException();
         }

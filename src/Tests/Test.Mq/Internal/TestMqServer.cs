@@ -1,5 +1,7 @@
+using System;
 using Twino.MQ;
 using Twino.MQ.Options;
+using Twino.Protocols.TMQ;
 using Twino.Server;
 
 namespace Test.Mq.Internal
@@ -29,7 +31,9 @@ namespace Test.Mq.Internal
 
         internal void Initialize(int port)
         {
-            ServerOptions serverOptions = new ServerOptions();
+            ServerOptions serverOptions = ServerOptions.CreateDefault();
+            serverOptions.Hosts[0].Port = port;
+
             MqServerOptions mqOptions = new MqServerOptions();
 
             Server = new MQServer(serverOptions, mqOptions);

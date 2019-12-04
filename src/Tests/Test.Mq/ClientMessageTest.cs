@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Test.Mq
@@ -10,7 +9,7 @@ namespace Test.Mq
         /// Sends a client message and does not wait any ack or response
         /// </summary>
         [Fact]
-        public async Task WithoutAnyResponse()
+        public void WithoutAnyResponse()
         {
             throw new NotImplementedException();
         }
@@ -19,7 +18,7 @@ namespace Test.Mq
         /// Sends a client message and waits acknowledge
         /// </summary>
         [Fact]
-        public async Task WithAcknowledge()
+        public void WithAcknowledge()
         {
             throw new NotImplementedException();
         }
@@ -28,7 +27,7 @@ namespace Test.Mq
         /// Sends a client message and waits response
         /// </summary>
         [Fact]
-        public async Task WithResponse()
+        public void WithResponse()
         {
             throw new NotImplementedException();
         }

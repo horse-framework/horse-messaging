@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Test.Mq
@@ -10,7 +9,7 @@ namespace Test.Mq
         /// Client connects to server and each sends hello message
         /// </summary>
         [Fact]
-        public async Task HelloBetweenServerClient()
+        public void HelloBetweenServerClient()
         {
             throw new NotImplementedException();
         }
@@ -19,7 +18,7 @@ namespace Test.Mq
         /// Client sends a header message to server
         /// </summary>
         [Fact]
-        public async Task HeaderFromClient()
+        public void HeaderFromClient()
         {
             throw new NotImplementedException();
         }
@@ -28,7 +27,7 @@ namespace Test.Mq
         /// Server sends a header message to client
         /// </summary>
         [Fact]
-        public async Task HeaderFromServer()
+        public void HeaderFromServer()
         {
             throw new NotImplementedException();
         }
@@ -37,7 +36,7 @@ namespace Test.Mq
         /// Client sends a channel join message to server
         /// </summary>
         [Fact]
-        public async Task JoinChannel()
+        public void JoinChannel()
         {
             throw new NotImplementedException();
         }
@@ -46,7 +45,7 @@ namespace Test.Mq
         /// Client sends a channel join message to server and waits response
         /// </summary>
         [Fact]
-        public async Task JoinChannelWithResponse()
+        public void JoinChannelWithResponse()
         {
             throw new NotImplementedException();
         }
@@ -55,7 +54,7 @@ namespace Test.Mq
         /// Client sends a channel leave message to server
         /// </summary>
         [Fact]
-        public async Task LeaveChannel()
+        public void LeaveChannel()
         {
             throw new NotImplementedException();
         }
@@ -64,7 +63,7 @@ namespace Test.Mq
         /// Client sends a channel leave message to server and waits response
         /// </summary>
         [Fact]
-        public async Task LeaveChannelWithResponse()
+        public void LeaveChannelWithResponse()
         {
             throw new NotImplementedException();
         }
@@ -73,7 +72,7 @@ namespace Test.Mq
         /// Client sends a queue creation message
         /// </summary>
         [Fact]
-        public async Task CreateQueue()
+        public void CreateQueue()
         {
             throw new NotImplementedException();
         }
@@ -82,7 +81,7 @@ namespace Test.Mq
         /// Client sends a queue creation message and waits response
         /// </summary>
         [Fact]
-        public async Task CreateQueueWithResponse()
+        public void CreateQueueWithResponse()
         {
             throw new NotImplementedException();
         }

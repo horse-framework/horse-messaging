@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Test.Mq
@@ -12,7 +11,7 @@ namespace Test.Mq
         /// Message is sent when there aren't any clients
         /// </summary>
         [Fact]
-        public async Task NonQueueMessageToNoClients()
+        public void NonQueueMessageToNoClients()
         {
             throw new NotImplementedException();
         }
@@ -21,7 +20,7 @@ namespace Test.Mq
         /// Message is sent one or multiple available clients
         /// </summary>
         [Fact]
-        public async Task NonQueueMessageToClients()
+        public void NonQueueMessageToClients()
         {
             throw new NotImplementedException();
         }
@@ -30,7 +29,7 @@ namespace Test.Mq
         /// Clients will join after messages are sent
         /// </summary>
         [Fact]
-        public async Task NonQueueMessageToLateClients()
+        public void NonQueueMessageToLateClients()
         {
             throw new NotImplementedException();
         }
@@ -44,7 +43,7 @@ namespace Test.Mq
         /// Message is sent when there aren't any clients
         /// </summary>
         [Fact]
-        public async Task QueueMessageToNoClients()
+        public void QueueMessageToNoClients()
         {
             throw new NotImplementedException();
         }
@@ -53,7 +52,7 @@ namespace Test.Mq
         /// Message is sent one or multiple available clients
         /// </summary>
         [Fact]
-        public async Task QueueMessageToClients()
+        public void QueueMessageToClients()
         {
             throw new NotImplementedException();
         }
@@ -62,7 +61,7 @@ namespace Test.Mq
         /// Clients will join after messages are sent
         /// </summary>
         [Fact]
-        public async Task ueueMessageToLateClients()
+        public void ueueMessageToLateClients()
         {
             throw new NotImplementedException();
         }
@@ -75,7 +74,7 @@ namespace Test.Mq
         /// Sends message when SendOnlyFirst enabled but there are no receivers available
         /// </summary>
         [Fact]
-        public async Task SendOnlyFirstNoClients()
+        public void SendOnlyFirstNoClients()
         {
             throw new NotImplementedException();
         }
@@ -84,7 +83,7 @@ namespace Test.Mq
         /// Sends message when SendOnlyFirst enabled and there are multiple receivers available
         /// </summary>
         [Fact]
-        public async Task SendOnlyFirstMultipleClients()
+        public void SendOnlyFirstMultipleClients()
         {
             throw new NotImplementedException();
         }
@@ -94,7 +93,7 @@ namespace Test.Mq
         /// They will join after message is sent.
         /// </summary>
         [Fact]
-        public async Task SendOnlyFirstLateClients()
+        public void SendOnlyFirstLateClients()
         {
             throw new NotImplementedException();
         }
@@ -105,7 +104,7 @@ namespace Test.Mq
         /// Sends message when UseMessageId option is enabled.
         /// </summary>
         [Fact]
-        public async Task UseMessageId()
+        public void UseMessageId()
         {
             throw new NotImplementedException();
         }
@@ -117,7 +116,7 @@ namespace Test.Mq
         /// There is no available receiver.
         /// </summary>
         [Fact]
-        public async Task WaitAcknowledgeNoClients()
+        public void WaitAcknowledgeNoClients()
         {
             throw new NotImplementedException();
         }
@@ -127,7 +126,7 @@ namespace Test.Mq
         /// There is one available receiver.
         /// </summary>
         [Fact]
-        public async Task WaitAcknowledgeOneClient()
+        public void WaitAcknowledgeOneClient()
         {
             throw new NotImplementedException();
         }
@@ -138,7 +137,7 @@ namespace Test.Mq
         /// But it does not send acknowledge message
         /// </summary>
         [Fact]
-        public async Task WaitAcknowledgeOneClientWithNoAck()
+        public void WaitAcknowledgeOneClientWithNoAck()
         {
             throw new NotImplementedException();
         }
@@ -148,7 +147,7 @@ namespace Test.Mq
         /// There are multiple available receiver.
         /// </summary>
         [Fact]
-        public async Task WaitAcknowledgeMultipleClients()
+        public void WaitAcknowledgeMultipleClients()
         {
             throw new NotImplementedException();
         }
@@ -159,7 +158,7 @@ namespace Test.Mq
         /// But they do not send acknowledge message
         /// </summary>
         [Fact]
-        public async Task WaitAcknowledgeMultipleClientsWithNoAck()
+        public void WaitAcknowledgeMultipleClientsWithNoAck()
         {
             throw new NotImplementedException();
         }

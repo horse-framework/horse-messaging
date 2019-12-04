@@ -47,7 +47,7 @@ namespace Twino.Client.TMQ
         /// If false, response messages are proceed silently.
         /// </summary>
         public bool CatchResponseMessages { get; set; }
-        
+
         /// <summary>
         /// If true, client ignores it's own messages in subscribed queues
         /// </summary>
@@ -460,6 +460,32 @@ namespace Twino.Client.TMQ
 
             if (waitAcknowledge)
                 return await _follower.FollowAcknowledge(message);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Creates new queue in server
+        /// </summary>
+        public async Task<bool> CreateQueue(string channel, ushort contentType, bool verifyResponse)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ContentType = KnownContentTypes.CreateQueue;
+            message.Target = channel;
+            message.ResponseRequired = verifyResponse;
+            message.MessageId = UniqueIdGenerator.Create();
+            message.Content = new MemoryStream(BitConverter.GetBytes(contentType));
+
+            bool sent = await SendAsync(message);
+            if (!sent)
+                return false;
+
+            if (verifyResponse)
+            {
+                TmqMessage response = await _follower.FollowResponse(message);
+                return response != null && response.ContentType == KnownContentTypes.Ok;
+            }
 
             return true;
         }

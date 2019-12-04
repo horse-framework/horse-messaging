@@ -1,5 +1,6 @@
 using System;
-using System.Threading.Tasks;
+using Test.Mq.Internal;
+using Twino.Client.TMQ;
 using Xunit;
 
 namespace Test.Mq
@@ -10,16 +11,26 @@ namespace Test.Mq
         /// Connects to TMQ Server and sends info message
         /// </summary>
         [Fact]
-        public async Task ConnectWithInfo()
+        public void ConnectWithInfo()
         {
-            throw new NotImplementedException();
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42101);
+            server.Start();
+
+            TmqClient client = new TmqClient();
+            client.Data.Properties.Add("Name", "Test-42101");
+            client.Connect("tmq://localhost:42101/path"); //todo: path is right? should not be changed with public setter
+            
+            //todo: client connected event in server?
+
+            Assert.True(client.IsConnected);
         }
 
         /// <summary>
         /// Connects to TMQ Server and does not send info message
         /// </summary>
         [Fact]
-        public async Task ConnectWithoutInfo()
+        public void ConnectWithoutInfo()
         {
             throw new NotImplementedException();
         }
@@ -28,7 +39,7 @@ namespace Test.Mq
         /// Connects to TMQ Server and sends another protocol message
         /// </summary>
         [Fact]
-        public async Task ConnectAsOtherProtocol()
+        public void ConnectAsOtherProtocol()
         {
             throw new NotImplementedException();
         }
@@ -37,7 +48,7 @@ namespace Test.Mq
         /// Connects to TMQ Server and does not send any message
         /// </summary>
         [Fact]
-        public async Task ConnectWithoutSendingData()
+        public void ConnectWithoutSendingData()
         {
             throw new NotImplementedException();
         }
@@ -46,7 +57,7 @@ namespace Test.Mq
         /// Connects to TMQ Server and stays alive with PING and PONG messages
         /// </summary>
         [Fact]
-        public async Task KeepAliveWithPingPong()
+        public void KeepAliveWithPingPong()
         {
             throw new NotImplementedException();
         }
@@ -55,7 +66,7 @@ namespace Test.Mq
         /// Connects to TMQ Server and stays alive until PING time out (does not send PONG message)
         /// </summary>
         [Fact]
-        public async Task DisconnectDueToPingTimeout()
+        public void DisconnectDueToPingTimeout()
         {
             throw new NotImplementedException();
         }
@@ -65,7 +76,7 @@ namespace Test.Mq
         /// </summary>
         [Theory]
         [InlineData(100, 1000, 5000)]
-        public async Task ConnectDisconnectStress(int concurrentClients, int minAliveMs, int maxAliveMs)
+        public void ConnectDisconnectStress(int concurrentClients, int minAliveMs, int maxAliveMs)
         {
             throw new NotImplementedException();
         }

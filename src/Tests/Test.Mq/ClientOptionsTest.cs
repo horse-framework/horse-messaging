@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Test.Mq
@@ -10,7 +9,7 @@ namespace Test.Mq
         /// If true, every message must have an id even user does not set
         /// </summary>
         [Fact]
-        public async Task UseUniqueMessageId()
+        public void UseUniqueMessageId()
         {
             throw new NotImplementedException();
         }
@@ -20,7 +19,7 @@ namespace Test.Mq
         /// If auto acknowledge enabled, client should send an ack message automatically.
         /// </summary>
         [Fact]
-        public async Task AutoAcknowledge()
+        public void AutoAcknowledge()
         {
             throw new NotImplementedException();
         }
@@ -31,7 +30,7 @@ namespace Test.Mq
         /// If catching response is enabled, response message should trigger message received event.
         /// </summary>
         [Fact]
-        public async Task CatchResponseMessages()
+        public void CatchResponseMessages()
         {
             throw new NotImplementedException();
         }
@@ -41,7 +40,7 @@ namespace Test.Mq
         /// If ignore is enabled, message should be ignored.
         /// </summary>
         [Fact]
-        public async Task IgnoreMyQueueMessages()
+        public void IgnoreMyQueueMessages()
         {
             throw new NotImplementedException();
         }
@@ -50,7 +49,7 @@ namespace Test.Mq
         /// Sends a message and waits for acknowledge but server does not send acknowledge message. 
         /// </summary>
         [Fact]
-        public async Task AcknowledgeTimeout()
+        public void AcknowledgeTimeout()
         {
             throw new NotImplementedException();
         }
@@ -59,7 +58,7 @@ namespace Test.Mq
         /// Sends a message and waits the response but server does not send response. 
         /// </summary>
         [Fact]
-        public async Task ResponseTimeout()
+        public void ResponseTimeout()
         {
             throw new NotImplementedException();
         }

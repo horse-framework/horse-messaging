@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Test.Mq
@@ -10,7 +9,7 @@ namespace Test.Mq
         /// Sends a channel message when hide client names enabled
         /// </summary>
         [Fact]
-        public async Task HideClientNames()
+        public void HideClientNames()
         {
             throw new NotImplementedException();
         }
@@ -19,7 +18,7 @@ namespace Test.Mq
         /// Creates multiple queues in channel when it's supported/unsupported
         /// </summary>
         [Fact]
-        public async Task CreateMultipleQueuesInChannel()
+        public void CreateMultipleQueuesInChannel()
         {
             throw new NotImplementedException();
         }
@@ -28,7 +27,7 @@ namespace Test.Mq
         /// Creates content type queues in a channel. (Allowed and not allowed)
         /// </summary>
         [Fact]
-        public async Task CreateContentType()
+        public void CreateContentType()
         {
             throw new NotImplementedException();
         }

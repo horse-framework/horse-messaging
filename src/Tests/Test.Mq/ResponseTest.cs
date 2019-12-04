@@ -10,7 +10,7 @@ namespace Test.Mq
         /// Client sends a response message to server
         /// </summary>
         [Fact]
-        public async Task FromClientToServer()
+        public void FromClientToServer()
         {
             throw new NotImplementedException();
         }
@@ -19,7 +19,7 @@ namespace Test.Mq
         /// Server waits a response but client does not send
         /// </summary>
         [Fact]
-        public async Task FromClientToServerTimeout()
+        public void FromClientToServerTimeout()
         {
             throw new NotImplementedException();
         }
@@ -28,7 +28,7 @@ namespace Test.Mq
         /// Server sends a response message to client
         /// </summary>
         [Fact]
-        public async Task FromServerToClient()
+        public void FromServerToClient()
         {
             throw new NotImplementedException();
         }
@@ -37,7 +37,7 @@ namespace Test.Mq
         /// Client waits a response but server does not send
         /// </summary>
         [Fact]
-        public async Task FromServerToClientTimeout()
+        public void FromServerToClientTimeout()
         {
             throw new NotImplementedException();
         }
@@ -46,7 +46,7 @@ namespace Test.Mq
         /// Client sends a response message to other client
         /// </summary>
         [Fact]
-        public async Task FromClientToClient()
+        public void FromClientToClient()
         {
             throw new NotImplementedException();
         }
@@ -55,7 +55,7 @@ namespace Test.Mq
         /// Client waits a response other client does not send
         /// </summary>
         [Fact]
-        public async Task FromClientToClientTimeout()
+        public void FromClientToClientTimeout()
         {
             throw new NotImplementedException();
         }
@@ -64,7 +64,7 @@ namespace Test.Mq
         /// Client sends a response message to channel
         /// </summary>
         [Fact]
-        public async Task FromClientToChannel()
+        public void FromClientToChannel()
         {
             throw new NotImplementedException();
         }
@@ -73,7 +73,7 @@ namespace Test.Mq
         /// Channel waits a response client does not send
         /// </summary>
         [Fact]
-        public async Task FromClientToChannelTimeout()
+        public void FromClientToChannelTimeout()
         {
             throw new NotImplementedException();
         }
