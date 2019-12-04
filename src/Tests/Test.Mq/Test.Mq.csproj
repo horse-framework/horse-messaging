@@ -14,7 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Internal" />
+      <ProjectReference Include="..\..\Twino.MQ\Twino.MQ.csproj" />
     </ItemGroup>
 
 </Project>
