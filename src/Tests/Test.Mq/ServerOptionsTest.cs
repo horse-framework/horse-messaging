@@ -4,31 +4,31 @@ using Xunit;
 
 namespace Test.Mq
 {
-    public class ClientMessageTest
+    public class ServerOptionsTest
     {
         /// <summary>
-        /// Sends a client message and does not wait any ack or response
+        /// Sends a channel message when hide client names enabled
         /// </summary>
         [Fact]
-        public async Task WithoutAnyResponse()
+        public async Task HideClientNames()
         {
             throw new NotImplementedException();
         }
 
         /// <summary>
-        /// Sends a client message and waits acknowledge
+        /// Creates multiple queues in channel when it's supported/unsupported
         /// </summary>
         [Fact]
-        public async Task WithAcknowledge()
+        public async Task CreateMultipleQueuesInChannel()
         {
             throw new NotImplementedException();
         }
 
         /// <summary>
-        /// Sends a client message and waits response
+        /// Creates content type queues in a channel. (Allowed and not allowed)
         /// </summary>
         [Fact]
-        public async Task WithResponse()
+        public async Task CreateContentType()
         {
             throw new NotImplementedException();
         }

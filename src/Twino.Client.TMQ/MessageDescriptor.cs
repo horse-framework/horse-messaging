@@ -4,10 +4,24 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.Client.TMQ
 {
+    /// <summary>
+    /// Following messsage descriptor
+    /// </summary>
     internal abstract class MessageDescriptor
     {
+        /// <summary>
+        /// Message
+        /// </summary>
         public TmqMessage Message { get; }
+
+        /// <summary>
+        /// Message follow expiration date
+        /// </summary>
         public DateTime Expiration { get; }
+
+        /// <summary>
+        /// If true, message process is completed successfully (ack or response received)
+        /// </summary>
         public bool Completed { get; set; }
 
         protected MessageDescriptor(TmqMessage message, DateTime expiration)
@@ -16,9 +30,15 @@ namespace Twino.Client.TMQ
             Expiration = expiration;
         }
 
+        /// <summary>
+        /// Sets message result
+        /// </summary>
         public abstract void Set(object value);
     }
 
+    /// <summary>
+    /// Followed acknowledge message descriptor 
+    /// </summary>
     internal class AcknowledgeMessageDescriptor : MessageDescriptor
     {
         public TaskCompletionSource<bool> Source { get; }
@@ -34,6 +54,9 @@ namespace Twino.Client.TMQ
         }
     }
 
+    /// <summary>
+    /// Followed response message descriptor 
+    /// </summary>
     internal class ResponseMessageDescriptor : MessageDescriptor
     {
         public TaskCompletionSource<TmqMessage> Source { get; }

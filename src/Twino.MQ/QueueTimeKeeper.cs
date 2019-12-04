@@ -6,17 +6,51 @@ using Twino.MQ.Clients;
 
 namespace Twino.MQ
 {
+    /// <summary>
+    /// Follows all deliveries and their acknowledges, responses and expirations
+    /// </summary>
     internal class QueueTimeKeeper
     {
+        /// <summary>
+        /// Queue of the keeper
+        /// </summary>
         private readonly ChannelQueue _queue;
+        
+        /// <summary>
+        /// Timeout checker timer
+        /// </summary>
         private Timer _timer;
 
+        /// <summary>
+        /// Messages with high priority list of the queue
+        /// </summary>
         private readonly LinkedList<QueueMessage> _prefentialMessages;
+        
+        /// <summary>
+        /// Messages list of the queue
+        /// </summary>
         private readonly LinkedList<QueueMessage> _standardMessages;
+        
+        /// <summary>
+        /// Processing timed out messages.
+        /// This list is used as temp list.
+        /// To prevent re-allocations, defined in here.
+        /// </summary>
         private readonly List<QueueMessage> _timeupMessages = new List<QueueMessage>(16);
 
+        /// <summary>
+        /// To not lock delivery list, adding deliveries are stored in different list
+        /// </summary>
         private readonly List<MessageDelivery> _addingDeliveries = new List<MessageDelivery>(16);
+        
+        /// <summary>
+        /// All following deliveries
+        /// </summary>
         private readonly List<MessageDelivery> _deliveries = new List<MessageDelivery>(1024);
+        
+        /// <summary>
+        /// To not lock delivery and ading delivery list, removing deliveries are stored in different list
+        /// </summary>
         private readonly List<MessageDelivery> _removingDeliveries = new List<MessageDelivery>(16);
 
         public QueueTimeKeeper(ChannelQueue queue, LinkedList<QueueMessage> prefentialMessages, LinkedList<QueueMessage> standardMessages)

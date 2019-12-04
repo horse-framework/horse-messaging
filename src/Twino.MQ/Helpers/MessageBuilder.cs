@@ -18,7 +18,7 @@ namespace Twino.MQ.Helpers
         /// String content (key value based, http header like) builder
         /// </summary>
         private StringBuilder _content;
-        
+
         private MessageBuilder()
         {
         }
@@ -58,43 +58,63 @@ namespace Twino.MQ.Helpers
 
         #region Status Code Messages
 
+        /// <summary>
+        /// Creates new Accepted status code message
+        /// </summary>
         public static TmqMessage Accepted(string clientId)
         {
             return StatusCodeMessage(KnownContentTypes.Accepted, clientId);
         }
 
+        /// <summary>
+        /// Creates new BadRequest status code message
+        /// </summary>
         public static TmqMessage BadRequest()
         {
             return StatusCodeMessage(KnownContentTypes.BadRequest);
         }
 
+        /// <summary>
+        /// Creates new NotFound status code message
+        /// </summary>
         public static TmqMessage NotFound()
         {
             return StatusCodeMessage(KnownContentTypes.NotFound);
         }
 
+        /// <summary>
+        /// Creates new Unauthorized status code message
+        /// </summary>
         public static TmqMessage Unauthorized()
         {
             return StatusCodeMessage(KnownContentTypes.Unauthorized);
         }
 
+        /// <summary>
+        /// Creates new Busy status code message
+        /// </summary>
         public static TmqMessage Busy()
         {
             return StatusCodeMessage(KnownContentTypes.Busy);
         }
 
+        /// <summary>
+        /// Creates new status code message
+        /// </summary>
         public static TmqMessage StatusCodeMessage(ushort contentType, string target = null)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.Accepted;
+            message.ContentType = contentType;
             message.Target = target;
             message.FirstAcquirer = true;
-                
-            message.CalculateLengths();
+
             return message;
         }
 
+        /// <summary>
+        /// Creates new response message, with no content, of the message.
+        /// </summary>
         public static TmqMessage ResponseStatus(TmqMessage request, ushort status)
         {
             TmqMessage response = new TmqMessage();
@@ -105,7 +125,6 @@ namespace Twino.MQ.Helpers
             response.ContentType = status;
             response.FirstAcquirer = true;
 
-            response.CalculateLengths();
             return response;
         }
 
