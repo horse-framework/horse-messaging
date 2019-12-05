@@ -204,12 +204,8 @@ namespace Twino.MQ
                 if (Options.UseMessageId && string.IsNullOrEmpty(message.Message.MessageId))
                     message.Message.MessageId = Channel.Server.MessageIdGenerator.Create();
 
-                //if we are hiding client names and message have it, remove client name from the message
-                if (Channel.Server.Options.HideClientNames && !string.IsNullOrEmpty(message.Message.Source))
-                {
-                    message.Message.Source = null;
-                    message.Message.SourceLength = 0;
-                }
+                message.Message.Source = Channel.Name;
+                message.Message.SourceLength = Channel.Name.Length;
 
                 //queue the message
                 if (Options.MessageQueuing)

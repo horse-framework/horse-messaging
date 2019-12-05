@@ -202,10 +202,6 @@ namespace Twino.MQ
         /// </summary>
         private async Task ClientMessageReceived(MqClient client, TmqMessage message)
         {
-            //peer to peer messaging disabled the clients hiding names
-            if (_server.Options.HideClientNames)
-                await client.SendAsync(MessageBuilder.Unauthorized());
-
             //find the receiver
             MqClient other = _server.FindClient(message.Target);
             if (other == null)
