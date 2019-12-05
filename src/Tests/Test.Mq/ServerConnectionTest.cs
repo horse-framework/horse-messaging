@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Test.Mq.Internal;
 using Twino.Client.TMQ;
 using Xunit;
@@ -20,10 +21,11 @@ namespace Test.Mq
             TmqClient client = new TmqClient();
             client.Data.Properties.Add("Name", "Test-42101");
             client.Connect("tmq://localhost:42101/path"); //todo: path is right? should not be changed with public setter
-            
-            //todo: client connected event in server?
+
+            Thread.Sleep(50);
 
             Assert.True(client.IsConnected);
+            Assert.Equal(1, server.ClientConnected);
         }
 
         /// <summary>

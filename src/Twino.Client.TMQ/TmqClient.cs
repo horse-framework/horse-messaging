@@ -154,7 +154,7 @@ namespace Twino.Client.TMQ
 
                 CheckProtocolResponse(buffer, len);
 
-                SendInfoMessage().Wait();
+                SendInfoMessage(host).Wait();
                 Start();
             }
             catch
@@ -201,7 +201,7 @@ namespace Twino.Client.TMQ
 
                 CheckProtocolResponse(buffer, len);
 
-                await SendInfoMessage();
+                await SendInfoMessage(host);
                 Start();
             }
             catch
@@ -254,7 +254,7 @@ namespace Twino.Client.TMQ
         /// Sends connection data message to server, called right after procotol handshaking completed.
         /// </summary>
         /// <returns></returns>
-        private async Task SendInfoMessage()
+        private async Task SendInfoMessage(DnsInfo dns)
         {
             if (Data?.Properties == null || Data.Properties.Count < 1 && string.IsNullOrEmpty(Data.Method) && string.IsNullOrEmpty(Data.Path))
                 return;
@@ -266,11 +266,9 @@ namespace Twino.Client.TMQ
 
             message.Content = new MemoryStream();
 
-            string path = "/";
-            if (!string.IsNullOrEmpty(Data.Path))
-                path = Data.Path.Replace(" ", "+");
+            Data.Path = dns.Path;
 
-            string first = (Data.Method ?? "NONE") + " " + path + "\r\n";
+            string first = (Data.Method ?? "NONE") + " " + dns.Path + "\r\n";
             await message.Content.WriteAsync(Encoding.UTF8.GetBytes(first));
             Data.Properties.Add(TmqHeaders.CLIENT_ID, ClientId);
 

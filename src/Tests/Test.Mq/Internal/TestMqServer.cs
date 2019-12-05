@@ -42,6 +42,7 @@ namespace Test.Mq.Internal
             Server = new MqServer(serverOptions, mqOptions);
             Server.SetDefaultChannelHandler(new TestChannelHandler(this), null);
             Server.SetDefaultDeliveryHandler(new TestDeliveryHandler(this));
+            Server.ClientHandler = new TestClientHandler(this);
         }
 
         public void Start()
