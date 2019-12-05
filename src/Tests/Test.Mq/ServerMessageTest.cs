@@ -1,4 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Test.Mq.Internal;
+using Twino.Client.TMQ;
+using Twino.MQ;
+using Twino.MQ.Clients;
 using Xunit;
 
 namespace Test.Mq
@@ -6,48 +13,50 @@ namespace Test.Mq
     public class ServerMessageTest
     {
         /// <summary>
-        /// Client connects to server and each sends hello message
-        /// </summary>
-        [Fact]
-        public void HelloBetweenServerClient()
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Client sends a header message to server
-        /// </summary>
-        [Fact]
-        public void HeaderFromClient()
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Server sends a header message to client
-        /// </summary>
-        [Fact]
-        public void HeaderFromServer()
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
         /// Client sends a channel join message to server
         /// </summary>
         [Fact]
-        public void JoinChannel()
+        public async Task JoinChannel()
         {
-            throw new NotImplementedException();
+            TestMqServer server = new TestMqServer();
+            server.Initialize(41201);
+            server.Start();
+
+            TmqClient client = new TmqClient();
+            client.Connect("tmq://localhost:41201");
+
+            bool joined = await client.Join("ch-1", false);
+            Assert.True(joined);
+            await Task.Delay(1000);
+
+            Channel channel = server.Server.Channels.FirstOrDefault();
+            Assert.NotNull(channel);
+
+            List<ChannelClient> clients = channel.ClientsClone;
+            Assert.Single(clients);
         }
 
         /// <summary>
         /// Client sends a channel join message to server and waits response
         /// </summary>
         [Fact]
-        public void JoinChannelWithResponse()
+        public async Task JoinChannelWithResponse()
         {
-            throw new NotImplementedException();
+            TestMqServer server = new TestMqServer();
+            server.Initialize(41201);
+            server.Start();
+
+            TmqClient client = new TmqClient();
+            client.Connect("tmq://localhost:41201");
+
+            bool joined = await client.Join("ch-1", true);
+            Assert.True(joined);
+
+            Channel channel = server.Server.Channels.FirstOrDefault();
+            Assert.NotNull(channel);
+
+            List<ChannelClient> clients = channel.ClientsClone;
+            Assert.Single(clients);
         }
 
         /// <summary>

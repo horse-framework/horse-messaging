@@ -1,4 +1,6 @@
 using System;
+using Newtonsoft.Json;
+using Test.Mq.Models;
 using Twino.MQ;
 using Twino.MQ.Options;
 using Twino.Protocols.TMQ;
@@ -28,7 +30,7 @@ namespace Test.Mq.Internal
         public int OnRemove { get; set; }
         public int OnException { get; set; }
         public int SaveMessage { get; set; }
-        
+
         public int ClientConnected { get; set; }
         public int ClientDisconnected { get; set; }
 
@@ -40,11 +42,17 @@ namespace Test.Mq.Internal
             serverOptions.RequestTimeout = 4;
 
             MqServerOptions mqOptions = new MqServerOptions();
+            mqOptions.AllowedContentTypes = new[] {MessageA.ContentType, MessageB.ContentType, MessageC.ContentType};
+            mqOptions.AllowMultipleQueues = true;
 
             Server = new MqServer(serverOptions, mqOptions);
             Server.SetDefaultChannelHandler(new TestChannelHandler(this), null);
             Server.SetDefaultDeliveryHandler(new TestDeliveryHandler(this));
             Server.ClientHandler = new TestClientHandler(this);
+
+            Channel channel = Server.CreateChannel("ch-1");
+            channel.CreateQueue(MessageA.ContentType).Wait();
+            channel.CreateQueue(MessageC.ContentType).Wait();
         }
 
         public void Start()
