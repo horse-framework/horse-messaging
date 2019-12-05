@@ -94,12 +94,38 @@ namespace Test.Mq
         /// Sends message from client to other client and wait for acknowledge from other client to client until timed out
         /// </summary>
         [Fact]
-        public void FromClientToClientTimeout()
+        public async Task FromClientToClientTimeout()
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42303);
+            server.Server.ServerOptions.PingInterval = 300;
+            server.Server.ServerOptions.RequestTimeout = 300;
 
-            throw new NotImplementedException();
+            server.Start();
+            await Task.Delay(250);
+
+            TmqClient client1 = new TmqClient();
+            TmqClient client2 = new TmqClient();
+
+            client1.ClientId = "client-1";
+            client2.ClientId = "client-2";
+            client1.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
+            client2.AutoAcknowledge = false;
+
+            await client1.ConnectAsync("tmq://localhost:42303");
+            await client2.ConnectAsync("tmq://localhost:42303");
+
+            Assert.True(client1.IsConnected);
+            Assert.True(client2.IsConnected);
+
+            TmqMessage message = new TmqMessage();
+            message.HighPriority = true;
+            message.Type = MessageType.Client;
+            message.Target = client2.ClientId;
+            message.SetStringContent("Hello, World!");
+
+            bool acknowledge = await client1.SendWithAcknowledge(message);
+            Assert.False(acknowledge);
         }
 
         #endregion
