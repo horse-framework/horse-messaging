@@ -506,6 +506,18 @@ namespace Twino.Client.TMQ
             return await _follower.FollowResponse(message);
         }
 
+        /// <summary>
+        /// Sends acknowledge message for the message
+        /// </summary>
+        public async Task<bool> Acknowledge(TmqMessage message)
+        {
+            if (!message.AcknowledgeRequired)
+                return false;
+            
+            TmqMessage ack = message.CreateAcknowledge();
+            return await SendAsync(ack);
+        }
+
         #endregion
     }
 }
