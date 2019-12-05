@@ -147,6 +147,7 @@ namespace Twino.Client.TMQ
                     Stream = Client.GetStream();
 
                 Stream.Write(PredefinedMessages.PROTOCOL_BYTES);
+                SendInfoMessage(host).Wait();
 
                 //Reads the protocol response
                 byte[] buffer = new byte[PredefinedMessages.PROTOCOL_BYTES.Length];
@@ -154,7 +155,6 @@ namespace Twino.Client.TMQ
 
                 CheckProtocolResponse(buffer, len);
 
-                SendInfoMessage(host).Wait();
                 Start();
             }
             catch
@@ -194,6 +194,7 @@ namespace Twino.Client.TMQ
                     Stream = Client.GetStream();
 
                 await Stream.WriteAsync(PredefinedMessages.PROTOCOL_BYTES);
+                await SendInfoMessage(host);
 
                 //Reads the protocol response
                 byte[] buffer = new byte[PredefinedMessages.PROTOCOL_BYTES.Length];
@@ -201,7 +202,6 @@ namespace Twino.Client.TMQ
 
                 CheckProtocolResponse(buffer, len);
 
-                await SendInfoMessage(host);
                 Start();
             }
             catch

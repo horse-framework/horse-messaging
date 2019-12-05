@@ -20,7 +20,7 @@ namespace Test.Mq
 
             TmqClient client = new TmqClient();
             client.Data.Properties.Add("Name", "Test-42101");
-            client.Connect("tmq://localhost:42101/path"); //todo: path is right? should not be changed with public setter
+            client.Connect("tmq://localhost:42101/path");
 
             Thread.Sleep(50);
 
