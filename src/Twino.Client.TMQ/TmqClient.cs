@@ -388,6 +388,34 @@ namespace Twino.Client.TMQ
             return await SendAsync(data);
         }
 
+        /// <summary>
+        /// Sends the message and waits for response
+        /// </summary>
+        public async Task<TmqMessage> Request(TmqMessage message)
+        {
+            message.ResponseRequired = true;
+            message.AcknowledgeRequired = false;
+            message.MessageId = UniqueIdGenerator.Create();
+
+            bool sent = await SendAsync(message);
+            if (!sent)
+                return null;
+
+            return await _follower.FollowResponse(message);
+        }
+
+        /// <summary>
+        /// Sends acknowledge message for the message
+        /// </summary>
+        public async Task<bool> Acknowledge(TmqMessage message)
+        {
+            if (!message.AcknowledgeRequired)
+                return false;
+
+            TmqMessage ack = message.CreateAcknowledge();
+            return await SendAsync(ack);
+        }
+
         #endregion
 
         #region MQ Operations
@@ -488,34 +516,6 @@ namespace Twino.Client.TMQ
             }
 
             return true;
-        }
-
-        /// <summary>
-        /// Sends the message and waits for response
-        /// </summary>
-        public async Task<TmqMessage> Request(TmqMessage message)
-        {
-            message.ResponseRequired = true;
-            message.AcknowledgeRequired = false;
-            message.MessageId = UniqueIdGenerator.Create();
-
-            bool sent = await SendAsync(message);
-            if (!sent)
-                return null;
-
-            return await _follower.FollowResponse(message);
-        }
-
-        /// <summary>
-        /// Sends acknowledge message for the message
-        /// </summary>
-        public async Task<bool> Acknowledge(TmqMessage message)
-        {
-            if (!message.AcknowledgeRequired)
-                return false;
-            
-            TmqMessage ack = message.CreateAcknowledge();
-            return await SendAsync(ack);
         }
 
         #endregion
