@@ -99,22 +99,22 @@ namespace Twino.Server
 
             if (Socket != null)
                 Socket.Disconnect();
-
-            try
-            {
-                Stream stream = GetStream();
-                if (stream != null)
-                    stream.Dispose();
-
-                if (Client != null)
+            else
+                try
                 {
-                    Client.Close();
-                    Client.Dispose();
+                    Stream stream = GetStream();
+                    if (stream != null)
+                        stream.Dispose();
+
+                    if (Client != null)
+                    {
+                        Client.Close();
+                        Client.Dispose();
+                    }
                 }
-            }
-            catch
-            {
-            }
+                catch
+                {
+                }
 
             SslStream = null;
             PlainStream = null;

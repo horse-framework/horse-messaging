@@ -143,6 +143,7 @@ namespace Twino.Server
                 if (!info.New && info.Socket.PongTime < info.Last)
                 {
                     info.Socket.Disconnect();
+                    Remove(info.Socket);
                     continue;
                 }
 

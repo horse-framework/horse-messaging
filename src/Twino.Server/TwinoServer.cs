@@ -180,7 +180,7 @@ namespace Twino.Server
             //if websocket ping is activated, starts pinger
             if (Options.PingInterval > 0)
             {
-                Pinger = new Pinger(this, TimeSpan.FromMilliseconds(Options.PingInterval));
+                Pinger = new Pinger(this, TimeSpan.FromSeconds(Options.PingInterval));
                 Pinger.Start();
             }
         }

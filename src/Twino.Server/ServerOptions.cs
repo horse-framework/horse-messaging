@@ -12,8 +12,7 @@ namespace Twino.Server
     public class ServerOptions
     {
         /// <summary>
-        /// Ping Interval in milliseconds to active websocket connections.
-        /// Default is 60000 (60 secs)
+        /// Ping Interval in SECONDS to active websocket connections. Default is 60.
         /// </summary>
         public int PingInterval { get; set; }
 
@@ -30,7 +29,7 @@ namespace Twino.Server
         public List<HostOptions> Hosts { get; set; }
 
         /// <summary>
-        /// HTTP Request timeout in milliseconds. Default is 30000 (30 secs)
+        /// HTTP Request timeout in SECONDS. Default is 30.
         /// </summary>
         public int RequestTimeout { get; set; }
 
@@ -69,7 +68,7 @@ namespace Twino.Server
             ServerOptions options = JsonConvert.DeserializeObject<ServerOptions>(serialized);
 
             if (options.RequestTimeout == 0)
-                options.RequestTimeout = 30000;
+                options.RequestTimeout = 30;
 
             if (!string.IsNullOrEmpty(options.ContentEncoding))
                 options.ContentEncoding = options.ContentEncoding.ToLower(new System.Globalization.CultureInfo("en-US")).Trim();
@@ -94,9 +93,9 @@ namespace Twino.Server
         {
             return new ServerOptions
                    {
-                       RequestTimeout = 120000,
+                       RequestTimeout = 120,
                        MaximumPendingConnections = 0,
-                       PingInterval = 120000,
+                       PingInterval = 120,
                        Hosts = new List<HostOptions>
                                {
                                    new HostOptions

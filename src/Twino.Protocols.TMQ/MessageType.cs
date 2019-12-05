@@ -16,6 +16,16 @@ namespace Twino.Protocols.TMQ
         Terminate = 0x08,
 
         /// <summary>
+        /// Ping message from server
+        /// </summary>
+        Ping = 0x09,
+
+        /// <summary>
+        /// Pong message to server
+        /// </summary>
+        Pong = 0x0A,
+
+        /// <summary>
         /// A message to directly server.
         /// Server should deal with it directly.
         /// </summary>
@@ -44,16 +54,6 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// A redirection message, message is same but has a new target 
         /// </summary>
-        Redirect = 0x15,
-
-        /// <summary>
-        /// Ping message from server
-        /// </summary>
-        Ping = 0x89,
-
-        /// <summary>
-        /// Pong message to server
-        /// </summary>
-        Pong = 0x8A
+        Redirect = 0x15
     }
 }

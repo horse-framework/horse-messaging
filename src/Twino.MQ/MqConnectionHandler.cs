@@ -53,7 +53,7 @@ namespace Twino.MQ
             }
 
             //creates new mq client object 
-            MqClient client = new MqClient(server, connection, _server.MessageIdGenerator, _server.Options.UseMessageId);
+            MqClient client = new MqClient(_server, connection, _server.MessageIdGenerator, _server.Options.UseMessageId);
             client.Data = data;
             client.UniqueId = clientId.Trim();
             client.Token = data.Properties.GetStringValue(TmqHeaders.CLIENT_TOKEN);
@@ -163,7 +163,7 @@ namespace Twino.MQ
 
                 //client sends PONG message
                 case MessageType.Pong:
-                    mc.Pong();
+                    info.PongReceived();
                     break;
 
                 //close the client's connection

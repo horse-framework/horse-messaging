@@ -54,13 +54,20 @@ namespace Twino.MQ.Clients
         /// </summary>
         public object Tag { get; set; }
 
-        public MqClient(ITwinoServer server, IConnectionInfo info) : base(server, info)
+        /// <summary>
+        /// Messaging queue server
+        /// </summary>
+        public MqServer MqServer { get; }
+
+        public MqClient(MqServer server, IConnectionInfo info) : base(server.Server, info)
         {
+            MqServer = server;
         }
 
-        public MqClient(ITwinoServer server, IConnectionInfo info, IUniqueIdGenerator generator, bool useUniqueMessageId = true)
-            : base(server, info, generator, useUniqueMessageId)
+        public MqClient(MqServer server, IConnectionInfo info, IUniqueIdGenerator generator, bool useUniqueMessageId = true)
+            : base(server.Server, info, generator, useUniqueMessageId)
         {
+            MqServer = server;
         }
 
         /// <summary>

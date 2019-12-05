@@ -36,6 +36,8 @@ namespace Test.Mq.Internal
         {
             ServerOptions serverOptions = ServerOptions.CreateDefault();
             serverOptions.Hosts[0].Port = port;
+            serverOptions.PingInterval = 3;
+            serverOptions.RequestTimeout = 4;
 
             MqServerOptions mqOptions = new MqServerOptions();
 

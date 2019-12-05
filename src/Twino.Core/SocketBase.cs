@@ -80,7 +80,7 @@ namespace Twino.Core
 
         protected SocketBase()
         {
-            PongTime = DateTime.UtcNow.AddSeconds(30);
+            PongTime = DateTime.UtcNow.AddSeconds(15);
         }
 
         #region Methods
