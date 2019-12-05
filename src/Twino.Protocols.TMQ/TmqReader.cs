@@ -30,6 +30,9 @@ namespace Twino.Protocols.TMQ
 
             await ReadContent(message, stream);
 
+            if (message.Content != null && message.Content.Position > 0)
+                message.Content.Position = 0;
+
             return message;
         }
 
