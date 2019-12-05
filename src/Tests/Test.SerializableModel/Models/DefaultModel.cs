@@ -1,10 +1,10 @@
 using System.Text.Json.Serialization;
 using Newtonsoft.Json;
-using Twino.SocketModels;
+using Twino.JsonModel;
 
 namespace Test.SocketModels.Models
 {
-    public class DefaultModel : ISocketModel
+    public class DefaultModel : ISerializableModel
     {
         [JsonProperty("type")]
         [JsonPropertyName("type")]

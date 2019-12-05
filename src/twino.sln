@@ -25,7 +25,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Mvc", "Tests\Test.Mvc\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Mvc.Auth.Jwt", "Tests\Test.Mvc.Auth.Jwt\Test.Mvc.Auth.Jwt.csproj", "{533184E5-D3C8-4A24-8D0F-AC14FBA3D1B2}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.SocketModels", "Tests\Test.SocketModels\Test.SocketModels.csproj", "{B062F015-8E5C-4CFC-8873-96A00D97F7B3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.SerializableModel", "Tests\Test.SerializableModel\Test.SerializableModel.csproj", "{B062F015-8E5C-4CFC-8873-96A00D97F7B3}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Playground", "Samples\Playground\Playground.csproj", "{3A3A6CBA-E31C-4E63-A06A-E0FF5DFE1619}"
 EndProject

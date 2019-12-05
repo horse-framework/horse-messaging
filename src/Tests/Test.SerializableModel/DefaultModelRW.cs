@@ -1,5 +1,5 @@
-using Twino.SocketModels.Serialization;
 using Test.SocketModels.Models;
+using Twino.JsonModel.Serialization;
 using Xunit;
 
 namespace Test.SocketModels

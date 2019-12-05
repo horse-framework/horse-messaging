@@ -1,17 +1,17 @@
 using System;
-using Twino.SocketModels;
-using Twino.SocketModels.Serialization;
+using Twino.JsonModel;
+using Twino.JsonModel.Serialization;
 
 namespace Test.SocketModels.Helpers
 {
     public class CustomModelReader : IModelReader
     {
-        public T Read<T>(string serialized) where T : ISocketModel, new()
+        public T Read<T>(string serialized) where T : ISerializableModel, new()
         {
             return Read<T>(serialized, true);
         }
 
-        public T Read<T>(string serialized, bool verify) where T : ISocketModel, new()
+        public T Read<T>(string serialized, bool verify) where T : ISerializableModel, new()
         {
             int index;
             int type = ReadType(serialized, out index);
@@ -24,17 +24,17 @@ namespace Test.SocketModels.Helpers
             return model;
         }
 
-        public ISocketModel Read(Type type, string serialized)
+        public ISerializableModel Read(Type type, string serialized)
         {
             return Read(type, serialized, true);
         }
 
-        public ISocketModel Read(Type type, string serialized, bool verify)
+        public ISerializableModel Read(Type type, string serialized, bool verify)
         {
             int index;
             int code = ReadType(serialized, out index);
 
-            ISocketModel model = (ISocketModel) Newtonsoft.Json.JsonConvert.DeserializeObject(serialized.Substring(index + 1), type);
+            ISerializableModel model = (ISerializableModel) Newtonsoft.Json.JsonConvert.DeserializeObject(serialized.Substring(index + 1), type);
 
             if (verify && code != model.Type)
                 return null;

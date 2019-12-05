@@ -1,12 +1,10 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Twino.SocketModels;
-using Twino.SocketModels.Models;
 using Test.SocketModels.Helpers;
 using Test.SocketModels.Models;
-using Twino.Client;
-using Twino.SocketModels.Requests;
+using Twino.Client.WebSocket;
+using Twino.Protocols.WebSocket.Requests;
 using Xunit;
 
 namespace Test.SocketModels
@@ -20,7 +18,7 @@ namespace Test.SocketModels
             server.Run();
             Thread.Sleep(250);
 
-            TwinoClient client = new TwinoClient();
+            TwinoWebSocket client = new TwinoWebSocket();
             client.Connect("127.0.0.1", 311, false);
             RequestModel model = new RequestModel();
             model.Delay = 100;
@@ -40,7 +38,7 @@ namespace Test.SocketModels
             server.Run();
             Thread.Sleep(250);
 
-            TwinoClient client = new TwinoClient();
+            TwinoWebSocket client = new TwinoWebSocket();
             client.Connect("127.0.0.1", 382, false);
             RequestModel model = new RequestModel();
             model.Delay = 100;
@@ -60,7 +58,7 @@ namespace Test.SocketModels
             server.Run();
             Thread.Sleep(250);
 
-            TwinoClient client = new TwinoClient();
+            TwinoWebSocket client = new TwinoWebSocket();
             client.Connect("127.0.0.1", 313, false);
             RequestModel model = new RequestModel();
             model.Delay = 20000;
@@ -80,7 +78,7 @@ namespace Test.SocketModels
             server.Run();
             Thread.Sleep(250);
 
-            TwinoClient client = new TwinoClient();
+            TwinoWebSocket client = new TwinoWebSocket();
             client.Connect("127.0.0.1", 314, false);
             RequestModel model = new RequestModel();
             model.Delay = 8000;
@@ -111,7 +109,7 @@ namespace Test.SocketModels
                 ThreadPool.QueueUserWorkItem(async s =>
                 {
                     await Task.Yield();
-                    TwinoClient client = new TwinoClient();
+                    TwinoWebSocket client = new TwinoWebSocket();
                     client.Connect("127.0.0.1", port, false);
                     RequestModel model = new RequestModel();
                     model.Delay = requestDelay;

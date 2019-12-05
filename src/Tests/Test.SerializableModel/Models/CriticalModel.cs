@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
-using Twino.SocketModels;
-using Twino.SocketModels.Serialization;
+using Twino.JsonModel;
+using Twino.JsonModel.Serialization;
 
 namespace Test.SocketModels.Models
 {
@@ -11,7 +11,7 @@ namespace Test.SocketModels.Models
 
         [JsonPropertyName("name")]
         public string Name { get; set; }
-        
+
         [JsonPropertyName("number")]
         public int Number { get; set; }
 

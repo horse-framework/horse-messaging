@@ -1,9 +1,10 @@
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using Twino.Server;
 using Test.SocketModels.Models;
-using Twino.SocketModels.Requests;
+using Twino.JsonModel;
+using Twino.Protocols.WebSocket;
+using Twino.Protocols.WebSocket.Requests;
 
 namespace Test.SocketModels.Helpers
 {
@@ -22,7 +23,7 @@ namespace Test.SocketModels.Helpers
             _requestDelay = requestDelay;
         }
 
-        public void Run()
+        public void Run(params PackageReader[] readers)
         {
             ServerOptions options = ServerOptions.CreateDefault();
             options.Hosts.FirstOrDefault().Port = _port;
@@ -48,12 +49,15 @@ namespace Test.SocketModels.Helpers
                 return response;
             });
 
-            Server = TwinoServer.CreateWebSocket(async (server, request, client) =>
+            Server = new TwinoServer(ServerOptions.CreateDefault());
+            Server.UseWebSockets(async (socket, message) =>
             {
-                ServerSocket socket = new ServerSocket(server, request, client);
-                socket.MessageReceived += async (s, m) => await _requestManager.HandleRequests(s, m);
-                return await Task.FromResult(socket);
-            }, options);
+                string msg = message.ToString();
+                await _requestManager.HandleRequests(socket, msg);
+
+                foreach (PackageReader reader in readers)
+                    reader.Read(socket, msg);
+            });
 
             Server.Start(_port);
         }
