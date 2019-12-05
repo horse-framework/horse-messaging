@@ -36,7 +36,6 @@ namespace Test.Mq
 
         #endregion
 
-
         #region Queuing
 
         /// <summary>

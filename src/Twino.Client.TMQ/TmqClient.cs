@@ -269,7 +269,7 @@ namespace Twino.Client.TMQ
             Data.Path = string.IsNullOrEmpty(dns.Path) ? "/" : dns.Path;
             if (string.IsNullOrEmpty(Data.Method))
                 Data.Method = "NONE";
-            
+
             string first = Data.Method + " " + Data.Path + "\r\n";
             await message.Content.WriteAsync(Encoding.UTF8.GetBytes(first));
             Data.Properties.Add(TmqHeaders.CLIENT_ID, ClientId);
@@ -488,6 +488,22 @@ namespace Twino.Client.TMQ
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Sends the message and waits for response
+        /// </summary>
+        public async Task<TmqMessage> Request(TmqMessage message)
+        {
+            message.ResponseRequired = true;
+            message.AcknowledgeRequired = false;
+            message.MessageId = UniqueIdGenerator.Create();
+
+            bool sent = await SendAsync(message);
+            if (!sent)
+                return null;
+
+            return await _follower.FollowResponse(message);
         }
 
         #endregion
