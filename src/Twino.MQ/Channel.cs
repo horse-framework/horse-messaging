@@ -45,7 +45,7 @@ namespace Twino.MQ
         /// <summary>
         /// Server of the channel
         /// </summary>
-        public MQServer Server { get; }
+        public MqServer Server { get; }
 
         /// <summary>
         /// Channel options
@@ -104,7 +104,7 @@ namespace Twino.MQ
 
         #region Constructors
 
-        internal Channel(MQServer server,
+        internal Channel(MqServer server,
                          ChannelOptions options,
                          string name,
                          IChannelAuthenticator authenticator,

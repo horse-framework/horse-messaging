@@ -18,14 +18,14 @@ namespace Twino.MQ
         /// <summary>
         /// Messaging Queue Server
         /// </summary>
-        private readonly MQServer _server;
+        private readonly MqServer _server;
 
         /// <summary>
         /// Default TMQ protocol message writer
         /// </summary>
         private static readonly TmqWriter _writer = new TmqWriter();
 
-        public MqConnectionHandler(MQServer server)
+        public MqConnectionHandler(MqServer server)
         {
             _server = server;
         }
@@ -77,6 +77,10 @@ namespace Twino.MQ
             //send response message to the client, client should check unique id,
             //if client's unique id isn't permitted, server will create new id for client and send it as response
             await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
+
+            if (_server.ClientHandler != null)
+                await _server.ClientHandler.Connected(_server, client);
+
             return client;
         }
 
@@ -87,6 +91,9 @@ namespace Twino.MQ
         {
             MqClient mqClient = (MqClient) client;
             await _server.RemoveClient(mqClient);
+
+            if (_server.ClientHandler != null)
+                await _server.ClientHandler.Disconnected(_server, mqClient);
         }
 
         #endregion

@@ -14,7 +14,7 @@ namespace Twino.MQ
     /// <summary>
     /// Twino Messaging Queue Server
     /// </summary>
-    public class MQServer
+    public class MqServer
     {
         #region Properties
 
@@ -57,6 +57,11 @@ namespace Twino.MQ
         /// Authorization implementation for client operations
         /// </summary>
         public IClientAuthorization Authorization { get; }
+        
+        /// <summary>
+        /// Client connect and disconnect operations
+        /// </summary>
+        public IClientHandler ClientHandler { get; set; }
 
         /// <summary>
         /// Default channel event handler.
@@ -93,7 +98,7 @@ namespace Twino.MQ
         /// <summary>
         /// Creates new Messaging Queue Server
         /// </summary>
-        public MQServer(ServerOptions serverOptions,
+        public MqServer(ServerOptions serverOptions,
                         MqServerOptions options,
                         IClientAuthenticator authenticator = null,
                         IClientAuthorization authorization = null)

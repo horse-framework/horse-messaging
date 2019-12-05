@@ -8,7 +8,7 @@ namespace Test.Mq.Internal
 {
     internal class TestMqServer
     {
-        public MQServer Server { get; private set; }
+        public MqServer Server { get; private set; }
 
         public int OnQueueCreated { get; set; }
         public int OnQueueRemoved { get; set; }
@@ -28,6 +28,9 @@ namespace Test.Mq.Internal
         public int OnRemove { get; set; }
         public int OnException { get; set; }
         public int SaveMessage { get; set; }
+        
+        public int ClientConnected { get; set; }
+        public int ClientDisconnected { get; set; }
 
         internal void Initialize(int port)
         {
@@ -36,7 +39,7 @@ namespace Test.Mq.Internal
 
             MqServerOptions mqOptions = new MqServerOptions();
 
-            Server = new MQServer(serverOptions, mqOptions);
+            Server = new MqServer(serverOptions, mqOptions);
             Server.SetDefaultChannelHandler(new TestChannelHandler(this), null);
             Server.SetDefaultDeliveryHandler(new TestDeliveryHandler(this));
         }

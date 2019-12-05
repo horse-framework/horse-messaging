@@ -12,7 +12,7 @@ namespace Twino.MQ.Security
         /// <summary>
         /// Returns true, if user can client the channel
         /// </summary>
-        Task<bool> CanCreateChannel(MqClient client, MQServer server, string channelName);
+        Task<bool> CanCreateChannel(MqClient client, MqServer server, string channelName);
 
         /// <summary>
         /// Returns true, if client can create new queue in the channel

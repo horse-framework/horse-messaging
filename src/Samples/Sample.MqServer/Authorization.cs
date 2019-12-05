@@ -9,7 +9,7 @@ namespace Sample.MqServer
 {
     public class Authorization : IClientAuthorization
     {
-        public async Task<bool> CanCreateChannel(MqClient client, MQServer server, string channelName)
+        public async Task<bool> CanCreateChannel(MqClient client, Twino.MQ.MqServer server, string channelName)
         {
             Console.WriteLine("Can create new channel passed");
             return await Task.FromResult(true);

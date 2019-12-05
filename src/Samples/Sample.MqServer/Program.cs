@@ -23,7 +23,7 @@ namespace Sample.MqServer
             mqOptions.UseMessageId = true;
             mqOptions.AllowedContentTypes = new ushort[] {100, 101, 102};
 
-            MQServer server = new MQServer(serverOptions, mqOptions, new ClientAuthenticator(), new Authorization());
+            Twino.MQ.MqServer server = new Twino.MQ.MqServer(serverOptions, mqOptions, new ClientAuthenticator(), new Authorization());
             server.SetDefaultDeliveryHandler(new DeliveryHandler());
             server.SetDefaultChannelHandler(new ChannelHandler(), new ChannelAuthenticator());
 

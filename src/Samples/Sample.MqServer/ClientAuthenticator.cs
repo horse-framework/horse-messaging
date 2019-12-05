@@ -8,7 +8,7 @@ namespace Sample.MqServer
 {
     public class ClientAuthenticator : IClientAuthenticator
     {
-        public async Task<bool> Authenticate(MQServer server, MqClient client)
+        public async Task<bool> Authenticate(Twino.MQ.MqServer server, MqClient client)
         {
             Console.WriteLine($"{client.UniqueId} authenticated in server");
             return await Task.FromResult(true);
