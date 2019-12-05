@@ -163,6 +163,7 @@ namespace Test.Mq
 
             //subscribe
             await client.Join(channel.Name, true);
+            await Task.Delay(250);
 
             //push a message to the queue
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
@@ -181,14 +182,14 @@ namespace Twino.MQ
         internal async Task Push(QueueMessage message, MqClient sender)
         {
             message.Message.AcknowledgeRequired = Options.RequestAcknowledge;
-            
+
             //process the message
             QueueMessage held = null;
             try
             {
                 //fire message receive event
                 MessageDecision decision = await DeliveryHandler.OnReceived(this, message, sender);
-                
+
                 //if message should save at the beginning, save the message
                 if (decision == MessageDecision.SkipAndSave || decision == MessageDecision.AllowAndSave)
                     message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
@@ -511,9 +512,17 @@ namespace Twino.MQ
         internal async Task AcknowledgeDelivered(MqClient from, TmqMessage deliveryMessage)
         {
             MessageDelivery delivery = _timeKeeper.FindDelivery(from, deliveryMessage.MessageId);
-
+            
             if (delivery != null)
+            {
                 delivery.MarkAsAcknowledged();
+
+                if (delivery.Message.Source != null && delivery.Message.Source.IsConnected)
+                {
+                    deliveryMessage.Target = delivery.Message.Source.UniqueId;
+                    delivery.AcknowledgeSentToSource = await delivery.Message.Source.SendAsync(deliveryMessage);
+                }
+            }
 
             await DeliveryHandler.OnAcknowledge(this, deliveryMessage, delivery);
             ReleaseAcknowledgeLock();

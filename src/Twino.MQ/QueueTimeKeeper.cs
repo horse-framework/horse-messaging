@@ -15,7 +15,7 @@ namespace Twino.MQ
         /// Queue of the keeper
         /// </summary>
         private readonly ChannelQueue _queue;
-        
+
         /// <summary>
         /// Timeout checker timer
         /// </summary>
@@ -25,12 +25,12 @@ namespace Twino.MQ
         /// Messages with high priority list of the queue
         /// </summary>
         private readonly LinkedList<QueueMessage> _prefentialMessages;
-        
+
         /// <summary>
         /// Messages list of the queue
         /// </summary>
         private readonly LinkedList<QueueMessage> _standardMessages;
-        
+
         /// <summary>
         /// Processing timed out messages.
         /// This list is used as temp list.
@@ -42,12 +42,12 @@ namespace Twino.MQ
         /// To not lock delivery list, adding deliveries are stored in different list
         /// </summary>
         private readonly List<MessageDelivery> _addingDeliveries = new List<MessageDelivery>(16);
-        
+
         /// <summary>
         /// All following deliveries
         /// </summary>
         private readonly List<MessageDelivery> _deliveries = new List<MessageDelivery>(1024);
-        
+
         /// <summary>
         /// To not lock delivery and ading delivery list, removing deliveries are stored in different list
         /// </summary>
@@ -174,14 +174,19 @@ namespace Twino.MQ
         public MessageDelivery FindDelivery(MqClient client, string messageId)
         {
             MessageDelivery delivery;
-            
+
             lock (_deliveries)
                 delivery = _deliveries.Find(x => x.Receiver != null
                                                  && x.Receiver.Client.UniqueId == client.UniqueId
                                                  && x.Message.Message.MessageId == messageId);
 
+            if (delivery == null)
+                lock (_addingDeliveries)
+                    delivery = _addingDeliveries.Find(x => x.Receiver != null
+                                                           && x.Receiver.Client.UniqueId == client.UniqueId
+                                                           && x.Message.Message.MessageId == messageId);
+
             return delivery;
         }
-        
     }
 }

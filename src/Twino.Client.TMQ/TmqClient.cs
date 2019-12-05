@@ -435,11 +435,13 @@ namespace Twino.Client.TMQ
             if (string.IsNullOrEmpty(message.MessageId))
                 throw new ArgumentNullException("Messages without unique id cannot be acknowledged");
 
+            Task<bool> task = _follower.FollowAcknowledge(message);
+
             bool sent = await SendAsync(message);
             if (!sent)
                 return false;
 
-            return await _follower.FollowAcknowledge(message);
+            return await task;
         }
 
         /// <summary>
@@ -505,14 +507,13 @@ namespace Twino.Client.TMQ
             message.Content = content;
             message.AcknowledgeRequired = waitAcknowledge;
 
+            Task<bool> task = _follower.FollowAcknowledge(message);
+
             bool sent = await SendAsync(message);
-            if (!sent)
-                return false;
+            if (!waitAcknowledge)
+                return sent;
 
-            if (waitAcknowledge)
-                return await _follower.FollowAcknowledge(message);
-
-            return true;
+            return await task;
         }
 
         /// <summary>
