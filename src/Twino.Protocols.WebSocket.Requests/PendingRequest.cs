@@ -1,15 +1,16 @@
 using System;
 using System.Threading.Tasks;
 using Twino.Core;
+using Twino.JsonModel;
 
-namespace Twino.SocketModels.Requests
+namespace Twino.Protocols.WebSocket.Requests
 {
     /// <summary>
     /// After a request is sent, to handle the response, information about the request must be kept.
     /// This class defines the properties which are kept for the request
     /// </summary>
     internal class PendingRequest<TModel> : PendingRequest
-        where TModel : ISocketModel, new()
+        where TModel : ISerializableModel, new()
     {
         /// <summary>
         /// Async response task completion source

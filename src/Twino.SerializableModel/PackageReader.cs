@@ -34,7 +34,7 @@ namespace Twino.JsonModel
         /// When TModel message is received to TClient clients.
         /// The parameter of this method will be called.
         /// </summary>
-        public virtual void On<TModel>(Action<SocketBase, TModel> func) where TModel : class, IJsonModel, new()
+        public virtual void On<TModel>(Action<SocketBase, TModel> func) where TModel : class, ISerializableModel, new()
         {
             TModel sample = new TModel();
             On(sample.Type, func);
@@ -45,7 +45,7 @@ namespace Twino.JsonModel
         /// It will be read as TModel message.
         /// The parameter of this method will be called.
         /// </summary>
-        public virtual void On<TModel>(int type, Action<SocketBase, TModel> func) where TModel : class, IJsonModel, new()
+        public virtual void On<TModel>(int type, Action<SocketBase, TModel> func) where TModel : class, ISerializableModel, new()
         {
             if (_descriptors.ContainsKey(type))
                 _descriptors[type].Actions.Add(func);
@@ -75,7 +75,7 @@ namespace Twino.JsonModel
 
             PackageDescriptor descriptor = _descriptors[type];
 
-            IJsonModel model = Reader.Read(descriptor.Type, message, true);
+            ISerializableModel model = Reader.Read(descriptor.Type, message, true);
 
             if (model == null)
                 return;

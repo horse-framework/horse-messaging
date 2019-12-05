@@ -5,7 +5,7 @@ namespace Twino.JsonModel
     /// <summary>
     /// Type and data specified socket model, created for compact usage
     /// </summary>
-    public class JsonModel<T> : IJsonModel where T : class, new()
+    public class SerializableModel<T> : ISerializableModel where T : class, new()
     {
         /// <summary>
         /// Type code for model

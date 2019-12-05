@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
-namespace Twino.SocketModels.Requests
+namespace Twino.Protocols.WebSocket.Requests
 {
     /// <summary>
     /// The header information for Request Manager requests

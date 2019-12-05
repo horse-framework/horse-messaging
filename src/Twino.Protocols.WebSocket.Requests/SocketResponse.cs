@@ -1,7 +1,8 @@
 using System.Text.Json.Serialization;
 using Newtonsoft.Json;
+using Twino.JsonModel;
 
-namespace Twino.SocketModels.Requests
+namespace Twino.Protocols.WebSocket.Requests
 {
     /// <summary>
     /// Response types
@@ -32,7 +33,7 @@ namespace Twino.SocketModels.Requests
     /// <summary>
     /// Generic model for response model type of Request Manager
     /// </summary>
-    public class SocketResponse<TModel> : SocketResponse where TModel : ISocketModel, new()
+    public class SocketResponse<TModel> : SocketResponse where TModel : ISerializableModel, new()
     {
         /// <summary>
         /// Process model

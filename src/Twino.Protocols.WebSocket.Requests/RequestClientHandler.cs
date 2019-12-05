@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using Twino.Core;
 
-namespace Twino.SocketModels.Requests
+namespace Twino.Protocols.WebSocket.Requests
 {
     /// <summary>
     /// Handles socket's active pending requests
@@ -30,14 +29,14 @@ namespace Twino.SocketModels.Requests
         /// <summary>
         /// Socket client of all requests in this instance
         /// </summary>
-        public SocketBase Socket { get; }
+        public ClientSocketBase<WebSocketMessage> Socket { get; }
 
         /// <summary>
         /// Request cleanup timer
         /// </summary>
         private Timer _cleanupTimer;
 
-        public RequestClientHandler(SocketBase socket)
+        public RequestClientHandler(ClientSocketBase<WebSocketMessage> socket)
         {
             Socket = socket;
         }
@@ -127,10 +126,10 @@ namespace Twino.SocketModels.Requests
         /// Called when a message received from the socket.
         /// If message is a response, it's proceed.
         /// </summary>
-        private void SenderOnMessageReceived(SocketBase client, byte[] data)
+        private void SenderOnMessageReceived(SocketBase client, WebSocketMessage message)
         {
-            string message = Encoding.UTF8.GetString(data);
-            SocketResponse header = TwinoRequestSerializer.DeserializeHeader<SocketResponse>(TwinoRequestSerializer.RESPONSE_CODE, message);
+            string content = message.ToString();
+            SocketResponse header = TwinoRequestSerializer.DeserializeHeader<SocketResponse>(TwinoRequestSerializer.RESPONSE_CODE, content);
 
             if (header == null || string.IsNullOrEmpty(header.Unique))
                 return;
@@ -148,7 +147,7 @@ namespace Twino.SocketModels.Requests
             switch (header.Status)
             {
                 case ResponseStatus.Success:
-                    object model = TwinoRequestSerializer.DeserializeModel(pending.ModelType, TwinoRequestSerializer.RESPONSE_CODE, message);
+                    object model = TwinoRequestSerializer.DeserializeModel(pending.ModelType, TwinoRequestSerializer.RESPONSE_CODE, content);
                     pending.CompleteAsSuccessful(model);
                     break;
 

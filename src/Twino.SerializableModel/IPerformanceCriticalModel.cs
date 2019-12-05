@@ -9,7 +9,7 @@ namespace Twino.JsonModel
     /// If your model is implemented from IJsonModel and IPerformanceCritical model,
     /// Model Reader and Writer classes are called Serialize and Deserialize methods.
     /// </summary>
-    public interface IPerformanceCriticalModel : IJsonModel
+    public interface IPerformanceCriticalModel : ISerializableModel
     {
         /// <summary>
         /// Serializes the object as JSON

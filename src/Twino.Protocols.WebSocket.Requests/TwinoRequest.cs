@@ -1,8 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using Twino.Core;
+using Twino.JsonModel;
 
-namespace Twino.SocketModels.Requests
+namespace Twino.Protocols.WebSocket.Requests
 {
     /// <summary>
     /// Sends WebSocket Request to a twino websocket server
@@ -18,8 +19,9 @@ namespace Twino.SocketModels.Requests
         /// Creates a request to the server and sends the model in specified timeout (in seconds).
         /// Response will be received via returned task
         /// </summary>
-        public static async Task<SocketResponse<TResponse>> Request<TResponse>(this SocketBase sender, ISocketModel model)
-            where TResponse : ISocketModel, new()
+        public static async Task<SocketResponse<TResponse>> Request<TResponse>(this ClientSocketBase<WebSocketMessage> sender,
+                                                                               ISerializableModel model)
+            where TResponse : ISerializableModel, new()
         {
             return await Request<TResponse>(sender, model, RequestManager.DefaultTimeout);
         }
@@ -28,8 +30,10 @@ namespace Twino.SocketModels.Requests
         /// Creates a request to the server and sends the model in specified timeout (in seconds).
         /// Response will be received via returned task
         /// </summary>
-        public static async Task<SocketResponse<TResponse>> Request<TResponse>(this SocketBase sender, ISocketModel model, int timeoutSeconds)
-            where TResponse : ISocketModel, new()
+        public static async Task<SocketResponse<TResponse>> Request<TResponse>(this ClientSocketBase<WebSocketMessage> sender,
+                                                                               ISerializableModel model,
+                                                                               int timeoutSeconds)
+            where TResponse : ISerializableModel, new()
         {
             RequestClientHandler handler = RequestClientPool.Instance.GetHandler(sender);
 
@@ -58,7 +62,7 @@ namespace Twino.SocketModels.Requests
         /// <summary>
         /// Creates request header with sending and receiving models.
         /// </summary>
-        private static RequestHeader CreateRequest<TResponse>(ISocketModel request) where TResponse : ISocketModel, new()
+        private static RequestHeader CreateRequest<TResponse>(ISerializableModel request) where TResponse : ISerializableModel, new()
         {
             TResponse response = new TResponse();
             return new RequestHeader
@@ -75,7 +79,7 @@ namespace Twino.SocketModels.Requests
         private static string CreateUnique()
         {
             string g1 = Guid.NewGuid().ToString();
-            
+
             int v = UNIQUE_HELPER;
             UNIQUE_HELPER++;
             if (UNIQUE_HELPER > 999999)

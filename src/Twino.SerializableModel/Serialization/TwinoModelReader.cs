@@ -28,7 +28,7 @@ namespace Twino.JsonModel.Serialization
         /// <summary>
         /// Reads T model from serialized string message
         /// </summary>
-        public T Read<T>(string serialized) where T : IJsonModel, new()
+        public T Read<T>(string serialized) where T : ISerializableModel, new()
         {
             return Read<T>(serialized, true);
         }
@@ -36,7 +36,7 @@ namespace Twino.JsonModel.Serialization
         /// <summary>
         /// Reads T model from serialized string message
         /// </summary>
-        public T Read<T>(string serialized, bool verify) where T : IJsonModel, new()
+        public T Read<T>(string serialized, bool verify) where T : ISerializableModel, new()
         {
             int bodyStartIndex;
             int type = ReadType(serialized, out bodyStartIndex);
@@ -75,7 +75,7 @@ namespace Twino.JsonModel.Serialization
         /// <summary>
         /// Reads T model from serialized string message
         /// </summary>
-        public IJsonModel Read(Type type, string serialized)
+        public ISerializableModel Read(Type type, string serialized)
         {
             return Read(type, serialized, true);
         }
@@ -83,7 +83,7 @@ namespace Twino.JsonModel.Serialization
         /// <summary>
         /// Reads T model from serialized string message
         /// </summary>
-        public IJsonModel Read(Type type, string serialized, bool verify)
+        public ISerializableModel Read(Type type, string serialized, bool verify)
         {
             int bodyStartIndex;
             int mtype = ReadType(serialized, out bodyStartIndex);
@@ -91,13 +91,13 @@ namespace Twino.JsonModel.Serialization
                 return null;
 
             string body = ReadBody(serialized, bodyStartIndex);
-            IJsonModel model;
+            ISerializableModel model;
             bool critical = typeof(IPerformanceCriticalModel).IsAssignableFrom(type);
             if (critical)
             {
                 LightJsonReader reader = new LightJsonReader(body);
                 
-                model = (IJsonModel) Activator.CreateInstance(type);
+                model = (ISerializableModel) Activator.CreateInstance(type);
                 IPerformanceCriticalModel pcm = (IPerformanceCriticalModel)model;
 
                 reader.StartObject();
@@ -107,7 +107,7 @@ namespace Twino.JsonModel.Serialization
             else
             {
                 object result = JsonConvert.DeserializeObject(body, type);
-                model = (IJsonModel) result;
+                model = (ISerializableModel) result;
             }
 
             if (model == null || verify && model.Type != mtype)

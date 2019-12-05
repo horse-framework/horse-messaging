@@ -103,7 +103,7 @@ namespace Twino.Core
                 else
                 {
                     Stream.EndRead(ar);
-                    
+
                     if (!_writeCompleted)
                         _writeCompleted = true;
                 }

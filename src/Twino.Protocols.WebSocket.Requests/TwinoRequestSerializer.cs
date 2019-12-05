@@ -2,10 +2,10 @@ using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Twino.Protocols.WebSocket;
-using Twino.SocketModels.Serialization;
+using Twino.JsonModel;
+using Twino.JsonModel.Serialization;
 
-namespace Twino.SocketModels.Requests
+namespace Twino.Protocols.WebSocket.Requests
 {
     /// <summary>
     /// Serializes and deserializes WebSocket requests and responses
@@ -83,7 +83,7 @@ namespace Twino.SocketModels.Requests
         /// <summary>
         /// Creates request websocket message from header and model instances
         /// </summary>
-        internal static async Task<byte[]> SerializeRequest(RequestHeader header, ISocketModel model)
+        internal static async Task<byte[]> SerializeRequest(RequestHeader header, ISerializableModel model)
         {
             LightJsonWriter writer = new LightJsonWriter();
 
@@ -115,7 +115,6 @@ namespace Twino.SocketModels.Requests
                                          OpCode = SocketOpCode.UTF8,
                                          Content = new MemoryStream(Encoding.UTF8.GetBytes(message))
                                      };
-            wsmsg.Length = (ulong) wsmsg.Content.Length;
 
             return await _writer.Create(wsmsg);
         }
@@ -123,7 +122,7 @@ namespace Twino.SocketModels.Requests
         /// <summary>
         /// Creates response websocket message from header and model instances
         /// </summary>
-        internal static async Task<byte[]> SerializeResponse(SocketResponse header, ISocketModel model)
+        internal static async Task<byte[]> SerializeResponse(SocketResponse header, ISerializableModel model)
         {
             LightJsonWriter writer = new LightJsonWriter();
             await writer.Writer.WriteRawAsync(RESPONSE_CODE + "=");
@@ -160,7 +159,6 @@ namespace Twino.SocketModels.Requests
                                          OpCode = SocketOpCode.UTF8,
                                          Content = new MemoryStream(Encoding.UTF8.GetBytes(message))
                                      };
-            wsmsg.Length = (ulong) wsmsg.Content.Length;
 
             return await _writer.Create(wsmsg);
         }

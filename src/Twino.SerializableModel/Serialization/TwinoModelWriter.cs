@@ -26,7 +26,7 @@ namespace Twino.JsonModel.Serialization
         /// <summary>
         /// Creates serialized string message from T model
         /// </summary>
-        public string Serialize(IJsonModel model)
+        public string Serialize(ISerializableModel model)
         {
             string body;
 

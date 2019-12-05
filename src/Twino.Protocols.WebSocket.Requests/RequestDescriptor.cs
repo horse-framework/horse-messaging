@@ -1,14 +1,15 @@
 using System;
 using System.Threading.Tasks;
+using Twino.JsonModel;
 
-namespace Twino.SocketModels.Requests
+namespace Twino.Protocols.WebSocket.Requests
 {
     /// <summary>
     /// Real request descriptor class keeps response actions and calls them
     /// </summary>
     internal class RequestDescriptor<TRequest, TResponse> : RequestDescriptor
-        where TRequest : ISocketModel, new()
-        where TResponse : ISocketModel, new()
+        where TRequest : ISerializableModel, new()
+        where TResponse : ISerializableModel, new()
     {
         /// <summary>
         /// Sync response method

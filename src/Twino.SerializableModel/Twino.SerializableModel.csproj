@@ -16,6 +16,7 @@
     <LangVersion>8</LangVersion>
     <NeutralLanguage>en</NeutralLanguage>
     <Title>Twino.JsonModel</Title>
+    <RootNamespace>Twino.JsonModel</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

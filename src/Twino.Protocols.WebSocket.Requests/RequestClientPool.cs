@@ -2,14 +2,15 @@ using System.Collections.Generic;
 using System.Threading;
 using Twino.Core;
 
-namespace Twino.SocketModels.Requests
+namespace Twino.Protocols.WebSocket.Requests
 {
     internal sealed class RequestClientPool
     {
         /// <summary>
         /// When a request is created via a socket client, this client is added to alive connection list until it's disconnected or manually removed
         /// </summary>
-        private readonly Dictionary<SocketBase, RequestClientHandler> _clients = new Dictionary<SocketBase, RequestClientHandler>();
+        private readonly Dictionary<ClientSocketBase<WebSocketMessage>, RequestClientHandler> _clients =
+            new Dictionary<ClientSocketBase<WebSocketMessage>, RequestClientHandler>();
 
         /// <summary>
         /// Removing client lists
@@ -71,7 +72,7 @@ namespace Twino.SocketModels.Requests
 
             if (_removing.Count < 1)
                 return;
-            
+
             foreach (RequestClientHandler handler in _removing)
                 handler.Dispose();
 
@@ -81,7 +82,7 @@ namespace Twino.SocketModels.Requests
         /// <summary>
         /// Finds handler of the specified socket
         /// </summary>
-        internal RequestClientHandler GetHandler(SocketBase socket)
+        internal RequestClientHandler GetHandler(ClientSocketBase<WebSocketMessage> socket)
         {
             RequestClientHandler handler;
 

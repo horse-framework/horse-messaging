@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Twino.Core;
+using Twino.JsonModel;
 
-namespace Twino.SocketModels.Requests
+namespace Twino.Protocols.WebSocket.Requests
 {
     /// <summary>
     /// Provides sending requests and receiving their response messages via web sockets.
@@ -35,8 +36,8 @@ namespace Twino.SocketModels.Requests
         /// Creates a subscription for reading the request from clients.
         /// </summary>
         public bool On<TRequest, TResponse>(Func<TRequest, TResponse> func)
-            where TRequest : ISocketModel, new()
-            where TResponse : ISocketModel, new()
+            where TRequest : ISerializableModel, new()
+            where TResponse : ISerializableModel, new()
         {
             TRequest sampleRequest = new TRequest();
             TResponse sampleResponse = new TResponse();
@@ -62,8 +63,8 @@ namespace Twino.SocketModels.Requests
         /// Creates a subscription for reading the request from clients.
         /// </summary>
         public bool OnScheduled<TRequest, TResponse>(Func<TRequest, Task<TResponse>> func)
-            where TRequest : ISocketModel, new()
-            where TResponse : ISocketModel, new()
+            where TRequest : ISerializableModel, new()
+            where TResponse : ISerializableModel, new()
         {
             TRequest sampleRequest = new TRequest();
             TResponse sampleResponse = new TResponse();
@@ -139,7 +140,7 @@ namespace Twino.SocketModels.Requests
                                               ResponseType = header.ResponseType
                                           };
 
-                byte[] prepared = await TwinoRequestSerializer.SerializeResponse(response, (ISocketModel) responseModel);
+                byte[] prepared = await TwinoRequestSerializer.SerializeResponse(response, (ISerializableModel) responseModel);
                 sender.Send(prepared);
             }
             catch

@@ -10,22 +10,22 @@ namespace Twino.JsonModel.Serialization
         /// <summary>
         /// Reads T model from serialized string message
         /// </summary>
-        T Read<T>(string serialized) where T : IJsonModel, new();
+        T Read<T>(string serialized) where T : ISerializableModel, new();
 
         /// <summary>
         /// Reads T model from serialized string message
         /// </summary>
-        T Read<T>(string serialized, bool verify) where T : IJsonModel, new();
+        T Read<T>(string serialized, bool verify) where T : ISerializableModel, new();
 
         /// <summary>
         /// Reads T model from serialized string message
         /// </summary>
-        IJsonModel Read(Type type, string serialized);
+        ISerializableModel Read(Type type, string serialized);
 
         /// <summary>
         /// Reads T model from serialized string message
         /// </summary>
-        IJsonModel Read(Type type, string serialized, bool verify);
+        ISerializableModel Read(Type type, string serialized, bool verify);
 
         /// <summary>
         /// Reads only model type from serialized message

@@ -81,6 +81,9 @@ namespace Twino.Protocols.WebSocket
                    };
         }
 
+        /// <summary>
+        /// Reads message content as UTF-8 string
+        /// </summary>
         public override string ToString()
         {
             if (Content != null)

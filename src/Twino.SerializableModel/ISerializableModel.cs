@@ -2,10 +2,10 @@
 {
     /// <summary>
     /// Network package interface.
-    /// In order to use Twino.JsonModel library,
+    /// In order to use Twino.SerializableModel library,
     /// all models must be implemented from this interface
     /// </summary>
-    public interface IJsonModel
+    public interface ISerializableModel
     {
         /// <summary>
         /// Model type as integer.

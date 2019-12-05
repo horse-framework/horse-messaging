@@ -8,7 +8,7 @@ namespace Twino.JsonModel.Serialization
         /// <summary>
         /// Creates serialized string message from T model
         /// </summary>
-        string Serialize(IJsonModel model);
+        string Serialize(ISerializableModel model);
 
     }
 }
