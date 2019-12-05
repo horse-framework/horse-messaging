@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Twino.Protocols.WebSocket;
 using Twino.Server;
 
 namespace Test.Connector.Helpers
@@ -7,14 +8,10 @@ namespace Test.Connector.Helpers
     {
         public void Start(int port)
         {
-            TwinoServer server = TwinoServer.CreateWebSocket(async (twinoServer, request, client) =>
-            {
-                ServerSocket socket = new ServerSocket(twinoServer, request, client);
-                return await Task.FromResult(socket);
-            });
+            TwinoServer server = new TwinoServer(ServerOptions.CreateDefault());
 
+            server.UseWebSockets(async delegate { await Task.CompletedTask; });
             server.Start(port);
         }
-        
     }
 }

@@ -1,7 +1,10 @@
 using System;
 using System.Threading.Tasks;
 using Twino.Client.Connectors;
+using Twino.Client.WebSocket;
+using Twino.Client.WebSocket.Connectors;
 using Twino.Core;
+using Twino.Protocols.WebSocket;
 using Twino.Server;
 using Xunit;
 
@@ -14,13 +17,13 @@ namespace Test.Connector
 
         public AbsoluteConnectorTest()
         {
-            _server = TwinoServer.CreateWebSocket(async (twinoServer, request, client) =>
-            {
-                ServerSocket socket = new ServerSocket(twinoServer, request, client);
-                socket.MessageReceived += (sender, message) => { _receivedMessages++; };
-                socket.Send("Welcome");
-                return await Task.FromResult(socket);
-            });
+            _server = new TwinoServer(ServerOptions.CreateDefault());
+            _server.UseWebSockets(async (socket, data) => { await socket.SendAsync("Welcome"); },
+                                  async (socket, message) =>
+                                  {
+                                      _receivedMessages++;
+                                      await Task.CompletedTask;
+                                  });
         }
 
         [Fact]
@@ -28,8 +31,8 @@ namespace Test.Connector
         {
             _server.Start(431);
             System.Threading.Thread.Sleep(250);
-            
-            AbsoluteConnector connector = new AbsoluteConnector(TimeSpan.FromSeconds(1));
+
+            WsAbsoluteConnector connector = new WsAbsoluteConnector(TimeSpan.FromSeconds(1));
             connector.AddHost("ws://127.0.0.1:431");
             connector.Run();
             System.Threading.Thread.Sleep(1000);
@@ -45,15 +48,15 @@ namespace Test.Connector
         public void DisconnectMultipleTimes()
         {
             int connectionCount = 0;
-            
+
             _server.Start(422);
-            AbsoluteConnector connector = new AbsoluteConnector(TimeSpan.FromMilliseconds(50));
+            WsAbsoluteConnector connector = new WsAbsoluteConnector(TimeSpan.FromMilliseconds(50));
             connector.AddHost("ws://127.0.0.1:422");
             connector.Connected += c => connectionCount++;
-            
+
             connector.Run();
             System.Threading.Thread.Sleep(150);
-            
+
             for (int i = 0; i < 19; i++)
             {
                 connector.GetClient().Disconnect();
@@ -68,8 +71,8 @@ namespace Test.Connector
         {
             _server.Start(432);
             System.Threading.Thread.Sleep(250);
-            
-            AbsoluteConnector connector = new AbsoluteConnector(TimeSpan.FromSeconds(1));
+
+            WsAbsoluteConnector connector = new WsAbsoluteConnector(TimeSpan.FromSeconds(1));
             connector.AddHost("ws://127.0.0.1:432");
             connector.Run();
             System.Threading.Thread.Sleep(250);
@@ -87,12 +90,12 @@ namespace Test.Connector
             _server.Start(433);
             System.Threading.Thread.Sleep(250);
             int _receivedFromServer = 0;
-            
-            AbsoluteConnector connector = new AbsoluteConnector(TimeSpan.FromSeconds(1));
+
+            WsAbsoluteConnector connector = new WsAbsoluteConnector(TimeSpan.FromSeconds(1));
             connector.AddHost("ws://127.0.0.1:433");
-            connector.MessageReceived += (client, message) => _receivedFromServer++; 
+            connector.MessageReceived += (client, message) => _receivedFromServer++;
             connector.Run();
-            
+
             System.Threading.Thread.Sleep(1000);
             Assert.Equal(1, _receivedFromServer);
         }
@@ -103,14 +106,14 @@ namespace Test.Connector
             _server.Start(421);
             _receivedMessages = 0;
 
-            AbsoluteConnector connector = new AbsoluteConnector(TimeSpan.FromMilliseconds(600));
+            WsAbsoluteConnector connector = new WsAbsoluteConnector(TimeSpan.FromMilliseconds(600));
             connector.AddHost("ws://127.0.0.1:421");
-            
+
             connector.Run();
             System.Threading.Thread.Sleep(150);
-            
+
             connector.Send("Message 1");
-            
+
             for (int i = 0; i < 19; i++)
             {
                 connector.GetClient().Disconnect();
