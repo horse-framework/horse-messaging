@@ -140,9 +140,8 @@ namespace Twino.Protocols.TMQ
             message.HighPriority = HighPriority;
             message.Type = MessageType.Acknowledge;
             message.MessageId = MessageId;
-            message.Target = Target;
+            message.Target = Source;
             message.ContentType = ContentType;
-            message.CalculateLengths();
 
             return message;
         }

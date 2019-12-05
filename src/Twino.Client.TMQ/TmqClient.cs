@@ -56,12 +56,12 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Maximum time to wait acknowledge message
         /// </summary>
-        public TimeSpan AcknowledgeTimeout { get; set; } = TimeSpan.FromSeconds(5);
+        public TimeSpan AcknowledgeTimeout { get; set; } = TimeSpan.FromSeconds(15);
 
         /// <summary>
         /// Maximum time to wait response message
         /// </summary>
-        public TimeSpan ResponseTimeout { get; set; } = TimeSpan.FromSeconds(15);
+        public TimeSpan ResponseTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
         /// <summary>
         /// Unique client id
@@ -419,6 +419,28 @@ namespace Twino.Client.TMQ
         #endregion
 
         #region MQ Operations
+
+        /// <summary>
+        /// Sends a TMQ message and waits for acknowledge
+        /// </summary>
+        public async Task<bool> SendWithAcknowledge(TmqMessage message)
+        {
+            message.Source = _clientId;
+            message.AcknowledgeRequired = true;
+            message.ResponseRequired = false;
+
+            if (string.IsNullOrEmpty(message.MessageId) && UseUniqueMessageId)
+                message.MessageId = UniqueIdGenerator.Create();
+
+            if (string.IsNullOrEmpty(message.MessageId))
+                throw new ArgumentNullException("Messages without unique id cannot be acknowledged");
+
+            bool sent = await SendAsync(message);
+            if (!sent)
+                return false;
+
+            return await _follower.FollowAcknowledge(message);
+        }
 
         /// <summary>
         /// Joins to a channel

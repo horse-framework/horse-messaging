@@ -21,7 +21,7 @@ namespace Twino.Core
         /// Connection data, path, method, properties (if http used directly or indirectly, properties may be header key/values)
         /// </summary>
         public ConnectionData Data { get; } = new ConnectionData();
-        
+
         /// <summary>
         /// Triggered when a message is received from the network stream
         /// </summary>
@@ -41,6 +41,22 @@ namespace Twino.Core
             DnsInfo info = resolver.Resolve(uri);
 
             Connect(info);
+        }
+
+        /// <summary>
+        /// Connects to specified url.
+        /// Url can be like;
+        /// ws://10.20.30.40
+        /// wss://10.20.30.40/path
+        /// tmqs://domain.com
+        /// tmq://domain.com:154/path
+        /// </summary>
+        public async Task ConnectAsync(string uri)
+        {
+            DnsResolver resolver = new DnsResolver();
+            DnsInfo info = resolver.Resolve(uri);
+
+            await ConnectAsync(info);
         }
 
         /// <summary>
@@ -64,10 +80,30 @@ namespace Twino.Core
         }
 
         /// <summary>
+        /// Connects to an IP address on specified port.
+        /// If secure is true, connects with SSL
+        /// </summary>
+        public async Task ConnectAsync(string ip, int port, bool secure)
+        {
+            DnsInfo info = new DnsInfo
+                           {
+                               IPAddress = ip,
+                               Hostname = ip,
+                               Port = port,
+                               Path = "/",
+                               Protocol = Protocol.WebSocket,
+                               SSL = secure
+                           };
+
+            IsSsl = secure;
+            await ConnectAsync(info);
+        }
+
+        /// <summary>
         /// Connects to the server
         /// </summary>
         public abstract void Connect(DnsInfo host);
-        
+
         /// <summary>
         /// Connects to the server
         /// </summary>

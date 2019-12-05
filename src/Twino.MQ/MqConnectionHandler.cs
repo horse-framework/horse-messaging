@@ -273,10 +273,34 @@ namespace Twino.MQ
         /// </summary>
         private async Task AcknowledgeMessageReceived(MqClient client, TmqMessage message)
         {
+            //priority has no role in ack message.
+            //we are using priority for helping receiver type recognization for better performance
+            if (message.HighPriority)
+            {
+                //target should be client
+                MqClient target = _server.FindClient(message.Target);
+                if (target != null)
+                {
+                    await target.SendAsync(message);
+                    return;
+                }
+            }
+
             //find channel and queue
             Channel channel = _server.FindChannel(message.Target);
             if (channel == null)
+            {
+                //if high prio, dont try to find client again
+                if (!message.HighPriority)
+                {
+                    //target should be client
+                    MqClient target = _server.FindClient(message.Target);
+                    if (target != null)
+                        await target.SendAsync(message);
+                }
+
                 return;
+            }
 
             ChannelQueue queue = channel.FindQueue(message.ContentType);
             if (queue == null)
