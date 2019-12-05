@@ -68,7 +68,7 @@ namespace Twino.MQ
             TimeSpan interval = TimeSpan.FromMilliseconds(1000);
             _timer = new Timer(async s =>
             {
-                if (_queue.Options.MessageQueuing && _queue.Options.ReceiverWaitMaxDuration > TimeSpan.Zero)
+                if (_queue.Options.MessageQueuing && _queue.Options.MessagePendingTimeout > TimeSpan.Zero)
                     await ProcessReceiveTimeup();
 
                 await ProcessDeliveries();

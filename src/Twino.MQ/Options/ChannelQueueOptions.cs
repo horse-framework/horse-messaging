@@ -24,14 +24,14 @@ namespace Twino.MQ.Options
         public bool RequestAcknowledge { get; set; }
 
         /// <summary>
-        /// When delivery is required, maximum duration for waiting delivery message
+        /// When acknowledge is required, maximum duration for waiting acknowledge message
         /// </summary>
-        public TimeSpan DeliveryWaitMaxDuration { get; set; }
+        public TimeSpan AcknowledgeTimeout { get; set; }
 
         /// <summary>
         /// When message queuing is active, maximum time for a message wait
         /// </summary>
-        public TimeSpan ReceiverWaitMaxDuration { get; set; }
+        public TimeSpan MessagePendingTimeout { get; set; }
 
         /// <summary>
         /// If true, server creates unique id for each message.

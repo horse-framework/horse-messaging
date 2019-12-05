@@ -197,8 +197,8 @@ namespace Twino.MQ
 
                 //if we have an option maximum wait duration for message, set it after message joined to the queue.
                 //time keeper will check this value and if message time is up, it will remove message from the queue.
-                if (Options.ReceiverWaitMaxDuration > TimeSpan.Zero)
-                    message.Deadline = DateTime.UtcNow.Add(Options.ReceiverWaitMaxDuration);
+                if (Options.MessagePendingTimeout > TimeSpan.Zero)
+                    message.Deadline = DateTime.UtcNow.Add(Options.MessagePendingTimeout);
 
                 //if message doesn't have message id and "UseMessageId" option is enabled, create new message id for the message
                 if (Options.UseMessageId && string.IsNullOrEmpty(message.Message.MessageId))
@@ -334,7 +334,7 @@ namespace Twino.MQ
             //if we need acknowledge from receiver, it has a deadline.
             DateTime? deadline = null;
             if (Options.RequestAcknowledge)
-                deadline = DateTime.UtcNow.Add(Options.DeliveryWaitMaxDuration);
+                deadline = DateTime.UtcNow.Add(Options.AcknowledgeTimeout);
 
             //if to process next message is requires previous message acknowledge, wait here
             if (Options.RequestAcknowledge && Options.WaitAcknowledge)
