@@ -15,10 +15,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\Twino.Client\Twino.Client.csproj" />
-        <ProjectReference Include="..\..\Twino.Core\Twino.Core.csproj" />
-        <ProjectReference Include="..\..\Twino.Mvc\Twino.Mvc.csproj" />
-        <ProjectReference Include="..\..\Twino.Server\Twino.Server.csproj" />
+      <ProjectReference Include="..\..\Twino.Mvc\Twino.Mvc.csproj" />
+      <ProjectReference Include="..\..\Twino.Server\Twino.Server.csproj" />
     </ItemGroup>
 
 </Project>
