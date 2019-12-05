@@ -21,23 +21,23 @@ namespace Test.Mq
             server.Initialize(42301);
             server.Server.ServerOptions.PingInterval = 300;
             server.Server.ServerOptions.RequestTimeout = 300;
-            
+
             server.Start();
             await Task.Delay(250);
 
             TmqClient client1 = new TmqClient();
             TmqClient client2 = new TmqClient();
-            
+
             client1.ClientId = "client-1";
             client2.ClientId = "client-2";
             client2.AutoAcknowledge = true;
-            
+
             await client1.ConnectAsync("tmq://localhost:42301");
             await client2.ConnectAsync("tmq://localhost:42301");
-            
+
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
-            
+
             TmqMessage message = new TmqMessage();
             message.HighPriority = true;
             message.Type = MessageType.Client;
@@ -52,12 +52,42 @@ namespace Test.Mq
         /// Sends message from client to other client and wait for acknowledge from other client to client by manuel
         /// </summary>
         [Fact]
-        public void FromClientToClientManuel()
+        public async Task FromClientToClientManuel()
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42302);
+            server.Server.ServerOptions.PingInterval = 300;
+            server.Server.ServerOptions.RequestTimeout = 300;
 
-            throw new NotImplementedException();
+            server.Start();
+            await Task.Delay(250);
+
+            TmqClient client1 = new TmqClient();
+            TmqClient client2 = new TmqClient();
+
+            client1.ClientId = "client-1";
+            client2.ClientId = "client-2";
+            client2.AutoAcknowledge = false;
+            client2.MessageReceived += async (c, m) =>
+            {
+                if (m.AcknowledgeRequired)
+                    await client2.SendAsync(m.CreateAcknowledge());
+            };
+
+            await client1.ConnectAsync("tmq://localhost:42302");
+            await client2.ConnectAsync("tmq://localhost:42302");
+
+            Assert.True(client1.IsConnected);
+            Assert.True(client2.IsConnected);
+
+            TmqMessage message = new TmqMessage();
+            message.HighPriority = true;
+            message.Type = MessageType.Client;
+            message.Target = client2.ClientId;
+            message.SetStringContent("Hello, World!");
+
+            bool acknowledge = await client1.SendWithAcknowledge(message);
+            Assert.True(acknowledge);
         }
 
         /// <summary>
