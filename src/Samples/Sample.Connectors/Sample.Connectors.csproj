@@ -11,13 +11,12 @@
         <RepositoryUrl></RepositoryUrl>
         <PackageTags></PackageTags>
         <Description></Description>
-        <Product/>
+        <Product />
         <LangVersion>8</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\Twino.Client\Twino.Client.csproj"/>
-        <ProjectReference Include="..\..\Twino.Core\Twino.Core.csproj"/>
+      <ProjectReference Include="..\..\Twino.Client.WebSocket\Twino.Client.WebSocket.csproj" />
     </ItemGroup>
 
 </Project>

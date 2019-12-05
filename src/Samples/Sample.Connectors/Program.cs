@@ -1,6 +1,9 @@
 ﻿using System;
 using Twino.Client;
 using Twino.Client.Connectors;
+using Twino.Client.WebSocket;
+using Twino.Client.WebSocket.Connectors;
+using Twino.Core;
 
 namespace Sample.Connectors
 {
@@ -8,7 +11,7 @@ namespace Sample.Connectors
     {
         static void Main(string[] args)
         {
-            StickyConnector connector = new StickyConnector(TimeSpan.FromMilliseconds(20));
+            WsStickyConnector connector = new WsStickyConnector(TimeSpan.FromMilliseconds(20));
             connector.AddHost("ws://127.0.0.1");
             connector.Connected += Connector_Connected;
             connector.Disconnected += Connector_Disconnected;
@@ -21,12 +24,12 @@ namespace Sample.Connectors
             }
         }
 
-        private static void Connector_Disconnected(TwinoClient client)
+        private static void Connector_Disconnected(SocketBase client)
         {
             Console.WriteLine("dc");
         }
 
-        private static void Connector_Connected(TwinoClient client)
+        private static void Connector_Connected(SocketBase client)
         {
             Console.WriteLine("c");
         }
