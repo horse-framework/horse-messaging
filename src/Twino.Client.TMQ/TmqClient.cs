@@ -266,9 +266,11 @@ namespace Twino.Client.TMQ
 
             message.Content = new MemoryStream();
 
-            Data.Path = dns.Path;
-
-            string first = (Data.Method ?? "NONE") + " " + dns.Path + "\r\n";
+            Data.Path = string.IsNullOrEmpty(dns.Path) ? "/" : dns.Path;
+            if (string.IsNullOrEmpty(Data.Method))
+                Data.Method = "NONE";
+            
+            string first = Data.Method + " " + Data.Path + "\r\n";
             await message.Content.WriteAsync(Encoding.UTF8.GetBytes(first));
             Data.Properties.Add(TmqHeaders.CLIENT_ID, ClientId);
 

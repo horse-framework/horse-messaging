@@ -186,10 +186,58 @@ namespace Test.Mq
         /// Connects to TMQ Server and stays alive a short duration and disconnects again with concurrent clients
         /// </summary>
         [Theory]
-        [InlineData(100, 1000, 5000)]
-        public void ConnectDisconnectStress(int concurrentClients, int minAliveMs, int maxAliveMs)
+        [InlineData(10, 20, 100, 500)]
+        [InlineData(50, 50, 100, 500)]
+        public async Task ConnectDisconnectStress(int concurrentClients, int connectionCount, int minAliveMs, int maxAliveMs)
         {
-            throw new NotImplementedException();
+            Random rnd = new Random();
+            int connected = 0;
+            int disconnected = 0;
+            int port = 42110 + rnd.Next(0, 89);
+
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start();
+
+
+            for (int i = 0; i < concurrentClients; i++)
+            {
+                Thread thread = new Thread(async () =>
+                {
+                    for (int j = 0; j < connectionCount; j++)
+                    {
+                        try
+                        {
+                            TmqClient client = new TmqClient();
+                            client.Connect("tmq://localhost:" + port);
+                            Assert.True(client.IsConnected);
+                            Interlocked.Increment(ref connected);
+                            await Task.Delay(rnd.Next(minAliveMs, maxAliveMs));
+                            client.Disconnect();
+                            Interlocked.Increment(ref disconnected);
+                            await Task.Delay(50);
+                            Assert.True(client.IsConnected);
+                        }
+                        catch
+                        {
+                        }
+                    }
+                });
+                thread.Start();
+            }
+
+            TimeSpan total = TimeSpan.FromMilliseconds(maxAliveMs * connectionCount);
+            TimeSpan elapsed = TimeSpan.Zero;
+            while (elapsed < total)
+            {
+                elapsed += TimeSpan.FromMilliseconds(100);
+                await Task.Delay(100);
+            }
+
+            await Task.Delay(maxAliveMs);
+            await Task.Delay(3000);
+            Assert.Equal(connected, concurrentClients * connectionCount);
+            Assert.Equal(disconnected, concurrentClients * connectionCount);
         }
     }
 }
