@@ -259,8 +259,13 @@ namespace Twino.MQ
                 }
             }
 
-            //push the message
+            //prepare the message
             QueueMessage queueMessage = new QueueMessage(message);
+            queueMessage.Source = client;
+            message.Source = queue.Channel.Name;
+            message.SourceLength = queue.Channel.Name.Length;
+            
+            //push the message
             await queue.Push(queueMessage, client);
         }
 

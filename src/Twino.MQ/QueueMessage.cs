@@ -1,4 +1,5 @@
 using System;
+using Twino.MQ.Clients;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ
@@ -22,6 +23,11 @@ namespace Twino.MQ
         /// TMQ Message
         /// </summary>
         public TmqMessage Message { get; set; }
+        
+        /// <summary>
+        /// Real source client of the message
+        /// </summary>
+        public MqClient Source { get; set; }
 
         /// <summary>
         /// If true, message is saved to DB or Disk

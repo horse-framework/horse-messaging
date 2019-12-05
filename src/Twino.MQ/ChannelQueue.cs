@@ -204,9 +204,6 @@ namespace Twino.MQ
                 if (Options.UseMessageId && string.IsNullOrEmpty(message.Message.MessageId))
                     message.Message.MessageId = Channel.Server.MessageIdGenerator.Create();
 
-                message.Message.Source = Channel.Name;
-                message.Message.SourceLength = Channel.Name.Length;
-
                 //queue the message
                 if (Options.MessageQueuing)
                 {
