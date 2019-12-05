@@ -6,6 +6,9 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
 using Twino.Client;
+using Twino.Client.WebSocket;
+using Twino.Mvc;
+using Twino.Protocols.WebSocket;
 
 namespace Sample.WebSocket.Client
 {
@@ -21,33 +24,31 @@ namespace Sample.WebSocket.Client
 
     class Program
     {
-
         static void StartServer()
         {
-            TwinoServer server = TwinoServer.CreateWebSocket(async (s, req, tcp) =>
-                                                         {
-                                                             ServerSocket sock = new ServerSocket(s, req, tcp);
-                                                             sock.Connected += c => Console.WriteLine("connected");
-                                                             sock.Disconnected += c => Console.WriteLine("disconnected");
-                                                             sock.MessageReceived += (c, m) =>
-                                                                                     {
-                                                                                         Console.Write(m);
-                                                                                         c.Send(m);
-                                                                                     };
-                                                             
-                                                             return await Task.FromResult(sock);
-                                                         });
-            
-            server.Options.PingInterval = 30000;
+            TwinoServer server = new TwinoServer(ServerOptions.CreateDefault());
+            server.UseWebSockets(async (socket, data) =>
+                                 {
+                                     Console.WriteLine("connected");
+                                     socket.Disconnected += c => Console.WriteLine("disconnected");
+                                     await Task.CompletedTask;
+                                 },
+                                 async (socket, message) =>
+                                 {
+                                     Console.Write(message);
+                                     await socket.SendAsync(message);
+                                 });
+
+            server.Options.PingInterval = 30;
             server.Start();
         }
 
         static void ConnectWithTwino()
         {
-            TwinoClient cx = new TwinoClient();
+            TwinoWebSocket cx = new TwinoWebSocket();
             cx.MessageReceived += (c, m) => Console.WriteLine("# " + m);
-            cx.Connected += c => Console.WriteLine("Connected"); 
-            cx.Disconnected += c => Console.WriteLine("Disconnected"); 
+            cx.Connected += c => Console.WriteLine("Connected");
+            cx.Disconnected += c => Console.WriteLine("Disconnected");
             cx.Connect("ws://127.0.0.1:84");
             while (true)
             {
@@ -55,18 +56,11 @@ namespace Sample.WebSocket.Client
                 cx.Send(s);
             }
         }
-        
+
         static void Main(string[] args)
         {
-            //StartServer();
-
-            //ConnectWithTcpClient();
-
-           // Console.ReadLine();
-
+            StartServer();
             ConnectWithTwino();
-            
         }
-
     }
 }

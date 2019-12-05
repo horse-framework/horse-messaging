@@ -29,7 +29,7 @@ namespace Twino.Protocols.WebSocket
         {
             return UseWebSockets(server, new MethodWebSocketConnectionHandler(handlerAction), options);
         }
-        
+
         /// <summary>
         /// Uses WebSocket Protocol and accepts HTTP connections which comes with "Upgrade: websocket" header data
         /// </summary>
@@ -46,6 +46,18 @@ namespace Twino.Protocols.WebSocket
             TwinoWebSocketProtocol protocol = new TwinoWebSocketProtocol(server, handler);
             server.UseProtocol(protocol);
             return server;
+        }
+
+        /// <summary>
+        /// Uses WebSocket Protocol and accepts HTTP connections which comes with "Upgrade: websocket" header data
+        /// </summary>
+        public static ITwinoServer UseWebSockets(this ITwinoServer server,
+                                                 WebSocketConnectedHandler connectedAction,
+                                                 WebSocketMessageRecievedHandler messageAction)
+        {
+            return UseWebSockets(server,
+                                 new MethodWebSocketConnectionHandler(connectedAction, messageAction),
+                                 HttpOptions.CreateDefault());
         }
     }
 }

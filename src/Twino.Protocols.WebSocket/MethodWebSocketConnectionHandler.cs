@@ -6,6 +6,8 @@ namespace Twino.Protocols.WebSocket
 {
     public delegate Task WebSocketMessageRecievedHandler(WsServerSocket socket, WebSocketMessage message);
 
+    public delegate Task WebSocketConnectedHandler(WsServerSocket socket, ConnectionData data);
+
     /// <summary>
     /// Twino WebSocket Server with WebSocketMessageRecievedHandler method implementation handler
     /// </summary>
@@ -14,11 +16,19 @@ namespace Twino.Protocols.WebSocket
         /// <summary>
         /// User defined action
         /// </summary>
-        private readonly WebSocketMessageRecievedHandler _handler;
+        private readonly WebSocketMessageRecievedHandler _messageHandler;
+
+        private readonly WebSocketConnectedHandler _connectedHandler;
 
         public MethodWebSocketConnectionHandler(WebSocketMessageRecievedHandler handler)
+            : this(null, handler)
         {
-            _handler = handler;
+        }
+
+        public MethodWebSocketConnectionHandler(WebSocketConnectedHandler connectedHandler, WebSocketMessageRecievedHandler messageHandler)
+        {
+            _connectedHandler = connectedHandler;
+            _messageHandler = messageHandler;
         }
 
         /// <summary>
@@ -26,7 +36,12 @@ namespace Twino.Protocols.WebSocket
         /// </summary>
         public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
-            return await Task.FromResult(new WsServerSocket(server, connection));
+            WsServerSocket socket = new WsServerSocket(server, connection);
+
+            if (_connectedHandler != null)
+                await _connectedHandler(socket, data);
+
+            return socket;
         }
 
         /// <summary>
@@ -34,7 +49,7 @@ namespace Twino.Protocols.WebSocket
         /// </summary>
         public async Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, WebSocketMessage message)
         {
-            await _handler((WsServerSocket) client, message);
+            await _messageHandler((WsServerSocket) client, message);
         }
 
         /// <summary>

@@ -21,12 +21,10 @@ namespace Sample.Tmq
             server.Start(82);
 
             TmqClient client = new TmqClient();
-            client.Data.Method = "GET";
-            client.Data.Path = "/sample";
             client.Data.Properties.Add("Host", "localhost");
             client.ClientId = "123";
 
-            client.Connect("tmq://localhost:82");
+            client.Connect("tmq://localhost:82/sample");
 
             Console.ReadLine();
         }
