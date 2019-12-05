@@ -180,6 +180,8 @@ namespace Twino.MQ
         /// </summary>
         internal async Task Push(QueueMessage message, MqClient sender)
         {
+            message.Message.AcknowledgeRequired = Options.RequestAcknowledge;
+            
             //process the message
             QueueMessage held = null;
             try

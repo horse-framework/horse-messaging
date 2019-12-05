@@ -1,7 +1,11 @@
 using System;
+using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Test.Mq.Internal;
 using Twino.Client.TMQ;
+using Twino.MQ;
 using Twino.Protocols.TMQ;
 using Xunit;
 
@@ -136,12 +140,34 @@ namespace Test.Mq
         /// Sends message from channel to client and wait for acknowledge from client to channel by AutoAcknowledge property
         /// </summary>
         [Fact]
-        public void FromClientToChannelAuto()
+        public async Task FromClientToChannelAuto()
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42304);
 
-            throw new NotImplementedException();
+            server.Start();
+            await Task.Delay(250);
+
+            TmqClient client = new TmqClient();
+            client.AutoAcknowledge = true;
+            client.IgnoreMyQueueMessages = false;
+
+            await client.ConnectAsync("tmq://localhost:42304");
+            Assert.True(client.IsConnected);
+
+            Channel channel = server.Server.Channels.FirstOrDefault();
+            Assert.NotNull(channel);
+            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            Assert.NotNull(queue);
+            queue.Options.RequestAcknowledge = true;
+
+            //subscribe
+            await client.Join(channel.Name, true);
+
+            //push a message to the queue
+            MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
+            bool sent = await client.Push(channel.Name, queue.ContentType, ms, true);
+            Assert.True(sent);
         }
 
         /// <summary>

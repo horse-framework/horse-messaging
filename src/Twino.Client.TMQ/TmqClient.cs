@@ -503,6 +503,7 @@ namespace Twino.Client.TMQ
             message.Target = channel;
             message.MessageId = UniqueIdGenerator.Create();
             message.Content = content;
+            message.AcknowledgeRequired = waitAcknowledge;
 
             bool sent = await SendAsync(message);
             if (!sent)
