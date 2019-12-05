@@ -1,4 +1,5 @@
 using System;
+using Test.Mq.Internal;
 using Xunit;
 
 namespace Test.Mq
@@ -11,6 +12,9 @@ namespace Test.Mq
         [Fact]
         public void ClientReadsMessageFromQueue()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42801);
+
             throw new NotImplementedException();
         }
 
@@ -20,6 +24,9 @@ namespace Test.Mq
         [Fact]
         public void ClientReadsMessagesFromMultipleChannels()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42802);
+
             throw new NotImplementedException();
         }
 
@@ -29,6 +36,9 @@ namespace Test.Mq
         [Fact]
         public void ClientReadsMessagesFromMultipleQueues()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42803);
+
             throw new NotImplementedException();
         }
 
@@ -38,6 +48,9 @@ namespace Test.Mq
         [Fact]
         public void MultipleAttachOnSameReader()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42804);
+
             throw new NotImplementedException();
         }
 
@@ -47,6 +60,9 @@ namespace Test.Mq
         [Fact]
         public void ExceptionOnBindMethod()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42805);
+
             throw new NotImplementedException();
         }
     }

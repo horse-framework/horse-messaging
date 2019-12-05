@@ -1,4 +1,5 @@
 using System;
+using Test.Mq.Internal;
 using Xunit;
 
 namespace Test.Mq
@@ -11,6 +12,9 @@ namespace Test.Mq
         [Fact]
         public void WithoutAnyResponse()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42601);
+
             throw new NotImplementedException();
         }
 
@@ -20,6 +24,9 @@ namespace Test.Mq
         [Fact]
         public void WithAcknowledge()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42602);
+
             throw new NotImplementedException();
         }
 
@@ -29,6 +36,9 @@ namespace Test.Mq
         [Fact]
         public void WithResponse()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42603);
+
             throw new NotImplementedException();
         }
     }

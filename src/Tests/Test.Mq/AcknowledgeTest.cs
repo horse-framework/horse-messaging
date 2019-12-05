@@ -1,72 +1,11 @@
 using System;
+using Test.Mq.Internal;
 using Xunit;
 
 namespace Test.Mq
 {
     public class AcknowledgeTest
     {
-        #region Server - Client
-
-        /// <summary>
-        /// Sends message from client to server and wait for acknowledge from server to client by AutoAcknowledge property
-        /// </summary>
-        [Fact]
-        public void FromServerToClientAuto()
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Sends message from client to server and wait for acknowledge from server to client by manuel
-        /// </summary>
-        [Fact]
-        public void FromServerToClientManuel()
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Sends message from client to server and wait for acknowledge from server to client until timed out
-        /// </summary>
-        [Fact]
-        public void FromServerToClientTimeout()
-        {
-            throw new NotImplementedException();
-        }
-
-        #endregion
-
-        #region Client - Server
-
-        /// <summary>
-        /// Sends message from server to client and wait for acknowledge from client to server by AutoAcknowledge property
-        /// </summary>
-        [Fact]
-        public void FromClientToServerAuto()
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Sends message from server to client and wait for acknowledge from client to server by manuel
-        /// </summary>
-        [Fact]
-        public void FromClientToServerManuel()
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Sends message from server to client and wait for acknowledge from client to server until timed out
-        /// </summary>
-        [Fact]
-        public void FromClientToServerTimeout()
-        {
-            throw new NotImplementedException();
-        }
-
-        #endregion
-
         #region Client - Client
 
         /// <summary>
@@ -75,6 +14,9 @@ namespace Test.Mq
         [Fact]
         public void FromClientToClientAuto()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42301);
+
             throw new NotImplementedException();
         }
 
@@ -84,6 +26,9 @@ namespace Test.Mq
         [Fact]
         public void FromClientToClientManuel()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42302);
+
             throw new NotImplementedException();
         }
 
@@ -93,6 +38,9 @@ namespace Test.Mq
         [Fact]
         public void FromClientToClientTimeout()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42303);
+
             throw new NotImplementedException();
         }
 
@@ -106,6 +54,9 @@ namespace Test.Mq
         [Fact]
         public void FromClientToChannelAuto()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42304);
+
             throw new NotImplementedException();
         }
 
@@ -115,6 +66,9 @@ namespace Test.Mq
         [Fact]
         public void FromClientToChannelManuel()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42305);
+
             throw new NotImplementedException();
         }
 
@@ -124,6 +78,9 @@ namespace Test.Mq
         [Fact]
         public void FromClientToChannelTimeout()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42306);
+
             throw new NotImplementedException();
         }
 

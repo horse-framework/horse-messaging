@@ -1,4 +1,5 @@
 using System;
+using Test.Mq.Internal;
 using Xunit;
 
 namespace Test.Mq
@@ -11,6 +12,9 @@ namespace Test.Mq
         [Fact]
         public void UseUniqueMessageId()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42701);
+
             throw new NotImplementedException();
         }
 
@@ -21,6 +25,9 @@ namespace Test.Mq
         [Fact]
         public void AutoAcknowledge()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42702);
+
             throw new NotImplementedException();
         }
 
@@ -32,6 +39,9 @@ namespace Test.Mq
         [Fact]
         public void CatchResponseMessages()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42703);
+
             throw new NotImplementedException();
         }
 
@@ -42,6 +52,9 @@ namespace Test.Mq
         [Fact]
         public void IgnoreMyQueueMessages()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42704);
+
             throw new NotImplementedException();
         }
 
@@ -51,6 +64,9 @@ namespace Test.Mq
         [Fact]
         public void AcknowledgeTimeout()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42705);
+
             throw new NotImplementedException();
         }
 
@@ -60,6 +76,9 @@ namespace Test.Mq
         [Fact]
         public void ResponseTimeout()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42706);
+
             throw new NotImplementedException();
         }
     }

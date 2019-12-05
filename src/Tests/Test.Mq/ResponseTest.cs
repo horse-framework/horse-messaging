@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Test.Mq.Internal;
 using Xunit;
 
 namespace Test.Mq
@@ -12,6 +13,9 @@ namespace Test.Mq
         [Fact]
         public void FromClientToServer()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42401);
+
             throw new NotImplementedException();
         }
 
@@ -21,6 +25,9 @@ namespace Test.Mq
         [Fact]
         public void FromClientToServerTimeout()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42402);
+
             throw new NotImplementedException();
         }
 
@@ -30,6 +37,9 @@ namespace Test.Mq
         [Fact]
         public void FromServerToClient()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42403);
+
             throw new NotImplementedException();
         }
 
@@ -39,6 +49,9 @@ namespace Test.Mq
         [Fact]
         public void FromServerToClientTimeout()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42404);
+
             throw new NotImplementedException();
         }
 
@@ -48,6 +61,9 @@ namespace Test.Mq
         [Fact]
         public void FromClientToClient()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42405);
+
             throw new NotImplementedException();
         }
 
@@ -57,6 +73,9 @@ namespace Test.Mq
         [Fact]
         public void FromClientToClientTimeout()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42406);
+
             throw new NotImplementedException();
         }
 
@@ -66,6 +85,9 @@ namespace Test.Mq
         [Fact]
         public void FromClientToChannel()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42407);
+
             throw new NotImplementedException();
         }
 
@@ -75,6 +97,9 @@ namespace Test.Mq
         [Fact]
         public void FromClientToChannelTimeout()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42408);
+
             throw new NotImplementedException();
         }
     }

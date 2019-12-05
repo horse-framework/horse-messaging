@@ -1,4 +1,5 @@
 using System;
+using Test.Mq.Internal;
 using Xunit;
 
 namespace Test.Mq
@@ -13,6 +14,9 @@ namespace Test.Mq
         [Fact]
         public void NonQueueMessageToNoClients()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42501);
+
             throw new NotImplementedException();
         }
 
@@ -22,6 +26,9 @@ namespace Test.Mq
         [Fact]
         public void NonQueueMessageToClients()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42502);
+
             throw new NotImplementedException();
         }
 
@@ -31,6 +38,9 @@ namespace Test.Mq
         [Fact]
         public void NonQueueMessageToLateClients()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42503);
+
             throw new NotImplementedException();
         }
 
@@ -44,6 +54,9 @@ namespace Test.Mq
         [Fact]
         public void QueueMessageToNoClients()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42504);
+
             throw new NotImplementedException();
         }
 
@@ -53,6 +66,9 @@ namespace Test.Mq
         [Fact]
         public void QueueMessageToClients()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42505);
+
             throw new NotImplementedException();
         }
 
@@ -62,6 +78,9 @@ namespace Test.Mq
         [Fact]
         public void ueueMessageToLateClients()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42506);
+
             throw new NotImplementedException();
         }
 
@@ -75,6 +94,9 @@ namespace Test.Mq
         [Fact]
         public void SendOnlyFirstNoClients()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42507);
+
             throw new NotImplementedException();
         }
 
@@ -84,6 +106,9 @@ namespace Test.Mq
         [Fact]
         public void SendOnlyFirstMultipleClients()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42508);
+
             throw new NotImplementedException();
         }
 
@@ -94,6 +119,9 @@ namespace Test.Mq
         [Fact]
         public void SendOnlyFirstLateClients()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42509);
+
             throw new NotImplementedException();
         }
 
@@ -105,6 +133,9 @@ namespace Test.Mq
         [Fact]
         public void UseMessageId()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42510);
+
             throw new NotImplementedException();
         }
 
@@ -117,6 +148,9 @@ namespace Test.Mq
         [Fact]
         public void WaitAcknowledgeNoClients()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42511);
+
             throw new NotImplementedException();
         }
 
@@ -127,6 +161,9 @@ namespace Test.Mq
         [Fact]
         public void WaitAcknowledgeOneClient()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42512);
+
             throw new NotImplementedException();
         }
 
@@ -138,6 +175,9 @@ namespace Test.Mq
         [Fact]
         public void WaitAcknowledgeOneClientWithNoAck()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42513);
+
             throw new NotImplementedException();
         }
 
@@ -148,6 +188,9 @@ namespace Test.Mq
         [Fact]
         public void WaitAcknowledgeMultipleClients()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42514);
+
             throw new NotImplementedException();
         }
 
@@ -159,6 +202,9 @@ namespace Test.Mq
         [Fact]
         public void WaitAcknowledgeMultipleClientsWithNoAck()
         {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42515);
+
             throw new NotImplementedException();
         }
 
