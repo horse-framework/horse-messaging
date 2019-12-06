@@ -87,6 +87,16 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public MemoryStream Content { get; set; }
 
+        public TmqMessage()
+        {
+        }
+
+        public TmqMessage(MessageType type, string target)
+        {
+            Type = type;
+            Target = target;
+        }
+        
         /// <summary>
         /// Checks message id, source, target and content properties.
         /// If they have a value, sets to length properties to their lengths
@@ -142,6 +152,22 @@ namespace Twino.Protocols.TMQ
             message.MessageId = MessageId;
             message.Target = Source;
             message.ContentType = ContentType;
+
+            return message;
+        }
+        
+        /// <summary>
+        /// Create a response message of the message
+        /// </summary>
+        public TmqMessage CreateResponse()
+        {
+            TmqMessage message = new TmqMessage();
+
+            message.FirstAcquirer = FirstAcquirer;
+            message.HighPriority = HighPriority;
+            message.Type = MessageType.Response;
+            message.MessageId = MessageId;
+            message.Target = Source;
 
             return message;
         }
