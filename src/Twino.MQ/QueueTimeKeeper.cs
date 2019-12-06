@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 using Twino.MQ.Clients;
 
 namespace Twino.MQ
@@ -11,6 +12,8 @@ namespace Twino.MQ
     /// </summary>
     internal class QueueTimeKeeper
     {
+        #region Fields
+
         /// <summary>
         /// Queue of the keeper
         /// </summary>
@@ -39,11 +42,6 @@ namespace Twino.MQ
         private readonly List<QueueMessage> _timeupMessages = new List<QueueMessage>(16);
 
         /// <summary>
-        /// To not lock delivery list, adding deliveries are stored in different list
-        /// </summary>
-        private readonly List<MessageDelivery> _addingDeliveries = new List<MessageDelivery>(16);
-
-        /// <summary>
         /// All following deliveries
         /// </summary>
         private readonly List<MessageDelivery> _deliveries = new List<MessageDelivery>(1024);
@@ -51,7 +49,9 @@ namespace Twino.MQ
         /// <summary>
         /// To not lock delivery and ading delivery list, removing deliveries are stored in different list
         /// </summary>
-        private readonly List<MessageDelivery> _removingDeliveries = new List<MessageDelivery>(16);
+        private readonly List<Tuple<bool, MessageDelivery>> _removingDeliveries = new List<Tuple<bool, MessageDelivery>>(16);
+
+        #endregion
 
         public QueueTimeKeeper(ChannelQueue queue, LinkedList<QueueMessage> prefentialMessages, LinkedList<QueueMessage> standardMessages)
         {
@@ -120,40 +120,41 @@ namespace Twino.MQ
         /// </summary>
         private async Task ProcessDeliveries()
         {
-            //add pending deliveries to add
-            lock (_addingDeliveries)
-            {
-                if (_addingDeliveries.Count > 0)
-                {
-                    foreach (MessageDelivery delivery in _addingDeliveries)
-                        _deliveries.Add(delivery);
-
-                    _addingDeliveries.Clear();
-                }
-            }
-
             _removingDeliveries.Clear();
 
             foreach (MessageDelivery delivery in _deliveries)
             {
                 //message acknowledge or came here accidently :)
                 if (delivery.IsAcknowledged || !delivery.AcknowledgeDeadline.HasValue)
-                {
-                    _removingDeliveries.Add(delivery);
-                    continue;
-                }
+                    _removingDeliveries.Add(new Tuple<bool, MessageDelivery>(false, delivery));
 
                 //expired
-                if (DateTime.UtcNow > delivery.AcknowledgeDeadline.Value)
+                else if (DateTime.UtcNow > delivery.AcknowledgeDeadline.Value)
+                    _removingDeliveries.Add(new Tuple<bool, MessageDelivery>(true, delivery));
+            }
+
+            if (_removingDeliveries.Count == 0)
+                return;
+
+            bool released = false;
+            foreach (Tuple<bool, MessageDelivery> tuple in _removingDeliveries)
+            {
+                MessageDelivery delivery = tuple.Item2;
+                if (tuple.Item1)
                 {
-                    _removingDeliveries.Add(delivery);
                     delivery.MarkAsAcknowledgeTimedUp();
                     await _queue.DeliveryHandler.OnAcknowledgeTimeUp(_queue, delivery);
-                    _queue.ReleaseAcknowledgeLock();
+                    if (!released)
+                    {
+                        released = true;
+                        _queue.ReleaseAcknowledgeLock();
+                    }
                 }
             }
 
-            _deliveries.RemoveAll(x => _removingDeliveries.Contains(x));
+            IEnumerable<MessageDelivery> rdm = _removingDeliveries.Select(x => x.Item2);
+            lock (_deliveries)
+                _deliveries.RemoveAll(x => rdm.Contains(x));
         }
 
         /// <summary>
@@ -164,8 +165,8 @@ namespace Twino.MQ
             if (!delivery.AcknowledgeDeadline.HasValue)
                 return;
 
-            lock (_addingDeliveries)
-                _addingDeliveries.Add(delivery);
+            lock (_deliveries)
+                _deliveries.Add(delivery);
         }
 
         /// <summary>
@@ -179,12 +180,6 @@ namespace Twino.MQ
                 delivery = _deliveries.Find(x => x.Receiver != null
                                                  && x.Receiver.Client.UniqueId == client.UniqueId
                                                  && x.Message.Message.MessageId == messageId);
-
-            if (delivery == null)
-                lock (_addingDeliveries)
-                    delivery = _addingDeliveries.Find(x => x.Receiver != null
-                                                           && x.Receiver.Client.UniqueId == client.UniqueId
-                                                           && x.Message.Message.MessageId == messageId);
 
             return delivery;
         }
