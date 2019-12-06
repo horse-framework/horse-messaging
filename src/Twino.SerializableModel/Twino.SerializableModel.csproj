@@ -1,28 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
-    <Authors>Mehmet Helvacıköylü</Authors>
-    <Company>Mehmet Helvacıköylü</Company>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
-    <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/mhelvacikoylu/twino.git</RepositoryUrl>
-    <PackageTags>twino, websocket, client, server, model, messaging</PackageTags>
-    <Description>Object based communication library with JSON for Twino WebSocket servers and clients.</Description>
-    <AssemblyVersion>2.0.1</AssemblyVersion>
-    <FileVersion>2.0.1</FileVersion>
-    <PackageVersion>2.0.1</PackageVersion>
-    <LangVersion>8</LangVersion>
-    <NeutralLanguage>en</NeutralLanguage>
-    <Title>Twino.JsonModel</Title>
-    <RootNamespace>Twino.JsonModel</RootNamespace>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.0</TargetFramework>
+        <Title>Twino.SerializableModel</Title>
+        <Product>Twino.SerializableModel</Product>
+        <Description>Twino Serializable Model library for object based communication with text-based protocols</Description>
+        <PackageTags>twino,tcp,server,http,websocket,serilizable,model</PackageTags>
+        <AssemblyVersion>2.0.1</AssemblyVersion>
+        <FileVersion>2.0.1</FileVersion>
+        <PackageVersion>2.0.1</PackageVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Mehmet Helvacıköylü</Authors>
+        <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/mhelvacikoylu/twino</RepositoryUrl>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Twino.Core\Twino.Core.csproj" />
-    <ProjectReference Include="..\Twino.Protocols.WebSocket\Twino.Protocols.WebSocket.csproj" />
-    <ProjectReference Include="..\Twino.Server\Twino.Server.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Twino.Core\Twino.Core.csproj"/>
+        <ProjectReference Include="..\Twino.Protocols.WebSocket\Twino.Protocols.WebSocket.csproj"/>
+        <ProjectReference Include="..\Twino.Server\Twino.Server.csproj"/>
+    </ItemGroup>
 
 </Project>

@@ -1,30 +1,28 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <RepositoryUrl>https://github.com/mhelvacikoylu/twino.git</RepositoryUrl>
-    <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
-    <Description>Lightweight MVC Library for Twino WebSocket and HTTP Server.</Description>
-    <Authors>Mehmet Helvacıköylü</Authors>
-    <Company>Mehmet Helvacıköylü</Company>
-    <PackageTags>twino, http, server, mvc, websocket, lightweight, server</PackageTags>
-    <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
-    <AssemblyVersion>2.0.1</AssemblyVersion>
-    <FileVersion>2.0.1</FileVersion>
-    <PackageVersion>2.0.1</PackageVersion>
-    <LangVersion>8</LangVersion>
-    <NeutralLanguage>en</NeutralLanguage>
-    <Title>Twino.Mvc</Title>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.0</TargetFramework>
+        <Title>Twino.Mvc</Title>
+        <Product>Twino.Mvc</Product>
+        <Description>MVC Library for Twino Http Server</Description>
+        <PackageTags>twino,http,server,mvc</PackageTags>
+        <AssemblyVersion>2.0.1</AssemblyVersion>
+        <FileVersion>2.0.1</FileVersion>
+        <PackageVersion>2.0.1</PackageVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Mehmet Helvacıköylü</Authors>
+        <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/mhelvacikoylu/twino</RepositoryUrl>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Newtonsoft.Json" Version="12.0.1"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Twino.Ioc\Twino.Ioc.csproj" />
-    <ProjectReference Include="..\Twino.Protocols.Http\Twino.Protocols.Http.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Twino.Ioc\Twino.Ioc.csproj"/>
+        <ProjectReference Include="..\Twino.Protocols.Http\Twino.Protocols.Http.csproj"/>
+    </ItemGroup>
 
 </Project>

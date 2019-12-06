@@ -1,29 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
-    <Authors>Mehmet Helvacıköylü</Authors>
-    <Product>Twino.Server</Product>
-    <Description>Advanced WebSocket Server with lightweight HTTP Server.</Description>
-    <RepositoryUrl>https://github.com/mhelvacikoylu/twino.git</RepositoryUrl>
-    <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
-    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <NeutralLanguage>en</NeutralLanguage>
-    <PackageTags>twino, websocket, server, http, tcp, lightweight, mq</PackageTags>
-    <AssemblyVersion>2.0.1</AssemblyVersion>
-    <FileVersion>2.0.1</FileVersion>
-    <PackageVersion>2.0.1</PackageVersion>
-    <LangVersion>8</LangVersion>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.0</TargetFramework>
+        <Title>Twino.Server</Title>
+        <Product>Twino.Server</Product>
+        <Description>Twino TCP Socket Server</Description>
+        <PackageTags>twino,tcp,socket,server,http,websocket,tmq,mq</PackageTags>
+        <AssemblyVersion>2.0.1</AssemblyVersion>
+        <FileVersion>2.0.1</FileVersion>
+        <PackageVersion>2.0.1</PackageVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Mehmet Helvacıköylü</Authors>
+        <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/mhelvacikoylu/twino</RepositoryUrl>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Twino.Core\Twino.Core.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Twino.Core\Twino.Core.csproj"/>
+    </ItemGroup>
 
 </Project>
