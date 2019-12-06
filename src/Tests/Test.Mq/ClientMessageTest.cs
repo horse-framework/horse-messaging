@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using Test.Mq.Internal;
 using Twino.Client.TMQ;
