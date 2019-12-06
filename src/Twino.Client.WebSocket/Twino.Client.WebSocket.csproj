@@ -2,20 +2,23 @@
 
     <PropertyGroup>
         <TargetFramework>netcoreapp3.0</TargetFramework>
+        <Title>Twino.Client.WebSocket</Title>
+        <Product>Twino.Client.WebSocket</Product>
+        <Description>Twino WebSocket Client to connect all WebSocket servers</Description>
+        <PackageTags>twino,websocket,client</PackageTags>
         <AssemblyVersion>2.0.1</AssemblyVersion>
         <FileVersion>2.0.1</FileVersion>
         <PackageVersion>2.0.1</PackageVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Mehmet Helvacıköylü</Authors>
+        <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/mhelvacikoylu/twino</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Twino.Client.Connectors\Twino.Client.Connectors.csproj" />
-      <ProjectReference Include="..\Twino.Protocols.WebSocket\Twino.Protocols.WebSocket.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Reference Include="Twino.Client, Version=1.5.3.0, Culture=neutral, PublicKeyToken=null">
-        <HintPath>..\Twino.Client\bin\Debug\netcoreapp3.0\Twino.Client.dll</HintPath>
-      </Reference>
+        <ProjectReference Include="..\Twino.Client.Connectors\Twino.Client.Connectors.csproj"/>
+        <ProjectReference Include="..\Twino.Protocols.WebSocket\Twino.Protocols.WebSocket.csproj"/>
     </ItemGroup>
 
 </Project>
