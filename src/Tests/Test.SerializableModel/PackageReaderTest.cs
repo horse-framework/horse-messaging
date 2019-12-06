@@ -16,13 +16,13 @@ namespace Test.SocketModels
             PackageReader reader = new PackageReader();
             reader.On<DefaultModel>((sender, model) => received = model);
 
-            TestServer server = new TestServer(351, 0);
+            TestServer server = new TestServer(44351);
             server.Run(reader);
 
             System.Threading.Thread.Sleep(250);
 
             TwinoWebSocket client = new TwinoWebSocket();
-            client.Connect("127.0.0.1", 351, false);
+            client.Connect("127.0.0.1", 44351, false);
 
             client.Send(new DefaultModel {Name = "Mehmet", Number = 500});
 
@@ -44,11 +44,11 @@ namespace Test.SocketModels
             reader1.On<DefaultModel>((sender, model) => received1 = model);
             reader1.On<CriticalModel>((sender, model) => received2 = model);
 
-            TestServer server = new TestServer(352, 0);
+            TestServer server = new TestServer(44352);
             server.Run(reader1, reader2);
 
             TwinoWebSocket client = new TwinoWebSocket();
-            client.Connect("127.0.0.1", 352, false);
+            client.Connect("127.0.0.1", 44352, false);
 
             client.Send(new DefaultModel {Name = "Default", Number = 501});
             client.Send(new CriticalModel {Name = "Critical", Number = 502});
