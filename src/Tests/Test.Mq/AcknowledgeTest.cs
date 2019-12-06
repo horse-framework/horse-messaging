@@ -148,7 +148,6 @@ namespace Test.Mq
 
             TmqClient client = new TmqClient();
             client.AutoAcknowledge = true;
-            client.IgnoreMyQueueMessages = false;
 
             await client.ConnectAsync("tmq://localhost:42304");
             Assert.True(client.IsConnected);
@@ -161,6 +160,7 @@ namespace Test.Mq
 
             //subscribe
             await client.Join(channel.Name, true);
+            await Task.Delay(250);
 
             //push a message to the queue
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
@@ -180,7 +180,6 @@ namespace Test.Mq
 
             TmqClient client = new TmqClient();
             client.AutoAcknowledge = false;
-            client.IgnoreMyQueueMessages = false;
             client.MessageReceived += async (c, m) => { await client.SendAsync(m.CreateAcknowledge()); };
 
             await client.ConnectAsync("tmq://localhost:42305");
@@ -213,7 +212,6 @@ namespace Test.Mq
 
             TmqClient client = new TmqClient();
             client.AutoAcknowledge = false;
-            client.IgnoreMyQueueMessages = false;
             client.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
 
             await client.ConnectAsync("tmq://localhost:42306");

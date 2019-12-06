@@ -49,11 +49,6 @@ namespace Twino.Client.TMQ
         public bool CatchResponseMessages { get; set; }
 
         /// <summary>
-        /// If true, client ignores it's own messages in subscribed queues
-        /// </summary>
-        public bool IgnoreMyQueueMessages { get; set; }
-
-        /// <summary>
         /// Maximum time to wait acknowledge message
         /// </summary>
         public TimeSpan AcknowledgeTimeout { get; set; } = TimeSpan.FromSeconds(15);
@@ -322,7 +317,7 @@ namespace Twino.Client.TMQ
                     if (CatchResponseMessages)
                         SetOnMessageReceived(message);
                     break;
-
+                
                 default:
                     if (message.AcknowledgeRequired && AutoAcknowledge)
                         await SendAsync(message.CreateAcknowledge());

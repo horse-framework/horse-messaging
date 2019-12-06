@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,7 +27,6 @@ namespace Test.Mq
 
             TmqClient client = new TmqClient();
             client.UseUniqueMessageId = false;
-            client.IgnoreMyQueueMessages = false;
 
             await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
@@ -102,22 +100,6 @@ namespace Test.Mq
             Assert.NotNull(response);
             Assert.Equal(msg.MessageId, response.MessageId);
             Assert.Equal(enabled, responseCaught);
-        }
-
-        /// <summary>
-        /// Subscribes a queue and sends a message to same queue.
-        /// If ignore is enabled, message should be ignored.
-        /// </summary>
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task IgnoreMyQueueMessages(bool enabled)
-        {
-            int port = enabled ? 42721 : 42722;
-            TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-
-            throw new NotImplementedException();
         }
     }
 }

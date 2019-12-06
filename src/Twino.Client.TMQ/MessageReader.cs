@@ -15,7 +15,7 @@ namespace Twino.Client.TMQ
         /// All message subscriptions
         /// </summary>
         private readonly List<QueueSubscription> _subscriptions = new List<QueueSubscription>(16);
-        
+
         /// <summary>
         /// Attached TMQ clients
         /// </summary>
@@ -86,12 +86,6 @@ namespace Twino.Client.TMQ
         {
             //only channel messages accepted
             if (message.Type != MessageType.Channel || string.IsNullOrEmpty(message.Target))
-                return;
-
-            TmqClient tmq = (TmqClient) client;
-            
-            //if the message is client's self message and ignoring self message option enabled, ignore 
-            if (tmq.IgnoreMyQueueMessages && !string.IsNullOrEmpty(message.Source) && tmq.ClientId == message.Source)
                 return;
 
             //find all subscriber actions
