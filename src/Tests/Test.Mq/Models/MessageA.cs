@@ -11,6 +11,10 @@ namespace Test.Mq.Models
 
         public int No { get; set; }
 
+        public MessageA()
+        {
+        }
+
         public MessageA(string username)
         {
             Username = username;

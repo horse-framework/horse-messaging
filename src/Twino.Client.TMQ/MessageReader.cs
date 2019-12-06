@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.VisualBasic;
+using Newtonsoft.Json;
 using Twino.Core;
 using Twino.Protocols.TMQ;
 
@@ -32,6 +34,14 @@ namespace Twino.Client.TMQ
         public MessageReader(Func<TmqMessage, Type, object> func)
         {
             _func = func;
+        }
+
+        /// <summary>
+        /// Creates new message reader, reads UTF-8 string from message content and deserializes it with System.Text.Json
+        /// </summary>
+        public static MessageReader JsonReader()
+        {
+            return new MessageReader((msg, type) => System.Text.Json.JsonSerializer.Deserialize(msg.ToString(), type));
         }
 
         /// <summary>

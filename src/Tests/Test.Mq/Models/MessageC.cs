@@ -12,6 +12,10 @@ namespace Test.Mq.Models
 
         public int Number { get; set; }
 
+        public MessageC()
+        {
+        }
+        
         public MessageC(string name, string username)
         {
             Name = name;
