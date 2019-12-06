@@ -60,6 +60,8 @@ namespace Twino.MQ
             _standardMessages = standardMessages;
         }
 
+        #region Methods
+
         /// <summary>
         /// Runs the queue time keeper timer
         /// </summary>
@@ -183,5 +185,7 @@ namespace Twino.MQ
 
             return delivery;
         }
+
+        #endregion
     }
 }

@@ -144,9 +144,7 @@ namespace Test.Mq
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42304);
-
             server.Start();
-            await Task.Delay(250);
 
             TmqClient client = new TmqClient();
             client.AutoAcknowledge = true;
@@ -163,7 +161,6 @@ namespace Test.Mq
 
             //subscribe
             await client.Join(channel.Name, true);
-            await Task.Delay(250);
 
             //push a message to the queue
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
@@ -175,24 +172,66 @@ namespace Test.Mq
         /// Sends message from channel to client and wait for acknowledge from client to channel by manuel
         /// </summary>
         [Fact]
-        public void FromClientToChannelManuel()
+        public async Task FromClientToChannelManuel()
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42305);
+            server.Start();
 
-            throw new NotImplementedException();
+            TmqClient client = new TmqClient();
+            client.AutoAcknowledge = false;
+            client.IgnoreMyQueueMessages = false;
+            client.MessageReceived += async (c, m) => { await client.SendAsync(m.CreateAcknowledge()); };
+
+            await client.ConnectAsync("tmq://localhost:42305");
+            Assert.True(client.IsConnected);
+
+            Channel channel = server.Server.Channels.FirstOrDefault();
+            Assert.NotNull(channel);
+            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            Assert.NotNull(queue);
+            queue.Options.RequestAcknowledge = true;
+
+            //subscribe
+            await client.Join(channel.Name, true);
+
+            //push a message to the queue
+            MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
+            bool sent = await client.Push(channel.Name, queue.ContentType, ms, true);
+            Assert.True(sent);
         }
 
         /// <summary>
         /// Sends message from channel to client and wait for acknowledge from client to channel until timed out
         /// </summary>
         [Fact]
-        public void FromClientToChannelTimeout()
+        public async Task FromClientToChannelTimeout()
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42306);
+            server.Start();
 
-            throw new NotImplementedException();
+            TmqClient client = new TmqClient();
+            client.AutoAcknowledge = false;
+            client.IgnoreMyQueueMessages = false;
+            client.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
+
+            await client.ConnectAsync("tmq://localhost:42306");
+            Assert.True(client.IsConnected);
+
+            Channel channel = server.Server.Channels.FirstOrDefault();
+            Assert.NotNull(channel);
+            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            Assert.NotNull(queue);
+            queue.Options.RequestAcknowledge = true;
+
+            //subscribe
+            await client.Join(channel.Name, true);
+
+            //push a message to the queue
+            MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
+            bool sent = await client.Push(channel.Name, queue.ContentType, ms, true);
+            Assert.False(sent);
         }
 
         #endregion
