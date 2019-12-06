@@ -43,6 +43,12 @@ namespace Twino.Client.TMQ
         public bool AutoAcknowledge { get; set; }
 
         /// <summary>
+        /// If true, acknowledge messages will trigger on message received events.
+        /// If false, acknowledge messages are proceed silently.
+        /// </summary>
+        public bool CatchAcknowledgeMessages { get; set; }
+
+        /// <summary>
         /// If true, response messages will trigger on message received events.
         /// If false, response messages are proceed silently.
         /// </summary>
@@ -309,6 +315,9 @@ namespace Twino.Client.TMQ
 
                 case MessageType.Acknowledge:
                     _follower.ProcessAcknowledge(message);
+                    
+                    if (CatchAcknowledgeMessages)
+                        SetOnMessageReceived(message);
                     break;
 
                 case MessageType.Response:

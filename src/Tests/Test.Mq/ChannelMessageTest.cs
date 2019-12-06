@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Test.Mq.Internal;
+using Test.Mq.Models;
 using Twino.Client.TMQ;
 using Twino.MQ;
 using Twino.Protocols.TMQ;
@@ -612,6 +613,74 @@ namespace Test.Mq
             Assert.Empty(queue.StandardMessages);
             Assert.True(receive1);
             Assert.True(receive2);
+        }
+
+        #endregion
+
+        #region Hide Names
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task HideNamesInChannel(bool enabled)
+        {
+            int port = enabled ? 42531 : 42532;
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start();
+
+            server.Server.Options.HideClientNames = enabled;
+            server.Server.Options.RequestAcknowledge = true;
+            server.Server.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
+
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:" + port);
+            client.AutoAcknowledge = true;
+            client.CatchAcknowledgeMessages = true;
+            Assert.True(client.IsConnected);
+
+            bool joined = await client.Join("ch-1", true);
+            Assert.True(joined);
+
+            TmqMessage received = null;
+            TmqMessage ack = null;
+            client.MessageReceived += (c, m) =>
+            {
+                switch (m.Type)
+                {
+                    case MessageType.Channel:
+                        received = m;
+                        break;
+                    case MessageType.Acknowledge:
+                        ack = m;
+                        break;
+                }
+            };
+
+            await Task.Delay(500);
+
+            MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
+            bool sent = await client.Push("ch-1", MessageA.ContentType, ms, true);
+            Assert.True(sent);
+
+            await Task.Delay(1000);
+
+            Assert.NotNull(received);
+            Assert.NotNull(ack);
+
+            Assert.Equal("ch-1", received.Target);
+            Assert.Equal("ch-1", ack.Target);
+
+            if (enabled)
+            {
+                Assert.Null(received.Source);
+                Assert.Null(ack.Source);
+            }
+            else
+            {
+                Assert.Equal(client.ClientId, received.Source);
+                Assert.Equal(client.ClientId, ack.Source);
+            }
         }
 
         #endregion

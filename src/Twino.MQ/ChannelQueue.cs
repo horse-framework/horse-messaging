@@ -529,7 +529,7 @@ namespace Twino.MQ
                 {
                     //if client names are hidden, set source as channel name
                     if (Options.HideClientNames)
-                        deliveryMessage.Source = Channel.Name;
+                        deliveryMessage.Source = null;
                     
                     //target should be channel name, so client can have info where the message comes from
                     deliveryMessage.Target = Channel.Name;
