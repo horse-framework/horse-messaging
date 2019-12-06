@@ -124,16 +124,17 @@ namespace Twino.MQ
         {
             _removingDeliveries.Clear();
 
-            foreach (MessageDelivery delivery in _deliveries)
-            {
-                //message acknowledge or came here accidently :)
-                if (delivery.IsAcknowledged || !delivery.AcknowledgeDeadline.HasValue)
-                    _removingDeliveries.Add(new Tuple<bool, MessageDelivery>(false, delivery));
+            lock (_deliveries)
+                foreach (MessageDelivery delivery in _deliveries)
+                {
+                    //message acknowledge or came here accidently :)
+                    if (delivery.IsAcknowledged || !delivery.AcknowledgeDeadline.HasValue)
+                        _removingDeliveries.Add(new Tuple<bool, MessageDelivery>(false, delivery));
 
-                //expired
-                else if (DateTime.UtcNow > delivery.AcknowledgeDeadline.Value)
-                    _removingDeliveries.Add(new Tuple<bool, MessageDelivery>(true, delivery));
-            }
+                    //expired
+                    else if (DateTime.UtcNow > delivery.AcknowledgeDeadline.Value)
+                        _removingDeliveries.Add(new Tuple<bool, MessageDelivery>(true, delivery));
+                }
 
             if (_removingDeliveries.Count == 0)
                 return;

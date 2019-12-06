@@ -310,19 +310,50 @@ namespace Test.Mq
 
         #endregion
 
-        #region Wait For Acknowledge
+        #region Non Queue Acknowledge
 
         /// <summary>
         /// Sends message and wait for acknowledge to go on other queue messages.
         /// There is no available receiver.
         /// </summary>
         [Fact]
-        public void WaitAcknowledgeNoClients()
+        public async Task NonQueueWaitAcknowledgeNoClients()
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42511);
+            server.Start();
+            server.Server.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
 
-            throw new NotImplementedException();
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:42511");
+            Assert.True(client.IsConnected);
+
+            Channel channel = server.Server.Channels.FirstOrDefault();
+            Assert.NotNull(channel);
+
+            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            Assert.NotNull(queue);
+
+            MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
+            bool sent = await client.Push(channel.Name, queue.ContentType, ms, true);
+            Assert.False(sent);
+
+            Assert.Empty(queue.PrefentialMessages);
+            Assert.Empty(queue.StandardMessages);
+
+            bool received = false;
+            client.MessageReceived += (c, m) =>
+            {
+                if (m.Type == MessageType.Channel)
+                    received = true;
+            };
+
+            bool joined = await client.Join(channel.Name, true);
+            Assert.True(joined);
+            await Task.Delay(1500);
+
+            Assert.Empty(queue.StandardMessages);
+            Assert.False(received);
         }
 
         /// <summary>
@@ -330,26 +361,43 @@ namespace Test.Mq
         /// There is one available receiver.
         /// </summary>
         [Fact]
-        public void WaitAcknowledgeOneClient()
+        public async Task NonQueueWaitAcknowledgeOneClient()
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42512);
+            server.Start();
+            server.Server.Options.RequestAcknowledge = true;
+            server.Server.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
-            throw new NotImplementedException();
-        }
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:42512");
+            client.AutoAcknowledge = true;
+            Assert.True(client.IsConnected);
 
-        /// <summary>
-        /// Sends message and wait for acknowledge to go on other queue messages.
-        /// There is one available receiver.
-        /// But it does not send acknowledge message
-        /// </summary>
-        [Fact]
-        public void WaitAcknowledgeOneClientWithNoAck()
-        {
-            TestMqServer server = new TestMqServer();
-            server.Initialize(42513);
+            Channel channel = server.Server.Channels.FirstOrDefault();
+            Assert.NotNull(channel);
 
-            throw new NotImplementedException();
+            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            Assert.NotNull(queue);
+
+            bool joined = await client.Join(channel.Name, true);
+            Assert.True(joined);
+            await Task.Delay(250);
+
+            bool received = false;
+            client.MessageReceived += (c, m) =>
+            {
+                if (m.Type == MessageType.Channel)
+                    received = true;
+            };
+
+            MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
+            bool sent = await client.Push(channel.Name, queue.ContentType, ms, true);
+
+            Assert.True(sent);
+            Assert.Empty(queue.PrefentialMessages);
+            Assert.Empty(queue.StandardMessages);
+            Assert.True(received);
         }
 
         /// <summary>
@@ -357,26 +405,58 @@ namespace Test.Mq
         /// There are multiple available receiver.
         /// </summary>
         [Fact]
-        public void WaitAcknowledgeMultipleClients()
+        public async Task NonQueueWaitAcknowledgeMultipleClients()
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42514);
+            server.Start();
+            server.Server.Options.RequestAcknowledge = true;
+            server.Server.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
-            throw new NotImplementedException();
-        }
+            TmqClient client1 = new TmqClient();
+            TmqClient client2 = new TmqClient();
+            client1.AutoAcknowledge = true;
+            client2.AutoAcknowledge = true;
+            await client1.ConnectAsync("tmq://localhost:42514");
+            await client2.ConnectAsync("tmq://localhost:42514");
+            Assert.True(client1.IsConnected);
+            Assert.True(client2.IsConnected);
 
-        /// <summary>
-        /// Sends message and wait for acknowledge to go on other queue messages.
-        /// There are multiple available receiver.
-        /// But they do not send acknowledge message
-        /// </summary>
-        [Fact]
-        public void WaitAcknowledgeMultipleClientsWithNoAck()
-        {
-            TestMqServer server = new TestMqServer();
-            server.Initialize(42515);
+            Channel channel = server.Server.Channels.FirstOrDefault();
+            Assert.NotNull(channel);
 
-            throw new NotImplementedException();
+            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            Assert.NotNull(queue);
+
+            bool joined1 = await client1.Join(channel.Name, true);
+            bool joined2 = await client2.Join(channel.Name, true);
+            Assert.True(joined1);
+            Assert.True(joined2);
+            await Task.Delay(250);
+
+            bool receive1 = false;
+            bool receive2 = false;
+            client1.MessageReceived += (c, m) =>
+            {
+                if (m.Type == MessageType.Channel)
+                    receive1 = true;
+            };
+            client2.MessageReceived += (c, m) =>
+            {
+                if (m.Type == MessageType.Channel)
+                    receive2 = true;
+            };
+
+            MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
+            bool sent = await client1.Push(channel.Name, queue.ContentType, ms, true);
+
+            await Task.Delay(250);
+            
+            Assert.True(sent);
+            Assert.Empty(queue.PrefentialMessages);
+            Assert.Empty(queue.StandardMessages);
+            Assert.True(receive1);
+            Assert.True(receive2);
         }
 
         #endregion
