@@ -29,11 +29,11 @@ namespace Test.Connector
         [Fact]
         public void Connect()
         {
-            _server.Start(431);
+            _server.Start(46431);
             System.Threading.Thread.Sleep(250);
 
             WsAbsoluteConnector connector = new WsAbsoluteConnector(TimeSpan.FromSeconds(1));
-            connector.AddHost("ws://127.0.0.1:431");
+            connector.AddHost("ws://127.0.0.1:46431");
             connector.Run();
             System.Threading.Thread.Sleep(1000);
 
@@ -49,9 +49,9 @@ namespace Test.Connector
         {
             int connectionCount = 0;
 
-            _server.Start(422);
+            _server.Start(46422);
             WsAbsoluteConnector connector = new WsAbsoluteConnector(TimeSpan.FromMilliseconds(50));
-            connector.AddHost("ws://127.0.0.1:422");
+            connector.AddHost("ws://127.0.0.1:46422");
             connector.Connected += c => connectionCount++;
 
             connector.Run();
@@ -69,11 +69,11 @@ namespace Test.Connector
         [Fact]
         public void SendData()
         {
-            _server.Start(432);
+            _server.Start(46432);
             System.Threading.Thread.Sleep(250);
 
             WsAbsoluteConnector connector = new WsAbsoluteConnector(TimeSpan.FromSeconds(1));
-            connector.AddHost("ws://127.0.0.1:432");
+            connector.AddHost("ws://127.0.0.1:46432");
             connector.Run();
             System.Threading.Thread.Sleep(250);
 
@@ -87,12 +87,12 @@ namespace Test.Connector
         [Fact]
         public void ReceiveData()
         {
-            _server.Start(433);
+            _server.Start(46433);
             System.Threading.Thread.Sleep(250);
             int _receivedFromServer = 0;
 
             WsAbsoluteConnector connector = new WsAbsoluteConnector(TimeSpan.FromSeconds(1));
-            connector.AddHost("ws://127.0.0.1:433");
+            connector.AddHost("ws://127.0.0.1:46433");
             connector.MessageReceived += (client, message) => _receivedFromServer++;
             connector.Run();
 
@@ -103,11 +103,11 @@ namespace Test.Connector
         [Fact]
         public void SendDataWhenOffline()
         {
-            _server.Start(421);
+            _server.Start(46421);
             _receivedMessages = 0;
 
             WsAbsoluteConnector connector = new WsAbsoluteConnector(TimeSpan.FromMilliseconds(600));
-            connector.AddHost("ws://127.0.0.1:421");
+            connector.AddHost("ws://127.0.0.1:46421");
 
             connector.Run();
             System.Threading.Thread.Sleep(150);

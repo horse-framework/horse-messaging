@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Test.SocketModels.Helpers;
 using Test.SocketModels.Models;
 using Twino.Client.WebSocket;
@@ -34,7 +35,7 @@ namespace Test.SocketModels
         }
 
         [Fact]
-        public void Multiple()
+        public async Task Multiple()
         {
             DefaultModel received1 = null;
             CriticalModel received2 = null;
@@ -54,7 +55,7 @@ namespace Test.SocketModels
             client.Send(new CriticalModel {Name = "Critical", Number = 502});
 
             //wait for async package reading
-            System.Threading.Thread.Sleep(2000);
+            await Task.Delay(2000);
 
             Assert.NotNull(received1);
             Assert.Equal(501, received1.Number);
