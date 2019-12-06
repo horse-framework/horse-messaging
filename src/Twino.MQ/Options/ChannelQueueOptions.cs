@@ -42,5 +42,10 @@ namespace Twino.MQ.Options
         /// If true, queue does not send next message to receivers until acknowledge message received
         /// </summary>
         public bool WaitAcknowledge { get; set; }
+        
+        /// <summary>
+        /// If true, server doesn't send client name to receivers in queueus.
+        /// </summary>
+        public bool HideClientNames { get; set; }
     }
 }

@@ -230,9 +230,6 @@ namespace Twino.MQ
         /// </summary>
         private async Task ChannelMessageReceived(MqClient client, TmqMessage message)
         {
-            //if client sends this value false accidently, set it true.
-            message.FirstAcquirer = true;
-
             //find channel and queue
             Channel channel = _server.FindChannel(message.Target);
             if (channel == null)
@@ -262,8 +259,6 @@ namespace Twino.MQ
             //prepare the message
             QueueMessage queueMessage = new QueueMessage(message);
             queueMessage.Source = client;
-            message.Source = queue.Channel.Name;
-            message.SourceLength = queue.Channel.Name.Length;
             
             //push the message
             await queue.Push(queueMessage, client);

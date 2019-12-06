@@ -104,6 +104,7 @@ namespace Twino.MQ.Helpers
         public static TmqMessage StatusCodeMessage(ushort contentType, string target = null)
         {
             TmqMessage message = new TmqMessage();
+
             message.Type = MessageType.Server;
             message.ContentType = contentType;
             message.Target = target;
@@ -118,12 +119,15 @@ namespace Twino.MQ.Helpers
         public static TmqMessage ResponseStatus(TmqMessage request, ushort status)
         {
             TmqMessage response = new TmqMessage();
+
             response.Type = MessageType.Response;
             response.MessageId = request.MessageId;
-            response.Target = request.Source;
-            response.Source = request.Target;
             response.ContentType = status;
             response.FirstAcquirer = true;
+            
+            response.Target = request.Type == MessageType.Channel
+                                  ? request.Target
+                                  : request.Source;
 
             return response;
         }

@@ -181,7 +181,15 @@ namespace Twino.MQ
         /// </summary>
         internal async Task Push(QueueMessage message, MqClient sender)
         {
+            //prepare properties
+            message.Message.FirstAcquirer = true;
             message.Message.AcknowledgeRequired = Options.RequestAcknowledge;
+
+            if (Options.HideClientNames)
+            {
+                message.Message.Source = null;
+                message.Message.SourceLength = 0;
+            }
 
             //process the message
             QueueMessage held = null;
@@ -519,7 +527,13 @@ namespace Twino.MQ
 
                 if (delivery.Message.Source != null && delivery.Message.Source.IsConnected)
                 {
-                    deliveryMessage.Target = delivery.Message.Source.UniqueId;
+                    //if client names are hidden, set source as channel name
+                    if (Options.HideClientNames)
+                        deliveryMessage.Source = Channel.Name;
+                    
+                    //target should be channel name, so client can have info where the message comes from
+                    deliveryMessage.Target = Channel.Name;
+                    
                     delivery.AcknowledgeSentToSource = await delivery.Message.Source.SendAsync(deliveryMessage);
                 }
             }

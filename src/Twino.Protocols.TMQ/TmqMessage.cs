@@ -168,8 +168,8 @@ namespace Twino.Protocols.TMQ
             message.HighPriority = HighPriority;
             message.Type = MessageType.Acknowledge;
             message.MessageId = MessageId;
-            message.Target = Source;
             message.ContentType = ContentType;
+            message.Target = Type == MessageType.Channel ? Target : Source;
 
             return message;
         }
@@ -185,7 +185,7 @@ namespace Twino.Protocols.TMQ
             message.HighPriority = HighPriority;
             message.Type = MessageType.Response;
             message.MessageId = MessageId;
-            message.Target = Source;
+            message.Target = Type == MessageType.Channel ? Target : Source;
 
             return message;
         }
