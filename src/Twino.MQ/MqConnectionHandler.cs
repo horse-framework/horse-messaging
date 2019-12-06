@@ -118,7 +118,7 @@ namespace Twino.MQ
                 if (_server.Options.UseMessageId)
                 {
                     message.MessageId = _server.MessageIdGenerator.Create();
-                    message.SourceLength = message.MessageId.Length;
+                    message.MessageIdLength = message.MessageId.Length;
                 }
             }
 

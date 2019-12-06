@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using System.Text;
 
@@ -9,6 +8,8 @@ namespace Twino.Protocols.TMQ
     /// </summary>
     public class TmqMessage
     {
+        #region Properties
+
         /// <summary>
         /// If true, receiver is the first acquirer of the message
         /// </summary>
@@ -87,8 +88,17 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public MemoryStream Content { get; set; }
 
+        #endregion
+
+        #region Constructors
+
         public TmqMessage()
         {
+        }
+
+        public TmqMessage(MessageType type)
+        {
+            Type = type;
         }
 
         public TmqMessage(MessageType type, string target)
@@ -96,7 +106,11 @@ namespace Twino.Protocols.TMQ
             Type = type;
             Target = target;
         }
-        
+
+        #endregion
+
+        #region Methods
+
         /// <summary>
         /// Checks message id, source, target and content properties.
         /// If they have a value, sets to length properties to their lengths
@@ -139,6 +153,10 @@ namespace Twino.Protocols.TMQ
             CalculateLengths();
         }
 
+        #endregion
+
+        #region Create
+
         /// <summary>
         /// Create an acknowledge message of the message
         /// </summary>
@@ -155,7 +173,7 @@ namespace Twino.Protocols.TMQ
 
             return message;
         }
-        
+
         /// <summary>
         /// Create a response message of the message
         /// </summary>
@@ -171,5 +189,7 @@ namespace Twino.Protocols.TMQ
 
             return message;
         }
+
+        #endregion
     }
 }

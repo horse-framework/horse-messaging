@@ -127,18 +127,6 @@ namespace Test.Mq
 
         #endregion
 
-        /// <summary>
-        /// Sends message when UseMessageId option is enabled.
-        /// </summary>
-        [Fact]
-        public void UseMessageId()
-        {
-            TestMqServer server = new TestMqServer();
-            server.Initialize(42510);
-
-            throw new NotImplementedException();
-        }
-
         #region Wait For Acknowledge
 
         /// <summary>

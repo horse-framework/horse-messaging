@@ -448,7 +448,9 @@ namespace Twino.Client.TMQ
             message.ContentType = KnownContentTypes.Join;
             message.Target = channel;
             message.ResponseRequired = verifyResponse;
-            message.MessageId = UniqueIdGenerator.Create();
+
+            if (verifyResponse)
+                message.MessageId = UniqueIdGenerator.Create();
 
             return await WaitResponseOk(message, verifyResponse);
         }
@@ -463,7 +465,9 @@ namespace Twino.Client.TMQ
             message.ContentType = KnownContentTypes.Leave;
             message.Target = channel;
             message.ResponseRequired = verifyResponse;
-            message.MessageId = UniqueIdGenerator.Create();
+
+            if (verifyResponse)
+                message.MessageId = UniqueIdGenerator.Create();
 
             return await WaitResponseOk(message, verifyResponse);
         }
@@ -477,9 +481,11 @@ namespace Twino.Client.TMQ
             message.Type = MessageType.Channel;
             message.ContentType = contentType;
             message.Target = channel;
-            message.MessageId = UniqueIdGenerator.Create();
             message.Content = content;
             message.AcknowledgeRequired = waitAcknowledge;
+
+            if (waitAcknowledge)
+                message.MessageId = UniqueIdGenerator.Create();
 
             return await WaitForAcknowledge(message, waitAcknowledge);
         }
@@ -494,8 +500,10 @@ namespace Twino.Client.TMQ
             message.ContentType = KnownContentTypes.CreateQueue;
             message.Target = channel;
             message.ResponseRequired = verifyResponse;
-            message.MessageId = UniqueIdGenerator.Create();
             message.Content = new MemoryStream(BitConverter.GetBytes(contentType));
+
+            if (verifyResponse)
+                message.MessageId = UniqueIdGenerator.Create();
 
             return await WaitResponseOk(message, verifyResponse);
         }
