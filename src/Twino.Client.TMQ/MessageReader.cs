@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 using Twino.Core;
@@ -8,6 +9,11 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.Client.TMQ
 {
+    /// <summary>
+    /// Exception thrown handler for message reader
+    /// </summary>
+    public delegate void ReaderExceptionThrownHandler(TmqMessage message, Exception exception);
+
     /// <summary>
     /// Type based message reader for TMQ client
     /// </summary>
@@ -27,6 +33,11 @@ namespace Twino.Client.TMQ
         /// TmqMessage to model type converter function
         /// </summary>
         private Func<TmqMessage, Type, object> _func;
+
+        /// <summary>
+        /// This event is triggered when user defined action throws an exception
+        /// </summary>
+        public event ReaderExceptionThrownHandler OnException;
 
         /// <summary>
         /// Creates new message reader with converter action
@@ -118,7 +129,16 @@ namespace Twino.Client.TMQ
             foreach (QueueSubscription sub in subs)
             {
                 if (sub.MessageType == type)
-                    sub.Action.DynamicInvoke(model);
+                {
+                    try
+                    {
+                        sub.Action.DynamicInvoke(model);
+                    }
+                    catch (Exception ex)
+                    {
+                        OnException?.Invoke(message, ex);
+                    }
+                }
             }
         }
 

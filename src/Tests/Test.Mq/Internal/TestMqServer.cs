@@ -1,9 +1,7 @@
 using System;
-using Newtonsoft.Json;
 using Test.Mq.Models;
 using Twino.MQ;
 using Twino.MQ.Options;
-using Twino.Protocols.TMQ;
 using Twino.Server;
 
 namespace Test.Mq.Internal
@@ -54,6 +52,9 @@ namespace Test.Mq.Internal
             Channel channel = Server.CreateChannel("ch-1");
             channel.CreateQueue(MessageA.ContentType).Wait();
             channel.CreateQueue(MessageC.ContentType).Wait();
+
+            Channel channel0 = Server.CreateChannel("ch-0");
+            channel0.CreateQueue(MessageA.ContentType).Wait();
         }
 
         public void Start()

@@ -1,4 +1,3 @@
-using System.Net.Mime;
 using Test.Mq.Internal;
 
 namespace Test.Mq.Models
