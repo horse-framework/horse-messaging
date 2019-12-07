@@ -5,7 +5,7 @@ using Twino.MQ.Clients;
 using Twino.MQ.Security;
 using Twino.Protocols.TMQ;
 
-namespace Sample.MqServer
+namespace Sample.Mq.Server
 {
     public class Authorization : IClientAuthorization
     {

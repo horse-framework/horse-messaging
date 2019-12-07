@@ -164,8 +164,9 @@ namespace Twino.MQ
         /// </summary>
         public async Task<ChannelQueue> CreateQueue(ushort contentType)
         {
+            ChannelQueueOptions options = Options.Clone() as ChannelQueueOptions;
             return await CreateQueue(contentType,
-                                     Options,
+                                     options,
                                      Server.DefaultDeliveryHandler);
         }
 

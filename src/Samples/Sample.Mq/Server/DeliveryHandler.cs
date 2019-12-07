@@ -4,7 +4,7 @@ using Twino.MQ;
 using Twino.MQ.Clients;
 using Twino.Protocols.TMQ;
 
-namespace Sample.MqServer
+namespace Sample.Mq.Server
 {
     public class DeliveryHandler : IMessageDeliveryHandler
     {

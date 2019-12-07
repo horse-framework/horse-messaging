@@ -4,7 +4,7 @@ using Twino.MQ;
 using Twino.MQ.Clients;
 using Twino.MQ.Security;
 
-namespace Sample.MqServer
+namespace Sample.Mq.Server
 {
     public class ChannelAuthenticator : IChannelAuthenticator
     {

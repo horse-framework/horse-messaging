@@ -154,7 +154,6 @@ namespace Test.Mq
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42506);
-            server.Server.Options.MessageQueuing = true;
             server.Start();
 
             TmqClient client = new TmqClient();
@@ -166,6 +165,7 @@ namespace Test.Mq
 
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
+            queue.Options.MessageQueuing = true;
 
             bool received = false;
             client.MessageReceived += (c, m) =>
@@ -203,13 +203,14 @@ namespace Test.Mq
             TestMqServer server = new TestMqServer();
             server.Initialize(42508);
             server.Start();
-            server.Server.Options.SendOnlyFirstAcquirer = true;
 
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
 
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
+            
+            queue.Options.SendOnlyFirstAcquirer = true;
 
             bool[] received = new bool[3];
 
@@ -258,14 +259,15 @@ namespace Test.Mq
             TestMqServer server = new TestMqServer();
             server.Initialize(42509);
             server.Start();
-            server.Server.Options.MessageQueuing = true;
-            server.Server.Options.SendOnlyFirstAcquirer = true;
 
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
 
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
+            
+            queue.Options.MessageQueuing = true;
+            queue.Options.SendOnlyFirstAcquirer = true;
 
             bool[] received = new bool[3];
 
@@ -368,8 +370,6 @@ namespace Test.Mq
             TestMqServer server = new TestMqServer();
             server.Initialize(42512);
             server.Start();
-            server.Server.Options.RequestAcknowledge = true;
-            server.Server.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:42512");
@@ -381,6 +381,9 @@ namespace Test.Mq
 
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
+            
+            queue.Options.RequestAcknowledge = true;
+            queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
             bool joined = await client.Join(channel.Name, true);
             Assert.True(joined);
@@ -412,8 +415,6 @@ namespace Test.Mq
             TestMqServer server = new TestMqServer();
             server.Initialize(42514);
             server.Start();
-            server.Server.Options.RequestAcknowledge = true;
-            server.Server.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
             TmqClient client1 = new TmqClient();
             TmqClient client2 = new TmqClient();
@@ -429,6 +430,9 @@ namespace Test.Mq
 
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
+            
+            queue.Options.RequestAcknowledge = true;
+            queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
             bool joined1 = await client1.Join(channel.Name, true);
             bool joined2 = await client2.Join(channel.Name, true);
@@ -475,9 +479,6 @@ namespace Test.Mq
             TestMqServer server = new TestMqServer();
             server.Initialize(42521);
             server.Start();
-            server.Server.Options.MessageQueuing = true;
-            server.Server.Options.RequestAcknowledge = true;
-            server.Server.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:42521");
@@ -488,6 +489,10 @@ namespace Test.Mq
 
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
+            
+            queue.Options.MessageQueuing = true;
+            queue.Options.RequestAcknowledge = true;
+            queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
             bool sent = await client.Push(channel.Name, queue.ContentType, ms, true);
@@ -520,9 +525,6 @@ namespace Test.Mq
             TestMqServer server = new TestMqServer();
             server.Initialize(42582);
             server.Start();
-            server.Server.Options.MessageQueuing = true;
-            server.Server.Options.RequestAcknowledge = true;
-            server.Server.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:42582");
@@ -534,6 +536,10 @@ namespace Test.Mq
 
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
+            
+            queue.Options.MessageQueuing = true;
+            queue.Options.RequestAcknowledge = true;
+            queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
             bool joined = await client.Join(channel.Name, true);
             Assert.True(joined);
@@ -563,18 +569,15 @@ namespace Test.Mq
         public async Task QueueWaitAcknowledgeMultipleClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42524);
+            server.Initialize(42594);
             server.Start();
-            server.Server.Options.MessageQueuing = true;
-            server.Server.Options.RequestAcknowledge = true;
-            server.Server.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
             TmqClient client1 = new TmqClient();
             TmqClient client2 = new TmqClient();
             client1.AutoAcknowledge = true;
             client2.AutoAcknowledge = true;
-            await client1.ConnectAsync("tmq://localhost:42524");
-            await client2.ConnectAsync("tmq://localhost:42524");
+            await client1.ConnectAsync("tmq://localhost:42594");
+            await client2.ConnectAsync("tmq://localhost:42594");
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
 
@@ -583,6 +586,10 @@ namespace Test.Mq
 
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
+            
+            queue.Options.MessageQueuing = true;
+            queue.Options.RequestAcknowledge = true;
+            queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
             bool joined1 = await client1.Join(channel.Name, true);
             bool joined2 = await client2.Join(channel.Name, true);
@@ -629,9 +636,14 @@ namespace Test.Mq
             server.Initialize(port);
             server.Start();
 
-            server.Server.Options.HideClientNames = enabled;
-            server.Server.Options.RequestAcknowledge = true;
-            server.Server.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
+            Channel channel = server.Server.FindChannel("ch-1");
+            Assert.NotNull(channel);
+            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            Assert.NotNull(queue);
+            
+            queue.Options.HideClientNames = enabled;
+            queue.Options.RequestAcknowledge = true;
+            queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);

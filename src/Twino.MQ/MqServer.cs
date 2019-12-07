@@ -57,7 +57,7 @@ namespace Twino.MQ
         /// Authorization implementation for client operations
         /// </summary>
         public IClientAuthorization Authorization { get; }
-        
+
         /// <summary>
         /// Client connect and disconnect operations
         /// </summary>
@@ -193,7 +193,8 @@ namespace Twino.MQ
                                      IChannelEventHandler eventHandler,
                                      IMessageDeliveryHandler deliveryHandler)
         {
-            return CreateChannel(name, Options, authenticator, eventHandler, deliveryHandler);
+            ChannelOptions options = Options.Clone() as ChannelOptions;
+            return CreateChannel(name, options, authenticator, eventHandler, deliveryHandler);
         }
 
         /// <summary>

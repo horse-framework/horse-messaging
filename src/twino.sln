@@ -77,7 +77,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Client.TMQ", "Twino.C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Tmq", "Samples\Sample.Tmq\Sample.Tmq.csproj", "{971CA2D0-FED0-43C5-9270-69B0C51A0F1C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.MqServer", "Samples\Sample.MqServer\Sample.MqServer.csproj", "{BCE0C6B8-8332-4709-BBCD-D9D87D1A0671}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Mq", "Samples\Sample.Mq\Sample.Mq.csproj", "{BCE0C6B8-8332-4709-BBCD-D9D87D1A0671}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Mq", "Tests\Test.Mq\Test.Mq.csproj", "{44BCC806-180F-42F7-A848-D3623356D318}"
 EndProject

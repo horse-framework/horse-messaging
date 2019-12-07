@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Twino.MQ;
 using Twino.MQ.Clients;
 
-namespace Sample.MqServer
+namespace Sample.Mq.Server
 {
     public class ChannelHandler : IChannelEventHandler
     {

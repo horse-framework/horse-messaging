@@ -47,5 +47,14 @@ namespace Twino.MQ.Options
         /// If true, server doesn't send client name to receivers in queueus.
         /// </summary>
         public bool HideClientNames { get; set; }
+        
+        /// <summary>
+        /// Creates clone of the object
+        /// </summary>
+        /// <returns></returns>
+        internal object Clone()
+        {
+            return MemberwiseClone();
+        }
     }
 }
