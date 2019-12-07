@@ -22,7 +22,7 @@ namespace Sample.Mq
         static void StartServer()
         {
             ServerOptions serverOptions = ServerOptions.CreateDefault();
-            serverOptions.Hosts[0].Port = 83;
+            serverOptions.Hosts[0].Port = 48050;
             MqServerOptions mqOptions = new MqServerOptions();
             mqOptions.AllowMultipleQueues = true;
             mqOptions.UseMessageId = true;
@@ -33,12 +33,7 @@ namespace Sample.Mq
             server.SetDefaultChannelHandler(new ChannelHandler(), new ChannelAuthenticator());
             server.Start();
             
-            ChannelOptions chqOptions = new ChannelOptions();
-            Channel chq = server.CreateChannel("ch-queue",
-                                               chqOptions,
-                                               server.DefaultChannelAuthenticator,
-                                               server.DefaultChannelEventHandler,
-                                               server.DefaultDeliveryHandler);
+            Channel chq = server.CreateChannel("ch-queue");
             
             chq.CreateQueue(ContentTypes.ProducerEvent);
             Console.WriteLine("Server started");

@@ -9,16 +9,18 @@ namespace Sample.Mq.Server
 {
     public class Authorization : IClientAuthorization
     {
-        public async Task<bool> CanCreateChannel(MqClient client, Twino.MQ.MqServer server, string channelName)
+        public async Task<bool> CanCreateChannel(MqClient client, MqServer server, string channelName)
         {
-            Console.WriteLine("Can create new channel passed");
-            return await Task.FromResult(true);
+            bool grant = client.Type.Equals("producer");
+            Console.WriteLine("Can create new channel: " + grant);
+            return await Task.FromResult(grant);
         }
 
         public async Task<bool> CanCreateQueue(MqClient client, Channel channel, ushort contentType)
         {
-            Console.WriteLine("Can create new queue passed");
-            return await Task.FromResult(true);
+            bool grant = client.Type.Equals("producer");
+            Console.WriteLine("Can create new queue: " + grant);
+            return await Task.FromResult(grant);
         }
 
         public async Task<bool> CanMessageToPeer(MqClient sender, TmqMessage message, MqClient receiver)
@@ -29,8 +31,9 @@ namespace Sample.Mq.Server
 
         public async Task<bool> CanMessageToQueue(MqClient client, ChannelQueue queue, TmqMessage message)
         {
-            Console.WriteLine("Can message to queue passed");
-            return await Task.FromResult(true);
+            bool grant = client.Type.Equals("producer");
+            Console.WriteLine("Can message to queue: " + grant);
+            return await Task.FromResult(grant);
         }
     }
 }
