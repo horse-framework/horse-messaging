@@ -26,43 +26,18 @@ namespace Sample.Mq
             MqServerOptions mqOptions = new MqServerOptions();
             mqOptions.AllowMultipleQueues = true;
             mqOptions.UseMessageId = true;
-            mqOptions.AllowedContentTypes = new[] {ContentTypes.ProducerEvent};
+            mqOptions.AllowedContentTypes = new[] {ModelTypes.ProducerEvent};
 
             MqServer server = new MqServer(serverOptions, mqOptions, new ClientAuthenticator(), new Authorization());
             server.SetDefaultDeliveryHandler(new DeliveryHandler());
             server.SetDefaultChannelHandler(new ChannelHandler(), new ChannelAuthenticator());
             server.Start();
-            
-            Channel chq = server.CreateChannel("ch-queue");
-            
-            chq.CreateQueue(ContentTypes.ProducerEvent);
+
+            Channel ackChannel = server.CreateChannel("ack-channel");
+            ackChannel.Options.RequestAcknowledge = true;
+            ackChannel.CreateQueue(ModelTypes.ProducerEvent);
+
             Console.WriteLine("Server started");
-
-            TmqClient client = new TmqClient();
-            client.ClientId = "test-client";
-            client.Connect("tmq://localhost:83");
-            client.AcknowledgeTimeout = TimeSpan.FromSeconds(180);
-            client.ResponseTimeout = TimeSpan.FromSeconds(300);
-            Console.ReadLine();
-
-            bool joined = client.Join("demo", true).Result;
-            Console.WriteLine(joined);
-
-            MessageReader reader = new MessageReader((mx, type) => { return Newtonsoft.Json.JsonConvert.DeserializeObject(mx.ToString(), type); });
-            reader.On<HelloModel>("demo", 100, m => { Console.WriteLine("Message received: " + m.M); });
-            reader.Attach(client);
-
-            Console.ReadLine();
-
-            TmqMessage msg = new TmqMessage();
-            msg.Type = MessageType.Channel;
-            msg.Target = "demo";
-            msg.ContentType = 100;
-            HelloModel hm = new HelloModel {M = "Hello World"};
-            msg.SetStringContent(Newtonsoft.Json.JsonConvert.SerializeObject(hm));
-            client.Send(msg);
-
-            server.Server.BlockWhileRunning();
         }
 
         static void Main(string[] args)

@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using Sample.Mq.Models;
 using Twino.Client.TMQ;
 using Twino.Client.TMQ.Connectors;
 using Twino.Core;
@@ -29,7 +30,19 @@ namespace Sample.Mq
 
             _timer = new Timer(o =>
             {
-                //send request
+                if (_connector.IsConnected)
+                {
+                    TmqClient client = _connector.GetClient();
+
+                    TmqMessage message = new TmqMessage(MessageType.Client, "producer-id");
+                    message.ContentType = ModelTypes.ConsumerRequest;
+
+                    ConsumerRequest request = new ConsumerRequest();
+                    request.Guid = Guid.NewGuid().ToString();
+
+                    message.SetJsonContent(request).Wait();
+                    client.Send(message);
+                }
             }, null, 6000, 6000);
         }
 
@@ -37,12 +50,36 @@ namespace Sample.Mq
         {
             TmqClient tc = (TmqClient) client;
             tc.AutoAcknowledge = true;
-            
-            //subscribe to queues (ack and non-ack)
+
+            tc.Join("ack-channel", false);
+            tc.Join("channel", false);
         }
 
         private void MessageReceived(ClientSocketBase<TmqMessage> client, TmqMessage message)
         {
+            switch (message.Type)
+            {
+                case MessageType.Response:
+                    if (message.ContentType == ModelTypes.ProducerResponse)
+                    {
+                        ProducerResponse response = message.GetJsonContent<ProducerResponse>().Result;
+                        Console.WriteLine($"response received for: {response.RequestGuid}");
+                    }
+
+                    break;
+
+                case MessageType.Channel:
+                    if (message.ContentType == ModelTypes.ProducerEvent)
+                    {
+                        ProducerEvent e = message.GetJsonContent<ProducerEvent>().Result;
+                        Console.WriteLine(message.Target == "ack-channel"
+                                              ? $"ack channel received: {e.No}"
+                                              : $"channel received: {e.No}");
+                    }
+
+                    break;
+            }
+
             //queue messages will trigger here
         }
     }

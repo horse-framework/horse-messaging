@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Twino.Protocols.TMQ
 {
@@ -151,6 +152,23 @@ namespace Twino.Protocols.TMQ
 
             Content = new MemoryStream(Encoding.UTF8.GetBytes(content));
             CalculateLengths();
+        }
+
+        /// <summary>
+        /// Sets message content as json serialized object
+        /// </summary>
+        public async Task SetJsonContent(object value)
+        {
+            Content = new MemoryStream();
+            await System.Text.Json.JsonSerializer.SerializeAsync(Content, value, value.GetType());
+        }
+
+        /// <summary>
+        /// Reads content and deserializes to from json string
+        /// </summary>
+        public async Task<TModel> GetJsonContent<TModel>()
+        {
+            return await System.Text.Json.JsonSerializer.DeserializeAsync<TModel>(Content);
         }
 
         #endregion

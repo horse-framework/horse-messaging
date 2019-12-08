@@ -479,6 +479,33 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
+        public async Task<bool> PushJson(string channel, ushort contentType, object jsonObject, bool waitAcknowledge)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Channel;
+            message.ContentType = contentType;
+            message.Target = channel;
+            message.Content = new MemoryStream();
+            message.AcknowledgeRequired = waitAcknowledge;
+            await System.Text.Json.JsonSerializer.SerializeAsync(message.Content, jsonObject, jsonObject.GetType());
+
+            if (waitAcknowledge)
+                message.MessageId = UniqueIdGenerator.Create();
+
+            return await WaitForAcknowledge(message, waitAcknowledge);
+        }
+
+        /// <summary>
+        /// Pushes a message to a queue
+        /// </summary>
+        public async Task<bool> Push(string channel, ushort contentType, string content, bool waitAcknowledge)
+        {
+            return await Push(channel, contentType, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge);
+        }
+        
+        /// <summary>
+        /// Pushes a message to a queue
+        /// </summary>
         public async Task<bool> Push(string channel, ushort contentType, MemoryStream content, bool waitAcknowledge)
         {
             TmqMessage message = new TmqMessage();
