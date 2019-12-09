@@ -8,7 +8,7 @@ namespace Twino.MQ.Helpers
         {
             string value;
             bool found = dictionary.TryGetValue(key, out value);
-            return found ? value : null;
+            return found ? value.Trim() : null;
         }
     }
 }

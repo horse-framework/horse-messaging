@@ -76,6 +76,8 @@ namespace Twino.Protocols.WebSocket
 
             result.Socket = socket;
             info.State = ConnectionStates.Pipe;
+            info.Protocol = this;
+            info.Socket = socket;
             socket.Disconnected += socketDisconnected;
             _server.Pinger.Add(socket);
 

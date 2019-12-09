@@ -39,6 +39,7 @@ namespace Twino.Protocols.TMQ
 
         public TmqServerSocket(ITwinoServer server, IConnectionInfo info, IUniqueIdGenerator generator, bool useUniqueMessageId = true)
         {
+            Client = info.Client;
             Server = server;
             Info = info;
             Stream = info.GetStream();

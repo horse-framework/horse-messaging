@@ -57,6 +57,7 @@ namespace Twino.Protocols.TMQ
 
             result.PipeConnection = true;
             info.State = ConnectionStates.Pipe;
+            info.Protocol = this;
 
             return result;
         }

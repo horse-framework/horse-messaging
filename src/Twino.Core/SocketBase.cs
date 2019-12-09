@@ -56,11 +56,6 @@ namespace Twino.Core
         private volatile bool _disconnectedWarn;
 
         /// <summary>
-        /// If true, messages will be proceed async
-        /// </summary>
-        protected bool AsyncMessaging { get; set; }
-
-        /// <summary>
         /// After endWrite called, this value will be set as true.
         /// This value is used for manipulating SslStream multiple write operation
         /// </summary>

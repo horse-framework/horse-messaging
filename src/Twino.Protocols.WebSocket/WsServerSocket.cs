@@ -25,6 +25,7 @@ namespace Twino.Protocols.WebSocket
 
         public WsServerSocket(ITwinoServer server, IConnectionInfo info)
         {
+            Client = info.Client;
             Server = server;
             Info = info;
             Stream = info.GetStream();
