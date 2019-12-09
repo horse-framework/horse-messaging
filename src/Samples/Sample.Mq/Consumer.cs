@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading;
 using Sample.Mq.Models;
 using Twino.Client.TMQ;
@@ -36,6 +37,7 @@ namespace Sample.Mq
 
             _timer = new Timer(o =>
             {
+                return;
                 if (_connector.IsConnected)
                 {
                     TmqClient client = _connector.GetClient();

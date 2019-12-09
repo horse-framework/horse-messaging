@@ -53,7 +53,7 @@ namespace Sample.Mq
                     client.PushJson("channel", ModelTypes.ProducerEvent, e, false);
                     client.PushJson("ack-channel", ModelTypes.ProducerEvent, e, false);
                 }
-            }, null, 6000, 6000);
+            }, null, 1000, 2000);
         }
 
         private void Connected(SocketBase client)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Sample.Mq.Models;
 using Sample.Mq.Server;
 using Twino.Client.TMQ;
@@ -36,6 +37,7 @@ namespace Sample.Mq
 
             Channel ackChannel = server.CreateChannel("ack-channel");
             ackChannel.Options.RequestAcknowledge = true;
+            ackChannel.Options.MessageQueuing = true;
             ackChannel.CreateQueue(ModelTypes.ProducerEvent);
 
             Console.WriteLine("Server started");
@@ -46,15 +48,20 @@ namespace Sample.Mq
         {
             StartServer();
 
-            Thread.Sleep(2000);
-            Producer producer = new Producer();
-            producer.Start();
+            ThreadPool.QueueUserWorkItem(async s =>
+            {
+                await Task.Delay(1000);
+                Producer producer = new Producer();
+                producer.Start();
+            }, null);
 
-            //wait for first messages of the producer, so we can see queue messages are keeping if there are no receivers or not.
-            Thread.Sleep(4000);
 
-            Consumer consumer = new Consumer();
-            consumer.Start();
+            ThreadPool.QueueUserWorkItem(async s =>
+            {
+                await Task.Delay(6000);
+                Consumer consumer = new Consumer();
+                consumer.Start();
+            }, null);
 
             //all operations are async, do not let the application to close
             _server.Server.BlockWhileRunning();
