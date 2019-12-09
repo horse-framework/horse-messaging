@@ -8,7 +8,7 @@
         <PackageTags>twino,http,client,factory,ioc,dependency,injection,service</PackageTags>
         <AssemblyVersion>2.0.1</AssemblyVersion>
         <FileVersion>2.0.1</FileVersion>
-        <PackageVersion>2.0.1</PackageVersion>
+        <PackageVersion>2.0.1-beta</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü</Authors>
         <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
@@ -17,7 +17,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Twino.Ioc\Twino.Ioc.csproj"/>
+        <ProjectReference Include="..\Twino.Ioc\Twino.Ioc.csproj" />
     </ItemGroup>
 
 </Project>

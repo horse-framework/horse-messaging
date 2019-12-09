@@ -8,7 +8,7 @@
         <PackageTags>twino,server,tmq,messaging,queue,mq</PackageTags>
         <AssemblyVersion>2.0.1</AssemblyVersion>
         <FileVersion>2.0.1</FileVersion>
-        <PackageVersion>2.0.1</PackageVersion>
+        <PackageVersion>2.0.1-beta</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü</Authors>
         <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
@@ -17,8 +17,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj"/>
-        <ProjectReference Include="..\Twino.Server\Twino.Server.csproj"/>
+        <ProjectReference Include="..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
+        <ProjectReference Include="..\Twino.Server\Twino.Server.csproj" />
     </ItemGroup>
 
 </Project>

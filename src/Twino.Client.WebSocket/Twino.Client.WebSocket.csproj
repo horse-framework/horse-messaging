@@ -8,7 +8,7 @@
         <PackageTags>twino,websocket,client</PackageTags>
         <AssemblyVersion>2.0.1</AssemblyVersion>
         <FileVersion>2.0.1</FileVersion>
-        <PackageVersion>2.0.1</PackageVersion>
+        <PackageVersion>2.0.1-beta</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü</Authors>
         <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
@@ -17,8 +17,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Twino.Client.Connectors\Twino.Client.Connectors.csproj"/>
-        <ProjectReference Include="..\Twino.Protocols.WebSocket\Twino.Protocols.WebSocket.csproj"/>
+        <ProjectReference Include="..\Twino.Client.Connectors\Twino.Client.Connectors.csproj" />
+        <ProjectReference Include="..\Twino.Protocols.WebSocket\Twino.Protocols.WebSocket.csproj" />
     </ItemGroup>
 
 </Project>
