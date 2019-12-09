@@ -122,25 +122,26 @@ namespace Twino.MQ
         /// </summary>
         private async Task ProcessDeliveries()
         {
-            _removingDeliveries.Clear();
+            var rdlist = new List<Tuple<bool, MessageDelivery>>(16);
+            //_removingDeliveries.Clear();
 
             lock (_deliveries)
                 foreach (MessageDelivery delivery in _deliveries)
                 {
                     //message acknowledge or came here accidently :)
                     if (delivery.IsAcknowledged || !delivery.AcknowledgeDeadline.HasValue)
-                        _removingDeliveries.Add(new Tuple<bool, MessageDelivery>(false, delivery));
+                        rdlist.Add(new Tuple<bool, MessageDelivery>(false, delivery));
 
                     //expired
                     else if (DateTime.UtcNow > delivery.AcknowledgeDeadline.Value)
-                        _removingDeliveries.Add(new Tuple<bool, MessageDelivery>(true, delivery));
+                        rdlist.Add(new Tuple<bool, MessageDelivery>(true, delivery));
                 }
 
-            if (_removingDeliveries.Count == 0)
+            if (rdlist.Count == 0)
                 return;
 
             bool released = false;
-            foreach (Tuple<bool, MessageDelivery> tuple in _removingDeliveries)
+            foreach (Tuple<bool, MessageDelivery> tuple in rdlist)
             {
                 MessageDelivery delivery = tuple.Item2;
                 if (tuple.Item1)
@@ -155,7 +156,7 @@ namespace Twino.MQ
                 }
             }
 
-            IEnumerable<MessageDelivery> rdm = _removingDeliveries.Select(x => x.Item2);
+            IEnumerable<MessageDelivery> rdm = rdlist.Select(x => x.Item2);
             lock (_deliveries)
                 _deliveries.RemoveAll(x => rdm.Contains(x));
         }

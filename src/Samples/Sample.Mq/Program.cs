@@ -3,10 +3,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sample.Mq.Models;
 using Sample.Mq.Server;
-using Twino.Client.TMQ;
 using Twino.MQ;
 using Twino.MQ.Options;
-using Twino.Protocols.TMQ;
 using Twino.Server;
 
 namespace Sample.Mq
@@ -38,7 +36,9 @@ namespace Sample.Mq
             Channel ackChannel = server.CreateChannel("ack-channel");
             ackChannel.Options.RequestAcknowledge = true;
             ackChannel.Options.MessageQueuing = true;
-            ackChannel.CreateQueue(ModelTypes.ProducerEvent);
+            ackChannel.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
+            ChannelQueue queue = ackChannel.CreateQueue(ModelTypes.ProducerEvent).Result;
+            queue.Options.MessageQueuing = true;
 
             Console.WriteLine("Server started");
             _server = server;
@@ -58,7 +58,7 @@ namespace Sample.Mq
 
             ThreadPool.QueueUserWorkItem(async s =>
             {
-                await Task.Delay(6000);
+                await Task.Delay(5000);
                 Consumer consumer = new Consumer();
                 consumer.Start();
             }, null);

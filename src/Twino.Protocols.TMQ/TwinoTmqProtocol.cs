@@ -1,4 +1,5 @@
 using System;
+using System.Net.Mime;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Core.Protocols;
@@ -113,12 +114,8 @@ namespace Twino.Protocols.TMQ
             while (info.Client != null && info.Client.Connected)
             {
                 TmqMessage message = await reader.Read(info.GetStream());
-
                 if (message == null)
-                {
-                    info.Close();
-                    return;
-                }
+                    continue;
 
                 if (message.Ttl < 0)
                     continue;

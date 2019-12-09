@@ -22,6 +22,7 @@ namespace Sample.Mq
                 client.ClientId = "consumer-id";
                 client.SetClientType("consumer");
                 client.SetClientToken("anonymous");
+                client.AutoAcknowledge = true;
 
                 return client;
             });
@@ -73,7 +74,7 @@ namespace Sample.Mq
                     if (message.ContentType == ModelTypes.ProducerResponse)
                     {
                         ProducerResponse response = message.GetJsonContent<ProducerResponse>().Result;
-                        Console.WriteLine($"response received for: {response.RequestGuid}");
+                        Console.WriteLine($"> response received for: {response.RequestGuid}");
                     }
 
                     break;
@@ -83,8 +84,8 @@ namespace Sample.Mq
                     {
                         ProducerEvent e = message.GetJsonContent<ProducerEvent>().Result;
                         Console.WriteLine(message.Target == "ack-channel"
-                                              ? $"ack channel received: {e.No}"
-                                              : $"channel received: {e.No}");
+                                              ? $"> ACK Channel received: #{e.No}"
+                                              : $"> NON-ACK Channel received: #{e.No}");
                     }
 
                     break;

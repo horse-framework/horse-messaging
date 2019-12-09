@@ -50,7 +50,7 @@ namespace Twino.Protocols.TMQ
 
             if (read < REQUIRED_SIZE)
             {
-                int reread = await stream.ReadAsync(bytes, read, bytes.Length - REQUIRED_SIZE);
+                int reread = await stream.ReadAsync(bytes, read, bytes.Length - read);
                 if (reread + read < REQUIRED_SIZE)
                     return null;
             }
@@ -142,13 +142,15 @@ namespace Twino.Protocols.TMQ
             if (message.Content == null)
                 message.Content = new MemoryStream();
 
-            ulong total = 0;
+            ulong left = message.Length;
+            ulong blen = (ulong) _buffer.Length;
             do
             {
-                int read = await stream.ReadAsync(_buffer, 0, _buffer.Length);
-                total += (uint) read;
+                int rcount = (int) (left > blen ? blen : left);
+                int read = await stream.ReadAsync(_buffer, 0, rcount);
+                left -= (uint) read;
                 await message.Content.WriteAsync(_buffer, 0, read);
-            } while (total < message.Length);
+            } while (left > 0);
         }
 
         /// <summary>
