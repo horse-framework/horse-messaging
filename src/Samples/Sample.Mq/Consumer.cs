@@ -54,6 +54,8 @@ namespace Sample.Mq
 
         private void Connected(SocketBase client)
         {
+            Console.WriteLine("consumer connection established");
+            
             TmqClient tc = (TmqClient) client;
             tc.AutoAcknowledge = true;
 

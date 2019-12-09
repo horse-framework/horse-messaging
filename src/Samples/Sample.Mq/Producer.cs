@@ -58,6 +58,7 @@ namespace Sample.Mq
 
         private void Connected(SocketBase client)
         {
+            Console.WriteLine("producer connection established");
             TmqClient tmq = (TmqClient) client;
             if (_firstConnection)
             {

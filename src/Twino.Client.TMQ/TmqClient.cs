@@ -127,6 +127,17 @@ namespace Twino.Client.TMQ
         }
 
         /// <summary>
+        /// Sets client name information of the client
+        /// </summary>
+        public void SetClientName(string name)
+        {
+            if (Data.Properties.ContainsKey(TmqHeaders.CLIENT_NAME))
+                Data.Properties[TmqHeaders.CLIENT_NAME] = name;
+            else
+                Data.Properties.Add(TmqHeaders.CLIENT_NAME, name);
+        }
+        
+        /// <summary>
         /// Sets client token information of the client
         /// </summary>
         public void SetClientToken(string token)

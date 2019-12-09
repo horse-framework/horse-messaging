@@ -31,6 +31,7 @@ namespace Sample.Mq
             MqServer server = new MqServer(serverOptions, mqOptions, new ClientAuthenticator(), new Authorization());
             server.SetDefaultDeliveryHandler(new DeliveryHandler());
             server.SetDefaultChannelHandler(new ChannelHandler(), new ChannelAuthenticator());
+
             server.Start();
 
             Channel ackChannel = server.CreateChannel("ack-channel");
