@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading;
 using Sample.Mq.Models;
 using Twino.Client.TMQ;
@@ -36,9 +35,8 @@ namespace Sample.Mq
             _connector.MessageReceived += MessageReceived;
             _connector.Run();
 
-            _timer = new Timer(o =>
+            _timer = new Timer(async o =>
             {
-                return;
                 if (_connector.IsConnected)
                 {
                     TmqClient client = _connector.GetClient();
@@ -49,8 +47,10 @@ namespace Sample.Mq
                     ConsumerRequest request = new ConsumerRequest();
                     request.Guid = Guid.NewGuid().ToString();
 
-                    message.SetJsonContent(request).Wait();
-                    client.Send(message);
+                    await message.SetJsonContent(request);
+                    TmqMessage response = await client.Request(message);
+                    ProducerResponse rmodel = await response.GetJsonContent<ProducerResponse>();
+                    Console.WriteLine($"> response received for: {rmodel.RequestGuid}");
                 }
             }, null, 6000, 6000);
         }
@@ -58,7 +58,7 @@ namespace Sample.Mq
         private void Connected(SocketBase client)
         {
             Console.WriteLine("consumer connection established");
-            
+
             TmqClient tc = (TmqClient) client;
             tc.AutoAcknowledge = true;
 
@@ -70,15 +70,6 @@ namespace Sample.Mq
         {
             switch (message.Type)
             {
-                case MessageType.Response:
-                    if (message.ContentType == ModelTypes.ProducerResponse)
-                    {
-                        ProducerResponse response = message.GetJsonContent<ProducerResponse>().Result;
-                        Console.WriteLine($"> response received for: {response.RequestGuid}");
-                    }
-
-                    break;
-
                 case MessageType.Channel:
                     if (message.ContentType == ModelTypes.ProducerEvent)
                     {

@@ -38,7 +38,7 @@ namespace Sample.Mq
 
             _timer = new Timer(o =>
             {
-                if (_connector.IsConnected && _eventCount < 5)
+                if (_connector.IsConnected)
                 {
                     TmqClient client = _connector.GetClient();
 
@@ -50,10 +50,10 @@ namespace Sample.Mq
                     Console.WriteLine($"Sending package #{e.No}");
                     _eventCount++;
 
-                    //client.PushJson("channel", ModelTypes.ProducerEvent, e, false);
+                    client.PushJson("channel", ModelTypes.ProducerEvent, e, false);
                     client.PushJson("ack-channel", ModelTypes.ProducerEvent, e, false);
                 }
-            }, null, 500, 500);
+            }, null, 1000, 1000);
         }
 
         private void Connected(SocketBase client)
