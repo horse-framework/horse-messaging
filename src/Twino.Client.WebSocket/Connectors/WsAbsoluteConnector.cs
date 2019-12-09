@@ -10,7 +10,8 @@ namespace Twino.Client.WebSocket.Connectors
     /// </summary>
     public class WsAbsoluteConnector : AbsoluteConnector<TwinoWebSocket, WebSocketMessage>
     {
-        public WsAbsoluteConnector(TimeSpan reconnectInterval) : base(reconnectInterval)
+        public WsAbsoluteConnector(TimeSpan reconnectInterval, Func<TwinoWebSocket> createInstance = null)
+            : base(reconnectInterval, createInstance)
         {
         }
     }

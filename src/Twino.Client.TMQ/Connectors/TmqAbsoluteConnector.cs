@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography;
 
 namespace Twino.Client.TMQ.Connectors
 {
@@ -7,7 +8,8 @@ namespace Twino.Client.TMQ.Connectors
     /// </summary>
     public class TmqAbsoluteConnector : TmqStickyConnector
     {
-        public TmqAbsoluteConnector(TimeSpan reconnectInterval) : base(reconnectInterval)
+        public TmqAbsoluteConnector(TimeSpan reconnectInterval, Func<TmqClient> createInstance = null) 
+            : base(reconnectInterval, createInstance)
         {
         }
     }

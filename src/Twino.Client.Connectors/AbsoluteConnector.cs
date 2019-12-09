@@ -72,7 +72,8 @@ namespace Twino.Client.Connectors
 
         #endregion
 
-        public AbsoluteConnector(TimeSpan reconnectInterval) : base(reconnectInterval)
+        public AbsoluteConnector(TimeSpan reconnectInterval, Func<TClient> createInstance = null)
+            : base(reconnectInterval, createInstance)
         {
             MessageExpiration = TimeSpan.Zero;
             MaximumTryCount = 0;

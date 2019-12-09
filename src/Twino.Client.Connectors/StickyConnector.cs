@@ -26,7 +26,8 @@ namespace Twino.Client.Connectors
 
         private Thread _thread;
 
-        public StickyConnector(TimeSpan reconnectInterval)
+        public StickyConnector(TimeSpan reconnectInterval, Func<TClient> createInstance = null)
+            : base(createInstance)
         {
             Interval = reconnectInterval;
         }

@@ -9,7 +9,8 @@ namespace Twino.Client.TMQ.Connectors
     /// </summary>
     public class TmqStickyConnector : StickyConnector<TmqClient, TmqMessage>
     {
-        public TmqStickyConnector(TimeSpan reconnectInterval) : base(reconnectInterval)
+        public TmqStickyConnector(TimeSpan reconnectInterval, Func<TmqClient> createInstance = null)
+            : base(reconnectInterval, createInstance)
         {
         }
     }

@@ -13,6 +13,15 @@ namespace Twino.Client.Connectors
     public class NecessityConnector<TClient, TMessage> : ConnectorBase<TClient, TMessage>
         where TClient : ClientSocketBase<TMessage>, new()
     {
+        public NecessityConnector(Func<TClient> createInstance)
+            : base(createInstance)
+        {
+        }
+
+        public NecessityConnector()
+        {
+        }
+
         /// <summary>
         /// Disconnects from the server
         /// </summary>

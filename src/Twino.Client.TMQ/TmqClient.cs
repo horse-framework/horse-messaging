@@ -113,6 +113,32 @@ namespace Twino.Client.TMQ
 
         #endregion
 
+        #region Connection Data
+
+        /// <summary>
+        /// Sets client type information of the client
+        /// </summary>
+        public void SetClientType(string type)
+        {
+            if (Data.Properties.ContainsKey(TmqHeaders.CLIENT_TYPE))
+                Data.Properties[TmqHeaders.CLIENT_TYPE] = type;
+            else
+                Data.Properties.Add(TmqHeaders.CLIENT_TYPE, type);
+        }
+
+        /// <summary>
+        /// Sets client token information of the client
+        /// </summary>
+        public void SetClientToken(string token)
+        {
+            if (Data.Properties.ContainsKey(TmqHeaders.CLIENT_TOKEN))
+                Data.Properties[TmqHeaders.CLIENT_TOKEN] = token;
+            else
+                Data.Properties.Add(TmqHeaders.CLIENT_TOKEN, token);
+        }
+
+        #endregion
+
         #region Connect - Read
 
         /// <summary>
@@ -315,7 +341,7 @@ namespace Twino.Client.TMQ
 
                 case MessageType.Acknowledge:
                     _follower.ProcessAcknowledge(message);
-                    
+
                     if (CatchAcknowledgeMessages)
                         SetOnMessageReceived(message);
                     break;
@@ -326,7 +352,7 @@ namespace Twino.Client.TMQ
                     if (CatchResponseMessages)
                         SetOnMessageReceived(message);
                     break;
-                
+
                 default:
                     if (message.AcknowledgeRequired && AutoAcknowledge)
                         await SendAsync(message.CreateAcknowledge());
@@ -502,7 +528,7 @@ namespace Twino.Client.TMQ
         {
             return await Push(channel, contentType, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge);
         }
-        
+
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>

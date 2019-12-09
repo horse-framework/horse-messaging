@@ -17,13 +17,19 @@ namespace Sample.Mq
 
         public Producer()
         {
-            _connector = new TmqAbsoluteConnector(TimeSpan.FromSeconds(5));
+            _connector = new TmqAbsoluteConnector(TimeSpan.FromSeconds(5), () =>
+            {
+                TmqClient client = new TmqClient();
+                client.ClientId = "producer-id";
+                client.SetClientType("producer");
+                client.SetClientToken("S3cr37_pr0duc3r_t0k3n");
+
+                return client;
+            });
         }
 
         public void Start()
         {
-            _connector.AddProperty(TmqHeaders.CLIENT_TYPE, "producer");
-            _connector.AddProperty(TmqHeaders.CLIENT_TOKEN, "S3cr37_pr0duc3r_t0k3n");
             _connector.AddHost("tmq://localhost:48050");
 
             _connector.Connected += Connected;

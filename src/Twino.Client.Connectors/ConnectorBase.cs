@@ -74,6 +74,12 @@ namespace Twino.Client.Connectors
         /// </summary>
         public bool IsRunning => _running;
 
+        /// <summary>
+        /// Called to create new instance of the client.
+        /// If null, default constructor will be used.
+        /// </summary>
+        private Func<TClient> _createInstance;
+
         public TClient GetClient()
         {
             return _client;
@@ -82,7 +88,13 @@ namespace Twino.Client.Connectors
         #endregion
 
         protected ConnectorBase()
+            : this(null)
         {
+        }
+
+        protected ConnectorBase(Func<TClient> createInstance)
+        {
+            _createInstance = createInstance;
             _hosts = new List<string>();
         }
 
@@ -172,7 +184,9 @@ namespace Twino.Client.Connectors
         {
             Disconnect();
 
-            _client = new TClient();
+            _client = _createInstance != null
+                          ? _createInstance()
+                          : new TClient();
 
             if (_data != null && _data.Properties != null)
                 lock (_data)

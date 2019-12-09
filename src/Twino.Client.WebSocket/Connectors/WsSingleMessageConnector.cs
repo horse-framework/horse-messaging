@@ -1,3 +1,4 @@
+using System;
 using Twino.Client.Connectors;
 using Twino.Protocols.WebSocket;
 
@@ -8,5 +9,9 @@ namespace Twino.Client.WebSocket.Connectors
     /// </summary>
     public class WsSingleMessageConnector : SingleMessageConnector<TwinoWebSocket, WebSocketMessage>
     {
+        public WsSingleMessageConnector(Func<TwinoWebSocket> createInstance = null)
+            : base(createInstance)
+        {
+        }
     }
 }

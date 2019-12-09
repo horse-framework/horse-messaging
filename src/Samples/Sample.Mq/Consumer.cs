@@ -15,13 +15,19 @@ namespace Sample.Mq
 
         public Consumer()
         {
-            _connector = new TmqStickyConnector(TimeSpan.FromSeconds(5));
+            _connector = new TmqStickyConnector(TimeSpan.FromSeconds(5), () =>
+            {
+                TmqClient client = new TmqClient();
+                client.ClientId = "consumer-id";
+                client.SetClientType("consumer");
+                client.SetClientToken("anonymous");
+
+                return client;
+            });
         }
 
         public void Start()
         {
-            _connector.AddProperty(TmqHeaders.CLIENT_TYPE, "consumer");
-            _connector.AddProperty(TmqHeaders.CLIENT_TOKEN, "anonymous");
             _connector.AddHost("tmq://localhost:48050");
 
             _connector.Connected += Connected;

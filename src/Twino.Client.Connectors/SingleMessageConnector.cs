@@ -1,4 +1,5 @@
-﻿using Twino.Core;
+﻿using System;
+using Twino.Core;
 
 namespace Twino.Client.Connectors
 {
@@ -9,6 +10,15 @@ namespace Twino.Client.Connectors
     public class SingleMessageConnector<TClient, TMessage> : NecessityConnector<TClient, TMessage>
         where TClient : ClientSocketBase<TMessage>, new()
     {
+        public SingleMessageConnector(Func<TClient> createInstance)
+            : base(createInstance)
+        {
+        }
+
+        public SingleMessageConnector()
+        {
+        }
+
         /// <summary>
         /// Connects to the server, sends the message and disconnects after message is sent.
         /// </summary>
