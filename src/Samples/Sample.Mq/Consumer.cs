@@ -85,8 +85,6 @@ namespace Sample.Mq
 
                     break;
             }
-
-            //queue messages will trigger here
         }
     }
 }

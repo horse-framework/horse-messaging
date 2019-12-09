@@ -38,6 +38,7 @@ namespace Sample.Mq
             ackChannel.CreateQueue(ModelTypes.ProducerEvent);
 
             Console.WriteLine("Server started");
+            _server = server;
         }
 
         static void Main(string[] args)
