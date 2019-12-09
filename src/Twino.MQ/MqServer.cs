@@ -98,6 +98,14 @@ namespace Twino.MQ
         /// <summary>
         /// Creates new Messaging Queue Server
         /// </summary>
+        public MqServer(ServerOptions serverOptions, IClientAuthenticator authenticator = null, IClientAuthorization authorization = null)
+            : this(serverOptions, null, authenticator, authorization)
+        {
+        }
+
+        /// <summary>
+        /// Creates new Messaging Queue Server
+        /// </summary>
         public MqServer(ServerOptions serverOptions,
                         MqServerOptions options,
                         IClientAuthenticator authenticator = null,
