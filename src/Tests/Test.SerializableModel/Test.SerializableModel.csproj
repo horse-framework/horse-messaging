@@ -19,7 +19,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\Twino.Client.WebSocket\Twino.Client.WebSocket.csproj" />
-      <ProjectReference Include="..\..\Twino.Protocols.WebSocket.Requests\Twino.Protocols.WebSocket.Requests.csproj" />
       <ProjectReference Include="..\..\Twino.SerializableModel\Twino.SerializableModel.csproj" />
     </ItemGroup>
 
