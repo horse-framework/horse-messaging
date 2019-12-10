@@ -22,5 +22,15 @@ namespace Twino.Protocols.Http
             server.UseProtocol(protocol);
             return server;
         }
+        /// <summary>
+        /// Uses HTTP Protocol and accepts HTTP connections
+        /// </summary>
+        public static ITwinoServer UseHttp(this ITwinoServer server, HttpRequestHandler action, string optionsFilename)
+        {
+            HttpMethodHandler handler = new HttpMethodHandler(action);
+            TwinoHttpProtocol protocol = new TwinoHttpProtocol(server, handler, HttpOptions.Load(optionsFilename));
+            server.UseProtocol(protocol);
+            return server;
+        }
     }
 }

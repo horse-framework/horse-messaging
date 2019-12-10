@@ -1,3 +1,7 @@
+using System.Collections.Generic;
+using System.Linq;
+using Newtonsoft.Json.Linq;
+
 namespace Twino.Protocols.Http
 {
     /// <summary>
@@ -42,6 +46,44 @@ namespace Twino.Protocols.Http
                                             }
                    };
         }
-        
+
+        /// <summary>
+        /// Loads options from filename
+        /// </summary>
+        public static HttpOptions Load(string filename)
+        {
+            string json = System.IO.File.ReadAllText(filename);
+            JObject obj = JObject.Parse(json);
+
+            HttpOptions options = new HttpOptions();
+
+            options.HttpConnectionTimeMax = obj["HttpConnectionTimeMax"].Value<int>();
+            options.MaximumRequestLength = obj["MaximumRequestLength"].Value<int>();
+            options.Hostnames = obj["Hostnames"].Values<string>().ToArray();
+
+            string[] sx = obj["SupportedEncodings"].Values<string>().ToArray();
+            List<ContentEncodings> encodings = new List<ContentEncodings>();
+            foreach (string s in sx)
+            {
+                if (string.IsNullOrWhiteSpace(s))
+                    continue;
+
+                switch (s.Trim().ToLower())
+                {
+                    case "none": encodings.Add(ContentEncodings.None); break;
+                    case "gzip": encodings.Add(ContentEncodings.Gzip); break;
+                    case "br": encodings.Add(ContentEncodings.Brotli); break;
+                    case "brotli": encodings.Add(ContentEncodings.Brotli); break;
+                    case "deflate": encodings.Add(ContentEncodings.Deflate); break;
+                }
+            }
+
+            if (encodings.Count == 0)
+                encodings.Add(ContentEncodings.None);
+            
+            options.SupportedEncodings = encodings.ToArray();
+
+            return options;
+        }
     }
 }
