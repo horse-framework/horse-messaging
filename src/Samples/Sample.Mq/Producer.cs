@@ -50,8 +50,8 @@ namespace Sample.Mq
                     Console.WriteLine($"Sending package #{e.No}");
                     _eventCount++;
 
-                    client.PushJson("channel", ModelTypes.ProducerEvent, e, false);
-                    client.PushJson("ack-channel", ModelTypes.ProducerEvent, e, false);
+                    client.PushJson("BasicChannel", ModelTypes.ProducerEvent, e, false);
+                    client.PushJson("AckChannel", ModelTypes.ProducerEvent, e, false);
                 }
             }, null, 1000, 1000);
         }
@@ -63,7 +63,7 @@ namespace Sample.Mq
             if (_firstConnection)
             {
                 _firstConnection = false;
-                tmq.CreateQueue("channel", ModelTypes.ProducerEvent, false).Wait();
+                tmq.CreateQueue("BasicChannel", ModelTypes.ProducerEvent, false).Wait();
             }
         }
 

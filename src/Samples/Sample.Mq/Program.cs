@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Sample.Mq.Models;
 using Sample.Mq.Server;
 using Twino.MQ;
 using Twino.MQ.Options;
@@ -22,24 +21,19 @@ namespace Sample.Mq
         {
             ServerOptions serverOptions = ServerOptions.CreateDefault();
             serverOptions.Hosts[0].Port = 48050;
-            MqServerOptions mqOptions = new MqServerOptions();
-            mqOptions.AllowMultipleQueues = true;
-            mqOptions.UseMessageId = true;
-            mqOptions.AllowedContentTypes = new[] {ModelTypes.ProducerEvent};
 
-            MqServer server = new MqServer(serverOptions, mqOptions, new ClientAuthenticator(), new Authorization());
-            server.SetDefaultDeliveryHandler(new DeliveryHandler());
-            server.SetDefaultChannelHandler(new ChannelHandler(), new ChannelAuthenticator());
+            ServerBuilder builder = new ServerBuilder();
+            builder.LoadFromFile("options.json");
+            builder.AddServerOptions(serverOptions);
+            builder.AddAuthenticator(new ClientAuthenticator());
+            builder.AddAuthorization(new Authorization());
+            builder.AddDefaultDeliveryHandler(new DeliveryHandler());
+            builder.AddDefaultChannelHandler(new ChannelHandler());
+            builder.AddDefaultChannelAuthenticator(new ChannelAuthenticator());
 
+            MqServer server = builder.CreateServer();
             server.Start();
-
-            Channel ackChannel = server.CreateChannel("ack-channel");
-            ackChannel.Options.RequestAcknowledge = true;
-            ackChannel.Options.MessageQueuing = true;
-            ackChannel.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
-            ChannelQueue queue = ackChannel.CreateQueue(ModelTypes.ProducerEvent).Result;
-            queue.Options.MessageQueuing = true;
-
+            
             Console.WriteLine("Server started");
             _server = server;
         }

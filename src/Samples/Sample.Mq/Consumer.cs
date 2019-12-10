@@ -62,8 +62,8 @@ namespace Sample.Mq
             TmqClient tc = (TmqClient) client;
             tc.AutoAcknowledge = true;
 
-            tc.Join("ack-channel", false);
-            tc.Join("channel", false);
+            tc.Join("AckChannel", false);
+            tc.Join("BasicChannel", false);
         }
 
         private void MessageReceived(ClientSocketBase<TmqMessage> client, TmqMessage message)
@@ -74,9 +74,9 @@ namespace Sample.Mq
                     if (message.ContentType == ModelTypes.ProducerEvent)
                     {
                         ProducerEvent e = message.GetJsonContent<ProducerEvent>().Result;
-                        Console.WriteLine(message.Target == "ack-channel"
-                                              ? $"> ACK Channel received: #{e.No}"
-                                              : $"> NON-ACK Channel received: #{e.No}");
+                        Console.WriteLine(message.Target == "AckChannel"
+                                              ? $"> AckChannel received: #{e.No}"
+                                              : $"> BasicChannel received: #{e.No}");
                     }
 
                     break;

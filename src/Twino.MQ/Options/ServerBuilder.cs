@@ -1,10 +1,17 @@
 using System;
+using System.Dynamic;
+using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
+using Newtonsoft.Json.Linq;
 using Twino.MQ.Security;
 using Twino.Server;
 
 namespace Twino.MQ.Options
 {
+    /// <summary>
+    /// Loads full options from a source and creates new server with these options
+    /// </summary>
     public class ServerBuilder
     {
         #region Properties
@@ -17,26 +24,35 @@ namespace Twino.MQ.Options
         private IChannelAuthenticator _channelAuthenticator;
         private IMessageDeliveryHandler _messageDeliveryHandler;
 
-        private object _object;
+        private JObject _object;
 
         #endregion
 
         #region Load
 
+        /// <summary>
+        /// Loads JSON from file
+        /// </summary>
         public void LoadFromFile(string filename)
         {
             LoadFromJson(System.IO.File.ReadAllText(filename));
         }
 
+        /// <summary>
+        /// Loads options from JSON string
+        /// </summary>
         public void LoadFromJson(string json)
         {
-            _object = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+            _object = JObject.Parse(json);
         }
 
         #endregion
 
         #region Create
 
+        /// <summary>
+        /// Creates server from loaded and added options
+        /// </summary>
         public MqServer CreateServer()
         {
             MqServerOptions options = new MqServerOptions();
@@ -53,51 +69,36 @@ namespace Twino.MQ.Options
             if (_clientHandler != null)
                 server.ClientHandler = _clientHandler;
 
-            Type type = _object.GetType();
-            PropertyInfo channelList = type.GetProperty("Channels");
-            if (channelList == null)
+            JObject channelToken = _object["Channels"] as JObject;
+            if (channelToken == null)
                 return server;
 
-            object channels = channelList.GetValue(_object);
-            Type channelsType = channels.GetType();
-            foreach (PropertyInfo prop in channelsType.GetProperties())
+            foreach (JProperty ctoken in channelToken.Properties())
             {
-                string channelName = prop.Name;
-                object optionsObject = prop.GetValue(channels);
                 ChannelOptions channelOptions;
-                if (optionsObject != null)
+                if (ctoken.HasValues)
                 {
-                    channelOptions = new ChannelOptions();
-                    SetChannelPropertyValues(optionsObject, channelOptions);
+                    channelOptions = CloneFrom(options);
+                    SetChannelPropertyValues(ctoken.Value, channelOptions);
                 }
                 else
                     channelOptions = options;
 
-                Channel channel = server.CreateChannel(channelName, channelOptions, _channelAuthenticator, _channelEventHandler, _messageDeliveryHandler);
-                if (optionsObject == null)
+                Channel channel = server.CreateChannel(ctoken.Name, channelOptions, _channelAuthenticator, _channelEventHandler, _messageDeliveryHandler);
+
+                JObject queueToken = ctoken.Value["Queues"] as JObject;
+                if (queueToken == null)
                     continue;
 
-                Type optionsType = optionsObject.GetType();
-                PropertyInfo qprop = optionsType.GetProperty("Queues");
-                if (qprop == null)
-                    continue;
-
-                object queuesObject = qprop.GetValue(optionsObject);
-                Type queuesType = queuesObject.GetType();
-
-                foreach (PropertyInfo qp in queuesType.GetProperties())
+                foreach (JProperty qtoken in queueToken.Properties())
                 {
-                    ushort contentType;
-                    bool parsed = ushort.TryParse(qp.Name, out contentType);
-                    if (!parsed)
-                        continue;
+                    ushort contentType = Convert.ToUInt16(qtoken.Name);
 
-                    object queueObject = qp.GetValue(queuesObject);
                     ChannelQueueOptions queueOptions;
-                    if (queueObject != null)
+                    if (qtoken.HasValues)
                     {
-                        queueOptions = new ChannelQueueOptions();
-                        SetQueuePropertyValues(queueObject, queueOptions);
+                        queueOptions = CloneFrom(channelOptions);
+                        SetQueuePropertyValues(qtoken.Value, queueOptions);
                     }
                     else
                         queueOptions = channelOptions;
@@ -109,21 +110,91 @@ namespace Twino.MQ.Options
             return server;
         }
 
-        private void SetQueuePropertyValues(object from, ChannelQueueOptions options)
+        private void SetQueuePropertyValues(JToken from, ChannelQueueOptions options)
         {
-            throw new NotImplementedException();
+            JToken messageQueuing = from["MessageQueuing"];
+            if (messageQueuing != null)
+                options.MessageQueuing = messageQueuing.Value<bool>();
+
+            JToken sendOnlyFirstAcquirer = from["SendOnlyFirstAcquirer"];
+            if (sendOnlyFirstAcquirer != null)
+                options.SendOnlyFirstAcquirer = sendOnlyFirstAcquirer.Value<bool>();
+
+            JToken requestAcknowledge = from["RequestAcknowledge"];
+            if (requestAcknowledge != null)
+                options.RequestAcknowledge = requestAcknowledge.Value<bool>();
+
+            JToken acknowledgeTimeout = from["AcknowledgeTimeout"];
+            if (acknowledgeTimeout != null)
+                options.AcknowledgeTimeout = TimeSpan.FromMilliseconds(acknowledgeTimeout.Value<int>());
+
+            JToken messagePendingTimeout = from["MessagePendingTimeout"];
+            if (messagePendingTimeout != null)
+                options.MessagePendingTimeout = TimeSpan.FromMilliseconds(messagePendingTimeout.Value<int>());
+
+            JToken useMessageId = from["UseMessageId"];
+            if (useMessageId != null)
+                options.UseMessageId = useMessageId.Value<bool>();
+
+            JToken waitAcknowledge = from["WaitAcknowledge"];
+            if (waitAcknowledge != null)
+                options.WaitAcknowledge = waitAcknowledge.Value<bool>();
+
+            JToken hideClientNames = from["HideClientNames"];
+            if (hideClientNames != null)
+                options.HideClientNames = hideClientNames.Value<bool>();
         }
 
-        private void SetChannelPropertyValues(object from, ChannelOptions options)
+        private void SetChannelPropertyValues(JToken from, ChannelOptions options)
         {
-            throw new NotImplementedException();
+            JToken allowedContentTypes = from["AllowedContentTypes"];
+            if (allowedContentTypes != null)
+                options.AllowedContentTypes = allowedContentTypes.Values<ushort>().ToArray();
+
+            JToken allowMultipleQueues = from["AllowMultipleQueues"];
+            if (allowMultipleQueues != null)
+                options.AllowMultipleQueues = allowMultipleQueues.Value<bool>();
+
+            SetQueuePropertyValues(from, options);
         }
 
-        private void SetServerPropertyValues(object from, MqServerOptions options)
+        private void SetServerPropertyValues(JObject from, MqServerOptions options)
         {
-            throw new NotImplementedException();
+            SetChannelPropertyValues(from, options);
         }
 
+        private ChannelOptions CloneFrom(ChannelOptions other)
+        {
+            ChannelOptions options = new ChannelOptions();
+            options.AllowedContentTypes = other.AllowedContentTypes;
+            options.AllowMultipleQueues = other.AllowMultipleQueues;
+            options.AcknowledgeTimeout = other.AcknowledgeTimeout;
+            options.MessageQueuing = other.MessageQueuing;
+            options.RequestAcknowledge = other.RequestAcknowledge;
+            options.WaitAcknowledge = other.WaitAcknowledge;
+            options.HideClientNames = other.HideClientNames;
+            options.MessagePendingTimeout = other.MessagePendingTimeout;
+            options.UseMessageId = other.UseMessageId;
+            options.SendOnlyFirstAcquirer = other.SendOnlyFirstAcquirer;
+
+            return options;
+        }
+        
+        private ChannelQueueOptions CloneFrom(ChannelQueueOptions other)
+        {
+            ChannelQueueOptions options = new ChannelQueueOptions();
+            options.AcknowledgeTimeout = other.AcknowledgeTimeout;
+            options.MessageQueuing = other.MessageQueuing;
+            options.RequestAcknowledge = other.RequestAcknowledge;
+            options.WaitAcknowledge = other.WaitAcknowledge;
+            options.HideClientNames = other.HideClientNames;
+            options.MessagePendingTimeout = other.MessagePendingTimeout;
+            options.UseMessageId = other.UseMessageId;
+            options.SendOnlyFirstAcquirer = other.SendOnlyFirstAcquirer;
+            
+            return options;
+        }
+        
         #endregion
 
         #region Add

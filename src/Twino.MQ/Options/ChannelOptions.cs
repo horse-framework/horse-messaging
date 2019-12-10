@@ -9,7 +9,7 @@ namespace Twino.MQ.Options
         /// If true, channel can have multiple queues with multiple content type.
         /// If false, each channel can only have one queue
         /// </summary>
-        public bool AllowMultipleQueues { get; set; }
+        public bool AllowMultipleQueues { get; set; } = true;
 
         /// <summary>
         /// Allowed content type for the channel

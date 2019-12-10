@@ -26,28 +26,28 @@ namespace Twino.MQ.Options
         /// <summary>
         /// When acknowledge is required, maximum duration for waiting acknowledge message
         /// </summary>
-        public TimeSpan AcknowledgeTimeout { get; set; }
+        public TimeSpan AcknowledgeTimeout { get; set; } = TimeSpan.FromSeconds(15);
 
         /// <summary>
         /// When message queuing is active, maximum time for a message wait
         /// </summary>
-        public TimeSpan MessagePendingTimeout { get; set; }
+        public TimeSpan MessagePendingTimeout { get; set; } = TimeSpan.Zero;
 
         /// <summary>
         /// If true, server creates unique id for each message.
         /// </summary>
-        public bool UseMessageId { get; set; }
-        
+        public bool UseMessageId { get; set; } = true;
+
         /// <summary>
         /// If true, queue does not send next message to receivers until acknowledge message received
         /// </summary>
-        public bool WaitAcknowledge { get; set; }
-        
+        public bool WaitAcknowledge { get; set; } = false;
+
         /// <summary>
         /// If true, server doesn't send client name to receivers in queueus.
         /// </summary>
         public bool HideClientNames { get; set; }
-        
+
         /// <summary>
         /// Creates clone of the object
         /// </summary>

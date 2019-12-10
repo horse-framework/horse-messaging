@@ -10,4 +10,10 @@
         <ProjectReference Include="..\..\Twino.MQ\Twino.MQ.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="options.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
 </Project>
