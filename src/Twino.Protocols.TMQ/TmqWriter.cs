@@ -89,17 +89,20 @@ namespace Twino.Protocols.TMQ
                 ms.WriteByte((byte) message.Length);
             else if (message.Length <= ushort.MaxValue)
             {
+                ms.WriteByte(253);
                 ushort len = (ushort) message.Length;
                 byte[] lenbytes = BitConverter.GetBytes(len);
                 await ms.WriteAsync(new[] {lenbytes[1], lenbytes[0]});
             }
             else if (message.Length <= uint.MaxValue)
             {
+                ms.WriteByte(254);
                 byte[] lb = BitConverter.GetBytes((uint) message.Length);
                 await ms.WriteAsync(new[] {lb[3], lb[2], lb[1], lb[0]});
             }
             else
             {
+                ms.WriteByte(255);
                 byte[] lb = BitConverter.GetBytes(message.Length);
                 await ms.WriteAsync(new[] {lb[7], lb[6], lb[5], lb[4], lb[3], lb[2], lb[1], lb[0]});
             }
