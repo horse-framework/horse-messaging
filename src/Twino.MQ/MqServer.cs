@@ -23,11 +23,6 @@ namespace Twino.MQ
         /// </summary>
         public MqServerOptions Options { get; }
 
-        /// <summary>
-        /// Twino Server options
-        /// </summary>
-        public ServerOptions ServerOptions { get; }
-
         private readonly SafeList<Channel> _channels;
 
         /// <summary>
@@ -98,20 +93,18 @@ namespace Twino.MQ
         /// <summary>
         /// Creates new Messaging Queue Server
         /// </summary>
-        public MqServer(ServerOptions serverOptions, IClientAuthenticator authenticator = null, IClientAuthorization authorization = null)
-            : this(serverOptions, null, authenticator, authorization)
+        public MqServer(IClientAuthenticator authenticator = null, IClientAuthorization authorization = null)
+            : this(null, authenticator, authorization)
         {
         }
 
         /// <summary>
         /// Creates new Messaging Queue Server
         /// </summary>
-        public MqServer(ServerOptions serverOptions,
-                        MqServerOptions options,
+        public MqServer(MqServerOptions options,
                         IClientAuthenticator authenticator = null,
                         IClientAuthorization authorization = null)
         {
-            ServerOptions = serverOptions;
             Options = options;
             Authenticator = authenticator;
             Authorization = authorization;
@@ -123,17 +116,6 @@ namespace Twino.MQ
         #endregion
 
         #region Start - Stop
-
-        /// <summary>
-        /// Starts server and accepts the TCP connections
-        /// </summary>
-        public void Start()
-        {
-            Server = new TwinoServer(ServerOptions);
-            MqConnectionHandler handler = new MqConnectionHandler(this);
-            Server.UseTmq(handler);
-            Server.Start();
-        }
 
         /// <summary>
         /// Stops server

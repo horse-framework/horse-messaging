@@ -32,19 +32,18 @@ namespace Test.Mq.Internal
         public int ClientConnected { get; set; }
         public int ClientDisconnected { get; set; }
 
+        public int Port { get; private set; }
+        
         internal void Initialize(int port)
         {
-            ServerOptions serverOptions = ServerOptions.CreateDefault();
-            serverOptions.Hosts[0].Port = port;
-            serverOptions.PingInterval = 3;
-            serverOptions.RequestTimeout = 4;
-
+            Port = port;
+            
             MqServerOptions mqOptions = new MqServerOptions();
             mqOptions.AllowedContentTypes = new[] {MessageA.ContentType, MessageB.ContentType, MessageC.ContentType};
             mqOptions.AllowMultipleQueues = true;
             mqOptions.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
 
-            Server = new MqServer(serverOptions, mqOptions);
+            Server = new MqServer(mqOptions);
             Server.SetDefaultChannelHandler(new TestChannelHandler(this), null);
             Server.SetDefaultDeliveryHandler(new TestDeliveryHandler(this));
             Server.ClientHandler = new TestClientHandler(this);
@@ -59,7 +58,14 @@ namespace Test.Mq.Internal
 
         public void Start()
         {
-            Server.Start();
+            ServerOptions serverOptions = ServerOptions.CreateDefault();
+            serverOptions.Hosts[0].Port = Port;
+            serverOptions.PingInterval = 3;
+            serverOptions.RequestTimeout = 4;
+
+            TwinoServer server = new TwinoServer(serverOptions);
+            server.UseMqServer(Server);
+            server.Start();
         }
     }
 }

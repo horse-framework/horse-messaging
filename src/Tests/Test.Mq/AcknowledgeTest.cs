@@ -23,8 +23,8 @@ namespace Test.Mq
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42301);
-            server.Server.ServerOptions.PingInterval = 300;
-            server.Server.ServerOptions.RequestTimeout = 300;
+            server.Server.Server.Options.PingInterval = 300;
+            server.Server.Server.Options.RequestTimeout = 300;
 
             server.Start();
             await Task.Delay(250);
@@ -60,8 +60,8 @@ namespace Test.Mq
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42302);
-            server.Server.ServerOptions.PingInterval = 300;
-            server.Server.ServerOptions.RequestTimeout = 300;
+            server.Server.Server.Options.PingInterval = 300;
+            server.Server.Server.Options.RequestTimeout = 300;
 
             server.Start();
             await Task.Delay(250);
@@ -102,8 +102,8 @@ namespace Test.Mq
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42303);
-            server.Server.ServerOptions.PingInterval = 300;
-            server.Server.ServerOptions.RequestTimeout = 300;
+            server.Server.Server.Options.PingInterval = 300;
+            server.Server.Server.Options.RequestTimeout = 300;
 
             server.Start();
             await Task.Delay(250);

@@ -1,11 +1,7 @@
 using System;
-using System.Dynamic;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.Serialization;
 using Newtonsoft.Json.Linq;
 using Twino.MQ.Security;
-using Twino.Server;
 
 namespace Twino.MQ.Options
 {
@@ -16,7 +12,6 @@ namespace Twino.MQ.Options
     {
         #region Properties
 
-        private ServerOptions _serverOptions;
         private IClientAuthenticator _clientAuthenticator;
         private IClientAuthorization _clientAuthorization;
         private IClientHandler _clientHandler;
@@ -58,7 +53,7 @@ namespace Twino.MQ.Options
             MqServerOptions options = new MqServerOptions();
             SetServerPropertyValues(_object, options);
 
-            MqServer server = new MqServer(_serverOptions, options, _clientAuthenticator, _clientAuthorization);
+            MqServer server = new MqServer(options, _clientAuthenticator, _clientAuthorization);
 
             if (_channelEventHandler != null)
                 server.SetDefaultChannelHandler(_channelEventHandler, _channelAuthenticator);
@@ -198,11 +193,6 @@ namespace Twino.MQ.Options
         #endregion
 
         #region Add
-
-        public void AddServerOptions(ServerOptions options)
-        {
-            _serverOptions = options;
-        }
 
         public void AddAuthenticator(IClientAuthenticator authenticator)
         {
