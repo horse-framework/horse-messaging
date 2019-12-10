@@ -24,7 +24,7 @@ namespace Twino.Client.Connectors
         /// </summary>
         public TimeSpan Interval { get; set; }
 
-        private Thread _thread;
+        private Timer _timer;
 
         public StickyConnector(TimeSpan reconnectInterval, Func<TClient> createInstance = null)
             : base(createInstance)
@@ -39,33 +39,37 @@ namespace Twino.Client.Connectors
         {
             _running = true;
 
-            _thread = new Thread(() =>
+            if (_timer != null)
+                return;
+
+            int interval = Convert.ToInt32(Interval.TotalMilliseconds);
+
+            _timer = new Timer(s =>
             {
-                while (IsRunning)
+                if (!IsRunning)
                 {
-                    if (NeedReconnect() && !_connecting)
-                    {
-                        try
-                        {
-                            _connecting = true;
-                            Connect();
-                        }
-                        catch (Exception ex)
-                        {
-                            RaiseException(ex);
-                        }
-                        finally
-                        {
-                            _connecting = false;
-                        }
-                    }
-
-                    Thread.Sleep(Convert.ToInt32(Interval.TotalMilliseconds));
+                    _timer.Dispose();
+                    _timer = null;
+                    return;
                 }
-            });
 
-            _thread.IsBackground = true;
-            _thread.Start();
+                if (NeedReconnect() && !_connecting)
+                {
+                    try
+                    {
+                        _connecting = true;
+                        Connect();
+                    }
+                    catch (Exception ex)
+                    {
+                        RaiseException(ex);
+                    }
+                    finally
+                    {
+                        _connecting = false;
+                    }
+                }
+            }, null, interval, interval);
         }
 
         /// <summary>

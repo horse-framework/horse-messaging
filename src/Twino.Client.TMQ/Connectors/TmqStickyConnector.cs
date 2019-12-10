@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Twino.Client.Connectors;
+using Twino.Core;
 using Twino.Protocols.TMQ;
 
 namespace Twino.Client.TMQ.Connectors
@@ -33,6 +34,14 @@ namespace Twino.Client.TMQ.Connectors
         public void InitReader(Func<TmqMessage, Type, object> serailizationAction)
         {
             _reader = new MessageReader(serailizationAction);
+        }
+
+        protected override void ClientMessageReceived(ClientSocketBase<TmqMessage> client, TmqMessage payload)
+        {
+            base.ClientMessageReceived(client, payload);
+
+            if (_reader != null)
+                _reader.Read((TmqClient) client, payload);
         }
 
         /// <summary>
