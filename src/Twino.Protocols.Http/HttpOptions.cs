@@ -13,12 +13,12 @@ namespace Twino.Protocols.Http
         /// Maximum keeping alive duration for each TCP connection
         /// </summary>
         public int HttpConnectionTimeMax { get; set; }
-        
+
         /// <summary>
         /// Maximum request lengths (includes content)
         /// </summary>
         public int MaximumRequestLength { get; set; }
-        
+
         /// <summary>
         /// Supported encodings (Only used when clients accept)
         /// </summary>
@@ -59,7 +59,10 @@ namespace Twino.Protocols.Http
 
             options.HttpConnectionTimeMax = obj["HttpConnectionTimeMax"].Value<int>();
             options.MaximumRequestLength = obj["MaximumRequestLength"].Value<int>();
-            options.Hostnames = obj["Hostnames"].Values<string>().ToArray();
+            
+            JToken hostnames = obj["Hostnames"];
+            if (hostnames != null && hostnames.HasValues)
+                options.Hostnames = obj["Hostnames"].Values<string>().ToArray();
 
             string[] sx = obj["SupportedEncodings"].Values<string>().ToArray();
             List<ContentEncodings> encodings = new List<ContentEncodings>();
@@ -70,17 +73,27 @@ namespace Twino.Protocols.Http
 
                 switch (s.Trim().ToLower())
                 {
-                    case "none": encodings.Add(ContentEncodings.None); break;
-                    case "gzip": encodings.Add(ContentEncodings.Gzip); break;
-                    case "br": encodings.Add(ContentEncodings.Brotli); break;
-                    case "brotli": encodings.Add(ContentEncodings.Brotli); break;
-                    case "deflate": encodings.Add(ContentEncodings.Deflate); break;
+                    case "none":
+                        encodings.Add(ContentEncodings.None);
+                        break;
+                    case "gzip":
+                        encodings.Add(ContentEncodings.Gzip);
+                        break;
+                    case "br":
+                        encodings.Add(ContentEncodings.Brotli);
+                        break;
+                    case "brotli":
+                        encodings.Add(ContentEncodings.Brotli);
+                        break;
+                    case "deflate":
+                        encodings.Add(ContentEncodings.Deflate);
+                        break;
                 }
             }
 
             if (encodings.Count == 0)
                 encodings.Add(ContentEncodings.None);
-            
+
             options.SupportedEncodings = encodings.ToArray();
 
             return options;

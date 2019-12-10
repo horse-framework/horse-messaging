@@ -148,7 +148,7 @@ namespace Twino.MQ.Options
         private void SetChannelPropertyValues(JToken from, ChannelOptions options)
         {
             JToken allowedContentTypes = from["AllowedContentTypes"];
-            if (allowedContentTypes != null)
+            if (allowedContentTypes != null && allowedContentTypes.HasValues)
                 options.AllowedContentTypes = allowedContentTypes.Values<ushort>().ToArray();
 
             JToken allowMultipleQueues = from["AllowMultipleQueues"];

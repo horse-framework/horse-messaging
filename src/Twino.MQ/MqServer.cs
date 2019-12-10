@@ -45,7 +45,7 @@ namespace Twino.MQ
         /// <summary>
         /// Underlying Twino Server
         /// </summary>
-        public TwinoServer Server { get; private set; }
+        public TwinoServer Server { get; internal set; }
 
         /// <summary>
         /// Client authenticator implementation.

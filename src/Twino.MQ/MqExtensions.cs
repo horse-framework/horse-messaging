@@ -1,5 +1,6 @@
 using Twino.Core;
 using Twino.Protocols.TMQ;
+using Twino.Server;
 
 namespace Twino.MQ
 {
@@ -11,9 +12,10 @@ namespace Twino.MQ
         /// <summary>
         /// Uses Twino.MQ Messaging Queue server
         /// </summary>
-        public static ITwinoServer UseMqServer(this ITwinoServer server, MqServer mqServer)
+        public static TwinoServer UseMqServer(this TwinoServer server, MqServer mqServer)
         {
             MqConnectionHandler handler = new MqConnectionHandler(mqServer);
+            mqServer.Server = server;
             server.UseTmq(handler);
             return server;
         }
