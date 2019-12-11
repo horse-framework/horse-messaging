@@ -21,7 +21,7 @@ namespace Twino.Protocols.WebSocket
 
             //length
             await WriteLengthAsync(stream, (ulong) value.Content.Length);
-            await value.Content.CopyToAsync(stream);
+            value.Content.WriteTo(stream);
         }
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace Twino.Protocols.WebSocket
             //length
             await WriteLengthAsync(ms, (ulong) value.Content.Length);
 
-            await value.Content.CopyToAsync(ms);
+            value.Content.WriteTo(ms);
             return ms.ToArray();
         }
 
@@ -75,7 +75,7 @@ namespace Twino.Protocols.WebSocket
         public async Task<byte[]> CreateContent(WebSocketMessage value)
         {
             await using MemoryStream ms = new MemoryStream();
-            await value.Content.CopyToAsync(ms);
+            value.Content.WriteTo(ms);
             return ms.ToArray();
         }
 

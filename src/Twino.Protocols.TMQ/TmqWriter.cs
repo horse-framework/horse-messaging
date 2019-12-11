@@ -69,10 +69,10 @@ namespace Twino.Protocols.TMQ
             byte ttl = (byte) message.Ttl;
             if (ttl > 63)
                 ttl = 63;
-            
+
             if (message.ResponseRequired)
                 ttl += 128;
-            
+
             if (message.AcknowledgeRequired)
                 ttl += 64;
 
@@ -82,29 +82,24 @@ namespace Twino.Protocols.TMQ
             ms.WriteByte((byte) message.SourceLength);
             ms.WriteByte((byte) message.TargetLength);
 
-            byte[] cbytes = BitConverter.GetBytes(message.ContentType);
-            await ms.WriteAsync(new[] {cbytes[1], cbytes[0]});
+            await ms.WriteAsync(BitConverter.GetBytes(message.ContentType));
 
             if (message.Length < 253)
                 ms.WriteByte((byte) message.Length);
             else if (message.Length <= ushort.MaxValue)
             {
                 ms.WriteByte(253);
-                ushort len = (ushort) message.Length;
-                byte[] lenbytes = BitConverter.GetBytes(len);
-                await ms.WriteAsync(new[] {lenbytes[1], lenbytes[0]});
+                await ms.WriteAsync(BitConverter.GetBytes((ushort) message.Length));
             }
             else if (message.Length <= uint.MaxValue)
             {
                 ms.WriteByte(254);
-                byte[] lb = BitConverter.GetBytes((uint) message.Length);
-                await ms.WriteAsync(new[] {lb[3], lb[2], lb[1], lb[0]});
+                await ms.WriteAsync(BitConverter.GetBytes((uint) message.Length));
             }
             else
             {
                 ms.WriteByte(255);
-                byte[] lb = BitConverter.GetBytes(message.Length);
-                await ms.WriteAsync(new[] {lb[7], lb[6], lb[5], lb[4], lb[3], lb[2], lb[1], lb[0]});
+                await ms.WriteAsync(BitConverter.GetBytes(message.Length));
             }
 
             if (message.MessageIdLength > 0)

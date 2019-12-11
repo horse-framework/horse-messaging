@@ -98,7 +98,7 @@ namespace Twino.Protocols.TMQ
             message.SourceLength = bytes[3];
             message.TargetLength = bytes[4];
 
-            message.ContentType = BitConverter.ToUInt16(new[] {bytes[6], bytes[5]}, 0);
+            message.ContentType = BitConverter.ToUInt16(bytes, 5);
 
             byte length = bytes[7];
             if (length == 253)
@@ -113,9 +113,9 @@ namespace Twino.Protocols.TMQ
             }
             else if (length == 255)
             {
-                byte[] lbytes = new byte[8];
-                await stream.ReadAsync(lbytes, 0, 8);
-                message.Length = BitConverter.ToUInt64(lbytes, 0);
+                byte[] b = new byte[8];
+                await stream.ReadAsync(b, 0, 8);
+                message.Length = BitConverter.ToUInt64(b, 0);
             }
             else
                 message.Length = length;

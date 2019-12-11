@@ -81,7 +81,7 @@ namespace Twino.Protocols.WebSocket
             {
                 byte[] sbytes = new byte[2];
                 await stream.ReadAsync(sbytes, 0, 2);
-                return BitConverter.ToUInt16(sbytes, 0);
+                return BitConverter.ToUInt16(new[] {sbytes[1], sbytes[0]}, 0);
             }
 
             //reads 9 (1 + long) bytes length
@@ -89,7 +89,7 @@ namespace Twino.Protocols.WebSocket
             {
                 byte[] sbytes = new byte[8];
                 await stream.ReadAsync(sbytes, 0, 8);
-                return BitConverter.ToInt64(sbytes, 0);
+                return BitConverter.ToInt64(new[] {sbytes[7], sbytes[6], sbytes[5], sbytes[4], sbytes[3], sbytes[2], sbytes[1], sbytes[0]}, 0);
             }
 
             return 0;
