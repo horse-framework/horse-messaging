@@ -68,10 +68,10 @@ namespace Twino.Protocols.WebSocket
         /// <summary>
         /// Sends string message to client
         /// </summary>
-        public void Send(string message)
+        public bool Send(string message)
         {
             byte[] data = _writer.Create(WebSocketMessage.FromString(message)).Result;
-            Send(data);
+            return Send(data);
         }
 
         /// <summary>
