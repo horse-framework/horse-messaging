@@ -115,7 +115,10 @@ namespace Twino.Protocols.TMQ
             {
                 TmqMessage message = await reader.Read(info.GetStream());
                 if (message == null)
-                    continue;
+                {
+                    info.Close();
+                    return;
+                }
 
                 if (message.Ttl < 0)
                     continue;
