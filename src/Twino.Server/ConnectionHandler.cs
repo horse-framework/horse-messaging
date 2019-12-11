@@ -59,8 +59,9 @@ namespace Twino.Server
                         }
                     }, tcp, false);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    _server.RaiseException(ex);
                 }
             }
         }
@@ -130,9 +131,10 @@ namespace Twino.Server
 
                 info.Close();
             }
-            catch
+            catch (Exception ex)
             {
                 info.Close();
+                _server.RaiseException(ex);
             }
         }
 

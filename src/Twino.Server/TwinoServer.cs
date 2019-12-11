@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -12,6 +13,11 @@ using Timer = System.Timers.Timer;
 
 namespace Twino.Server
 {
+    /// <summary>
+    /// Crated for catching twino inner exceptions with events in TwinoServer
+    /// </summary>
+    public delegate void TwinoInnerExceptionHandler(TwinoServer server, Exception ex);
+    
     /// <summary>
     /// Twino TCP Server
     /// Listens all TCP Connections and routes to requests protocols
@@ -57,6 +63,11 @@ namespace Twino.Server
         /// </summary>
         private List<ConnectionHandler> _handlers = new List<ConnectionHandler>();
 
+        /// <summary>
+        /// Triggered when inner exception is raised in twino server
+        /// </summary>
+        public event TwinoInnerExceptionHandler OnInnerException;
+        
         #endregion
 
         #region Constructors
@@ -273,5 +284,10 @@ namespace Twino.Server
         }
 
         #endregion
+
+        internal void RaiseException(Exception ex)
+        {
+            OnInnerException?.Invoke(this, ex);
+        }
     }
 }
