@@ -246,6 +246,22 @@ namespace Twino.MQ
             return _clients.Find(x => x.UniqueId == uniqueId);
         }
 
+        /// <summary>
+        /// Finds all connected client with specified name
+        /// </summary>
+        public List<MqClient> FindClientByName(string name)
+        {
+            return _clients.FindAll(x => x.Name == name);
+        }
+
+        /// <summary>
+        /// Finds all connected client with specified type
+        /// </summary>
+        public List<MqClient> FindClientByType(string type)
+        {
+            return _clients.FindAll(x => x.Name == type);
+        }
+
         #endregion
     }
 }

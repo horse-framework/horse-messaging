@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Core.Protocols;
@@ -202,6 +203,51 @@ namespace Twino.MQ
         /// </summary>
         private async Task ClientMessageReceived(MqClient client, TmqMessage message)
         {
+            if (string.IsNullOrEmpty(message.Target))
+                return;
+
+            if (message.Target.StartsWith("@name:"))
+            {
+                List<MqClient> receivers = _server.FindClientByName(message.Target.Substring(6));
+                await ProcessMultipleReceiverClientMessage(client, receivers, message);
+            }
+            else if (message.Target.StartsWith("@type:"))
+            {
+                List<MqClient> receivers = _server.FindClientByType(message.Target.Substring(6));
+                await ProcessMultipleReceiverClientMessage(client, receivers, message);
+            }
+            else
+                await ProcessSingleReceiverClientMessage(client, message);
+        }
+
+        private async Task ProcessMultipleReceiverClientMessage(MqClient sender, List<MqClient> receivers, TmqMessage message)
+        {
+            if (receivers.Count < 1)
+            {
+                await sender.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                return;
+            }
+
+            foreach (MqClient receiver in receivers)
+            {
+                //check sending message authority
+                if (_server.Authorization != null)
+                {
+                    bool grant = await _server.Authorization.CanMessageToPeer(sender, message, receiver);
+                    if (!grant)
+                    {
+                        await sender.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                        return;
+                    }
+                }
+
+                //send the message
+                await receiver.SendAsync(message);
+            }
+        }
+
+        private async Task ProcessSingleReceiverClientMessage(MqClient client, TmqMessage message)
+        {
             //find the receiver
             MqClient other = _server.FindClient(message.Target);
             if (other == null)
@@ -259,7 +305,7 @@ namespace Twino.MQ
             //prepare the message
             QueueMessage queueMessage = new QueueMessage(message);
             queueMessage.Source = client;
-            
+
             //push the message
             await queue.Push(queueMessage, client);
         }

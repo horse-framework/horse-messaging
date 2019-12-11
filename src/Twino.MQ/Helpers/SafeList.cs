@@ -149,5 +149,21 @@ namespace Twino.MQ.Helpers
 
             return default;
         }
+        
+        /// <summary>
+        /// Finds all elements within a filter
+        /// </summary>
+        public List<T> FindAll(Predicate<T> predicate)
+        {
+            List<T> items = new List<T>();
+            lock (_list)
+                foreach (T item in _list)
+                {
+                    if (predicate(item))
+                        items.Add(item);
+                }
+
+            return items;
+        }
     }
 }
