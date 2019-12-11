@@ -29,6 +29,7 @@ namespace Twino.Protocols.WebSocket
             Server = server;
             Info = info;
             Stream = info.GetStream();
+            IsConnected = true;
         }
 
         /// <summary>
