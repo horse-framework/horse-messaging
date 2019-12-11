@@ -56,7 +56,23 @@ Some of Twino features are listed below:
 
 #### MQ
 
-- todo...
+- Complete Messaging Queue library can be used with a few interface implementations and fully extensible
+- Queuing or not queuing options
+- Multiple queues in same channel
+- Client based authentication
+- Channel based authentication
+- Action based authorization
+- Saving or not saving messages
+- Peer to peer messaging
+- Sending messages to some type of clients or some client groups
+- Message acknowledge in queues, peer to peer messaging and server side messaging
+- Keeping messages if there is no receiver and setting timeout
+- Creating channels and queues programmatically
+- Content types by models
+- Requesting and responsing messages
+- Fully extensible client management
+- Channel event handlers
+- Changing decisions from all steps in message delivery operations
 
 ### Basic MVC Example
 
