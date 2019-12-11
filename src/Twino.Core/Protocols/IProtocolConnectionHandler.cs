@@ -13,6 +13,11 @@ namespace Twino.Core.Protocols
         Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data);
 
         /// <summary>
+        /// Triggered when handshake is completed and the connection is ready to communicate 
+        /// </summary>
+        Task Ready(ITwinoServer server, SocketBase client);
+
+        /// <summary>
         /// Triggered when a client sends a message to the server 
         /// </summary>
         Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, TMessage message);

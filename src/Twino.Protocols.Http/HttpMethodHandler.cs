@@ -34,6 +34,14 @@ namespace Twino.Protocols.Http
         }
 
         /// <summary>
+        /// Triggered when handshake is completed and the connection is ready to communicate 
+        /// </summary>
+        public async Task Ready(ITwinoServer server, SocketBase client)
+        {
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Triggered when a client sends a message to the server 
         /// </summary>
         public async Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, HttpMessage message)

@@ -21,6 +21,11 @@ namespace Sample.WebSocket.Server
             return await Task.FromResult(socket);
         }
 
+        public async Task Ready(ITwinoServer server, SocketBase client)
+        {
+            await Task.CompletedTask;
+        }
+
         public async Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, WebSocketMessage message)
         {
             Console.WriteLine(message);

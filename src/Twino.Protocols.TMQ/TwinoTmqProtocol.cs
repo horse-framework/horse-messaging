@@ -109,6 +109,12 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public async Task HandleConnection(IConnectionInfo info, ProtocolHandshakeResult handshakeResult)
         {
+            try
+            {
+                await _handler.Ready(_server, handshakeResult.Socket);
+            }
+            catch { }
+            
             TmqReader reader = new TmqReader();
 
             while (info.Client != null && info.Client.Connected)

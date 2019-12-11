@@ -51,6 +51,14 @@ namespace Twino.Mvc
         }
 
         /// <summary>
+        /// Triggered when handshake is completed and the connection is ready to communicate 
+        /// </summary>
+        public async Task Ready(ITwinoServer server, SocketBase client)
+        {
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
         /// HTTP Protocol does not support piped connections
         /// </summary>
         public async Task Disconnected(ITwinoServer server, SocketBase client)

@@ -30,6 +30,14 @@ namespace Twino.Protocols.WebSocket
         }
 
         /// <summary>
+        /// Triggered when handshake is completed and the connection is ready to communicate 
+        /// </summary>
+        public async Task Ready(ITwinoServer server, SocketBase client)
+        {
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Triggered when a websocket client is disconnected. 
         /// </summary>
         public async Task Disconnected(ITwinoServer server, SocketBase client)

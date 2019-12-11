@@ -89,6 +89,12 @@ namespace Twino.Protocols.WebSocket
         /// </summary>
         public async Task HandleConnection(IConnectionInfo info, ProtocolHandshakeResult handshakeResult)
         {
+            try
+            {
+                await _handler.Ready(_server, handshakeResult.Socket);
+            }
+            catch { }
+            
             WebSocketReader reader = new WebSocketReader();
             while (info.Client != null && info.Client.Connected)
             {

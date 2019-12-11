@@ -86,6 +86,14 @@ namespace Twino.MQ
         }
 
         /// <summary>
+        /// Triggered when handshake is completed and the connection is ready to communicate 
+        /// </summary>
+        public async Task Ready(ITwinoServer server, SocketBase client)
+        {
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Called when connected client is connected in TMQ protocol
         /// </summary>
         public async Task Disconnected(ITwinoServer server, SocketBase client)

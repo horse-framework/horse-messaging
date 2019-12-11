@@ -119,6 +119,12 @@ namespace Twino.Protocols.Http
         /// </summary>
         public async Task HandleConnection(IConnectionInfo info, ProtocolHandshakeResult handshakeResult)
         {
+            try
+            {
+                await _handler.Ready(_server, handshakeResult.Socket);
+            }
+            catch { }
+
             HttpReader reader = new HttpReader(Options);
             HttpWriter writer = new HttpWriter(Options);
             reader.HandshakeResult = handshakeResult;
