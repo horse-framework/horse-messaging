@@ -2,10 +2,10 @@
 using System.Text;
 using System.Threading.Tasks;
 using Twino.Core;
-using Twino.JsonModel.Serialization;
 using Twino.Protocols.WebSocket;
+using Twino.SerializableModel.Serialization;
 
-namespace Twino.JsonModel
+namespace Twino.SerializableModel
 {
     public static class Extensions
     {

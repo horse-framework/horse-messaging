@@ -1,6 +1,6 @@
-using Twino.JsonModel.Serialization;
+using Twino.SerializableModel.Serialization;
 
-namespace Twino.JsonModel
+namespace Twino.SerializableModel
 {
     /// <summary>
     /// Used by Model Reader and Writer classes.

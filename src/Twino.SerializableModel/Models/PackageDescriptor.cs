@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Twino.JsonModel.Models
+namespace Twino.SerializableModel.Models
 {
     /// <summary>
     /// Description for subscription of reading message from web socket

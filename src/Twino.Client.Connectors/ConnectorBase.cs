@@ -78,7 +78,7 @@ namespace Twino.Client.Connectors
         /// Called to create new instance of the client.
         /// If null, default constructor will be used.
         /// </summary>
-        private Func<TClient> _createInstance;
+        private readonly Func<TClient> _createInstance;
 
         public TClient GetClient()
         {

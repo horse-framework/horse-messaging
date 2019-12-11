@@ -1,4 +1,4 @@
-﻿namespace Twino.JsonModel
+﻿namespace Twino.SerializableModel
 {
     /// <summary>
     /// Network package interface.

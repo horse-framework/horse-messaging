@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 using Newtonsoft.Json;
-using Twino.JsonModel;
+using Twino.SerializableModel;
 
 namespace Test.SocketModels.Models
 {

@@ -1,4 +1,4 @@
-﻿namespace Twino.JsonModel
+﻿namespace Twino.SerializableModel
 {
     /// <summary>
     /// Must used model types for general purpose

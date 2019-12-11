@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace Twino.JsonModel
+namespace Twino.SerializableModel
 {
     /// <summary>
     /// Type and data specified socket model, created for compact usage

@@ -1,6 +1,6 @@
 using Test.SocketModels.Helpers;
 using Test.SocketModels.Models;
-using Twino.JsonModel.Serialization;
+using Twino.SerializableModel.Serialization;
 using Xunit;
 
 namespace Test.SocketModels

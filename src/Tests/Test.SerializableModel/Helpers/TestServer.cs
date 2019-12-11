@@ -1,8 +1,8 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Twino.Server;
-using Twino.JsonModel;
 using Twino.Protocols.WebSocket;
+using Twino.SerializableModel;
 
 namespace Test.SocketModels.Helpers
 {

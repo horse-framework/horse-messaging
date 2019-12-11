@@ -2,7 +2,7 @@ using System.Threading.Tasks;
 using Test.SocketModels.Helpers;
 using Test.SocketModels.Models;
 using Twino.Client.WebSocket;
-using Twino.JsonModel;
+using Twino.SerializableModel;
 using Xunit;
 
 namespace Test.SocketModels

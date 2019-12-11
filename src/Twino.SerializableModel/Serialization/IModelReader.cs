@@ -1,6 +1,6 @@
 using System;
 
-namespace Twino.JsonModel.Serialization
+namespace Twino.SerializableModel.Serialization
 {
     /// <summary>
     /// Model reading inteface for web socket string messages

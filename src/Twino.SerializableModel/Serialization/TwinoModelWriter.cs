@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace Twino.JsonModel.Serialization
+namespace Twino.SerializableModel.Serialization
 {
     /// <summary>
     /// Default model writer for Twino libraries

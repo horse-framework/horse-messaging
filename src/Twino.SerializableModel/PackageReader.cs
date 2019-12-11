@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using Twino.Core;
-using Twino.JsonModel.Models;
-using Twino.JsonModel.Serialization;
+using Twino.SerializableModel.Models;
+using Twino.SerializableModel.Serialization;
 
-namespace Twino.JsonModel
+namespace Twino.SerializableModel
 {
     /// <summary>
     /// Manages network packages that implement from JsonModel interface.

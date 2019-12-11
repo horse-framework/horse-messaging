@@ -1,7 +1,7 @@
 using System;
 using Newtonsoft.Json;
 
-namespace Twino.JsonModel.Serialization
+namespace Twino.SerializableModel.Serialization
 {
     /// <summary>
     /// Default model reader for Twino libraries
