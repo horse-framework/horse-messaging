@@ -390,7 +390,7 @@ namespace Twino.Ioc
 
             ServiceDescriptor descriptor = GetDescriptor(serviceType);
             if (descriptor == null)
-                throw new KeyNotFoundException("Service type is not found");
+                throw new KeyNotFoundException($"Service type is not found {serviceType.Name}");
 
             if (descriptor.IsPool)
             {
