@@ -46,6 +46,7 @@ namespace Twino.Protocols.TMQ
             _uniqueIdGenerator = generator;
             UseUniqueMessageId = useUniqueMessageId;
             IsConnected = true;
+            IsSsl = info.IsSsl;
         }
 
         /// <summary>

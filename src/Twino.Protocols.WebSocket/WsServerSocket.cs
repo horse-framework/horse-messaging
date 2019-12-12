@@ -30,6 +30,7 @@ namespace Twino.Protocols.WebSocket
             Info = info;
             Stream = info.GetStream();
             IsConnected = true;
+            IsSsl = info.IsSsl;
         }
 
         /// <summary>
