@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 using Twino.SerializableModel;
 using Twino.SerializableModel.Serialization;
 
@@ -6,13 +6,13 @@ namespace Test.SocketModels.Models
 {
     public class CriticalModel : IPerformanceCriticalModel
     {
-        [JsonPropertyName("type")]
+        [JsonProperty("type")]
         public int Type { get; set; } = 302;
 
-        [JsonPropertyName("name")]
+        [JsonProperty("name")]
         public string Name { get; set; }
 
-        [JsonPropertyName("number")]
+        [JsonProperty("number")]
         public int Number { get; set; }
 
         public void Serialize(LightJsonWriter writer)

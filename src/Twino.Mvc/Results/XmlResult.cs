@@ -41,11 +41,12 @@ namespace Twino.Mvc.Results
             Headers = new Dictionary<string, string>();
 
             XmlSerializer serializer = new XmlSerializer(obj.GetType());
-            using StringWriter writer = new StringWriter();
-            using XmlWriter xml = XmlWriter.Create(writer);
-            serializer.Serialize(xml, obj);
-
-            Stream = new MemoryStream(Encoding.UTF8.GetBytes(xml.ToString()));
+            using (StringWriter writer = new StringWriter())
+            using (XmlWriter xml = XmlWriter.Create(writer))
+            {
+                serializer.Serialize(xml, obj);
+                Stream = new MemoryStream(Encoding.UTF8.GetBytes(xml.ToString()));
+            }
         }
     }
 }

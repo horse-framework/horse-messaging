@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netcoreapp3.0</TargetFramework>
+        <TargetFramework>netcoreapp2.2</TargetFramework>
         <Title>Twino.Extensions.Http</Title>
         <Product>Twino.Extensions.Http</Product>
         <Description>HttpClient Factory extension for Twino IOC</Description>

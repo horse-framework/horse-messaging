@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netcoreapp3.0</TargetFramework>
+        <TargetFramework>netcoreapp2.2</TargetFramework>
         <Title>Twino.Client.TMQ</Title>
         <Product>Twino.Client.TMQ</Product>
         <Description>Twino Messaging Queue Client to connect all TMQ Servers</Description>

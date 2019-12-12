@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Test.Mq.Internal;
 using Test.Mq.Models;
 using Twino.Client.TMQ;
-using Twino.Protocols.TMQ;
 using Xunit;
 
 namespace Test.Mq
@@ -36,8 +35,7 @@ namespace Test.Mq
             await Task.Delay(1000);
 
             MessageA m = new MessageA("Msg-A");
-            MemoryStream ms = new MemoryStream();
-            await System.Text.Json.JsonSerializer.SerializeAsync(ms, m);
+            MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(Newtonsoft.Json.JsonConvert.SerializeObject(m)));
 
             bool sent = await client.Push("ch-1", MessageA.ContentType, ms, false);
             Assert.True(sent);
@@ -74,8 +72,7 @@ namespace Test.Mq
             reader.On<MessageA>("ch-1", MessageA.ContentType, a => ch1 = true);
             reader.Attach(client);
 
-            MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(new MessageA("Ax"))));
-
+            MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(Newtonsoft.Json.JsonConvert.SerializeObject(new MessageA("Ax"))));
             bool sent = await client.Push("ch-1", MessageA.ContentType, ms, false);
             Assert.True(sent);
             sent = await client.Push("ch-0", MessageA.ContentType, ms, false);
@@ -112,8 +109,8 @@ namespace Test.Mq
             reader.On<MessageA>("ch-1", MessageC.ContentType, c => mc = true);
             reader.Attach(client);
 
-            MemoryStream astream = new MemoryStream(Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(new MessageA("Ax"))));
-            MemoryStream cstream = new MemoryStream(Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(new MessageC("Cx", "x"))));
+            MemoryStream astream = new MemoryStream(Encoding.UTF8.GetBytes(Newtonsoft.Json.JsonConvert.SerializeObject(new MessageA("Ax"))));
+            MemoryStream cstream = new MemoryStream(Encoding.UTF8.GetBytes(Newtonsoft.Json.JsonConvert.SerializeObject(new MessageC("Cx", "x"))));
 
             bool sent = await client.Push("ch-1", MessageA.ContentType, astream, false);
             Assert.True(sent);
@@ -162,8 +159,7 @@ namespace Test.Mq
             await Task.Delay(1000);
 
             MessageA m = new MessageA("Msg-A");
-            MemoryStream ms = new MemoryStream();
-            await System.Text.Json.JsonSerializer.SerializeAsync(ms, m);
+            MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(Newtonsoft.Json.JsonConvert.SerializeObject(m)));
 
             bool sent = await client.Push("ch-1", MessageA.ContentType, ms, false);
             Assert.True(sent);

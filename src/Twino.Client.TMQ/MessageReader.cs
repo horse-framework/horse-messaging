@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
-using Microsoft.VisualBasic;
-using Newtonsoft.Json;
 using Twino.Core;
 using Twino.Protocols.TMQ;
 
@@ -52,7 +49,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         public static MessageReader JsonReader()
         {
-            return new MessageReader((msg, type) => System.Text.Json.JsonSerializer.Deserialize(msg.ToString(), type));
+            return new MessageReader((msg, type) => Newtonsoft.Json.JsonConvert.DeserializeObject(msg.ToString()));
         }
 
         /// <summary>

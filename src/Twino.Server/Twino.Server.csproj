@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netcoreapp3.0</TargetFramework>
+        <TargetFramework>netcoreapp2.2</TargetFramework>
         <Title>Twino.Server</Title>
         <Product>Twino.Server</Product>
         <Description>Twino TCP Socket Server</Description>

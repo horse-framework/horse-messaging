@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Test.Mq.Internal;
 using Twino.Client.TMQ;
 using Twino.Client.WebSocket;
-using Twino.Protocols.Http;
 using Twino.Protocols.TMQ;
 using Xunit;
 
@@ -53,7 +52,7 @@ namespace Test.Mq
                 client.Connect("127.0.0.1", 42102);
                 clients.Add(client);
                 Thread.Sleep(20);
-                ThreadPool.UnsafeQueueUserWorkItem(async c =>
+                ThreadPool.QueueUserWorkItem(async c =>
                 {
                     byte[] buffer = new byte[128];
                     NetworkStream ns = client.GetStream();
@@ -162,7 +161,7 @@ namespace Test.Mq
             Thread.Sleep(1000);
             Assert.Equal(1, server.ClientConnected);
 
-            ThreadPool.UnsafeQueueUserWorkItem(async s =>
+            ThreadPool.QueueUserWorkItem(async s =>
             {
                 byte[] buffer = new byte[128];
                 while (client.Connected)

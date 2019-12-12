@@ -330,9 +330,11 @@ namespace Twino.Mvc
                             value = Newtonsoft.Json.JsonConvert.DeserializeObject(content, ap.ParameterType);
                         else if (ap.FromName == "xml")
                         {
-                            using MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(content));
-                            XmlSerializer serializer = new XmlSerializer(ap.ParameterType);
-                            value = serializer.Deserialize(ms);
+                            using (MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(content)))
+                            {
+                                XmlSerializer serializer = new XmlSerializer(ap.ParameterType);
+                                value = serializer.Deserialize(ms);
+                            }
                         }
 
                         break;

@@ -113,17 +113,19 @@ namespace Twino.Protocols.WebSocket
         /// </summary>
         private static async Task<byte[]> CreateWebSocketHandshakeResponse(string websocketKey)
         {
-            await using MemoryStream ms = new MemoryStream();
-            await ms.WriteAsync(PredefinedMessages.WEBSOCKET_101_SWITCHING_PROTOCOLS_CRLF);
-            await ms.WriteAsync(PredefinedMessages.SERVER_CRLF);
-            await ms.WriteAsync(PredefinedMessages.CONNECTION_UPGRADE_CRLF);
-            await ms.WriteAsync(PredefinedMessages.UPGRADE_WEBSOCKET_CRLF);
-            await ms.WriteAsync(PredefinedMessages.SEC_WEB_SOCKET_COLON);
+            using (MemoryStream ms = new MemoryStream())
+            {
+                await ms.WriteAsync(PredefinedMessages.WEBSOCKET_101_SWITCHING_PROTOCOLS_CRLF);
+                await ms.WriteAsync(PredefinedMessages.SERVER_CRLF);
+                await ms.WriteAsync(PredefinedMessages.CONNECTION_UPGRADE_CRLF);
+                await ms.WriteAsync(PredefinedMessages.UPGRADE_WEBSOCKET_CRLF);
+                await ms.WriteAsync(PredefinedMessages.SEC_WEB_SOCKET_COLON);
 
-            ReadOnlyMemory<byte> memory = Encoding.UTF8.GetBytes(CreateWebSocketGuid(websocketKey) + "\r\n\r\n");
-            await ms.WriteAsync(memory);
+                ReadOnlyMemory<byte> memory = Encoding.UTF8.GetBytes(CreateWebSocketGuid(websocketKey) + "\r\n\r\n");
+                await ms.WriteAsync(memory);
 
-            return ms.ToArray();
+                return ms.ToArray();
+            }
         }
 
         /// <summary>

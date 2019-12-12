@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Twino.Core.Protocols;
 
 namespace Twino.Protocols.TMQ
 {
@@ -16,10 +15,12 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public async Task Write(TmqMessage value, Stream stream)
         {
-            await using MemoryStream ms = new MemoryStream();
-            await WriteFrame(ms, value);
-            WriteContent(ms, value);
-            ms.WriteTo(stream);
+            using (MemoryStream ms = new MemoryStream())
+            {
+                await WriteFrame(ms, value);
+                WriteContent(ms, value);
+                ms.WriteTo(stream);
+            }
         }
 
         /// <summary>
@@ -27,10 +28,12 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public async Task<byte[]> Create(TmqMessage value)
         {
-            await using MemoryStream ms = new MemoryStream();
-            await WriteFrame(ms, value);
-            WriteContent(ms, value);
-            return ms.ToArray();
+            using (MemoryStream ms = new MemoryStream())
+            {
+                await WriteFrame(ms, value);
+                WriteContent(ms, value);
+                return ms.ToArray();
+            }
         }
 
         /// <summary>
@@ -38,9 +41,11 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public async Task<byte[]> CreateFrame(TmqMessage value)
         {
-            await using MemoryStream ms = new MemoryStream();
-            await WriteFrame(ms, value);
-            return ms.ToArray();
+            using (MemoryStream ms = new MemoryStream())
+            {
+                await WriteFrame(ms, value);
+                return ms.ToArray();
+            }
         }
 
         /// <summary>
@@ -48,9 +53,11 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public async Task<byte[]> CreateContent(TmqMessage value)
         {
-            await using MemoryStream ms = new MemoryStream();
-            WriteContent(ms, value);
-            return ms.ToArray();
+            using (MemoryStream ms = new MemoryStream())
+            {
+                WriteContent(ms, value);
+                return ms.ToArray();
+            }
         }
 
         /// <summary>

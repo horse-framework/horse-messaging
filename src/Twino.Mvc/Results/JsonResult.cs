@@ -1,5 +1,4 @@
 ﻿using System;
-using Twino.Mvc.Controllers;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -33,14 +32,14 @@ namespace Twino.Mvc.Results
         /// Additional custom headers with key and value
         /// </summary>
         public Dictionary<string, string> Headers { get; }
-        
+
         public JsonResult(HttpStatusCode code = HttpStatusCode.OK)
         {
             Code = code;
             ContentType = ContentTypes.APPLICATION_JSON;
             Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
         }
-        
+
         public JsonResult(object model, HttpStatusCode code = HttpStatusCode.OK)
         {
             Code = code;
@@ -48,14 +47,14 @@ namespace Twino.Mvc.Results
             Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
             Set(model);
         }
-        
+
         /// <summary>
         /// Sets json objects of json result
         /// </summary>
         public async Task SetAsync(object model)
         {
-            Stream = new MemoryStream();
-            await System.Text.Json.JsonSerializer.SerializeAsync(Stream, model, model.GetType());
+            Stream = new MemoryStream(Encoding.UTF8.GetBytes(Newtonsoft.Json.JsonConvert.SerializeObject(model)));
+            await Task.CompletedTask;
         }
 
         /// <summary>
@@ -63,7 +62,7 @@ namespace Twino.Mvc.Results
         /// </summary>
         public void Set(object model)
         {
-            string serialized = System.Text.Json.JsonSerializer.Serialize(model, model.GetType());
+            string serialized = Newtonsoft.Json.JsonConvert.SerializeObject(model);
             Stream = new MemoryStream(Encoding.UTF8.GetBytes(serialized));
         }
     }

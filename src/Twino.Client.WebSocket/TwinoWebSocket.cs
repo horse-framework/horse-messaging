@@ -160,12 +160,14 @@ namespace Twino.Client.WebSocket
             string rkey = requestResponse.Headers[HttpHeaders.WEBSOCKET_ACCEPT];
 
             //check if the key is valid
-            using SHA1 sha1 = SHA1.Create();
-            byte[] hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(WebSocketKey + HttpHeaders.WEBSOCKET_GUID));
-            string fkey = Convert.ToBase64String(hash);
+            using (SHA1 sha1 = SHA1.Create())
+            {
+                byte[] hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(WebSocketKey + HttpHeaders.WEBSOCKET_GUID));
+                string fkey = Convert.ToBase64String(hash);
 
-            if (rkey != fkey)
-                throw new InvalidOperationException("Handshaking error, Invalid Key");
+                if (rkey != fkey)
+                    throw new InvalidOperationException("Handshaking error, Invalid Key");
+            }
         }
 
         /// <summary>

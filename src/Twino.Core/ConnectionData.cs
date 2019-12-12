@@ -38,28 +38,30 @@ namespace Twino.Core
         /// </summary>
         public async Task ReadFromStream(Stream stream)
         {
-            using StreamReader reader = new StreamReader(stream);
-            bool first = true;
-            while (!reader.EndOfStream)
+            using (StreamReader reader = new StreamReader(stream))
             {
-                string line = await reader.ReadLineAsync();
-                if (first)
+                bool first = true;
+                while (!reader.EndOfStream)
                 {
-                    first = false;
-                    int index = line.IndexOf(' ');
-                    if (!line.Contains(':') && index > 0)
+                    string line = await reader.ReadLineAsync();
+                    if (first)
                     {
-                        Method = line.Substring(0, index);
-                        Path = line.Substring(index + 1);
-                        continue;
+                        first = false;
+                        int index = line.IndexOf(' ');
+                        if (!line.Contains(':') && index > 0)
+                        {
+                            Method = line.Substring(0, index);
+                            Path = line.Substring(index + 1);
+                            continue;
+                        }
                     }
+
+                    int i = line.IndexOf(':');
+                    if (i < 0)
+                        continue;
+
+                    Properties.Add(line.Substring(0, i), line.Substring(i + 1));
                 }
-
-                int i = line.IndexOf(':');
-                if (i < 0)
-                    continue;
-
-                Properties.Add(line.Substring(0, i), line.Substring(i + 1));
             }
         }
     }

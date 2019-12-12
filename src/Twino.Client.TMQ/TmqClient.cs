@@ -136,7 +136,7 @@ namespace Twino.Client.TMQ
             else
                 Data.Properties.Add(TmqHeaders.CLIENT_NAME, name);
         }
-        
+
         /// <summary>
         /// Sets client token information of the client
         /// </summary>
@@ -522,9 +522,8 @@ namespace Twino.Client.TMQ
             message.Type = MessageType.Channel;
             message.ContentType = contentType;
             message.Target = channel;
-            message.Content = new MemoryStream();
             message.AcknowledgeRequired = waitAcknowledge;
-            await System.Text.Json.JsonSerializer.SerializeAsync(message.Content, jsonObject, jsonObject.GetType());
+            message.Content = new MemoryStream(Encoding.UTF8.GetBytes(Newtonsoft.Json.JsonConvert.SerializeObject(jsonObject)));
 
             if (waitAcknowledge)
                 message.MessageId = UniqueIdGenerator.Create();

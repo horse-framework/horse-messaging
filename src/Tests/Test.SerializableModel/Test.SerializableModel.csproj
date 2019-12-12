@@ -1,12 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netcoreapp3.0</TargetFramework>
-
+        <TargetFramework>netcoreapp2.2</TargetFramework>
         <IsPackable>false</IsPackable>
-
         <LangVersion>8</LangVersion>
-
         <RootNamespace>Test.SocketModels</RootNamespace>
     </PropertyGroup>
 

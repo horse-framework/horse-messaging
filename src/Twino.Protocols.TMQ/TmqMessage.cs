@@ -159,8 +159,8 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public async Task SetJsonContent(object value)
         {
-            Content = new MemoryStream();
-            await System.Text.Json.JsonSerializer.SerializeAsync(Content, value, value.GetType());
+            Content = new MemoryStream(Encoding.UTF8.GetBytes(Newtonsoft.Json.JsonConvert.SerializeObject(value)));
+            await Task.CompletedTask;
         }
 
         /// <summary>
@@ -168,7 +168,8 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public async Task<TModel> GetJsonContent<TModel>()
         {
-            return await System.Text.Json.JsonSerializer.DeserializeAsync<TModel>(Content);
+            TModel model = Newtonsoft.Json.JsonConvert.DeserializeObject<TModel>(Encoding.UTF8.GetString(Content.ToArray()));
+            return await Task.FromResult(model);
         }
 
         #endregion

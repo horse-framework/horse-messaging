@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netcoreapp3.0</TargetFramework>
+        <TargetFramework>netcoreapp2.2</TargetFramework>
         <Title>Twino.Protocols.Http</Title>
         <Product>Twino.Protocols.Http</Product>
         <Description>Twino Http Protocol library and server extension for Twino Server</Description>

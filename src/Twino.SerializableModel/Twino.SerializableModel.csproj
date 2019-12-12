@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netcoreapp3.0</TargetFramework>
+        <TargetFramework>netcoreapp2.2</TargetFramework>
         <Title>Twino.SerializableModel</Title>
         <Product>Twino.SerializableModel</Product>
         <Description>Twino Serializable Model library for object based communication with text-based protocols</Description>

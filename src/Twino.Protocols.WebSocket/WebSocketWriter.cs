@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Twino.Core.Protocols;
 
 namespace Twino.Protocols.WebSocket
 {
@@ -29,16 +28,17 @@ namespace Twino.Protocols.WebSocket
         /// </summary>
         public async Task<byte[]> Create(WebSocketMessage value)
         {
-            await using MemoryStream ms = new MemoryStream();
+            using (MemoryStream ms = new MemoryStream())
+            {
+                //fin and op code
+                ms.WriteByte(value.OpCode == SocketOpCode.Binary ? (byte) 0x82 : (byte) 0x81);
 
-            //fin and op code
-            ms.WriteByte(value.OpCode == SocketOpCode.Binary ? (byte) 0x82 : (byte) 0x81);
+                //length
+                await WriteLengthAsync(ms, (ulong) value.Content.Length);
 
-            //length
-            await WriteLengthAsync(ms, (ulong) value.Content.Length);
-
-            value.Content.WriteTo(ms);
-            return ms.ToArray();
+                value.Content.WriteTo(ms);
+                return ms.ToArray();
+            }
         }
 
         /// <summary>
@@ -46,12 +46,14 @@ namespace Twino.Protocols.WebSocket
         /// </summary>
         public async Task<byte[]> Create(string message)
         {
-            await using MemoryStream ms = new MemoryStream();
-            ms.WriteByte(0x81);
-            byte[] bytes = Encoding.UTF8.GetBytes(message);
-            await WriteLengthAsync(ms, (ulong) bytes.Length);
-            await ms.WriteAsync(bytes);
-            return ms.ToArray();
+            using (MemoryStream ms = new MemoryStream())
+            {
+                ms.WriteByte(0x81);
+                byte[] bytes = Encoding.UTF8.GetBytes(message);
+                await WriteLengthAsync(ms, (ulong) bytes.Length);
+                await ms.WriteAsync(bytes);
+                return ms.ToArray();
+            }
         }
 
         /// <summary>
@@ -59,14 +61,15 @@ namespace Twino.Protocols.WebSocket
         /// </summary>
         public async Task<byte[]> CreateFrame(WebSocketMessage value)
         {
-            await using MemoryStream ms = new MemoryStream();
+            using (MemoryStream ms = new MemoryStream())
+            {
+                //fin and op code
+                ms.WriteByte(value.OpCode == SocketOpCode.Binary ? (byte) 0x82 : (byte) 0x81);
 
-            //fin and op code
-            ms.WriteByte(value.OpCode == SocketOpCode.Binary ? (byte) 0x82 : (byte) 0x81);
-
-            //length
-            await WriteLengthAsync(ms, (ulong) value.Content.Length);
-            return ms.ToArray();
+                //length
+                await WriteLengthAsync(ms, (ulong) value.Content.Length);
+                return ms.ToArray();
+            }
         }
 
         /// <summary>
@@ -74,9 +77,11 @@ namespace Twino.Protocols.WebSocket
         /// </summary>
         public async Task<byte[]> CreateContent(WebSocketMessage value)
         {
-            await using MemoryStream ms = new MemoryStream();
-            value.Content.WriteTo(ms);
-            return ms.ToArray();
+            using (MemoryStream ms = new MemoryStream())
+            {
+                value.Content.WriteTo(ms);
+                return await Task.FromResult(ms.ToArray());
+            }
         }
 
         /// <summary>

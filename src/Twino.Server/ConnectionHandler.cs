@@ -46,7 +46,7 @@ namespace Twino.Server
                 try
                 {
                     TcpClient tcp = await _listener.Listener.AcceptTcpClientAsync();
-                    ThreadPool.UnsafeQueueUserWorkItem(async t =>
+                    ThreadPool.QueueUserWorkItem(async t =>
                     {
                         try
                         {
@@ -168,13 +168,13 @@ namespace Twino.Server
         /// </summary>
         private static SslProtocols GetProtocol(HostListener server)
         {
-            return server.Options.SslProtocol switch
+            switch (server.Options.SslProtocol)
             {
-                "tls" => SslProtocols.Tls,
-                "tls11" => SslProtocols.Tls11,
-                "tls12" => SslProtocols.Tls12,
-                _ => SslProtocols.None
-            };
+                case "tls": return SslProtocols.Tls;
+                case "tls11": return SslProtocols.Tls11;
+                case "tls12": return SslProtocols.Tls12;
+                default: return SslProtocols.None;
+            }
         }
     }
 }

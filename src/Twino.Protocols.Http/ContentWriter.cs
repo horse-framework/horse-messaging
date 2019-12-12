@@ -47,13 +47,13 @@ namespace Twino.Protocols.Http
         /// </summary>
         private static bool EncodingIsAccepted(HttpRequest request, ContentEncodings encoding)
         {
-            return encoding switch
+            switch (encoding)
             {
-                ContentEncodings.Brotli => request.AcceptEncoding.Contains("br", StringComparison.InvariantCultureIgnoreCase),
-                ContentEncodings.Gzip => request.AcceptEncoding.Contains("gzip", StringComparison.InvariantCultureIgnoreCase),
-                ContentEncodings.Deflate => request.AcceptEncoding.Contains("deflate", StringComparison.InvariantCultureIgnoreCase),
-                _ => false
-            };
+                case ContentEncodings.Brotli: return request.AcceptEncoding.Contains("br", StringComparison.InvariantCultureIgnoreCase);
+                case ContentEncodings.Gzip: return request.AcceptEncoding.Contains("gzip", StringComparison.InvariantCultureIgnoreCase);
+                case ContentEncodings.Deflate: return request.AcceptEncoding.Contains("deflate", StringComparison.InvariantCultureIgnoreCase);
+                default: return false;
+            }
         }
 
         /// <summary>
@@ -78,13 +78,13 @@ namespace Twino.Protocols.Http
         /// </summary>
         private Stream CreateEncodingStream(Stream parent, ContentEncodings encoding)
         {
-            return encoding switch
+            switch (encoding)
             {
-                ContentEncodings.Brotli => (Stream) new BrotliStream(parent, CompressionMode.Compress),
-                ContentEncodings.Deflate => new DeflateStream(parent, CompressionMode.Compress),
-                ContentEncodings.Gzip => new GZipStream(parent, CompressionMode.Compress),
-                _ => null
-            };
+                case ContentEncodings.Brotli: return new BrotliStream(parent, CompressionMode.Compress);
+                case ContentEncodings.Gzip: return new DeflateStream(parent, CompressionMode.Compress);
+                case ContentEncodings.Deflate: return new GZipStream(parent, CompressionMode.Compress);
+                default: return null;
+            }
         }
     }
 }
