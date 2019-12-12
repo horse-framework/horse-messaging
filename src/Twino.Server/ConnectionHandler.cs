@@ -95,6 +95,7 @@ namespace Twino.Server
 
                     info.SslStream = sslStream;
                     SslProtocols protocol = GetProtocol(_listener);
+                    info.IsSsl = true;
                     await sslStream.AuthenticateAsServerAsync(_listener.Certificate, false, protocol, false);
                 }
 

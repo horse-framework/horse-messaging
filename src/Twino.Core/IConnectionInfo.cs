@@ -42,6 +42,11 @@ namespace Twino.Core
         TcpClient Client { get; }
 
         /// <summary>
+        /// True, if connection is SSL connection
+        /// </summary>
+        bool IsSsl { get; }
+
+        /// <summary>
         /// If true, request read and proceed successfuly.
         /// If false, timeout timer is waiting for the process.
         /// </summary>

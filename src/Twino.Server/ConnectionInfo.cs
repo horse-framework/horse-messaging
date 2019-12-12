@@ -19,6 +19,11 @@ namespace Twino.Server
         public TcpClient Client { get; private set; }
 
         /// <summary>
+        /// True, if connection is SSL connection
+        /// </summary>
+        public bool IsSsl { get; internal set; }
+
+        /// <summary>
         /// If the handshaking is a real SSL, the stream will be SslStream.
         /// If not, this value will be null
         /// </summary>

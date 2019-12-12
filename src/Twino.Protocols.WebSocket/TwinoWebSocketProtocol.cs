@@ -93,17 +93,22 @@ namespace Twino.Protocols.WebSocket
             {
                 await _handler.Ready(_server, handshakeResult.Socket);
             }
-            catch { }
-            
-            WebSocketReader reader = new WebSocketReader();
-            while (info.Client != null && info.Client.Connected)
+            catch
             {
-                WebSocketMessage message = await reader.Read(info.GetStream());
+            }
+
+            WebSocketReader reader = new WebSocketReader();
+            Stream stream = info.GetStream();
+            while (info.Socket != null && info.Socket.IsConnected)
+            {
+                WebSocketMessage message = await reader.Read(stream);
+
                 if (message == null)
                 {
                     info.Close();
                     return;
                 }
+
                 await ProcessMessage(info, handshakeResult.Socket, message);
             }
         }
