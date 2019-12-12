@@ -24,13 +24,11 @@ namespace Twino.Protocols.WebSocket
         public IConnectionInfo Info { get; }
 
         public WsServerSocket(ITwinoServer server, IConnectionInfo info)
+            : base(info)
         {
             Client = info.Client;
             Server = server;
             Info = info;
-            Stream = info.GetStream();
-            IsConnected = true;
-            IsSsl = info.IsSsl;
         }
 
         /// <summary>
