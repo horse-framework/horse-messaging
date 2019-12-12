@@ -89,12 +89,15 @@ namespace Twino.Protocols.WebSocket
         /// </summary>
         public async Task HandleConnection(IConnectionInfo info, ProtocolHandshakeResult handshakeResult)
         {
+            //if user makes a mistake in ready method, we should not interrupt connection handling
             try
             {
                 await _handler.Ready(_server, handshakeResult.Socket);
             }
-            catch
+            catch (Exception e)
             {
+                if (_server.Logger != null)
+                    _server.Logger.LogException("Unhandled Exception", e);
             }
 
             WebSocketReader reader = new WebSocketReader();
@@ -149,7 +152,17 @@ namespace Twino.Protocols.WebSocket
             {
                 case SocketOpCode.Binary:
                 case SocketOpCode.UTF8:
-                    await _handler.Received(_server, info, socket, message);
+                    //if user makes a mistake in received method, we should not interrupt connection handling
+                    try
+                    {
+                        await _handler.Received(_server, info, socket, message);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_server.Logger != null)
+                            _server.Logger.LogException("Unhandled Exception", e);
+                    }
+
                     break;
 
                 case SocketOpCode.Terminate:

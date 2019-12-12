@@ -18,12 +18,12 @@ namespace Twino.Protocols.Http
         /// Closes the connection
         /// </summary>
         Close,
-        
+
         /// <summary>
         /// Does not close connection and reads next request
         /// </summary>
         ReadAgain,
-        
+
         /// <summary>
         /// Does not close connection but does not read next request.
         /// Used when protocol is switched.
@@ -50,7 +50,7 @@ namespace Twino.Protocols.Http
         /// Server time updater for response time data
         /// </summary>
         private readonly Timer _timeTimer;
-        
+
         /// <summary>
         /// Server
         /// </summary>
@@ -119,11 +119,16 @@ namespace Twino.Protocols.Http
         /// </summary>
         public async Task HandleConnection(IConnectionInfo info, ProtocolHandshakeResult handshakeResult)
         {
+            //if user makes a mistake in ready method, we should not interrupt connection handling
             try
             {
                 await _handler.Ready(_server, handshakeResult.Socket);
             }
-            catch { }
+            catch (Exception e)
+            {
+                if (_server.Logger != null)
+                    _server.Logger.LogException("Unhandled Exception", e);
+            }
 
             HttpReader reader = new HttpReader(Options);
             HttpWriter writer = new HttpWriter(Options);
@@ -195,6 +200,7 @@ namespace Twino.Protocols.Http
 
             HttpReader.ReadContent(message.Request);
 
+            //if user makes a mistake in received method, we should not interrupt connection handling
             try
             {
                 await _handler.Received(_server, info, null, message);

@@ -1,5 +1,4 @@
 using System;
-using System.Net.Mime;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Core.Protocols;
@@ -109,12 +108,17 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public async Task HandleConnection(IConnectionInfo info, ProtocolHandshakeResult handshakeResult)
         {
+            //if user makes a mistake in ready method, we should not interrupt connection handling
             try
             {
                 await _handler.Ready(_server, handshakeResult.Socket);
             }
-            catch { }
-            
+            catch (Exception e)
+            {
+                if (_server.Logger != null)
+                    _server.Logger.LogException("Unhandled Exception", e);
+            }
+
             TmqReader reader = new TmqReader();
 
             while (info.Client != null && info.Client.Connected)
@@ -129,7 +133,16 @@ namespace Twino.Protocols.TMQ
                 if (message.Ttl < 0)
                     continue;
 
-                await _handler.Received(_server, info, handshakeResult.Socket, message);
+                //if user makes a mistake in received method, we should not interrupt connection handling
+                try
+                {
+                    await _handler.Received(_server, info, handshakeResult.Socket, message);
+                }
+                catch (Exception e)
+                {
+                    if (_server.Logger != null)
+                        _server.Logger.LogException("Unhandled Exception", e);
+                }
             }
         }
 

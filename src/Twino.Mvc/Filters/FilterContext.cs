@@ -34,6 +34,5 @@ namespace Twino.Mvc.Filters
         /// Get Claims for user associated for executing request
         /// </summary>
         public ClaimsPrincipal User { get; internal set; }
-
     }
 }

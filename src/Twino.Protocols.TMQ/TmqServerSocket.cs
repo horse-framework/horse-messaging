@@ -38,15 +38,13 @@ namespace Twino.Protocols.TMQ
         }
 
         public TmqServerSocket(ITwinoServer server, IConnectionInfo info, IUniqueIdGenerator generator, bool useUniqueMessageId = true)
+            : base(info)
         {
             Client = info.Client;
             Server = server;
             Info = info;
-            Stream = info.GetStream();
             _uniqueIdGenerator = generator;
             UseUniqueMessageId = useUniqueMessageId;
-            IsConnected = true;
-            IsSsl = info.IsSsl;
         }
 
         /// <summary>

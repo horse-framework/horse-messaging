@@ -78,6 +78,14 @@ namespace Twino.Core
             PongTime = DateTime.UtcNow.AddSeconds(15);
         }
 
+        protected SocketBase(IConnectionInfo info)
+        {
+            PongTime = DateTime.UtcNow.AddSeconds(15);
+            IsSsl = info.IsSsl;
+            IsConnected = true;
+            Stream = info.GetStream();
+        }
+
         #region Methods
 
         /// <summary>
