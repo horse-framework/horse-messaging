@@ -69,7 +69,7 @@ namespace Twino.Client.Connectors
                         _connecting = false;
                     }
                 }
-            }, null, interval, interval);
+            }, null, 0, interval);
         }
 
         /// <summary>
