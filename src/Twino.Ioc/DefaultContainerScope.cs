@@ -50,7 +50,7 @@ namespace Twino.Ioc
         {
             ServiceDescriptor descriptor = services.GetDescriptor(serviceType);
             if (descriptor == null)
-                throw new KeyNotFoundException("Service type is not found");
+                throw new KeyNotFoundException($"Service type is not found {serviceType.Name}");
 
             return await Get(descriptor, services);
         }
