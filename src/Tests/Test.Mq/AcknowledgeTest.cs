@@ -23,10 +23,10 @@ namespace Test.Mq
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42301);
+            server.Start();
+            
             server.Server.Server.Options.PingInterval = 300;
             server.Server.Server.Options.RequestTimeout = 300;
-
-            server.Start();
             await Task.Delay(250);
 
             TmqClient client1 = new TmqClient();
@@ -60,10 +60,10 @@ namespace Test.Mq
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42302);
+            server.Start();
+            
             server.Server.Server.Options.PingInterval = 300;
             server.Server.Server.Options.RequestTimeout = 300;
-
-            server.Start();
             await Task.Delay(250);
 
             TmqClient client1 = new TmqClient();
@@ -102,10 +102,10 @@ namespace Test.Mq
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42303);
+            server.Start();
+            
             server.Server.Server.Options.PingInterval = 300;
             server.Server.Server.Options.RequestTimeout = 300;
-
-            server.Start();
             await Task.Delay(250);
 
             TmqClient client1 = new TmqClient();
