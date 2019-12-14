@@ -130,8 +130,6 @@ namespace Test.Mq
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42804);
-
-            throw new NotImplementedException();
         }
 
         /// <summary>

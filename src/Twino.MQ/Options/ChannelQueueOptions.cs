@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Options
 {
@@ -7,12 +9,6 @@ namespace Twino.MQ.Options
     /// </summary>
     public class ChannelQueueOptions
     {
-        /// <summary>
-        /// If true, messages will be queued and wait for subscribers to deliver.
-        /// If false, only online subsribers receive messages. If there is no subscriber message won't kept.
-        /// </summary>
-        public bool MessageQueuing { get; set; }
-
         /// <summary>
         /// If true, messages will send to only first acquirers
         /// </summary>
@@ -31,7 +27,7 @@ namespace Twino.MQ.Options
         /// <summary>
         /// When message queuing is active, maximum time for a message wait
         /// </summary>
-        public TimeSpan MessagePendingTimeout { get; set; } = TimeSpan.Zero;
+        public TimeSpan MessageTimeout { get; set; } = TimeSpan.Zero;
 
         /// <summary>
         /// If true, server creates unique id for each message.
@@ -41,12 +37,17 @@ namespace Twino.MQ.Options
         /// <summary>
         /// If true, queue does not send next message to receivers until acknowledge message received
         /// </summary>
-        public bool WaitAcknowledge { get; set; } = false;
+        public bool WaitForAcknowledge { get; set; }
 
         /// <summary>
         /// If true, server doesn't send client name to receivers in queueus.
         /// </summary>
         public bool HideClientNames { get; set; }
+
+        /// <summary>
+        /// Default status for the queue
+        /// </summary>
+        public QueueStatus Status { get; set; } = QueueStatus.Route;
 
         /// <summary>
         /// Creates clone of the object
@@ -55,6 +56,63 @@ namespace Twino.MQ.Options
         internal object Clone()
         {
             return MemberwiseClone();
+        }
+
+        /// <summary>
+        /// Fills value from properties
+        /// </summary>
+        internal void FillFromProperties(Dictionary<string, string> properties)
+        {
+            foreach (KeyValuePair<string, string> pair in properties)
+            {
+                if (pair.Value.Equals(TmqHeaders.ONLY_FIRST_ACQUIRER, StringComparison.InvariantCultureIgnoreCase))
+                    SendOnlyFirstAcquirer = pair.Value.Equals("true", StringComparison.InvariantCultureIgnoreCase) || pair.Value == "1";
+
+                else if (pair.Value.Equals(TmqHeaders.REQUEST_ACKNOWLEDGE, StringComparison.InvariantCultureIgnoreCase))
+                    RequestAcknowledge = pair.Value.Equals("true", StringComparison.InvariantCultureIgnoreCase) || pair.Value == "1";
+
+                else if (pair.Value.Equals(TmqHeaders.USE_MESSAGE_ID, StringComparison.InvariantCultureIgnoreCase))
+                    UseMessageId = pair.Value.Equals("true", StringComparison.InvariantCultureIgnoreCase) || pair.Value == "1";
+
+                else if (pair.Value.Equals(TmqHeaders.WAIT_FOR_ACKNOWLEDGE, StringComparison.InvariantCultureIgnoreCase))
+                    WaitForAcknowledge = pair.Value.Equals("true", StringComparison.InvariantCultureIgnoreCase) || pair.Value == "1";
+
+                else if (pair.Value.Equals(TmqHeaders.HIDE_CLIENT_NAMES, StringComparison.InvariantCultureIgnoreCase))
+                    HideClientNames = pair.Value.Equals("true", StringComparison.InvariantCultureIgnoreCase) || pair.Value == "1";
+
+                else if (pair.Value.Equals(TmqHeaders.ACKNOWLEDGE_TIMEOUT, StringComparison.InvariantCultureIgnoreCase))
+                    AcknowledgeTimeout = TimeSpan.FromMilliseconds(Convert.ToInt32(pair.Value));
+
+                else if (pair.Value.Equals(TmqHeaders.MESSAGE_TIMEOUT, StringComparison.InvariantCultureIgnoreCase))
+                    MessageTimeout = TimeSpan.FromMilliseconds(Convert.ToInt32(pair.Value));
+
+                else if (pair.Value.Equals(TmqHeaders.QUEUE_STATUS, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    switch (pair.Value.ToLower())
+                    {
+                        case "route":
+                            Status = QueueStatus.Route;
+                            break;
+                        case "push":
+                            Status = QueueStatus.Push;
+                            break;
+                        case "pull":
+                            Status = QueueStatus.Pull;
+                            break;
+
+                        case "pause":
+                        case "paused":
+                            Status = QueueStatus.Paused;
+                            break;
+
+                        case "stop":
+                        case "stoped":
+                        case "stopped":
+                            Status = QueueStatus.Stopped;
+                            break;
+                    }
+                }
+            }
         }
     }
 }

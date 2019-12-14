@@ -31,12 +31,6 @@ namespace Sample.Mq.Server
             await Task.CompletedTask;
         }
 
-        public async Task<bool> OnChannelStatusChanged(Channel channel, ChannelStatus from, ChannelStatus to)
-        {
-            Console.WriteLine($"{channel.Name} channel status changed from {from} to {to}");
-            return await Task.FromResult(true);
-        }
-
         public async Task<bool> OnQueueStatusChanged(ChannelQueue queue, QueueStatus from, QueueStatus to)
         {
             Console.WriteLine($"{queue.ContentType} queue status changed from {from} to {to}");

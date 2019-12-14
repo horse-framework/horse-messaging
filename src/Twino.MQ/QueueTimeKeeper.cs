@@ -46,11 +46,6 @@ namespace Twino.MQ
         /// </summary>
         private readonly List<MessageDelivery> _deliveries = new List<MessageDelivery>(1024);
 
-        /// <summary>
-        /// To not lock delivery and ading delivery list, removing deliveries are stored in different list
-        /// </summary>
-        private readonly List<Tuple<bool, MessageDelivery>> _removingDeliveries = new List<Tuple<bool, MessageDelivery>>(16);
-
         #endregion
 
         public QueueTimeKeeper(ChannelQueue queue, LinkedList<QueueMessage> prefentialMessages, LinkedList<QueueMessage> standardMessages)
@@ -70,13 +65,23 @@ namespace Twino.MQ
             TimeSpan interval = TimeSpan.FromMilliseconds(1000);
             _timer = new Timer(async s =>
             {
-                if (_queue.Options.MessageQueuing && _queue.Options.MessagePendingTimeout > TimeSpan.Zero)
+                if ((_queue.Options.Status == QueueStatus.Push || _queue.Options.Status == QueueStatus.Pull)
+                    && _queue.Options.MessageTimeout > TimeSpan.Zero)
                     await ProcessReceiveTimeup();
 
                 await ProcessDeliveries();
             }, null, interval, interval);
         }
 
+        /// <summary>
+        /// Clears all following deliveries
+        /// </summary>
+        public void Reset()
+        {
+            lock (_deliveries)
+                _deliveries.Clear();
+        }
+        
         /// <summary>
         /// Checks messages if they are not received from any receiver and time is up
         /// Complete the operation about timing up.
@@ -123,7 +128,6 @@ namespace Twino.MQ
         private async Task ProcessDeliveries()
         {
             var rdlist = new List<Tuple<bool, MessageDelivery>>(16);
-            //_removingDeliveries.Clear();
 
             lock (_deliveries)
                 foreach (MessageDelivery delivery in _deliveries)

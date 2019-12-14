@@ -107,9 +107,34 @@ namespace Twino.MQ.Options
 
         private void SetQueuePropertyValues(JToken from, ChannelQueueOptions options)
         {
-            JToken messageQueuing = from["MessageQueuing"];
+            JToken messageQueuing = from["Status"];
             if (messageQueuing != null)
-                options.MessageQueuing = messageQueuing.Value<bool>();
+            {
+                string status = messageQueuing.Value<string>().ToLower();
+                switch (status)
+                {
+                    case "route":
+                        options.Status = QueueStatus.Route;
+                        break;
+                    case "push":
+                        options.Status = QueueStatus.Push;
+                        break;
+                    case "pull":
+                        options.Status = QueueStatus.Pull;
+                        break;
+                    
+                    case "pause":
+                    case "paused":
+                        options.Status = QueueStatus.Paused;
+                        break;
+                    
+                    case "stop":
+                    case "stoped":
+                    case "stopped":
+                        options.Status = QueueStatus.Stopped;
+                        break;
+                }
+            }
 
             JToken sendOnlyFirstAcquirer = from["SendOnlyFirstAcquirer"];
             if (sendOnlyFirstAcquirer != null)
@@ -125,7 +150,7 @@ namespace Twino.MQ.Options
 
             JToken messagePendingTimeout = from["MessagePendingTimeout"];
             if (messagePendingTimeout != null)
-                options.MessagePendingTimeout = TimeSpan.FromMilliseconds(messagePendingTimeout.Value<int>());
+                options.MessageTimeout = TimeSpan.FromMilliseconds(messagePendingTimeout.Value<int>());
 
             JToken useMessageId = from["UseMessageId"];
             if (useMessageId != null)
@@ -133,7 +158,7 @@ namespace Twino.MQ.Options
 
             JToken waitAcknowledge = from["WaitAcknowledge"];
             if (waitAcknowledge != null)
-                options.WaitAcknowledge = waitAcknowledge.Value<bool>();
+                options.WaitForAcknowledge = waitAcknowledge.Value<bool>();
 
             JToken hideClientNames = from["HideClientNames"];
             if (hideClientNames != null)
@@ -164,32 +189,32 @@ namespace Twino.MQ.Options
             options.AllowedContentTypes = other.AllowedContentTypes;
             options.AllowMultipleQueues = other.AllowMultipleQueues;
             options.AcknowledgeTimeout = other.AcknowledgeTimeout;
-            options.MessageQueuing = other.MessageQueuing;
+            options.Status = other.Status;
             options.RequestAcknowledge = other.RequestAcknowledge;
-            options.WaitAcknowledge = other.WaitAcknowledge;
+            options.WaitForAcknowledge = other.WaitForAcknowledge;
             options.HideClientNames = other.HideClientNames;
-            options.MessagePendingTimeout = other.MessagePendingTimeout;
+            options.MessageTimeout = other.MessageTimeout;
             options.UseMessageId = other.UseMessageId;
             options.SendOnlyFirstAcquirer = other.SendOnlyFirstAcquirer;
 
             return options;
         }
-        
+
         private ChannelQueueOptions CloneFrom(ChannelQueueOptions other)
         {
             ChannelQueueOptions options = new ChannelQueueOptions();
             options.AcknowledgeTimeout = other.AcknowledgeTimeout;
-            options.MessageQueuing = other.MessageQueuing;
+            options.Status = other.Status;
             options.RequestAcknowledge = other.RequestAcknowledge;
-            options.WaitAcknowledge = other.WaitAcknowledge;
+            options.WaitForAcknowledge = other.WaitForAcknowledge;
             options.HideClientNames = other.HideClientNames;
-            options.MessagePendingTimeout = other.MessagePendingTimeout;
+            options.MessageTimeout = other.MessageTimeout;
             options.UseMessageId = other.UseMessageId;
             options.SendOnlyFirstAcquirer = other.SendOnlyFirstAcquirer;
-            
+
             return options;
         }
-        
+
         #endregion
 
         #region Add

@@ -10,27 +10,6 @@ using Twino.MQ.Security;
 namespace Twino.MQ
 {
     /// <summary>
-    /// Channel status
-    /// </summary>
-    public enum ChannelStatus
-    {
-        /// <summary>
-        /// Channel queue messaging is running. Messages are accepted and sent to queueus.
-        /// </summary>
-        Running,
-
-        /// <summary>
-        /// Channel queue messages are accepted and queued but not pending
-        /// </summary>
-        Paused,
-
-        /// <summary>
-        /// Channel queue messages are not accepted.
-        /// </summary>
-        Stopped
-    }
-
-    /// <summary>
     /// Messaging Queue Channel
     /// </summary>
     public class Channel
@@ -51,11 +30,6 @@ namespace Twino.MQ
         /// Channel options
         /// </summary>
         public ChannelOptions Options { get; }
-
-        /// <summary>
-        /// Channel status
-        /// </summary>
-        public ChannelStatus Status { get; private set; }
 
         /// <summary>
         /// Channel authenticator.
@@ -114,7 +88,6 @@ namespace Twino.MQ
             Server = server;
             Options = options;
             Name = name;
-            Status = ChannelStatus.Running;
 
             Authenticator = authenticator;
             EventHandler = eventHandler;
@@ -122,29 +95,6 @@ namespace Twino.MQ
 
             _queues = new SafeList<ChannelQueue>(8);
             _clients = new SafeList<ChannelClient>(256);
-        }
-
-        #endregion
-
-        #region Status Actions
-
-        /// <summary>
-        /// Sets status of the channel
-        /// </summary>
-        public async Task SetStatus(ChannelStatus status)
-        {
-            ChannelStatus old = Status;
-            if (old == status)
-                return;
-
-            if (EventHandler != null)
-            {
-                bool allowed = await EventHandler.OnChannelStatusChanged(this, old, status);
-                if (!allowed)
-                    return;
-            }
-
-            Status = status;
         }
 
         #endregion
@@ -286,6 +236,14 @@ namespace Twino.MQ
                 await EventHandler.ClientLeft(cc);
 
             return true;
+        }
+
+        /// <summary>
+        /// Finds client in the channel
+        /// </summary>
+        public ChannelClient FindClient(MqClient client)
+        {
+            return _clients.Find(x => x.Client == client);
         }
 
         #endregion

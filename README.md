@@ -62,7 +62,7 @@ Some of Twino features are listed below:
 - Client based authentication
 - Channel based authentication
 - Action based authorization
-- Saving or not saving messages
+- Message saving operations
 - Peer to peer messaging
 - Sending messages to some type of clients or some client groups
 - Message acknowledge in queues, peer to peer messaging and server side messaging
@@ -73,6 +73,7 @@ Some of Twino features are listed below:
 - Fully extensible client management
 - Channel event handlers
 - Changing decisions from all steps in message delivery operations
+- Pausing and resuming channel or queue operations
 
 ### Basic MVC Example
 

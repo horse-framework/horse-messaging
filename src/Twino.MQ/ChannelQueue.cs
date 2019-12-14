@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
@@ -15,17 +14,34 @@ namespace Twino.MQ
     public enum QueueStatus
     {
         /// <summary>
-        /// Queue messaging is running. Messages are accepted and sent to queueus.
+        /// Queue messaging is in running state.
+        /// Messages are not queued, producers push the message and if there are available consumers, message is sent to them.
+        /// Otherwise, message is deleted.
+        /// If you need to keep messages and transmit only live messages, Route is good status to consume less resource.
         /// </summary>
-        Running,
+        Route,
 
         /// <summary>
-        /// Queue messages are accepted and queued but not pending
+        /// Queue messaging is in running state.
+        /// Producers push the message into the queue and consumer receive when message is pushed
+        /// </summary>
+        Push,
+
+        /// <summary>
+        /// Queue messaging is in running state.
+        /// Producers push message into queue, consumers receive the messages when they requested.
+        /// Each message is sent only one-receiver at same time.
+        /// Request operation removes the message from the queue.
+        /// </summary>
+        Pull,
+
+        /// <summary>
+        /// Queue messages are accepted from producers but they are not sending to consumers even they request new messages. 
         /// </summary>
         Paused,
 
         /// <summary>
-        /// Queue messages are not accepted.
+        /// Queue messages are removed, producers can't push any message to the queue and consumers can't receive any message
         /// </summary>
         Stopped
     }
@@ -119,13 +135,13 @@ namespace Twino.MQ
             Channel = channel;
             ContentType = contentType;
             Options = options;
-
+            Status = options.Status;
             DeliveryHandler = deliveryHandler;
 
             _timeKeeper = new QueueTimeKeeper(this, _prefentialMessages, _standardMessages);
             _timeKeeper.Run();
 
-            if (options.WaitAcknowledge)
+            if (options.WaitForAcknowledge)
                 _semaphore = new SemaphoreSlim(1, 1024);
         }
 
@@ -149,7 +165,34 @@ namespace Twino.MQ
                     return;
             }
 
+            //clear all queue messages if new status is stopped
+            if (status == QueueStatus.Stopped)
+            {
+                lock (_prefentialMessages)
+                    _prefentialMessages.Clear();
+
+                lock (_standardMessages)
+                    _standardMessages.Clear();
+
+                _timeKeeper.Reset();
+            }
+
             Status = status;
+
+            //trigger queued messages
+            if (status == QueueStatus.Route || status == QueueStatus.Push)
+                await Trigger(null);
+        }
+
+        /// <summary>
+        /// Stop the queue, clears all queued messages and re-starts
+        /// </summary>
+        /// <returns></returns>
+        public async Task Restart()
+        {
+            QueueStatus prev = Status;
+            await SetStatus(QueueStatus.Stopped);
+            await SetStatus(prev);
         }
 
         #endregion
@@ -177,10 +220,62 @@ namespace Twino.MQ
         }
 
         /// <summary>
+        /// Client pulls a message from the queue
+        /// </summary>
+        internal async Task Pull(ChannelClient client)
+        {
+            if (Status != QueueStatus.Pull)
+                return;
+
+            QueueMessage message = null;
+
+            //pull from prefential messages
+            if (_prefentialMessages.Count > 0)
+                lock (_prefentialMessages)
+                {
+                    message = _prefentialMessages.First.Value;
+                    _prefentialMessages.RemoveFirst();
+                }
+
+            //if there is no prefential message, pull from standard messages
+            if (message == null && _standardMessages.Count > 0)
+            {
+                lock (_standardMessages)
+
+                {
+                    message = _standardMessages.First.Value;
+                    _standardMessages.RemoveFirst();
+                }
+            }
+
+            //there is no pullable message
+            if (message == null)
+                return;
+
+            try
+            {
+                await ProcesssMessage(message, true, client);
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    await DeliveryHandler.OnException(this, message, ex);
+                }
+                catch //if developer does wrong operation, we should not stop
+                {
+                }
+            }
+        }
+
+        /// <summary>
         /// Pushes a message into the queue.
         /// </summary>
-        internal async Task Push(QueueMessage message, MqClient sender)
+        internal async Task<bool> Push(QueueMessage message, MqClient sender)
         {
+            if (Status == QueueStatus.Stopped)
+                return false;
+
             //prepare properties
             message.Message.FirstAcquirer = true;
             message.Message.AcknowledgeRequired = Options.RequestAcknowledge;
@@ -204,38 +299,44 @@ namespace Twino.MQ
 
                 //if message is skipped on first step, dont push the message any queue and do not process
                 if (decision == MessageDecision.Skip || decision == MessageDecision.SkipAndSave)
-                    return;
+                    return true;
 
                 //if we have an option maximum wait duration for message, set it after message joined to the queue.
                 //time keeper will check this value and if message time is up, it will remove message from the queue.
-                if (Options.MessagePendingTimeout > TimeSpan.Zero)
-                    message.Deadline = DateTime.UtcNow.Add(Options.MessagePendingTimeout);
+                if (Options.MessageTimeout > TimeSpan.Zero)
+                    message.Deadline = DateTime.UtcNow.Add(Options.MessageTimeout);
 
                 //if message doesn't have message id and "UseMessageId" option is enabled, create new message id for the message
                 if (Options.UseMessageId && string.IsNullOrEmpty(message.Message.MessageId))
                     message.Message.MessageId = Channel.Server.MessageIdGenerator.Create();
 
-                //queue the message
-                if (Options.MessageQueuing)
+                //just send the message to receivers
+                if (Status == QueueStatus.Route)
+                {
+                    held = message;
+                    await ProcesssMessage(message, false);
+                }
+
+                //keep the message in queue send send it to receivers
+                //if there is no receiver, message will kept back in the queue
+                else if (Status == QueueStatus.Push)
                 {
                     held = PullMessage(message);
                     await ProcesssMessage(held, true);
                 }
-
-                //process like MQTT
-                else
-                    await ProcesssMessage(message, false);
             }
             catch (Exception ex)
             {
                 try
                 {
-                    await DeliveryHandler.OnException(this, Options.MessageQueuing ? held : message, ex);
+                    await DeliveryHandler.OnException(this, held, ex);
                 }
                 catch //if developer does wrong operation, we should not stop
                 {
                 }
             }
+
+            return true;
         }
 
         /// <summary>
@@ -245,7 +346,7 @@ namespace Twino.MQ
         /// </summary>
         internal async Task Trigger(ChannelClient subscribedClient)
         {
-            if (!Options.MessageQueuing)
+            if (Status != QueueStatus.Route && Status != QueueStatus.Push)
                 return;
 
             if (_prefentialMessages.Count > 0)
@@ -275,7 +376,7 @@ namespace Twino.MQ
 
                 try
                 {
-                    DeliveryOperation operation = await ProcesssMessage(message, Options.MessageQueuing);
+                    DeliveryOperation operation = await ProcesssMessage(message, true);
                     if (operation == DeliveryOperation.Keep)
                         return;
                 }
@@ -330,7 +431,7 @@ namespace Twino.MQ
         /// <summary>
         /// Searches receivers of the message and process the send operation
         /// </summary>
-        private async Task<DeliveryOperation> ProcesssMessage(QueueMessage message, bool onheld)
+        private async Task<DeliveryOperation> ProcesssMessage(QueueMessage message, bool onheld, ChannelClient singleClient = null)
         {
             //if we need acknowledge, we are sending this information to receivers that we require response
             message.Message.AcknowledgeRequired = Options.RequestAcknowledge;
@@ -341,7 +442,7 @@ namespace Twino.MQ
                 deadline = DateTime.UtcNow.Add(Options.AcknowledgeTimeout);
 
             //if to process next message is requires previous message acknowledge, wait here
-            if (Options.RequestAcknowledge && Options.WaitAcknowledge)
+            if (Options.RequestAcknowledge && Options.WaitForAcknowledge)
                 await WaitForAcknowledge(message);
 
             MessageDecision decision = await DeliveryHandler.OnSendStarting(this, message);
@@ -359,19 +460,27 @@ namespace Twino.MQ
 
                 await CompleteOperation(message, skipOperation);
 
-                if (Options.MessageQueuing && onheld && skipOperation == DeliveryOperation.Keep)
+                if (Status != QueueStatus.Route && onheld && skipOperation == DeliveryOperation.Keep)
                     PutMessageBack(message);
 
                 return skipOperation;
             }
 
-            List<ChannelClient> clients = Channel.ClientsClone;
+            List<ChannelClient> clients;
+            if (singleClient == null)
+                clients = Channel.ClientsClone;
+            else
+            {
+                clients = new List<ChannelClient>();
+                clients.Add(singleClient);
+            }
+
             if (clients.Count == 0)
             {
                 await CompleteOperation(message, DeliveryOperation.Keep);
 
                 //if we are queuing, put the message back
-                if (Options.MessageQueuing)
+                if (onheld)
                     PutMessageBack(message);
 
                 return DeliveryOperation.Keep;
@@ -429,7 +538,7 @@ namespace Twino.MQ
 
             await CompleteOperation(message, operation);
 
-            if (operation == DeliveryOperation.Keep)
+            if (Status != QueueStatus.Route && operation == DeliveryOperation.Keep)
                 PutMessageBack(message);
 
             return operation;
@@ -479,9 +588,6 @@ namespace Twino.MQ
         /// </summary>
         private void PutMessageBack(QueueMessage message)
         {
-            if (!Options.MessageQueuing)
-                return;
-
             if (message.IsFirstQueue)
                 message.IsFirstQueue = false;
 
@@ -520,7 +626,7 @@ namespace Twino.MQ
         internal async Task AcknowledgeDelivered(MqClient from, TmqMessage deliveryMessage)
         {
             MessageDelivery delivery = _timeKeeper.FindDelivery(from, deliveryMessage.MessageId);
-            
+
             if (delivery != null)
             {
                 delivery.MarkAsAcknowledged();
@@ -530,10 +636,10 @@ namespace Twino.MQ
                     //if client names are hidden, set source as channel name
                     if (Options.HideClientNames)
                         deliveryMessage.Source = null;
-                    
+
                     //target should be channel name, so client can have info where the message comes from
                     deliveryMessage.Target = Channel.Name;
-                    
+
                     delivery.AcknowledgeSentToSource = await delivery.Message.Source.SendAsync(deliveryMessage);
                 }
             }

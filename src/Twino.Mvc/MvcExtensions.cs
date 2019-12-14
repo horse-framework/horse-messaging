@@ -19,8 +19,7 @@ namespace Twino.Mvc
         /// </summary>
         public static ITwinoServer UseMvc(this ITwinoServer server, TwinoMvc mvc, HttpOptions options)
         {
-            MvcAppBuilder builder = new MvcAppBuilder(mvc);
-            MvcConnectionHandler handler = new MvcConnectionHandler(mvc, builder);
+            MvcConnectionHandler handler = new MvcConnectionHandler(mvc, mvc.AppBuilder);
             TwinoHttpProtocol protocol = new TwinoHttpProtocol(server, handler, options);
             server.UseProtocol(protocol);
             return server;
