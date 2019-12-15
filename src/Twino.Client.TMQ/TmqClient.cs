@@ -161,6 +161,9 @@ namespace Twino.Client.TMQ
             if (string.IsNullOrEmpty(_clientId))
                 _clientId = UniqueIdGenerator.Create();
 
+            if (host.Protocol != Protocol.Tmq)
+                throw new NotSupportedException("Only TMQ protocol is supported");
+
             try
             {
                 Client = new TcpClient();
@@ -208,6 +211,9 @@ namespace Twino.Client.TMQ
         /// </summary>
         public override async Task ConnectAsync(DnsInfo host)
         {
+            if (host.Protocol != Protocol.Tmq)
+                throw new NotSupportedException("Only TMQ protocol is supported");
+
             try
             {
                 Client = new TcpClient();
@@ -635,6 +641,21 @@ namespace Twino.Client.TMQ
                 return sent;
 
             return await task;
+        }
+
+        /// <summary>
+        /// Request a message from Pull queue
+        /// </summary>
+        public async Task<bool> Pull(string channel, ushort contentType)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Channel;
+            message.ResponseRequired = true;
+            message.ContentType = contentType;
+            message.Target = channel;
+
+            bool sent = await SendAsync(message);
+            return sent;
         }
 
         #endregion

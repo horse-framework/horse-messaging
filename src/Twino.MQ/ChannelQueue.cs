@@ -458,10 +458,14 @@ namespace Twino.MQ
                 message.IsSkipped = true;
                 DeliveryOperation skipOperation = await DeliveryHandler.OnSendCompleted(this, message);
 
-                await CompleteOperation(message, skipOperation);
-
+                if (skipOperation == DeliveryOperation.SaveMessage && !message.IsSaved)
+                    message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
+                
                 if (Status != QueueStatus.Route && onheld && skipOperation == DeliveryOperation.Keep)
                     PutMessageBack(message);
+
+                else
+                    await DeliveryHandler.OnRemove(this, message);
 
                 return skipOperation;
             }
@@ -613,7 +617,7 @@ namespace Twino.MQ
                 return;
 
             //save the message
-            if (operation == DeliveryOperation.SaveMessage)
+            if (!message.IsSaved && operation == DeliveryOperation.SaveMessage)
                 message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
 
             //remove the message

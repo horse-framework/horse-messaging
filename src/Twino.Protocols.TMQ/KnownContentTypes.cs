@@ -9,6 +9,7 @@ namespace Twino.Protocols.TMQ
         public const ushort BadRequest = 400;
         public const ushort Unauthorized = 401;
         public const ushort NotFound = 404;
+        public const ushort Unacceptable = 406;
         public const ushort Duplicate = 481;
         public const ushort Failed = 500;
         public const ushort Busy = 503;
