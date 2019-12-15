@@ -295,14 +295,16 @@ namespace Twino.MQ
             Channel channel = _server.FindChannel(message.Target);
             if (channel == null)
             {
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                if (!string.IsNullOrEmpty(message.MessageId))
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
                 return;
             }
 
             ChannelQueue queue = channel.FindQueue(message.ContentType);
             if (queue == null)
             {
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                if (!string.IsNullOrEmpty(message.MessageId))
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
                 return;
             }
 
@@ -336,7 +338,8 @@ namespace Twino.MQ
                     bool grant = await _server.Authorization.CanMessageToQueue(client, queue, message);
                     if (!grant)
                     {
-                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                        if (!string.IsNullOrEmpty(message.MessageId))
+                            await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
                         return;
                     }
                 }
