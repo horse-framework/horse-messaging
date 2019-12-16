@@ -21,12 +21,16 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public async Task<TmqMessage> Read(Stream stream)
         {
-            byte[] bytes = await ReadRequiredFrame(stream);
-            if (bytes == null || bytes.Length < REQUIRED_SIZE)
+            byte[] bytes = new byte[REQUIRED_SIZE];
+            bool done = await ReadCertainBytes(stream, bytes, 0, REQUIRED_SIZE);
+            if (!done)
                 return null;
 
             TmqMessage message = new TmqMessage();
-            await ProcessRequiredFrame(message, bytes, stream);
+            done = await ProcessRequiredFrame(message, bytes, stream);
+            if (!done)
+                return null;
+            
             message.Ttl--;
 
             await ReadContent(message, stream);
@@ -38,21 +42,10 @@ namespace Twino.Protocols.TMQ
         }
 
         /// <summary>
-        /// Reads required frame of the message
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static async Task<byte[]> ReadRequiredFrame(Stream stream)
-        {
-            byte[] bytes = new byte[REQUIRED_SIZE];
-            bool done = await ReadCertainBytes(stream, bytes, 0, REQUIRED_SIZE);
-            return !done ? null : bytes;
-        }
-
-        /// <summary>
         /// Process required frame data of message
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static async Task ProcessRequiredFrame(TmqMessage message, byte[] bytes, Stream stream)
+        private static async Task<bool> ProcessRequiredFrame(TmqMessage message, byte[] bytes, Stream stream)
         {
             byte type = bytes[0];
             if (type >= 128)
@@ -95,7 +88,7 @@ namespace Twino.Protocols.TMQ
             {
                 bool done = await ReadCertainBytes(stream, bytes, 0, 2);
                 if (!done)
-                    throw new SocketException();
+                    return false;
 
                 message.Length = BitConverter.ToUInt16(bytes, 0);
             }
@@ -103,7 +96,7 @@ namespace Twino.Protocols.TMQ
             {
                 bool done = await ReadCertainBytes(stream, bytes, 0, 4);
                 if (!done)
-                    throw new SocketException();
+                    return false;
 
                 message.Length = BitConverter.ToUInt32(bytes, 0);
             }
@@ -112,12 +105,14 @@ namespace Twino.Protocols.TMQ
                 byte[] b = new byte[8];
                 bool done = await ReadCertainBytes(stream, b, 0, 8);
                 if (!done)
-                    throw new SocketException();
+                    return false;
 
                 message.Length = BitConverter.ToUInt64(b, 0);
             }
             else
                 message.Length = length;
+
+            return true;
         }
 
         /// <summary>
