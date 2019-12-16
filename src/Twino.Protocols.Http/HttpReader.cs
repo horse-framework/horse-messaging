@@ -139,6 +139,7 @@ namespace Twino.Protocols.Http
                     if (!_readingHeaders)
                     {
                         start = await ReadContent(request, _stream.GetBuffer(), start, (int) _stream.Length - start);
+                        requiredMoreData = ContentLength < request.ContentLength;
                         continue;
                     }
 
@@ -298,8 +299,8 @@ namespace Twino.Protocols.Http
                 request.ContentStream = new MemoryStream();
 
             await request.ContentStream.WriteAsync(buffer, start, length);
-            ContentLength += length;
 
+            ContentLength += length;
             return start + length;
         }
 

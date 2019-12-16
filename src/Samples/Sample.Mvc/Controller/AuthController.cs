@@ -1,7 +1,10 @@
-﻿using Twino.Mvc;
+﻿using System.Threading.Tasks;
+using Sample.Mvc.Models;
+using Twino.Mvc;
 using Twino.Mvc.Auth;
 using Twino.Mvc.Auth.Jwt;
 using Twino.Mvc.Controllers;
+using Twino.Mvc.Controllers.Parameters;
 using Twino.Mvc.Filters.Route;
 
 namespace Sample.Mvc.Controller
@@ -36,5 +39,15 @@ namespace Sample.Mvc.Controller
             return String("IT");
         }
 
+        [HttpPost("post")]
+        public async Task<IActionResult> Post([FromBody] LoginModel model)
+        {
+            return await JsonAsync(new
+                                   {
+                                       Ok = true,
+                                       Code = 200,
+                                       Message = "Success: " + model.Username
+                                   });
+        }
     }
 }
