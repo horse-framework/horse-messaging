@@ -6,9 +6,9 @@
         <Product>Twino.Mvc.Auth.Jwt</Product>
         <Description>JSON Web Token Authentication and Authorization library for Twino MVC</Description>
         <PackageTags>twino,http,mvc,jwt,token,authentication,authorization</PackageTags>
-        <AssemblyVersion>2.0.19</AssemblyVersion>
-        <FileVersion>2.0.19</FileVersion>
-        <PackageVersion>2.0.19-beta</PackageVersion>
+        <AssemblyVersion>2.0.21</AssemblyVersion>
+        <FileVersion>2.0.21</FileVersion>
+        <PackageVersion>2.0.21-beta</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü</Authors>
         <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
