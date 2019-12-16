@@ -146,6 +146,7 @@ namespace Twino.Protocols.WebSocket
         /// <summary>
         /// Reads length bytes from the stream, not even one byte less.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static async Task<bool> ReadCertainBytes(Stream stream, byte[] buffer, int start, int length)
         {
             int total = 0;
