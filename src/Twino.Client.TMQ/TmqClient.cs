@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -160,6 +161,9 @@ namespace Twino.Client.TMQ
             if (string.IsNullOrEmpty(_clientId))
                 _clientId = UniqueIdGenerator.Create();
 
+            if (host.Protocol != Protocol.Tmq)
+                throw new NotSupportedException("Only TMQ protocol is supported");
+
             try
             {
                 Client = new TcpClient();
@@ -207,6 +211,9 @@ namespace Twino.Client.TMQ
         /// </summary>
         public override async Task ConnectAsync(DnsInfo host)
         {
+            if (host.Protocol != Protocol.Tmq)
+                throw new NotSupportedException("Only TMQ protocol is supported");
+
             try
             {
                 Client = new TcpClient();
@@ -562,12 +569,31 @@ namespace Twino.Client.TMQ
         /// </summary>
         public async Task<bool> CreateQueue(string channel, ushort contentType, bool verifyResponse)
         {
+            return await CreateQueue(channel, contentType, null, verifyResponse);
+        }
+
+        /// <summary>
+        /// Creates new queue in server
+        /// </summary>
+        public async Task<bool> CreateQueue(string channel, ushort contentType, Dictionary<string, string> properties, bool verifyResponse)
+        {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.CreateQueue;
             message.Target = channel;
             message.ResponseRequired = verifyResponse;
-            message.Content = new MemoryStream(BitConverter.GetBytes(contentType));
+
+            if (properties == null)
+                message.Content = new MemoryStream(BitConverter.GetBytes(contentType));
+            else
+            {
+                StringBuilder content = new StringBuilder();
+                content.Append(TmqHeaders.CONTENT_TYPE + ": " + contentType + "\r\n");
+                foreach (KeyValuePair<string, string> pair in properties)
+                    content.Append(pair.Key + ": " + pair.Value + "\r\n");
+
+                message.Content = new MemoryStream(Encoding.UTF8.GetBytes(content.ToString()));
+            }
 
             if (verifyResponse)
                 message.MessageId = UniqueIdGenerator.Create();
@@ -615,6 +641,21 @@ namespace Twino.Client.TMQ
                 return sent;
 
             return await task;
+        }
+
+        /// <summary>
+        /// Request a message from Pull queue
+        /// </summary>
+        public async Task<bool> Pull(string channel, ushort contentType)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Channel;
+            message.ResponseRequired = true;
+            message.ContentType = contentType;
+            message.Target = channel;
+
+            bool sent = await SendAsync(message);
+            return sent;
         }
 
         #endregion

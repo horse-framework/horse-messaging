@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.Protocols.TMQ;
@@ -17,7 +18,7 @@ namespace Twino.MQ.Security
         /// <summary>
         /// Returns true, if client can create new queue in the channel
         /// </summary>
-        Task<bool> CanCreateQueue(MqClient client, Channel channel, ushort contentType);
+        Task<bool> CanCreateQueue(MqClient client, Channel channel, ushort contentType, Dictionary<string, string> properties);
 
         /// <summary>
         /// Returns true, if client can send a peer message
@@ -28,5 +29,10 @@ namespace Twino.MQ.Security
         /// Returns true, if client can send a message to the queue
         /// </summary>
         Task<bool> CanMessageToQueue(MqClient client, ChannelQueue queue, TmqMessage message);
+        
+        /// <summary>
+        /// Returns true, if client can pull a message from the queue
+        /// </summary>
+        Task<bool> CanPullFromQueue(ChannelClient client, ChannelQueue queue);
     }
 }

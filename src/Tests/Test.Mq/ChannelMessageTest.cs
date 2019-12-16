@@ -14,13 +14,13 @@ namespace Test.Mq
 {
     public class ChannelMessageTest
     {
-        #region Not Queuing
+        #region Route Messaging
 
         /// <summary>
         /// Message is sent when there aren't any clients
         /// </summary>
         [Fact]
-        public async Task NonQueueMessageToNoClients()
+        public async Task RouteToNoClients()
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42501);
@@ -63,7 +63,7 @@ namespace Test.Mq
         /// Message is sent one or multiple available clients
         /// </summary>
         [Fact]
-        public async Task NonQueueMessageToClients()
+        public async Task RouteToClients()
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42502);
@@ -102,17 +102,17 @@ namespace Test.Mq
 
         #endregion
 
-        #region Queuing
+        #region Push Messaging
 
         /// <summary>
         /// Message is sent one or multiple available clients
         /// </summary>
         [Fact]
-        public async Task QueueMessageToClients()
+        public async Task PushToClients()
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42505);
-            server.Server.Options.MessageQueuing = true;
+            server.Server.Options.Status = QueueStatus.Push;
             server.Start();
 
             TmqClient client = new TmqClient();
@@ -150,7 +150,7 @@ namespace Test.Mq
         /// Clients will join after messages are sent
         /// </summary>
         [Fact]
-        public async Task QueueMessageToLateClients()
+        public async Task PushToLateClients()
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42506);
@@ -165,7 +165,7 @@ namespace Test.Mq
 
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
-            queue.Options.MessageQueuing = true;
+            await queue.SetStatus(QueueStatus.Push);
 
             bool received = false;
             client.MessageReceived += (c, m) =>
@@ -266,8 +266,8 @@ namespace Test.Mq
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
             
-            queue.Options.MessageQueuing = true;
             queue.Options.SendOnlyFirstAcquirer = true;
+            await queue.SetStatus(QueueStatus.Push);
 
             bool[] received = new bool[3];
 
@@ -490,9 +490,9 @@ namespace Test.Mq
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
             
-            queue.Options.MessageQueuing = true;
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
+            await queue.SetStatus(QueueStatus.Push);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
             bool sent = await client.Push(channel.Name, queue.ContentType, ms, true);
@@ -537,7 +537,7 @@ namespace Test.Mq
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
             
-            queue.Options.MessageQueuing = true;
+            queue.Options.Status = QueueStatus.Push;
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
@@ -587,7 +587,7 @@ namespace Test.Mq
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
             
-            queue.Options.MessageQueuing = true;
+            queue.Options.Status = QueueStatus.Push;
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 

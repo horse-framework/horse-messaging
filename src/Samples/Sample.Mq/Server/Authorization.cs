@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Twino.MQ;
 using Twino.MQ.Clients;
@@ -16,7 +17,7 @@ namespace Sample.Mq.Server
             return await Task.FromResult(grant);
         }
 
-        public async Task<bool> CanCreateQueue(MqClient client, Channel channel, ushort contentType)
+        public async Task<bool> CanCreateQueue(MqClient client, Channel channel, ushort contentType, Dictionary<string, string> properties)
         {
             bool grant = client.Type.Equals("producer");
             Console.WriteLine("Can create new queue: " + grant);
@@ -34,6 +35,12 @@ namespace Sample.Mq.Server
             bool grant = client.Type.Equals("producer");
             Console.WriteLine("Can message to queue: " + grant);
             return await Task.FromResult(grant);
+        }
+
+        public async Task<bool> CanPullFromQueue(ChannelClient client, ChannelQueue queue)
+        {
+            Console.WriteLine("can pull from queue True");
+            return await Task.FromResult(true);
         }
     }
 }

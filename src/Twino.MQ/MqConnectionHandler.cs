@@ -5,6 +5,7 @@ using Twino.Core;
 using Twino.Core.Protocols;
 using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
+using Twino.MQ.Options;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ
@@ -228,6 +229,9 @@ namespace Twino.MQ
                 await ProcessSingleReceiverClientMessage(client, message);
         }
 
+        /// <summary>
+        /// Processes the client message which has multiple receivers (message by name or type)
+        /// </summary>
         private async Task ProcessMultipleReceiverClientMessage(MqClient sender, List<MqClient> receivers, TmqMessage message)
         {
             if (receivers.Count < 1)
@@ -254,6 +258,9 @@ namespace Twino.MQ
             }
         }
 
+        /// <summary>
+        /// Processes the client message which has single receiver (message by unique id)
+        /// </summary>
         private async Task ProcessSingleReceiverClientMessage(MqClient client, TmqMessage message)
         {
             //find the receiver
@@ -288,34 +295,64 @@ namespace Twino.MQ
             Channel channel = _server.FindChannel(message.Target);
             if (channel == null)
             {
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                if (!string.IsNullOrEmpty(message.MessageId))
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
                 return;
             }
 
             ChannelQueue queue = channel.FindQueue(message.ContentType);
             if (queue == null)
             {
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                if (!string.IsNullOrEmpty(message.MessageId))
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
                 return;
             }
 
-            //check authority
-            if (_server.Authorization != null)
+            //consumer is trying to pull from the queue
+            //in false cases, we won't send any response, cuz client is pending only queue messages, not response messages
+            if (message.Length == 0 && message.ResponseRequired)
             {
-                bool grant = await _server.Authorization.CanMessageToQueue(client, queue, message);
-                if (!grant)
-                {
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                //only pull statused queues can handle this request
+                if (queue.Status != QueueStatus.Pull)
                     return;
-                }
+
+                //client cannot pull message from the channel not in
+                ChannelClient channelClient = channel.FindClient(client);
+                if (channelClient == null)
+                    return;
+
+                //check authorization
+                bool grant = await _server.Authorization.CanPullFromQueue(channelClient, queue);
+                if (!grant)
+                    return;
+
+                await queue.Pull(channelClient);
             }
 
-            //prepare the message
-            QueueMessage queueMessage = new QueueMessage(message);
-            queueMessage.Source = client;
+            //message have a content, this is the real message from producer to the queue
+            else
+            {
+                //check authority
+                if (_server.Authorization != null)
+                {
+                    bool grant = await _server.Authorization.CanMessageToQueue(client, queue, message);
+                    if (!grant)
+                    {
+                        if (!string.IsNullOrEmpty(message.MessageId))
+                            await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                        return;
+                    }
+                }
 
-            //push the message
-            await queue.Push(queueMessage, client);
+                //prepare the message
+                QueueMessage queueMessage = new QueueMessage(message);
+                queueMessage.Source = client;
+
+                //push the message
+                bool sent = await queue.Push(queueMessage, client);
+                if (!sent)
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Failed));
+            }
         }
 
         /// <summary>
@@ -423,9 +460,36 @@ namespace Twino.MQ
         /// </summary>
         private async Task CreateQueue(MqClient client, TmqMessage message)
         {
-            byte[] bytes = new byte[2];
-            await message.Content.ReadAsync(bytes);
-            ushort contentType = BitConverter.ToUInt16(bytes);
+            ushort? contentType = null;
+            Dictionary<string, string> properties = null;
+            if (message.Length == 2)
+            {
+                byte[] bytes = new byte[2];
+                await message.Content.ReadAsync(bytes);
+                contentType = BitConverter.ToUInt16(bytes);
+            }
+            else
+            {
+                string content = message.ToString();
+                string[] lines = content.Split(new[] {"\r\n"}, StringSplitOptions.RemoveEmptyEntries);
+                properties = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+                foreach (string line in lines)
+                {
+                    string[] kv = line.Split(':');
+                    string key = kv[0].Trim();
+                    string value = kv[1].Trim();
+                    if (key.Equals(TmqHeaders.CONTENT_TYPE))
+                        contentType = Convert.ToUInt16(value);
+                    else
+                        properties.Add(key, value);
+                }
+            }
+
+            if (!contentType.HasValue)
+            {
+                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.BadRequest));
+                return;
+            }
 
             Channel channel = _server.FindChannel(message.Target);
 
@@ -448,7 +512,7 @@ namespace Twino.MQ
                 channel = _server.CreateChannel(message.Target);
             }
 
-            ChannelQueue queue = channel.FindQueue(contentType);
+            ChannelQueue queue = channel.FindQueue(contentType.Value);
 
             //if queue exists, we can't create. return duplicate response.
             if (queue != null)
@@ -462,7 +526,7 @@ namespace Twino.MQ
             //check authority if client can create queue
             if (_server.Authorization != null)
             {
-                bool grant = await _server.Authorization.CanCreateQueue(client, channel, contentType);
+                bool grant = await _server.Authorization.CanCreateQueue(client, channel, contentType.Value, properties);
                 if (!grant)
                 {
                     if (message.ResponseRequired)
@@ -473,7 +537,11 @@ namespace Twino.MQ
             }
 
             //creates new queue
-            queue = await channel.CreateQueue(contentType);
+            ChannelQueueOptions options = (ChannelQueueOptions) channel.Options.Clone();
+            if (properties != null)
+                options.FillFromProperties(properties);
+
+            queue = await channel.CreateQueue(contentType.Value, options);
 
             //if creation successful, sends response
             if (queue != null && message.ResponseRequired)
