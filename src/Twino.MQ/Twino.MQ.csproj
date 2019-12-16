@@ -6,9 +6,9 @@
         <Product>Twino.MQ</Product>
         <Description>Messaging Queue Server library with TMQ Protocol via Twino Server</Description>
         <PackageTags>twino,server,tmq,messaging,queue,mq</PackageTags>
-        <AssemblyVersion>2.0.17</AssemblyVersion>
-        <FileVersion>2.0.17</FileVersion>
-        <PackageVersion>2.0.17-beta</PackageVersion>
+        <AssemblyVersion>2.0.19</AssemblyVersion>
+        <FileVersion>2.0.19</FileVersion>
+        <PackageVersion>2.0.19-beta</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü</Authors>
         <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
