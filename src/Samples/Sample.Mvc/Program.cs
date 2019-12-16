@@ -36,7 +36,7 @@ namespace Sample.Mvc
         {
             using TwinoMvc mvc = new TwinoMvc();
 
-            mvc.IsDevelopment = true;
+            mvc.IsDevelopment = false;
             mvc.Init(twino =>
             {
                 twino.Services.AddScoped<IScopedService, ScopedService>();

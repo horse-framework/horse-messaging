@@ -43,19 +43,8 @@ namespace Twino.Protocols.TMQ
         private static async Task<byte[]> ReadRequiredFrame(Stream stream)
         {
             byte[] bytes = new byte[REQUIRED_SIZE];
-
-            int read = await stream.ReadAsync(bytes, 0, bytes.Length);
-            if (read == 0)
-                return null;
-
-            if (read < REQUIRED_SIZE)
-            {
-                int reread = await stream.ReadAsync(bytes, read, bytes.Length - read);
-                if (reread + read < REQUIRED_SIZE)
-                    return null;
-            }
-
-            return bytes;
+            bool done = await ReadCertainBytes(stream, bytes, 0, REQUIRED_SIZE);
+            return !done ? null : bytes;
         }
 
         /// <summary>
@@ -173,6 +162,24 @@ namespace Twino.Protocols.TMQ
             } while (total >= length);
 
             return result;
+        }
+
+        /// <summary>
+        /// Reads length bytes from the stream, not even one byte less.
+        /// </summary>
+        private static async Task<bool> ReadCertainBytes(Stream stream, byte[] buffer, int start, int length)
+        {
+            int total = 0;
+            do
+            {
+                int read = await stream.ReadAsync(buffer, start + total, length - total);
+                if (read == 0)
+                    return false;
+
+                total += read;
+            } while (total < length);
+
+            return true;
         }
     }
 }
