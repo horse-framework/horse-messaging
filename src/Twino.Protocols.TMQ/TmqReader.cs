@@ -21,7 +21,6 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public async Task<TmqMessage> Read(Stream stream)
         {
-            Console.Write(",");
             byte[] bytes = await ReadRequiredFrame(stream);
             if (bytes == null || bytes.Length < REQUIRED_SIZE)
                 return null;
@@ -29,10 +28,8 @@ namespace Twino.Protocols.TMQ
             TmqMessage message = new TmqMessage();
             await ProcessRequiredFrame(message, bytes, stream);
             message.Ttl--;
-            Console.Write("+" + message.Length);
 
             await ReadContent(message, stream);
-            Console.Write("-");
 
             if (message.Content != null && message.Content.Position > 0)
                 message.Content.Position = 0;
@@ -48,7 +45,6 @@ namespace Twino.Protocols.TMQ
         {
             byte[] bytes = new byte[REQUIRED_SIZE];
             bool done = await ReadCertainBytes(stream, bytes, 0, REQUIRED_SIZE);
-            Console.Write("*");
             return !done ? null : bytes;
         }
 
