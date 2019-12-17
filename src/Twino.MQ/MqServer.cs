@@ -43,6 +43,12 @@ namespace Twino.MQ
         public TwinoServer Server { get; internal set; }
 
         /// <summary>
+        /// Server authenticator implementation.
+        /// If null, all servers will be rejected.
+        /// </summary>
+        internal IClientAuthenticator ServerAuthenticator { get; private set; }
+
+        /// <summary>
         /// Client authenticator implementation.
         /// If null, all clients will be accepted.
         /// </summary>
@@ -85,6 +91,16 @@ namespace Twino.MQ
         /// Id generator for clients which has no specified unique id 
         /// </summary>
         public IUniqueIdGenerator ClientIdGenerator { get; set; } = new DefaultUniqueIdGenerator();
+
+        /// <summary>
+        /// Connected MQ Servers
+        /// </summary>
+        internal SafeList<MqClient> Servers { get; } = new SafeList<MqClient>(8);
+
+        /// <summary>
+        /// Connected MQ Servers
+        /// </summary>
+        public IEnumerable<MqClient> ConnectedServers => Servers.GetAsClone();
 
         #endregion
 
@@ -133,6 +149,17 @@ namespace Twino.MQ
 
         #region Set Default Interfaces
 
+        /// <summary>
+        /// Sets server authenticator for using multiple servers
+        /// </summary>
+        public void SetServerAuthenticator(IClientAuthenticator authenticator)
+        {
+            if (ServerAuthenticator != null)
+                throw new ReadOnlyException("Server authenticator can be set only once");
+
+            ServerAuthenticator = authenticator;
+        }
+        
         /// <summary>
         /// Sets default channel event handler and authenticator
         /// </summary>
