@@ -211,6 +211,9 @@ namespace Twino.Client.TMQ
         /// </summary>
         public override async Task ConnectAsync(DnsInfo host)
         {
+            if (string.IsNullOrEmpty(_clientId))
+                _clientId = UniqueIdGenerator.Create();
+
             if (host.Protocol != Protocol.Tmq)
                 throw new NotSupportedException("Only TMQ protocol is supported");
 
@@ -349,6 +352,11 @@ namespace Twino.Client.TMQ
 
             switch (message.Type)
             {
+                case MessageType.Server:
+                    if (message.ContentType == KnownContentTypes.Accepted)
+                        _clientId = message.Target;
+                    break;
+
                 case MessageType.Terminate:
                     Disconnect();
                     break;

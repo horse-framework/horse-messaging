@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Twino.Client.TMQ.Connectors;
 using Twino.Core;
 using Twino.Core.Protocols;
 using Twino.MQ.Clients;
@@ -43,7 +44,7 @@ namespace Twino.MQ
         {
             string clientId;
             bool found = data.Properties.TryGetValue(TmqHeaders.CLIENT_ID, out clientId);
-            if (!found)
+            if (!found || string.IsNullOrEmpty(clientId))
                 clientId = _server.ClientIdGenerator.Create();
 
             //if another client with same unique id is online, do not accept new client
@@ -62,26 +63,44 @@ namespace Twino.MQ
             client.Name = data.Properties.GetStringValue(TmqHeaders.CLIENT_NAME);
             client.Type = data.Properties.GetStringValue(TmqHeaders.CLIENT_TYPE);
 
-            //authenticates client
-            if (_server.Authenticator != null)
+            //connecting client is a MQ server 
+            string serverValue = data.Properties.GetStringValue(TmqHeaders.TWINO_MQ_SERVER);
+            if (!string.IsNullOrEmpty(serverValue) && (serverValue.Equals("1") || serverValue.Equals("true", StringComparison.InvariantCultureIgnoreCase)))
             {
-                client.IsAuthenticated = await _server.Authenticator.Authenticate(_server, client);
-                if (!client.IsAuthenticated)
-                {
-                    await client.SendAsync(MessageBuilder.Unauthorized());
+                if (_server.ServerAuthenticator == null)
                     return null;
-                }
+
+                bool accepted = await _server.ServerAuthenticator.Authenticate(_server, client);
+                if (!accepted)
+                    return null;
+
+                await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
             }
 
-            //client authenticated, add it into the connected clients list
-            _server.AddClient(client);
+            //connecting client is a producer/consumer client
+            else
+            {
+                //authenticates client
+                if (_server.Authenticator != null)
+                {
+                    client.IsAuthenticated = await _server.Authenticator.Authenticate(_server, client);
+                    if (!client.IsAuthenticated)
+                    {
+                        await client.SendAsync(MessageBuilder.Unauthorized());
+                        return null;
+                    }
+                }
 
-            //send response message to the client, client should check unique id,
-            //if client's unique id isn't permitted, server will create new id for client and send it as response
-            await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
+                //client authenticated, add it into the connected clients list
+                _server.AddClient(client);
 
-            if (_server.ClientHandler != null)
-                await _server.ClientHandler.Connected(_server, client);
+                //send response message to the client, client should check unique id,
+                //if client's unique id isn't permitted, server will create new id for client and send it as response
+                await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
+
+                if (_server.ClientHandler != null)
+                    await _server.ClientHandler.Connected(_server, client);
+            }
 
             return client;
         }
@@ -141,6 +160,14 @@ namespace Twino.MQ
             {
                 client.Disconnect();
                 return;
+            }
+
+            //if there are connected servers, send message to them
+            if (_server.ServerAuthenticator != null && _server.InstanceConnectors.Length > 0)
+            {
+                byte[] mdata = await _writer.Create(message);
+                foreach (TmqStickyConnector connector in _server.InstanceConnectors)
+                    connector.Send(mdata);
             }
 
             switch (message.Type)

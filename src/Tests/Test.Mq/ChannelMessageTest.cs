@@ -634,7 +634,7 @@ namespace Test.Mq
             int port = enabled ? 42531 : 42532;
             TestMqServer server = new TestMqServer();
             server.Initialize(port);
-            server.Start();
+            server.Start(300);
 
             Channel channel = server.Server.FindChannel("ch-1");
             Assert.NotNull(channel);

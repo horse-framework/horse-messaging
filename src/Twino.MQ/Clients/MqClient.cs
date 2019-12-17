@@ -62,12 +62,14 @@ namespace Twino.MQ.Clients
         public MqClient(MqServer server, IConnectionInfo info) : base(server.Server, info)
         {
             MqServer = server;
+            IsConnected = true;
         }
 
         public MqClient(MqServer server, IConnectionInfo info, IUniqueIdGenerator generator, bool useUniqueMessageId = true)
             : base(server.Server, info, generator, useUniqueMessageId)
         {
             MqServer = server;
+            IsConnected = true;
         }
 
         /// <summary>

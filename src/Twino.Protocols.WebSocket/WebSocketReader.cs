@@ -60,7 +60,12 @@ namespace Twino.Protocols.WebSocket
             long length = await ReadLength(maskbyte, stream);
 
             if (message.Masking)
-                message.Mask = await ReadMask(stream);
+            {
+                message.Mask = new byte[4];
+                done = await ReadCertainBytes(stream, message.Mask, 0, 4);
+                if (!done)
+                    return null;
+            }
 
             await ReadContent(stream, message, length);
 
@@ -84,7 +89,7 @@ namespace Twino.Protocols.WebSocket
                 bool done = await ReadCertainBytes(stream, sbytes, 0, 2);
                 if (!done)
                     throw new SocketException();
-                
+
                 return BitConverter.ToUInt16(new[] {sbytes[1], sbytes[0]}, 0);
             }
 
@@ -95,25 +100,11 @@ namespace Twino.Protocols.WebSocket
                 bool done = await ReadCertainBytes(stream, sbytes, 0, 8);
                 if (!done)
                     throw new SocketException();
-                
+
                 return BitConverter.ToInt64(new[] {sbytes[7], sbytes[6], sbytes[5], sbytes[4], sbytes[3], sbytes[2], sbytes[1], sbytes[0]}, 0);
             }
 
             return 0;
-        }
-
-        /// <summary>
-        /// Reads masking status and masking key from stream
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<byte[]> ReadMask(Stream stream)
-        {
-            byte[] mask = new byte[4];
-            bool done = await ReadCertainBytes(stream, mask, 0, 4);
-            if (!done)
-                throw new SocketException();
-            
-            return mask;
         }
 
         /// <summary>

@@ -6,11 +6,11 @@ using Twino.Protocols.TMQ;
 
 namespace Test.Mq.Internal
 {
-    internal class TestDeliveryHandler : IMessageDeliveryHandler
+    public class TestDeliveryHandler : IMessageDeliveryHandler
     {
         private readonly TestMqServer _server;
 
-        internal TestDeliveryHandler(TestMqServer server)
+        public TestDeliveryHandler(TestMqServer server)
         {
             _server = server;
         }

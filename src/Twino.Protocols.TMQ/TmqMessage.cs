@@ -118,17 +118,10 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public void CalculateLengths()
         {
-            if (MessageId != null)
-                MessageIdLength = MessageId.Length;
-
-            if (Source != null)
-                SourceLength = Source.Length;
-
-            if (Target != null)
-                TargetLength = Target.Length;
-
-            if (Content != null)
-                Length = (ulong) Content.Length;
+            MessageIdLength = MessageId != null ? MessageId.Length : 0;
+            SourceLength = Source != null ? Source.Length : 0;
+            TargetLength = Target != null ? Target.Length : 0;
+            Length = Content != null ? (ulong) Content.Length : 0;
         }
 
         /// <summary>

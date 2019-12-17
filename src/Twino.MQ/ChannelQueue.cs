@@ -260,7 +260,7 @@ namespace Twino.MQ
             {
                 try
                 {
-                    await DeliveryHandler.OnException(this, message, ex);
+                    _ = DeliveryHandler.OnException(this, message, ex);
                 }
                 catch //if developer does wrong operation, we should not stop
                 {
@@ -329,7 +329,7 @@ namespace Twino.MQ
             {
                 try
                 {
-                    await DeliveryHandler.OnException(this, held, ex);
+                    _ = DeliveryHandler.OnException(this, held, ex);
                 }
                 catch //if developer does wrong operation, we should not stop
                 {
@@ -384,7 +384,7 @@ namespace Twino.MQ
                 {
                     try
                     {
-                        await DeliveryHandler.OnException(this, message, ex);
+                        _ = DeliveryHandler.OnException(this, message, ex);
                     }
                     catch //if developer does wrong operation, we should not stop
                     {
@@ -465,7 +465,7 @@ namespace Twino.MQ
                     PutMessageBack(message);
 
                 else
-                    await DeliveryHandler.OnRemove(this, message);
+                    _ = DeliveryHandler.OnRemove(this, message);
 
                 return skipOperation;
             }
@@ -527,7 +527,7 @@ namespace Twino.MQ
                 delivery.MarkAsSent();
 
                 //do after send operations for per message
-                await DeliveryHandler.OnAfterSend(this, delivery, client.Client);
+                _ = DeliveryHandler.OnAfterSend(this, delivery, client.Client);
 
                 //if we are sending to only first acquirer, break
                 if (Options.SendOnlyFirstAcquirer && firstAcquirer)
@@ -621,7 +621,7 @@ namespace Twino.MQ
                 message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
 
             //remove the message
-            await DeliveryHandler.OnRemove(this, message);
+            _ = DeliveryHandler.OnRemove(this, message);
         }
 
         /// <summary>

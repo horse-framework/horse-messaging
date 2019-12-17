@@ -1,64 +1,73 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
+using System.Reflection.Metadata;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
-using Twino.Client.WebSocket;
+using System.Threading;
+using System.Threading.Tasks;
+using Test.Mq.Internal;
+using Test.Mq.Models;
+using Twino.Client.TMQ;
+using Twino.MQ;
 using Twino.Protocols.TMQ;
-using Twino.Protocols.WebSocket;
+using Xunit;
 
 namespace Playground
 {
     class Program
     {
+        private static volatile int X = 0;
+
         static void Main(string[] args)
         {
-            TmqWriter writer = new TmqWriter();
-            TmqReader reader = new TmqReader();
-
-            StringBuilder builder = new StringBuilder();
-            for (int i = 0; i < 1000; i++)
-                builder.AppendLine(new string('x', 50));
-
-            TmqMessage msg = new TmqMessage(MessageType.Client);
-            msg.ContentType = 45700;
-            msg.SetStringContent(builder.ToString());
-
-            MemoryStream ms = new MemoryStream();
-            writer.Write(msg, ms).Wait();
-
-            ms.Position = 0;
-            TmqMessage result = reader.Read(ms).Result;
-            Console.WriteLine(result.ToString().Length);
+            A().Wait();
+            Console.ReadLine();
         }
 
-        private static void Ws()
+        private static async Task A()
         {
-            StringBuilder builder = new StringBuilder();
-            for (int i = 0; i < 1; i++)
-                builder.AppendLine(new string('x', 50));
+            int port = 49400;
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start(300);
 
-            TwinoWebSocket client = new TwinoWebSocket();
-            client.Connect("wss://echo.websocket.org");
-            client.Disconnected += (c) => Console.WriteLine("disc");
-            client.MessageReceived += (c, m) => Console.WriteLine(m.Length);
-            Console.ReadLine();
-            client.Send("Hello"); // (builder.ToString());
-            Console.ReadLine();
+            Channel channel = server.Server.FindChannel("ch-1");
+            Assert.NotNull(channel);
+            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
 
-            WebSocketWriter writer = new WebSocketWriter();
-            WebSocketReader reader = new WebSocketReader();
+            queue.Options.HideClientNames = true;
+            queue.Options.RequestAcknowledge = true;
+            queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
 
-            WebSocketMessage msg = new WebSocketMessage();
-            msg.OpCode = SocketOpCode.UTF8;
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:" + port);
+            client.AutoAcknowledge = true;
+            client.CatchAcknowledgeMessages = true;
 
-            MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(builder.ToString()));
-            msg.Content = ms;
+            bool joined = await client.Join("ch-1", true);
 
-            MemoryStream ms2 = new MemoryStream();
-            writer.Write(msg, ms2).Wait();
+            TmqMessage received = null;
+            TmqMessage ack = null;
+            client.MessageReceived += (c, m) =>
+            {
+                switch (m.Type)
+                {
+                    case MessageType.Channel:
+                        received = m;
+                        break;
+                    case MessageType.Acknowledge:
+                        ack = m;
+                        break;
+                }
+            };
 
-            ms2.Position = 0;
-            WebSocketMessage msg2 = reader.Read(ms2).Result;
-            Console.WriteLine(msg2.Length);
+            await Task.Delay(500);
+
+            MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
+            bool sent = await client.Push("ch-1", MessageA.ContentType, ms, true);
+
+            await Task.Delay(1000);
         }
     }
 }

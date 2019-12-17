@@ -6,7 +6,7 @@ using Twino.Server;
 
 namespace Test.Mq.Internal
 {
-    internal class TestMqServer
+    public class TestMqServer
     {
         public MqServer Server { get; private set; }
 
@@ -33,11 +33,11 @@ namespace Test.Mq.Internal
         public int ClientDisconnected { get; set; }
 
         public int Port { get; private set; }
-        
-        internal void Initialize(int port)
+
+        public void Initialize(int port)
         {
             Port = port;
-            
+
             MqServerOptions mqOptions = new MqServerOptions();
             mqOptions.AllowedContentTypes = new[] {MessageA.ContentType, MessageB.ContentType, MessageC.ContentType};
             mqOptions.AllowMultipleQueues = true;
@@ -56,11 +56,11 @@ namespace Test.Mq.Internal
             channel0.CreateQueue(MessageA.ContentType).Wait();
         }
 
-        public void Start()
+        public void Start(int pingInterval = 3)
         {
             ServerOptions serverOptions = ServerOptions.CreateDefault();
             serverOptions.Hosts[0].Port = Port;
-            serverOptions.PingInterval = 3;
+            serverOptions.PingInterval = pingInterval;
             serverOptions.RequestTimeout = 4;
 
             TwinoServer server = new TwinoServer(serverOptions);

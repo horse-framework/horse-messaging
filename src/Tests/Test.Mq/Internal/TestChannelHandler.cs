@@ -4,11 +4,11 @@ using Twino.MQ.Clients;
 
 namespace Test.Mq.Internal
 {
-    internal class TestChannelHandler : IChannelEventHandler
+    public class TestChannelHandler : IChannelEventHandler
     {
         private readonly TestMqServer _server;
 
-        internal TestChannelHandler(TestMqServer server)
+        public TestChannelHandler(TestMqServer server)
         {
             _server = server;
         }
