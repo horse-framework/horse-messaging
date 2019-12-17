@@ -6,9 +6,9 @@
         <Product>Twino.Protocols.Http</Product>
         <Description>Twino Http Protocol library and server extension for Twino Server</Description>
         <PackageTags>twino,tcp,server,http,protocol</PackageTags>
-        <AssemblyVersion>2.0.21</AssemblyVersion>
-        <FileVersion>2.0.21</FileVersion>
-        <PackageVersion>2.0.21-beta</PackageVersion>
+        <AssemblyVersion>2.0.23</AssemblyVersion>
+        <FileVersion>2.0.23</FileVersion>
+        <PackageVersion>2.0.23-beta</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü</Authors>
         <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
