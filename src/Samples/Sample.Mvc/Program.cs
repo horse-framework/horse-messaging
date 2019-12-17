@@ -36,7 +36,7 @@ namespace Sample.Mvc
         {
             using TwinoMvc mvc = new TwinoMvc();
 
-            mvc.IsDevelopment = true;
+            mvc.IsDevelopment = false;
             mvc.Init(twino =>
             {
                 twino.Services.AddScoped<IScopedService, ScopedService>();
@@ -73,8 +73,11 @@ namespace Sample.Mvc
             });
 
             TwinoServer server = new TwinoServer();
-            server.UseMvc(mvc, HttpOptions.CreateDefault());
-            server.Start(82);
+            var opt = HttpOptions.CreateDefault();
+            opt.HttpConnectionTimeMax = 0;
+            server.UseMvc(mvc, opt);
+            server.Start(441);
+            server.BlockWhileRunning();
         }
     }
 }

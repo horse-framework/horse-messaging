@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -43,19 +44,8 @@ namespace Twino.Protocols.TMQ
         private static async Task<byte[]> ReadRequiredFrame(Stream stream)
         {
             byte[] bytes = new byte[REQUIRED_SIZE];
-
-            int read = await stream.ReadAsync(bytes, 0, bytes.Length);
-            if (read == 0)
-                return null;
-
-            if (read < REQUIRED_SIZE)
-            {
-                int reread = await stream.ReadAsync(bytes, read, bytes.Length - read);
-                if (reread + read < REQUIRED_SIZE)
-                    return null;
-            }
-
-            return bytes;
+            bool done = await ReadCertainBytes(stream, bytes, 0, REQUIRED_SIZE);
+            return !done ? null : bytes;
         }
 
         /// <summary>
@@ -103,18 +93,27 @@ namespace Twino.Protocols.TMQ
             byte length = bytes[7];
             if (length == 253)
             {
-                await stream.ReadAsync(bytes, 0, 2);
+                bool done = await ReadCertainBytes(stream, bytes, 0, 2);
+                if (!done)
+                    throw new SocketException();
+
                 message.Length = BitConverter.ToUInt16(bytes, 0);
             }
             else if (length == 254)
             {
-                await stream.ReadAsync(bytes, 0, 4);
+                bool done = await ReadCertainBytes(stream, bytes, 0, 4);
+                if (!done)
+                    throw new SocketException();
+
                 message.Length = BitConverter.ToUInt32(bytes, 0);
             }
             else if (length == 255)
             {
                 byte[] b = new byte[8];
-                await stream.ReadAsync(b, 0, 8);
+                bool done = await ReadCertainBytes(stream, b, 0, 8);
+                if (!done)
+                    throw new SocketException();
+
                 message.Length = BitConverter.ToUInt64(b, 0);
             }
             else
@@ -159,20 +158,27 @@ namespace Twino.Protocols.TMQ
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<string> ReadOctetSizeData(Stream stream, int length)
         {
-            int read = await stream.ReadAsync(_buffer, 0, length);
-            if (read == length)
-                return Encoding.UTF8.GetString(_buffer, 0, length);
+            bool done = await ReadCertainBytes(stream, _buffer, 0, length);
+            return done ? Encoding.UTF8.GetString(_buffer, 0, length) : "";
+        }
 
-            string result = "";
-            int total = read;
+        /// <summary>
+        /// Reads length bytes from the stream, not even one byte less.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static async Task<bool> ReadCertainBytes(Stream stream, byte[] buffer, int start, int length)
+        {
+            int total = 0;
             do
             {
-                result += Encoding.UTF8.GetString(_buffer, 0, read);
-                read = await stream.ReadAsync(_buffer, 0, length);
-                total += read;
-            } while (total >= length);
+                int read = await stream.ReadAsync(buffer, start + total, length - total);
+                if (read == 0)
+                    return false;
 
-            return result;
+                total += read;
+            } while (total < length);
+
+            return true;
         }
     }
 }

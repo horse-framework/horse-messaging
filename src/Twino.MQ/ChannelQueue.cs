@@ -460,7 +460,7 @@ namespace Twino.MQ
 
                 if (skipOperation == DeliveryOperation.SaveMessage && !message.IsSaved)
                     message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
-                
+
                 if (Status != QueueStatus.Route && onheld && skipOperation == DeliveryOperation.Keep)
                     PutMessageBack(message);
 
@@ -517,7 +517,7 @@ namespace Twino.MQ
                 _timeKeeper.AddAcknowledgeCheck(delivery);
 
                 //send the message
-                await client.Client.SendAsync(messageData);
+                client.Client.Send(messageData);
 
                 //set as sent, if message is sent to it's first acquirer,
                 //set message first acquirer false and re-create byte array data of the message
