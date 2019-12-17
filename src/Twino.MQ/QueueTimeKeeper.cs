@@ -67,9 +67,9 @@ namespace Twino.MQ
             {
                 if ((_queue.Options.Status == QueueStatus.Push || _queue.Options.Status == QueueStatus.Pull)
                     && _queue.Options.MessageTimeout > TimeSpan.Zero)
-                    await ProcessReceiveTimeup();
+                    ProcessReceiveTimeup();
 
-                await ProcessDeliveries();
+                ProcessDeliveries();
             }, null, interval, interval);
         }
 
@@ -81,24 +81,24 @@ namespace Twino.MQ
             lock (_deliveries)
                 _deliveries.Clear();
         }
-        
+
         /// <summary>
         /// Checks messages if they are not received from any receiver and time is up
         /// Complete the operation about timing up.
         /// </summary>
-        private async Task ProcessReceiveTimeup()
+        private void ProcessReceiveTimeup()
         {
             _timeupMessages.Clear();
             ProcessReceiveTimeupOnList(_prefentialMessages);
 
             foreach (QueueMessage message in _timeupMessages)
-                await _queue.DeliveryHandler.OnTimeUp(_queue, message);
+                _ = _queue.DeliveryHandler.OnTimeUp(_queue, message);
 
             _timeupMessages.Clear();
             ProcessReceiveTimeupOnList(_standardMessages);
 
             foreach (QueueMessage message in _timeupMessages)
-                await _queue.DeliveryHandler.OnTimeUp(_queue, message);
+                _ = _queue.DeliveryHandler.OnTimeUp(_queue, message);
         }
 
         /// <summary>
@@ -125,7 +125,7 @@ namespace Twino.MQ
         /// <summary>
         /// Checks all pending deliveries if they are delivered or time is up
         /// </summary>
-        private async Task ProcessDeliveries()
+        private void ProcessDeliveries()
         {
             var rdlist = new List<Tuple<bool, MessageDelivery>>(16);
 
@@ -151,7 +151,7 @@ namespace Twino.MQ
                 if (tuple.Item1)
                 {
                     delivery.MarkAsAcknowledgeTimedUp();
-                    await _queue.DeliveryHandler.OnAcknowledgeTimeUp(_queue, delivery);
+                    _ = _queue.DeliveryHandler.OnAcknowledgeTimeUp(_queue, delivery);
                     if (!released)
                     {
                         released = true;
