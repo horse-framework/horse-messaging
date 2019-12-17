@@ -5,11 +5,11 @@ using Twino.MQ.Clients;
 
 namespace Test.Mq.Internal
 {
-    internal class TestClientHandler : IClientHandler
+    public class TestClientHandler : IClientHandler
     {
         private readonly TestMqServer _server;
 
-        internal TestClientHandler(TestMqServer server)
+        public TestClientHandler(TestMqServer server)
         {
             _server = server;
         }

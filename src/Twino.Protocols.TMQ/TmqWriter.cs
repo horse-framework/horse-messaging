@@ -29,7 +29,9 @@ namespace Twino.Protocols.TMQ
         {
             await using MemoryStream ms = new MemoryStream();
             await WriteFrame(ms, value);
-            WriteContent(ms, value);
+            
+            if (value.MessageIdLength > 0)
+                WriteContent(ms, value);
             return ms.ToArray();
         }
 
