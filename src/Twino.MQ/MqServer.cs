@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
+using Twino.Client.TMQ;
+using Twino.Client.TMQ.Connectors;
 using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
@@ -93,14 +95,14 @@ namespace Twino.MQ
         public IUniqueIdGenerator ClientIdGenerator { get; set; } = new DefaultUniqueIdGenerator();
 
         /// <summary>
-        /// Connected MQ Servers
+        /// Instance connectors
         /// </summary>
-        internal SafeList<MqClient> Servers { get; } = new SafeList<MqClient>(8);
+        private TmqStickyConnector[] _connectors = new TmqStickyConnector[0];
 
         /// <summary>
-        /// Connected MQ Servers
+        /// Instance connectors
         /// </summary>
-        public IEnumerable<MqClient> ConnectedServers => Servers.GetAsClone();
+        internal TmqStickyConnector[] InstanceConnectors => _connectors;
 
         #endregion
 
@@ -127,22 +129,44 @@ namespace Twino.MQ
 
             _channels = new SafeList<Channel>(256);
             _clients = new SafeList<MqClient>(2048);
+
+            InitInstances();
         }
 
-        #endregion
-
-        #region Start - Stop
 
         /// <summary>
-        /// Stops server
+        /// Init instance options and starts the connections
         /// </summary>
-        public void Stop()
+        private void InitInstances()
         {
-            if (Server == null)
-                throw new InvalidOperationException("Server stop error: Server is not running.");
+            if (Options.Instances == null || Options.Instances.Length < 1)
+                return;
 
-            Server.Stop();
-            Server = null;
+            _connectors = new TmqStickyConnector[Options.Instances.Length];
+
+            for (int i = 0; i < _connectors.Length; i++)
+            {
+                InstanceOptions options = Options.Instances[i];
+                TimeSpan reconnect = TimeSpan.FromMilliseconds(options.ReconnectWait);
+
+                TmqStickyConnector connector = options.KeepMessages
+                                                   ? new TmqAbsoluteConnector(reconnect, () => CreateInstanceClient(options))
+                                                   : new TmqStickyConnector(reconnect, () => CreateInstanceClient(options));
+
+                _connectors[i] = connector;
+            }
+        }
+
+        /// <summary>
+        /// Client creation action for server instances
+        /// </summary>
+        private TmqClient CreateInstanceClient(InstanceOptions options)
+        {
+            TmqClient client = new TmqClient();
+            client.SetClientName(options.Name);
+            client.SetClientToken(options.Token);
+            client.SetClientType("server");
+            return client;
         }
 
         #endregion
@@ -159,7 +183,7 @@ namespace Twino.MQ
 
             ServerAuthenticator = authenticator;
         }
-        
+
         /// <summary>
         /// Sets default channel event handler and authenticator
         /// </summary>

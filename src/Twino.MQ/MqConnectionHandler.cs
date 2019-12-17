@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Twino.Client.TMQ.Connectors;
 using Twino.Core;
 using Twino.Core.Protocols;
 using Twino.MQ.Clients;
@@ -73,7 +74,7 @@ namespace Twino.MQ
                 if (!accepted)
                     return null;
 
-                _server.Servers.Add(client);
+                await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
             }
 
             //connecting client is a producer/consumer client
@@ -162,15 +163,11 @@ namespace Twino.MQ
             }
 
             //if there are connected servers, send message to them
-            if (_server.ServerAuthenticator != null)
+            if (_server.ServerAuthenticator != null && _server.InstanceConnectors.Length > 0)
             {
-                List<MqClient> servers = _server.Servers.GetAsClone();
-                if (servers.Count > 0)
-                {
-                    byte[] mdata = await _writer.Create(message);
-                    foreach (MqClient cs in servers)
-                        cs.Send(mdata);
-                }
+                byte[] mdata = await _writer.Create(message);
+                foreach (TmqStickyConnector connector in _server.InstanceConnectors)
+                    connector.Send(mdata);
             }
 
             switch (message.Type)
