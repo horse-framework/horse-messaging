@@ -10,6 +10,8 @@ Twino IOC can be used on all protocols.
 
 ## Why Twino?
 
+In a single application with single library, you can have TCP Server, HTTP Server, WebSocket Server, Messaging Queue Server and with many extra features such as IOC, Authentication, Clients, Connectors etc.
+
 - High performance (in many cases, as fast as kestrel)
 - Twino has high scalable advanced websocket server with amazing client management.
 - Multiple protocols can be used on same project, same port, same host.
@@ -67,6 +69,7 @@ Some of Twino features are listed below:
 - Sending messages to some type of clients or some client groups
 - Message acknowledge in queues, peer to peer messaging and server side messaging
 - Keeping messages if there is no receiver and setting timeout
+- Sending messages by pulling
 - Creating channels and queues programmatically
 - Content types by models
 - Requesting and responsing messages
@@ -74,6 +77,50 @@ Some of Twino features are listed below:
 - Channel event handlers
 - Changing decisions from all steps in message delivery operations
 - Pausing and resuming channel or queue operations
+- Instanced servers supported
+
+### Basic WebSocket Server Example
+
+Basic WebSocket Server creation example
+
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            TwinoServer server = new TwinoServer();
+            server.UseWebSockets((socket, message) => { Console.WriteLine($"Received: {message}"); });
+	    
+	    //or advanced with IProtocolConnectionHandler<WebSocketMessage> implementation
+            //server.UseWebSockets(new ServerWsHandler());
+            server.Start(80);
+            
+            //optional
+            _server.Server.BlockWhileRunning();
+        }
+    }
+
+### Basic MQ Server Example
+
+Basic MQ Server creation example
+
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            MqServerOptions options = new MqServerOptions();
+            //set your options here
+            
+            MqServer mq = new MqServer(options);
+            mq.SetDefaultDeliveryHandler(new YourCustomDeliveryHandler());
+            TwinoServer twinoServer = new TwinoServer(ServerOptions.CreateDefault());
+            twinoServer.UseMqServer(mq);
+            twinoServer.Start();
+            
+            //optional
+            _server.Server.BlockWhileRunning();
+        }
+    }
+
 
 ### Basic MVC Example
 
@@ -83,23 +130,22 @@ Twino.Mvc similar to ASP.NET Core. Here is a basic example:
     {
         static void Main(string[] args)
         {
-            IClientFactory factory = new ClientFactory();
-            using (TwinoMvc mvc = new TwinoMvc(factory))
+            TwinoMvc mvc = new TwinoMvc();
+            mvc.Init();
+            mvc.Use(app =>
             {
-                mvc.Init();
-                mvc.Run();
-            }
+                app.UseMiddleware<CorsMiddleware>();
+            });
+
+            TwinoServer server = new TwinoServer();
+            server.UseMvc(mvc, HttpOptions.CreateDefault());
+            server.Start();
+            
+            //optional
+            server.BlockWhileRunning();
         }
     }
-	
-    public class ClientFactory : IClientFactory
-    {
-        public async Task<ServerSocket> Create(TwinoServer server, HttpRequest request, TcpClient client)
-        {
-            return await Task.FromResult(new Client(server, request, client));
-        }
-    }
-    
+
     [Route("[controller]")]
     public class DemoController : TwinoController
     {
