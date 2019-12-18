@@ -162,33 +162,29 @@ namespace Twino.MQ
                 return;
             }
 
-            //if there are connected servers, send message to them
-            if (_server.ServerAuthenticator != null && _server.InstanceConnectors.Length > 0)
-            {
-                byte[] mdata = await _writer.Create(message);
-                foreach (TmqStickyConnector connector in _server.InstanceConnectors)
-                    connector.Send(mdata);
-            }
-
             switch (message.Type)
             {
                 //client sends a queue message in a channel
                 case MessageType.Channel:
+                    await SendMessageToInstances(message);
                     await ChannelMessageReceived(mc, message);
                     break;
 
                 //clients sends a message to another client
                 case MessageType.Client:
+                    await SendMessageToInstances(message);
                     await ClientMessageReceived(mc, message);
                     break;
 
                 //client sends an acknowledge message of a message
                 case MessageType.Acknowledge:
+                    await SendMessageToInstances(message);
                     await AcknowledgeMessageReceived(mc, message);
                     break;
 
                 //client sends a response message for a message
                 case MessageType.Response:
+                    await SendMessageToInstances(message);
                     await ResponseMessageReceived(message);
                     break;
 
@@ -207,6 +203,20 @@ namespace Twino.MQ
                 case MessageType.Terminate:
                     mc.Disconnect();
                     break;
+            }
+        }
+
+        /// <summary>
+        /// Sends the message to connected instances
+        /// </summary>
+        private async Task SendMessageToInstances(TmqMessage message)
+        {
+            //if there are connected servers, send message to them
+            if (_server.ServerAuthenticator != null && _server.InstanceConnectors.Length > 0)
+            {
+                byte[] mdata = await _writer.Create(message);
+                foreach (TmqStickyConnector connector in _server.InstanceConnectors)
+                    connector.Send(mdata);
             }
         }
 
