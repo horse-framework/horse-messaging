@@ -21,9 +21,9 @@ In a single application with single library, you can have TCP Server, HTTP Serve
 - Twino has sweet client connectors for WebSocket and TMQ protocols.
 - Twino MQ is not a executable messaging queue server. It's library and you can create your own MQ server with a few interface implementations.
 
-**Read [Features](https://github.com/mhelvacikoylu/twino/blob/v2/docs/Features.MD) to see all features of twino libraries.**
+**Read [All Features](https://github.com/mhelvacikoylu/twino/blob/v2/docs/Features.MD) to see all features of twino libraries.**
 
-**Go to documentation [home page](https://github.com/mhelvacikoylu/twino/blob/v2/docs/Readme.MD)**
+**Go to [Documentation Home Page](https://github.com/mhelvacikoylu/twino/blob/v2/docs/README.MD)**
 
 ### Basic WebSocket Server Example
 
