@@ -48,7 +48,7 @@ namespace Twino.MQ
         /// Server authenticator implementation.
         /// If null, all servers will be rejected.
         /// </summary>
-        internal IClientAuthenticator ServerAuthenticator { get; private set; }
+        internal IServerAuthenticator ServerAuthenticator { get; private set; }
 
         /// <summary>
         /// Client authenticator implementation.
@@ -176,7 +176,7 @@ namespace Twino.MQ
         /// <summary>
         /// Sets server authenticator for using multiple servers
         /// </summary>
-        public void SetServerAuthenticator(IClientAuthenticator authenticator)
+        public void SetServerAuthenticator(IServerAuthenticator authenticator)
         {
             if (ServerAuthenticator != null)
                 throw new ReadOnlyException("Server authenticator can be set only once");

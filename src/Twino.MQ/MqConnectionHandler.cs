@@ -222,7 +222,12 @@ namespace Twino.MQ
 
             byte[] mdata = await _writer.Create(message);
             foreach (TmqStickyConnector connector in _server.InstanceConnectors)
-                connector.Send(mdata);
+            {
+                bool grant = await _server.ServerAuthenticator.CanReceive(connector.GetClient(), message);
+
+                if (grant)
+                    connector.Send(mdata);
+            }
         }
 
         /// <summary>
