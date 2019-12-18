@@ -35,6 +35,11 @@ namespace Twino.MQ.Clients
         /// Client name.
         /// </summary>
         public string Name { get; internal set; }
+        
+        /// <summary>
+        /// True, if the client is a instanced server
+        /// </summary>
+        public bool IsInstanceServer { get; internal set; }
 
         /// <summary>
         /// Client type.
