@@ -32,8 +32,9 @@ namespace Twino.Protocols.TMQ
             {
                 await WriteFrame(ms, value);
                 
-                if (value.MessageIdLength > 0)
+                if (value.Length > 0)
                     WriteContent(ms, value);
+                
                 return ms.ToArray();
             }
         }
