@@ -21,65 +21,9 @@ In a single application with single library, you can have TCP Server, HTTP Serve
 - Twino has sweet client connectors for WebSocket and TMQ protocols.
 - Twino MQ is not a executable messaging queue server. It's library and you can create your own MQ server with a few interface implementations.
 
-### Features
+**Read [Features](https://github.com/mhelvacikoylu/twino/blob/v2/docs/Features.MD) to see all features of twino libraries.**
 
-Some of Twino features are listed below:
-
-#### HTTP Server
-
-- HTTP and HTTPS support
-- Loading SSL certificate programmatically, from file or from string
-- Connection keep-alive or close options
-- Maximum URI, Header, Content length options
-- Content encoding suports (brotli, gzip and deflate)
-- Multiple host and multiple port binding
-- URL Encoded application form requests are supported
-- Multipart form data requests are supported
-- File upload and file download
-- Full async support
-
-#### MVC
-
-- Middlewares infrastructure ASP.NET like (including CORS Middleware)
-- JWT support with Authorize attribute and custom token implementation
-- Using static files with multiple volume binding with validation actions
-- Model binding from HTTP Request (JSON, XML, QueryString, FormData)
-- Service collection for dependency inversion (singleton and transient)
-- Easy to use policy and claim management
-- Action and controller filters
-- Custom HTTP Status code pages
-
-#### WebSockets
-
-- All features included from HTTP and/or MVC
-- HTTP and WebSocket server on same port
-- Connectors for WebSocket Clients for different purposes
-- Request and Response Architecture (non-HTTP) via one active TCP connection
-- Object based data transfer with IModelWriter and IModelReader interfaces
-- Custom and fast serialization helper libarary for objects
-
-#### MQ
-
-- Complete Messaging Queue library can be used with a few interface implementations and fully extensible
-- Queuing or not queuing options
-- Multiple queues in same channel
-- Client based authentication
-- Channel based authentication
-- Action based authorization
-- Message saving operations
-- Peer to peer messaging
-- Sending messages to some type of clients or some client groups
-- Message acknowledge in queues, peer to peer messaging and server side messaging
-- Keeping messages if there is no receiver and setting timeout
-- Sending messages by pulling
-- Creating channels and queues programmatically
-- Content types by models
-- Requesting and responsing messages
-- Fully extensible client management
-- Channel event handlers
-- Changing decisions from all steps in message delivery operations
-- Pausing and resuming channel or queue operations
-- Instanced servers supported
+**Go to documentation [home page](https://github.com/mhelvacikoylu/twino/blob/v2/docs/Readme.MD)**
 
 ### Basic WebSocket Server Example
 
