@@ -103,6 +103,29 @@ All Twino Features are listed below.
 
 ## Twino MVC
 
+* Nearly same usage with ASP.NET Core and 2x faster than ASP.NET Core
+* Controllers derive from TwinoController
+* TwinoController has UserPrincipal, HttpRequest, HttpResponse, Server properties
+* MVC uses Twino IOC, each request work in a scope, you can reach scope, if you need, inside controller
+* Controller constructors fully support Twino Ioc dependency injection
+* Middlewares with IMiddleware interface implementation
+* Milddeware constructors fully support Twino Ioc dependency injection
+* TwinoMvc has init and use methods, in use method middlewares can be used ASP.NET like
+* Custom controller factory implementation is supported with IControllerFactory
+* Route, HttpGet, HttpPost... attributes can be applied to controller actions
+* Route attribute can be applied to controllers
+* Route attribute supports patterns like {name}, {?name}, [controller] and [action] 
+* Action filters and controller filters are supported (IActionFilter and IControllerFilter interface implementations)
+* Custom error handling
+* Custom default status code result contents
+* FileResult, JsonResult, XmlResult, StringResult, HtmlResult, StatusCodeResult objects for quick responses, also controllers have methods to create quick results
+* Assembly injection, loading controllers from other assemblies
+* Using static files
+* Multiple static file folder on same path and vice versa
+* Static file using authentication methods
+* Useful, easy to use and extensible policy management
+* Authorize attribute for authorization
+
 ## Twino Connectors
 
 * Extensible connector base classes
