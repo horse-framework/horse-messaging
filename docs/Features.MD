@@ -34,6 +34,10 @@ All Twino Features are listed below.
 * Client based authorization; create channel and queue, send message to queue, send message to other client, pull from queue
 * Extensible channel event management; queue created and removed, client joined and left, status changed
 * Client name, token, type and other custom headers are supported
+* Multiple instances are supported can work distributed
+* For distributed instances authentication and message routing options
+* TmqClient client class for connecting MQ servers
+* Quick join, leave, push, send methods
 
 #### For Each Queue Features
 
@@ -70,18 +74,45 @@ All Twino Features are listed below.
   * Message queue timed out operations
   * Message delivery exception handling
 
-* Multiple instances are supported can work disturbed
-* For disturbed instances authentication and message routing options
-
 ## Twino HTTP
+
+* Lightweight HTTP Request and response with quick action method
+* Advanced HTTP Request handling with interface implementations
+* Request querystrings
+* Request forms
+* Multipart form data and file uploads
+* HTTP Reader and writer classes for developers
+* Content writers are supported for content encodings
+* Fully multi-threading HTTP Request handling
 
 ## Twino WebSockets
 
+* Over Twino HTTP or only websocket usage
+* Quick usage with message receive action handler
+* Advanced usage with advanced interface implementations
+* Client management and client containers
+* WebSocket reader and writer protocol classes for developer usage
+* HTTP Request headers over websockets
+* Advanced WebSocket clients for connecting to websocket servers
+
 ## Twino Serializable Models
+
+* Sending and receiving objects over websocket protocol
+* Auto serialize and deserializing with model writers and readers
+* Getting objects directly from the network with package reader
 
 ## Twino MVC
 
 ## Twino Connectors
+
+* Extensible connector base classes
+* Multiple host support
+* Advanced event management
+* Extensible and overridable
+* Single message connector for sending single messages to servers, connects automatically when message is sending and disconnects after message is sent
+* Necessity connector, connects only when a new message is about to send and keeps the connection after operation
+* Sticky connectors, keeps always connected to specified servers
+* Absolute connectors for not to lose any message, even client is not connected
 
 ## Twino IOC
 
