@@ -14,6 +14,7 @@ The example code above, creates new twino server with 60 seconds timeout.
 That means, when a client is connected to the server,
 If no protocol resolves in 60 seconds, server disconnects the client's connection.
 
+
 There are a few options in core Twino Server. Here is the full list:
 
 <table>
@@ -47,6 +48,7 @@ There are a few options in core Twino Server. Here is the full list:
   </tbody>
 </table>
 
+
 And here is the Host Options:
 
 <table>
@@ -59,31 +61,35 @@ And here is the Host Options:
   <tbody>
     <tr>
       <td>Port</td>
-      <td></td>
+      <td>Listening port number</td>
     </tr>
     <tr>
       <td>Hostnames</td>
-      <td></td>
+      <td>Accepted hostnames for this port. It's string array. null or empty array accepts all hostnames.</td>
     </tr>
     <tr>
       <td>SslEnabled</td>
-      <td></td>
+      <td>If true, connections will be SSL protected.</td>
     </tr>
     <tr>
       <td>SslCertificate</td>
-      <td></td>
+      <td>SSL Certificate filename</td>
     </tr>
     <tr>
       <td>CertificateKey</td>
-      <td></td>
+      <td>If there is, SSL Certificate password</td>
     </tr>
     <tr>
       <td>BypassSslValidation</td>
-      <td></td>
+      <td>If true, SSL errors will be ignored</td>
     </tr>
     <tr>
       <td>SslProtocol</td>
-      <td></td>
+      <td>SSL Protocol. Default is Tls12. Accepted values: None, Ssl2, Ssl3, Tls, Tls11, Tls12. None means use default.</td>
     </tr>
   </tbody>
 </table>
+
+Options can be created programmatically. Can be deserialized from a JSON. Maybe you want to keep JSON string in a database like MongoDB. Or you can load settings from file. Twino supports loading options from file. You can use static **LoadFromFile** method. For example:
+
+        TwinoServer server = new TwinoServer("options.json");
