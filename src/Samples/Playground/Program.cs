@@ -10,64 +10,124 @@ using Test.Mq.Internal;
 using Test.Mq.Models;
 using Twino.Client.TMQ;
 using Twino.MQ;
+using Twino.MQ.Clients;
 using Twino.Protocols.TMQ;
+using Twino.Server;
 using Xunit;
 
 namespace Playground
 {
+    public class SampleMessageDelivery : IMessageDeliveryHandler
+    {
+        public async Task<MessageDecision> OnReceived(ChannelQueue queue, QueueMessage message, MqClient sender)
+        {
+            Console.WriteLine($"A mesage is received: " + message.Message);
+            return await Task.FromResult(MessageDecision.Allow);
+        }
+
+        public async Task<MessageDecision> OnSendStarting(ChannelQueue queue, QueueMessage message)
+        {
+            Console.WriteLine("Message is about to send to consumers");
+            return await Task.FromResult(MessageDecision.Allow);
+        }
+
+        public async Task<DeliveryDecision> OnBeforeSend(ChannelQueue queue, QueueMessage message, MqClient receiver)
+        {
+            Console.WriteLine($"Message is about to send to {receiver.Name}");
+            return await Task.FromResult(DeliveryDecision.Allow);
+        }
+
+        public async Task OnAfterSend(ChannelQueue queue, MessageDelivery delivery, MqClient receiver)
+        {
+            Console.WriteLine($"Message is sent to {receiver.Name}");
+            await Task.CompletedTask;
+        }
+
+        public async Task<DeliveryOperation> OnSendCompleted(ChannelQueue queue, QueueMessage message)
+        {
+            Console.WriteLine($"Message send operation has completed");
+            return await Task.FromResult(DeliveryOperation.DontSaveMesage);
+        }
+
+        public async Task OnAcknowledge(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery)
+        {
+            Console.WriteLine($"Acknowledge is received for the message: {delivery.Message.Message}");
+            await Task.CompletedTask;
+        }
+
+        public async Task OnTimeUp(ChannelQueue queue, QueueMessage message)
+        {
+            Console.WriteLine("There are no receivers, message time is out, will be removed");
+            await Task.CompletedTask;
+        }
+
+        public async Task OnAcknowledgeTimeUp(ChannelQueue queue, MessageDelivery delivery)
+        {
+            Console.WriteLine("Queue was requesting ack but no acknowledge received for the message");
+            await Task.CompletedTask;
+        }
+
+        public async Task OnRemove(ChannelQueue queue, QueueMessage message)
+        {
+            Console.WriteLine($"Message is removed: {message.Message}");
+            await Task.CompletedTask;
+        }
+
+        public async Task OnException(ChannelQueue queue, QueueMessage message, Exception exception)
+        {
+            Console.WriteLine($"An exception is thrown on delivery: {exception}");
+            await Task.CompletedTask;
+        }
+
+        public async Task<bool> SaveMessage(ChannelQueue queue, QueueMessage message)
+        {
+            Console.WriteLine("Message save method is called");
+            return await Task.FromResult(false);
+        }
+    }
+
     class Program
     {
-        private static volatile int X = 0;
-
         static void Main(string[] args)
         {
-            A().Wait();
+            CreateServer();
+            
+            Console.WriteLine("Press enter to connect to the MQ server");
+            Console.ReadLine();
+
+            ConnectAndPush();
+
             Console.ReadLine();
         }
 
-        private static async Task A()
+        static void CreateServer()
         {
-            int port = 49400;
-            TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start(300);
+            //create messaging queue server
+            SampleMessageDelivery delivery = new SampleMessageDelivery();
+            MqServer mq = new MqServer();
+            mq.SetDefaultDeliveryHandler(delivery);
 
-            Channel channel = server.Server.FindChannel("ch-1");
-            Assert.NotNull(channel);
-            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            //create channel and queue
+            Channel channel = mq.CreateChannel("ch");
+            channel.CreateQueue(10).Wait();
 
-            queue.Options.HideClientNames = true;
-            queue.Options.RequestAcknowledge = true;
-            queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
+            //create twino server, use mq and listen port 26222
+            TwinoServer server = new TwinoServer();
+            server.UseMqServer(mq);
+            server.Start(26222);
+        }
 
+        static void ConnectAndPush()
+        {
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:" + port);
-            client.AutoAcknowledge = true;
-            client.CatchAcknowledgeMessages = true;
+            client.SetClientName("demo-client");
+            client.Connect("tmq://localhost:26222");
+            client.MessageReceived += (c, msg) => Console.WriteLine($"Received from the queue: {msg}");
 
-            bool joined = await client.Join("ch-1", true);
+            bool joined = client.Join("ch", true).Result;
+            Console.WriteLine($"Channel join: {joined}");
 
-            TmqMessage received = null;
-            TmqMessage ack = null;
-            client.MessageReceived += (c, m) =>
-            {
-                switch (m.Type)
-                {
-                    case MessageType.Channel:
-                        received = m;
-                        break;
-                    case MessageType.Acknowledge:
-                        ack = m;
-                        break;
-                }
-            };
-
-            await Task.Delay(500);
-
-            MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push("ch-1", MessageA.ContentType, ms, true);
-
-            await Task.Delay(1000);
+            client.Push("ch", 10, "Hello, World!", false);
         }
     }
 }

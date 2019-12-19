@@ -123,7 +123,7 @@ namespace Twino.MQ
                         IClientAuthenticator authenticator = null,
                         IClientAuthorization authorization = null)
         {
-            Options = options;
+            Options = options ?? new MqServerOptions();
             Authenticator = authenticator;
             Authorization = authorization;
 
