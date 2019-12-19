@@ -13,7 +13,7 @@ All Twino Features are listed below.
 
 ## Twino TMQ
 
-* TMQ is a messaging protocol, you can read more about TMQ Protocol [here](https://github.com/mhelvacikoylu/twino/blob/v2/docs/TMQ%20Protocol.MD)
+* TMQ is a messaging protocol, you can read more about TMQ Protocol [here](https://github.com/mhelvacikoylu/twino/blob/v2/docs/mq/TMQ%20Protocol.MD)
 * TMQ Protocol message readers and writers
 * TMQ Protocol Handlers
 * Unique Id generators
