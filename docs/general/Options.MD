@@ -90,6 +90,6 @@ And here is the Host Options:
   </tbody>
 </table>
 
-Options can be created programmatically. Can be deserialized from a JSON. Maybe you want to keep JSON string in a database like MongoDB. Or you can load settings from file. Twino supports loading options from file. You can use static **LoadFromFile** method. For example:
+Options can be created programmatically. Can be deserialized from a JSON. Maybe you want to keep JSON string in a database like MongoDB. Or you can load settings from file. Twino supports loading options from file. For example:
 
         TwinoServer server = new TwinoServer("options.json");
