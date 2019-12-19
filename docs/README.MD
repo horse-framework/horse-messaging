@@ -6,7 +6,7 @@ You can see all NuGET packages in [here](https://github.com/mhelvacikoylu/twino/
 
 ### Twino General
 
-* Twino Library Architecture and Layers
+* [Twino Library Architecture and Layers](https://github.com/mhelvacikoylu/twino/blob/v2/docs/Architecture.MD)
 * Introducing to Twino Server
 * Twino Server Options
 * Client Connectors
