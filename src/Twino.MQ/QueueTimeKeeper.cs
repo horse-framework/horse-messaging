@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Linq;
 using Twino.MQ.Clients;
 
@@ -63,7 +62,7 @@ namespace Twino.MQ
         public void Run()
         {
             TimeSpan interval = TimeSpan.FromMilliseconds(1000);
-            _timer = new Timer(async s =>
+            _timer = new Timer(s =>
             {
                 if ((_queue.Options.Status == QueueStatus.Push || _queue.Options.Status == QueueStatus.Pull)
                     && _queue.Options.MessageTimeout > TimeSpan.Zero)
