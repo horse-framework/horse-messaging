@@ -199,6 +199,8 @@ Instance options in server options properties:
       <td>
         If true messages will be kept while there are active instance connections.
         When a instance connection is established, all queued messages are sent.
+        As more technical description is, if this value is true, connections will be handled with absolute connectors.
+        If false, connections will be handled with sticky connectors.
         Default value is **false**.
       </td>
     </tr>
