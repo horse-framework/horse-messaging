@@ -1,4 +1,5 @@
 using System;
+using System.Transactions;
 using Twino.MQ.Clients;
 using Twino.Protocols.TMQ;
 
@@ -23,7 +24,7 @@ namespace Twino.MQ
         /// TMQ Message
         /// </summary>
         public TmqMessage Message { get; set; }
-        
+
         /// <summary>
         /// Real source client of the message
         /// </summary>
@@ -48,6 +49,11 @@ namespace Twino.MQ
         /// True, if is sent
         /// </summary>
         public bool IsSent { get; internal set; }
+
+        /// <summary>
+        /// How many times sent, usually that count equals to receivers count
+        /// </summary>
+        public int SendCount { get; private set; }
 
         /// <summary>
         /// If in pending duration, there is no available receivers, this value will be true.
@@ -79,7 +85,10 @@ namespace Twino.MQ
             if (Message.FirstAcquirer)
                 Message.FirstAcquirer = false;
 
-            IsSent = true;
+            if (!IsSent)
+                IsSent = true;
+
+            SendCount++;
         }
     }
 }

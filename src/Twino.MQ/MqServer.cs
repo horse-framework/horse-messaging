@@ -48,7 +48,7 @@ namespace Twino.MQ
         /// Server authenticator implementation.
         /// If null, all servers will be rejected.
         /// </summary>
-        internal IClientAuthenticator ServerAuthenticator { get; private set; }
+        internal IServerAuthenticator ServerAuthenticator { get; private set; }
 
         /// <summary>
         /// Client authenticator implementation.
@@ -123,7 +123,7 @@ namespace Twino.MQ
                         IClientAuthenticator authenticator = null,
                         IClientAuthorization authorization = null)
         {
-            Options = options;
+            Options = options ?? new MqServerOptions();
             Authenticator = authenticator;
             Authorization = authorization;
 
@@ -176,7 +176,7 @@ namespace Twino.MQ
         /// <summary>
         /// Sets server authenticator for using multiple servers
         /// </summary>
-        public void SetServerAuthenticator(IClientAuthenticator authenticator)
+        public void SetServerAuthenticator(IServerAuthenticator authenticator)
         {
             if (ServerAuthenticator != null)
                 throw new ReadOnlyException("Server authenticator can be set only once");
@@ -263,6 +263,34 @@ namespace Twino.MQ
         {
             Channel channel = _channels.Find(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
             return channel;
+        }
+
+        /// <summary>
+        /// Removes channel, destroys all queues in it
+        /// </summary>
+        public async Task RemoveChannel(string name)
+        {
+            Channel channel = FindChannel(name);
+            if (channel == null)
+                return;
+
+            await RemoveChannel(channel);
+        }
+
+        /// <summary>
+        /// Removes channel, destroys all queues in it
+        /// </summary>
+        public async Task RemoveChannel(Channel channel)
+        {
+            foreach (ChannelQueue queue in channel.QueuesClone)
+                await channel.RemoveQueue(queue);
+
+            _channels.Remove(channel);
+
+            if (channel.EventHandler != null)
+                await channel.EventHandler.OnChannelRemoved(channel);
+
+            channel.Destroy();
         }
 
         #endregion

@@ -25,13 +25,13 @@ namespace Test.Mq.Internal
             await Task.CompletedTask;
         }
 
-        public async Task ClientJoined(ChannelClient client)
+        public async Task OnClientJoined(ChannelClient client)
         {
             _server.ClientJoined++;
             await Task.CompletedTask;
         }
 
-        public async Task ClientLeft(ChannelClient client)
+        public async Task OnClientLeft(ChannelClient client)
         {
             _server.ClientLeft++;
             await Task.CompletedTask;
@@ -41,6 +41,12 @@ namespace Test.Mq.Internal
         {
             _server.OnQueueStatusChanged++;
             return await Task.FromResult(true);
+        }
+
+        public async Task OnChannelRemoved(Channel channel)
+        {
+            _server.OnChannelRemoved++;
+            await Task.CompletedTask;
         }
     }
 }

@@ -145,6 +145,20 @@ namespace Twino.MQ
                 _semaphore = new SemaphoreSlim(1, 1024);
         }
 
+        /// <summary>
+        /// Destorys the queue
+        /// </summary>
+        public async Task Destroy()
+        {
+            await _timeKeeper.Destroy();
+            
+            lock (_prefentialMessages)
+                _prefentialMessages.Clear();
+
+            lock (_standardMessages)
+                _standardMessages.Clear();
+        }
+
         #endregion
 
         #region Status Actions
@@ -310,19 +324,31 @@ namespace Twino.MQ
                 if (Options.UseMessageId && string.IsNullOrEmpty(message.Message.MessageId))
                     message.Message.MessageId = Channel.Server.MessageIdGenerator.Create();
 
-                //just send the message to receivers
-                if (Status == QueueStatus.Route)
+                switch (Status)
                 {
-                    held = message;
-                    await ProcesssMessage(message, false);
-                }
+                    //just send the message to receivers
+                    case QueueStatus.Route:
+                        held = message;
+                        await ProcesssMessage(message, false);
+                        break;
 
-                //keep the message in queue send send it to receivers
-                //if there is no receiver, message will kept back in the queue
-                else if (Status == QueueStatus.Push)
-                {
-                    held = PullMessage(message);
-                    await ProcesssMessage(held, true);
+                    //keep the message in queue send send it to receivers
+                    //if there is no receiver, message will kept back in the queue
+                    case QueueStatus.Push:
+                        held = PullMessage(message);
+                        await ProcesssMessage(held, true);
+                        break;
+
+                    //dont send the message, just put it to queue
+                    case QueueStatus.Pull:
+                    case QueueStatus.Paused:
+                        if (message.Message.HighPriority)
+                            lock (_prefentialMessages)
+                                _prefentialMessages.AddLast(message);
+                        else
+                            lock (_standardMessages)
+                                _standardMessages.AddLast(message);
+                        break;
                 }
             }
             catch (Exception ex)
@@ -481,8 +507,6 @@ namespace Twino.MQ
 
             if (clients.Count == 0)
             {
-                await CompleteOperation(message, DeliveryOperation.Keep);
-
                 //if we are queuing, put the message back
                 if (onheld)
                     PutMessageBack(message);

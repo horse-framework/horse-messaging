@@ -17,11 +17,21 @@ namespace Sample.Mq.Server
             return await Task.FromResult(grant);
         }
 
+        public async Task<bool> CanRemoveChannel(MqClient client, MqServer server, Channel channel)
+        {
+            return await Task.FromResult(true);
+        }
+
         public async Task<bool> CanCreateQueue(MqClient client, Channel channel, ushort contentType, Dictionary<string, string> properties)
         {
             bool grant = client.Type.Equals("producer");
             Console.WriteLine("Can create new queue: " + grant);
             return await Task.FromResult(grant);
+        }
+
+        public async Task<bool> CanRemoveQueue(MqClient client, ChannelQueue queue)
+        {
+            return await Task.FromResult(true);
         }
 
         public async Task<bool> CanMessageToPeer(MqClient sender, TmqMessage message, MqClient receiver)

@@ -19,15 +19,21 @@ namespace Sample.Mq.Server
             await Task.CompletedTask;
         }
 
-        public async Task ClientJoined(ChannelClient client)
+        public async Task OnClientJoined(ChannelClient client)
         {
             Console.WriteLine($"{client.Client.UniqueId} joined to {client.Channel.Name}");
             await Task.CompletedTask;
         }
 
-        public async Task ClientLeft(ChannelClient client)
+        public async Task OnClientLeft(ChannelClient client)
         {
             Console.WriteLine($"{client.Client.UniqueId} left from {client.Channel.Name}");
+            await Task.CompletedTask;
+        }
+
+        public async Task OnChannelRemoved(Channel channel)
+        {
+            Console.WriteLine($"Channel is removed {channel.Name}");
             await Task.CompletedTask;
         }
 

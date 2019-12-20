@@ -21,16 +21,22 @@ namespace Twino.MQ
         /// <summary>
         /// Called when a client joined to the channel
         /// </summary>
-        Task ClientJoined(ChannelClient client);
+        Task OnClientJoined(ChannelClient client);
 
         /// <summary>
         /// Called when a client left from the channel
         /// </summary>
-        Task ClientLeft(ChannelClient client);
+        Task OnClientLeft(ChannelClient client);
 
         /// <summary>
         /// Called when queue status has changed
         /// </summary>
         Task<bool> OnQueueStatusChanged(ChannelQueue queue, QueueStatus from, QueueStatus to);
+        
+        /// <summary>
+        /// Called when channel is removed
+        /// </summary>
+        Task OnChannelRemoved(Channel channel);
+
     }
 }

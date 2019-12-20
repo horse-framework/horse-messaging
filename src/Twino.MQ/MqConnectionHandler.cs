@@ -74,6 +74,7 @@ namespace Twino.MQ
                 if (!accepted)
                     return null;
 
+                client.IsInstanceServer = true;
                 await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
             }
 
@@ -162,33 +163,29 @@ namespace Twino.MQ
                 return;
             }
 
-            //if there are connected servers, send message to them
-            if (_server.ServerAuthenticator != null && _server.InstanceConnectors.Length > 0)
-            {
-                byte[] mdata = await _writer.Create(message);
-                foreach (TmqStickyConnector connector in _server.InstanceConnectors)
-                    connector.Send(mdata);
-            }
-
             switch (message.Type)
             {
                 //client sends a queue message in a channel
                 case MessageType.Channel:
+                    await SendMessageToInstances(mc, message);
                     await ChannelMessageReceived(mc, message);
                     break;
 
                 //clients sends a message to another client
                 case MessageType.Client:
+                    await SendMessageToInstances(mc, message);
                     await ClientMessageReceived(mc, message);
                     break;
 
                 //client sends an acknowledge message of a message
                 case MessageType.Acknowledge:
+                    await SendMessageToInstances(mc, message);
                     await AcknowledgeMessageReceived(mc, message);
                     break;
 
                 //client sends a response message for a message
                 case MessageType.Response:
+                    await SendMessageToInstances(mc, message);
                     await ResponseMessageReceived(message);
                     break;
 
@@ -211,6 +208,29 @@ namespace Twino.MQ
         }
 
         /// <summary>
+        /// Sends the message to connected instances
+        /// </summary>
+        private async Task SendMessageToInstances(MqClient sender, TmqMessage message)
+        {
+            //to prevent receive same message from instanced server that already sent from this server
+            if (sender.IsInstanceServer)
+                return;
+
+            //if server is not set or there is no connected server
+            if (_server.ServerAuthenticator == null || _server.InstanceConnectors.Length == 0)
+                return;
+
+            byte[] mdata = await _writer.Create(message);
+            foreach (TmqStickyConnector connector in _server.InstanceConnectors)
+            {
+                bool grant = await _server.ServerAuthenticator.CanReceive(connector.GetClient(), message);
+
+                if (grant)
+                    connector.Send(mdata);
+            }
+        }
+
+        /// <summary>
         /// Clients send a server message
         /// </summary>
         private async Task ServerMessageReceived(MqClient client, TmqMessage message)
@@ -227,9 +247,23 @@ namespace Twino.MQ
                     await LeaveChannel(client, message);
                     break;
 
+                //create only channel
+                case KnownContentTypes.CreateChannel:
+                    break;
+
+                //remove channel and queues in it
+                case KnownContentTypes.RemoveChannel:
+                    await RemoveChannel(client, message);
+                    break;
+
                 //creates new queue
                 case KnownContentTypes.CreateQueue:
                     await CreateQueue(client, message);
+                    break;
+
+                //remove only queue
+                case KnownContentTypes.RemoveQueue:
+                    await RemoveQueue(client, message);
                     break;
             }
         }
@@ -483,6 +517,59 @@ namespace Twino.MQ
         }
 
         /// <summary>
+        /// Creates new channel
+        /// </summary>
+        private async Task<Channel> CreateChannel(MqClient client, TmqMessage message)
+        {
+            Channel channel = _server.FindChannel(message.Target);
+            if (channel != null)
+                return channel;
+
+            //check create channel access
+            if (_server.Authorization != null)
+            {
+                bool grant = await _server.Authorization.CanCreateChannel(client, _server, message.Target);
+                if (!grant)
+                {
+                    if (message.ResponseRequired)
+                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+
+                    return null;
+                }
+            }
+
+            return _server.CreateChannel(message.Target);
+        }
+
+        /// <summary>
+        /// Removes a channel with it's queues
+        /// </summary>
+        private async Task RemoveChannel(MqClient client, TmqMessage message)
+        {
+            Channel channel = _server.FindChannel(message.Target);
+            if (channel == null)
+            {
+                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                return;
+            }
+
+            //check remove channel access
+            if (_server.Authorization != null)
+            {
+                bool grant = await _server.Authorization.CanRemoveChannel(client, _server, channel);
+                if (!grant)
+                {
+                    if (message.ResponseRequired)
+                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+
+                    return;
+                }
+            }
+
+            await _server.RemoveChannel(channel);
+        }
+
+        /// <summary>
         /// Creates new queue and sends response
         /// </summary>
         private async Task CreateQueue(MqClient client, TmqMessage message)
@@ -518,27 +605,7 @@ namespace Twino.MQ
                 return;
             }
 
-            Channel channel = _server.FindChannel(message.Target);
-
-            //if channel doesn't exists, create new channel
-            if (channel == null)
-            {
-                //check create channel access
-                if (_server.Authorization != null)
-                {
-                    bool grant = await _server.Authorization.CanCreateChannel(client, _server, message.Target);
-                    if (!grant)
-                    {
-                        if (message.ResponseRequired)
-                            await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
-
-                        return;
-                    }
-                }
-
-                channel = _server.CreateChannel(message.Target);
-            }
-
+            Channel channel = await CreateChannel(client, message);
             ChannelQueue queue = channel.FindQueue(contentType.Value);
 
             //if queue exists, we can't create. return duplicate response.
@@ -573,6 +640,45 @@ namespace Twino.MQ
             //if creation successful, sends response
             if (queue != null && message.ResponseRequired)
                 await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Ok));
+        }
+
+        /// <summary>
+        /// Removes a queue from a channel
+        /// </summary>
+        private async Task RemoveQueue(MqClient client, TmqMessage message)
+        {
+            Channel channel = _server.FindChannel(message.Target);
+            if (channel == null)
+            {
+                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                return;
+            }
+
+            byte[] bytes = new byte[2];
+            await message.Content.ReadAsync(bytes);
+            ushort contentType = BitConverter.ToUInt16(bytes);
+
+            ChannelQueue queue = channel.FindQueue(contentType);
+            if (queue == null)
+            {
+                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                return;
+            }
+
+            //check authority if client can create queue
+            if (_server.Authorization != null)
+            {
+                bool grant = await _server.Authorization.CanRemoveQueue(client, queue);
+                if (!grant)
+                {
+                    if (message.ResponseRequired)
+                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+
+                    return;
+                }
+            }
+
+            await channel.RemoveQueue(queue);
         }
 
         #endregion

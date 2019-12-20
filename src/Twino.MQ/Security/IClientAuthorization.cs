@@ -11,14 +11,24 @@ namespace Twino.MQ.Security
     public interface IClientAuthorization
     {
         /// <summary>
-        /// Returns true, if user can client the channel
+        /// Returns true, if user can create the channel
         /// </summary>
         Task<bool> CanCreateChannel(MqClient client, MqServer server, string channelName);
+
+        /// <summary>
+        /// Returns true, if user can remove the channel
+        /// </summary>
+        Task<bool> CanRemoveChannel(MqClient client, MqServer server, Channel channel);
 
         /// <summary>
         /// Returns true, if client can create new queue in the channel
         /// </summary>
         Task<bool> CanCreateQueue(MqClient client, Channel channel, ushort contentType, Dictionary<string, string> properties);
+        
+        /// <summary>
+        /// Returns true, if client can remove the queue in a channel
+        /// </summary>
+        Task<bool> CanRemoveQueue(MqClient client, ChannelQueue queue);
 
         /// <summary>
         /// Returns true, if client can send a peer message

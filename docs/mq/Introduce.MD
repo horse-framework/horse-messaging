@@ -1,23 +1,46 @@
-﻿using System;
-using System.Diagnostics;
-using System.IO;
-using System.Net;
-using System.Reflection.Metadata;
-using System.Runtime.InteropServices.ComTypes;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Test.Mq.Internal;
-using Test.Mq.Models;
-using Twino.Client.TMQ;
-using Twino.MQ;
-using Twino.MQ.Clients;
-using Twino.Protocols.TMQ;
-using Twino.Server;
-using Xunit;
+## Introducing to Twino Messaging Queue Server
 
-namespace Playground
-{
+Twino Messaging Queue Server is a messaging queue server library.
+You can create full MQ Server with Twino MQ with a few interface implementations.
+But alone, Twino MQ isn't an executable MQ server.
+
+Twino Server uses TMQ protocol.
+We will shortly discuess TMQ protocol in this article.
+But you can read more about TMQ protocol at [here](https://github.com/mhelvacikoylu/twino/blob/v2/docs/mq/TMQ%20Protocol.MD)
+
+TMQ Protocol is binary based protocol and can run over TCP protocol.
+The objects of the TMQ Protocol are here:
+* Each message has a message type. Tells us message type queue, peer to peer, acknowledge, response and more...
+* Each message contains source information. Tells to receiver, who is sending this message.
+* Each message contains target information. Tells to readers, who will receive this message.
+* Each message has a content type. Describes content of the message.
+* Each message has a unique id.
+
+And there are some other properties such as high priority, first acquirer, is response or acknowledge required and time to live.
+But the key is:
+
+**What type** of message, contains **What**, is going to **Where** and sent by **Who**
+
+Independently server or client, when you see a TMQ Protocol Message, you can have a good information what's going on.
+Thats provides us these advantages:
+
+* Everyone can send a message to every target
+* Each receiver can know who is sent this message (you can hide it optionally)
+  * So they can send response message
+* With content type you can have information the message content and you can deserialize or process it directly.
+* Target is not just a queue, target can be a client, a group of clients by name or type, server and more depends your logic.
+* Each message can be tracked with acknowledge and responses because all messages can have unique id (or they can be anonymous)
+
+Let's create a MQ Server and Client sample.
+* Create new messaging queue server
+* Create a channel and a queue in it
+* Connect to the server
+* Join to the channel
+* Push a message to the queue
+* Write everthing to console
+
+Now we will write everything in delivery steps to console. So we need to implement IMessageDeliveryHandler
+
     public class SampleMessageDelivery : IMessageDeliveryHandler
     {
         public async Task<MessageDecision> OnReceived(ChannelQueue queue, QueueMessage message, MqClient sender)
@@ -86,6 +109,8 @@ namespace Playground
             return await Task.FromResult(false);
         }
     }
+    
+Then do something funny
 
     class Program
     {
@@ -103,18 +128,6 @@ namespace Playground
 
         static void CreateServer()
         {
-            IPHostEntry hostEntry = Dns.GetHostEntry("www.google.com");
-            foreach (IPAddress address in hostEntry.AddressList)
-            {
-                Console.WriteLine(address);
-            }
-
-            Console.ReadLine();
-            string ip = hostEntry.AddressList[0].ToString();
-            Console.WriteLine(ip);
-            Console.ReadLine();
-            return;
-            
             //create messaging queue server
             SampleMessageDelivery delivery = new SampleMessageDelivery();
             MqServer mq = new MqServer();
@@ -143,4 +156,3 @@ namespace Playground
             client.Push("ch", 10, "Hello, World!", false);
         }
     }
-}

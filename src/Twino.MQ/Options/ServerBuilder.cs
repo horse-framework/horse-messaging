@@ -53,6 +53,10 @@ namespace Twino.MQ.Options
             MqServerOptions options = new MqServerOptions();
             SetServerPropertyValues(_object, options);
 
+            options.Instances = _object["Instances"] != null
+                                    ? _object["Instances"].ToObject<InstanceOptions[]>()
+                                    : new InstanceOptions[0];
+
             MqServer server = new MqServer(options, _clientAuthenticator, _clientAuthorization);
 
             if (_channelEventHandler != null)
@@ -122,12 +126,12 @@ namespace Twino.MQ.Options
                     case "pull":
                         options.Status = QueueStatus.Pull;
                         break;
-                    
+
                     case "pause":
                     case "paused":
                         options.Status = QueueStatus.Paused;
                         break;
-                    
+
                     case "stop":
                     case "stoped":
                     case "stopped":

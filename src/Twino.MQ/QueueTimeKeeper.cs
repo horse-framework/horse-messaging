@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Linq;
+using System.Threading.Tasks;
 using Twino.MQ.Clients;
 
 namespace Twino.MQ
@@ -63,7 +63,7 @@ namespace Twino.MQ
         public void Run()
         {
             TimeSpan interval = TimeSpan.FromMilliseconds(1000);
-            _timer = new Timer(async s =>
+            _timer = new Timer(s =>
             {
                 if ((_queue.Options.Status == QueueStatus.Push || _queue.Options.Status == QueueStatus.Pull)
                     && _queue.Options.MessageTimeout > TimeSpan.Zero)
@@ -80,6 +80,17 @@ namespace Twino.MQ
         {
             lock (_deliveries)
                 _deliveries.Clear();
+        }
+
+        /// <summary>
+        /// Destroys the queue time keeper. 
+        /// </summary>
+        public async Task Destroy()
+        {
+            Reset();
+            
+            if (_timer != null)
+                await _timer.DisposeAsync();
         }
 
         /// <summary>

@@ -55,17 +55,24 @@ namespace Twino.Protocols.Http
             string json = System.IO.File.ReadAllText(filename);
             JObject obj = JObject.Parse(json);
 
-            HttpOptions options = new HttpOptions();
+            HttpOptions options = CreateDefault();
 
-            options.HttpConnectionTimeMax = obj["HttpConnectionTimeMax"].Value<int>();
-            options.MaximumRequestLength = obj["MaximumRequestLength"].Value<int>();
-            
+            JToken timeMax = obj["HttpConnectionTimeMax"];
+            if (timeMax != null)
+                options.HttpConnectionTimeMax = timeMax.Value<int>();
+
+            JToken requestLength = obj["MaximumRequestLength"];
+            if (requestLength != null)
+                options.MaximumRequestLength = requestLength.Value<int>();
+
             JToken hostnames = obj["Hostnames"];
             if (hostnames != null && hostnames.HasValues)
                 options.Hostnames = obj["Hostnames"].Values<string>().ToArray();
 
-            string[] sx = obj["SupportedEncodings"].Values<string>().ToArray();
+            JToken supportedEncodings = obj["SupportedEncodings"];
+            string[] sx = supportedEncodings != null ? supportedEncodings.Values<string>().ToArray() : new string[0];
             List<ContentEncodings> encodings = new List<ContentEncodings>();
+            
             foreach (string s in sx)
             {
                 if (string.IsNullOrWhiteSpace(s))

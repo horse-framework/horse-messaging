@@ -573,11 +573,45 @@ namespace Twino.Client.TMQ
         }
 
         /// <summary>
+        /// Creates a new channel without any queue
+        /// </summary>
+        public async Task<bool> CreateOnlyChannel(string channel, bool verifyResponse)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ContentType = KnownContentTypes.CreateChannel;
+            message.Target = channel;
+            message.ResponseRequired = verifyResponse;
+
+            if (verifyResponse)
+                message.MessageId = UniqueIdGenerator.Create();
+
+            return await WaitResponseOk(message, verifyResponse);
+        }
+
+        /// <summary>
         /// Creates new queue in server
         /// </summary>
         public async Task<bool> CreateQueue(string channel, ushort contentType, bool verifyResponse)
         {
             return await CreateQueue(channel, contentType, null, verifyResponse);
+        }
+
+        /// <summary>
+        /// Removes a channel and all queues in it
+        /// </summary>
+        public async Task<bool> RemoveChannel(string channel, bool verifyResponse)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ContentType = KnownContentTypes.RemoveChannel;
+            message.Target = channel;
+            message.ResponseRequired = verifyResponse;
+
+            if (verifyResponse)
+                message.MessageId = UniqueIdGenerator.Create();
+
+            return await WaitResponseOk(message, verifyResponse);
         }
 
         /// <summary>
@@ -602,6 +636,24 @@ namespace Twino.Client.TMQ
 
                 message.Content = new MemoryStream(Encoding.UTF8.GetBytes(content.ToString()));
             }
+
+            if (verifyResponse)
+                message.MessageId = UniqueIdGenerator.Create();
+
+            return await WaitResponseOk(message, verifyResponse);
+        }
+
+        /// <summary>
+        /// Removes a queue in a channel in server
+        /// </summary>
+        public async Task<bool> RemoveQueue(string channel, ushort contentType, bool verifyResponse)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ContentType = KnownContentTypes.RemoveQueue;
+            message.Target = channel;
+            message.ResponseRequired = verifyResponse;
+            message.Content = new MemoryStream(BitConverter.GetBytes(contentType));
 
             if (verifyResponse)
                 message.MessageId = UniqueIdGenerator.Create();

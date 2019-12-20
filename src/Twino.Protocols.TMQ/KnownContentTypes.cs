@@ -16,7 +16,12 @@ namespace Twino.Protocols.TMQ
 
         public const ushort Join = 601;
         public const ushort Leave = 602;
-
+        
+        public const ushort CreateChannel = 603;
+        public const ushort RemoveChannel = 604;
+        
         public const ushort CreateQueue = 610;
+        public const ushort RemoveQueue = 611;
+        
     }
 }

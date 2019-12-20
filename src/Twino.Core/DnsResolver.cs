@@ -59,7 +59,11 @@ namespace Twino.Core
             {
                 //if the host is domain name, find the remote ip address of the domain
                 IPHostEntry hostEntry = Dns.GetHostEntry(host_search);
-                info.IPAddress = hostEntry.AddressList[0].ToString();
+
+                string ip = hostEntry.AddressList[0].ToString();
+                if (ip.Length < 5 && hostEntry.AddressList.Length > 1)
+                    ip = hostEntry.AddressList[1].ToString();
+                info.IPAddress = ip;
             }
 
             //set the protocol and ssl information by protocol

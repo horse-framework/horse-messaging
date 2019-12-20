@@ -68,7 +68,10 @@ namespace Twino.Server
             ServerOptions options = JsonConvert.DeserializeObject<ServerOptions>(serialized);
 
             if (options.RequestTimeout == 0)
-                options.RequestTimeout = 30;
+                options.RequestTimeout = 120;
+
+            if (options.PingInterval == 0)
+                options.PingInterval = 120;
 
             if (!string.IsNullOrEmpty(options.ContentEncoding))
                 options.ContentEncoding = options.ContentEncoding.ToLower(new System.Globalization.CultureInfo("en-US")).Trim();

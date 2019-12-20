@@ -9,7 +9,7 @@ namespace Twino.MQ.Options
         /// Server name, will be used while connecting to other instances
         /// </summary>
         public string Name { get; set; }
-        
+
         /// <summary>
         /// Server type, will be used while connecting to other instances
         /// </summary>
