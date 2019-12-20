@@ -23,9 +23,9 @@ When you need to set channel and queue creations outside of your code. You can c
 Then you can build server with ServerBuilder object.
 This object loads all channels and queues with their options and initializes them.
 This option is useful when your channels are queues always same and you have multiple instances.
-You can copy your builder JSON file to all your instances and they can load same options, channels and queues from this file.
+You can copy your builder JSON file to all your instances and they can load same options, channels and queues from this file. To see how to initialize your server with ServerBuilder read this article:
 
-      sample code
+[Create Server with Options using ServerBuilder](https://github.com/mhelvacikoylu/twino/blob/v2/docs/mq/ServerBuilder.MD)
 
 ### Create Queues From Clients Over Network Connection
 
