@@ -55,7 +55,7 @@ namespace Twino.MQ
         /// If this value is set and acknowledge isn't received, time up methods will be called.
         /// </summary>
         public DateTime? AcknowledgeDeadline { get; }
-        
+
         /// <summary>
         /// True, if acknowledge message is sent to message source
         /// </summary>
