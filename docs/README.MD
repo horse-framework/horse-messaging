@@ -17,17 +17,11 @@ You can see all NuGET packages in [here](https://github.com/mhelvacikoylu/twino/
 * [TMQ Protocol](https://github.com/mhelvacikoylu/twino/blob/v2/docs/mq/TMQ%20Protocol.MD)
 * [Messaging Queue Options](https://github.com/mhelvacikoylu/twino/blob/v2/docs/mq/Options.MD)
 * [Channel Queue Statuses](https://github.com/mhelvacikoylu/twino/blob/v2/docs/mq/Queue%20Statuses.MD)
-* Creating Queues
-  * Create Queues With Server Builder
-  * Create Queues Programmatically in MQ Server
-  * Create Queues From Clients Over Network Connection
+* [Creating Channels and Queues](https://github.com/mhelvacikoylu/twino/blob/v2/docs/mq/QueueCreation.MD)
+* Removing Channels and Queues
 * Pushing messages to Queues
 * Sending Messages to Clients
-  * Send Messages to Clients By Unique Id
-  * Send Messages to Clients By Client Name
-  * Send Messages to Clients By Client Type
 * Requests and Responses over Messaging Queue Server
-* Peer to peer messaging over Messaging Queue Server
 * Channel Event Management
 * Message Delivery
   * Message Delivery Properties
