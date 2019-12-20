@@ -88,9 +88,11 @@ namespace Twino.MQ
         public async Task Destroy()
         {
             Reset();
-            
+
             if (_timer != null)
-                await _timer.DisposeAsync();
+                _timer.Dispose();
+
+            await Task.CompletedTask;
         }
 
         /// <summary>
