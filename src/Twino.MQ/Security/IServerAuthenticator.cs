@@ -3,7 +3,7 @@ using Twino.Client.TMQ;
 using Twino.MQ.Clients;
 using Twino.Protocols.TMQ;
 
-namespace Twino.MQ
+namespace Twino.MQ.Security
 {
     public interface IServerAuthenticator
     {
