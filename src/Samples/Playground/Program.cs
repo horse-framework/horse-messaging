@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Reflection.Metadata;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
@@ -102,6 +103,18 @@ namespace Playground
 
         static void CreateServer()
         {
+            IPHostEntry hostEntry = Dns.GetHostEntry("www.google.com");
+            foreach (IPAddress address in hostEntry.AddressList)
+            {
+                Console.WriteLine(address);
+            }
+
+            Console.ReadLine();
+            string ip = hostEntry.AddressList[0].ToString();
+            Console.WriteLine(ip);
+            Console.ReadLine();
+            return;
+            
             //create messaging queue server
             SampleMessageDelivery delivery = new SampleMessageDelivery();
             MqServer mq = new MqServer();
