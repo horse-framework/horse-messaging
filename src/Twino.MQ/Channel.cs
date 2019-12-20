@@ -60,6 +60,11 @@ namespace Twino.MQ
         /// </summary>
         public IEnumerable<ChannelQueue> Queues => _queues.GetUnsafeList();
 
+        /// <summary>
+        /// Clone list of active channel queues
+        /// </summary>
+        public IEnumerable<ChannelQueue> QueuesClone => _queues.GetAsClone();
+
         private readonly SafeList<ChannelQueue> _queues;
 
         /// <summary>
@@ -95,6 +100,15 @@ namespace Twino.MQ
 
             _queues = new SafeList<ChannelQueue>(8);
             _clients = new SafeList<ChannelClient>(256);
+        }
+
+        /// <summary>
+        /// Destroys the channel, clears all queues and clients 
+        /// </summary>
+        public void Destroy()
+        {
+            _clients.Clear();
+            _queues.Clear();
         }
 
         #endregion
@@ -173,9 +187,12 @@ namespace Twino.MQ
         public async Task RemoveQueue(ChannelQueue queue)
         {
             _queues.Remove(queue);
+            await queue.SetStatus(QueueStatus.Stopped);
 
             if (EventHandler != null)
                 await EventHandler.OnQueueRemoved(queue, this);
+            
+            await queue.Destroy();
         }
 
         #endregion
@@ -199,7 +216,7 @@ namespace Twino.MQ
             client.Join(cc);
 
             if (EventHandler != null)
-                await EventHandler.ClientJoined(cc);
+                await EventHandler.OnClientJoined(cc);
 
             IEnumerable<ChannelQueue> list = _queues.GetAsClone();
             foreach (ChannelQueue queue in list)
@@ -217,7 +234,7 @@ namespace Twino.MQ
             client.Client.Leave(client);
 
             if (EventHandler != null)
-                await EventHandler.ClientLeft(client);
+                await EventHandler.OnClientLeft(client);
         }
 
         /// <summary>
@@ -233,7 +250,7 @@ namespace Twino.MQ
             client.Leave(cc);
 
             if (EventHandler != null)
-                await EventHandler.ClientLeft(cc);
+                await EventHandler.OnClientLeft(cc);
 
             return true;
         }

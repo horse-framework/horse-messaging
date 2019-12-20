@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Linq;
+using System.Threading.Tasks;
 using Twino.MQ.Clients;
 
 namespace Twino.MQ
@@ -79,6 +80,17 @@ namespace Twino.MQ
         {
             lock (_deliveries)
                 _deliveries.Clear();
+        }
+
+        /// <summary>
+        /// Destroys the queue time keeper. 
+        /// </summary>
+        public async Task Destroy()
+        {
+            Reset();
+            
+            if (_timer != null)
+                await _timer.DisposeAsync();
         }
 
         /// <summary>

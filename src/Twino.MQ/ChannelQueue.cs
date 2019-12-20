@@ -145,6 +145,20 @@ namespace Twino.MQ
                 _semaphore = new SemaphoreSlim(1, 1024);
         }
 
+        /// <summary>
+        /// Destorys the queue
+        /// </summary>
+        public async Task Destroy()
+        {
+            await _timeKeeper.Destroy();
+            
+            lock (_prefentialMessages)
+                _prefentialMessages.Clear();
+
+            lock (_standardMessages)
+                _standardMessages.Clear();
+        }
+
         #endregion
 
         #region Status Actions

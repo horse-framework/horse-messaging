@@ -47,6 +47,15 @@ namespace Twino.MQ.Helpers
         }
 
         /// <summary>
+        /// Clears list, removes all items
+        /// </summary>
+        public void Clear()
+        {
+            lock (_list)
+                _list.Clear();
+        }
+
+        /// <summary>
         /// Adds and item to the list
         /// </summary>
         public void Add(T item)

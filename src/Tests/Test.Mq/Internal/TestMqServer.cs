@@ -16,6 +16,7 @@ namespace Test.Mq.Internal
         public int ClientLeft { get; set; }
         public int OnChannelStatusChanged { get; set; }
         public int OnQueueStatusChanged { get; set; }
+        public int OnChannelRemoved { get; set; }
 
         public int OnReceived { get; set; }
         public int OnSendStarting { get; set; }
