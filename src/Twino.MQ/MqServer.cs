@@ -274,6 +274,14 @@ namespace Twino.MQ
             if (channel == null)
                 return;
 
+            await RemoveChannel(channel);
+        }
+
+        /// <summary>
+        /// Removes channel, destroys all queues in it
+        /// </summary>
+        public async Task RemoveChannel(Channel channel)
+        {
             foreach (ChannelQueue queue in channel.QueuesClone)
                 await channel.RemoveQueue(queue);
 
