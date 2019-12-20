@@ -481,12 +481,10 @@ namespace Twino.MQ
 
             if (clients.Count == 0)
             {
-                await CompleteOperation(message, DeliveryOperation.Keep);
-
                 //if we are queuing, put the message back
                 if (onheld)
                     PutMessageBack(message);
-
+                    
                 return DeliveryOperation.Keep;
             }
 
