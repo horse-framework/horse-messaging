@@ -91,3 +91,122 @@ Channel queue options uses **ChannelQueueOptions** class. Here is the property l
     </tr>
   </tbody>
 </table>
+
+
+## Channel Options
+
+Channel options uses **ChannelOptions** class. This class derives from ChannelQueueOptions.
+That means, Channel options has all options channel queue options has.
+This is useful, when you create a new queue without specifiying options, queue will use channel default options. So, if you set a default options to channel, all queue options will use these options.
+
+Here is the list of properties channel options has and channel queue options does not have:
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>AllowMultipleQueues</td>
+      <td>
+        If true, multiple queues can be created in the channel. Default value is **true**.
+      </td>
+    </tr>
+    <tr>
+      <td>AllowedContentTypes</td>
+      <td>
+        If it has at least one value, channel will allow to create queues only allowed in this list.
+        This list a number array. If you do not restrict content types, you can set it null or empty array.
+        Default value is **null**.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+## Server Options
+
+Server options uses **MqServerOptions** class. This class derives from ChannelOptions.
+That means, server options has all options channel options has so has all options channel queue options has too.
+So you can set a default channel and queue options with server options object.
+For creating new channels or queuest with no specified options default server options are used.
+
+Here is the list of properties server options has and channel options does not have:
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Name</td>
+      <td>
+        Name of the server. This name is used when server is connected to other distributed instances.
+      </td>
+    </tr>
+    <tr>
+      <td>Type</td>
+      <td>
+        Type of the server. This type is used when server is connected to other distributed instances.
+      </td>
+    </tr>
+    <tr>
+      <td>Instances</td>
+      <td>
+        Other server instances. For distributed systems, you may want to create multiple queue servers that work together.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+### Instance options
+
+Instance options in server options properties:
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Name</td>
+      <td>
+        Name of the connecting remote server. This is useful for describing and monitoring.
+      </td>
+    </tr>
+    <tr>
+      <td>Host</td>
+      <td>
+        Hostname of the server. Should be like tmq://host-name:port
+      </td>
+    </tr>
+    <tr>
+      <td>Token</td>
+      <td>
+        Authentication token. Security may be necessary, you can create token for each instance and while connecting to other instances they can verify token.
+      </td>
+    </tr>
+    <tr>
+      <td>KeepMessages</td>
+      <td>
+        If true messages will be kept while there are active instance connections.
+        When a instance connection is established, all queued messages are sent.
+        Default value is **false**.
+      </td>
+    </tr>
+    <tr>
+      <td>ReconnectWait</td>
+      <td>
+        If server instance connection fails or disconnects, the time wait before reconnect.
+      </td>
+    </tr>
+  </tbody>
+</table>
