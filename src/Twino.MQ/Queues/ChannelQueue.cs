@@ -124,6 +124,11 @@ namespace Twino.MQ.Queues
         /// </summary>
         private volatile bool _waitingAcknowledge;
 
+        /// <summary>
+        /// Queue statistics and information
+        /// </summary>
+        public QueueInfo Info { get; } = new QueueInfo();
+
         #endregion
 
         #region Constructors
@@ -228,8 +233,8 @@ namespace Twino.MQ.Queues
             else
                 _standardMessages.Remove(message);
 
-            if (DeliveryHandler != null)
-                await DeliveryHandler.MessageRemoved(this, message);
+            Info.AddMessageRemove();
+            await DeliveryHandler.MessageRemoved(this, message);
 
             return true;
         }
@@ -273,6 +278,7 @@ namespace Twino.MQ.Queues
             }
             catch (Exception ex)
             {
+                Info.AddError();
                 try
                 {
                     _ = DeliveryHandler.ExceptionThrown(this, message, ex);
@@ -306,6 +312,7 @@ namespace Twino.MQ.Queues
             try
             {
                 //fire message receive event
+                Info.AddMessageReceive();
                 Decision decision = await DeliveryHandler.ReceivedFromProducer(this, message, sender);
                 bool allow = await ApplyDecision(decision, message);
                 if (!allow)
@@ -349,6 +356,7 @@ namespace Twino.MQ.Queues
             }
             catch (Exception ex)
             {
+                Info.AddError();
                 try
                 {
                     _ = DeliveryHandler.ExceptionThrown(this, held, ex);
@@ -402,6 +410,7 @@ namespace Twino.MQ.Queues
                 }
                 catch (Exception ex)
                 {
+                    Info.AddError();
                     try
                     {
                         _ = DeliveryHandler.ExceptionThrown(this, message, ex);
@@ -477,7 +486,10 @@ namespace Twino.MQ.Queues
                 if (Status != QueueStatus.Route && onheld && message.Decision.KeepMessage)
                     PutMessageBack(message);
                 else
+                {
+                    Info.AddMessageRemove();
                     _ = DeliveryHandler.MessageRemoved(this, message);
+                }
 
                 return;
             }
@@ -537,6 +549,7 @@ namespace Twino.MQ.Queues
                 delivery.MarkAsSent();
 
                 //do after send operations for per message
+                Info.AddConsumerReceive();
                 _ = DeliveryHandler.ConsumerReceived(this, delivery, client.Client);
 
                 //if we are sending to only first acquirer, break
@@ -548,13 +561,17 @@ namespace Twino.MQ.Queues
             }
 
             //after all sending operations completed, calls implementation send completed method and complete the operation
+            Info.AddMessageSend();
             decision = await DeliveryHandler.EndSend(this, message);
             await ApplyDecision(decision, message);
 
             if (Status != QueueStatus.Route && decision.KeepMessage)
                 PutMessageBack(message);
             else
+            {
+                Info.AddMessageRemove();
                 _ = DeliveryHandler.MessageRemoved(this, message);
+            }
         }
 
         /// <summary>
@@ -627,7 +644,12 @@ namespace Twino.MQ.Queues
             if (decision.SaveMessage)
             {
                 if (!message.IsSaved)
+                {
                     message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
+
+                    if (message.IsSaved)
+                        Info.AddMessageSave();
+                }
             }
 
             if (decision.SendAcknowledge == DeliveryAcknowledgeDecision.Always ||
@@ -664,6 +686,7 @@ namespace Twino.MQ.Queues
                 }
             }
 
+            Info.AddAcknowledge();
             await DeliveryHandler.AcknowledgeReceived(this, deliveryMessage, delivery);
             ReleaseAcknowledgeLock();
         }

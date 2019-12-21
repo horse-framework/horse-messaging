@@ -192,7 +192,7 @@ namespace Twino.MQ
 
             if (EventHandler != null)
                 await EventHandler.OnQueueRemoved(queue, this);
-            
+
             await queue.Destroy();
         }
 

@@ -88,7 +88,7 @@ namespace Twino.MQ.Queues
         public async Task Destroy()
         {
             Reset();
-            
+
             if (_timer != null)
                 await _timer.DisposeAsync();
         }
@@ -103,13 +103,19 @@ namespace Twino.MQ.Queues
             ProcessReceiveTimeupOnList(_prefentialMessages);
 
             foreach (QueueMessage message in _timeupMessages)
+            {
+                _queue.Info.AddMessageTimeout();
                 _ = _queue.DeliveryHandler.MessageTimedOut(_queue, message);
+            }
 
             _timeupMessages.Clear();
             ProcessReceiveTimeupOnList(_standardMessages);
 
             foreach (QueueMessage message in _timeupMessages)
+            {
+                _queue.Info.AddMessageTimeout();
                 _ = _queue.DeliveryHandler.MessageTimedOut(_queue, message);
+            }
         }
 
         /// <summary>
@@ -162,6 +168,7 @@ namespace Twino.MQ.Queues
                 if (tuple.Item1)
                 {
                     delivery.MarkAsAcknowledgeTimedUp();
+                    _queue.Info.AddAcknowledgeTimeout();
                     _ = _queue.DeliveryHandler.AcknowledgeTimedOut(_queue, delivery);
                     if (!released)
                     {
