@@ -1,9 +1,9 @@
 using System;
-using System.Transactions;
 using Twino.MQ.Clients;
+using Twino.MQ.Delivery;
 using Twino.Protocols.TMQ;
 
-namespace Twino.MQ
+namespace Twino.MQ.Queues
 {
     /// <summary>
     /// Queue TMQ Message
@@ -66,6 +66,11 @@ namespace Twino.MQ
         /// If first operation skipped, or remove is skipped, message will be still in the queue but this value will be false. 
         /// </summary>
         public bool IsFirstQueue { get; set; }
+        
+        /// <summary>
+        /// Last decision for the message
+        /// </summary>
+        public Decision Decision { get; set; }
 
         /// <summary>
         /// Creates new QueueMessage from TmqMessage with save status

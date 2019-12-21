@@ -22,6 +22,7 @@ namespace Twino.Protocols.TMQ
         
         public const ushort CreateQueue = 610;
         public const ushort RemoveQueue = 611;
+        public const ushort UpdateQueue = 612;
         
     }
 }

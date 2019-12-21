@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
+using Twino.MQ.Queues;
 using Twino.MQ.Security;
 
 namespace Twino.MQ

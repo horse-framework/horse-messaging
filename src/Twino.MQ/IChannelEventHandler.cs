@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
+using Twino.MQ.Queues;
 
 namespace Twino.MQ
 {

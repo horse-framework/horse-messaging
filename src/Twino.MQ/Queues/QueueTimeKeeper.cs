@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 
-namespace Twino.MQ
+namespace Twino.MQ.Queues
 {
     /// <summary>
     /// Follows all deliveries and their acknowledges, responses and expirations
@@ -103,13 +103,13 @@ namespace Twino.MQ
             ProcessReceiveTimeupOnList(_prefentialMessages);
 
             foreach (QueueMessage message in _timeupMessages)
-                _ = _queue.DeliveryHandler.OnTimeUp(_queue, message);
+                _ = _queue.DeliveryHandler.MessageTimedOut(_queue, message);
 
             _timeupMessages.Clear();
             ProcessReceiveTimeupOnList(_standardMessages);
 
             foreach (QueueMessage message in _timeupMessages)
-                _ = _queue.DeliveryHandler.OnTimeUp(_queue, message);
+                _ = _queue.DeliveryHandler.MessageTimedOut(_queue, message);
         }
 
         /// <summary>
@@ -162,7 +162,7 @@ namespace Twino.MQ
                 if (tuple.Item1)
                 {
                     delivery.MarkAsAcknowledgeTimedUp();
-                    _ = _queue.DeliveryHandler.OnAcknowledgeTimeUp(_queue, delivery);
+                    _ = _queue.DeliveryHandler.AcknowledgeTimedOut(_queue, delivery);
                     if (!released)
                     {
                         released = true;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Options
