@@ -383,7 +383,7 @@ namespace Twino.MQ.Queues
 
             try
             {
-                await ProcesssMessage(message, true, client);
+                await ProcesssMessage(message, client);
             }
             catch (Exception ex)
             {
@@ -441,14 +441,14 @@ namespace Twino.MQ.Queues
                     //just send the message to receivers
                     case QueueStatus.Route:
                         held = message;
-                        await ProcesssMessage(message, false);
+                        await ProcesssMessage(message);
                         break;
 
                     //keep the message in queue send send it to receivers
                     //if there is no receiver, message will kept back in the queue
                     case QueueStatus.Push:
                         held = PullMessage(message);
-                        await ProcesssMessage(held, true);
+                        await ProcesssMessage(held);
                         break;
 
                     //redirects message to consumers with round robin algorithm
@@ -456,7 +456,7 @@ namespace Twino.MQ.Queues
                         held = PullMessage(message);
                         ChannelClient cc = Channel.GetNextRRClient(ref _roundRobinIndex);
                         if (cc != null)
-                            await ProcesssMessage(held, true, cc);
+                            await ProcesssMessage(held, cc);
                         else
                             PutMessageBack(held);
                         break;
@@ -526,7 +526,7 @@ namespace Twino.MQ.Queues
 
                 try
                 {
-                    await ProcesssMessage(message, true);
+                    await ProcesssMessage(message);
                 }
                 catch (Exception ex)
                 {
@@ -543,44 +543,9 @@ namespace Twino.MQ.Queues
         }
 
         /// <summary>
-        /// When wait for acknowledge is active, this method locks the queue until acknowledge is received
-        /// </summary>
-        private async Task WaitForAcknowledge(QueueMessage message)
-        {
-            //if we will lock the queue until ack received, we must request ack
-            if (!message.Message.AcknowledgeRequired)
-                message.Message.AcknowledgeRequired = true;
-
-            //lock the object, because pending ack message should be queued
-            await _semaphore.WaitAsync();
-
-            try
-            {
-                //if there is no queue in ack delivery
-                //this message is sent and sets the waiting true until it's process completed
-                if (!_waitingAcknowledge)
-                {
-                    _waitingAcknowledge = true;
-                    return;
-                }
-
-                //if waiting already true, this message should wait until delivery process completed
-                while (_waitingAcknowledge)
-                    await Task.Delay(1);
-
-                //now, it's this message turn, set wait true and go on.
-                _waitingAcknowledge = true;
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
-        }
-
-        /// <summary>
         /// Searches receivers of the message and process the send operation
         /// </summary>
-        private async Task ProcesssMessage(QueueMessage message, bool onheld, ChannelClient singleClient = null)
+        private async Task ProcesssMessage(QueueMessage message, ChannelClient singleClient = null)
         {
             //if we need acknowledge, we are sending this information to receivers that we require response
             message.Message.AcknowledgeRequired = Options.RequestAcknowledge;
@@ -597,13 +562,14 @@ namespace Twino.MQ.Queues
             Decision decision = await DeliveryHandler.BeginSend(this, message);
             bool allow = await ApplyDecision(decision, message);
 
+            //if user exit from delivery process, do complete operations
             if (!allow)
             {
                 message.Decision = decision;
                 message.IsSkipped = true;
                 message.Decision = await DeliveryHandler.EndSend(this, message);
 
-                if (Status != QueueStatus.Route && onheld && message.Decision.KeepMessage)
+                if (Status == QueueStatus.Push || Status == QueueStatus.Pull || Status == QueueStatus.RoundRobin && message.Decision.KeepMessage)
                     PutMessageBack(message);
                 else
                 {
@@ -614,6 +580,7 @@ namespace Twino.MQ.Queues
                 return;
             }
 
+            //find receivers. if single client assigned, create one-element list
             List<ChannelClient> clients;
             if (singleClient == null)
                 clients = Channel.ClientsClone;
@@ -623,10 +590,13 @@ namespace Twino.MQ.Queues
                 clients.Add(singleClient);
             }
 
+            //if there are not receivers, complete send operation
             if (clients.Count == 0)
             {
                 message.Decision = await DeliveryHandler.EndSend(this, message);
-                if (Status != QueueStatus.Route && onheld && message.Decision.KeepMessage)
+                await ApplyDecision(message.Decision, message);
+                
+                if (Status == QueueStatus.Push || Status == QueueStatus.Pull || Status == QueueStatus.RoundRobin && message.Decision.KeepMessage)
                     PutMessageBack(message);
                 else
                 {
@@ -788,6 +758,45 @@ namespace Twino.MQ.Queues
             }
 
             return decision.Allow;
+        }
+
+        #endregion
+
+        #region Acknowledge
+
+        /// <summary>
+        /// When wait for acknowledge is active, this method locks the queue until acknowledge is received
+        /// </summary>
+        private async Task WaitForAcknowledge(QueueMessage message)
+        {
+            //if we will lock the queue until ack received, we must request ack
+            if (!message.Message.AcknowledgeRequired)
+                message.Message.AcknowledgeRequired = true;
+
+            //lock the object, because pending ack message should be queued
+            await _semaphore.WaitAsync();
+
+            try
+            {
+                //if there is no queue in ack delivery
+                //this message is sent and sets the waiting true until it's process completed
+                if (!_waitingAcknowledge)
+                {
+                    _waitingAcknowledge = true;
+                    return;
+                }
+
+                //if waiting already true, this message should wait until delivery process completed
+                while (_waitingAcknowledge)
+                    await Task.Delay(1);
+
+                //now, it's this message turn, set wait true and go on.
+                _waitingAcknowledge = true;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
         /// <summary>
