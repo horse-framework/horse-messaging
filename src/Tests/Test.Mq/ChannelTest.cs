@@ -112,54 +112,5 @@ namespace Test.Mq
             List<ChannelClient> clients = channel.ClientsClone;
             Assert.Empty(clients);
         }
-
-        /// <summary>
-        /// Client sends a queue creation message
-        /// </summary>
-        [Fact]
-        public async Task CreateQueue()
-        {
-            TestMqServer server = new TestMqServer();
-            server.Initialize(41205);
-            server.Start();
-
-            TmqClient client = new TmqClient();
-            client.Connect("tmq://localhost:41205");
-
-            bool created = await client.CreateQueue("ch-2", MessageA.ContentType, false);
-            Assert.True(created);
-            await Task.Delay(1000);
-
-            Channel channel = server.Server.Channels.FirstOrDefault(x => x.Name == "ch-2");
-            Assert.NotNull(channel);
-
-            ChannelQueue queue = channel.Queues.FirstOrDefault();
-            Assert.NotNull(queue);
-            Assert.Equal(MessageA.ContentType, queue.ContentType);
-        }
-
-        /// <summary>
-        /// Client sends a queue creation message and waits response
-        /// </summary>
-        [Fact]
-        public async Task CreateQueueWithResponse()
-        {
-            TestMqServer server = new TestMqServer();
-            server.Initialize(41206);
-            server.Start();
-
-            TmqClient client = new TmqClient();
-            client.Connect("tmq://localhost:41206");
-
-            bool created = await client.CreateQueue("ch-2", MessageA.ContentType, true);
-            Assert.True(created);
-
-            Channel channel = server.Server.Channels.FirstOrDefault(x => x.Name == "ch-2");
-            Assert.NotNull(channel);
-
-            ChannelQueue queue = channel.Queues.FirstOrDefault();
-            Assert.NotNull(queue);
-            Assert.Equal(MessageA.ContentType, queue.ContentType);
-        }
     }
 }

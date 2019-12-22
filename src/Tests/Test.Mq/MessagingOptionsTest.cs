@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Test.Mq
 {
-    public class ChannelMessageTest
+    public class MessagingOptionsTest
     {
         #region Route Messaging
 
@@ -697,5 +697,11 @@ namespace Test.Mq
         }
 
         #endregion
+
+        [Fact]
+        public async Task SendAcknowledgeFromServerToProducer()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
