@@ -29,6 +29,13 @@ namespace Twino.MQ.Queues
         Push,
 
         /// <summary>
+        /// Load balancing status. Queue messaging is in running state.
+        /// Producers push the message into the queue and consumer receive when message is pushed.
+        /// If there are no available consumers, message will be kept in queue like push status.
+        /// </summary>
+        RoundRobin,
+        
+        /// <summary>
         /// Queue messaging is in running state.
         /// Producers push message into queue, consumers receive the messages when they requested.
         /// Each message is sent only one-receiver at same time.
@@ -83,6 +90,11 @@ namespace Twino.MQ.Queues
         public IMessageDeliveryHandler DeliveryHandler { get; }
 
         /// <summary>
+        /// Queue statistics and information
+        /// </summary>
+        public QueueInfo Info { get; } = new QueueInfo();
+
+        /// <summary>
         /// High priority message list
         /// </summary>
         private readonly LinkedList<QueueMessage> _prefentialMessages = new LinkedList<QueueMessage>();
@@ -125,9 +137,9 @@ namespace Twino.MQ.Queues
         private volatile bool _waitingAcknowledge;
 
         /// <summary>
-        /// Queue statistics and information
+        /// Round robin client list index
         /// </summary>
-        public QueueInfo Info { get; } = new QueueInfo();
+        private int _roundRobinIndex = -1;
 
         #endregion
 
@@ -341,7 +353,17 @@ namespace Twino.MQ.Queues
                         held = PullMessage(message);
                         await ProcesssMessage(held, true);
                         break;
-
+                    
+                    //redirects message to consumers with round robin algorithm
+                    case QueueStatus.RoundRobin:
+                        held = PullMessage(message);
+                        ChannelClient cc = Channel.GetNextRRClient(ref _roundRobinIndex);
+                        if (cc != null)
+                            await ProcesssMessage(held, true, cc);
+                        else
+                            PutMessageBack(held);
+                        break;
+                    
                     //dont send the message, just put it to queue
                     case QueueStatus.Pull:
                     case QueueStatus.Paused:

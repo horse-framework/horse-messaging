@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
@@ -262,6 +263,25 @@ namespace Twino.MQ
         public ChannelClient FindClient(MqClient client)
         {
             return _clients.Find(x => x.Client == client);
+        }
+
+        /// <summary>
+        /// Gets next client with round robin algorithm and updates index
+        /// </summary>
+        internal ChannelClient GetNextRRClient(ref int index)
+        {
+            List<ChannelClient> clients = _clients.GetAsClone();
+            if (index < 0 || index + 1 >= clients.Count)
+            {
+                if (clients.Count == 0)
+                    return null;
+
+                index = 0;
+                return clients[0];
+            }
+
+            index++;
+            return clients[index];
         }
 
         #endregion

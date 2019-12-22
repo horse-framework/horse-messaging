@@ -121,11 +121,21 @@ namespace Twino.MQ.Options
                     case "route":
                         options.Status = QueueStatus.Route;
                         break;
+
                     case "push":
                         options.Status = QueueStatus.Push;
                         break;
+
                     case "pull":
                         options.Status = QueueStatus.Pull;
+                        break;
+
+                    case "rr":
+                    case "round":
+                    case "robin":
+                    case "roundrobin":
+                    case "round-robin":
+                        options.Status = QueueStatus.RoundRobin;
                         break;
 
                     case "pause":

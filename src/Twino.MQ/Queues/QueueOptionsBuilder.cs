@@ -140,6 +140,14 @@ namespace Twino.MQ.Queues
                             Status = QueueStatus.Pull;
                             break;
 
+                        case "rr":
+                        case "round":
+                        case "robin":
+                        case "roundrobin":
+                        case "round-robin":
+                            Status = QueueStatus.RoundRobin;
+                            break;
+
                         case "pause":
                         case "paused":
                             Status = QueueStatus.Paused;
