@@ -222,7 +222,7 @@ namespace Twino.MQ
 
             IEnumerable<ChannelQueue> list = _queues.GetAsClone();
             foreach (ChannelQueue queue in list)
-                await queue.Trigger(cc);
+                await queue.Trigger();
 
             return true;
         }

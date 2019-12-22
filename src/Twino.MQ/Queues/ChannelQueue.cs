@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
@@ -97,22 +99,22 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// High priority message list
         /// </summary>
-        private readonly LinkedList<QueueMessage> _prefentialMessages = new LinkedList<QueueMessage>();
+        private readonly LinkedList<QueueMessage> _highPriorityMessages = new LinkedList<QueueMessage>();
 
         /// <summary>
         /// Low/Standard priority message list
         /// </summary>
-        private readonly LinkedList<QueueMessage> _standardMessages = new LinkedList<QueueMessage>();
+        private readonly LinkedList<QueueMessage> _regularMessages = new LinkedList<QueueMessage>();
 
         /// <summary>
         /// Standard prefential messages
         /// </summary>
-        public IEnumerable<QueueMessage> PrefentialMessages => _prefentialMessages;
+        public IEnumerable<QueueMessage> HighPriorityMessages => _highPriorityMessages;
 
         /// <summary>
         /// Standard queued messages
         /// </summary>
-        public IEnumerable<QueueMessage> StandardMessages => _standardMessages;
+        public IEnumerable<QueueMessage> RegularMessages => _regularMessages;
 
         /// <summary>
         /// Default TMQ Writer class for the queue
@@ -143,7 +145,7 @@ namespace Twino.MQ.Queues
 
         #endregion
 
-        #region Constructors
+        #region Constructors - Destroy
 
         internal ChannelQueue(Channel channel,
                               ushort contentType,
@@ -156,7 +158,7 @@ namespace Twino.MQ.Queues
             Status = options.Status;
             DeliveryHandler = deliveryHandler;
 
-            _timeKeeper = new QueueTimeKeeper(this, _prefentialMessages, _standardMessages);
+            _timeKeeper = new QueueTimeKeeper(this, _highPriorityMessages, _regularMessages);
             _timeKeeper.Run();
 
             if (options.WaitForAcknowledge)
@@ -170,11 +172,106 @@ namespace Twino.MQ.Queues
         {
             await _timeKeeper.Destroy();
 
-            lock (_prefentialMessages)
-                _prefentialMessages.Clear();
+            lock (_highPriorityMessages)
+                _highPriorityMessages.Clear();
 
-            lock (_standardMessages)
-                _standardMessages.Clear();
+            lock (_regularMessages)
+                _regularMessages.Clear();
+        }
+
+        #endregion
+
+        #region Fill
+
+        /// <summary>
+        /// Fills JSON object data to the queue
+        /// </summary>
+        public async Task FillJson<T>(IEnumerable<T> items, bool createAsSaved, bool highPriority) where T : class
+        {
+            foreach (T item in items)
+            {
+                TmqMessage message = new TmqMessage(MessageType.Channel, Channel.Name);
+                message.FirstAcquirer = true;
+                message.HighPriority = highPriority;
+                message.AcknowledgeRequired = Options.RequestAcknowledge;
+
+                if (Options.UseMessageId)
+                    message.MessageId = Channel.Server.MessageIdGenerator.Create();
+
+                message.Content = new MemoryStream();
+                await System.Text.Json.JsonSerializer.SerializeAsync(message.Content, item);
+
+                message.CalculateLengths();
+
+                QueueMessage qm = new QueueMessage(message, createAsSaved);
+
+                if (highPriority)
+                    lock (_highPriorityMessages)
+                        _highPriorityMessages.AddLast(qm);
+                else
+                    lock (_regularMessages)
+                        _regularMessages.AddLast(qm);
+            }
+        }
+
+        /// <summary>
+        /// Fills JSON object data to the queue
+        /// </summary>
+        public void FillString(IEnumerable<string> items, bool createAsSaved, bool highPriority)
+        {
+            foreach (string item in items)
+            {
+                TmqMessage message = new TmqMessage(MessageType.Channel, Channel.Name);
+                message.FirstAcquirer = true;
+                message.HighPriority = highPriority;
+                message.AcknowledgeRequired = Options.RequestAcknowledge;
+
+                if (Options.UseMessageId)
+                    message.MessageId = Channel.Server.MessageIdGenerator.Create();
+
+                message.Content = new MemoryStream(Encoding.UTF8.GetBytes(item));
+                message.Content.Position = 0;
+                message.CalculateLengths();
+
+                QueueMessage qm = new QueueMessage(message, createAsSaved);
+
+                if (highPriority)
+                    lock (_highPriorityMessages)
+                        _highPriorityMessages.AddLast(qm);
+                else
+                    lock (_regularMessages)
+                        _regularMessages.AddLast(qm);
+            }
+        }
+
+        /// <summary>
+        /// Fills JSON object data to the queue
+        /// </summary>
+        public void FillData(IEnumerable<byte[]> items, bool createAsSaved, bool highPriority)
+        {
+            foreach (byte[] item in items)
+            {
+                TmqMessage message = new TmqMessage(MessageType.Channel, Channel.Name);
+                message.FirstAcquirer = true;
+                message.HighPriority = highPriority;
+                message.AcknowledgeRequired = Options.RequestAcknowledge;
+
+                if (Options.UseMessageId)
+                    message.MessageId = Channel.Server.MessageIdGenerator.Create();
+
+                message.Content = new MemoryStream(item);
+                message.Content.Position = 0;
+                message.CalculateLengths();
+
+                QueueMessage qm = new QueueMessage(message, createAsSaved);
+
+                if (highPriority)
+                    lock (_highPriorityMessages)
+                        _highPriorityMessages.AddLast(qm);
+                else
+                    lock (_regularMessages)
+                        _regularMessages.AddLast(qm);
+            }
         }
 
         #endregion
@@ -200,11 +297,11 @@ namespace Twino.MQ.Queues
             //clear all queue messages if new status is stopped
             if (status == QueueStatus.Stopped)
             {
-                lock (_prefentialMessages)
-                    _prefentialMessages.Clear();
+                lock (_highPriorityMessages)
+                    _highPriorityMessages.Clear();
 
-                lock (_standardMessages)
-                    _standardMessages.Clear();
+                lock (_regularMessages)
+                    _regularMessages.Clear();
 
                 _timeKeeper.Reset();
             }
@@ -213,7 +310,7 @@ namespace Twino.MQ.Queues
 
             //trigger queued messages
             if (status == QueueStatus.Route || status == QueueStatus.Push)
-                await Trigger(null);
+                await Trigger();
         }
 
         /// <summary>
@@ -241,9 +338,9 @@ namespace Twino.MQ.Queues
                 return false;
 
             if (message.Message.HighPriority)
-                _prefentialMessages.Remove(message);
+                _highPriorityMessages.Remove(message);
             else
-                _standardMessages.Remove(message);
+                _regularMessages.Remove(message);
 
             Info.AddMessageRemove();
             await DeliveryHandler.MessageRemoved(this, message);
@@ -262,21 +359,21 @@ namespace Twino.MQ.Queues
             QueueMessage message = null;
 
             //pull from prefential messages
-            if (_prefentialMessages.Count > 0)
-                lock (_prefentialMessages)
+            if (_highPriorityMessages.Count > 0)
+                lock (_highPriorityMessages)
                 {
-                    message = _prefentialMessages.First.Value;
-                    _prefentialMessages.RemoveFirst();
+                    message = _highPriorityMessages.First.Value;
+                    _highPriorityMessages.RemoveFirst();
                 }
 
             //if there is no prefential message, pull from standard messages
-            if (message == null && _standardMessages.Count > 0)
+            if (message == null && _regularMessages.Count > 0)
             {
-                lock (_standardMessages)
+                lock (_regularMessages)
 
                 {
-                    message = _standardMessages.First.Value;
-                    _standardMessages.RemoveFirst();
+                    message = _regularMessages.First.Value;
+                    _regularMessages.RemoveFirst();
                 }
             }
 
@@ -368,11 +465,11 @@ namespace Twino.MQ.Queues
                     case QueueStatus.Pull:
                     case QueueStatus.Paused:
                         if (message.Message.HighPriority)
-                            lock (_prefentialMessages)
-                                _prefentialMessages.AddLast(message);
+                            lock (_highPriorityMessages)
+                                _highPriorityMessages.AddLast(message);
                         else
-                            lock (_standardMessages)
-                                _standardMessages.AddLast(message);
+                            lock (_regularMessages)
+                                _regularMessages.AddLast(message);
                         break;
                 }
             }
@@ -393,19 +490,20 @@ namespace Twino.MQ.Queues
 
         /// <summary>
         /// Checks all pending messages and subscribed receivers.
-        /// If they should receive the messages, runs the process. 
-        /// Should be called when a new client is subscribed to the channel.
+        /// If they should receive the messages, runs the process.
+        /// This method is called automatically after a client joined to channel or status has changed.
+        /// You can call manual after you filled queue manually.
         /// </summary>
-        internal async Task Trigger(ChannelClient subscribedClient)
+        public async Task Trigger()
         {
-            if (Status != QueueStatus.Route && Status != QueueStatus.Push)
-                return;
+            if (Status == QueueStatus.Push || Status == QueueStatus.RoundRobin)
+            {
+                if (_highPriorityMessages.Count > 0)
+                    await ProcessPendingMessages(_highPriorityMessages);
 
-            if (_prefentialMessages.Count > 0)
-                await ProcessPendingMessages(_prefentialMessages);
-
-            if (_standardMessages.Count > 0)
-                await ProcessPendingMessages(_standardMessages);
+                if (_regularMessages.Count > 0)
+                    await ProcessPendingMessages(_regularMessages);
+            }
         }
 
         /// <summary>
@@ -535,6 +633,7 @@ namespace Twino.MQ.Queues
                     Info.AddMessageRemove();
                     _ = DeliveryHandler.MessageRemoved(this, message);
                 }
+
                 return;
             }
 
@@ -610,28 +709,28 @@ namespace Twino.MQ.Queues
             QueueMessage held;
             if (message.Message.HighPriority)
             {
-                lock (_prefentialMessages)
+                lock (_highPriorityMessages)
                 {
                     //we don't need push and pull
-                    if (_prefentialMessages.Count == 0)
+                    if (_highPriorityMessages.Count == 0)
                         return message;
 
-                    _prefentialMessages.AddLast(message);
-                    held = _prefentialMessages.First.Value;
-                    _prefentialMessages.RemoveFirst();
+                    _highPriorityMessages.AddLast(message);
+                    held = _highPriorityMessages.First.Value;
+                    _highPriorityMessages.RemoveFirst();
                 }
             }
             else
             {
-                lock (_standardMessages)
+                lock (_regularMessages)
                 {
                     //we don't need push and pull
-                    if (_standardMessages.Count == 0)
+                    if (_regularMessages.Count == 0)
                         return message;
 
-                    _standardMessages.AddLast(message);
-                    held = _standardMessages.First.Value;
-                    _standardMessages.RemoveFirst();
+                    _regularMessages.AddLast(message);
+                    held = _regularMessages.First.Value;
+                    _regularMessages.RemoveFirst();
                 }
             }
 
@@ -649,13 +748,13 @@ namespace Twino.MQ.Queues
 
             if (message.Message.HighPriority)
             {
-                lock (_prefentialMessages)
-                    _prefentialMessages.AddFirst(message);
+                lock (_highPriorityMessages)
+                    _highPriorityMessages.AddFirst(message);
             }
             else
             {
-                lock (_standardMessages)
-                    _standardMessages.AddFirst(message);
+                lock (_regularMessages)
+                    _regularMessages.AddFirst(message);
             }
         }
 
@@ -681,8 +780,11 @@ namespace Twino.MQ.Queues
             if (decision.SendAcknowledge == DeliveryAcknowledgeDecision.Always ||
                 decision.SendAcknowledge == DeliveryAcknowledgeDecision.IfSaved && message.IsSaved)
             {
-                TmqMessage acknowledge = message.Message.CreateAcknowledge();
-                await message.Source.SendAsync(acknowledge);
+                if (message.Source != null)
+                {
+                    TmqMessage acknowledge = message.Message.CreateAcknowledge();
+                    await message.Source.SendAsync(acknowledge);
+                }
             }
 
             return decision.Allow;

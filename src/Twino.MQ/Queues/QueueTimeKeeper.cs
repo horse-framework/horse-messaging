@@ -28,12 +28,12 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Messages with high priority list of the queue
         /// </summary>
-        private readonly LinkedList<QueueMessage> _prefentialMessages;
+        private readonly LinkedList<QueueMessage> _HighPriorityMessages;
 
         /// <summary>
         /// Messages list of the queue
         /// </summary>
-        private readonly LinkedList<QueueMessage> _standardMessages;
+        private readonly LinkedList<QueueMessage> _RegularMessages;
 
         /// <summary>
         /// Processing timed out messages.
@@ -49,11 +49,11 @@ namespace Twino.MQ.Queues
 
         #endregion
 
-        public QueueTimeKeeper(ChannelQueue queue, LinkedList<QueueMessage> prefentialMessages, LinkedList<QueueMessage> standardMessages)
+        public QueueTimeKeeper(ChannelQueue queue, LinkedList<QueueMessage> HighPriorityMessages, LinkedList<QueueMessage> RegularMessages)
         {
             _queue = queue;
-            _prefentialMessages = prefentialMessages;
-            _standardMessages = standardMessages;
+            _HighPriorityMessages = HighPriorityMessages;
+            _RegularMessages = RegularMessages;
         }
 
         #region Methods
@@ -101,7 +101,7 @@ namespace Twino.MQ.Queues
         private void ProcessReceiveTimeup()
         {
             _timeupMessages.Clear();
-            ProcessReceiveTimeupOnList(_prefentialMessages);
+            ProcessReceiveTimeupOnList(_HighPriorityMessages);
 
             foreach (QueueMessage message in _timeupMessages)
             {
@@ -110,7 +110,7 @@ namespace Twino.MQ.Queues
             }
 
             _timeupMessages.Clear();
-            ProcessReceiveTimeupOnList(_standardMessages);
+            ProcessReceiveTimeupOnList(_RegularMessages);
 
             foreach (QueueMessage message in _timeupMessages)
             {

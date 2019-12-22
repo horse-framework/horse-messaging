@@ -16,6 +16,21 @@ namespace Twino.MQ.Queues
         public DateTime CreatedDate { get; }
 
         /// <summary>
+        /// Pending high priority message count in queue
+        /// </summary>
+        public long HighPriorityMessagesInQueue => _highPriorityMessagesInQueue;
+
+        private long _highPriorityMessagesInQueue;
+
+        /// <summary>
+        /// Pending regular message count in queue
+        /// </summary>
+        public long RegularMessagesInQueue => _regularMessagesInQueue;
+
+        private long _regularMessagesInQueue;
+
+        
+        /// <summary>
         /// Total received messages from producers
         /// </summary>
         public long ReceivedMessages => _receivedMessages;
@@ -120,6 +135,8 @@ namespace Twino.MQ.Queues
             Volatile.Write(ref _messageRemoved, 0);
             Volatile.Write(ref _messageSaved, 0);
             Volatile.Write(ref _errorCount, 0);
+            Volatile.Write(ref _highPriorityMessagesInQueue, 0);
+            Volatile.Write(ref _regularMessagesInQueue, 0);
 
             LastMessageReceivedDate = null;
             LastMessageSendDate = null;
@@ -203,6 +220,22 @@ namespace Twino.MQ.Queues
             Interlocked.Increment(ref _errorCount);
         }
 
+        /// <summary>
+        /// Updates high priority message count in queue
+        /// </summary>
+        internal void UpdateHighPriorityMessageCount(long value)
+        {
+            _highPriorityMessagesInQueue = value;
+        }
+
+        /// <summary>
+        /// Updates regular message count in queue
+        /// </summary>
+        internal void UpdateRegularMessageCount(long value)
+        {
+            _regularMessagesInQueue = value;
+        }
+        
         #endregion
     }
 }
