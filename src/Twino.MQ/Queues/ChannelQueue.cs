@@ -34,7 +34,7 @@ namespace Twino.MQ.Queues
         /// If there are no available consumers, message will be kept in queue like push status.
         /// </summary>
         RoundRobin,
-        
+
         /// <summary>
         /// Queue messaging is in running state.
         /// Producers push message into queue, consumers receive the messages when they requested.
@@ -353,7 +353,7 @@ namespace Twino.MQ.Queues
                         held = PullMessage(message);
                         await ProcesssMessage(held, true);
                         break;
-                    
+
                     //redirects message to consumers with round robin algorithm
                     case QueueStatus.RoundRobin:
                         held = PullMessage(message);
@@ -363,7 +363,7 @@ namespace Twino.MQ.Queues
                         else
                             PutMessageBack(held);
                         break;
-                    
+
                     //dont send the message, just put it to queue
                     case QueueStatus.Pull:
                     case QueueStatus.Paused:
@@ -527,10 +527,14 @@ namespace Twino.MQ.Queues
 
             if (clients.Count == 0)
             {
-                //if we are queuing, put the message back
-                if (onheld)
+                message.Decision = await DeliveryHandler.EndSend(this, message);
+                if (Status != QueueStatus.Route && onheld && message.Decision.KeepMessage)
                     PutMessageBack(message);
-
+                else
+                {
+                    Info.AddMessageRemove();
+                    _ = DeliveryHandler.MessageRemoved(this, message);
+                }
                 return;
             }
 
