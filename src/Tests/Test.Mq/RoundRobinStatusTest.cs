@@ -1,5 +1,12 @@
 using System;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Test.Mq.Internal;
+using Test.Mq.Models;
+using Twino.Client.TMQ;
+using Twino.MQ;
+using Twino.MQ.Queues;
 using Xunit;
 
 namespace Test.Mq
@@ -13,19 +20,104 @@ namespace Test.Mq
         [InlineData(20)]
         public async Task SendToOnlineConsumers(int onlineConsumerCount)
         {
-            throw new NotImplementedException();
+            int port = 47300 + onlineConsumerCount;
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start(300, 300);
+
+            TmqClient producer = new TmqClient();
+            await producer.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(producer.IsConnected);
+
+            int msgReceived = 0;
+            int msgSent = 0;
+
+            for (int i = 0; i < onlineConsumerCount; i++)
+            {
+                TmqClient consumer = new TmqClient();
+                consumer.ClientId = "consumer-" + i;
+                await consumer.ConnectAsync("tmq://localhost:" + port);
+                Assert.True(consumer.IsConnected);
+                consumer.MessageReceived += (c, m) => Interlocked.Increment(ref msgReceived);
+                bool joined = await consumer.Join("ch-round", true);
+                Assert.True(joined);
+            }
+
+            for (int i = 0; i < 50; i++)
+            {
+                await producer.Push("ch-round", MessageA.ContentType, "Hello, World!", false);
+                msgSent++;
+            }
+
+            await Task.Delay(1500);
+            Assert.Equal(msgSent, msgReceived);
         }
 
         [Fact]
         public async Task SendToOfflineConsumers()
         {
-            throw new NotImplementedException();
+            int port = 47317;
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start(300, 300);
+
+            TmqClient producer = new TmqClient();
+            await producer.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(producer.IsConnected);
+
+            await producer.Push("ch-round", MessageA.ContentType, "Hello, World!", false);
+            await Task.Delay(700);
+
+            Channel channel = server.Server.FindChannel("ch-round");
+            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            Assert.NotNull(channel);
+            Assert.NotNull(queue);
+            Assert.Single(queue.RegularMessages);
+            
+            bool msgReceived = false;
+            TmqClient consumer = new TmqClient();
+            consumer.ClientId = "consumer";
+            await consumer.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(consumer.IsConnected);
+            consumer.MessageReceived += (c, m) => msgReceived = true;
+            bool joined = await consumer.Join("ch-round", true);
+            Assert.True(joined);
+
+            await Task.Delay(800);
+            Assert.True(msgReceived);
         }
 
-        [Fact]
-        public async Task RequestAcknowledge()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task RequestAcknowledge(bool queueAckIsActive)
         {
-            throw new NotImplementedException();
+            int port = 47318 + Convert.ToInt32(queueAckIsActive);
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start(300, 300);
+            
+            Channel ch = server.Server.FindChannel("ch-round");
+            ChannelQueue queue = ch.Queues.FirstOrDefault();
+            Assert.NotNull(queue);
+            queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
+            queue.Options.RequestAcknowledge = queueAckIsActive;
+
+            TmqClient producer = new TmqClient();
+            await producer.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(producer.IsConnected);
+
+            TmqClient consumer = new TmqClient();
+            consumer.AutoAcknowledge = true;
+            consumer.AcknowledgeTimeout = TimeSpan.FromSeconds(4);
+            consumer.ClientId = "consumer";
+            await consumer.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(consumer.IsConnected);
+            bool joined = await consumer.Join("ch-round", true);
+            Assert.True(joined);
+
+            bool ack = await producer.Push("ch-round", MessageA.ContentType, "Hello, World!", true);
+            Assert.Equal(queueAckIsActive, ack);
         }
     }
 }
