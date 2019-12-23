@@ -243,6 +243,14 @@ namespace Twino.Core
         }
 
         /// <summary>
+        /// Triggers virtual connected method
+        /// </summary>
+        internal void SetOnConnected()
+        {
+            OnConnected();
+        }
+        
+        /// <summary>
         /// Triggered when client is disconnected
         /// </summary>
         protected virtual void OnDisconnected()
