@@ -55,9 +55,12 @@ namespace Twino.MQ.Network
                     return;
 
                 //check authorization
-                bool grant = await _server.Authorization.CanPullFromQueue(channelClient, queue);
-                if (!grant)
-                    return;
+                if (_server.Authorization != null)
+                {
+                    bool grant = await _server.Authorization.CanPullFromQueue(channelClient, queue);
+                    if (!grant)
+                        return;
+                }
 
                 await queue.Pull(channelClient);
             }
