@@ -47,7 +47,29 @@ namespace Test.Mq
         [Fact]
         public async Task SendToOfflineConsumers()
         {
-            throw new NotImplementedException();
+            int port = 47117;
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start(300, 300);
+
+            TmqClient producer = new TmqClient();
+            await producer.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(producer.IsConnected);
+
+            await producer.Push("ch-route", MessageA.ContentType, "Hello, World!", false);
+            await Task.Delay(700);
+            
+            bool msgReceived = false;
+            TmqClient consumer = new TmqClient();
+            consumer.ClientId = "consumer";
+            await consumer.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(consumer.IsConnected);
+            bool joined = await consumer.Join("ch-route", true);
+            Assert.True(joined);
+            consumer.MessageReceived += (c, m) => msgReceived = true;
+            
+            await Task.Delay(800);
+            Assert.False(msgReceived);
         }
 
         [Fact]
