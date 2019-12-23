@@ -1,0 +1,18 @@
+{
+  "PingInterval": 60,
+  "MaximumPendingConnections": 800,
+  "RequestTimeout": 60,
+  "ContentEncoding": "br, gzip, deflate",
+  "Hosts": [
+    {
+      "Port": 441,
+      "SslEnabled": false,
+      "SslCertificate": "lc1024.pfx",
+      "CertificateKey": "",
+      "BypassSslValidation": true,
+      "SslProtocol": "Tls",
+      "Hostnames": null
+    }
+  ],
+  "IsDevelopment": true
+}

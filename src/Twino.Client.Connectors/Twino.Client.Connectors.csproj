@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.0</TargetFramework>
+        <Title>Twino.Client.Connectors</Title>
+        <Product>Twino.Client.Connectors</Product>
+        <Description>Connectors for twino WebSocket and TMQ protocols</Description>
+        <PackageTags>twino,server,client,connector,websocket,tmq</PackageTags>
+        <AssemblyVersion>2.1.2</AssemblyVersion>
+        <FileVersion>2.1.2</FileVersion>
+        <PackageVersion>2.1.2</PackageVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Mehmet Helvacıköylü</Authors>
+        <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/mhelvacikoylu/twino</RepositoryUrl>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Twino.Core\Twino.Core.csproj" />
+    </ItemGroup>
+
+</Project>

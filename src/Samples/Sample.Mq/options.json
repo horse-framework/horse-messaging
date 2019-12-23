@@ -1,0 +1,18 @@
+{
+  "AllowMultipleQueues": true,
+  "UseMessageId": true,
+  "AllowedContentTypes": [
+    1001
+  ],
+  "Channels": {
+    "AckChannel": {
+      "RequestAcknowledge": true,
+      "AcknowledgeTimeout": 10000,
+      "Queues": {
+        "1001": {
+          "MessageQueuing": true
+        }
+      }
+    }
+  }
+}

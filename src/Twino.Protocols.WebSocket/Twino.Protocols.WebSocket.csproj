@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.0</TargetFramework>
+        <Title>Twino.Protocols.WebSocket</Title>
+        <Product>Twino.Protocols.WebSocket</Product>
+        <Description>WebSocket Protocol library and server extension for Twino Server</Description>
+        <PackageTags>twino,tcp,server,http,websocket,protocol,ws</PackageTags>
+        <AssemblyVersion>2.1.2</AssemblyVersion>
+        <FileVersion>2.1.2</FileVersion>
+        <PackageVersion>2.1.2</PackageVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Mehmet Helvacıköylü</Authors>
+        <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/mhelvacikoylu/twino</RepositoryUrl>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Twino.Core\Twino.Core.csproj" />
+        <ProjectReference Include="..\Twino.Protocols.Http\Twino.Protocols.Http.csproj" />
+    </ItemGroup>
+
+</Project>

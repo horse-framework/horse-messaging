@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>netcoreapp3.0</TargetFramework>
+        <LangVersion>8</LangVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Twino.Client.WebSocket\Twino.Client.WebSocket.csproj" />
+      <ProjectReference Include="..\..\Twino.Protocols.Http\Twino.Protocols.Http.csproj" />
+      <ProjectReference Include="..\..\Twino.Server\Twino.Server.csproj" />
+    </ItemGroup>
+
+</Project>

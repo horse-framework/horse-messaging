@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.0</TargetFramework>
+        <Title>Twino.Client.TMQ</Title>
+        <Product>Twino.Client.TMQ</Product>
+        <Description>Twino Messaging Queue Client to connect all TMQ Servers</Description>
+        <PackageTags>twino,tmq,client,mq,messaging,queue</PackageTags>
+        <AssemblyVersion>2.1.2</AssemblyVersion>
+        <FileVersion>2.1.2</FileVersion>
+        <PackageVersion>2.1.2</PackageVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Mehmet Helvacıköylü</Authors>
+        <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/mhelvacikoylu/twino</RepositoryUrl>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Twino.Client.Connectors\Twino.Client.Connectors.csproj" />
+        <ProjectReference Include="..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
+    </ItemGroup>
+
+</Project>

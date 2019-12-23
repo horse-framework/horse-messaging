@@ -1,73 +1,73 @@
 # Twino
 
-**Twino** is a .NET Core Web Server.<br>
-Twino provides advanced WebSocket server management, messaging queue infrastructure, HTTP Server, MVC pattern similar to ASP.NET Core and WebSocket clients.
+**Twino** is a .NET Core TCP Server provides multiple protocols on same host.<br>
+**Twino** is a complete Messaging Queue server library.<br>
+**Twino** is a WebSocket server with advanced client management.<br>
+**Twino** is a HTTP server with MVC Support.<br>
+
+Twino HTTP Server supports MVC architecture.<br>
+Twino WebSockets provides advanced WebSocket server management<br>
+Twino MQ provides quick messaging queue server library<br>
+Twino IOC can be used on all protocols.
 
 ## Why Twino?
 
+In a single application with single library, you can have TCP Server, HTTP Server, WebSocket Server, Messaging Queue Server and with many extra features such as IOC, Authentication, Clients, Connectors etc.
+
 - High performance (in many cases, as fast as kestrel)
-- Twino is high scalable advanced websocket server with amazing client management.
-- WebSocket and HTTP server on same project, same port, same host.
+- Twino has high scalable advanced websocket server with amazing client management.
+- Multiple protocols can be used on same project, same port, same host.
 - Twino.Mvc has nearly all features ASP.NET MVC has, and you write nearly same code.
-- Websocket Clients with sweet connectors and you can send and receive objects via websocket.
+- Twino has sweet client connectors for WebSocket and TMQ protocols.
+- Twino MQ is not a executable messaging queue server. It's library and you can create your own MQ server with a few interface implementations.
 
-### Libraries
+**Read [All Features](https://github.com/mhelvacikoylu/twino/blob/v2/docs/Features.MD) to see all features of twino libraries.**
 
-**Twino.Core:** Twino Core contains all common features for all Twino libraries. TCP connection handling, DNS resolving, HTTP Procotol implementation, WebSocket Protocol implementation etc.<br>
-**Twino.Server:** Basic HTTP and WebSocket server. Accepts HTTP and WebSocket requests and process these requests.<br>
-**Twino.Client:** Twino WebSocket Client. Also includes connectors for specific purposes: AbsoluteConnector, StickyConnector, SingleMessageConnector etc.<br>
-**Twino.Mvc:** MVC Architecture for Twino.Server. It's quite similar to ASP.NET Core. Supports most useful attributes of ASP.NET Core, has its own authentication, authorization and policy management system. Has its own Service container, Middleware system and action filters.<br>
-**Twino.Mvc.Auth.Jwt:** JSON Web Token implementation for Twino.Mvc library<br>
-**Twino.Ioc:** IOC, dependency injection library. Created to use in Twino.Mvc. It's also can be used independently.<br>
-**Twino.SocketModels:** Makes WebSocket communication super easy and event/model based. With Twino.SocketModels, you do not need any knowledge about WebSocket protocol to use it.<br>
+See **[All Twino NuGet Packages](https://github.com/mhelvacikoylu/twino/blob/v2/docs/Packages.MD)**
 
-##### NuGet Packages
+**Go to [Documentation Home Page](https://github.com/mhelvacikoylu/twino/blob/v2/docs/README.MD)**
 
-[Twino.Core NuGet Package](https://www.nuget.org/packages/Twino.Core)<br>
-[Twino.Server NuGet Package](https://www.nuget.org/packages/Twino.Server)<br>
-[Twino.Client NuGet Package](https://www.nuget.org/packages/Twino.Client)<br>
-[Twino.Mvc NuGet Package](https://www.nuget.org/packages/Twino.Mvc)<br>
-[Twino.Mvc.Auth.Jwt NuGet Package](https://www.nuget.org/packages/Twino.Mvc.Auth.Jwt)<br>
-[Twino.Ioc NuGet Package](https://www.nuget.org/packages/Twino.Ioc)<br>
-[Twino.SocketModels NuGet Package](https://www.nuget.org/packages/Twino.SocketModels)<br>
-<br>
+### Basic WebSocket Server Example
 
-### Features
+Basic WebSocket Server creation example
 
-Some of Twino features are listed below:
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            TwinoServer server = new TwinoServer();
+            server.UseWebSockets((socket, message) => { Console.WriteLine($"Received: {message}"); });
+	    
+	    //or advanced with IProtocolConnectionHandler<WebSocketMessage> implementation
+            //server.UseWebSockets(new ServerWsHandler());
+            server.Start(80);
+            
+            //optional
+            _server.Server.BlockWhileRunning();
+        }
+    }
 
-#### HTTP Server
+### Basic MQ Server Example
 
-- HTTP and HTTPS support
-- Loading SSL certificate programmatically, from file or from string
-- Connection keep-alive or close options
-- Maximum URI, Header, Content length options
-- Content encoding suports (brotli, gzip and deflate)
-- Multiple host and multiple port binding
-- URL Encoded application form requests are supported
-- Multipart form data requests are supported
-- File upload and file download
-- Full async support
+Basic MQ Server creation example
 
-#### MVC
-
-- Middlewares infrastructure ASP.NET like (including CORS Middleware)
-- JWT support with Authorize attribute and custom token implementation
-- Using static files with multiple volume binding with validation actions
-- Model binding from HTTP Request (JSON, XML, QueryString, FormData)
-- Service collection for dependency inversion (singleton and transient)
-- Easy to use policy and claim management
-- Action and controller filters
-- Custom HTTP Status code pages
-
-#### WebSockets
-
-- All features included from HTTP and/or MVC
-- HTTP and WebSocket server on same port
-- Connectors for WebSocket Clients for different purposes
-- Request and Response Architecture (non-HTTP) via one active TCP connection
-- Object based data transfer with IModelWriter and IModelReader interfaces
-- Custom and fast serialization helper libarary for objects
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            MqServerOptions options = new MqServerOptions();
+            //set your options here
+            
+            MqServer mq = new MqServer(options);
+            mq.SetDefaultDeliveryHandler(new YourCustomDeliveryHandler());
+            TwinoServer twinoServer = new TwinoServer(ServerOptions.CreateDefault());
+            twinoServer.UseMqServer(mq);
+            twinoServer.Start();
+            
+            //optional
+            _server.Server.BlockWhileRunning();
+        }
+    }
 
 
 ### Basic MVC Example
@@ -78,23 +78,22 @@ Twino.Mvc similar to ASP.NET Core. Here is a basic example:
     {
         static void Main(string[] args)
         {
-            IClientFactory factory = new ClientFactory();
-            using (TwinoMvc mvc = new TwinoMvc(factory))
+            TwinoMvc mvc = new TwinoMvc();
+            mvc.Init();
+            mvc.Use(app =>
             {
-                mvc.Init();
-                mvc.Run();
-            }
+                app.UseMiddleware<CorsMiddleware>();
+            });
+
+            TwinoServer server = new TwinoServer();
+            server.UseMvc(mvc, HttpOptions.CreateDefault());
+            server.Start();
+            
+            //optional
+            server.BlockWhileRunning();
         }
     }
-	
-    public class ClientFactory : IClientFactory
-    {
-        public async Task<ServerSocket> Create(TwinoServer server, HttpRequest request, TcpClient client)
-        {
-            return await Task.FromResult(new Client(server, request, client));
-        }
-    }
-    
+
     [Route("[controller]")]
     public class DemoController : TwinoController
     {
