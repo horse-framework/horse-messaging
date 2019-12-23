@@ -62,15 +62,15 @@ namespace Test.Mq.Internal
             croute.CreateQueue(MessageA.ContentType).Wait();
             
             Channel cpush = Server.CreateChannel("ch-push");
-            cpush.Options.Status = QueueStatus.Route;
+            cpush.Options.Status = QueueStatus.Push;
             cpush.CreateQueue(MessageA.ContentType).Wait();
             
             Channel cpull = Server.CreateChannel("ch-pull");
-            cpull.Options.Status = QueueStatus.Route;
+            cpull.Options.Status = QueueStatus.Pull;
             cpull.CreateQueue(MessageA.ContentType).Wait();
             
             Channel cround = Server.CreateChannel("ch-round");
-            cround.Options.Status = QueueStatus.Route;
+            cround.Options.Status = QueueStatus.RoundRobin;
             cround.CreateQueue(MessageA.ContentType).Wait();
         }
 

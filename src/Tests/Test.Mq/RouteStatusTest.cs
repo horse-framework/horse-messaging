@@ -1,9 +1,12 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Test.Mq.Internal;
 using Test.Mq.Models;
 using Twino.Client.TMQ;
+using Twino.MQ;
+using Twino.MQ.Queues;
 using Xunit;
 
 namespace Test.Mq
@@ -34,9 +37,9 @@ namespace Test.Mq
                 consumer.ClientId = "consumer-" + i;
                 await consumer.ConnectAsync("tmq://localhost:" + port);
                 Assert.True(consumer.IsConnected);
+                consumer.MessageReceived += (c, m) => Interlocked.Increment(ref msgReceived);
                 bool joined = await consumer.Join("ch-route", true);
                 Assert.True(joined);
-                consumer.MessageReceived += (c, m) => Interlocked.Increment(ref msgReceived);
             }
 
             await producer.Push("ch-route", MessageA.ContentType, "Hello, World!", false);
@@ -58,24 +61,50 @@ namespace Test.Mq
 
             await producer.Push("ch-route", MessageA.ContentType, "Hello, World!", false);
             await Task.Delay(700);
-            
+
             bool msgReceived = false;
             TmqClient consumer = new TmqClient();
             consumer.ClientId = "consumer";
             await consumer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
+            consumer.MessageReceived += (c, m) => msgReceived = true;
             bool joined = await consumer.Join("ch-route", true);
             Assert.True(joined);
-            consumer.MessageReceived += (c, m) => msgReceived = true;
-            
+
             await Task.Delay(800);
             Assert.False(msgReceived);
         }
 
-        [Fact]
-        public async Task RequestAcknowledge()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task RequestAcknowledge(bool queueAckIsActive)
         {
-            throw new NotImplementedException();
+            int port = 47118 + Convert.ToInt32(queueAckIsActive);
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start(300, 300);
+            Channel ch = server.Server.FindChannel("ch-route");
+            ChannelQueue queue = ch.Queues.FirstOrDefault();
+            Assert.NotNull(queue);
+            queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
+            queue.Options.RequestAcknowledge = queueAckIsActive;
+
+            TmqClient producer = new TmqClient();
+            await producer.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(producer.IsConnected);
+
+            TmqClient consumer = new TmqClient();
+            consumer.AutoAcknowledge = true;
+            consumer.AcknowledgeTimeout = TimeSpan.FromSeconds(4);
+            consumer.ClientId = "consumer";
+            await consumer.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(consumer.IsConnected);
+            bool joined = await consumer.Join("ch-route", true);
+            Assert.True(joined);
+
+            bool ack = await producer.Push("ch-route", MessageA.ContentType, "Hello, World!", true);
+            Assert.Equal(queueAckIsActive, ack);
         }
     }
 }
