@@ -20,6 +20,10 @@ namespace Test.Mq.Internal
         public async Task<Decision> ReceivedFromProducer(ChannelQueue queue, QueueMessage message, MqClient sender)
         {
             _server.OnReceived++;
+            
+            if (_server.SendAcknowledgeFromMQ)
+                return await Task.FromResult(new Decision(true, false, false, DeliveryAcknowledgeDecision.Always));
+            
             return await Task.FromResult(new Decision(true, false));
         }
 

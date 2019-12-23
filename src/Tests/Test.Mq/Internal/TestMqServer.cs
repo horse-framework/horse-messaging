@@ -35,6 +35,8 @@ namespace Test.Mq.Internal
         public int ClientDisconnected { get; set; }
 
         public int Port { get; private set; }
+        
+        public bool SendAcknowledgeFromMQ { get; set; }
 
         public void Initialize(int port)
         {

@@ -701,7 +701,17 @@ namespace Test.Mq
         [Fact]
         public async Task SendAcknowledgeFromServerToProducer()
         {
-            throw new NotImplementedException();
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42599);
+            server.Start();
+            server.SendAcknowledgeFromMQ = true;
+            
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:42599");
+            Assert.True(client.IsConnected);
+            
+            bool ack = await client.Push("ch-route", MessageA.ContentType, "Hello", true);
+            Assert.True(ack);
         }
     }
 }
