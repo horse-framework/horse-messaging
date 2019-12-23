@@ -26,5 +26,10 @@ namespace Twino.Client.TMQ
         /// The action that will triggered when the message received
         /// </summary>
         public Delegate Action { get; set; }
+        
+        /// <summary>
+        /// True, if action has message parameter as second
+        /// </summary>
+        public bool TmqMessageParameter { get; set; }
     }
 }

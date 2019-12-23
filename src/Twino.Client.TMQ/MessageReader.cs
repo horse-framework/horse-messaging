@@ -129,7 +129,10 @@ namespace Twino.Client.TMQ
                 {
                     try
                     {
-                        sub.Action.DynamicInvoke(model);
+                        if (sub.TmqMessageParameter)
+                            sub.Action.DynamicInvoke(model, message);
+                        else
+                            sub.Action.DynamicInvoke(model);
                     }
                     catch (Exception ex)
                     {
@@ -150,6 +153,24 @@ namespace Twino.Client.TMQ
                                                  ContentType = content,
                                                  MessageType = typeof(T),
                                                  Action = action
+                                             };
+
+            lock (_subscriptions)
+                _subscriptions.Add(subscription);
+        }
+
+        /// <summary>
+        /// Subscribe to messages in a queue in a channel
+        /// </summary>
+        public void On<T>(string channel, ushort content, Action<T, TmqMessage> action)
+        {
+            QueueSubscription subscription = new QueueSubscription
+                                             {
+                                                 Channel = channel,
+                                                 ContentType = content,
+                                                 MessageType = typeof(T),
+                                                 Action = action,
+                                                 TmqMessageParameter = true
                                              };
 
             lock (_subscriptions)
