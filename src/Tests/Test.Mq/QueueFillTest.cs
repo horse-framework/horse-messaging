@@ -74,7 +74,7 @@ namespace Test.Mq
                 items.Add(Encoding.UTF8.GetBytes("No #" + i));
 
             TestMqServer server = new TestMqServer();
-            server.Initialize(47702);
+            server.Initialize(40702);
             server.Start(300, 300);
 
             Channel channel = server.Server.FindChannel("ch-push");

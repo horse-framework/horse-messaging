@@ -84,7 +84,7 @@ namespace Test.Mq
 
             Assert.False(queue.Options.WaitForAcknowledge);
             Assert.False(queue.Options.SendOnlyFirstAcquirer);
-            Assert.Equal(TimeSpan.Zero, queue.Options.MessageTimeout);
+            Assert.Equal(TimeSpan.FromSeconds(12), queue.Options.MessageTimeout);
             
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:41207");
