@@ -49,7 +49,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         public static MessageReader JsonReader()
         {
-            return new MessageReader((msg, type) => Newtonsoft.Json.JsonConvert.DeserializeObject(msg.ToString()));
+            return new MessageReader((msg, type) => Newtonsoft.Json.JsonConvert.DeserializeObject(msg.ToString(), type));
         }
 
         /// <summary>
