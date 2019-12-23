@@ -2,6 +2,7 @@ using System;
 using Test.Mq.Models;
 using Twino.MQ;
 using Twino.MQ.Options;
+using Twino.MQ.Queues;
 using Twino.Server;
 
 namespace Test.Mq.Internal
@@ -34,6 +35,8 @@ namespace Test.Mq.Internal
         public int ClientDisconnected { get; set; }
 
         public int Port { get; private set; }
+        
+        public bool SendAcknowledgeFromMQ { get; set; }
 
         public void Initialize(int port)
         {
@@ -43,6 +46,7 @@ namespace Test.Mq.Internal
             mqOptions.AllowedContentTypes = new[] {MessageA.ContentType, MessageB.ContentType, MessageC.ContentType};
             mqOptions.AllowMultipleQueues = true;
             mqOptions.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
+            mqOptions.MessageTimeout = TimeSpan.FromSeconds(12);
 
             Server = new MqServer(mqOptions);
             Server.SetDefaultChannelHandler(new TestChannelHandler(this), null);
@@ -55,14 +59,30 @@ namespace Test.Mq.Internal
 
             Channel channel0 = Server.CreateChannel("ch-0");
             channel0.CreateQueue(MessageA.ContentType).Wait();
+            
+            Channel croute = Server.CreateChannel("ch-route");
+            croute.Options.Status = QueueStatus.Route;
+            croute.CreateQueue(MessageA.ContentType).Wait();
+            
+            Channel cpush = Server.CreateChannel("ch-push");
+            cpush.Options.Status = QueueStatus.Push;
+            cpush.CreateQueue(MessageA.ContentType).Wait();
+            
+            Channel cpull = Server.CreateChannel("ch-pull");
+            cpull.Options.Status = QueueStatus.Pull;
+            cpull.CreateQueue(MessageA.ContentType).Wait();
+            
+            Channel cround = Server.CreateChannel("ch-round");
+            cround.Options.Status = QueueStatus.RoundRobin;
+            cround.CreateQueue(MessageA.ContentType).Wait();
         }
 
-        public void Start(int pingInterval = 3)
+        public void Start(int pingInterval = 3, int requestTimeout = 4)
         {
             ServerOptions serverOptions = ServerOptions.CreateDefault();
             serverOptions.Hosts[0].Port = Port;
             serverOptions.PingInterval = pingInterval;
-            serverOptions.RequestTimeout = 4;
+            serverOptions.RequestTimeout = requestTimeout;
 
             TwinoServer server = new TwinoServer(serverOptions);
             server.UseMqServer(Server);

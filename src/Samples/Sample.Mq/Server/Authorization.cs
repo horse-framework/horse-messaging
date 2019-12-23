@@ -1,8 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Twino.MQ;
 using Twino.MQ.Clients;
+using Twino.MQ.Queues;
 using Twino.MQ.Security;
 using Twino.Protocols.TMQ;
 
@@ -22,11 +22,16 @@ namespace Sample.Mq.Server
             return await Task.FromResult(true);
         }
 
-        public async Task<bool> CanCreateQueue(MqClient client, Channel channel, ushort contentType, Dictionary<string, string> properties)
+        public async Task<bool> CanCreateQueue(MqClient client, Channel channel, ushort contentType, QueueOptionsBuilder options)
         {
             bool grant = client.Type.Equals("producer");
             Console.WriteLine("Can create new queue: " + grant);
             return await Task.FromResult(grant);
+        }
+
+        public async Task<bool> CanUpdateQueueOptions(MqClient client, Channel channel, ChannelQueue queue, QueueOptionsBuilder options)
+        {
+            return await Task.FromResult(true);
         }
 
         public async Task<bool> CanRemoveQueue(MqClient client, ChannelQueue queue)

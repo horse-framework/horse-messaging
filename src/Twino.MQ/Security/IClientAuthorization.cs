@@ -1,6 +1,6 @@
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
+using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Security
@@ -23,8 +23,13 @@ namespace Twino.MQ.Security
         /// <summary>
         /// Returns true, if client can create new queue in the channel
         /// </summary>
-        Task<bool> CanCreateQueue(MqClient client, Channel channel, ushort contentType, Dictionary<string, string> properties);
-        
+        Task<bool> CanCreateQueue(MqClient client, Channel channel, ushort contentType, QueueOptionsBuilder options);
+
+        /// <summary>
+        /// Returns true, if client can update queue options
+        /// </summary>
+        Task<bool> CanUpdateQueueOptions(MqClient client, Channel channel, ChannelQueue queue, QueueOptionsBuilder options);
+
         /// <summary>
         /// Returns true, if client can remove the queue in a channel
         /// </summary>
@@ -39,7 +44,7 @@ namespace Twino.MQ.Security
         /// Returns true, if client can send a message to the queue
         /// </summary>
         Task<bool> CanMessageToQueue(MqClient client, ChannelQueue queue, TmqMessage message);
-        
+
         /// <summary>
         /// Returns true, if client can pull a message from the queue
         /// </summary>

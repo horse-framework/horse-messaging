@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Test.Mq.Internal;
 using Test.Mq.Models;
 using Twino.MQ;
+using Twino.MQ.Queues;
 using Xunit;
 
 namespace Test.Mq

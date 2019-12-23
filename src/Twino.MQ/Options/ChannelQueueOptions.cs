@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Options
@@ -93,11 +94,21 @@ namespace Twino.MQ.Options
                         case "route":
                             Status = QueueStatus.Route;
                             break;
+
                         case "push":
                             Status = QueueStatus.Push;
                             break;
+
                         case "pull":
                             Status = QueueStatus.Pull;
+                            break;
+
+                        case "rr":
+                        case "round":
+                        case "robin":
+                        case "roundrobin":
+                        case "round-robin":
+                            Status = QueueStatus.RoundRobin;
                             break;
 
                         case "pause":

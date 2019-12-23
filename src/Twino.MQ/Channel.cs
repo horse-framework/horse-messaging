@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
+using Twino.MQ.Queues;
 using Twino.MQ.Security;
 
 namespace Twino.MQ
@@ -191,7 +192,7 @@ namespace Twino.MQ
 
             if (EventHandler != null)
                 await EventHandler.OnQueueRemoved(queue, this);
-            
+
             await queue.Destroy();
         }
 
@@ -220,7 +221,7 @@ namespace Twino.MQ
 
             IEnumerable<ChannelQueue> list = _queues.GetAsClone();
             foreach (ChannelQueue queue in list)
-                await queue.Trigger(cc);
+                await queue.Trigger();
 
             return true;
         }
@@ -261,6 +262,25 @@ namespace Twino.MQ
         public ChannelClient FindClient(MqClient client)
         {
             return _clients.Find(x => x.Client == client);
+        }
+
+        /// <summary>
+        /// Gets next client with round robin algorithm and updates index
+        /// </summary>
+        internal ChannelClient GetNextRRClient(ref int index)
+        {
+            List<ChannelClient> clients = _clients.GetAsClone();
+            if (index < 0 || index + 1 >= clients.Count)
+            {
+                if (clients.Count == 0)
+                    return null;
+
+                index = 0;
+                return clients[0];
+            }
+
+            index++;
+            return clients[index];
         }
 
         #endregion

@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Twino.MQ;
 using Twino.MQ.Clients;
+using Twino.MQ.Queues;
 
 namespace Test.Mq.Internal
 {

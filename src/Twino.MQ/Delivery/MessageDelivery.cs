@@ -1,7 +1,8 @@
 using System;
 using Twino.MQ.Clients;
+using Twino.MQ.Queues;
 
-namespace Twino.MQ
+namespace Twino.MQ.Delivery
 {
     /// <summary>
     /// Message delivery data for a single message to a single receiver

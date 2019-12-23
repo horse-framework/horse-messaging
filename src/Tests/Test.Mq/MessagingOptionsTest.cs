@@ -7,12 +7,13 @@ using Test.Mq.Internal;
 using Test.Mq.Models;
 using Twino.Client.TMQ;
 using Twino.MQ;
+using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
 using Xunit;
 
 namespace Test.Mq
 {
-    public class ChannelMessageTest
+    public class MessagingOptionsTest
     {
         #region Route Messaging
 
@@ -41,8 +42,8 @@ namespace Test.Mq
             Assert.True(sent);
 
             await Task.Delay(1500);
-            Assert.Empty(queue.PrefentialMessages);
-            Assert.Empty(queue.StandardMessages);
+            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.RegularMessages);
 
             bool received = false;
             client.MessageReceived += (c, m) =>
@@ -55,7 +56,7 @@ namespace Test.Mq
             Assert.True(joined);
             await Task.Delay(1500);
 
-            Assert.Empty(queue.StandardMessages);
+            Assert.Empty(queue.RegularMessages);
             Assert.False(received);
         }
 
@@ -95,8 +96,8 @@ namespace Test.Mq
             Assert.True(sent);
 
             await Task.Delay(1500);
-            Assert.Empty(queue.PrefentialMessages);
-            Assert.Empty(queue.StandardMessages);
+            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.RegularMessages);
             Assert.True(received);
         }
 
@@ -141,8 +142,8 @@ namespace Test.Mq
             Assert.True(sent);
 
             await Task.Delay(1500);
-            Assert.Empty(queue.PrefentialMessages);
-            Assert.Empty(queue.StandardMessages);
+            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.RegularMessages);
             Assert.True(received);
         }
 
@@ -179,14 +180,14 @@ namespace Test.Mq
             Assert.True(sent);
 
             await Task.Delay(1500);
-            Assert.NotEmpty(queue.StandardMessages);
+            Assert.NotEmpty(queue.RegularMessages);
             Assert.False(received);
 
             bool joined = await client.Join(channel.Name, true);
             Assert.True(joined);
             await Task.Delay(1500);
 
-            Assert.Empty(queue.StandardMessages);
+            Assert.Empty(queue.RegularMessages);
             Assert.True(received);
         }
 
@@ -243,8 +244,8 @@ namespace Test.Mq
 
             await Task.Delay(1500);
 
-            Assert.Empty(queue.PrefentialMessages);
-            Assert.Empty(queue.StandardMessages);
+            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.RegularMessages);
             int c = received.Count(x => x);
             Assert.Equal(1, c);
         }
@@ -305,8 +306,8 @@ namespace Test.Mq
             Assert.True(joined);
             await Task.Delay(250);
 
-            Assert.Empty(queue.PrefentialMessages);
-            Assert.Empty(queue.StandardMessages);
+            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.RegularMessages);
             int c = received.Count(x => x);
             Assert.Equal(1, c);
         }
@@ -342,8 +343,8 @@ namespace Test.Mq
             bool sent = await client.Push(channel.Name, queue.ContentType, ms, true);
             Assert.False(sent);
 
-            Assert.Empty(queue.PrefentialMessages);
-            Assert.Empty(queue.StandardMessages);
+            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.RegularMessages);
 
             bool received = false;
             client.MessageReceived += (c, m) =>
@@ -356,7 +357,7 @@ namespace Test.Mq
             Assert.True(joined);
             await Task.Delay(1500);
 
-            Assert.Empty(queue.StandardMessages);
+            Assert.Empty(queue.RegularMessages);
             Assert.False(received);
         }
 
@@ -400,8 +401,8 @@ namespace Test.Mq
             bool sent = await client.Push(channel.Name, queue.ContentType, ms, true);
 
             Assert.True(sent);
-            Assert.Empty(queue.PrefentialMessages);
-            Assert.Empty(queue.StandardMessages);
+            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.RegularMessages);
             Assert.True(received);
         }
 
@@ -459,8 +460,8 @@ namespace Test.Mq
             await Task.Delay(250);
 
             Assert.True(sent);
-            Assert.Empty(queue.PrefentialMessages);
-            Assert.Empty(queue.StandardMessages);
+            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.RegularMessages);
             Assert.True(receive1);
             Assert.True(receive2);
         }
@@ -498,7 +499,7 @@ namespace Test.Mq
             bool sent = await client.Push(channel.Name, queue.ContentType, ms, true);
 
             Assert.False(sent);
-            Assert.NotEmpty(queue.StandardMessages);
+            Assert.NotEmpty(queue.RegularMessages);
 
             bool received = false;
             client.MessageReceived += (c, m) =>
@@ -511,7 +512,7 @@ namespace Test.Mq
             Assert.True(joined);
             await Task.Delay(1500);
 
-            Assert.Empty(queue.StandardMessages);
+            Assert.Empty(queue.RegularMessages);
             Assert.True(received);
         }
 
@@ -556,8 +557,8 @@ namespace Test.Mq
             bool sent = await client.Push(channel.Name, queue.ContentType, ms, true);
 
             Assert.True(sent);
-            Assert.Empty(queue.PrefentialMessages);
-            Assert.Empty(queue.StandardMessages);
+            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.RegularMessages);
             Assert.True(received);
         }
 
@@ -616,8 +617,8 @@ namespace Test.Mq
             await Task.Delay(250);
 
             Assert.True(sent);
-            Assert.Empty(queue.PrefentialMessages);
-            Assert.Empty(queue.StandardMessages);
+            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.RegularMessages);
             Assert.True(receive1);
             Assert.True(receive2);
         }
@@ -696,5 +697,21 @@ namespace Test.Mq
         }
 
         #endregion
+
+        [Fact]
+        public async Task SendAcknowledgeFromServerToProducer()
+        {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42599);
+            server.Start();
+            server.SendAcknowledgeFromMQ = true;
+            
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:42599");
+            Assert.True(client.IsConnected);
+            
+            bool ack = await client.Push("ch-route", MessageA.ContentType, "Hello", true);
+            Assert.True(ack);
+        }
     }
 }

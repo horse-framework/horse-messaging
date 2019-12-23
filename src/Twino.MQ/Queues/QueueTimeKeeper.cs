@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
+using Twino.MQ.Delivery;
 
-namespace Twino.MQ
+namespace Twino.MQ.Queues
 {
     /// <summary>
     /// Follows all deliveries and their acknowledges, responses and expirations
@@ -27,12 +28,12 @@ namespace Twino.MQ
         /// <summary>
         /// Messages with high priority list of the queue
         /// </summary>
-        private readonly LinkedList<QueueMessage> _prefentialMessages;
+        private readonly LinkedList<QueueMessage> _HighPriorityMessages;
 
         /// <summary>
         /// Messages list of the queue
         /// </summary>
-        private readonly LinkedList<QueueMessage> _standardMessages;
+        private readonly LinkedList<QueueMessage> _RegularMessages;
 
         /// <summary>
         /// Processing timed out messages.
@@ -48,11 +49,11 @@ namespace Twino.MQ
 
         #endregion
 
-        public QueueTimeKeeper(ChannelQueue queue, LinkedList<QueueMessage> prefentialMessages, LinkedList<QueueMessage> standardMessages)
+        public QueueTimeKeeper(ChannelQueue queue, LinkedList<QueueMessage> HighPriorityMessages, LinkedList<QueueMessage> RegularMessages)
         {
             _queue = queue;
-            _prefentialMessages = prefentialMessages;
-            _standardMessages = standardMessages;
+            _HighPriorityMessages = HighPriorityMessages;
+            _RegularMessages = RegularMessages;
         }
 
         #region Methods
@@ -102,16 +103,22 @@ namespace Twino.MQ
         private void ProcessReceiveTimeup()
         {
             _timeupMessages.Clear();
-            ProcessReceiveTimeupOnList(_prefentialMessages);
+            ProcessReceiveTimeupOnList(_HighPriorityMessages);
 
             foreach (QueueMessage message in _timeupMessages)
-                _ = _queue.DeliveryHandler.OnTimeUp(_queue, message);
+            {
+                _queue.Info.AddMessageTimeout();
+                _ = _queue.DeliveryHandler.MessageTimedOut(_queue, message);
+            }
 
             _timeupMessages.Clear();
-            ProcessReceiveTimeupOnList(_standardMessages);
+            ProcessReceiveTimeupOnList(_RegularMessages);
 
             foreach (QueueMessage message in _timeupMessages)
-                _ = _queue.DeliveryHandler.OnTimeUp(_queue, message);
+            {
+                _queue.Info.AddMessageTimeout();
+                _ = _queue.DeliveryHandler.MessageTimedOut(_queue, message);
+            }
         }
 
         /// <summary>
@@ -164,7 +171,8 @@ namespace Twino.MQ
                 if (tuple.Item1)
                 {
                     delivery.MarkAsAcknowledgeTimedUp();
-                    _ = _queue.DeliveryHandler.OnAcknowledgeTimeUp(_queue, delivery);
+                    _queue.Info.AddAcknowledgeTimeout();
+                    _ = _queue.DeliveryHandler.AcknowledgeTimedOut(_queue, delivery);
                     if (!released)
                     {
                         released = true;

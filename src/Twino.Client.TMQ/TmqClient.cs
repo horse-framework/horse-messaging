@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -590,14 +589,6 @@ namespace Twino.Client.TMQ
         }
 
         /// <summary>
-        /// Creates new queue in server
-        /// </summary>
-        public async Task<bool> CreateQueue(string channel, ushort contentType, bool verifyResponse)
-        {
-            return await CreateQueue(channel, contentType, null, verifyResponse);
-        }
-
-        /// <summary>
         /// Removes a channel and all queues in it
         /// </summary>
         public async Task<bool> RemoveChannel(string channel, bool verifyResponse)
@@ -617,7 +608,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Creates new queue in server
         /// </summary>
-        public async Task<bool> CreateQueue(string channel, ushort contentType, Dictionary<string, string> properties, bool verifyResponse)
+        public async Task<bool> CreateQueue(string channel, ushort contentType, bool verifyResponse, Action<QueueOptions> optionsAction = null)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -625,16 +616,13 @@ namespace Twino.Client.TMQ
             message.Target = channel;
             message.ResponseRequired = verifyResponse;
 
-            if (properties == null)
+            if (optionsAction == null)
                 message.Content = new MemoryStream(BitConverter.GetBytes(contentType));
             else
             {
-                StringBuilder content = new StringBuilder();
-                content.Append(TmqHeaders.CONTENT_TYPE + ": " + contentType + "\r\n");
-                foreach (KeyValuePair<string, string> pair in properties)
-                    content.Append(pair.Key + ": " + pair.Value + "\r\n");
-
-                message.Content = new MemoryStream(Encoding.UTF8.GetBytes(content.ToString()));
+                QueueOptions options = new QueueOptions();
+                optionsAction(options);
+                message.Content = new MemoryStream(Encoding.UTF8.GetBytes(options.Serialize(contentType)));
             }
 
             if (verifyResponse)
@@ -659,6 +647,25 @@ namespace Twino.Client.TMQ
                 message.MessageId = UniqueIdGenerator.Create();
 
             return await WaitResponseOk(message, verifyResponse);
+        }
+
+        /// <summary>
+        /// Updates queue options
+        /// </summary>
+        public async Task<bool> SetQueueOptions(string channel, ushort contentType, Action<QueueOptions> optionsAction)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ContentType = KnownContentTypes.UpdateQueue;
+            message.Target = channel;
+            message.ResponseRequired = true;
+            message.MessageId = UniqueIdGenerator.Create();
+
+            QueueOptions options = new QueueOptions();
+            optionsAction(options);
+            message.Content = new MemoryStream(Encoding.UTF8.GetBytes(options.Serialize(contentType)));
+
+            return await WaitResponseOk(message, true);
         }
 
         /// <summary>
