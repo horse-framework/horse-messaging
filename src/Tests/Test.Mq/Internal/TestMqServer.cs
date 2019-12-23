@@ -46,6 +46,7 @@ namespace Test.Mq.Internal
             mqOptions.AllowedContentTypes = new[] {MessageA.ContentType, MessageB.ContentType, MessageC.ContentType};
             mqOptions.AllowMultipleQueues = true;
             mqOptions.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
+            mqOptions.MessageTimeout = TimeSpan.FromSeconds(12);
 
             Server = new MqServer(mqOptions);
             Server.SetDefaultChannelHandler(new TestChannelHandler(this), null);
