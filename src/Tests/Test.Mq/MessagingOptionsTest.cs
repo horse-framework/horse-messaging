@@ -524,11 +524,11 @@ namespace Test.Mq
         public async Task QueueWaitAcknowledgeOneClient()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42582);
+            server.Initialize(40582);
             server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42582");
+            await client.ConnectAsync("tmq://localhost:40582");
             client.AutoAcknowledge = true;
             Assert.True(client.IsConnected);
 
