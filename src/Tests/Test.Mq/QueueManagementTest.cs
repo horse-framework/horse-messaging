@@ -20,12 +20,13 @@ namespace Test.Mq
         [InlineData(true)]
         public async Task Create(bool verifyResponse)
         {
+            int port = verifyResponse ? 40905 : 40904;
             TestMqServer server = new TestMqServer();
-            server.Initialize(41205);
+            server.Initialize(port);
             server.Start();
 
             TmqClient client = new TmqClient();
-            client.Connect("tmq://localhost:41205");
+            client.Connect("tmq://localhost:" + port);
 
             bool created = await client.CreateQueue("ch-2", MessageA.ContentType, verifyResponse);
             Assert.True(created);
@@ -85,7 +86,7 @@ namespace Test.Mq
             Assert.False(queue.Options.WaitForAcknowledge);
             Assert.False(queue.Options.SendOnlyFirstAcquirer);
             Assert.Equal(TimeSpan.FromSeconds(12), queue.Options.MessageTimeout);
-            
+
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:41207");
             Assert.True(client.IsConnected);
