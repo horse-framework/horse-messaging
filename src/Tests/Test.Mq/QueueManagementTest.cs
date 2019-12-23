@@ -42,13 +42,65 @@ namespace Test.Mq
         [Fact]
         public async Task CreateWithProperties()
         {
-            throw new NotImplementedException();
+            TestMqServer server = new TestMqServer();
+            server.Initialize(41206);
+            server.Start();
+
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:41206");
+            Assert.True(client.IsConnected);
+
+            bool created = await client.CreateQueue("ch-test", MessageA.ContentType, true, o =>
+            {
+                o.SendOnlyFirstAcquirer = true;
+                o.AcknowledgeTimeout = TimeSpan.FromSeconds(33);
+                o.Status = MessagingQueueStatus.Pull;
+            });
+            Assert.True(created);
+
+            Channel channel = server.Server.FindChannel("ch-test");
+            Assert.NotNull(channel);
+
+            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            Assert.NotNull(queue);
+
+            Assert.True(queue.Options.SendOnlyFirstAcquirer);
+            Assert.Equal(TimeSpan.FromSeconds(33), queue.Options.AcknowledgeTimeout);
+            Assert.Equal(QueueStatus.Pull, queue.Status);
         }
 
         [Fact]
         public async Task Update()
         {
-            throw new NotImplementedException();
+            TestMqServer server = new TestMqServer();
+            server.Initialize(41207);
+            server.Start();
+
+            Channel channel = server.Server.FindChannel("ch-route");
+            Assert.NotNull(channel);
+
+            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            Assert.NotNull(queue);
+
+            Assert.False(queue.Options.WaitForAcknowledge);
+            Assert.False(queue.Options.SendOnlyFirstAcquirer);
+            Assert.Equal(TimeSpan.Zero, queue.Options.MessageTimeout);
+            
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:41207");
+            Assert.True(client.IsConnected);
+
+            bool updated = await client.SetQueueOptions("ch-route", MessageA.ContentType, o =>
+            {
+                o.WaitForAcknowledge = true;
+                o.MessageTimeout = TimeSpan.FromSeconds(666);
+                o.SendOnlyFirstAcquirer = true;
+            });
+            Assert.True(updated);
+
+            Assert.True(queue.Options.WaitForAcknowledge);
+            Assert.True(queue.Options.SendOnlyFirstAcquirer);
+            Assert.Equal(TimeSpan.FromSeconds(666), queue.Options.MessageTimeout);
         }
 
         [Theory]
@@ -56,7 +108,29 @@ namespace Test.Mq
         [InlineData(true)]
         public async Task Remove(bool verifyResponse)
         {
-            throw new NotImplementedException();
+            int port = 41208 + Convert.ToInt32(verifyResponse);
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start();
+
+            Channel channel = server.Server.FindChannel("ch-route");
+            Assert.NotNull(channel);
+
+            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            Assert.NotNull(queue);
+
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(client.IsConnected);
+
+            bool done = await client.RemoveQueue("ch-route", MessageA.ContentType, verifyResponse);
+            Assert.True(done);
+
+            if (!verifyResponse)
+                await Task.Delay(500);
+
+            queue = channel.FindQueue(MessageA.ContentType);
+            Assert.Null(queue);
         }
     }
 }

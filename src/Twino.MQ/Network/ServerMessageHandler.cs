@@ -258,6 +258,9 @@ namespace Twino.MQ.Network
             }
 
             await channel.RemoveQueue(queue);
+            
+            if (message.ResponseRequired)
+                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Ok));
         }
 
         /// <summary>
