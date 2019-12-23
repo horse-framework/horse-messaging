@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Twino.Core;
@@ -10,7 +9,7 @@ namespace Twino.Protocols.WebSocket
     /// <summary>
     /// Default websocekt connection handler
     /// </summary>
-    internal class WebSocketHttpHandler : IProtocolConnectionHandler<HttpMessage>
+    internal class WebSocketHttpHandler : IProtocolConnectionHandler<SocketBase, HttpMessage>
     {
         /// <summary>
         /// Triggered when a websocket client is connected. 

@@ -27,7 +27,7 @@ namespace Twino.Mvc
     /// HTTP Request Handler implementation of Twino.Server for Twino.Mvc project.
     /// All HTTP Requests starts in here in Request method.
     /// </summary>
-    internal class MvcConnectionHandler : IProtocolConnectionHandler<HttpMessage>
+    internal class MvcConnectionHandler : IProtocolConnectionHandler<SocketBase, HttpMessage>
     {
         /// <summary>
         /// Twino.Mvc Facade object

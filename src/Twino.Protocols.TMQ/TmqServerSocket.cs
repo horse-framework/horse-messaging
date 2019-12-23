@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Twino.Core;
 
@@ -32,6 +33,8 @@ namespace Twino.Protocols.TMQ
 
         private readonly IUniqueIdGenerator _uniqueIdGenerator;
 
+        private Action<TmqServerSocket> _cleanupAction;
+
         public TmqServerSocket(ITwinoServer server, IConnectionInfo info)
             : this(server, info, new DefaultUniqueIdGenerator())
         {
@@ -45,6 +48,22 @@ namespace Twino.Protocols.TMQ
             Info = info;
             _uniqueIdGenerator = generator;
             UseUniqueMessageId = useUniqueMessageId;
+        }
+
+        protected override void OnDisconnected()
+        {
+            if (_cleanupAction != null)
+                _cleanupAction(this);
+
+            base.OnDisconnected();
+        }
+
+        /// <summary>
+        /// Runs cleanup action
+        /// </summary>
+        internal void SetCleanupAction(Action<TmqServerSocket> action)
+        {
+            _cleanupAction = action;
         }
 
         /// <summary>

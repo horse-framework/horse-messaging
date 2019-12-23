@@ -18,14 +18,14 @@ namespace Twino.Protocols.WebSocket
         /// <summary>
         /// WebSocket protocol connection handler
         /// </summary>
-        private readonly IProtocolConnectionHandler<WebSocketMessage> _handler;
+        private readonly IProtocolConnectionHandler<WsServerSocket, WebSocketMessage> _handler;
 
         /// <summary>
         /// Twino server
         /// </summary>
         private readonly ITwinoServer _server;
 
-        public TwinoWebSocketProtocol(ITwinoServer server, IProtocolConnectionHandler<WebSocketMessage> handler)
+        public TwinoWebSocketProtocol(ITwinoServer server, IProtocolConnectionHandler<WsServerSocket, WebSocketMessage> handler)
         {
             _server = server;
             _handler = handler;
@@ -62,24 +62,23 @@ namespace Twino.Protocols.WebSocket
             result.PreviouslyRead = null;
             result.Response = await CreateWebSocketHandshakeResponse(key);
 
-            SocketBase socket = await _handler.Connected(_server, info, data);
+            WsServerSocket socket = await _handler.Connected(_server, info, data);
 
             if (socket == null)
                 return await Task.FromResult(new ProtocolHandshakeResult());
 
-            void socketDisconnected(SocketBase socketBase)
-            {
-                _handler.Disconnected(_server, socketBase);
-                _server.Pinger.Remove(socket);
-                socket.Disconnected -= socketDisconnected;
-            }
-
-            result.Socket = socket;
             info.State = ConnectionStates.Pipe;
             info.Protocol = this;
+            result.Socket = socket;
             info.Socket = socket;
-            socket.Disconnected += socketDisconnected;
+
             _server.Pinger.Add(socket);
+
+            socket.SetCleanupAction(s =>
+            {
+                _server.Pinger.Remove(socket);
+                _handler.Disconnected(_server, s);
+            });
 
             return result;
         }
@@ -92,7 +91,7 @@ namespace Twino.Protocols.WebSocket
             //if user makes a mistake in ready method, we should not interrupt connection handling
             try
             {
-                await _handler.Ready(_server, handshakeResult.Socket);
+                await _handler.Ready(_server, (WsServerSocket) handshakeResult.Socket);
             }
             catch (Exception e)
             {
@@ -155,7 +154,7 @@ namespace Twino.Protocols.WebSocket
                     //if user makes a mistake in received method, we should not interrupt connection handling
                     try
                     {
-                        await _handler.Received(_server, info, socket, message);
+                        await _handler.Received(_server, info, (WsServerSocket) socket, message);
                     }
                     catch (Exception e)
                     {

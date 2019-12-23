@@ -8,7 +8,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Uses TMQ Protocol and accepts TCP connections.
         /// </summary>
-        public static ITwinoServer UseTmq(this ITwinoServer server, IProtocolConnectionHandler<TmqMessage> handler)
+        public static ITwinoServer UseTmq(this ITwinoServer server, IProtocolConnectionHandler<TmqServerSocket, TmqMessage> handler)
         {
             TwinoTmqProtocol protocol = new TwinoTmqProtocol(server, handler);
             server.UseProtocol(protocol);

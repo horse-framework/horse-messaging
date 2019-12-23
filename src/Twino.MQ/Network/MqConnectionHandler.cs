@@ -11,7 +11,7 @@ namespace Twino.MQ.Network
     /// <summary>
     /// Message queue server handler
     /// </summary>
-    internal class MqConnectionHandler : IProtocolConnectionHandler<TmqMessage>
+    internal class MqConnectionHandler : IProtocolConnectionHandler<TmqServerSocket, TmqMessage>
     {
         #region Fields
 
@@ -50,7 +50,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Called when a new client is connected via TMQ protocol
         /// </summary>
-        public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
+        public async Task<TmqServerSocket> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
             string clientId;
             bool found = data.Properties.TryGetValue(TmqHeaders.CLIENT_ID, out clientId);
@@ -119,7 +119,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Triggered when handshake is completed and the connection is ready to communicate 
         /// </summary>
-        public async Task Ready(ITwinoServer server, SocketBase client)
+        public async Task Ready(ITwinoServer server, TmqServerSocket client)
         {
             await Task.CompletedTask;
         }
@@ -127,7 +127,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Called when connected client is connected in TMQ protocol
         /// </summary>
-        public async Task Disconnected(ITwinoServer server, SocketBase client)
+        public async Task Disconnected(ITwinoServer server, TmqServerSocket client)
         {
             MqClient mqClient = (MqClient) client;
             await _server.RemoveClient(mqClient);
@@ -143,7 +143,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Called when a new message received from the client
         /// </summary>
-        public async Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, TmqMessage message)
+        public async Task Received(ITwinoServer server, IConnectionInfo info, TmqServerSocket client, TmqMessage message)
         {
             MqClient mc = (MqClient) client;
 

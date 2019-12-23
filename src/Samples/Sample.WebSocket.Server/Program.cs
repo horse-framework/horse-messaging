@@ -10,9 +10,9 @@ namespace Sample.WebSocket.Server
     /// <summary>
     /// WebSocket Client Factory
     /// </summary>
-    public class ServerWsHandler : IProtocolConnectionHandler<WebSocketMessage>
+    public class ServerWsHandler : IProtocolConnectionHandler<WsServerSocket, WebSocketMessage>
     {
-        public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
+        public async Task<WsServerSocket> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
             WsServerSocket socket = new WsServerSocket(server, connection);
             Program.ServerClient = socket;
@@ -21,18 +21,18 @@ namespace Sample.WebSocket.Server
             return await Task.FromResult(socket);
         }
 
-        public async Task Ready(ITwinoServer server, SocketBase client)
+        public async Task Ready(ITwinoServer server, WsServerSocket client)
         {
             await Task.CompletedTask;
         }
 
-        public async Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, WebSocketMessage message)
+        public async Task Received(ITwinoServer server, IConnectionInfo info, WsServerSocket client, WebSocketMessage message)
         {
             Console.WriteLine(message);
             await Task.CompletedTask;
         }
 
-        public async Task Disconnected(ITwinoServer server, SocketBase client)
+        public async Task Disconnected(ITwinoServer server, WsServerSocket client)
         {
             Console.WriteLine("> Disconnected");
             await Task.CompletedTask;

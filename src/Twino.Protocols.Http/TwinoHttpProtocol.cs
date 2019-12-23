@@ -44,7 +44,7 @@ namespace Twino.Protocols.Http
         /// <summary>
         /// Protocol's connection handler
         /// </summary>
-        private readonly IProtocolConnectionHandler<HttpMessage> _handler;
+        private readonly IProtocolConnectionHandler<SocketBase, HttpMessage> _handler;
 
         /// <summary>
         /// Server time updater for response time data
@@ -79,7 +79,7 @@ namespace Twino.Protocols.Http
         /// </summary>
         public HttpOptions Options { get; set; }
 
-        public TwinoHttpProtocol(ITwinoServer server, IProtocolConnectionHandler<HttpMessage> handler, HttpOptions options)
+        public TwinoHttpProtocol(ITwinoServer server, IProtocolConnectionHandler<SocketBase, HttpMessage> handler, HttpOptions options)
         {
             Options = options;
             _server = server;

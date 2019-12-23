@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Core.Protocols;
@@ -13,7 +12,7 @@ namespace Twino.Protocols.Http
     /// <summary>
     /// Http Protocol handler for accepting HTTP Requests via HttpRequestHandler action  
     /// </summary>
-    internal class HttpMethodHandler : IProtocolConnectionHandler<HttpMessage>
+    internal class HttpMethodHandler : IProtocolConnectionHandler<SocketBase, HttpMessage>
     {
         /// <summary>
         /// User defined action

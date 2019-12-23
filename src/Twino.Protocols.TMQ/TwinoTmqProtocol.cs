@@ -18,14 +18,14 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Protocol connection handler
         /// </summary>
-        private readonly IProtocolConnectionHandler<TmqMessage> _handler;
+        private readonly IProtocolConnectionHandler<TmqServerSocket, TmqMessage> _handler;
 
         /// <summary>
         /// Server object
         /// </summary>
         private readonly ITwinoServer _server;
 
-        public TwinoTmqProtocol(ITwinoServer server, IProtocolConnectionHandler<TmqMessage> handler)
+        public TwinoTmqProtocol(ITwinoServer server, IProtocolConnectionHandler<TmqServerSocket, TmqMessage> handler)
         {
             _server = server;
             _handler = handler;
@@ -74,24 +74,26 @@ namespace Twino.Protocols.TMQ
             message.Content.Position = 0;
             await connectionData.ReadFromStream(message.Content);
 
-            SocketBase socket = await _handler.Connected(_server, info, connectionData);
+            TmqServerSocket socket = await _handler.Connected(_server, info, connectionData);
             if (socket == null)
             {
                 info.Close();
                 return false;
             }
-
-            void socketDisconnected(SocketBase socketBase)
-            {
-                _handler.Disconnected(_server, socketBase);
-                _server.Pinger.Remove(socket);
-                socket.Disconnected -= socketDisconnected;
-            }
-
-            handshakeResult.Socket = socket;
+            
             info.State = ConnectionStates.Pipe;
-            socket.Disconnected += socketDisconnected;
+            info.Protocol = this;
+            handshakeResult.Socket = socket;
+            info.Socket = socket;
+            
             _server.Pinger.Add(socket);
+
+            socket.SetCleanupAction(s =>
+            {
+                _server.Pinger.Remove(socket);
+                _handler.Disconnected(_server, s);
+            });
+
             return true;
         }
 
@@ -111,7 +113,7 @@ namespace Twino.Protocols.TMQ
             //if user makes a mistake in ready method, we should not interrupt connection handling
             try
             {
-                await _handler.Ready(_server, handshakeResult.Socket);
+                await _handler.Ready(_server, (TmqServerSocket) handshakeResult.Socket);
             }
             catch (Exception e)
             {
@@ -136,7 +138,7 @@ namespace Twino.Protocols.TMQ
                 //if user makes a mistake in received method, we should not interrupt connection handling
                 try
                 {
-                    await _handler.Received(_server, info, handshakeResult.Socket, message);
+                    await _handler.Received(_server, info, (TmqServerSocket) handshakeResult.Socket, message);
                 }
                 catch (Exception e)
                 {

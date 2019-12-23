@@ -9,7 +9,7 @@ namespace Twino.Protocols.TMQ
     /// </summary>
     public delegate Task TmqMessageHandler(TmqServerSocket socket, TmqMessage message);
 
-    public class TmqMethodHandler : IProtocolConnectionHandler<TmqMessage>
+    public class TmqMethodHandler : IProtocolConnectionHandler<TmqServerSocket, TmqMessage>
     {
         /// <summary>
         /// Default unique Id generator
@@ -29,7 +29,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Triggered when a TMQ client is connected. 
         /// </summary>
-        public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
+        public async Task<TmqServerSocket> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
             return await Task.FromResult(new TmqServerSocket(server, connection, _uniqueIdGenerator));
         }
@@ -37,7 +37,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Triggered when handshake is completed and the connection is ready to communicate 
         /// </summary>
-        public async Task Ready(ITwinoServer server, SocketBase client)
+        public async Task Ready(ITwinoServer server, TmqServerSocket client)
         {
             await Task.CompletedTask;
         }
@@ -45,15 +45,15 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Triggered when a TMQ message received from client
         /// </summary>
-        public async Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, TmqMessage message)
+        public async Task Received(ITwinoServer server, IConnectionInfo info, TmqServerSocket client, TmqMessage message)
         {
-            await _action((TmqServerSocket) client, message);
+            await _action(client, message);
         }
 
         /// <summary>
         /// Triggered when a TMQ client is connected. 
         /// </summary>
-        public async Task Disconnected(ITwinoServer server, SocketBase client)
+        public async Task Disconnected(ITwinoServer server, TmqServerSocket client)
         {
             await Task.CompletedTask;
         }

@@ -73,6 +73,8 @@ namespace Twino.Core
 
         #endregion
 
+        #region Constructors
+        
         protected SocketBase()
         {
             PongTime = DateTime.UtcNow.AddSeconds(15);
@@ -85,6 +87,8 @@ namespace Twino.Core
             IsConnected = true;
             Stream = info.GetStream();
         }
+        
+        #endregion
 
         #region Methods
 

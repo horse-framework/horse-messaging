@@ -11,7 +11,7 @@ namespace Twino.Protocols.WebSocket
     /// <summary>
     /// Twino WebSocket Server with WebSocketMessageRecievedHandler method implementation handler
     /// </summary>
-    internal class MethodWebSocketConnectionHandler : IProtocolConnectionHandler<WebSocketMessage>
+    internal class MethodWebSocketConnectionHandler : IProtocolConnectionHandler<WsServerSocket, WebSocketMessage>
     {
         /// <summary>
         /// User defined action
@@ -34,7 +34,7 @@ namespace Twino.Protocols.WebSocket
         /// <summary>
         /// Triggered when a websocket client is connected. 
         /// </summary>
-        public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
+        public async Task<WsServerSocket> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
             WsServerSocket socket = new WsServerSocket(server, connection);
 
@@ -47,7 +47,7 @@ namespace Twino.Protocols.WebSocket
         /// <summary>
         /// Triggered when handshake is completed and the connection is ready to communicate 
         /// </summary>
-        public async Task Ready(ITwinoServer server, SocketBase client)
+        public async Task Ready(ITwinoServer server, WsServerSocket client)
         {
             await Task.CompletedTask;
         }
@@ -55,15 +55,15 @@ namespace Twino.Protocols.WebSocket
         /// <summary>
         /// Triggered when a client sends a message to the server 
         /// </summary>
-        public async Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, WebSocketMessage message)
+        public async Task Received(ITwinoServer server, IConnectionInfo info, WsServerSocket client, WebSocketMessage message)
         {
-            await _messageHandler((WsServerSocket) client, message);
+            await _messageHandler(client, message);
         }
 
         /// <summary>
         /// Triggered when a websocket client is disconnected. 
         /// </summary>
-        public async Task Disconnected(ITwinoServer server, SocketBase client)
+        public async Task Disconnected(ITwinoServer server, WsServerSocket client)
         {
             await Task.CompletedTask;
         }
