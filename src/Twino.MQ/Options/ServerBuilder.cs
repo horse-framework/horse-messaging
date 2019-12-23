@@ -97,7 +97,7 @@ namespace Twino.MQ.Options
                     ChannelQueueOptions queueOptions;
                     if (qtoken.HasValues)
                     {
-                        queueOptions = CloneFrom(channelOptions);
+                        queueOptions = CloneFromAsQueue(channelOptions);
                         SetQueuePropertyValues(qtoken.Value, queueOptions);
                     }
                     else
@@ -215,7 +215,7 @@ namespace Twino.MQ.Options
             return options;
         }
 
-        private ChannelQueueOptions CloneFrom(ChannelQueueOptions other)
+        private ChannelQueueOptions CloneFromAsQueue(ChannelQueueOptions other)
         {
             ChannelQueueOptions options = new ChannelQueueOptions();
             options.AcknowledgeTimeout = other.AcknowledgeTimeout;
@@ -234,31 +234,49 @@ namespace Twino.MQ.Options
 
         #region Add
 
+        /// <summary>
+        /// Adds client authenticator implementation to builder
+        /// </summary>
         public void AddAuthenticator(IClientAuthenticator authenticator)
         {
             _clientAuthenticator = authenticator;
         }
 
+        /// <summary>
+        /// Adds authorization implementation to builder
+        /// </summary>
         public void AddAuthorization(IClientAuthorization authorization)
         {
             _clientAuthorization = authorization;
         }
 
+        /// <summary>
+        /// Adds client handler implementation to builder
+        /// </summary>
         public void AddClientHandler(IClientHandler handler)
         {
             _clientHandler = handler;
         }
 
+        /// <summary>
+        /// Adds default channel handler implementation to builder
+        /// </summary>
         public void AddDefaultChannelHandler(IChannelEventHandler handler)
         {
             _channelEventHandler = handler;
         }
 
+        /// <summary>
+        /// Adds default channel authenticator implementation to builder
+        /// </summary>
         public void AddDefaultChannelAuthenticator(IChannelAuthenticator authenticator)
         {
             _channelAuthenticator = authenticator;
         }
 
+        /// <summary>
+        /// Adds default delivery handler implementation to builder
+        /// </summary>
         public void AddDefaultDeliveryHandler(IMessageDeliveryHandler handler)
         {
             _messageDeliveryHandler = handler;
