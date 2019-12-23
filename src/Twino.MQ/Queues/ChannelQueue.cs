@@ -199,7 +199,8 @@ namespace Twino.MQ.Queues
                     message.MessageId = Channel.Server.MessageIdGenerator.Create();
 
                 message.Content = new MemoryStream();
-                await System.Text.Json.JsonSerializer.SerializeAsync(message.Content, item);
+                string json = Newtonsoft.Json.JsonConvert.SerializeObject(item);
+                await message.Content.WriteAsync(Encoding.UTF8.GetBytes(json));
 
                 message.CalculateLengths();
 
@@ -595,7 +596,7 @@ namespace Twino.MQ.Queues
             {
                 message.Decision = await DeliveryHandler.EndSend(this, message);
                 await ApplyDecision(message.Decision, message);
-                
+
                 if (Status == QueueStatus.Push || Status == QueueStatus.Pull || Status == QueueStatus.RoundRobin && message.Decision.KeepMessage)
                     PutMessageBack(message);
                 else
