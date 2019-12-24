@@ -38,7 +38,7 @@ namespace Test.Mq
             Assert.NotNull(queue);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.ContentType, ms, false);
+            bool sent = await client.Push(channel.Name, queue.Id, ms, false);
             Assert.True(sent);
 
             await Task.Delay(1500);
@@ -92,7 +92,7 @@ namespace Test.Mq
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.ContentType, ms, false);
+            bool sent = await client.Push(channel.Name, queue.Id, ms, false);
             Assert.True(sent);
 
             await Task.Delay(1500);
@@ -138,7 +138,7 @@ namespace Test.Mq
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.ContentType, ms, false);
+            bool sent = await client.Push(channel.Name, queue.Id, ms, false);
             Assert.True(sent);
 
             await Task.Delay(1500);
@@ -176,7 +176,7 @@ namespace Test.Mq
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.ContentType, ms, false);
+            bool sent = await client.Push(channel.Name, queue.Id, ms, false);
             Assert.True(sent);
 
             await Task.Delay(1500);
@@ -239,7 +239,7 @@ namespace Test.Mq
             await join(3);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client1.Push(channel.Name, queue.ContentType, ms, false);
+            bool sent = await client1.Push(channel.Name, queue.Id, ms, false);
             Assert.True(sent);
 
             await Task.Delay(1500);
@@ -293,7 +293,7 @@ namespace Test.Mq
             TmqClient client3 = await join(3);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client1.Push(channel.Name, queue.ContentType, ms, false);
+            bool sent = await client1.Push(channel.Name, queue.Id, ms, false);
             Assert.True(sent);
 
             await Task.Delay(1500);
@@ -340,7 +340,7 @@ namespace Test.Mq
             Assert.NotNull(queue);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.ContentType, ms, true);
+            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
             Assert.False(sent);
 
             Assert.Empty(queue.HighPriorityMessages);
@@ -398,7 +398,7 @@ namespace Test.Mq
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.ContentType, ms, true);
+            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
 
             Assert.True(sent);
             Assert.Empty(queue.HighPriorityMessages);
@@ -455,7 +455,7 @@ namespace Test.Mq
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client1.Push(channel.Name, queue.ContentType, ms, true);
+            bool sent = await client1.Push(channel.Name, queue.Id, ms, true);
 
             await Task.Delay(250);
 
@@ -496,7 +496,7 @@ namespace Test.Mq
             await queue.SetStatus(QueueStatus.Push);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.ContentType, ms, true);
+            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
 
             Assert.False(sent);
             Assert.NotEmpty(queue.RegularMessages);
@@ -554,7 +554,7 @@ namespace Test.Mq
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.ContentType, ms, true);
+            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
 
             Assert.True(sent);
             Assert.Empty(queue.HighPriorityMessages);
@@ -612,7 +612,7 @@ namespace Test.Mq
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client1.Push(channel.Name, queue.ContentType, ms, true);
+            bool sent = await client1.Push(channel.Name, queue.Id, ms, true);
 
             await Task.Delay(250);
 

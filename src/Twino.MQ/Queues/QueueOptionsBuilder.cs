@@ -10,7 +10,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Queue content type
         /// </summary>
-        public ushort ContentType { get; set; }
+        public ushort Id { get; set; }
 
         /// <summary>
         /// If true, messages will send to only first acquirers
@@ -59,7 +59,7 @@ namespace Twino.MQ.Queues
         {
             StringBuilder builder = new StringBuilder();
 
-            builder.Append(Line(TmqHeaders.CONTENT_TYPE, ContentType.ToString()));
+            builder.Append(Line(TmqHeaders.CONTENT_TYPE, Id.ToString()));
 
             if (SendOnlyFirstAcquirer.HasValue)
                 builder.Append(Line(TmqHeaders.ONLY_FIRST_ACQUIRER, SendOnlyFirstAcquirer.Value));
@@ -101,7 +101,7 @@ namespace Twino.MQ.Queues
                 string value = kv[1].Trim();
 
                 if (key.Equals(TmqHeaders.CONTENT_TYPE, StringComparison.InvariantCultureIgnoreCase))
-                    ContentType = Convert.ToUInt16(value);
+                    Id = Convert.ToUInt16(value);
 
                 if (key.Equals(TmqHeaders.ONLY_FIRST_ACQUIRER, StringComparison.InvariantCultureIgnoreCase))
                     SendOnlyFirstAcquirer = value == "1" || value == "true";

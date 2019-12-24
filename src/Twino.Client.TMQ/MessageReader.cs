@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
-using Microsoft.VisualBasic;
-using Newtonsoft.Json;
 using Twino.Core;
 using Twino.Protocols.TMQ;
 
@@ -113,7 +110,7 @@ namespace Twino.Client.TMQ
             List<QueueSubscription> subs;
             lock (_subscriptions)
             {
-                subs = _subscriptions.Where(x => x.ContentType == message.ContentType &&
+                subs = _subscriptions.Where(x => x.QueueId == message.ContentType &&
                                                  x.Channel.Equals(message.Target, StringComparison.InvariantCultureIgnoreCase))
                                      .ToList();
             }
@@ -148,12 +145,12 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Subscribe to messages in a queue in a channel
         /// </summary>
-        public void On<T>(string channel, ushort content, Action<T> action)
+        public void On<T>(string channel, ushort queueId, Action<T> action)
         {
             QueueSubscription subscription = new QueueSubscription
                                              {
                                                  Channel = channel,
-                                                 ContentType = content,
+                                                 QueueId = queueId,
                                                  MessageType = typeof(T),
                                                  Action = action
                                              };
@@ -165,12 +162,12 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Subscribe to messages in a queue in a channel
         /// </summary>
-        public void On<T>(string channel, ushort content, Action<T, TmqMessage> action)
+        public void On<T>(string channel, ushort queueId, Action<T, TmqMessage> action)
         {
             QueueSubscription subscription = new QueueSubscription
                                              {
                                                  Channel = channel,
-                                                 ContentType = content,
+                                                 QueueId = queueId,
                                                  MessageType = typeof(T),
                                                  Action = action,
                                                  TmqMessageParameter = true
@@ -186,7 +183,7 @@ namespace Twino.Client.TMQ
         public void Off(string channel, ushort content)
         {
             lock (_subscriptions)
-                _subscriptions.RemoveAll(x => x.ContentType == content && x.Channel.Equals(channel, StringComparison.InvariantCultureIgnoreCase));
+                _subscriptions.RemoveAll(x => x.QueueId == content && x.Channel.Equals(channel, StringComparison.InvariantCultureIgnoreCase));
         }
 
         /// <summary>

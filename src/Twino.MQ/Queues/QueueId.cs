@@ -3,14 +3,14 @@ namespace Twino.MQ.Queues
     /// <summary>
     /// Queue content type object
     /// </summary>
-    public class QueueContentType
+    public class QueueId
     {
         /// <summary>
         /// Content type value
         /// </summary>
         public ushort Value { get; }
 
-        public QueueContentType(ushort value)
+        public QueueId(ushort value)
         {
             Value = value;
         }

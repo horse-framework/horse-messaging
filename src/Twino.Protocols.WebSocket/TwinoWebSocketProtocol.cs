@@ -68,10 +68,7 @@ namespace Twino.Protocols.WebSocket
                 return await Task.FromResult(new ProtocolHandshakeResult());
 
             info.State = ConnectionStates.Pipe;
-            info.Protocol = this;
             result.Socket = socket;
-            info.Socket = socket;
-
             _server.Pinger.Add(socket);
 
             socket.SetCleanupAction(s =>

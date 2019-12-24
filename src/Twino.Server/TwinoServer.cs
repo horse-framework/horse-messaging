@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -17,7 +16,7 @@ namespace Twino.Server
     /// Crated for catching twino inner exceptions with events in TwinoServer
     /// </summary>
     public delegate void TwinoInnerExceptionHandler(TwinoServer server, Exception ex);
-    
+
     /// <summary>
     /// Twino TCP Server
     /// Listens all TCP Connections and routes to requests protocols
@@ -67,7 +66,7 @@ namespace Twino.Server
         /// Triggered when inner exception is raised in twino server
         /// </summary>
         public event TwinoInnerExceptionHandler OnInnerException;
-        
+
         #endregion
 
         #region Constructors
@@ -263,11 +262,18 @@ namespace Twino.Server
                         return;
                     }
 
+                    ITwinoProtocol previous = info.Protocol;
                     info.Protocol = protocol;
                     info.Socket = hsresult.Socket;
 
+                    if (info.Socket != null)
+                        info.Socket.SetOnConnected();
+
                     if (hsresult.Response != null)
                         await info.GetStream().WriteAsync(hsresult.Response);
+
+                    if (info.Socket != null)
+                        info.Socket.SetOnProtocolSwitched(previous, info.Protocol);
 
                     await protocol.HandleConnection(info, hsresult);
                     return;

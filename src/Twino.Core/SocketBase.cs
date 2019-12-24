@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Twino.Core.Protocols;
 
 [assembly: InternalsVisibleTo("Twino.Server")]
 
@@ -247,19 +248,35 @@ namespace Twino.Core
         }
 
         /// <summary>
+        /// Triggered when client is disconnected
+        /// </summary>
+        protected virtual void OnDisconnected()
+        {
+            Disconnected?.Invoke(this);
+        }
+
+        /// <summary>
+        /// Called when client's protocol has switched
+        /// </summary>
+        protected virtual void OnProtocolSwitched(ITwinoProtocol previous, ITwinoProtocol current)
+        {
+            //not abstract, override is not must. but we do not have anything to do here.
+        }
+
+        /// <summary>
         /// Triggers virtual connected method
         /// </summary>
         internal void SetOnConnected()
         {
             OnConnected();
         }
-        
+
         /// <summary>
-        /// Triggered when client is disconnected
+        /// Triggers virtual protocol switched
         /// </summary>
-        protected virtual void OnDisconnected()
+        internal void SetOnProtocolSwitched(ITwinoProtocol previous, ITwinoProtocol current)
         {
-            Disconnected?.Invoke(this);
+            OnProtocolSwitched(previous, current);
         }
 
         /// <summary>

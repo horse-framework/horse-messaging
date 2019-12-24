@@ -12,8 +12,8 @@ namespace Twino.MQ.Options
         public bool AllowMultipleQueues { get; set; } = true;
 
         /// <summary>
-        /// Allowed content type for the channel
+        /// Allowed queue id list for the channel
         /// </summary>
-        public ushort[] AllowedContentTypes { get; set; }
+        public ushort[] AllowedQueues { get; set; }
     }
 }

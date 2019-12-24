@@ -43,7 +43,7 @@ namespace Test.Mq.Internal
             Port = port;
 
             MqServerOptions mqOptions = new MqServerOptions();
-            mqOptions.AllowedContentTypes = new[] {MessageA.ContentType, MessageB.ContentType, MessageC.ContentType};
+            mqOptions.AllowedQueues = new[] {MessageA.ContentType, MessageB.ContentType, MessageC.ContentType};
             mqOptions.AllowMultipleQueues = true;
             mqOptions.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
             mqOptions.MessageTimeout = TimeSpan.FromSeconds(12);

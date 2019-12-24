@@ -116,8 +116,8 @@ namespace Twino.Server
                     //matched
                     if (hsresult.Accepted)
                     {
-                        info.Protocol = protocol;
                         hsresult.PreviouslyRead = pbytes;
+                        info.Protocol = protocol;
                         info.Socket = hsresult.Socket;
                         
                         if (info.Socket != null)

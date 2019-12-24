@@ -184,7 +184,7 @@ namespace Twino.MQ.Options
         {
             JToken allowedContentTypes = from["AllowedContentTypes"];
             if (allowedContentTypes != null && allowedContentTypes.HasValues)
-                options.AllowedContentTypes = allowedContentTypes.Values<ushort>().ToArray();
+                options.AllowedQueues = allowedContentTypes.Values<ushort>().ToArray();
 
             JToken allowMultipleQueues = from["AllowMultipleQueues"];
             if (allowMultipleQueues != null)
@@ -201,7 +201,7 @@ namespace Twino.MQ.Options
         private ChannelOptions CloneFrom(ChannelOptions other)
         {
             ChannelOptions options = new ChannelOptions();
-            options.AllowedContentTypes = other.AllowedContentTypes;
+            options.AllowedQueues = other.AllowedQueues;
             options.AllowMultipleQueues = other.AllowMultipleQueues;
             options.AcknowledgeTimeout = other.AcknowledgeTimeout;
             options.Status = other.Status;

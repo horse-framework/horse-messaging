@@ -15,7 +15,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Subscribed content type
         /// </summary>
-        public ushort ContentType { get; set; }
+        public ushort QueueId { get; set; }
         
         /// <summary>
         /// Message type in the queue
