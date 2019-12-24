@@ -262,6 +262,7 @@ namespace Twino.Server
                         return;
                     }
 
+                    ITwinoProtocol previous = info.Protocol;
                     info.Protocol = protocol;
                     info.Socket = hsresult.Socket;
 
@@ -270,6 +271,9 @@ namespace Twino.Server
 
                     if (hsresult.Response != null)
                         await info.GetStream().WriteAsync(hsresult.Response);
+
+                    if (info.Socket != null)
+                        info.Socket.SetOnProtocolSwitched(previous, info.Protocol);
 
                     await protocol.HandleConnection(info, hsresult);
                     return;
