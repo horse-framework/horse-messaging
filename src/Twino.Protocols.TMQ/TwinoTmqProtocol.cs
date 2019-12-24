@@ -80,11 +80,9 @@ namespace Twino.Protocols.TMQ
                 info.Close();
                 return false;
             }
-            
+
             info.State = ConnectionStates.Pipe;
             handshakeResult.Socket = socket;
-            info.Socket = socket;
-            
             _server.Pinger.Add(socket);
 
             socket.SetCleanupAction(s =>

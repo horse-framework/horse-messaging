@@ -69,7 +69,6 @@ namespace Twino.Protocols.WebSocket
 
             info.State = ConnectionStates.Pipe;
             result.Socket = socket;
-            info.Socket = socket;
             _server.Pinger.Add(socket);
 
             socket.SetCleanupAction(s =>
