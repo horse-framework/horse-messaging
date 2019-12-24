@@ -82,7 +82,6 @@ namespace Twino.Protocols.TMQ
             }
             
             info.State = ConnectionStates.Pipe;
-            info.Protocol = this;
             handshakeResult.Socket = socket;
             info.Socket = socket;
             
