@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using Test.Mq.Internal;
 using Test.Mq.Models;
@@ -22,7 +21,7 @@ namespace Test.Mq
             Channel channel = server.Server.FindChannel("ch-1");
             Assert.NotNull(channel);
             channel.Options.AllowMultipleQueues = true;
-            channel.Options.AllowedContentTypes = null;
+            channel.Options.AllowedQueues = null;
 
             ChannelQueue queue1 = await channel.CreateQueue(301);
             Assert.NotNull(queue1);
@@ -44,7 +43,7 @@ namespace Test.Mq
 
             Channel channel = server.Server.FindChannel("ch-1");
             Assert.NotNull(channel);
-            channel.Options.AllowedContentTypes = new[] {MessageA.ContentType, MessageB.ContentType, MessageC.ContentType};
+            channel.Options.AllowedQueues = new[] {MessageA.ContentType, MessageB.ContentType, MessageC.ContentType};
 
             ChannelQueue queue1 = await channel.CreateQueue(MessageB.ContentType);
             Assert.NotNull(queue1);

@@ -530,11 +530,11 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public async Task<bool> PushJson(string channel, ushort contentType, object jsonObject, bool waitAcknowledge)
+        public async Task<bool> PushJson(string channel, ushort queueId, object jsonObject, bool waitAcknowledge)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Channel;
-            message.ContentType = contentType;
+            message.ContentType = queueId;
             message.Target = channel;
             message.Content = new MemoryStream();
             message.AcknowledgeRequired = waitAcknowledge;
@@ -549,19 +549,19 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public async Task<bool> Push(string channel, ushort contentType, string content, bool waitAcknowledge)
+        public async Task<bool> Push(string channel, ushort queueId, string content, bool waitAcknowledge)
         {
-            return await Push(channel, contentType, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge);
+            return await Push(channel, queueId, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge);
         }
 
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public async Task<bool> Push(string channel, ushort contentType, MemoryStream content, bool waitAcknowledge)
+        public async Task<bool> Push(string channel, ushort queueId, MemoryStream content, bool waitAcknowledge)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Channel;
-            message.ContentType = contentType;
+            message.ContentType = queueId;
             message.Target = channel;
             message.Content = content;
             message.AcknowledgeRequired = waitAcknowledge;
@@ -609,7 +609,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Creates new queue in server
         /// </summary>
-        public async Task<bool> CreateQueue(string channel, ushort contentType, bool verifyResponse, Action<QueueOptions> optionsAction = null)
+        public async Task<bool> CreateQueue(string channel, ushort queueId, bool verifyResponse, Action<QueueOptions> optionsAction = null)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -618,12 +618,12 @@ namespace Twino.Client.TMQ
             message.ResponseRequired = verifyResponse;
 
             if (optionsAction == null)
-                message.Content = new MemoryStream(BitConverter.GetBytes(contentType));
+                message.Content = new MemoryStream(BitConverter.GetBytes(queueId));
             else
             {
                 QueueOptions options = new QueueOptions();
                 optionsAction(options);
-                message.Content = new MemoryStream(Encoding.UTF8.GetBytes(options.Serialize(contentType)));
+                message.Content = new MemoryStream(Encoding.UTF8.GetBytes(options.Serialize(queueId)));
             }
 
             if (verifyResponse)
@@ -635,14 +635,14 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Removes a queue in a channel in server
         /// </summary>
-        public async Task<bool> RemoveQueue(string channel, ushort contentType, bool verifyResponse)
+        public async Task<bool> RemoveQueue(string channel, ushort queueId, bool verifyResponse)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.RemoveQueue;
             message.Target = channel;
             message.ResponseRequired = verifyResponse;
-            message.Content = new MemoryStream(BitConverter.GetBytes(contentType));
+            message.Content = new MemoryStream(BitConverter.GetBytes(queueId));
 
             if (verifyResponse)
                 message.MessageId = UniqueIdGenerator.Create();
@@ -653,7 +653,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Updates queue options
         /// </summary>
-        public async Task<bool> SetQueueOptions(string channel, ushort contentType, Action<QueueOptions> optionsAction)
+        public async Task<bool> SetQueueOptions(string channel, ushort queueId, Action<QueueOptions> optionsAction)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -664,7 +664,7 @@ namespace Twino.Client.TMQ
 
             QueueOptions options = new QueueOptions();
             optionsAction(options);
-            message.Content = new MemoryStream(Encoding.UTF8.GetBytes(options.Serialize(contentType)));
+            message.Content = new MemoryStream(Encoding.UTF8.GetBytes(options.Serialize(queueId)));
 
             return await WaitResponseOk(message, true);
         }
@@ -714,12 +714,12 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Request a message from Pull queue
         /// </summary>
-        public async Task<bool> Pull(string channel, ushort contentType)
+        public async Task<bool> Pull(string channel, ushort queueId)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Channel;
             message.ResponseRequired = true;
-            message.ContentType = contentType;
+            message.ContentType = queueId;
             message.Target = channel;
 
             bool sent = await SendAsync(message);

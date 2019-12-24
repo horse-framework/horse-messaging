@@ -10,13 +10,13 @@ namespace Sample.Mq.Server
     {
         public async Task OnQueueCreated(ChannelQueue queue, Channel channel)
         {
-            Console.WriteLine($"{queue.ContentType} is created in {channel.Name}");
+            Console.WriteLine($"{queue.Id} is created in {channel.Name}");
             await Task.CompletedTask;
         }
 
         public async Task OnQueueRemoved(ChannelQueue queue, Channel channel)
         {
-            Console.WriteLine($"{queue.ContentType} queue removed from {channel.Name}");
+            Console.WriteLine($"{queue.Id} queue removed from {channel.Name}");
             await Task.CompletedTask;
         }
 
@@ -40,7 +40,7 @@ namespace Sample.Mq.Server
 
         public async Task<bool> OnQueueStatusChanged(ChannelQueue queue, QueueStatus from, QueueStatus to)
         {
-            Console.WriteLine($"{queue.ContentType} queue status changed from {from} to {to}");
+            Console.WriteLine($"{queue.Id} queue status changed from {from} to {to}");
             return await Task.FromResult(true);
         }
     }

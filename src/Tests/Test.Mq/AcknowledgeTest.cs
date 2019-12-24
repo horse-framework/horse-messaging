@@ -165,7 +165,7 @@ namespace Test.Mq
 
             //push a message to the queue
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.ContentType, ms, true);
+            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
             Assert.True(sent);
         }
 
@@ -197,7 +197,7 @@ namespace Test.Mq
 
             //push a message to the queue
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.ContentType, ms, true);
+            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
             Assert.True(sent);
         }
 
@@ -229,7 +229,7 @@ namespace Test.Mq
 
             //push a message to the queue
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.ContentType, ms, true);
+            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
             Assert.False(sent);
         }
 

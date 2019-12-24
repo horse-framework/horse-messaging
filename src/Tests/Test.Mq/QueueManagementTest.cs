@@ -37,7 +37,7 @@ namespace Test.Mq
 
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
-            Assert.Equal(MessageA.ContentType, queue.ContentType);
+            Assert.Equal(MessageA.ContentType, queue.Id);
         }
 
         [Fact]

@@ -181,7 +181,7 @@ namespace Twino.MQ.Network
             {
                 builder = new QueueOptionsBuilder();
                 builder.Load(message.ToString());
-                contentType = builder.ContentType;
+                contentType = builder.Id;
             }
 
             Channel channel = await CreateChannel(client, message);
@@ -280,7 +280,7 @@ namespace Twino.MQ.Network
                 return;
             }
 
-            ChannelQueue queue = channel.FindQueue(builder.ContentType);
+            ChannelQueue queue = channel.FindQueue(builder.Id);
             if (queue == null)
             {
                 if (message.ResponseRequired)

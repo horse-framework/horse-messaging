@@ -38,12 +38,12 @@ namespace Twino.MQ
         /// </summary>
         public IChannelAuthenticator Authenticator { get; }
 
-        private readonly SafeList<QueueContentType> _allowedContentTypes = new SafeList<QueueContentType>(32);
+        private readonly SafeList<QueueId> _allowedQueues = new SafeList<QueueId>(32);
 
         /// <summary>
-        /// Allowed content type in this channel
+        /// Allowed queue id list in this channel
         /// </summary>
-        public IEnumerable<QueueContentType> AllowedContentTypes => _allowedContentTypes.GetUnsafeList();
+        public IEnumerable<QueueId> AllowedQueues => _allowedQueues.GetUnsafeList();
 
         /// <summary>
         /// Channel event handler
@@ -119,18 +119,18 @@ namespace Twino.MQ
         /// <summary>
         /// Finds queue by content type
         /// </summary>
-        public ChannelQueue FindQueue(ushort contentType)
+        public ChannelQueue FindQueue(ushort queueId)
         {
-            return _queues.Find(x => x.ContentType == contentType);
+            return _queues.Find(x => x.Id == queueId);
         }
 
         /// <summary>
         /// Creates new queue in the channel with default options and default handlers
         /// </summary>
-        public async Task<ChannelQueue> CreateQueue(ushort contentType)
+        public async Task<ChannelQueue> CreateQueue(ushort queueId)
         {
             ChannelQueueOptions options = Options.Clone() as ChannelQueueOptions;
-            return await CreateQueue(contentType,
+            return await CreateQueue(queueId,
                                      options,
                                      Server.DefaultDeliveryHandler);
         }
@@ -139,12 +139,12 @@ namespace Twino.MQ
         /// <summary>
         /// Creates new queue in the channel with default handlers
         /// </summary>
-        public async Task<ChannelQueue> CreateQueue(ushort contentType, ChannelQueueOptions options)
+        public async Task<ChannelQueue> CreateQueue(ushort queueId, ChannelQueueOptions options)
         {
             if (DeliveryHandler == null)
                 throw new NoNullAllowedException("There is no default delivery handler defined for the channel. Queue must have it's own delivery handler.");
 
-            return await CreateQueue(contentType,
+            return await CreateQueue(queueId,
                                      options,
                                      Server.DefaultDeliveryHandler);
         }
@@ -152,7 +152,7 @@ namespace Twino.MQ
         /// <summary>
         /// Creates new queue in the channel
         /// </summary>
-        public async Task<ChannelQueue> CreateQueue(ushort contentType,
+        public async Task<ChannelQueue> CreateQueue(ushort queueId,
                                                     ChannelQueueOptions options,
                                                     IMessageDeliveryHandler deliveryHandler)
         {
@@ -164,16 +164,16 @@ namespace Twino.MQ
                 return null;
 
             //if content type is not allowed for this channel, return null
-            if (Options.AllowedContentTypes != null && Options.AllowedContentTypes.Length > 0)
-                if (!Options.AllowedContentTypes.Contains(contentType))
+            if (Options.AllowedQueues != null && Options.AllowedQueues.Length > 0)
+                if (!Options.AllowedQueues.Contains(queueId))
                     return null;
 
-            ChannelQueue queue = _queues.Find(x => x.ContentType == contentType);
+            ChannelQueue queue = _queues.Find(x => x.Id == queueId);
 
             if (queue != null)
-                throw new DuplicateNameException($"The channel has already a queue with same content type: {contentType}");
+                throw new DuplicateNameException($"The channel has already a queue with same content type: {queueId}");
 
-            queue = new ChannelQueue(this, contentType, options, deliveryHandler);
+            queue = new ChannelQueue(this, queueId, options, deliveryHandler);
             _queues.Add(queue);
 
             if (EventHandler != null)

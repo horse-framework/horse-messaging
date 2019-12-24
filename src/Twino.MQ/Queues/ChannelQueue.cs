@@ -77,7 +77,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Queue content type
         /// </summary>
-        public ushort ContentType { get; }
+        public ushort Id { get; }
 
         /// <summary>
         /// Queue options.
@@ -148,12 +148,12 @@ namespace Twino.MQ.Queues
         #region Constructors - Destroy
 
         internal ChannelQueue(Channel channel,
-                              ushort contentType,
+                              ushort id,
                               ChannelQueueOptions options,
                               IMessageDeliveryHandler deliveryHandler)
         {
             Channel = channel;
-            ContentType = contentType;
+            Id = id;
             Options = options;
             Status = options.Status;
             DeliveryHandler = deliveryHandler;
