@@ -29,26 +29,26 @@ namespace Twino.MQ.Delivery
         /// <summary>
         /// If true, operation will continue
         /// </summary>
-        public bool Allow;
+        public readonly bool Allow;
 
         /// <summary>
         /// If true, message will be saved.
         /// If message already saved, second save will be discarded.
         /// </summary>
-        public bool SaveMessage;
+        public readonly bool SaveMessage;
 
         /// <summary>
         /// If true, message will be kept in front of the queue.
         /// Settings this value always true may cause infinity same message send operation.
         /// </summary>
-        public bool KeepMessage;
+        public readonly bool KeepMessage;
 
         /// <summary>
         /// If true, server will send an acknowledge message to producer.
         /// Sometimes acknowledge is required after save operation instead of receiving ack from consumer.
         /// This can be true in similar cases.
         /// </summary>
-        public DeliveryAcknowledgeDecision SendAcknowledge;
+        public readonly DeliveryAcknowledgeDecision SendAcknowledge;
 
         public Decision(bool allow, bool save)
         {
