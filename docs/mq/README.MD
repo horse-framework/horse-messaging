@@ -7,3 +7,4 @@
 * [Channel Queue Statuses](https://github.com/mhelvacikoylu/twino/blob/v2/docs/mq/Queue%20Statuses.MD)
 * [Creating Channels and Queues](https://github.com/mhelvacikoylu/twino/blob/v2/docs/mq/QueueCreation.MD)
 * [Changing Queue Options](https://github.com/mhelvacikoylu/twino/blob/v2/docs/mq/QueueUpdate.MD)
+* [Removing Channels and Queues](https://github.com/mhelvacikoylu/twino/blob/v2/docs/mq/QueueRemoving.MD)
