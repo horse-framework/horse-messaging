@@ -50,12 +50,12 @@ Producers decide which queues should be created and they need to send a queue cr
 While sending this message, they can attach some options.
 These options, if they are exists, override queue's server-side defined default options.
 
-       TmqClient client = new TmqClient();
-       client.Connect("tmq://somehere:12345");
-       bool created = await client.CreateQueue("channel-name", 123, true, o =>
-       {
-           o.Status = MessagingQueueStatus.Push;
-           o.UseMessageId = true;
-       });
+          TmqClient client = new TmqClient();
+          client.Connect("tmq://localhost:12345");
+          bool created = await client.CreateQueue("channel-name", 123, true, o =>
+          {
+              o.Status = MessagingQueueStatus.Push;
+              o.UseMessageId = true;
+          });
 
 Third parameter as **true** means, after the message is sent, client will wait the response from the server. If returns true, you can be sure the queue is created and verified by server. If **false**, created will be true if the message send operation completed successfully over network. Server might reject queue creation due to some reasons authorization, duplicate, channel not found etc.
