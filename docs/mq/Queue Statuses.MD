@@ -3,7 +3,7 @@
 In Twino MQ, each queue has it's own status.
 There can be many channels in a server and a channel can have many queues in it.
 
-Twino has 5 queue status, three of them tell us how messages will handle, two of them manages statement of the queue.
+Twino has 6 queue status, three of them tell us how messages will handle, two of them manages statement of the queue.
 
 ### Route
 **Route is the default status.**
@@ -24,6 +24,15 @@ If in this duration, still no consumers, message will be removed.
 If you are pushing data from producer to consumers and consumers should receive data as soon as possible
 -until here same with route status- but you do not want to lose any data, all messages in queue should be transffered,
 push status will be the best choice.
+
+### Round Robin
+Round robin works like push status, but when a message is pushed by producer, the message will sent to only one consumer.
+Deciding which consumer will receive message is calculated with round robin algorithm.
+
+Round robin status does not guarantee that each consumer will consume same amount of messages.
+Especially when if some clients connect and some others disconnect -or, join or leave- while sending messages.
+But, if consumers are connected only once and stay connected all time, round robin can guarantee
+each consumer will receive that same amount of messages.
 
 ### Pull
 Pull status work like opposite of pushing.

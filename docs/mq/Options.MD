@@ -116,7 +116,7 @@ Here is the list of properties channel options has and channel queue options doe
       </td>
     </tr>
     <tr>
-      <td>AllowedContentTypes</td>
+      <td>AllowedQueues</td>
       <td>
         If it has at least one value, channel will allow to create queues only allowed in this list.
         This list a number array. If you do not restrict content types, you can set it null or empty array.
