@@ -125,5 +125,23 @@ namespace Twino.MQ.Options
                 }
             }
         }
+        
+        /// <summary>
+        /// Clones channel queue options from another options
+        /// </summary>
+        internal static ChannelQueueOptions CloneFrom(ChannelQueueOptions options)
+        {
+            return new ChannelQueueOptions
+                   {
+                       Status = options.Status,
+                       AcknowledgeTimeout = options.AcknowledgeTimeout,
+                       MessageTimeout = options.MessageTimeout,
+                       RequestAcknowledge = options.RequestAcknowledge,
+                       HideClientNames = options.HideClientNames,
+                       UseMessageId = options.UseMessageId,
+                       WaitForAcknowledge = options.WaitForAcknowledge,
+                       SendOnlyFirstAcquirer = options.SendOnlyFirstAcquirer
+                   };
+        }
     }
 }

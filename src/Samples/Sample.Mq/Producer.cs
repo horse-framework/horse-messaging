@@ -23,7 +23,6 @@ namespace Sample.Mq
                 client.ClientId = "producer-id";
                 client.SetClientType("producer");
                 client.SetClientToken("S3cr37_pr0duc3r_t0k3n");
-
                 return client;
             });
         }

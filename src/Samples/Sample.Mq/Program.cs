@@ -24,6 +24,7 @@ namespace Sample.Mq
 
             ServerBuilder builder = new ServerBuilder();
             builder.LoadFromFile("options.json");
+
             builder.AddAuthenticator(new ClientAuthenticator());
             builder.AddAuthorization(new Authorization());
             builder.AddDefaultDeliveryHandler(new DeliveryHandler());
@@ -31,10 +32,12 @@ namespace Sample.Mq
             builder.AddDefaultChannelAuthenticator(new ChannelAuthenticator());
 
             TwinoServer twinoServer = new TwinoServer(serverOptions);
+
             MqServer server = builder.CreateServer();
+
             twinoServer.UseMqServer(server);
             twinoServer.Start();
-            
+
             Console.WriteLine("Server started");
             _server = server;
         }

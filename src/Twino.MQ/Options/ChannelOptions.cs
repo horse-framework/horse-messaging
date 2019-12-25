@@ -15,5 +15,25 @@ namespace Twino.MQ.Options
         /// Allowed queue id list for the channel
         /// </summary>
         public ushort[] AllowedQueues { get; set; }
+
+        /// <summary>
+        /// Clones channel options from another options
+        /// </summary>
+        internal static ChannelOptions CloneFrom(ChannelOptions options)
+        {
+            return new ChannelOptions
+                   {
+                       Status = options.Status,
+                       AcknowledgeTimeout = options.AcknowledgeTimeout,
+                       AllowedQueues = options.AllowedQueues,
+                       MessageTimeout = options.MessageTimeout,
+                       RequestAcknowledge = options.RequestAcknowledge,
+                       AllowMultipleQueues = options.AllowMultipleQueues,
+                       HideClientNames = options.HideClientNames,
+                       UseMessageId = options.UseMessageId,
+                       WaitForAcknowledge = options.WaitForAcknowledge,
+                       SendOnlyFirstAcquirer = options.SendOnlyFirstAcquirer
+                   };
+        }
     }
 }

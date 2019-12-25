@@ -228,6 +228,17 @@ namespace Twino.MQ
         }
 
         /// <summary>
+        /// Creates new channel with default options, without event handler and authenticator
+        /// </summary>
+        public Channel CreateChannel(string name, Action<ChannelOptions> optionsAction)
+        {
+            if (DefaultDeliveryHandler == null)
+                throw new NoNullAllowedException("There is no default delivery handler defined. Channel must have it's own delivery handler.");
+
+            return CreateChannel(name, DefaultChannelAuthenticator, DefaultChannelEventHandler, DefaultDeliveryHandler, optionsAction);
+        }
+
+        /// <summary>
         /// Creates new channel with custom event handler, authenticator and default options
         /// </summary>
         public Channel CreateChannel(string name,
@@ -235,18 +246,32 @@ namespace Twino.MQ
                                      IChannelEventHandler eventHandler,
                                      IMessageDeliveryHandler deliveryHandler)
         {
-            ChannelOptions options = Options.Clone() as ChannelOptions;
-            return CreateChannel(name, options, authenticator, eventHandler, deliveryHandler);
+            ChannelOptions options = ChannelOptions.CloneFrom(Options);
+            return CreateChannel(name, authenticator, eventHandler, deliveryHandler, options);
         }
 
         /// <summary>
         /// Creates new channel with custom event handler, authenticator and options
         /// </summary>
         public Channel CreateChannel(string name,
-                                     ChannelOptions options,
                                      IChannelAuthenticator authenticator,
                                      IChannelEventHandler eventHandler,
-                                     IMessageDeliveryHandler deliveryHandler)
+                                     IMessageDeliveryHandler deliveryHandler,
+                                     Action<ChannelOptions> optionsAction)
+        {
+            ChannelOptions options = ChannelOptions.CloneFrom(Options);
+            optionsAction(options);
+            return CreateChannel(name, authenticator, eventHandler, deliveryHandler, options);
+        }
+
+        /// <summary>
+        /// Creates new channel with custom event handler, authenticator and options
+        /// </summary>
+        public Channel CreateChannel(string name,
+                                     IChannelAuthenticator authenticator,
+                                     IChannelEventHandler eventHandler,
+                                     IMessageDeliveryHandler deliveryHandler,
+                                     ChannelOptions options)
         {
             Channel channel = _channels.Find(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
             if (channel != null)
