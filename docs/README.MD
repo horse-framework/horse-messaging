@@ -4,6 +4,8 @@
 You can see all features in [here](https://github.com/mhelvacikoylu/twino/blob/v2/docs/Features.MD)<br>
 You can see all NuGET packages in [here](https://github.com/mhelvacikoylu/twino/blob/v2/docs/Packages.MD)<br>
 
+If you can't find an article you wish to read, please create an issue about it.
+
 ### Twino General
 
 * [Twino Library Architecture and Layers](https://github.com/mhelvacikoylu/twino/blob/v2/docs/general/Architecture.MD)
