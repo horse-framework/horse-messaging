@@ -13,9 +13,25 @@ There are three ways of creating a queue
 
 In server side, creating a queue programmatically is the easiest way.
 In order to create a queue, first you should find the channel or create new channel.
-Here are two examples; first is creating channel and queue, second is finding exist channel and creating a queue on it.
+Here are three examples;
+* queue1 is created with default options
+* queue2 is created with fully defined options instance
+* queue3 is created with some modifications on default options
 
-      sample code
+       MqServer server = builder.CreateServer();
+       Channel channel = server.FindChannel("channel-name");
+       ChannelQueue queue1 = await channel.CreateQueue(123);
+       ChannelQueue queue2 = await channel.CreateQueue(124, new ChannelQueueOptions
+                                                            {
+                                                                Status = QueueStatus.RoundRobin,
+                                                                HideClientNames = true
+                                                            });
+
+       ChannelQueue queue3 = await channel.CreateQueue(125, o =>
+       {
+           o.UseMessageId = true;
+           o.SendOnlyFirstAcquirer = true;
+       });
 
 ### Create Queues With Server Builder
 
@@ -34,4 +50,12 @@ Producers decide which queues should be created and they need to send a queue cr
 While sending this message, they can attach some options.
 These options, if they are exists, override queue's server-side defined default options.
 
-      sample code
+       TmqClient client = new TmqClient();
+       client.Connect("tmq://somehere:12345");
+       bool created = await client.CreateQueue("channel-name", 123, true, o =>
+       {
+           o.Status = MessagingQueueStatus.Push;
+           o.UseMessageId = true;
+       });
+
+Third parameter as **true** means, after the message is sent, client will wait the response from the server. If returns true, you can be sure the queue is created and verified by server. If **false**, created will be true if the message send operation completed successfully over network. Server might reject queue creation due to some reasons authorization, duplicate, channel not found etc.
