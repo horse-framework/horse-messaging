@@ -1,5 +1,7 @@
+using System;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Twino.Core
@@ -11,6 +13,13 @@ namespace Twino.Core
 
     public abstract class ClientSocketBase<TMessage> : SocketBase
     {
+        #region Properties
+
+        /// <summary>
+        /// Maximum time to wait response message
+        /// </summary>
+        public TimeSpan PingInterval { get; set; } = TimeSpan.FromSeconds(60);
+
         /// <summary>
         /// Client certificate for SSL client connections.
         /// If null, Twino uses default certificate.
@@ -27,6 +36,75 @@ namespace Twino.Core
         /// </summary>
         public event ClientMessageHandler<TMessage> MessageReceived;
 
+        /// <summary>
+        /// If client is working on passive mode,
+        /// we will need to send ping messages to recognize if it's disconnected or just server is not sending messages
+        /// </summary>
+        private Timer _pingTimer;
+
+        //if we are receiving messages recently, ping will not be required 
+        private DateTime _lastAliveDate = DateTime.UtcNow;
+
+        #endregion
+
+        #region Keep Alive
+
+        /// <summary>
+        /// Creates new ping timer
+        /// </summary>
+        private void CreatePingTimer()
+        {
+            if (_pingTimer != null)
+                DestroyPingTimer();
+
+            _pingTimer = new Timer(s =>
+            {
+                if (!IsConnected)
+                {
+                    DestroyPingTimer();
+                    return;
+                }
+
+                if (DateTime.UtcNow - _lastAliveDate > PingInterval)
+                {
+                    _lastAliveDate = DateTime.UtcNow;
+                    Ping();
+                }
+            }, null, 5000, 5000);
+        }
+
+        /// <summary>
+        /// Destroyes ping timer and releases all sources
+        /// </summary>
+        private void DestroyPingTimer()
+        {
+            if (_pingTimer == null)
+                return;
+
+            _pingTimer.Dispose();
+            _pingTimer = null;
+        }
+
+        /// <summary>
+        /// Updates alive status of connection to prevent unnecessary ping/pong messages
+        /// </summary>
+        protected void SetAlive()
+        {
+            _lastAliveDate = DateTime.UtcNow;
+        }
+
+        protected override void OnConnected()
+        {
+            CreatePingTimer();
+            _lastAliveDate = DateTime.UtcNow;
+
+            base.OnConnected();
+        }
+
+        #endregion
+
+        #region Connect
+        
         /// <summary>
         /// Connects to specified url.
         /// Url can be like;
@@ -109,6 +187,8 @@ namespace Twino.Core
         /// </summary>
         public abstract Task ConnectAsync(DnsInfo host);
 
+        #endregion
+        
         /// <summary>
         /// Starts to read from the TCP socket
         /// </summary>
@@ -127,6 +207,7 @@ namespace Twino.Core
         /// </summary>
         protected void SetOnMessageReceived(TMessage message)
         {
+            SetAlive();
             MessageReceived?.Invoke(this, message);
         }
     }

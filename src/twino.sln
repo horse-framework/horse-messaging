@@ -57,8 +57,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Ioc", "Tests\Test.Ioc\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Extensions.Data", "Twino.Extensions.Data\Twino.Extensions.Data.csproj", "{0031281F-ABD5-4905-92CE-E7688732FF84}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Mvc.Explorer", "Twino.Mvc.Explorer\Twino.Mvc.Explorer.csproj", "{F81B7E4F-F061-4B9B-9BFF-AF20954929A9}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Extensions.Http", "Twino.Extensions.Http\Twino.Extensions.Http.csproj", "{972D19A9-019E-4EDA-A8D0-18808E737838}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.MQ", "Twino.MQ\Twino.MQ.csproj", "{CFB19F80-FBC0-4999-BD95-44CF0B916B86}"
@@ -175,10 +173,6 @@ Global
 		{0031281F-ABD5-4905-92CE-E7688732FF84}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0031281F-ABD5-4905-92CE-E7688732FF84}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0031281F-ABD5-4905-92CE-E7688732FF84}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F81B7E4F-F061-4B9B-9BFF-AF20954929A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F81B7E4F-F061-4B9B-9BFF-AF20954929A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F81B7E4F-F061-4B9B-9BFF-AF20954929A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F81B7E4F-F061-4B9B-9BFF-AF20954929A9}.Release|Any CPU.Build.0 = Release|Any CPU
 		{972D19A9-019E-4EDA-A8D0-18808E737838}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{972D19A9-019E-4EDA-A8D0-18808E737838}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{972D19A9-019E-4EDA-A8D0-18808E737838}.Release|Any CPU.ActiveCfg = Release|Any CPU

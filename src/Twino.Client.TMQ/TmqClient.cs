@@ -360,6 +360,9 @@ namespace Twino.Client.TMQ
                     Disconnect();
                     break;
 
+                case MessageType.Pong:
+                    break;
+
                 case MessageType.Ping:
                     Pong();
                     break;

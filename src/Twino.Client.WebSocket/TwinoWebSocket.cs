@@ -252,6 +252,9 @@ namespace Twino.Client.WebSocket
                     Disconnect();
                     break;
 
+                case SocketOpCode.Pong:
+                    break;
+
                 case SocketOpCode.Ping:
                     Pong();
                     break;
