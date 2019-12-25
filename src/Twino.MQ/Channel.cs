@@ -195,6 +195,18 @@ namespace Twino.MQ
         /// <summary>
         /// Removes a queue from the channel
         /// </summary>
+        public async Task RemoveQueue(ushort queueId)
+        {
+            ChannelQueue queue = FindQueue(queueId);
+            if (queue == null)
+                return;
+
+            await RemoveQueue(queue);
+        }
+
+        /// <summary>
+        /// Removes a queue from the channel
+        /// </summary>
         public async Task RemoveQueue(ChannelQueue queue)
         {
             _queues.Remove(queue);
