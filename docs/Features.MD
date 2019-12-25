@@ -27,8 +27,10 @@ All Twino Features are listed below.
 * Each channel supports 65k queues
 * Loading channels from JSON file
 * Loading channels programmatically
-* Adding and removing channels runtine
-* Adding and removing queues runtime
+* Adding and removing channels at runtine
+* Adding and removing queues at runtime
+* Changing queue statuses and workflows at runtime
+* Adding, removing and updating channel and queue remotely
 * Client based authentication
 * Channel based authentication
 * Client based authorization; create channel and queue, send message to queue, send message to other client, pull from queue
