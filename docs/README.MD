@@ -21,7 +21,8 @@ If you can't find an article you wish to read, please create an issue about it.
 * [Create Server with Options using ServerBuilder](https://github.com/mhelvacikoylu/twino/blob/v2/docs/mq/ServerBuilder.MD)
 * [Channel Queue Statuses](https://github.com/mhelvacikoylu/twino/blob/v2/docs/mq/Queue%20Statuses.MD)
 * [Creating Channels and Queues](https://github.com/mhelvacikoylu/twino/blob/v2/docs/mq/QueueCreation.MD)
-* Removing Channels and Queues
+* [Changing Queue Options](https://github.com/mhelvacikoylu/twino/blob/v2/docs/mq/QueueUpdate.MD)
+* [Removing Channels and Queues](https://github.com/mhelvacikoylu/twino/blob/v2/docs/mq/QueueRemoving.MD)
 * Pushing messages to Queues
 * Sending Messages to Clients
 * Requests and Responses over Messaging Queue Server
