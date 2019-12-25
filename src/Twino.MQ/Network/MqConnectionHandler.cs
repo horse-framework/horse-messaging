@@ -213,6 +213,11 @@ namespace Twino.MQ.Network
                     await _serverHandler.Handle(mc, message);
                     break;
 
+                //if client sends a ping message, response with pong
+                case MessageType.Ping:
+                    await mc.SendAsync(PredefinedMessages.PONG);
+                    break;
+
                 //client sends PONG message
                 case MessageType.Pong:
                     info.PongReceived();

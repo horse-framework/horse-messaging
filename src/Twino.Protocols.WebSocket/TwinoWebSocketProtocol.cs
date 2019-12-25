@@ -161,10 +161,17 @@ namespace Twino.Protocols.WebSocket
 
                     break;
 
+                //close the connection if terminate requested
                 case SocketOpCode.Terminate:
                     info.Close();
                     break;
+                
+                //if client sends a ping message, response with pong
+                case SocketOpCode.Ping:
+                    await socket.SendAsync(PredefinedMessages.PONG);
+                    break;
 
+                //client sent response pong to ping message
                 case SocketOpCode.Pong:
                     info.PongReceived();
                     break;
