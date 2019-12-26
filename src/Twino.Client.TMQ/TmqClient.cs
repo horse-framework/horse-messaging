@@ -431,6 +431,45 @@ namespace Twino.Client.TMQ
         }
 
         /// <summary>
+        /// Sends a json object message
+        /// </summary>
+        public bool SendJson(string target, ushort contentType, object model)
+        {
+            TmqMessage msg = new TmqMessage();
+            msg.Target = target;
+            msg.ContentType = contentType;
+            msg.SetJsonContent(model).Wait();
+
+            return Send(msg);
+        }
+
+        /// <summary>
+        /// Sends a string message
+        /// </summary>
+        public bool Send(string target, ushort contentType, string message)
+        {
+            TmqMessage msg = new TmqMessage();
+            msg.Target = target;
+            msg.ContentType = contentType;
+            msg.SetStringContent(message);
+
+            return Send(msg);
+        }
+
+        /// <summary>
+        /// Sends a memory stream message
+        /// </summary>
+        public bool Send(string target, ushort contentType, MemoryStream content)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Target = target;
+            message.ContentType = contentType;
+            message.Content = content;
+
+            return Send(message);
+        }
+
+        /// <summary>
         /// Sends a TMQ message
         /// </summary>
         public async Task<bool> SendAsync(TmqMessage message)
@@ -445,38 +484,6 @@ namespace Twino.Client.TMQ
             byte[] data = await _writer.Create(message);
             return await SendAsync(data);
         }
-
-        /// <summary>
-        /// Sends the message and waits for response
-        /// </summary>
-        public async Task<TmqMessage> Request(TmqMessage message)
-        {
-            message.ResponseRequired = true;
-            message.AcknowledgeRequired = false;
-            message.MessageId = UniqueIdGenerator.Create();
-
-            bool sent = await SendAsync(message);
-            if (!sent)
-                return null;
-
-            return await _follower.FollowResponse(message);
-        }
-
-        /// <summary>
-        /// Sends acknowledge message for the message
-        /// </summary>
-        public async Task<bool> Acknowledge(TmqMessage message)
-        {
-            if (!message.AcknowledgeRequired)
-                return false;
-
-            TmqMessage ack = message.CreateAcknowledge();
-            return await SendAsync(ack);
-        }
-
-        #endregion
-
-        #region MQ Operations
 
         /// <summary>
         /// Sends a TMQ message and waits for acknowledge
@@ -497,38 +504,173 @@ namespace Twino.Client.TMQ
         }
 
         /// <summary>
-        /// Joins to a channel
+        /// Sends a json object message
         /// </summary>
-        public async Task<bool> Join(string channel, bool verifyResponse)
+        public async Task<bool> SendJsonAsync(string target, ushort contentType, object model, bool waitAcknowledge)
         {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.Join;
-            message.Target = channel;
-            message.ResponseRequired = verifyResponse;
+            TmqMessage msg = new TmqMessage();
+            msg.Target = target;
+            msg.ContentType = contentType;
+            await msg.SetJsonContent(model);
 
-            if (verifyResponse)
-                message.MessageId = UniqueIdGenerator.Create();
+            if (waitAcknowledge)
+                return await SendWithAcknowledge(msg);
 
-            return await WaitResponseOk(message, verifyResponse);
+            return await SendAsync(msg);
         }
 
         /// <summary>
-        /// Leaves from a channel
+        /// Sends a string message
         /// </summary>
-        public async Task<bool> Leave(string channel, bool verifyResponse)
+        public async Task<bool> SendAsync(string target, ushort contentType, string message, bool waitAcknowledge)
+        {
+            TmqMessage msg = new TmqMessage();
+            msg.Target = target;
+            msg.ContentType = contentType;
+            msg.SetStringContent(message);
+
+            if (waitAcknowledge)
+                return await SendWithAcknowledge(msg);
+
+            return await SendAsync(msg);
+        }
+
+        /// <summary>
+        /// Sends a memory stream message
+        /// </summary>
+        public async Task<bool> SendAsync(string target, ushort contentType, MemoryStream content, bool waitAcknowledge)
         {
             TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.Leave;
-            message.Target = channel;
-            message.ResponseRequired = verifyResponse;
+            message.Target = target;
+            message.ContentType = contentType;
+            message.Content = content;
+
+            if (waitAcknowledge)
+                return await SendWithAcknowledge(message);
+
+            return await SendAsync(message);
+        }
+
+        #endregion
+
+        #region Acknowledge - Response
+
+        /// <summary>
+        /// Sends acknowledge message for the message
+        /// </summary>
+        public async Task<bool> Acknowledge(TmqMessage message)
+        {
+            if (!message.AcknowledgeRequired)
+                return false;
+
+            TmqMessage ack = message.CreateAcknowledge();
+            return await SendAsync(ack);
+        }
+
+        /// <summary>
+        /// Sends message.
+        /// if verify requires, waits response and checkes status code of the response.
+        /// returns true if Ok.
+        /// </summary>
+        private async Task<bool> WaitResponseOk(TmqMessage message, bool verifyResponse)
+        {
+            Task<TmqMessage> task = null;
+            if (verifyResponse)
+                task = _follower.FollowResponse(message);
+
+            bool sent = await SendAsync(message);
+            if (!sent)
+                return false;
 
             if (verifyResponse)
-                message.MessageId = UniqueIdGenerator.Create();
+            {
+                TmqMessage response = await task;
+                return response != null && response.ContentType == KnownContentTypes.Ok;
+            }
 
-            return await WaitResponseOk(message, verifyResponse);
+            return true;
         }
+
+        /// <summary>
+        /// Sends message.
+        /// if acknowledge is pending, waits for acknowledge.
+        /// returns true if received.
+        /// </summary>
+        private async Task<bool> WaitForAcknowledge(TmqMessage message, bool waitAcknowledge)
+        {
+            Task<bool> task = null;
+            if (waitAcknowledge)
+                task = _follower.FollowAcknowledge(message);
+
+            bool sent = await SendAsync(message);
+            if (!waitAcknowledge || !sent)
+                return sent;
+
+            return await task;
+        }
+
+        #endregion
+
+        #region Request
+
+        /// <summary>
+        /// Sends a request to target with a JSON model, waits response
+        /// </summary>
+        public async Task<TmqMessage> RequestJson(string target, ushort contentType, object model)
+        {
+            TmqMessage message = new TmqMessage(MessageType.Client);
+            message.Target = target;
+            message.ContentType = contentType;
+            await message.SetJsonContent(model);
+
+            return await Request(message);
+        }
+
+        /// <summary>
+        /// Sends a request to target, waits response
+        /// </summary>
+        public async Task<TmqMessage> Request(string target, ushort contentType, MemoryStream content)
+        {
+            TmqMessage message = new TmqMessage(MessageType.Client);
+            message.Target = target;
+            message.Content = content;
+            message.ContentType = contentType;
+
+            return await Request(message);
+        }
+
+        /// <summary>
+        /// Sends a request to target, waits response
+        /// </summary>
+        public async Task<TmqMessage> Request(string target, ushort contentType, string content)
+        {
+            TmqMessage message = new TmqMessage(MessageType.Client);
+            message.Target = target;
+            message.ContentType = contentType;
+            message.SetStringContent(content);
+
+            return await Request(message);
+        }
+
+        /// <summary>
+        /// Sends the message and waits for response
+        /// </summary>
+        public async Task<TmqMessage> Request(TmqMessage message)
+        {
+            message.ResponseRequired = true;
+            message.AcknowledgeRequired = false;
+            message.MessageId = UniqueIdGenerator.Create();
+
+            bool sent = await SendAsync(message);
+            if (!sent)
+                return null;
+
+            return await _follower.FollowResponse(message);
+        }
+
+        #endregion
+
+        #region Push
 
         /// <summary>
         /// Pushes a message to a queue
@@ -575,6 +717,63 @@ namespace Twino.Client.TMQ
             return await WaitForAcknowledge(message, waitAcknowledge);
         }
 
+        #endregion
+
+        #region Pull
+
+        /// <summary>
+        /// Request a message from Pull queue
+        /// </summary>
+        public async Task<bool> Pull(string channel, ushort queueId)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Channel;
+            message.ResponseRequired = true;
+            message.ContentType = queueId;
+            message.Target = channel;
+
+            bool sent = await SendAsync(message);
+            return sent;
+        }
+
+        #endregion
+
+        #region Channel
+
+        /// <summary>
+        /// Joins to a channel
+        /// </summary>
+        public async Task<bool> Join(string channel, bool verifyResponse)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ContentType = KnownContentTypes.Join;
+            message.Target = channel;
+            message.ResponseRequired = verifyResponse;
+
+            if (verifyResponse)
+                message.MessageId = UniqueIdGenerator.Create();
+
+            return await WaitResponseOk(message, verifyResponse);
+        }
+
+        /// <summary>
+        /// Leaves from a channel
+        /// </summary>
+        public async Task<bool> Leave(string channel, bool verifyResponse)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ContentType = KnownContentTypes.Leave;
+            message.Target = channel;
+            message.ResponseRequired = verifyResponse;
+
+            if (verifyResponse)
+                message.MessageId = UniqueIdGenerator.Create();
+
+            return await WaitResponseOk(message, verifyResponse);
+        }
+
         /// <summary>
         /// Creates a new channel without any queue
         /// </summary>
@@ -608,6 +807,10 @@ namespace Twino.Client.TMQ
 
             return await WaitResponseOk(message, verifyResponse);
         }
+
+        #endregion
+
+        #region Queue
 
         /// <summary>
         /// Creates new queue in server
@@ -670,63 +873,6 @@ namespace Twino.Client.TMQ
             message.Content = new MemoryStream(Encoding.UTF8.GetBytes(options.Serialize(queueId)));
 
             return await WaitResponseOk(message, true);
-        }
-
-        /// <summary>
-        /// Sends message.
-        /// if verify requires, waits response and checkes status code of the response.
-        /// returns true if Ok.
-        /// </summary>
-        private async Task<bool> WaitResponseOk(TmqMessage message, bool verifyResponse)
-        {
-            Task<TmqMessage> task = null;
-            if (verifyResponse)
-                task = _follower.FollowResponse(message);
-
-            bool sent = await SendAsync(message);
-            if (!sent)
-                return false;
-
-            if (verifyResponse)
-            {
-                TmqMessage response = await task;
-                return response != null && response.ContentType == KnownContentTypes.Ok;
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// Sends message.
-        /// if acknowledge is pending, waits for acknowledge.
-        /// returns true if received.
-        /// </summary>
-        private async Task<bool> WaitForAcknowledge(TmqMessage message, bool waitAcknowledge)
-        {
-            Task<bool> task = null;
-            if (waitAcknowledge)
-                task = _follower.FollowAcknowledge(message);
-
-            bool sent = await SendAsync(message);
-            if (!waitAcknowledge || !sent)
-                return sent;
-
-            return await task;
-        }
-
-        /// <summary>
-        /// Request a message from Pull queue
-        /// </summary>
-        public async Task<bool> Pull(string channel, ushort queueId)
-        {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Channel;
-            message.ResponseRequired = true;
-            message.ContentType = queueId;
-            message.Target = channel;
-
-            bool sent = await SendAsync(message);
-            return sent;
         }
 
         #endregion
