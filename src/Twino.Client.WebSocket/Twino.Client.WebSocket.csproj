@@ -6,9 +6,9 @@
         <Product>Twino.Client.WebSocket</Product>
         <Description>Twino WebSocket Client to connect all WebSocket servers</Description>
         <PackageTags>twino,websocket,client</PackageTags>
-        <AssemblyVersion>2.1.6</AssemblyVersion>
-        <FileVersion>2.1.6</FileVersion>
-        <PackageVersion>2.1.6</PackageVersion>
+        <AssemblyVersion>2.1.8</AssemblyVersion>
+        <FileVersion>2.1.8</FileVersion>
+        <PackageVersion>2.1.8</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü</Authors>
         <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
