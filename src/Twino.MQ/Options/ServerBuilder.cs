@@ -84,7 +84,7 @@ namespace Twino.MQ.Options
                 else
                     channelOptions = options;
 
-                Channel channel = server.CreateChannel(ctoken.Name, channelOptions, _channelAuthenticator, _channelEventHandler, _messageDeliveryHandler);
+                Channel channel = server.CreateChannel(ctoken.Name, _channelAuthenticator, _channelEventHandler, _messageDeliveryHandler, channelOptions);
 
                 JObject queueToken = ctoken.Value["Queues"] as JObject;
                 if (queueToken == null)

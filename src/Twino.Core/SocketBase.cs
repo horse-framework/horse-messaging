@@ -72,10 +72,16 @@ namespace Twino.Core
         /// </summary>
         public event SocketStatusHandler Disconnected;
 
+        /// <summary>
+        /// Last message received or sent date.
+        /// Used for preventing unnecessary ping/pong traffic
+        /// </summary>
+        public DateTime LastAliveDate { get; protected set; } = DateTime.UtcNow;
+
         #endregion
 
         #region Constructors
-        
+
         protected SocketBase()
         {
             PongTime = DateTime.UtcNow.AddSeconds(15);
@@ -88,7 +94,7 @@ namespace Twino.Core
             IsConnected = true;
             Stream = info.GetStream();
         }
-        
+
         #endregion
 
         #region Methods
@@ -136,6 +142,7 @@ namespace Twino.Core
                 if (Stream == null || data == null)
                     return false;
 
+                LastAliveDate = DateTime.UtcNow;
                 await Stream.WriteAsync(data);
                 return true;
             }
@@ -156,6 +163,8 @@ namespace Twino.Core
                 if (Stream == null || data == null)
                     return false;
 
+                LastAliveDate = DateTime.UtcNow;
+                
                 if (IsSsl)
                 {
                     lock (Stream)
@@ -190,20 +199,18 @@ namespace Twino.Core
         /// </summary>
         private void SendQueue(byte[] data)
         {
-            SpinWait wait = new SpinWait();
             DateTime until = DateTime.UtcNow.AddSeconds(5);
-
-            Task.Factory.StartNew(() =>
+            ThreadPool.UnsafeQueueUserWorkItem(async (s) =>
             {
                 while (!_writeCompleted)
                 {
-                    wait.SpinOnce();
+                    await Task.Delay(1);
                     if (DateTime.UtcNow > until)
                         return;
                 }
 
                 Send(data);
-            });
+            }, "", false);
         }
 
         #endregion

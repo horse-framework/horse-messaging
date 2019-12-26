@@ -42,9 +42,6 @@ namespace Twino.Core
         /// </summary>
         private Timer _pingTimer;
 
-        //if we are receiving messages recently, ping will not be required 
-        private DateTime _lastAliveDate = DateTime.UtcNow;
-
         #endregion
 
         #region Keep Alive
@@ -65,9 +62,9 @@ namespace Twino.Core
                     return;
                 }
 
-                if (DateTime.UtcNow - _lastAliveDate > PingInterval)
+                if (DateTime.UtcNow - LastAliveDate > PingInterval)
                 {
-                    _lastAliveDate = DateTime.UtcNow;
+                    LastAliveDate = DateTime.UtcNow;
                     Ping();
                 }
             }, null, 5000, 5000);
@@ -85,18 +82,10 @@ namespace Twino.Core
             _pingTimer = null;
         }
 
-        /// <summary>
-        /// Updates alive status of connection to prevent unnecessary ping/pong messages
-        /// </summary>
-        protected void SetAlive()
-        {
-            _lastAliveDate = DateTime.UtcNow;
-        }
-
         protected override void OnConnected()
         {
             CreatePingTimer();
-            _lastAliveDate = DateTime.UtcNow;
+            LastAliveDate = DateTime.UtcNow;
 
             base.OnConnected();
         }
@@ -104,7 +93,7 @@ namespace Twino.Core
         #endregion
 
         #region Connect
-        
+
         /// <summary>
         /// Connects to specified url.
         /// Url can be like;
@@ -188,7 +177,7 @@ namespace Twino.Core
         public abstract Task ConnectAsync(DnsInfo host);
 
         #endregion
-        
+
         /// <summary>
         /// Starts to read from the TCP socket
         /// </summary>
@@ -207,7 +196,7 @@ namespace Twino.Core
         /// </summary>
         protected void SetOnMessageReceived(TMessage message)
         {
-            SetAlive();
+            LastAliveDate = DateTime.UtcNow;
             MessageReceived?.Invoke(this, message);
         }
     }

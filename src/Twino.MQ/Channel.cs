@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -129,12 +130,21 @@ namespace Twino.MQ
         /// </summary>
         public async Task<ChannelQueue> CreateQueue(ushort queueId)
         {
-            ChannelQueueOptions options = Options.Clone() as ChannelQueueOptions;
+            ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(Options);
             return await CreateQueue(queueId,
                                      options,
                                      Server.DefaultDeliveryHandler);
         }
 
+        /// <summary>
+        /// Creates new queue in the channel with default handlers
+        /// </summary>
+        public async Task<ChannelQueue> CreateQueue(ushort queueId, Action<ChannelQueueOptions> optionsAction)
+        {
+            ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(Options);
+            optionsAction(options);
+            return await CreateQueue(queueId, options);
+        }
 
         /// <summary>
         /// Creates new queue in the channel with default handlers
@@ -180,6 +190,18 @@ namespace Twino.MQ
                 await EventHandler.OnQueueCreated(queue, this);
 
             return queue;
+        }
+
+        /// <summary>
+        /// Removes a queue from the channel
+        /// </summary>
+        public async Task RemoveQueue(ushort queueId)
+        {
+            ChannelQueue queue = FindQueue(queueId);
+            if (queue == null)
+                return;
+
+            await RemoveQueue(queue);
         }
 
         /// <summary>

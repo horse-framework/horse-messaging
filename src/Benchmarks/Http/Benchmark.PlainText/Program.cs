@@ -25,7 +25,7 @@ namespace Benchmark.PlainText
                 await Task.CompletedTask;
             }, HttpOptions.CreateDefault());
 
-            server.Start();
+            server.Start(5000);
             server.BlockWhileRunning();
         }
     }
