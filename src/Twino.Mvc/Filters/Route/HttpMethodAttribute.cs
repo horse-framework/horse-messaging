@@ -7,7 +7,7 @@ namespace Twino.Mvc.Filters.Route
     /// For other HTTP methods (if Twino MVC does not have the specified method attribute)
     /// You can use this method and pass the upper-case string method value to method parameter in constructor.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Method)]
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
     public class HttpMethodAttribute : Attribute
     {
         /// <summary>

@@ -32,6 +32,7 @@ namespace Playground
     public class HomeController : TwinoController
     {
         [HttpGet]
+        [HttpGet("a")]
         public IActionResult Index()
         {
             return String("Hello, World!");
@@ -46,7 +47,7 @@ namespace Playground
             
             TwinoMvc mvc = new TwinoMvc();
             mvc.Init();
-            
+            mvc.IsDevelopment = true;
             server.UseMvc(mvc);
 
             server.Start(80);
