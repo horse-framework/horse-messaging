@@ -156,6 +156,22 @@ Here is the list of properties server options has and channel options does not h
       </td>
     </tr>
     <tr>
+      <td>AutoChannelCreation</td>
+      <td>
+        If true, channel will be created automatically with default options
+        when a client tries to subscribe or push a message to not existing channel.
+        Default is false.
+      </td>
+    </tr>
+    <tr>
+      <td>AutoQueueCreation</td>
+      <td>
+        If true, queue will be created automatically with default options
+        when a client tries to subscribe or push a message to not existing queue.
+        Default is false.
+      </td>
+    </tr>
+    <tr>
       <td>Instances</td>
       <td>
         Other server instances. For distributed systems, you may want to create multiple queue servers that work together.
