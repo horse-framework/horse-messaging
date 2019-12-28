@@ -62,7 +62,7 @@ namespace Twino.MQ.Network
                         return;
                 }
 
-                await queue.Pull(channelClient);
+                await queue.Pull(channelClient, message);
             }
 
             //message have a content, this is the real message from producer to the queue

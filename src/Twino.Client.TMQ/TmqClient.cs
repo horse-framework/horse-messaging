@@ -724,16 +724,25 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Request a message from Pull queue
         /// </summary>
-        public async Task<bool> Pull(string channel, ushort queueId)
+        public async Task<TmqMessage> Pull(string channel, ushort queueId)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Channel;
             message.ResponseRequired = true;
             message.ContentType = queueId;
             message.Target = channel;
+            message.MessageId = UniqueIdGenerator.Create();
 
+            Task<TmqMessage> task = _follower.FollowResponse(message);
             bool sent = await SendAsync(message);
-            return sent;
+            if (!sent)
+                return null;
+
+            TmqMessage response = await task;
+            if (response.Content == null || response.Length == 0 || response.Content.Length == 0)
+                return null;
+
+            return response;
         }
 
         #endregion

@@ -5,6 +5,7 @@ using Test.Mq.Models;
 using Twino.Client.TMQ;
 using Twino.MQ;
 using Twino.MQ.Queues;
+using Twino.Protocols.TMQ;
 using Xunit;
 
 namespace Test.Mq
@@ -19,12 +20,10 @@ namespace Test.Mq
             server.Initialize(port);
             server.Start(300, 300);
 
-            bool msgReceived = false;
             TmqClient consumer = new TmqClient();
             consumer.ClientId = "consumer";
             await consumer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
-            consumer.MessageReceived += (c, m) => msgReceived = true;
             bool joined = await consumer.Join("ch-pull", true);
             Assert.True(joined);
 
@@ -40,18 +39,12 @@ namespace Test.Mq
             Assert.NotNull(channel);
             Assert.NotNull(queue);
             Assert.Single(queue.RegularMessages);
-            Assert.False(msgReceived);
 
-            bool requested = await consumer.Pull("ch-pull", MessageA.ContentType);
-            Assert.True(requested);
-            await Task.Delay(200);
-            Assert.True(msgReceived);
-
-            msgReceived = false;
-            requested = await consumer.Pull("ch-pull", MessageA.ContentType);
-            Assert.True(requested);
-            await Task.Delay(200);
-            Assert.False(msgReceived);
+            TmqMessage pull1 = await consumer.Pull("ch-pull", MessageA.ContentType);
+            Assert.NotNull(pull1);
+            
+            TmqMessage pull2 = await consumer.Pull("ch-pull", MessageA.ContentType);
+            Assert.Null(pull2);
         }
 
         [Fact]
@@ -93,12 +86,8 @@ namespace Test.Mq
             Assert.False(msgReceived);
             Assert.Single(queue.RegularMessages);
 
-            bool requested = await consumer.Pull("ch-pull", MessageA.ContentType);
-            Assert.True(requested);
-            await Task.Delay(200);
-            Assert.True(msgReceived);
-            Assert.True(taskAck.IsCompleted);
-            Assert.True(taskAck.Result);
+            TmqMessage pull = await consumer.Pull("ch-pull", MessageA.ContentType);
+            Assert.NotNull(pull);
         }
     }
 }
