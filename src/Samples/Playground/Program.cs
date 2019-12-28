@@ -46,7 +46,7 @@ namespace Playground
             TwinoMvc mvc = new TwinoMvc();
             mvc.Init();
             
-            server.UseMvc(mvc, HttpOptions.CreateDefault());
+            server.UseMvc(mvc);
 
             server.Start(80);
             server.BlockWhileRunning();
