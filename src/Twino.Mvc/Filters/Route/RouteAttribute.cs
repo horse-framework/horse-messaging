@@ -5,7 +5,7 @@ namespace Twino.Mvc.Filters.Route
     /// <summary>
     /// Route attribute for the controller classes.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class)]
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
     public sealed class RouteAttribute : Attribute
     {
         /// <summary>

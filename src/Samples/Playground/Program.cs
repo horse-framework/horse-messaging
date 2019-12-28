@@ -27,7 +27,8 @@ using Xunit;
 
 namespace Playground
 {
-    [Route]
+    [Route("")]
+    [Route("home")]
     public class HomeController : TwinoController
     {
         [HttpGet]
