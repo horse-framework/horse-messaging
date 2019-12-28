@@ -16,7 +16,7 @@ If you can't find an article you wish to read, please create an issue about it.
 #### Twino HTTP with MVC
 
 * [Introducing to Twino HTTP](https://github.com/mhelvacikoylu/twino/blob/v2/docs/http/IntroduceHttp.MD)
-* HTTP Options
+* [HTTP Options](https://github.com/mhelvacikoylu/twino/blob/v2/docs/http/HttpOptions.MD)
 * HttpRequest and HttpResponse objects
 * Introducing to Twino Mvc
 * Policy Management in Twino Mvc
