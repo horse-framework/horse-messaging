@@ -754,7 +754,7 @@ namespace Twino.Client.TMQ
             if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
                 return default;
 
-            return await System.Text.Json.JsonSerializer.DeserializeAsync<TModel>(response.Content);
+            return await response.GetJsonContent<TModel>();
         }
 
         #endregion
