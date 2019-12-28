@@ -26,7 +26,7 @@ In a single application with single framework, you can have TCP Server, HTTP Ser
 
 See **[All Twino NuGet Packages](https://github.com/mhelvacikoylu/twino/blob/v2/docs/Packages.MD)**
 
-**Go to [Documentation Home Page](https://github.com/mhelvacikoylu/twino/blob/v2/docs/README.MD)**
+**Go to [Documentation Home Page](https://github.com/mhelvacikoylu/twino/tree/v2/docs)**
 
 ### Basic WebSocket Server Example
 
