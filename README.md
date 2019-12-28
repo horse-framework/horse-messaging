@@ -16,7 +16,7 @@ In a single application with single framework, you can have TCP Server, HTTP Ser
 
 - High performance (in many cases, nearly as fast as kestrel)
 - Twino MQ is not a executable messaging queue server. It's a framework and you can create your own MQ server with a few interface implementations.
-- MQ Protocol supports various message types. It's not a queue server, supports peer to peer messaging, request responsing and more
+- MQ Protocol supports various message types. It's not just a queue server, it supports peer to peer messaging, request responsing and more.
 - Twino has high scalable advanced websocket server with amazing client management.
 - Multiple protocols can be used on same project, same port, same host.
 - Twino.Mvc has nearly all features ASP.NET MVC has, and you write nearly same code.
