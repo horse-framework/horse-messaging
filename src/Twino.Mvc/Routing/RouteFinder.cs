@@ -85,6 +85,9 @@ namespace Twino.Mvc.Routing
                 //we need to check each part of the path
                 for (int i = 0; i < route.Path.Length; i++)
                 {
+                    if (i >= parts.Length)
+                        break;
+                    
                     RoutePath route_part = route.Path[i];
 
                     //if type is optional parameter we dont need to check if equals

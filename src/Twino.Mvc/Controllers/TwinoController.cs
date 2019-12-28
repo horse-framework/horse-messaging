@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Ioc;
+using Twino.Mvc.Filters;
 using Twino.Protocols.Http;
 
 namespace Twino.Mvc.Controllers
@@ -278,6 +279,30 @@ namespace Twino.Mvc.Controllers
             return await JsonAsync(model, HttpStatusCode.NotImplemented);
         }
 
+        #endregion
+        
+        #region Execution Events
+
+        protected virtual Task OnActionExecuting(ActionDescriptor descriptor, FilterContext context)
+        {
+            return Task.CompletedTask;
+        }
+
+        protected virtual Task OnActionExecuted(ActionDescriptor descriptor, FilterContext context, IActionResult result)
+        {
+            return Task.CompletedTask;
+        }
+
+        internal async Task CallActionExecuting(ActionDescriptor descriptor, FilterContext context)
+        {
+            await OnActionExecuting(descriptor, context);
+        }
+
+        internal async Task CallActionExecuted(ActionDescriptor descriptor, FilterContext context, IActionResult result)
+        {
+            await OnActionExecuted(descriptor, context, result);
+        }
+        
         #endregion
     }
 }

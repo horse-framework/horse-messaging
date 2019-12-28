@@ -5,7 +5,7 @@ namespace Twino.Mvc.Filters.Route
     /// <summary>
     /// Attribute for action methods routed with HTTP POST method
     /// </summary>
-    [AttributeUsage(AttributeTargets.Method)]
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
     public class HttpPostAttribute : HttpMethodAttribute
     {
 

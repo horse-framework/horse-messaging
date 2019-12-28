@@ -5,7 +5,7 @@ namespace Twino.Mvc.Filters.Route
     /// <summary>
     /// Attribute for action methods routed with HTTP GET method
     /// </summary>
-    [AttributeUsage(AttributeTargets.Method)]
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
     public class HttpGetAttribute : HttpMethodAttribute
     {
 

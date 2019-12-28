@@ -220,8 +220,15 @@ namespace Twino.Mvc
             if (!CallFilters(response, context, actionFilters, filter => filter.Before(controller, descriptor, context)))
                 return;
 
+            await controller.CallActionExecuting(descriptor, context);
+            if (context.Result != null)
+            {
+                WriteResponse(response, context.Result);
+                return;
+            }
+
             //execute action
-            void Action(IActionResult actionResult)
+            async Task Action(IActionResult actionResult)
             {
                 if (actionResult == null) return;
 
@@ -233,6 +240,8 @@ namespace Twino.Mvc
 
                 //call AfterAction methods of controller attributes
                 CallFilters(response, context, controllerFilters, filter => filter.AfterAction(controller, descriptor, actionResult, context), true);
+                
+                await controller.CallActionExecuted(descriptor, context, actionResult);
 
                 WriteResponse(response, actionResult);
             }
@@ -241,12 +250,12 @@ namespace Twino.Mvc
             if (a == null)
             {
                 TaskCompletionSource<bool> source = new TaskCompletionSource<bool>();
-                ThreadPool.QueueUserWorkItem(t =>
+                ThreadPool.QueueUserWorkItem(async t =>
                 {
                     try
                     {
                         IActionResult ar = (IActionResult) match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray());
-                        Action(ar);
+                        await Action(ar);
                         source.SetResult(true);
                     }
                     catch (Exception e)
@@ -261,7 +270,7 @@ namespace Twino.Mvc
             {
                 Task<IActionResult> task = (Task<IActionResult>) match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray());
                 await task;
-                Action(task.Result);
+                await Action(task.Result);
             }
         }
 
