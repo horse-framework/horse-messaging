@@ -745,6 +745,18 @@ namespace Twino.Client.TMQ
             return response;
         }
 
+        /// <summary>
+        /// Request a message from Pull queue
+        /// </summary>
+        public async Task<TModel> PullJson<TModel>(string channel, ushort queueId)
+        {
+            TmqMessage response = await Pull(channel, queueId);
+            if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
+                return default;
+
+            return await System.Text.Json.JsonSerializer.DeserializeAsync<TModel>(response.Content);
+        }
+
         #endregion
 
         #region Channel

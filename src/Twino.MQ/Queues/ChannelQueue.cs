@@ -577,7 +577,7 @@ namespace Twino.MQ.Queues
                 message.IsSkipped = true;
                 message.Decision = await DeliveryHandler.EndSend(this, message);
 
-                if (Status == QueueStatus.Push || Status == QueueStatus.Pull || Status == QueueStatus.RoundRobin && message.Decision.KeepMessage)
+                if (Status == QueueStatus.Push || Status == QueueStatus.RoundRobin && message.Decision.KeepMessage)
                     PutMessageBack(message);
                 else
                 {
@@ -604,7 +604,7 @@ namespace Twino.MQ.Queues
                 message.Decision = await DeliveryHandler.EndSend(this, message);
                 await ApplyDecision(message.Decision, message);
 
-                if (Status == QueueStatus.Push || Status == QueueStatus.Pull || Status == QueueStatus.RoundRobin && message.Decision.KeepMessage)
+                if (Status == QueueStatus.Push || Status == QueueStatus.RoundRobin && message.Decision.KeepMessage)
                     PutMessageBack(message);
                 else
                 {
