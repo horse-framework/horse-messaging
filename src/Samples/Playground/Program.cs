@@ -16,6 +16,9 @@ using Twino.MQ;
 using Twino.MQ.Clients;
 using Twino.MQ.Delivery;
 using Twino.MQ.Queues;
+using Twino.Mvc;
+using Twino.Mvc.Controllers;
+using Twino.Mvc.Filters.Route;
 using Twino.Protocols.Http;
 using Twino.Protocols.TMQ;
 using Twino.Protocols.WebSocket;
@@ -24,45 +27,27 @@ using Xunit;
 
 namespace Playground
 {
-    public class SampleWebSocketHandler : IProtocolConnectionHandler<WsServerSocket,WebSocketMessage>
+    [Route]
+    public class HomeController : TwinoController
     {
-        public async Task<WsServerSocket> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
+        [HttpGet]
+        public IActionResult Index()
         {
-            Console.WriteLine("Client connected");
-            WsServerSocket socket = new WsServerSocket(server, connection);
-            return await Task.FromResult(socket);
-        }
-
-        public Task Ready(ITwinoServer server, WsServerSocket client)
-        {
-            Console.WriteLine("Client is ready");
-            return Task.CompletedTask;
-        }
-
-        public async Task Received(ITwinoServer server, IConnectionInfo info, WsServerSocket client, WebSocketMessage message)
-        {
-            Console.WriteLine($"# {message}");
-            await client.SendAsync(message);
-        }
-
-        public Task Disconnected(ITwinoServer server, WsServerSocket client)
-        {
-            Console.WriteLine("Client disconnected");
-            return Task.CompletedTask;
+            return String("Hello, World!");
         }
     }
     
     class Program
     {
         static void Main(string[] args)
-        {
+        { 
             TwinoServer server = new TwinoServer();
+            
+            TwinoMvc mvc = new TwinoMvc();
+            mvc.Init();
+            
+            server.UseMvc(mvc, HttpOptions.CreateDefault());
 
-            SampleWebSocketHandler handler = new SampleWebSocketHandler();
-            HttpOptions options = new HttpOptions();
-            
-            server.UseWebSockets(handler);
-            
             server.Start(80);
             server.BlockWhileRunning();
         }

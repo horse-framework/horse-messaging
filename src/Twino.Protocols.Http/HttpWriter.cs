@@ -65,7 +65,7 @@ namespace Twino.Protocols.Http
 
             if (hasStream)
             {
-                if (!response.SuppressContentEncoding && _options.SupportedEncodings.Length > 0)
+                if (_options.SupportedEncodings != null && !response.SuppressContentEncoding && _options.SupportedEncodings.Length > 0)
                     resultStream = await _writer.WriteAsync(response.Request, response);
                 else
                 {

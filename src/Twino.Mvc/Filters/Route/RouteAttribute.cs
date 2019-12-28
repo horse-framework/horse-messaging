@@ -12,8 +12,13 @@ namespace Twino.Mvc.Filters.Route
         /// Controller route pattern.
         /// For controller name type "[controller]"
         /// </summary>
-        public string Pattern { get; private set; }
+        public string Pattern { get; }
 
+        public RouteAttribute()
+        {
+            Pattern = "[controller]";
+        }
+        
         public RouteAttribute(string pattern)
         {
             Pattern = pattern;

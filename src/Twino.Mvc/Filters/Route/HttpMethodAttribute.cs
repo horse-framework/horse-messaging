@@ -18,7 +18,7 @@ namespace Twino.Mvc.Filters.Route
         /// <summary>
         /// Route pattern for the action route parameters type {id}, for optional parameters type {?id}
         /// </summary>
-        public string Pattern { get; }
+        public string Pattern { get; internal set; }
 
         public HttpMethodAttribute(string method, string pattern)
         {

@@ -82,7 +82,7 @@ namespace Twino.Mvc.Routing
                 RouteAttribute routeAttribute = attr as RouteAttribute;
                 if (routeAttribute == null)
                     continue;
-
+                
                 routes.Add(routeAttribute.Pattern);
             }
 
