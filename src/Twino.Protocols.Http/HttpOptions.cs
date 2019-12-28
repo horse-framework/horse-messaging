@@ -12,12 +12,12 @@ namespace Twino.Protocols.Http
         /// <summary>
         /// Maximum keeping alive duration for each TCP connection
         /// </summary>
-        public int HttpConnectionTimeMax { get; set; }
+        public int HttpConnectionTimeMax { get; set; } = 300;
 
         /// <summary>
         /// Maximum request lengths (includes content)
         /// </summary>
-        public int MaximumRequestLength { get; set; }
+        public int MaximumRequestLength { get; set; } = 1024 * 100;
 
         /// <summary>
         /// Supported encodings (Only used when clients accept)
@@ -38,12 +38,7 @@ namespace Twino.Protocols.Http
             return new HttpOptions
                    {
                        HttpConnectionTimeMax = 300,
-                       MaximumRequestLength = 1024 * 100,
-                       SupportedEncodings = new[]
-                                            {
-                                                ContentEncodings.Brotli,
-                                                ContentEncodings.Gzip
-                                            }
+                       MaximumRequestLength = 1024 * 100
                    };
         }
 
@@ -72,7 +67,7 @@ namespace Twino.Protocols.Http
             JToken supportedEncodings = obj["SupportedEncodings"];
             string[] sx = supportedEncodings != null ? supportedEncodings.Values<string>().ToArray() : new string[0];
             List<ContentEncodings> encodings = new List<ContentEncodings>();
-            
+
             foreach (string s in sx)
             {
                 if (string.IsNullOrWhiteSpace(s))

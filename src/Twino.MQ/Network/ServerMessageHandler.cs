@@ -73,6 +73,11 @@ namespace Twino.MQ.Network
         private async Task JoinChannel(MqClient client, TmqMessage message)
         {
             Channel channel = _server.FindChannel(message.Target);
+
+            //if auto creation active, try to create channel
+            if (channel == null && _server.Options.AutoChannelCreation)
+                channel = _server.CreateChannel(message.Target);
+
             if (channel == null)
             {
                 if (message.ResponseRequired)
@@ -258,7 +263,7 @@ namespace Twino.MQ.Network
             }
 
             await channel.RemoveQueue(queue);
-            
+
             if (message.ResponseRequired)
                 await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Ok));
         }

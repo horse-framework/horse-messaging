@@ -6,9 +6,9 @@
         <Product>Twino.Extensions.Http</Product>
         <Description>HttpClient Factory extension for Twino IOC</Description>
         <PackageTags>twino,http,client,factory,ioc,dependency,injection,service</PackageTags>
-        <AssemblyVersion>2.1.8</AssemblyVersion>
-        <FileVersion>2.1.8</FileVersion>
-        <PackageVersion>2.1.8</PackageVersion>
+        <AssemblyVersion>2.1.10</AssemblyVersion>
+        <FileVersion>2.1.10</FileVersion>
+        <PackageVersion>2.1.10</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü</Authors>
         <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
