@@ -19,7 +19,7 @@ namespace Twino.Mvc.Routing
         /// <summary>
         /// Finds matched route from the list with specified request
         /// </summary>
-        RouteMatch Find(IEnumerable<Route> routes, HttpRequest request);
+        RouteMatch Find(IEnumerable<RouteLeaf> routes, HttpRequest request);
 
     }
 }

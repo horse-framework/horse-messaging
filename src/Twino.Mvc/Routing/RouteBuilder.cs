@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Twino.Mvc.Auth;
@@ -21,59 +20,77 @@ namespace Twino.Mvc.Routing
     /// </summary>
     public class RouteBuilder
     {
-        private class RouteInfo
+        private IEnumerable<RouteLeaf> GetEdgeLeaves(RouteLeaf root)
         {
-            public string Method { get; set; }
-            public string Pattern { get; set; }
+            if (root.Children.Count == 0)
+            {
+                yield return root;
+                yield break;
+            }
+
+            foreach (RouteLeaf leaf in root.Children)
+            {
+                IEnumerable<RouteLeaf> leaves = GetEdgeLeaves(leaf);
+                foreach (RouteLeaf child in leaves)
+                    yield return child;
+            }
         }
 
         /// <summary>
         /// Creates all Route objects of the specified Controller type
         /// </summary>
-        public IEnumerable<Route> BuildRoutes(Type controllerType)
+        public IEnumerable<RouteLeaf> BuildRoutes(Type controllerType)
         {
             //find base path for the controller
-            List<string> controllerRoutes = FindControllerRoutes(controllerType);
+            List<RouteLeaf> routes = CreateControllerRoutes(controllerType);
+            List<RouteLeaf> edges = new List<RouteLeaf>();
+            foreach (RouteLeaf leaf in routes)
+                edges.AddRange(GetEdgeLeaves(leaf));
 
             MethodInfo[] methods = controllerType.GetMethods();
-
             foreach (MethodInfo method in methods)
             {
                 //find method route if exists
                 List<RouteInfo> methodRoutes = FindActionRoute(method);
-
                 if (methodRoutes.Count == 0)
                     continue;
 
-                foreach (string controllerRoute in controllerRoutes)
+                foreach (RouteLeaf cleaf in edges)
                 {
                     foreach (RouteInfo info in methodRoutes)
                     {
-                        //create fullpath
-                        string fullpath = string.IsNullOrEmpty(info.Pattern)
-                                              ? controllerRoute
-                                              : (controllerRoute + "/" + info.Pattern);
-
                         //get route table from the fullpath
-                        List<RoutePath> path = GetRoutePath(controllerType, method, fullpath);
+                        List<RoutePath> path = GetRoutePath(method, info.Pattern);
 
-                        Route route = new Route
-                                      {
-                                          ActionType = method,
-                                          ControllerType = controllerType,
-                                          Method = info.Method,
-                                          Path = path.ToArray(),
-                                          Parameters = BuildParameters(method),
-                                          IsAsyncMethod = (AsyncStateMachineAttribute) method.GetCustomAttribute(typeof(AsyncStateMachineAttribute)) != null
-                                      };
+                        RouteLeaf leaf = cleaf;
+                        for (int i = 0; i < path.Count; i++)
+                        {
+                            RoutePath rp = path[i];
+                            RouteLeaf child = new RouteLeaf(rp, leaf);
+                            leaf.Children.Add(child);
+                            leaf = child;
 
-                        ApplyControllerAttributes(route, controllerType);
-                        ApplyActionAttributes(route, method);
+                            if (i == path.Count - 1)
+                            {
+                                leaf.Route = new Route
+                                             {
+                                                 ActionType = method,
+                                                 ControllerType = controllerType,
+                                                 Method = info.Method,
+                                                 Path = path.ToArray(),
+                                                 Parameters = BuildParameters(method),
+                                                 IsAsyncMethod = (AsyncStateMachineAttribute) method.GetCustomAttribute(typeof(AsyncStateMachineAttribute)) != null
+                                             };
+                            }
+                        }
 
-                        yield return route;
+                        ApplyControllerAttributes(leaf.Route, controllerType);
+                        ApplyActionAttributes(leaf.Route, method);
                     }
                 }
             }
+
+            return routes;
         }
 
         /// <summary>
@@ -88,10 +105,10 @@ namespace Twino.Mvc.Routing
 
                 if (typeof(IBeforeControllerFilter).IsAssignableFrom(data.AttributeType))
                     route.HasControllerBeforeFilter = true;
-                
+
                 if (typeof(IAfterControllerFilter).IsAssignableFrom(data.AttributeType))
                     route.HasControllerAfterFilter = true;
-                
+
                 if (typeof(IActionExecutingFilter).IsAssignableFrom(data.AttributeType))
                     route.HasControllerExecutingFilter = true;
 
@@ -99,7 +116,7 @@ namespace Twino.Mvc.Routing
                     route.HasControllerExecutedFilter = true;
             }
         }
-        
+
         /// <summary>
         /// Searches method attributes and applies existing attributes to route
         /// </summary>
@@ -121,34 +138,57 @@ namespace Twino.Mvc.Routing
         /// <summary>
         /// Finds route value for the controller type
         /// </summary>
-        private static List<string> FindControllerRoutes(Type controllerType)
+        private static List<RouteLeaf> CreateControllerRoutes(Type controllerType)
         {
-            List<string> routes = new List<string>();
+            List<RouteLeaf> routes = new List<RouteLeaf>();
+            IEnumerable<RouteAttribute> attributes = controllerType.GetCustomAttributes<RouteAttribute>(true);
 
-            object[] attributes = controllerType.GetCustomAttributes(true);
-
-            foreach (object attr in attributes)
+            foreach (RouteAttribute attr in attributes)
             {
-                RouteAttribute routeAttribute = attr as RouteAttribute;
-                if (routeAttribute == null)
+                string value = attr.Pattern;
+                if (string.IsNullOrEmpty(value))
+                {
+                    routes.Add(new RouteLeaf(new RoutePath(RouteType.Text, FindControllerRouteName(controllerType)), null));
                     continue;
+                }
 
-                routes.Add(routeAttribute.Pattern);
+                string[] pathLeaves = value.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                RouteLeaf parent = null;
+                foreach (string p in pathLeaves)
+                {
+                    string v = p;
+                    if (p.Equals("[controller]", StringComparison.InvariantCultureIgnoreCase))
+                        v = FindControllerRouteName(controllerType);
+
+                    RouteLeaf leaf = new RouteLeaf(new RoutePath(RouteType.Text, v), parent);
+                    if (parent == null)
+                        routes.Add(leaf);
+                    else
+                        parent.Children.Add(leaf);
+
+                    parent = leaf;
+                }
             }
 
             //if there is no route definition, the route value is the name of the controller
             if (routes.Count == 0)
-            {
-                string value = controllerType.Name.ToLower(new CultureInfo("en-US"));
-
-                //remove value from the end
-                if (value.EndsWith("controller"))
-                    value = value.Substring(0, value.Length - "controller".Length);
-
-                routes.Add(value);
-            }
+                routes.Add(new RouteLeaf(new RoutePath(RouteType.Text, FindControllerRouteName(controllerType)), null));
 
             return routes;
+        }
+
+        /// <summary>
+        /// Finds route name of controller type
+        /// </summary>
+        private static string FindControllerRouteName(Type type)
+        {
+            string value = type.Name.ToLower(new CultureInfo("en-US"));
+
+            //remove value from the end
+            if (value.EndsWith("controller"))
+                value = value.Substring(0, value.Length - "controller".Length);
+
+            return value;
         }
 
         /// <summary>
@@ -160,9 +200,7 @@ namespace Twino.Mvc.Routing
         private List<RouteInfo> FindActionRoute(MethodInfo method)
         {
             List<RouteInfo> routes = new List<RouteInfo>();
-
             object[] attributes = method.GetCustomAttributes(typeof(HttpMethodAttribute), true);
-
             foreach (object attribute in attributes)
             {
                 if (!(attribute is HttpMethodAttribute attr))
@@ -171,7 +209,8 @@ namespace Twino.Mvc.Routing
                 RouteInfo route = new RouteInfo
                                   {
                                       Method = attr.Method,
-                                      Pattern = attr.Pattern
+                                      Pattern = attr.Pattern,
+                                      Path = attr.Pattern.Split('/', StringSplitOptions.RemoveEmptyEntries)
                                   };
 
                 routes.Add(route);
@@ -183,9 +222,20 @@ namespace Twino.Mvc.Routing
         /// <summary>
         /// Creates RoutePath table from the controller type, action method reflection info and full path.
         /// </summary>
-        private List<RoutePath> GetRoutePath(Type controller, MethodInfo action, string fullpath)
+        private List<RoutePath> GetRoutePath(MethodInfo action, string fullpath)
         {
             List<RoutePath> result = new List<RoutePath>();
+
+            if (string.IsNullOrEmpty(fullpath))
+            {
+                result.Add(new RoutePath
+                           {
+                               Type = RouteType.Text,
+                               Value = ""
+                           });
+
+                return result;
+            }
 
             //split path to parts.
             //each part will be replaced to RoutePath class with extra information
@@ -198,25 +248,9 @@ namespace Twino.Mvc.Routing
 
                 RoutePath route = new RoutePath();
 
-                //if the part is controller name, set the value to the specified controller (comes from method parameter)
-                if (part == "[controller]")
+                if (part == "[action]")
                 {
-                    route.Type = RouteType.Controller;
-
-                    string controllerName = controller.Name.ToLower(new CultureInfo("en-US"));
-                    if (controllerName.EndsWith("controller"))
-                    {
-                        int cindex = controllerName.IndexOf("controller", StringComparison.Ordinal);
-                        route.Value = controllerName.Substring(0, cindex);
-                    }
-                    else
-                        route.Value = controllerName;
-                }
-
-                //if the part is action name, set the value to the specified action method name (comes from method parameter)
-                else if (part == "[action]")
-                {
-                    route.Type = RouteType.Action;
+                    route.Type = RouteType.Text;
                     route.Value = action.Name.ToLower(new CultureInfo("en-US"));
                 }
 
@@ -241,13 +275,6 @@ namespace Twino.Mvc.Routing
 
                 result.Add(route);
             }
-
-            if (result.Count == 0)
-                result.Add(new RoutePath
-                           {
-                               Type = RouteType.Text,
-                               Value = ""
-                           });
 
             return result;
         }
