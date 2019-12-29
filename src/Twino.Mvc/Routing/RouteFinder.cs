@@ -82,6 +82,15 @@ namespace Twino.Mvc.Routing
                 while (x.Children.Count == 1)
                 {
                     RouteLeaf y = x.Children[0];
+
+                    if (y.Path.Type == RouteType.Text && string.IsNullOrEmpty(y.Path.Value))
+                    {
+                        if (y.Route.Method.Equals(method, StringComparison.InvariantCultureIgnoreCase))
+                            return y;
+
+                        return null;
+                    }
+                    
                     if (y.Path.Type != RouteType.OptionalParameter)
                         break;
 
@@ -92,6 +101,7 @@ namespace Twino.Mvc.Routing
 
                         break;
                     }
+                    
                     x = y;
                 }
             }

@@ -146,9 +146,15 @@ namespace Twino.Mvc.Routing
             foreach (RouteAttribute attr in attributes)
             {
                 string value = attr.Pattern;
-                if (string.IsNullOrEmpty(value))
+                if (value == null)
                 {
                     routes.Add(new RouteLeaf(new RoutePath(RouteType.Text, FindControllerRouteName(controllerType)), null));
+                    continue;
+                }
+
+                if (value == "")
+                {
+                    routes.Add(new RouteLeaf(new RoutePath(RouteType.Text, ""), null));
                     continue;
                 }
 
@@ -206,11 +212,12 @@ namespace Twino.Mvc.Routing
                 if (!(attribute is HttpMethodAttribute attr))
                     continue;
 
+                string pattern = attr.Pattern ?? "";
                 RouteInfo route = new RouteInfo
                                   {
                                       Method = attr.Method,
-                                      Pattern = attr.Pattern,
-                                      Path = attr.Pattern.Split('/', StringSplitOptions.RemoveEmptyEntries)
+                                      Pattern = pattern,
+                                      Path = pattern.Split('/', StringSplitOptions.RemoveEmptyEntries)
                                   };
 
                 routes.Add(route);
