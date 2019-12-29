@@ -43,7 +43,7 @@ namespace Sample.Mvc.Controller
             return await completionSource.Task;
         }
 
-        [HttpGet("getb/{?id}")]
+        [HttpGet("getb/{id}")]
         public async Task<IActionResult> GetB([FromRoute] int? id)
         {
             return await StringAsync("Hello world: " + id);

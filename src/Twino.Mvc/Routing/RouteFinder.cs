@@ -55,14 +55,15 @@ namespace Twino.Mvc.Routing
 
         private RouteLeaf FindRouteInLeaf(RouteLeaf leaf, string method, string[] parts, int index)
         {
+            //for text parts, it should match
             if (leaf.Path.Type == RouteType.Text)
             {
                 bool matched = leaf.Path.Value.Equals(parts[index], StringComparison.InvariantCultureIgnoreCase);
-
                 if (!matched)
                     return null;
             }
 
+            //if leaf is last of path check method and return if equals
             if (leaf.Route != null)
             {
                 if (parts.Length == index + 1 && leaf.Route.Method.Equals(method, StringComparison.InvariantCultureIgnoreCase))
@@ -73,6 +74,27 @@ namespace Twino.Mvc.Routing
 
             if (leaf.Children.Count == 0)
                 return null;
+
+            //parts are done but route may keep going to optional parameters
+            if (parts.Length == index + 1)
+            {
+                RouteLeaf x = leaf;
+                while (x.Children.Count == 1)
+                {
+                    RouteLeaf y = x.Children[0];
+                    if (y.Path.Type != RouteType.OptionalParameter)
+                        break;
+
+                    if (y.Route != null)
+                    {
+                        if (y.Route.Method.Equals(method, StringComparison.InvariantCultureIgnoreCase))
+                            return y;
+
+                        break;
+                    }
+                    x = y;
+                }
+            }
 
             if (parts.Length < index + 2)
                 return null;
@@ -128,7 +150,7 @@ namespace Twino.Mvc.Routing
                                      parts.Length <= route.Index
                                          ? null
                                          : parts[route.Index]);
-                
+
                 //if type is parameter we dont need to check if equals
                 //we just need to read the part value and put it into value list
                 else if (path.Type == RouteType.Parameter)
