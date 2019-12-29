@@ -1,30 +1,35 @@
 ﻿using Twino.Mvc.Controllers;
 using Twino.Mvc.Filters;
 using System;
+using System.Threading.Tasks;
 using Twino.Mvc;
 
 namespace Sample.Mvc.Models
 {
-    public class TestControllerFilterAttribute : Attribute, IControllerFilter
+    public class TestControllerFilterAttribute : Attribute, IBeforeControllerFilter, IAfterControllerFilter, IActionExecutingFilter, IActionExecutedFilter
     {
-        public void AfterAction(IController controller, ActionDescriptor descriptor, IActionResult result, FilterContext context)
+        public Task OnBefore(FilterContext context)
         {
-            Console.WriteLine("After Action: " + context.Request.Path);
+            Console.WriteLine("OnBefore: " + context.Request.Path);
+            return Task.CompletedTask;
         }
 
-        public void AfterCreated(IController controller, FilterContext context)
+        public Task OnAfter(IController controller, FilterContext context)
         {
-            Console.WriteLine("After Created: " + context.Request.Path);
+            Console.WriteLine("OnAfter: " + context.Request.Path);
+            return Task.CompletedTask;
         }
 
-        public void BeforeAction(IController controller, ActionDescriptor descriptor, FilterContext context)
+        public Task OnExecuting(IController controller, ActionDescriptor descriptor, FilterContext context)
         {
-            Console.WriteLine("Before Action: " + context.Request.Path);
+            Console.WriteLine("OnExecuting: " + context.Request.Path);
+            return Task.CompletedTask;
         }
 
-        public void BeforeCreated(FilterContext context)
+        public Task OnExecuted(IController controller, ActionDescriptor descriptor, IActionResult result, FilterContext context)
         {
-            Console.WriteLine("Before Created: " + context.Request.Path);
+            Console.WriteLine("OnExecuted: " + context.Request.Path);
+            return Task.CompletedTask;
         }
     }
 }

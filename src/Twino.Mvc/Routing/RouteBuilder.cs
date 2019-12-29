@@ -2,8 +2,12 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using Twino.Mvc.Auth;
 using Twino.Mvc.Controllers;
+using Twino.Mvc.Filters;
 using Twino.Mvc.Filters.Route;
 
 namespace Twino.Mvc.Routing
@@ -59,12 +63,58 @@ namespace Twino.Mvc.Routing
                                           ControllerType = controllerType,
                                           Method = info.Method,
                                           Path = path.ToArray(),
-                                          Parameters = BuildParameters(method)
+                                          Parameters = BuildParameters(method),
+                                          IsAsyncMethod = (AsyncStateMachineAttribute) method.GetCustomAttribute(typeof(AsyncStateMachineAttribute)) != null
                                       };
+
+                        ApplyControllerAttributes(route, controllerType);
+                        ApplyActionAttributes(route, method);
 
                         yield return route;
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Searches method attributes and applies existing attributes to route
+        /// </summary>
+        private static void ApplyControllerAttributes(Route route, Type controller)
+        {
+            foreach (CustomAttributeData data in controller.GetCustomAttributesData())
+            {
+                if (typeof(AuthorizeAttribute).IsAssignableFrom(data.AttributeType))
+                    route.HasControllerAuthorizeFilter = true;
+
+                if (typeof(IBeforeControllerFilter).IsAssignableFrom(data.AttributeType))
+                    route.HasControllerBeforeFilter = true;
+                
+                if (typeof(IAfterControllerFilter).IsAssignableFrom(data.AttributeType))
+                    route.HasControllerAfterFilter = true;
+                
+                if (typeof(IActionExecutingFilter).IsAssignableFrom(data.AttributeType))
+                    route.HasControllerExecutingFilter = true;
+
+                if (typeof(IActionExecutedFilter).IsAssignableFrom(data.AttributeType))
+                    route.HasControllerExecutedFilter = true;
+            }
+        }
+        
+        /// <summary>
+        /// Searches method attributes and applies existing attributes to route
+        /// </summary>
+        private static void ApplyActionAttributes(Route route, MethodInfo method)
+        {
+            foreach (CustomAttributeData data in method.GetCustomAttributesData())
+            {
+                if (typeof(AuthorizeAttribute).IsAssignableFrom(data.AttributeType))
+                    route.HasActionAuthorizeFilter = true;
+
+                if (typeof(IActionExecutingFilter).IsAssignableFrom(data.AttributeType))
+                    route.HasActionExecutingFilter = true;
+
+                if (typeof(IActionExecutedFilter).IsAssignableFrom(data.AttributeType))
+                    route.HasActionExecutedFilter = true;
             }
         }
 
@@ -82,7 +132,7 @@ namespace Twino.Mvc.Routing
                 RouteAttribute routeAttribute = attr as RouteAttribute;
                 if (routeAttribute == null)
                     continue;
-                
+
                 routes.Add(routeAttribute.Pattern);
             }
 
