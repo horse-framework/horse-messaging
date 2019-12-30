@@ -48,7 +48,7 @@ namespace Twino.MQ.Network
                         await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Ok));
                     break;
 
-                //find channel
+                //get channel information
                 case KnownContentTypes.ChannelInformation:
                     await GetChannelInformation(client, message);
                     break;
@@ -71,6 +71,11 @@ namespace Twino.MQ.Network
                 //update queue
                 case KnownContentTypes.UpdateQueue:
                     await UpdateQueue(client, message);
+                    break;
+                
+                //get queue information
+                case KnownContentTypes.QueueInformation:
+                    await GetQueueInformation(client, message);
                     break;
             }
         }
@@ -367,6 +372,60 @@ namespace Twino.MQ.Network
             //if creation successful, sends response
             if (message.ResponseRequired)
                 await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Ok));
+        }
+
+        /// <summary>
+        /// Finds the queue and sends the information
+        /// </summary>
+        private async Task GetQueueInformation(MqClient client, TmqMessage message)
+        {
+            Channel channel = _server.FindChannel(message.Target);
+            if (channel == null)
+            {
+                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                return;
+            }
+
+            //authenticate for channel
+            if (_server.DefaultChannelAuthenticator != null)
+            {
+                bool grant = await _server.DefaultChannelAuthenticator.Authenticate(channel, client);
+                if (!grant)
+                {
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                    return;
+                }
+            }
+
+            byte[] bytes = new byte[2];
+            await message.Content.ReadAsync(bytes);
+            ushort id = BitConverter.ToUInt16(bytes);
+            ChannelQueue queue = channel.FindQueue(id);
+            if (queue == null)
+            {
+                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                return;
+            }
+            
+            QueueInformation information = new QueueInformation
+                                             {
+                                                 Channel = channel.Name,
+                                                 Id = id,
+                                                 Status = queue.Status.ToString().ToLower(),
+                                                 HighPriorityMessages = queue.HighPriorityLinkedList.Count,
+                                                 RegularMessages = queue.RegularLinkedList.Count,
+                                                 SendOnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
+                                                 RequestAcknowledge = channel.Options.RequestAcknowledge,
+                                                 AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
+                                                 MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout),
+                                                 WaitForAcknowledge = channel.Options.WaitForAcknowledge,
+                                                 HideClientNames = channel.Options.HideClientNames
+                                             };
+
+            TmqMessage response = message.CreateResponse();
+            message.ContentType = KnownContentTypes.ChannelInformation;
+            await response.SetJsonContent(information);
+            await client.SendAsync(response);
         }
 
         #endregion
