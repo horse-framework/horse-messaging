@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Twino.MQ.Security;
 
@@ -15,17 +16,20 @@ namespace Twino.MQ
         /// <summary>
         /// Message delivery handlers
         /// </summary>
-        private readonly Dictionary<string, IMessageDeliveryHandler> _messageDeliveryHandlers = new Dictionary<string, IMessageDeliveryHandler>();
-        
+        private readonly Dictionary<string, IMessageDeliveryHandler> _messageDeliveryHandlers
+            = new Dictionary<string, IMessageDeliveryHandler>(StringComparer.InvariantCultureIgnoreCase);
+
         /// <summary>
         /// Channel event handlers
         /// </summary>
-        private readonly Dictionary<string, IChannelEventHandler> _channelEventHandlers = new Dictionary<string, IChannelEventHandler>();
-        
+        private readonly Dictionary<string, IChannelEventHandler> _channelEventHandlers
+            = new Dictionary<string, IChannelEventHandler>(StringComparer.InvariantCultureIgnoreCase);
+
         /// <summary>
         /// Channel authenticators
         /// </summary>
-        private readonly Dictionary<string, IChannelAuthenticator> _channelAuthenticators = new Dictionary<string, IChannelAuthenticator>();
+        private readonly Dictionary<string, IChannelAuthenticator> _channelAuthenticators
+            = new Dictionary<string, IChannelAuthenticator>(StringComparer.InvariantCultureIgnoreCase);
 
         #endregion
 

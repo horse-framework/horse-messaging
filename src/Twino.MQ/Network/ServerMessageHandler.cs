@@ -72,7 +72,7 @@ namespace Twino.MQ.Network
                 case KnownContentTypes.UpdateQueue:
                     await UpdateQueue(client, message);
                     break;
-                
+
                 //get queue information
                 case KnownContentTypes.QueueInformation:
                     await GetQueueInformation(client, message);
@@ -274,10 +274,19 @@ namespace Twino.MQ.Network
 
             //creates new queue
             ChannelQueueOptions options = (ChannelQueueOptions) channel.Options.Clone();
+            IMessageDeliveryHandler delivery = channel.DeliveryHandler;
             if (builder != null)
+            {
                 builder.ApplyTo(options);
+                if (!string.IsNullOrEmpty(builder.MessageDeliveryHandler))
+                {
+                    IMessageDeliveryHandler found = _server.Registry.GetMessageDelivery(builder.MessageDeliveryHandler);
+                    if (found != null)
+                        delivery = found;
+                }
+            }
 
-            queue = await channel.CreateQueue(contentType.Value, options);
+            queue = await channel.CreateQueue(contentType.Value, options, delivery);
 
             //if creation successful, sends response
             if (queue != null && message.ResponseRequired)
@@ -406,21 +415,21 @@ namespace Twino.MQ.Network
                 await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
                 return;
             }
-            
+
             QueueInformation information = new QueueInformation
-                                             {
-                                                 Channel = channel.Name,
-                                                 Id = id,
-                                                 Status = queue.Status.ToString().ToLower(),
-                                                 HighPriorityMessages = queue.HighPriorityLinkedList.Count,
-                                                 RegularMessages = queue.RegularLinkedList.Count,
-                                                 SendOnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
-                                                 RequestAcknowledge = channel.Options.RequestAcknowledge,
-                                                 AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
-                                                 MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout),
-                                                 WaitForAcknowledge = channel.Options.WaitForAcknowledge,
-                                                 HideClientNames = channel.Options.HideClientNames
-                                             };
+                                           {
+                                               Channel = channel.Name,
+                                               Id = id,
+                                               Status = queue.Status.ToString().ToLower(),
+                                               HighPriorityMessages = queue.HighPriorityLinkedList.Count,
+                                               RegularMessages = queue.RegularLinkedList.Count,
+                                               SendOnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
+                                               RequestAcknowledge = channel.Options.RequestAcknowledge,
+                                               AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
+                                               MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout),
+                                               WaitForAcknowledge = channel.Options.WaitForAcknowledge,
+                                               HideClientNames = channel.Options.HideClientNames
+                                           };
 
             TmqMessage response = message.CreateResponse();
             message.ContentType = KnownContentTypes.ChannelInformation;

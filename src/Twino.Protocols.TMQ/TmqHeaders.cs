@@ -22,6 +22,10 @@ namespace Twino.Protocols.TMQ
         public const string HIDE_CLIENT_NAMES = "Hide-Client-Names";
         public const string QUEUE_STATUS = "Queue-Status";
         
+        public const string MESSAGE_DELIVERY_HANDLER = "Message-Delivery-Handler";
+        public const string CHANNEL_EVENT_HANDLER = "Channel-Event-Handler";
+        public const string CHANNEL_AUTHENTICATOR = "Channel-Authenticator";
+        
         public const string TWINO_MQ_SERVER = "Twino-MQ-Server";
     }
 }

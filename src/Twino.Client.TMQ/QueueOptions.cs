@@ -92,6 +92,11 @@ namespace Twino.Client.TMQ
         public MessagingQueueStatus? Status { get; set; }
 
         /// <summary>
+        /// Registry key for message delivery handler
+        /// </summary>
+        public string MessageDeliveryHandler { get; set; }
+
+        /// <summary>
         /// Serializes options and creates key value pair
         /// </summary>
         public string Serialize(ushort contentType)
@@ -123,6 +128,9 @@ namespace Twino.Client.TMQ
 
             if (Status.HasValue)
                 builder.Append(Line(TmqHeaders.QUEUE_STATUS, Status.Value.ToString().ToLower()));
+
+            if (!string.IsNullOrEmpty(MessageDeliveryHandler))
+                builder.Append(Line(TmqHeaders.MESSAGE_DELIVERY_HANDLER, MessageDeliveryHandler));
 
             return builder.ToString();
         }
