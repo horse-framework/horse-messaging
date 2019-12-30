@@ -21,6 +21,8 @@ namespace Twino.Protocols.TMQ
         public const string WAIT_FOR_ACKNOWLEDGE = "Wait-For-Acknowledge";
         public const string HIDE_CLIENT_NAMES = "Hide-Client-Names";
         public const string QUEUE_STATUS = "Queue-Status";
+        public const string ALLOW_MULTIPLE_QUEUES = "Allow-Multiple-Queues";
+        public const string ALLOWED_QUEUES = "Allowed-Queues";
         
         public const string MESSAGE_DELIVERY_HANDLER = "Message-Delivery-Handler";
         public const string CHANNEL_EVENT_HANDLER = "Channel-Event-Handler";

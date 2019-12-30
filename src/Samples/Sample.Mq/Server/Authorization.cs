@@ -22,14 +22,14 @@ namespace Sample.Mq.Server
             return await Task.FromResult(true);
         }
 
-        public async Task<bool> CanCreateQueue(MqClient client, Channel channel, ushort contentType, QueueOptionsBuilder options)
+        public async Task<bool> CanCreateQueue(MqClient client, Channel channel, ushort contentType, NetworkOptionsBuilder options)
         {
             bool grant = client.Type.Equals("producer");
             Console.WriteLine("Can create new queue: " + grant);
             return await Task.FromResult(grant);
         }
 
-        public async Task<bool> CanUpdateQueueOptions(MqClient client, Channel channel, ChannelQueue queue, QueueOptionsBuilder options)
+        public async Task<bool> CanUpdateQueueOptions(MqClient client, Channel channel, ChannelQueue queue, NetworkOptionsBuilder options)
         {
             return await Task.FromResult(true);
         }

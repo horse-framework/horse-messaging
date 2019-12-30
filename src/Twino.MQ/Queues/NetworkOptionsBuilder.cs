@@ -5,7 +5,7 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Queues
 {
-    public class QueueOptionsBuilder
+    public class NetworkOptionsBuilder
     {
         /// <summary>
         /// Queue content type
@@ -58,6 +58,26 @@ namespace Twino.MQ.Queues
         public string MessageDeliveryHandler { get; set; }
 
         /// <summary>
+        /// Registry key for channel event handler
+        /// </summary>
+        public string ChannelEventHandler { get; set; }
+
+        /// <summary>
+        /// Registry key for channel authenticator
+        /// </summary>
+        public string ChannelAuthenticator { get; set; }
+
+        /// <summary>
+        /// If true, channel supports multiple queues
+        /// </summary>
+        public bool? AllowMultipleQueues { get; set; }
+
+        /// <summary>
+        /// Allowed queues for channel
+        /// </summary>
+        public ushort[] AllowedQueues { get; set; }
+
+        /// <summary>
         /// Serializes options and creates key value pair
         /// </summary>
         public string Serialize()
@@ -90,8 +110,29 @@ namespace Twino.MQ.Queues
             if (Status.HasValue)
                 builder.Append(Line(TmqHeaders.QUEUE_STATUS, Status.Value.ToString().ToLower()));
 
+            if (AllowMultipleQueues.HasValue)
+                builder.Append(Line(TmqHeaders.ALLOW_MULTIPLE_QUEUES, AllowMultipleQueues.Value));
+
+            if (AllowedQueues != null)
+            {
+                string list = "";
+                foreach (ushort aq in AllowedQueues)
+                    list += aq + ",";
+
+                if (list.EndsWith(","))
+                    list = list.Substring(0, list.Length - 1);
+
+                builder.Append(Line(TmqHeaders.ALLOWED_QUEUES, list));
+            }
+
             if (!string.IsNullOrEmpty(MessageDeliveryHandler))
                 builder.Append(Line(TmqHeaders.MESSAGE_DELIVERY_HANDLER, MessageDeliveryHandler));
+
+            if (!string.IsNullOrEmpty(ChannelEventHandler))
+                builder.Append(Line(TmqHeaders.CHANNEL_EVENT_HANDLER, ChannelEventHandler));
+
+            if (!string.IsNullOrEmpty(ChannelAuthenticator))
+                builder.Append(Line(TmqHeaders.CHANNEL_AUTHENTICATOR, ChannelAuthenticator));
 
             return builder.ToString();
         }
@@ -132,9 +173,26 @@ namespace Twino.MQ.Queues
                 if (key.Equals(TmqHeaders.HIDE_CLIENT_NAMES, StringComparison.InvariantCultureIgnoreCase))
                     HideClientNames = value == "1" || value == "true";
 
+                if (key.Equals(TmqHeaders.ALLOW_MULTIPLE_QUEUES, StringComparison.InvariantCultureIgnoreCase))
+                    AllowMultipleQueues = value == "1" || value == "true";
+
+                if (key.Equals(TmqHeaders.ALLOWED_QUEUES, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    string[] spx = value.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                    AllowedQueues = new ushort[spx.Length];
+                    for (int i = 0; i < spx.Length; i++)
+                        AllowedQueues[i] = Convert.ToUInt16(spx[i]);
+                }
+
                 if (key.Equals(TmqHeaders.MESSAGE_DELIVERY_HANDLER, StringComparison.InvariantCultureIgnoreCase))
                     MessageDeliveryHandler = value;
-                
+
+                if (key.Equals(TmqHeaders.CHANNEL_EVENT_HANDLER, StringComparison.InvariantCultureIgnoreCase))
+                    ChannelEventHandler = value;
+
+                if (key.Equals(TmqHeaders.CHANNEL_AUTHENTICATOR, StringComparison.InvariantCultureIgnoreCase))
+                    ChannelAuthenticator = value;
+
                 if (key.Equals(TmqHeaders.QUEUE_STATUS, StringComparison.InvariantCultureIgnoreCase))
                 {
                     switch (value)
@@ -177,7 +235,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Applies non-null values to channel queue options
         /// </summary>
-        public void ApplyTo(ChannelQueueOptions target)
+        public void ApplyToQueue(ChannelQueueOptions target)
         {
             if (SendOnlyFirstAcquirer.HasValue)
                 target.SendOnlyFirstAcquirer = SendOnlyFirstAcquirer.Value;
@@ -202,6 +260,20 @@ namespace Twino.MQ.Queues
 
             if (Status.HasValue)
                 target.Status = Status.Value;
+        }
+
+        /// <summary>
+        /// Applies non-null values to channel options
+        /// </summary>
+        public void ApplyToChannel(ChannelOptions target)
+        {
+            ApplyToQueue(target);
+
+            if (AllowMultipleQueues.HasValue)
+                target.AllowMultipleQueues = AllowMultipleQueues.Value;
+
+            if (AllowedQueues != null)
+                target.AllowedQueues = AllowedQueues;
         }
 
         private static string Line(string key, bool value)

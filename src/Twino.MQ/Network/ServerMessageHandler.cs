@@ -6,6 +6,7 @@ using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
 using Twino.MQ.Queues;
+using Twino.MQ.Security;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Network
@@ -149,6 +150,41 @@ namespace Twino.MQ.Network
                 }
             }
 
+            if (message.Length > 0 && message.Content != null && message.Content.Length > 0)
+            {
+                NetworkOptionsBuilder builder = new NetworkOptionsBuilder();
+                builder.Load(message.ToString());
+
+                ChannelOptions options = ChannelOptions.CloneFrom(_server.Options);
+                builder.ApplyToChannel(options);
+
+                IChannelEventHandler eventHandler = _server.DefaultChannelEventHandler;
+                if (!string.IsNullOrEmpty(builder.ChannelEventHandler))
+                {
+                    IChannelEventHandler e = _server.Registry.GetChannelEvent(builder.ChannelEventHandler);
+                    if (e != null)
+                        eventHandler = e;
+                }
+
+                IChannelAuthenticator authenticator = _server.DefaultChannelAuthenticator;
+                if (!string.IsNullOrEmpty(builder.ChannelAuthenticator))
+                {
+                    IChannelAuthenticator e = _server.Registry.GetChannelAuthenticator(builder.ChannelAuthenticator);
+                    if (e != null)
+                        authenticator = e;
+                }
+
+                IMessageDeliveryHandler deliveryHandler = _server.DefaultDeliveryHandler;
+                if (!string.IsNullOrEmpty(builder.MessageDeliveryHandler))
+                {
+                    IMessageDeliveryHandler e = _server.Registry.GetMessageDelivery(builder.MessageDeliveryHandler);
+                    if (e != null)
+                        deliveryHandler = e;
+                }
+
+                return _server.CreateChannel(message.Target, authenticator, eventHandler, deliveryHandler, options);
+            }
+
             return _server.CreateChannel(message.Target);
         }
 
@@ -233,7 +269,7 @@ namespace Twino.MQ.Network
         private async Task CreateQueue(MqClient client, TmqMessage message)
         {
             ushort? contentType;
-            QueueOptionsBuilder builder = null;
+            NetworkOptionsBuilder builder = null;
             if (message.Length == 2)
             {
                 byte[] bytes = new byte[2];
@@ -242,7 +278,7 @@ namespace Twino.MQ.Network
             }
             else
             {
-                builder = new QueueOptionsBuilder();
+                builder = new NetworkOptionsBuilder();
                 builder.Load(message.ToString());
                 contentType = builder.Id;
             }
@@ -273,11 +309,11 @@ namespace Twino.MQ.Network
             }
 
             //creates new queue
-            ChannelQueueOptions options = (ChannelQueueOptions) channel.Options.Clone();
+            ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(channel.Options);
             IMessageDeliveryHandler delivery = channel.DeliveryHandler;
             if (builder != null)
             {
-                builder.ApplyTo(options);
+                builder.ApplyToQueue(options);
                 if (!string.IsNullOrEmpty(builder.MessageDeliveryHandler))
                 {
                     IMessageDeliveryHandler found = _server.Registry.GetMessageDelivery(builder.MessageDeliveryHandler);
@@ -340,7 +376,7 @@ namespace Twino.MQ.Network
         /// </summary>
         private async Task UpdateQueue(MqClient client, TmqMessage message)
         {
-            QueueOptionsBuilder builder = new QueueOptionsBuilder();
+            NetworkOptionsBuilder builder = new NetworkOptionsBuilder();
             builder.Load(message.ToString());
 
             Channel channel = _server.FindChannel(message.Target);
@@ -374,7 +410,7 @@ namespace Twino.MQ.Network
                 }
             }
 
-            builder.ApplyTo(queue.Options);
+            builder.ApplyToQueue(queue.Options);
             if (builder.Status.HasValue)
                 await queue.SetStatus(builder.Status.Value);
 

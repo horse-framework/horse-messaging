@@ -798,7 +798,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Creates a new channel without any queue
         /// </summary>
-        public async Task<bool> CreateOnlyChannel(string channel, bool verifyResponse)
+        public async Task<bool> CreateChannel(string channel, bool verifyResponse)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -810,6 +810,25 @@ namespace Twino.Client.TMQ
                 message.MessageId = UniqueIdGenerator.Create();
 
             return await WaitResponseOk(message, verifyResponse);
+        }
+
+        /// <summary>
+        /// Creates a new channel without any queue
+        /// </summary>
+        public async Task<bool> CreateChannel(string channel, Action<ChannelCreationOptions> optionsAction)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ContentType = KnownContentTypes.CreateChannel;
+            message.Target = channel;
+            message.ResponseRequired = true;
+            message.MessageId = UniqueIdGenerator.Create();
+
+            ChannelCreationOptions options = new ChannelCreationOptions();
+            optionsAction(options);
+            message.Content = new MemoryStream(Encoding.UTF8.GetBytes(options.Serialize(0)));
+
+            return await WaitResponseOk(message, true);
         }
 
         /// <summary>
