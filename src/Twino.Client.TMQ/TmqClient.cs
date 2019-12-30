@@ -829,6 +829,30 @@ namespace Twino.Client.TMQ
             return await WaitResponseOk(message, verifyResponse);
         }
 
+        /// <summary>
+        /// Finds the channel and gets information if exists
+        /// </summary>
+        public async Task<ChannelInformation> GetChannelInfo(string name)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ResponseRequired = true;
+            message.ContentType = KnownContentTypes.ChannelInformation;
+            message.Target = name;
+            message.MessageId = UniqueIdGenerator.Create();
+
+            Task<TmqMessage> task = _follower.FollowResponse(message);
+            bool sent = await SendAsync(message);
+            if (!sent)
+                return null;
+
+            TmqMessage response = await task;
+            if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
+                return default;
+
+            return await response.GetJsonContent<ChannelInformation>();
+        }
+
         #endregion
 
         #region Queue
@@ -894,6 +918,31 @@ namespace Twino.Client.TMQ
             message.Content = new MemoryStream(Encoding.UTF8.GetBytes(options.Serialize(queueId)));
 
             return await WaitResponseOk(message, true);
+        }
+
+        /// <summary>
+        /// Finds the queue and gets information if exists
+        /// </summary>
+        public async Task<QueueInformation> GetQueueInfo(string channel, ushort id)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ResponseRequired = true;
+            message.ContentType = KnownContentTypes.ChannelInformation;
+            message.Target = channel;
+            message.MessageId = UniqueIdGenerator.Create();
+            message.Content = new MemoryStream(BitConverter.GetBytes(id));
+
+            Task<TmqMessage> task = _follower.FollowResponse(message);
+            bool sent = await SendAsync(message);
+            if (!sent)
+                return null;
+
+            TmqMessage response = await task;
+            if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
+                return default;
+
+            return await response.GetJsonContent<QueueInformation>();
         }
 
         #endregion
