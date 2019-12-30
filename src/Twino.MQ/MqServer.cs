@@ -105,6 +105,12 @@ namespace Twino.MQ
         /// </summary>
         internal TmqStickyConnector[] InstanceConnectors => _connectors;
 
+        /// <summary>
+        /// Implementation registry library.
+        /// Implementation instances are kept in this registry by their keys.
+        /// </summary>
+        public ImplementationRegistry Registry { get; } = new ImplementationRegistry();
+
         #endregion
 
         #region Constructors - Init

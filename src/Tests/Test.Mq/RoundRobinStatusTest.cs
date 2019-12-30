@@ -92,7 +92,7 @@ namespace Test.Mq
         [InlineData(false)]
         public async Task RequestAcknowledge(bool queueAckIsActive)
         {
-            int port = 47318 + Convert.ToInt32(queueAckIsActive);
+            int port = 37318 + Convert.ToInt32(queueAckIsActive);
             TestMqServer server = new TestMqServer();
             server.Initialize(port);
             server.Start(300, 300);

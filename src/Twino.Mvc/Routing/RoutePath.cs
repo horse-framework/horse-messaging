@@ -1,6 +1,5 @@
 ﻿namespace Twino.Mvc.Routing
 {
-
     /// <summary>
     /// Route part types
     /// </summary>
@@ -10,18 +9,6 @@
         /// Plain text route part like "v2", "api/test"
         /// </summary>
         Text,
-
-        /// <summary>
-        /// When route type is Controller, part value is "[controller]".
-        /// This kind of part is checked by requested controller route name.
-        /// </summary>
-        Controller,
-
-        /// <summary>
-        /// When route type is Action, part value is "[action]".
-        /// This kind of part is checked by requested action method name.
-        /// </summary>
-        Action,
 
         /// <summary>
         /// When route type is parameter, part value is "{paramName}".
@@ -41,7 +28,6 @@
     /// </summary>
     public class RoutePath
     {
-
         /// <summary>
         /// Path Type
         /// </summary>
@@ -52,5 +38,19 @@
         /// </summary>
         public string Value { get; set; }
 
+        public RoutePath()
+        {
+        }
+
+        public RoutePath(RouteType type, string value)
+        {
+            Type = type;
+            Value = value;
+        }
+
+        public override string ToString()
+        {
+            return "[" + Type + "] " + Value;
+        }
     }
 }

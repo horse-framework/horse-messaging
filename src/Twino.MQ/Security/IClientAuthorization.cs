@@ -23,12 +23,12 @@ namespace Twino.MQ.Security
         /// <summary>
         /// Returns true, if client can create new queue in the channel
         /// </summary>
-        Task<bool> CanCreateQueue(MqClient client, Channel channel, ushort contentType, QueueOptionsBuilder options);
+        Task<bool> CanCreateQueue(MqClient client, Channel channel, ushort contentType, NetworkOptionsBuilder options);
 
         /// <summary>
         /// Returns true, if client can update queue options
         /// </summary>
-        Task<bool> CanUpdateQueueOptions(MqClient client, Channel channel, ChannelQueue queue, QueueOptionsBuilder options);
+        Task<bool> CanUpdateQueueOptions(MqClient client, Channel channel, ChannelQueue queue, NetworkOptionsBuilder options);
 
         /// <summary>
         /// Returns true, if client can remove the queue in a channel

@@ -9,10 +9,10 @@ namespace Benchmark.Mvc.PlainText
         static void Main(string[] args)
         {
             TwinoMvc mvc = new TwinoMvc();
-            TwinoServer server = new TwinoServer(ServerOptions.CreateDefault());
+            TwinoServer server = new TwinoServer();
             mvc.Init();
-            server.UseMvc(mvc, HttpOptions.CreateDefault());
-            server.Start();
+            server.UseMvc(mvc);
+            server.Start(5000);
             server.BlockWhileRunning();
         }
     }

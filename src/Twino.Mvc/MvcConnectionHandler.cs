@@ -6,7 +6,6 @@ using System.Linq;
 using System;
 using System.IO;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Xml.Serialization;
 using Twino.Mvc.Results;
@@ -29,6 +28,8 @@ namespace Twino.Mvc
     /// </summary>
     internal class MvcConnectionHandler : IProtocolConnectionHandler<SocketBase, HttpMessage>
     {
+        #region Properties
+
         /// <summary>
         /// Twino.Mvc Facade object
         /// </summary>
@@ -41,6 +42,10 @@ namespace Twino.Mvc
             Mvc = mvc;
             App = app;
         }
+
+        #endregion
+
+        #region Implementations
 
         /// <summary>
         /// HTTP Protocol does not support piped connections
@@ -73,6 +78,10 @@ namespace Twino.Mvc
         {
             await RequestAsync(server, message.Request, message.Response);
         }
+
+        #endregion
+
+        #region Execution
 
         /// <summary>
         /// Triggered when a non-websocket request available.
@@ -156,23 +165,10 @@ namespace Twino.Mvc
                                         User = user
                                     };
 
-            //check controller authorize attribute
-            AuthorizeAttribute authController = (AuthorizeAttribute) match.Route.ControllerType.GetCustomAttribute(typeof(AuthorizeAttribute));
-            if (authController != null)
-            {
-                authController.VerifyAuthority(Mvc, null, context);
-                if (context.Result != null)
-                {
-                    WriteResponse(response, context.Result);
-                    return;
-                }
-            }
+            if (!CheckControllerAuthority(match, context, response))
+                return;
 
-            //find controller filters
-            IControllerFilter[] controllerFilters = (IControllerFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IControllerFilter), true);
-
-            //call BeforeCreated methods of controller attributes
-            if (!CallFilters(response, context, controllerFilters, filter => filter.BeforeCreated(context)))
+            if (!ExecuteBeforeControllerFilters(match, context, response))
                 return;
 
             TwinoController controller = await Mvc.ControllerFactory.CreateInstance(Mvc, match.Route.ControllerType, request, response, scope);
@@ -184,40 +180,21 @@ namespace Twino.Mvc
 
             controller.User = user;
 
-            //call AfterCreated methods of controller attributes
-            if (!CallFilters(response, context, controllerFilters, filter => filter.AfterCreated(controller, context)))
+            if (!ExecuteAfterControllerFilters(match, context, response, controller))
                 return;
-
-            //find action filters
-            IActionFilter[] actionFilters = (IActionFilter[]) match.Route.ActionType.GetCustomAttributes(typeof(IActionFilter), true);
 
             //fill action descriptor
             ActionDescriptor descriptor = new ActionDescriptor
                                           {
                                               Controller = controller,
-                                              Filters = actionFilters,
                                               Action = match.Route.ActionType,
                                               Parameters = FillParameters(request, match)
                                           };
 
-            //check action authorize attribute
-            AuthorizeAttribute authAction = (AuthorizeAttribute) match.Route.ActionType.GetCustomAttribute(typeof(AuthorizeAttribute));
-            if (authAction != null)
-            {
-                authAction.VerifyAuthority(Mvc, descriptor, context);
-                if (context.Result != null)
-                {
-                    WriteResponse(response, context.Result);
-                    return;
-                }
-            }
-
-            //call BeforeAction methods of controller attributes
-            if (!CallFilters(response, context, controllerFilters, filter => filter.BeforeAction(controller, descriptor, context)))
+            if (!CheckActionAuthority(match, context, response, descriptor))
                 return;
 
-            //call before action filters
-            if (!CallFilters(response, context, actionFilters, filter => filter.Before(controller, descriptor, context)))
+            if (!CheckActionExecutingFilters(match, context, response, controller, descriptor))
                 return;
 
             await controller.CallActionExecuting(descriptor, context);
@@ -227,27 +204,18 @@ namespace Twino.Mvc
                 return;
             }
 
-            //execute action
-            async Task Action(IActionResult actionResult)
+            await ExecuteAction(match, context, controller, descriptor, response);
+        }
+
+        private async Task ExecuteAction(RouteMatch match, FilterContext context, TwinoController controller, ActionDescriptor descriptor, HttpResponse response)
+        {
+            if (match.Route.IsAsyncMethod)
             {
-                if (actionResult == null) return;
-
-                //IActionResult actionResult = match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray()) as IActionResult;
-                context.Result = actionResult;
-
-                //call after action filters
-                CallFilters(response, context, actionFilters, filter => filter.After(controller, descriptor, actionResult, context), true);
-
-                //call AfterAction methods of controller attributes
-                CallFilters(response, context, controllerFilters, filter => filter.AfterAction(controller, descriptor, actionResult, context), true);
-                
-                await controller.CallActionExecuted(descriptor, context, actionResult);
-
-                WriteResponse(response, actionResult);
+                Task<IActionResult> task = (Task<IActionResult>) match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray());
+                await task;
+                await CompleteActionExecution(match, context, response, controller, descriptor, task.Result);
             }
-
-            AsyncStateMachineAttribute a = (AsyncStateMachineAttribute) match.Route.ActionType.GetCustomAttribute(typeof(AsyncStateMachineAttribute));
-            if (a == null)
+            else
             {
                 TaskCompletionSource<bool> source = new TaskCompletionSource<bool>();
                 ThreadPool.QueueUserWorkItem(async t =>
@@ -255,7 +223,7 @@ namespace Twino.Mvc
                     try
                     {
                         IActionResult ar = (IActionResult) match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray());
-                        await Action(ar);
+                        await CompleteActionExecution(match, context, response, controller, descriptor, ar);
                         source.SetResult(true);
                     }
                     catch (Exception e)
@@ -265,12 +233,6 @@ namespace Twino.Mvc
                 });
 
                 await source.Task;
-            }
-            else
-            {
-                Task<IActionResult> task = (Task<IActionResult>) match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray());
-                await task;
-                await Action(task.Result);
             }
         }
 
@@ -404,12 +366,166 @@ namespace Twino.Mvc
             return values;
         }
 
+        #endregion
+
+        #region Filters
+
+        /// <summary>
+        /// Checks controller authority, returns false if unauthorized
+        /// </summary>
+        private bool CheckControllerAuthority(RouteMatch match, FilterContext context, HttpResponse response)
+        {
+            if (!match.Route.HasControllerAuthorizeFilter)
+                return true;
+
+            AuthorizeAttribute filter = (AuthorizeAttribute) match.Route.ControllerType.GetCustomAttribute(typeof(AuthorizeAttribute));
+            if (filter != null)
+            {
+                filter.VerifyAuthority(Mvc, null, context);
+                if (context.Result != null)
+                {
+                    WriteResponse(response, context.Result);
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Executes before controller filters. Returns true, if execution can resume.
+        /// </summary>
+        private bool ExecuteBeforeControllerFilters(RouteMatch match, FilterContext context, HttpResponse response)
+        {
+            if (!match.Route.HasControllerBeforeFilter)
+                return true;
+
+            //find controller filters
+            IBeforeControllerFilter[] filters = (IBeforeControllerFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IBeforeControllerFilter), true);
+
+            //call BeforeCreated methods of controller attributes
+            return CallFilters(response, context, filters, async filter => await filter.OnBefore(context));
+        }
+
+        /// <summary>
+        /// Executes after controller filters. Returns true, if execution can resume.
+        /// </summary>
+        private bool ExecuteAfterControllerFilters(RouteMatch match, FilterContext context, HttpResponse response, IController controller)
+        {
+            if (!match.Route.HasControllerAfterFilter)
+                return true;
+
+            //find controller filters
+            IAfterControllerFilter[] filters = (IAfterControllerFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IAfterControllerFilter), true);
+
+            //call AfterCreated methods of controller attributes
+            return CallFilters(response, context, filters, async filter => await filter.OnAfter(controller, context));
+        }
+
+        /// <summary>
+        /// Checks action authority, returns false if unauthorized
+        /// </summary>
+        private bool CheckActionAuthority(RouteMatch match, FilterContext context, HttpResponse response, ActionDescriptor descriptor)
+        {
+            if (!match.Route.HasActionAuthorizeFilter)
+                return true;
+
+            //check action authorize attribute
+            AuthorizeAttribute filter = (AuthorizeAttribute) match.Route.ActionType.GetCustomAttribute(typeof(AuthorizeAttribute));
+            if (filter != null)
+            {
+                filter.VerifyAuthority(Mvc, descriptor, context);
+                if (context.Result != null)
+                {
+                    WriteResponse(response, context.Result);
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Calls controller and action executing filters
+        /// </summary>
+        private bool CheckActionExecutingFilters(RouteMatch match, FilterContext context, HttpResponse response, IController controller, ActionDescriptor descriptor)
+        {
+            if (match.Route.HasControllerExecutingFilter)
+            {
+                //find controller filters
+                IActionExecutingFilter[] filters = (IActionExecutingFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IActionExecutingFilter), true);
+
+                //call BeforeCreated methods of controller attributes
+                bool resume = CallFilters(response, context, filters, async filter => await filter.OnExecuting(controller, descriptor, context));
+                if (!resume)
+                    return false;
+            }
+
+            if (match.Route.HasActionExecutingFilter)
+            {
+                //find controller filters
+                IActionExecutingFilter[] filters = (IActionExecutingFilter[]) match.Route.ActionType.GetCustomAttributes(typeof(IActionExecutingFilter), true);
+
+                //call BeforeCreated methods of controller attributes
+                bool resume = CallFilters(response, context, filters, async filter => await filter.OnExecuting(controller, descriptor, context));
+                if (!resume)
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Completes action execution, calls after actions and writes response
+        /// </summary>
+        private async Task CompleteActionExecution(RouteMatch match,
+                                                   FilterContext context,
+                                                   HttpResponse response,
+                                                   TwinoController controller,
+                                                   ActionDescriptor descriptor,
+                                                   IActionResult actionResult)
+        {
+            if (actionResult == null) return;
+
+            //IActionResult actionResult = match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray()) as IActionResult;
+            context.Result = actionResult;
+
+            if (match.Route.HasActionExecutedFilter)
+            {
+                //find controller filters
+                IActionExecutedFilter[] filters = (IActionExecutedFilter[]) match.Route.ActionType.GetCustomAttributes(typeof(IActionExecutedFilter), true);
+
+                //call AfterCreated methods of controller attributes
+                foreach (IActionExecutedFilter filter in filters)
+                    await filter.OnExecuted(controller, descriptor, actionResult, context);
+            }
+
+            if (match.Route.HasControllerExecutedFilter)
+            {
+                //find controller filters
+                IActionExecutedFilter[] filters = (IActionExecutedFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IActionExecutedFilter), true);
+
+                //call AfterCreated methods of controller attributes
+                foreach (IActionExecutedFilter filter in filters)
+                    await filter.OnExecuted(controller, descriptor, actionResult, context);
+            }
+
+            await controller.CallActionExecuted(descriptor, context, actionResult);
+
+            WriteResponse(response, actionResult);
+        }
+
+
         /// <summary>
         /// Calls the action method (from parameter) for the specified response, context for each filter items (from parameter).
         /// Filter parameter action calling is used many times in Request method.
         /// CallFilters method is created to avoid to type this code many times
         /// </summary>
-        private bool CallFilters<TFilter>(HttpResponse response, FilterContext context, IEnumerable<TFilter> items, Action<TFilter> action, bool skipResultChanges = false)
+        private bool CallFilters<TFilter>(HttpResponse response,
+                                          FilterContext context,
+                                          IEnumerable<TFilter> items,
+                                          Action<TFilter> action,
+                                          bool skipResultChanges = false)
         {
             foreach (TFilter item in items)
             {
@@ -427,5 +543,7 @@ namespace Twino.Mvc
 
             return true;
         }
+
+        #endregion
     }
 }

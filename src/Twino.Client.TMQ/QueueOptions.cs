@@ -92,9 +92,14 @@ namespace Twino.Client.TMQ
         public MessagingQueueStatus? Status { get; set; }
 
         /// <summary>
+        /// Registry key for message delivery handler
+        /// </summary>
+        public string MessageDeliveryHandler { get; set; }
+
+        /// <summary>
         /// Serializes options and creates key value pair
         /// </summary>
-        public string Serialize(ushort contentType)
+        public virtual string Serialize(ushort contentType)
         {
             StringBuilder builder = new StringBuilder();
 
@@ -124,20 +129,23 @@ namespace Twino.Client.TMQ
             if (Status.HasValue)
                 builder.Append(Line(TmqHeaders.QUEUE_STATUS, Status.Value.ToString().ToLower()));
 
+            if (!string.IsNullOrEmpty(MessageDeliveryHandler))
+                builder.Append(Line(TmqHeaders.MESSAGE_DELIVERY_HANDLER, MessageDeliveryHandler));
+
             return builder.ToString();
         }
 
-        private static string Line(string key, bool value)
+        protected static string Line(string key, bool value)
         {
             return key + ": " + (value ? "1" : "0") + "\r\n";
         }
 
-        private static string Line(string key, string value)
+        protected static string Line(string key, string value)
         {
             return key + ": " + value + "\r\n";
         }
 
-        private static string Line(string key, TimeSpan value)
+        protected static string Line(string key, TimeSpan value)
         {
             int ms = Convert.ToInt32(value.TotalMilliseconds.ToString());
             return key + ": " + ms + "\r\n";

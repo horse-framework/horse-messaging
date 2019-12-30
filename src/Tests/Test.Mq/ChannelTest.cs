@@ -1,12 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Test.Mq.Internal;
-using Test.Mq.Models;
 using Twino.Client.TMQ;
 using Twino.MQ;
 using Twino.MQ.Clients;
-using Twino.MQ.Queues;
 using Xunit;
 
 namespace Test.Mq
@@ -111,6 +110,59 @@ namespace Test.Mq
 
             List<ChannelClient> clients = channel.ClientsClone;
             Assert.Empty(clients);
+        }
+
+
+        /// <summary>
+        /// Client sends a queue creation message
+        /// </summary>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Create(bool verifyResponse)
+        {
+            int port = verifyResponse ? 35905 : 35904;
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start();
+
+            TmqClient client = new TmqClient();
+            client.Connect("tmq://localhost:" + port);
+
+            bool created = await client.CreateChannel("new-channel", verifyResponse);
+            if (verifyResponse)
+                Assert.True(created);
+            else
+            {
+                await Task.Delay(1000);
+                Assert.True(created);
+            }
+        }
+
+        [Fact]
+        public async Task CreateWithProperties()
+        {
+            TestMqServer server = new TestMqServer();
+            server.Initialize(41206);
+            server.Start();
+
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:41206");
+            Assert.True(client.IsConnected);
+
+            bool created = await client.CreateChannel("new-channel", o =>
+            {
+                o.AllowMultipleQueues = false;
+                o.SendOnlyFirstAcquirer = true;
+                o.AcknowledgeTimeout = TimeSpan.FromSeconds(33);
+                o.Status = MessagingQueueStatus.Pull;
+            });
+            Assert.True(created);
+
+            Channel found = server.Server.FindChannel("new-channel");
+            Assert.NotNull(found);
+            Assert.False(found.Options.AllowMultipleQueues);
+            Assert.True(found.Options.SendOnlyFirstAcquirer);
         }
     }
 }
