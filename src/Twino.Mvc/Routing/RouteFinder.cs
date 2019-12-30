@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using Twino.Mvc.Controllers;
 using Twino.Mvc.Results;
 using Twino.Protocols.Http;
 
@@ -15,7 +14,6 @@ namespace Twino.Mvc.Routing
     /// </summary>
     public class RouteFinder : IRouteFinder
     {
-        
         /// <summary>
         /// Finds file from request url
         /// </summary>
@@ -47,82 +45,131 @@ namespace Twino.Mvc.Routing
                 if (code != HttpStatusCode.OK)
                     return new FileResult(code);
             }
-            
+
             int fileStartIndex = fullpath.LastIndexOf('/');
             string filename = fullpath.Substring(fileStartIndex + 1);
 
             FileStream stream = new FileStream(fullpath, FileMode.Open, FileAccess.Read);
             return new FileResult(stream, filename);
         }
-        
+
+        private RouteLeaf FindRouteInLeaf(RouteLeaf leaf, string method, string[] parts, int index)
+        {
+            //for text parts, it should match
+            if (leaf.Path.Type == RouteType.Text)
+            {
+                bool matched = leaf.Path.Value.Equals(parts[index], StringComparison.InvariantCultureIgnoreCase);
+                if (!matched)
+                    return null;
+            }
+
+            //if leaf is last of path check method and return if equals
+            if (leaf.Route != null)
+            {
+                if (parts.Length == index + 1 && leaf.Route.Method.Equals(method, StringComparison.InvariantCultureIgnoreCase))
+                    return leaf;
+
+                return null;
+            }
+
+            if (leaf.Children.Count == 0)
+                return null;
+
+            //parts are done but route may keep going to optional parameters
+            if (parts.Length == index + 1)
+            {
+                RouteLeaf x = leaf;
+                while (x.Children.Count == 1)
+                {
+                    RouteLeaf y = x.Children[0];
+
+                    if (y.Path.Type == RouteType.Text && string.IsNullOrEmpty(y.Path.Value))
+                    {
+                        if (y.Route.Method.Equals(method, StringComparison.InvariantCultureIgnoreCase))
+                            return y;
+
+                        return null;
+                    }
+                    
+                    if (y.Path.Type != RouteType.OptionalParameter)
+                        break;
+
+                    if (y.Route != null)
+                    {
+                        if (y.Route.Method.Equals(method, StringComparison.InvariantCultureIgnoreCase))
+                            return y;
+
+                        break;
+                    }
+                    
+                    x = y;
+                }
+            }
+
+            if (parts.Length < index + 2)
+                return null;
+
+            int next = index + 1;
+            foreach (RouteLeaf child in leaf.Children)
+            {
+                RouteLeaf found = FindRouteInLeaf(child, method, parts, next);
+                if (found != null)
+                    return found;
+            }
+
+            return null;
+        }
+
         /// <summary>
         /// Finds matched route from the list with specified request
         /// </summary>
-        public RouteMatch Find(IEnumerable<Route> routes, HttpRequest request)
+        public RouteMatch Find(IEnumerable<RouteLeaf> routes, HttpRequest request)
         {
-            RouteMatch match = new RouteMatch();
-            match.Values = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
-
             //split path to route parts
             string[] parts = request.Path.Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0)
-                parts = new[] { "" };
+                parts = new[] {""};
 
-            foreach (Route route in routes)
+            RouteLeaf route = null;
+            foreach (RouteLeaf leaf in routes)
             {
-                //if route's path list is shorter then request match impossible
-                //NOTE: this check should not be "==" cuz of optional parameter.
-                if (route.Path.Length < parts.Length)
-                    continue;
-
-                //check HTTP method
-                if (!string.Equals(route.Method, request.Method, StringComparison.InvariantCultureIgnoreCase))
-                    continue;
-
-                bool skip = false;
-
-                //part length and HTTP method are checked.
-                //we need to check each part of the path
-                for (int i = 0; i < route.Path.Length; i++)
+                RouteLeaf found = FindRouteInLeaf(leaf, request.Method, parts, 0);
+                if (found != null)
                 {
-                    RoutePath route_part = route.Path[i];
-
-                    //if type is optional parameter we dont need to check if equals
-                    //we just need to read the part value and put it into value list (if doesn't exists put default value)
-                    if (route_part.Type == RouteType.OptionalParameter)
-                    {
-                        if (parts.Length <= i)
-                            match.Values.Add(route_part.Value, null);
-                        else
-                            match.Values.Add(route_part.Value, parts[i]);
-                    }
-
-                    //if type is parameter we dont need to check if equals
-                    //we just need to read the part value and put it into value list
-                    else if (route_part.Type == RouteType.Parameter)
-                        match.Values.Add(route_part.Value, parts[i]);
-
-                    //if type is not parameter, it should be text, controller or action. for all, the route value contains exact value
-                    //NOTE: for [controller] or [action] values, for each and action created different route object and added to route list on MVC Init.
-                    //      so in here, we don2t need to try to check patterns etc. just check if the strings are equal.
-                    else if (!string.Equals(route_part.Value, parts[i], StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        skip = true;
-                        break;
-                    }
+                    route = found;
+                    break;
                 }
-
-                if (skip)
-                    continue;
-
-                match.Route = route;
             }
 
-            if (match.Route == null)
+            if (route == null)
                 return null;
+
+            RouteMatch match = new RouteMatch();
+            match.Values = new Dictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
+
+            match.Route = route.Route;
+
+            do
+            {
+                RoutePath path = route.Path;
+
+                //if type is optional parameter we dont need to check if equals
+                //we just need to read the part value and put it into value list (if doesn't exists put default value)
+                if (path.Type == RouteType.OptionalParameter)
+                    match.Values.Add(path.Value,
+                                     parts.Length <= route.Index
+                                         ? null
+                                         : parts[route.Index]);
+
+                //if type is parameter we dont need to check if equals
+                //we just need to read the part value and put it into value list
+                else if (path.Type == RouteType.Parameter)
+                    match.Values.Add(path.Value, parts[route.Index]);
+
+                route = route.Parent;
+            } while (route != null);
 
             return match;
         }
-
     }
 }

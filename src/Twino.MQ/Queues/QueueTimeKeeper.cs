@@ -26,16 +26,6 @@ namespace Twino.MQ.Queues
         private Timer _timer;
 
         /// <summary>
-        /// Messages with high priority list of the queue
-        /// </summary>
-        private readonly LinkedList<QueueMessage> _HighPriorityMessages;
-
-        /// <summary>
-        /// Messages list of the queue
-        /// </summary>
-        private readonly LinkedList<QueueMessage> _RegularMessages;
-
-        /// <summary>
         /// Processing timed out messages.
         /// This list is used as temp list.
         /// To prevent re-allocations, defined in here.
@@ -49,11 +39,9 @@ namespace Twino.MQ.Queues
 
         #endregion
 
-        public QueueTimeKeeper(ChannelQueue queue, LinkedList<QueueMessage> HighPriorityMessages, LinkedList<QueueMessage> RegularMessages)
+        public QueueTimeKeeper(ChannelQueue queue)
         {
             _queue = queue;
-            _HighPriorityMessages = HighPriorityMessages;
-            _RegularMessages = RegularMessages;
         }
 
         #region Methods
@@ -101,7 +89,8 @@ namespace Twino.MQ.Queues
         private void ProcessReceiveTimeup()
         {
             _timeupMessages.Clear();
-            ProcessReceiveTimeupOnList(_HighPriorityMessages);
+            lock (_queue.HighPriorityLinkedList)
+                ProcessReceiveTimeupOnList(_queue.HighPriorityLinkedList);
 
             foreach (QueueMessage message in _timeupMessages)
             {
@@ -110,7 +99,8 @@ namespace Twino.MQ.Queues
             }
 
             _timeupMessages.Clear();
-            ProcessReceiveTimeupOnList(_RegularMessages);
+            lock (_queue.RegularLinkedList)
+                ProcessReceiveTimeupOnList(_queue.RegularLinkedList);
 
             foreach (QueueMessage message in _timeupMessages)
             {
@@ -124,20 +114,17 @@ namespace Twino.MQ.Queues
         /// </summary>
         private void ProcessReceiveTimeupOnList(LinkedList<QueueMessage> list)
         {
-            lock (list)
+            foreach (QueueMessage message in list)
             {
-                foreach (QueueMessage message in list)
-                {
-                    if (!message.Deadline.HasValue)
-                        continue;
+                if (!message.Deadline.HasValue)
+                    continue;
 
-                    if (DateTime.UtcNow > message.Deadline.Value)
-                        _timeupMessages.Add(message);
-                }
-
-                foreach (QueueMessage message in _timeupMessages)
-                    list.Remove(message);
+                if (DateTime.UtcNow > message.Deadline.Value)
+                    _timeupMessages.Add(message);
             }
+
+            foreach (QueueMessage message in _timeupMessages)
+                list.Remove(message);
         }
 
         /// <summary>

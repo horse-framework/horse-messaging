@@ -5,15 +5,20 @@ namespace Twino.Mvc.Filters.Route
     /// <summary>
     /// Route attribute for the controller classes.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class)]
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
     public sealed class RouteAttribute : Attribute
     {
         /// <summary>
         /// Controller route pattern.
         /// For controller name type "[controller]"
         /// </summary>
-        public string Pattern { get; private set; }
+        public string Pattern { get; }
 
+        public RouteAttribute()
+        {
+            Pattern = "[controller]";
+        }
+        
         public RouteAttribute(string pattern)
         {
             Pattern = pattern;

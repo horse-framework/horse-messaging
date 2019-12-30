@@ -1,23 +1,23 @@
 ﻿using Twino.Mvc.Controllers;
 using Twino.Mvc.Filters;
 using System;
+using System.Threading.Tasks;
 using Twino.Mvc;
 
 namespace Sample.Mvc.Models
 {
-    public class TestActionFilterAttribute : Attribute, IActionFilter
+    public class TestActionFilterAttribute : Attribute, IActionExecutingFilter, IActionExecutedFilter
     {
-
-        public void After(IController controller, ActionDescriptor descriptor, IActionResult result, FilterContext context)
+        public Task OnExecuting(IController controller, ActionDescriptor descriptor, FilterContext context)
         {
-            Console.WriteLine("After: " + context.Request.Path);
+            Console.WriteLine("OnExecuting: " + context.Request.Path);
+            return Task.CompletedTask;
         }
 
-        public void Before(IController controller, ActionDescriptor descriptor, FilterContext context)
+        public Task OnExecuted(IController controller, ActionDescriptor descriptor, IActionResult result, FilterContext context)
         {
-            Console.WriteLine("Before: " + context.Request.Path);
-            //context.Result = StatusCodeResult.Unauthorized();
+            Console.WriteLine("OnExecuted: " + context.Request.Path);
+            return Task.CompletedTask;
         }
-
     }
 }

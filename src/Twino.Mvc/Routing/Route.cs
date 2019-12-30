@@ -38,6 +38,51 @@ namespace Twino.Mvc.Routing
         /// with some pre-calculated values.
         /// </summary>
         public ActionParameter[] Parameters { get; set; }
-        
+
+        /// <summary>
+        /// If true, when route has Authorize attribute 
+        /// </summary>
+        internal bool HasControllerAuthorizeFilter { get; set; }
+
+        /// <summary>
+        /// If true, when route has IBeforeControllerFilter 
+        /// </summary>
+        internal bool HasControllerBeforeFilter { get; set; }
+
+        /// <summary>
+        /// If true, when route has IAfterControllerFilter 
+        /// </summary>
+        internal bool HasControllerAfterFilter { get; set; }
+
+        /// <summary>
+        /// If true, when controller has IActionExecutingFilter 
+        /// </summary>
+        internal bool HasControllerExecutingFilter { get; set; }
+
+        /// <summary>
+        /// If true, when controller has IActionExecutedFilter 
+        /// </summary>
+        internal bool HasControllerExecutedFilter { get; set; }
+
+        /// <summary>
+        /// If true, when route has Authorize attribute 
+        /// </summary>
+        internal bool HasActionAuthorizeFilter { get; set; }
+
+        /// <summary>
+        /// If true, when action method has IActionExecutingFilter 
+        /// </summary>
+        internal bool HasActionExecutingFilter { get; set; }
+
+        /// <summary>
+        /// If true, when action method has IActionExecutedFilter 
+        /// </summary>
+        internal bool HasActionExecutedFilter { get; set; }
+
+        /// <summary>
+        /// If true, method return type is generic Task.
+        /// If false, method return type is IActionResult.
+        /// </summary>
+        internal bool IsAsyncMethod { get; set; }
     }
 }

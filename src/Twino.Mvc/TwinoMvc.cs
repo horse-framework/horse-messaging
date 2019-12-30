@@ -25,8 +25,8 @@ namespace Twino.Mvc
         /// All routes. This list is prepared with Init method.
         /// Loads all types in assembly implemented from IController and their actions with Http Method Attribute.
         /// </summary>
-        public List<Route> Routes { get; private set; }
-
+        internal List<RouteLeaf> Routes { get; private set; }
+        
         /// <summary>
         /// File download routes
         /// </summary>
@@ -97,7 +97,7 @@ namespace Twino.Mvc
 
         public TwinoMvc()
         {
-            Routes = new List<Route>();
+            Routes = new List<RouteLeaf>();
             Services = new ServiceContainer();
             RouteFinder = new RouteFinder();
             ControllerFactory = new ControllerFactory();
@@ -134,7 +134,7 @@ namespace Twino.Mvc
         /// </summary>
         public void Init()
         {
-            Routes = new List<Route>();
+            Routes = new List<RouteLeaf>();
             FileRoutes = new List<FileRoute>();
             CreateRoutes();
         }
@@ -174,8 +174,8 @@ namespace Twino.Mvc
                 if (type.IsAssignableFrom(typeof(TwinoController)) && typeof(TwinoController).IsAssignableFrom(type))
                     continue;
 
-                IEnumerable<Route> routes = builder.BuildRoutes(type);
-                foreach (Route route in routes)
+                IEnumerable<RouteLeaf> routes = builder.BuildRoutes(type);
+                foreach (RouteLeaf route in routes)
                     Routes.Add(route);
             }
         }

@@ -21,14 +21,8 @@ namespace Twino.Mvc.Controllers
         public MethodInfo Action { get; set; }
 
         /// <summary>
-        /// Action filters of the action method
-        /// </summary>
-        public IEnumerable<IActionFilter> Filters { get; set; }
-
-        /// <summary>
         /// All parameters with values of the action method
         /// </summary>
         public IEnumerable<ParameterValue> Parameters { get; set; }
-        
     }
 }
