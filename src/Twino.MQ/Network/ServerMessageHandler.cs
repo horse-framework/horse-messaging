@@ -44,9 +44,7 @@ namespace Twino.MQ.Network
 
                 //create only channel
                 case KnownContentTypes.CreateChannel:
-                    Channel ch = await CreateChannel(client, message);
-                    if (ch != null && message.ResponseRequired)
-                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Ok));
+                    await CreateChannel(client, message, false);
                     break;
 
                 //get channel information
@@ -131,7 +129,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Creates new channel
         /// </summary>
-        private async Task<Channel> CreateChannel(MqClient client, TmqMessage message)
+        private async Task<Channel> CreateChannel(MqClient client, TmqMessage message, bool createForQueue)
         {
             Channel channel = _server.FindChannel(message.Target);
             if (channel != null)
@@ -150,7 +148,7 @@ namespace Twino.MQ.Network
                 }
             }
 
-            if (message.Length > 0 && message.Content != null && message.Content.Length > 0)
+            if (!createForQueue && message.Length > 0 && message.Content != null && message.Content.Length > 0)
             {
                 NetworkOptionsBuilder builder = new NetworkOptionsBuilder();
                 builder.Load(message.ToString());
@@ -182,10 +180,18 @@ namespace Twino.MQ.Network
                         deliveryHandler = e;
                 }
 
-                return _server.CreateChannel(message.Target, authenticator, eventHandler, deliveryHandler, options);
+                Channel ch = _server.CreateChannel(message.Target, authenticator, eventHandler, deliveryHandler, options);
+
+                if (ch != null && message.ResponseRequired)
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Ok));
             }
 
-            return _server.CreateChannel(message.Target);
+            Channel c = _server.CreateChannel(message.Target);
+
+            if (!createForQueue && c != null && message.ResponseRequired)
+                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Ok));
+
+            return c;
         }
 
         /// <summary>
@@ -283,7 +289,7 @@ namespace Twino.MQ.Network
                 contentType = builder.Id;
             }
 
-            Channel channel = await CreateChannel(client, message);
+            Channel channel = await CreateChannel(client, message, true);
             ChannelQueue queue = channel.FindQueue(contentType.Value);
 
             //if queue exists, we can't create. return duplicate response.

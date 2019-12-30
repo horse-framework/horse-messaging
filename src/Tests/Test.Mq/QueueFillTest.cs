@@ -49,7 +49,7 @@ namespace Test.Mq
                 items.Add("No #" + i);
 
             TestMqServer server = new TestMqServer();
-            server.Initialize(47702);
+            server.Initialize(39702);
             server.Start(300, 300);
 
             Channel channel = server.Server.FindChannel("ch-push");
