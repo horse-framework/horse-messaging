@@ -9,7 +9,7 @@ namespace Twino.MQ.Security
     public interface IChannelAuthenticator
     {
         /// <summary>
-        /// Checks if a client can join to the channel.
+        /// Checks if a client can join to the channel or get information about the channel.
         /// It should return true if allowed.
         /// </summary>
         Task<bool> Authenticate(Channel channel, MqClient client);
