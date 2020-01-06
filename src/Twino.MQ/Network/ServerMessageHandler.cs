@@ -100,8 +100,16 @@ namespace Twino.MQ.Network
                 return;
             }
 
-            bool grant = await channel.AddClient(client);
+            ChannelClient found = channel.FindClient(client.UniqueId);
+            if (found != null)
+            {
+                if (message.ResponseRequired)
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Ok));
 
+                return;
+            }
+
+            bool grant = await channel.AddClient(client);
             if (message.ResponseRequired)
                 await client.SendAsync(MessageBuilder.ResponseStatus(message, grant ? KnownContentTypes.Ok : KnownContentTypes.Unauthorized));
         }
