@@ -281,6 +281,14 @@ namespace Twino.MQ
         /// <summary>
         /// Finds client in the channel
         /// </summary>
+        public ChannelClient FindClient(string uniqueId)
+        {
+            return _clients.Find(x => x.Client.UniqueId == uniqueId);
+        }
+        
+        /// <summary>
+        /// Finds client in the channel
+        /// </summary>
         public ChannelClient FindClient(MqClient client)
         {
             return _clients.Find(x => x.Client == client);
