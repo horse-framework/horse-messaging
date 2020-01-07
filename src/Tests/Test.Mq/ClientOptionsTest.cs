@@ -23,6 +23,7 @@ namespace Test.Mq
             TestMqServer server = new TestMqServer();
             server.Initialize(port);
             server.Server.Options.UseMessageId = enabled;
+            server.Server.FindChannel("ch-1").FindQueue(MessageA.ContentType).Options.UseMessageId = false;
             server.Start();
 
             TmqClient client = new TmqClient();

@@ -46,7 +46,7 @@ namespace Test.Mq
             TmqMessage message = new TmqMessage();
             message.HighPriority = true;
             message.Type = MessageType.Client;
-            message.Target = client2.ClientId;
+            message.SetTarget(client2.ClientId);
             message.SetStringContent("Hello, World!");
 
             bool acknowledge = await client1.SendWithAcknowledge(message);
@@ -88,7 +88,7 @@ namespace Test.Mq
             TmqMessage message = new TmqMessage();
             message.HighPriority = true;
             message.Type = MessageType.Client;
-            message.Target = client2.ClientId;
+            message.SetTarget(client2.ClientId);
             message.SetStringContent("Hello, World!");
 
             bool acknowledge = await client1.SendWithAcknowledge(message);
@@ -126,7 +126,7 @@ namespace Test.Mq
             TmqMessage message = new TmqMessage();
             message.HighPriority = true;
             message.Type = MessageType.Client;
-            message.Target = client2.ClientId;
+            message.SetTarget(client2.ClientId);
             message.SetStringContent("Hello, World!");
 
             bool acknowledge = await client1.SendWithAcknowledge(message);

@@ -419,12 +419,10 @@ namespace Twino.Client.TMQ
         /// </summary>
         public bool Send(TmqMessage message)
         {
-            message.Source = _clientId;
+            message.SetSource(_clientId);
 
             if (string.IsNullOrEmpty(message.MessageId) && UseUniqueMessageId)
-                message.MessageId = UniqueIdGenerator.Create();
-
-            message.CalculateLengths();
+                message.SetMessageId(UniqueIdGenerator.Create());
 
             byte[] data = _writer.Create(message).Result;
             return Send(data);
@@ -436,7 +434,7 @@ namespace Twino.Client.TMQ
         public bool SendJson(string target, ushort contentType, object model)
         {
             TmqMessage msg = new TmqMessage();
-            msg.Target = target;
+            msg.SetTarget(target);
             msg.ContentType = contentType;
             msg.SetJsonContent(model).Wait();
 
@@ -449,7 +447,7 @@ namespace Twino.Client.TMQ
         public bool Send(string target, ushort contentType, string message)
         {
             TmqMessage msg = new TmqMessage();
-            msg.Target = target;
+            msg.SetTarget(target);
             msg.ContentType = contentType;
             msg.SetStringContent(message);
 
@@ -462,7 +460,7 @@ namespace Twino.Client.TMQ
         public bool Send(string target, ushort contentType, MemoryStream content)
         {
             TmqMessage message = new TmqMessage();
-            message.Target = target;
+            message.SetTarget(target);
             message.ContentType = contentType;
             message.Content = content;
 
@@ -474,12 +472,10 @@ namespace Twino.Client.TMQ
         /// </summary>
         public async Task<bool> SendAsync(TmqMessage message)
         {
-            message.Source = _clientId;
+            message.SetSource(_clientId);
 
             if (string.IsNullOrEmpty(message.MessageId) && UseUniqueMessageId)
-                message.MessageId = UniqueIdGenerator.Create();
-
-            message.CalculateLengths();
+                message.SetMessageId(UniqueIdGenerator.Create());
 
             byte[] data = await _writer.Create(message);
             return await SendAsync(data);
@@ -490,12 +486,12 @@ namespace Twino.Client.TMQ
         /// </summary>
         public async Task<bool> SendWithAcknowledge(TmqMessage message)
         {
-            message.Source = _clientId;
+            message.SetSource(_clientId);
             message.AcknowledgeRequired = true;
             message.ResponseRequired = false;
 
             if (string.IsNullOrEmpty(message.MessageId) && UseUniqueMessageId)
-                message.MessageId = UniqueIdGenerator.Create();
+                message.SetMessageId(UniqueIdGenerator.Create());
 
             if (string.IsNullOrEmpty(message.MessageId))
                 throw new ArgumentNullException("Messages without unique id cannot be acknowledged");
@@ -509,7 +505,7 @@ namespace Twino.Client.TMQ
         public async Task<bool> SendJsonAsync(string target, ushort contentType, object model, bool waitAcknowledge)
         {
             TmqMessage msg = new TmqMessage();
-            msg.Target = target;
+            msg.SetTarget(target);
             msg.ContentType = contentType;
             await msg.SetJsonContent(model);
 
@@ -525,7 +521,7 @@ namespace Twino.Client.TMQ
         public async Task<bool> SendAsync(string target, ushort contentType, string message, bool waitAcknowledge)
         {
             TmqMessage msg = new TmqMessage();
-            msg.Target = target;
+            msg.SetTarget(target);
             msg.ContentType = contentType;
             msg.SetStringContent(message);
 
@@ -541,7 +537,7 @@ namespace Twino.Client.TMQ
         public async Task<bool> SendAsync(string target, ushort contentType, MemoryStream content, bool waitAcknowledge)
         {
             TmqMessage message = new TmqMessage();
-            message.Target = target;
+            message.SetTarget(target);
             message.ContentType = contentType;
             message.Content = content;
 
@@ -619,7 +615,7 @@ namespace Twino.Client.TMQ
         public async Task<TmqMessage> RequestJson(string target, ushort contentType, object model)
         {
             TmqMessage message = new TmqMessage(MessageType.Client);
-            message.Target = target;
+            message.SetTarget(target);
             message.ContentType = contentType;
             await message.SetJsonContent(model);
 
@@ -632,7 +628,7 @@ namespace Twino.Client.TMQ
         public async Task<TmqMessage> Request(string target, ushort contentType, MemoryStream content)
         {
             TmqMessage message = new TmqMessage(MessageType.Client);
-            message.Target = target;
+            message.SetTarget(target);
             message.Content = content;
             message.ContentType = contentType;
 
@@ -645,7 +641,7 @@ namespace Twino.Client.TMQ
         public async Task<TmqMessage> Request(string target, ushort contentType, string content)
         {
             TmqMessage message = new TmqMessage(MessageType.Client);
-            message.Target = target;
+            message.SetTarget(target);
             message.ContentType = contentType;
             message.SetStringContent(content);
 
@@ -659,7 +655,7 @@ namespace Twino.Client.TMQ
         {
             message.ResponseRequired = true;
             message.AcknowledgeRequired = false;
-            message.MessageId = UniqueIdGenerator.Create();
+            message.SetMessageId(UniqueIdGenerator.Create());
 
             bool sent = await SendAsync(message);
             if (!sent)
@@ -680,13 +676,13 @@ namespace Twino.Client.TMQ
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Channel;
             message.ContentType = queueId;
-            message.Target = channel;
+            message.SetTarget(channel);
             message.Content = new MemoryStream();
             message.AcknowledgeRequired = waitAcknowledge;
             await System.Text.Json.JsonSerializer.SerializeAsync(message.Content, jsonObject, jsonObject.GetType());
 
             if (waitAcknowledge)
-                message.MessageId = UniqueIdGenerator.Create();
+                message.SetMessageId(UniqueIdGenerator.Create());
 
             return await WaitForAcknowledge(message, waitAcknowledge);
         }
@@ -707,12 +703,12 @@ namespace Twino.Client.TMQ
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Channel;
             message.ContentType = queueId;
-            message.Target = channel;
+            message.SetTarget(channel);
             message.Content = content;
             message.AcknowledgeRequired = waitAcknowledge;
 
             if (waitAcknowledge)
-                message.MessageId = UniqueIdGenerator.Create();
+                message.SetMessageId(UniqueIdGenerator.Create());
 
             return await WaitForAcknowledge(message, waitAcknowledge);
         }
@@ -730,8 +726,8 @@ namespace Twino.Client.TMQ
             message.Type = MessageType.Channel;
             message.ResponseRequired = true;
             message.ContentType = queueId;
-            message.Target = channel;
-            message.MessageId = UniqueIdGenerator.Create();
+            message.SetTarget(channel);
+            message.SetMessageId(UniqueIdGenerator.Create());
 
             Task<TmqMessage> task = _follower.FollowResponse(message);
             bool sent = await SendAsync(message);
@@ -769,11 +765,11 @@ namespace Twino.Client.TMQ
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.Join;
-            message.Target = channel;
+            message.SetTarget(channel);
             message.ResponseRequired = verifyResponse;
 
             if (verifyResponse)
-                message.MessageId = UniqueIdGenerator.Create();
+                message.SetMessageId(UniqueIdGenerator.Create());
 
             return await WaitResponseOk(message, verifyResponse);
         }
@@ -786,11 +782,11 @@ namespace Twino.Client.TMQ
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.Leave;
-            message.Target = channel;
+            message.SetTarget(channel);
             message.ResponseRequired = verifyResponse;
 
             if (verifyResponse)
-                message.MessageId = UniqueIdGenerator.Create();
+                message.SetMessageId(UniqueIdGenerator.Create());
 
             return await WaitResponseOk(message, verifyResponse);
         }
@@ -803,11 +799,11 @@ namespace Twino.Client.TMQ
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.CreateChannel;
-            message.Target = channel;
+            message.SetTarget(channel);
             message.ResponseRequired = verifyResponse;
 
             if (verifyResponse)
-                message.MessageId = UniqueIdGenerator.Create();
+                message.SetMessageId(UniqueIdGenerator.Create());
 
             return await WaitResponseOk(message, verifyResponse);
         }
@@ -820,9 +816,9 @@ namespace Twino.Client.TMQ
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.CreateChannel;
-            message.Target = channel;
+            message.SetTarget(channel);
             message.ResponseRequired = true;
-            message.MessageId = UniqueIdGenerator.Create();
+            message.SetMessageId(UniqueIdGenerator.Create());
 
             ChannelCreationOptions options = new ChannelCreationOptions();
             optionsAction(options);
@@ -839,11 +835,11 @@ namespace Twino.Client.TMQ
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.RemoveChannel;
-            message.Target = channel;
+            message.SetTarget(channel);
             message.ResponseRequired = verifyResponse;
 
             if (verifyResponse)
-                message.MessageId = UniqueIdGenerator.Create();
+                message.SetMessageId(UniqueIdGenerator.Create());
 
             return await WaitResponseOk(message, verifyResponse);
         }
@@ -857,8 +853,8 @@ namespace Twino.Client.TMQ
             message.Type = MessageType.Server;
             message.ResponseRequired = true;
             message.ContentType = KnownContentTypes.ChannelInformation;
-            message.Target = name;
-            message.MessageId = UniqueIdGenerator.Create();
+            message.SetTarget(name);
+            message.SetMessageId(UniqueIdGenerator.Create());
 
             Task<TmqMessage> task = _follower.FollowResponse(message);
             bool sent = await SendAsync(message);
@@ -884,7 +880,7 @@ namespace Twino.Client.TMQ
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.CreateQueue;
-            message.Target = channel;
+            message.SetTarget(channel);
             message.ResponseRequired = verifyResponse;
 
             if (optionsAction == null)
@@ -897,7 +893,7 @@ namespace Twino.Client.TMQ
             }
 
             if (verifyResponse)
-                message.MessageId = UniqueIdGenerator.Create();
+                message.SetMessageId(UniqueIdGenerator.Create());
 
             return await WaitResponseOk(message, verifyResponse);
         }
@@ -910,12 +906,12 @@ namespace Twino.Client.TMQ
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.RemoveQueue;
-            message.Target = channel;
+            message.SetTarget(channel);
             message.ResponseRequired = verifyResponse;
             message.Content = new MemoryStream(BitConverter.GetBytes(queueId));
 
             if (verifyResponse)
-                message.MessageId = UniqueIdGenerator.Create();
+                message.SetMessageId(UniqueIdGenerator.Create());
 
             return await WaitResponseOk(message, verifyResponse);
         }
@@ -928,9 +924,9 @@ namespace Twino.Client.TMQ
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.UpdateQueue;
-            message.Target = channel;
+            message.SetTarget(channel);
             message.ResponseRequired = true;
-            message.MessageId = UniqueIdGenerator.Create();
+            message.SetMessageId(UniqueIdGenerator.Create());
 
             QueueOptions options = new QueueOptions();
             optionsAction(options);
@@ -948,8 +944,8 @@ namespace Twino.Client.TMQ
             message.Type = MessageType.Server;
             message.ResponseRequired = true;
             message.ContentType = KnownContentTypes.ChannelInformation;
-            message.Target = channel;
-            message.MessageId = UniqueIdGenerator.Create();
+            message.SetTarget(channel);
+            message.SetMessageId(UniqueIdGenerator.Create());
             message.Content = new MemoryStream(BitConverter.GetBytes(id));
 
             Task<TmqMessage> task = _follower.FollowResponse(message);

@@ -156,15 +156,12 @@ namespace Twino.MQ.Network
 
                 //if server want to use message id anyway, generate new.
                 if (_server.Options.UseMessageId)
-                {
-                    message.MessageId = _server.MessageIdGenerator.Create();
-                    message.MessageIdLength = message.MessageId.Length;
-                }
+                    message.SetMessageId(_server.MessageIdGenerator.Create());
             }
 
             //if message does not have a source information, source will be set to sender's unique id
             if (string.IsNullOrEmpty(message.Source))
-                message.Source = mc.UniqueId;
+                message.SetSource(mc.UniqueId);
 
             //if client sending messages like someone another, kick him
             else if (message.Source != mc.UniqueId)

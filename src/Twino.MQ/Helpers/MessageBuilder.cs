@@ -107,7 +107,7 @@ namespace Twino.MQ.Helpers
 
             message.Type = MessageType.Server;
             message.ContentType = contentType;
-            message.Target = target;
+            message.SetTarget(target);
             message.FirstAcquirer = true;
 
             return message;
@@ -121,13 +121,13 @@ namespace Twino.MQ.Helpers
             TmqMessage response = new TmqMessage();
 
             response.Type = MessageType.Response;
-            response.MessageId = request.MessageId;
+            response.SetMessageId(request.MessageId);
             response.ContentType = status;
             response.FirstAcquirer = true;
-            
-            response.Target = request.Type == MessageType.Channel
-                                  ? request.Target
-                                  : request.Source;
+
+            response.SetTarget(request.Type == MessageType.Channel
+                                   ? request.Target
+                                   : request.Source);
 
             return response;
         }
