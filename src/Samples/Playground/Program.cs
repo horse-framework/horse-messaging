@@ -12,6 +12,7 @@ using Test.Mq.Models;
 using Twino.Client.TMQ;
 using Twino.Core;
 using Twino.Core.Protocols;
+using Twino.Ioc;
 using Twino.MQ;
 using Twino.MQ.Clients;
 using Twino.MQ.Delivery;
@@ -27,6 +28,7 @@ using Xunit;
 
 namespace Playground
 {
+
     [Route("")]
     [Route("home")]
     public class HomeController : TwinoController

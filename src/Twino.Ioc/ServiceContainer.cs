@@ -58,7 +58,7 @@ namespace Twino.Ioc
         public void AddTransient(Type serviceType, Type implementationType, Delegate afterCreated)
         {
             if (Items.ContainsKey(serviceType))
-                throw new InvalidOperationException("Specified service type is already added into service container");
+                throw new InvalidOperationException($"Specified service type is already added into service container: {serviceType.Name}");
 
             ServiceDescriptor descriptor = new ServiceDescriptor
             {
@@ -390,7 +390,7 @@ namespace Twino.Ioc
 
             ServiceDescriptor descriptor = GetDescriptor(serviceType);
             if (descriptor == null)
-                throw new KeyNotFoundException($"Service type is not found {serviceType.Name}");
+                throw new KeyNotFoundException($"Service type is not found: {serviceType.Name}");
 
             if (descriptor.IsPool)
             {

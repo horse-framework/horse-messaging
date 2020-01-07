@@ -201,7 +201,7 @@ namespace Twino.MQ.Queues
                 message.AcknowledgeRequired = Options.RequestAcknowledge;
 
                 if (Options.UseMessageId)
-                    message.MessageId = Channel.Server.MessageIdGenerator.Create();
+                    message.SetMessageId(Channel.Server.MessageIdGenerator.Create());
 
                 message.Content = new MemoryStream();
                 await System.Text.Json.JsonSerializer.SerializeAsync(message.Content, item);
@@ -232,7 +232,7 @@ namespace Twino.MQ.Queues
                 message.AcknowledgeRequired = Options.RequestAcknowledge;
 
                 if (Options.UseMessageId)
-                    message.MessageId = Channel.Server.MessageIdGenerator.Create();
+                    message.SetMessageId(Channel.Server.MessageIdGenerator.Create());
 
                 message.Content = new MemoryStream(Encoding.UTF8.GetBytes(item));
                 message.Content.Position = 0;
@@ -262,7 +262,7 @@ namespace Twino.MQ.Queues
                 message.AcknowledgeRequired = Options.RequestAcknowledge;
 
                 if (Options.UseMessageId)
-                    message.MessageId = Channel.Server.MessageIdGenerator.Create();
+                    message.SetMessageId(Channel.Server.MessageIdGenerator.Create());
 
                 message.Content = new MemoryStream(item);
                 message.Content.Position = 0;
@@ -419,10 +419,7 @@ namespace Twino.MQ.Queues
             message.Message.AcknowledgeRequired = Options.RequestAcknowledge;
 
             if (Options.HideClientNames)
-            {
-                message.Message.Source = null;
-                message.Message.SourceLength = 0;
-            }
+                message.Message.SetSource(null);
 
             //process the message
             QueueMessage held = null;
@@ -442,7 +439,7 @@ namespace Twino.MQ.Queues
 
                 //if message doesn't have message id and "UseMessageId" option is enabled, create new message id for the message
                 if (Options.UseMessageId && string.IsNullOrEmpty(message.Message.MessageId))
-                    message.Message.MessageId = Channel.Server.MessageIdGenerator.Create();
+                    message.Message.SetMessageId(Channel.Server.MessageIdGenerator.Create());
 
                 switch (Status)
                 {
@@ -768,12 +765,10 @@ namespace Twino.MQ.Queues
             
             //change to response message, send, change back to channel message
             string mid = message.Message.MessageId;
-            message.Message.MessageId = request.MessageId;
-            message.Message.MessageIdLength = request.MessageIdLength;
+            message.Message.SetMessageId(request.MessageId);
             message.Message.Type = MessageType.Response;
             bool sent = requester.Client.Send(message.Message);
-            message.Message.MessageId = mid;
-            message.Message.MessageIdLength = mid.Length;
+            message.Message.SetMessageId(mid);
             message.Message.Type = MessageType.Channel;
             
             if (!sent)
@@ -912,10 +907,10 @@ namespace Twino.MQ.Queues
                 {
                     //if client names are hidden, set source as channel name
                     if (Options.HideClientNames)
-                        deliveryMessage.Source = null;
+                        deliveryMessage.SetSource(null);
 
                     //target should be channel name, so client can have info where the message comes from
-                    deliveryMessage.Target = Channel.Name;
+                    deliveryMessage.SetTarget(Channel.Name);
 
                     delivery.AcknowledgeSentToSource = await delivery.Message.Source.SendAsync(deliveryMessage);
                 }

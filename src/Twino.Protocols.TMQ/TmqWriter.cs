@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Twino.Core.Protocols;
 
 namespace Twino.Protocols.TMQ
 {
@@ -86,6 +85,9 @@ namespace Twino.Protocols.TMQ
             ms.WriteByte((byte) message.TargetLength);
 
             await ms.WriteAsync(BitConverter.GetBytes(message.ContentType));
+
+            if (message.Content != null && message.Length == 0)
+                message.Length = (ulong) message.Content.Length;
 
             if (message.Length < 253)
                 ms.WriteByte((byte) message.Length);

@@ -241,12 +241,42 @@ namespace Twino.MQ.Options
         {
             _clientAuthenticator = authenticator;
         }
+        /// <summary>
+        /// Adds client authenticator implementation to builder
+        /// </summary>
+        public void AddAuthenticator<T>( ) where T: class, IClientAuthenticator, new()
+        {
+            _clientAuthenticator = new T();
+        }
+        /// <summary>
+        /// Adds client authenticator implementation to builder
+        /// </summary>
+        public void AddAuthenticator<T>(params object[] ctorArgs) where T : class, IClientAuthenticator, new()
+        {
+            IClientAuthenticator authenticator = Activator.CreateInstance(typeof(T), ctorArgs) as IClientAuthenticator;
+            _clientAuthenticator = authenticator;
+        }
 
         /// <summary>
         /// Adds authorization implementation to builder
         /// </summary>
         public void AddAuthorization(IClientAuthorization authorization)
         {
+            _clientAuthorization = authorization;
+        }
+        /// <summary>
+        /// Adds authorization implementation to builder
+        /// </summary>
+        public void AddAuthorization<T>() where T : class, IClientAuthorization, new()
+        {
+            _clientAuthorization = new T();
+        }
+        /// <summary>
+        /// Adds authorization implementation to builder
+        /// </summary>
+        public void AddAuthorization<T>(params object[] ctorArgs) where T : class, IClientAuthorization, new()
+        {
+            IClientAuthorization authorization = Activator.CreateInstance(typeof(T), ctorArgs) as IClientAuthorization;
             _clientAuthorization = authorization;
         }
 
@@ -257,12 +287,42 @@ namespace Twino.MQ.Options
         {
             _clientHandler = handler;
         }
+        /// <summary>
+        /// Adds client handler implementation to builder
+        /// </summary>
+        public void AddClientHandler<T>() where T : class, IClientHandler, new()
+        {
+            _clientHandler = new T();
+        }
+        /// <summary>
+        /// Adds client handler implementation to builder
+        /// </summary>
+        public void AddClientHandler<T>(params object[] ctorArgs) where T : class, IClientHandler, new()
+        {
+            IClientHandler handler = Activator.CreateInstance(typeof(T), ctorArgs) as IClientHandler;
+            _clientHandler = handler;
+        }
 
         /// <summary>
         /// Adds default channel handler implementation to builder
         /// </summary>
         public void AddDefaultChannelHandler(IChannelEventHandler handler)
         {
+            _channelEventHandler = handler;
+        }
+        /// <summary>
+        /// Adds default channel handler implementation to builder
+        /// </summary>
+        public void AddDefaultChannelHandler<T>() where T : class, IChannelEventHandler, new()
+        {
+            _channelEventHandler = new T();
+        }
+        /// <summary>
+        /// Adds default channel handler implementation to builder
+        /// </summary>
+        public void AddDefaultChannelHandler<T>(params object[] ctorArgs) where T : class, IChannelEventHandler, new()
+        {
+            IChannelEventHandler handler = Activator.CreateInstance(typeof(T), ctorArgs) as IChannelEventHandler;
             _channelEventHandler = handler;
         }
 
@@ -273,6 +333,21 @@ namespace Twino.MQ.Options
         {
             _channelAuthenticator = authenticator;
         }
+        /// <summary>
+        /// Adds default channel authenticator implementation to builder
+        /// </summary>
+        public void AddDefaultChannelAuthenticator<T>() where T : class, IChannelAuthenticator, new()
+        {
+            _channelAuthenticator = new T();
+        }
+        /// <summary>
+        /// Adds default channel authenticator implementation to builder
+        /// </summary>
+        public void AddDefaultChannelAuthenticator<T>(params object[] ctorArgs) where T : class, IChannelAuthenticator, new()
+        {
+            IChannelAuthenticator authenticator = Activator.CreateInstance(typeof(T), ctorArgs) as IChannelAuthenticator;
+            _channelAuthenticator = authenticator;
+        }
 
         /// <summary>
         /// Adds default delivery handler implementation to builder
@@ -281,7 +356,21 @@ namespace Twino.MQ.Options
         {
             _messageDeliveryHandler = handler;
         }
-
+        /// <summary>
+        /// Adds default delivery handler implementation to builder
+        /// </summary>
+        public void AddDefaultDeliveryHandler<T>() where T : class, IMessageDeliveryHandler, new()
+        {
+            _messageDeliveryHandler = new T();
+        }
+        /// <summary>
+        /// Adds default delivery handler implementation to builder
+        /// </summary>
+        public void AddDefaultDeliveryHandler<T>(params object[] ctorArgs) where T : class, IMessageDeliveryHandler, new()
+        {
+            IMessageDeliveryHandler handler = Activator.CreateInstance(typeof(T), ctorArgs) as IMessageDeliveryHandler;
+            _messageDeliveryHandler = handler;
+        }
         #endregion
     }
 }

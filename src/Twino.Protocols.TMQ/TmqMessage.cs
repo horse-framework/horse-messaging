@@ -46,37 +46,37 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Message Id length
         /// </summary>
-        public int MessageIdLength { get; set; }
+        internal int MessageIdLength { get; set; }
 
         /// <summary>
         /// Message unique id
         /// </summary>
-        public string MessageId { get; set; }
+        public string MessageId { get; internal set; }
 
         /// <summary>
         /// Message target id length
         /// </summary>
-        public int TargetLength { get; set; }
+        internal int TargetLength { get; set; }
 
         /// <summary>
         /// Message target (channel name, client name or server)
         /// </summary>
-        public string Target { get; set; }
+        public string Target { get; internal set; }
 
         /// <summary>
         /// Message source length
         /// </summary>
-        public int SourceLength { get; set; }
+        internal int SourceLength { get; set; }
 
         /// <summary>
         /// Message source client unique id, channel unique id or server
         /// </summary>
-        public string Source { get; set; }
+        public string Source { get; internal set; }
 
         /// <summary>
         /// Message content length
         /// </summary>
-        public ulong Length { get; set; }
+        public ulong Length { get; internal set; }
 
         /// <summary>
         /// Content type code.
@@ -105,7 +105,7 @@ namespace Twino.Protocols.TMQ
         public TmqMessage(MessageType type, string target)
         {
             Type = type;
-            Target = target;
+            SetTarget(target);
         }
 
         #endregion
@@ -113,14 +113,41 @@ namespace Twino.Protocols.TMQ
         #region Methods
 
         /// <summary>
+        /// Changes id of the message
+        /// </summary>
+        public void SetMessageId(string id)
+        {
+            MessageId = id;
+            MessageIdLength = string.IsNullOrEmpty(id) ? 0 : Encoding.UTF8.GetByteCount(id);
+        }
+
+        /// <summary>
+        /// Changes source of the message
+        /// </summary>
+        public void SetSource(string source)
+        {
+            Source = source;
+            SourceLength = string.IsNullOrEmpty(source) ? 0 : Encoding.UTF8.GetByteCount(source);
+        }
+
+        /// <summary>
+        /// Changes target of the message
+        /// </summary>
+        public void SetTarget(string target)
+        {
+            Target = target;
+            TargetLength = string.IsNullOrEmpty(target) ? 0 : Encoding.UTF8.GetByteCount(target);
+        }
+        
+        /// <summary>
         /// Checks message id, source, target and content properties.
         /// If they have a value, sets to length properties to their lengths
         /// </summary>
         public void CalculateLengths()
         {
-            MessageIdLength = MessageId != null ? MessageId.Length : 0;
-            SourceLength = Source != null ? Source.Length : 0;
-            TargetLength = Target != null ? Target.Length : 0;
+            MessageIdLength = string.IsNullOrEmpty(MessageId) ? 0 : Encoding.UTF8.GetByteCount(MessageId);
+            SourceLength = string.IsNullOrEmpty(Source) ? 0 : Encoding.UTF8.GetByteCount(Source);
+            TargetLength = string.IsNullOrEmpty(Target) ? 0 : Encoding.UTF8.GetByteCount(Target);
             Length = Content != null ? (ulong) Content.Length : 0;
         }
 
@@ -144,7 +171,7 @@ namespace Twino.Protocols.TMQ
                 return;
 
             Content = new MemoryStream(Encoding.UTF8.GetBytes(content));
-            CalculateLengths();
+            Length = Content != null ? (ulong) Content.Length : 0;
         }
 
         /// <summary>
@@ -154,6 +181,7 @@ namespace Twino.Protocols.TMQ
         {
             Content = new MemoryStream();
             await System.Text.Json.JsonSerializer.SerializeAsync(Content, value, value.GetType());
+            Length = Content != null ? (ulong) Content.Length : 0;
         }
 
         /// <summary>
@@ -178,9 +206,9 @@ namespace Twino.Protocols.TMQ
             message.FirstAcquirer = FirstAcquirer;
             message.HighPriority = HighPriority;
             message.Type = MessageType.Acknowledge;
-            message.MessageId = MessageId;
+            message.SetMessageId(MessageId);
             message.ContentType = ContentType;
-            message.Target = Type == MessageType.Channel ? Target : Source;
+            message.SetTarget(Type == MessageType.Channel ? Target : Source);
 
             return message;
         }
@@ -195,8 +223,8 @@ namespace Twino.Protocols.TMQ
             message.FirstAcquirer = FirstAcquirer;
             message.HighPriority = HighPriority;
             message.Type = MessageType.Response;
-            message.MessageId = MessageId;
-            message.Target = Type == MessageType.Channel ? Target : Source;
+            message.SetMessageId(MessageId);
+            message.SetTarget(Type == MessageType.Channel ? Target : Source);
 
             return message;
         }

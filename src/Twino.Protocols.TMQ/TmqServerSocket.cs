@@ -88,9 +88,7 @@ namespace Twino.Protocols.TMQ
         public bool Send(TmqMessage message)
         {
             if (UseUniqueMessageId && string.IsNullOrEmpty(message.MessageId))
-                message.MessageId = _uniqueIdGenerator.Create();
-
-            message.CalculateLengths();
+                message.SetMessageId(_uniqueIdGenerator.Create());
 
             byte[] data = _writer.Create(message).Result;
             return Send(data);
@@ -102,9 +100,7 @@ namespace Twino.Protocols.TMQ
         public async Task<bool> SendAsync(TmqMessage message)
         {
             if (UseUniqueMessageId && string.IsNullOrEmpty(message.MessageId))
-                message.MessageId = _uniqueIdGenerator.Create();
-
-            message.CalculateLengths();
+                message.SetMessageId(_uniqueIdGenerator.Create());
 
             byte[] data = await _writer.Create(message);
             return await SendAsync(data);
