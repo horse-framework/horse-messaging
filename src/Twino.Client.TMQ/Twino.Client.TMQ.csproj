@@ -16,6 +16,14 @@
         <RepositoryUrl>https://github.com/mhelvacikoylu/twino</RepositoryUrl>
     </PropertyGroup>
 
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <DocumentationFile>bin\Debug\Twino.Client.TMQ.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <DocumentationFile>bin\Release\Twino.Client.TMQ.xml</DocumentationFile>
+    </PropertyGroup>
+
     <ItemGroup>
         <ProjectReference Include="..\Twino.Client.Connectors\Twino.Client.Connectors.csproj" />
         <ProjectReference Include="..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />

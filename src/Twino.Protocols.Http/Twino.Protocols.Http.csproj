@@ -16,6 +16,14 @@
         <RepositoryUrl>https://github.com/mhelvacikoylu/twino</RepositoryUrl>
     </PropertyGroup>
 
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <DocumentationFile>bin\Debug\Twino.Protocols.Http.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <DocumentationFile>bin\Release\Twino.Protocols.Http.xml</DocumentationFile>
+    </PropertyGroup>
+
     <ItemGroup>
       <ProjectReference Include="..\Twino.Core\Twino.Core.csproj" />
     </ItemGroup>

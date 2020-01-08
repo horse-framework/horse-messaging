@@ -16,4 +16,12 @@
         <RepositoryUrl>https://github.com/mhelvacikoylu/twino</RepositoryUrl>
     </PropertyGroup>
 
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <DocumentationFile>bin\Release\Twino.Ioc.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <DocumentationFile>bin\Debug\Twino.Ioc.xml</DocumentationFile>
+    </PropertyGroup>
+
 </Project>
