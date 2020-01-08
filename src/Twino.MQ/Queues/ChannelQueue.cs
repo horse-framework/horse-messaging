@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -762,7 +763,7 @@ namespace Twino.MQ.Queues
             delivery.FirstAcquirer = message.Message.FirstAcquirer;
 
             _timeKeeper.AddAcknowledgeCheck(delivery);
-            
+
             //change to response message, send, change back to channel message
             string mid = message.Message.MessageId;
             message.Message.SetMessageId(request.MessageId);
@@ -770,7 +771,7 @@ namespace Twino.MQ.Queues
             bool sent = requester.Client.Send(message.Message);
             message.Message.SetMessageId(mid);
             message.Message.Type = MessageType.Channel;
-            
+
             if (!sent)
             {
                 Decision d = await DeliveryHandler.EndSend(this, message);
@@ -779,7 +780,7 @@ namespace Twino.MQ.Queues
 
                 return;
             }
-            
+
             delivery.MarkAsSent();
 
             //do after send operations for per message
@@ -899,26 +900,27 @@ namespace Twino.MQ.Queues
         internal async Task AcknowledgeDelivered(MqClient from, TmqMessage deliveryMessage)
         {
             MessageDelivery delivery = _timeKeeper.FindDelivery(from, deliveryMessage.MessageId);
+
             if (delivery != null)
-            {
                 delivery.MarkAsAcknowledged();
 
-                if (delivery.Message.Source != null && delivery.Message.Source.IsConnected)
-                {
-                    //if client names are hidden, set source as channel name
-                    if (Options.HideClientNames)
-                        deliveryMessage.SetSource(null);
-
-                    //target should be channel name, so client can have info where the message comes from
-                    deliveryMessage.SetTarget(Channel.Name);
-
-                    delivery.AcknowledgeSentToSource = await delivery.Message.Source.SendAsync(deliveryMessage);
-                }
-            }
-
             Info.AddAcknowledge();
-            await DeliveryHandler.AcknowledgeReceived(this, deliveryMessage, delivery);
+            AcknowledgeDecision decision = await DeliveryHandler.AcknowledgeReceived(this, deliveryMessage, delivery);
             ReleaseAcknowledgeLock();
+
+            if (delivery != null &&
+                decision == AcknowledgeDecision.SendToOwner &&
+                delivery.Message.Source != null &&
+                delivery.Message.Source.IsConnected)
+            {
+                //if client names are hidden, set source as channel name
+                if (Options.HideClientNames)
+                    deliveryMessage.SetSource(null);
+
+                //target should be channel name, so client can have info where the message comes from
+                deliveryMessage.SetTarget(Channel.Name);
+                delivery.AcknowledgeSentToSource = await delivery.Message.Source.SendAsync(deliveryMessage);
+            }
         }
 
         /// <summary>

@@ -6,14 +6,22 @@
         <Product>Twino.Client.TMQ</Product>
         <Description>Twino Messaging Queue Client to connect all TMQ Servers</Description>
         <PackageTags>twino,tmq,client,mq,messaging,queue</PackageTags>
-        <AssemblyVersion>2.2.6</AssemblyVersion>
-        <FileVersion>2.2.6</FileVersion>
-        <PackageVersion>2.2.6</PackageVersion>
+        <AssemblyVersion>2.2.8</AssemblyVersion>
+        <FileVersion>2.2.8</FileVersion>
+        <PackageVersion>2.2.8</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü</Authors>
         <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
         <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
         <RepositoryUrl>https://github.com/mhelvacikoylu/twino</RepositoryUrl>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <DocumentationFile>bin\Debug\Twino.Client.TMQ.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <DocumentationFile>bin\Release\Twino.Client.TMQ.xml</DocumentationFile>
     </PropertyGroup>
 
     <ItemGroup>
