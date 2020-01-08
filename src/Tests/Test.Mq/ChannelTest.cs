@@ -117,8 +117,8 @@ namespace Test.Mq
         /// Client sends a queue creation message
         /// </summary>
         [Theory]
-        [InlineData(false)]
         [InlineData(true)]
+        [InlineData(false)]
         public async Task Create(bool verifyResponse)
         {
             int port = verifyResponse ? 35905 : 35904;

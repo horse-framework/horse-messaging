@@ -20,10 +20,10 @@ namespace Test.Mq.Internal
         public async Task<Decision> ReceivedFromProducer(ChannelQueue queue, QueueMessage message, MqClient sender)
         {
             _server.OnReceived++;
-            
+
             if (_server.SendAcknowledgeFromMQ)
                 return await Task.FromResult(new Decision(true, false, false, DeliveryAcknowledgeDecision.Always));
-            
+
             return await Task.FromResult(new Decision(true, false));
         }
 
@@ -51,10 +51,10 @@ namespace Test.Mq.Internal
             return await Task.FromResult(new Decision(true, true));
         }
 
-        public async Task AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery)
+        public async Task<AcknowledgeDecision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery)
         {
             _server.OnAcknowledge++;
-            await Task.CompletedTask;
+            return await Task.FromResult(AcknowledgeDecision.SendToOwner);
         }
 
         public async Task MessageTimedOut(ChannelQueue queue, QueueMessage message)

@@ -40,10 +40,10 @@ namespace Sample.Mq.Server
             return await Task.FromResult(new Decision(true, true));
         }
 
-        public async Task AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery)
+        public async Task<AcknowledgeDecision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery)
         {
             Console.WriteLine($"Acknowledge received in {queue.Id} queue in {queue.Channel.Name}");
-            await Task.CompletedTask;
+            return await Task.FromResult(AcknowledgeDecision.SendToOwner);
         }
 
         public async Task MessageTimedOut(ChannelQueue queue, QueueMessage message)
