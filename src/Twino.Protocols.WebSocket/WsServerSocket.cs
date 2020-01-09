@@ -26,6 +26,9 @@ namespace Twino.Protocols.WebSocket
 
         private Action<WsServerSocket> _cleanupAction;
 
+        /// <summary>
+        /// Creates new server-side websocket client
+        /// </summary>
         public WsServerSocket(ITwinoServer server, IConnectionInfo info)
             : base(info)
         {
@@ -34,6 +37,9 @@ namespace Twino.Protocols.WebSocket
             Info = info;
         }
 
+        /// <summary>
+        /// Completed disconnected operations for websocket client
+        /// </summary>
         protected override void OnDisconnected()
         {
             if (_cleanupAction != null)

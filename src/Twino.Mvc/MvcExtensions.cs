@@ -1,9 +1,11 @@
 using Twino.Core;
-using Twino.Mvc.Middlewares;
 using Twino.Protocols.Http;
 
 namespace Twino.Mvc
 {
+    /// <summary>
+    /// Extension methods for Twino MVC
+    /// </summary>
     public static class MvcExtensions
     {
         /// <summary>

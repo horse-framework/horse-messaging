@@ -9,6 +9,9 @@ namespace Twino.Protocols.TMQ
     /// </summary>
     public delegate Task TmqMessageHandler(TmqServerSocket socket, TmqMessage message);
 
+    /// <summary>
+    /// TMQ message handler for action-based use
+    /// </summary>
     public class TmqMethodHandler : IProtocolConnectionHandler<TmqServerSocket, TmqMessage>
     {
         /// <summary>
@@ -21,6 +24,10 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         private readonly TmqMessageHandler _action;
 
+        /// <summary>
+        /// Creates new TMQ protocol handler for action-based message handling use
+        /// </summary>
+        /// <param name="action"></param>
         public TmqMethodHandler(TmqMessageHandler action)
         {
             _action = action;

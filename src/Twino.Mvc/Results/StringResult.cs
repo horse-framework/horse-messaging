@@ -1,5 +1,4 @@
 ﻿using System;
-using Twino.Mvc.Controllers;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -33,6 +32,9 @@ namespace Twino.Mvc.Results
         /// </summary>
         public Dictionary<string, string> Headers { get; }
 
+        /// <summary>
+        /// Creates new string (plain/text) result
+        /// </summary>
         public StringResult(string content)
         {
             Code = HttpStatusCode.OK;

@@ -99,7 +99,7 @@ namespace Twino.Protocols.Http
         public HttpResponse Response { get; internal set; }
 
         /// <summary>
-        /// Full querystring data, such as a=1&b=2&c=3...
+        /// Full querystring data, such as "a=1&amp;b=2&amp;c=3..."
         /// </summary>
         internal string QueryStringData { get; set; }
 

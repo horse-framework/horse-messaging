@@ -9,6 +9,9 @@ namespace Twino.Client.WebSocket.Connectors
     /// </summary>
     public class WsSingleMessageConnector : SingleMessageConnector<TwinoWebSocket, WebSocketMessage>
     {
+        /// <summary>
+        /// Creates new single message connector for websocket connections
+        /// </summary>
         public WsSingleMessageConnector(Func<TwinoWebSocket> createInstance = null)
             : base(createInstance)
         {

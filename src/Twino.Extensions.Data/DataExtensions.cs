@@ -5,6 +5,9 @@ using Twino.Ioc.Pool;
 
 namespace Twino.Extensions.Data
 {
+    /// <summary>
+    /// Extension methods for Twino Data
+    /// </summary>
     public static class DataExtensions
     {
         #region Add Context

@@ -13,6 +13,9 @@ namespace Twino.Server.Containers
         /// </summary>
         private List<SocketBase> Clients { get; }
 
+        /// <summary>
+        /// Creates new client container
+        /// </summary>
         public ClientContainer()
         {
             Clients = new List<SocketBase>();

@@ -18,6 +18,9 @@ namespace Twino.Mvc.Auth.Jwt
         /// </summary>
         public JwtOptions Options { get; }
 
+        /// <summary>
+        /// Creates new JWT token validator with specified options
+        /// </summary>
         public JwtClaimsPrincipalValidator(JwtOptions options)
         {
             Options = options;

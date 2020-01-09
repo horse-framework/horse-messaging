@@ -72,6 +72,9 @@ namespace Twino.Client.Connectors
 
         #endregion
 
+        /// <summary>
+        /// Creates new absolute connector
+        /// </summary>
         public AbsoluteConnector(TimeSpan reconnectInterval, Func<TClient> createInstance = null)
             : base(reconnectInterval, createInstance)
         {

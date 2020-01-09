@@ -65,6 +65,9 @@ namespace Twino.MQ.Queues
         /// </summary>
         public long AcknowledgedMessages => _acknowledgedMessages;
 
+        /// <summary>
+        /// Timed out acknowledge count
+        /// </summary>
         public long _acknowledgedMessages;
 
         /// <summary>
@@ -116,6 +119,9 @@ namespace Twino.MQ.Queues
 
         #region Constructor - Reset
 
+        /// <summary>
+        /// Creates new queue statistics information object
+        /// </summary>
         public QueueInfo()
         {
             CreatedDate = DateTime.UtcNow;

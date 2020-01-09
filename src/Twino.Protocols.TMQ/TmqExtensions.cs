@@ -3,6 +3,9 @@ using Twino.Core.Protocols;
 
 namespace Twino.Protocols.TMQ
 {
+    /// <summary>
+    /// Extension methods for TMQ Protocol
+    /// </summary>
     public static class TmqExtensions
     {
         /// <summary>

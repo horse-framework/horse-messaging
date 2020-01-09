@@ -49,6 +49,9 @@ namespace Twino.Client.TMQ
         Stopped
     }
 
+    /// <summary>
+    /// Queue options
+    /// </summary>
     public class QueueOptions
     {
         /// <summary>
@@ -135,16 +138,25 @@ namespace Twino.Client.TMQ
             return builder.ToString();
         }
 
+        /// <summary>
+        /// Creates new key-value line with bool value
+        /// </summary>
         protected static string Line(string key, bool value)
         {
             return key + ": " + (value ? "1" : "0") + "\r\n";
         }
 
+        /// <summary>
+        /// Creates new key-value line with string value
+        /// </summary>
         protected static string Line(string key, string value)
         {
             return key + ": " + value + "\r\n";
         }
 
+        /// <summary>
+        /// Creates new key-value line with timespan value
+        /// </summary>
         protected static string Line(string key, TimeSpan value)
         {
             int ms = Convert.ToInt32(value.TotalMilliseconds.ToString());

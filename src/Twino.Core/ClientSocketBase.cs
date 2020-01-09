@@ -11,6 +11,9 @@ namespace Twino.Core
     /// </summary>
     public delegate void ClientMessageHandler<TMessage>(ClientSocketBase<TMessage> client, TMessage message);
 
+    /// <summary>
+    /// Client socket base for twino clients
+    /// </summary>
     public abstract class ClientSocketBase<TMessage> : SocketBase
     {
         #region Properties
@@ -82,6 +85,9 @@ namespace Twino.Core
             _pingTimer = null;
         }
 
+        /// <summary>
+        /// Completes client base connected operations
+        /// </summary>
         protected override void OnConnected()
         {
             CreatePingTimer();

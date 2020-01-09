@@ -11,6 +11,9 @@ using Twino.Protocols.Http.Forms;
 
 namespace Twino.Protocols.Http
 {
+    /// <summary>
+    /// HTTP 1.1 Protocol reader
+    /// </summary>
     public class HttpReader
     {
         #region Fields - Properties
@@ -57,11 +60,17 @@ namespace Twino.Protocols.Http
 
         #endregion
 
+        /// <summary>
+        /// Creates new HTTP 1.1 protocol reader with specified options
+        /// </summary>
         public HttpReader(HttpOptions options)
         {
             _options = options;
         }
 
+        /// <summary>
+        /// Resets reader variables for next read operation
+        /// </summary>
         public void Reset()
         {
             _firstLine = true;

@@ -22,6 +22,9 @@ namespace Twino.MQ.Clients
         /// </summary>
         public MqClient Client { get; set; }
 
+        /// <summary>
+        /// Creates new channel client pair descriptor
+        /// </summary>
         public ChannelClient(Channel channel, MqClient client)
         {
             Channel = channel;

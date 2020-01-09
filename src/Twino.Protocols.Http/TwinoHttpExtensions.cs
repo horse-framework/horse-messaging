@@ -2,6 +2,9 @@ using Twino.Core;
 
 namespace Twino.Protocols.Http
 {
+    /// <summary>
+    /// Extention methods for Twino HTTP protocol
+    /// </summary>
     public static class TwinoHttpExtensions
     {
         /// <summary>

@@ -14,11 +14,17 @@ namespace Twino.Mvc.Filters.Route
         /// </summary>
         public string Pattern { get; }
 
+        /// <summary>
+        /// Creates new default controller route attribute with "[controller]" pattern
+        /// </summary>
         public RouteAttribute()
         {
             Pattern = "[controller]";
         }
         
+        /// <summary>
+        /// Creates new route attribute with specified pattern
+        /// </summary>
         public RouteAttribute(string pattern)
         {
             Pattern = pattern;

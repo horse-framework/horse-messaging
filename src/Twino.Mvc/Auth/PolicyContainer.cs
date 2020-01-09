@@ -17,6 +17,9 @@ namespace Twino.Mvc.Auth
         /// </summary>
         private Dictionary<string, Policy> Policies { get; set; }
 
+        /// <summary>
+        /// Creates new policy container
+        /// </summary>
         public PolicyContainer()
         {
             Policies = new Dictionary<string, Policy>(StringComparer.InvariantCultureIgnoreCase);

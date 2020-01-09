@@ -29,10 +29,16 @@ namespace Twino.Mvc.Auth
         /// </summary>
         public string Policy { get; set; }
         
+        /// <summary>
+        /// Creates new default authorize attribute
+        /// </summary>
         public AuthorizeAttribute()
         {
         }
 
+        /// <summary>
+        /// Creates new authorize attribute with policy name
+        /// </summary>
         public AuthorizeAttribute(string policy)
         {
             Policy = policy;

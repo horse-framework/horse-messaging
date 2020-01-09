@@ -19,10 +19,16 @@ namespace Twino.SerializableModel
         /// </summary>
         public IModelReader Reader { get; }
 
+        /// <summary>
+        /// Creates new package reader with default TwinoModelReader
+        /// </summary>
         public PackageReader() : this(new TwinoModelReader())
         {
         }
 
+        /// <summary>
+        /// Creates new package reader with specified IModelReader
+        /// </summary>
         public PackageReader(IModelReader reader)
         {
             Reader = reader;

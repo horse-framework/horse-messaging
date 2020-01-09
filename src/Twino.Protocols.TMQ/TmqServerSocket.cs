@@ -35,11 +35,17 @@ namespace Twino.Protocols.TMQ
 
         private Action<TmqServerSocket> _cleanupAction;
 
+        /// <summary>
+        /// Creates new TMQ Server-side socket client
+        /// </summary>
         public TmqServerSocket(ITwinoServer server, IConnectionInfo info)
             : this(server, info, new DefaultUniqueIdGenerator())
         {
         }
 
+        /// <summary>
+        /// Creates new TMQ Server-side socket client
+        /// </summary>
         public TmqServerSocket(ITwinoServer server, IConnectionInfo info, IUniqueIdGenerator generator, bool useUniqueMessageId = true)
             : base(info)
         {
@@ -50,6 +56,9 @@ namespace Twino.Protocols.TMQ
             UseUniqueMessageId = useUniqueMessageId;
         }
 
+        /// <summary>
+        /// Completed disconnect operations in tmq server-side client
+        /// </summary>
         protected override void OnDisconnected()
         {
             if (_cleanupAction != null)

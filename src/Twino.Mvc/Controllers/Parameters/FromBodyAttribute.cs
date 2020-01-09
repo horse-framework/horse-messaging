@@ -8,7 +8,14 @@ namespace Twino.Mvc.Controllers.Parameters
     /// </summary>
     public enum BodyType
     {
+        /// <summary>
+        /// JSON Message
+        /// </summary>
         Json = 0,
+        
+        /// <summary>
+        /// XML Message
+        /// </summary>
         Xml = 1
     }
 
@@ -23,10 +30,16 @@ namespace Twino.Mvc.Controllers.Parameters
         /// </summary>
         public BodyType Type { get; }
 
+        /// <summary>
+        /// Creates new from body attribute for reading JSON messages
+        /// </summary>
         public FromBodyAttribute() : this(BodyType.Json)
         {
         }
-
+        
+        /// <summary>
+        /// Creates new from body attribute for reading specified body type
+        /// </summary>
         public FromBodyAttribute(BodyType type): base(null)
         {
             Type = type;

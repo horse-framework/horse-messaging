@@ -4,6 +4,9 @@ using Twino.Protocols.Http;
 
 namespace Twino.Protocols.WebSocket
 {
+    /// <summary>
+    /// Extension methods for Twino Websocket protocol
+    /// </summary>
     public static class WebSocketExtensions
     {
         /// <summary>

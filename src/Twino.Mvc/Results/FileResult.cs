@@ -2,12 +2,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text;
-using Twino.Mvc.Controllers;
 using Twino.Protocols.Http;
 using Twino.Server.Http;
 
 namespace Twino.Mvc.Results
 {
+    /// <summary>
+    /// File result for twino MVC
+    /// </summary>
     public class FileResult : IActionResult
     {
         /// <summary>
@@ -30,12 +32,18 @@ namespace Twino.Mvc.Results
         /// </summary>
         public Dictionary<string, string> Headers { get; }
 
+        /// <summary>
+        /// Creates new HTTP Status code file result
+        /// </summary>
         public FileResult(HttpStatusCode statusCode)
         {
             Code = statusCode;
             Headers = new Dictionary<string, string>();
         }
-        
+
+        /// <summary>
+        /// Creates new file result and finds MIME type from known mime types in twino
+        /// </summary>
         public FileResult(Stream stream, string filename)
         {
             Code = HttpStatusCode.OK;
@@ -43,6 +51,9 @@ namespace Twino.Mvc.Results
             Set(stream, MimeTypes.GetMimeType(filename), filename);
         }
 
+        /// <summary>
+        /// Creates new file result
+        /// </summary>
         public FileResult(Stream stream, string filename, string contentType)
         {
             Code = HttpStatusCode.OK;
@@ -50,6 +61,9 @@ namespace Twino.Mvc.Results
             Set(stream, contentType, filename);
         }
 
+        /// <summary>
+        /// Changes content of file result with new stream, conten type and filename
+        /// </summary>
         private void Set(Stream stream, string contentType, string filename)
         {
             ContentType = contentType;

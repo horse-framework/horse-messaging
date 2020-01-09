@@ -53,7 +53,7 @@ namespace Twino.Ioc
         public ImplementationType Implementation { get; set; }
 
         /// <summary>
-        /// If true, implementation is pool. Instance is type of IServicePool<TService>
+        /// If true, implementation is pool. Instance is type of IServicePool with generic TService template
         /// </summary>
         public bool IsPool { get; set; }
         

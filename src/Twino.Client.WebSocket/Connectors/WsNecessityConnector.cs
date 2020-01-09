@@ -9,6 +9,9 @@ namespace Twino.Client.WebSocket.Connectors
     /// </summary>
     public class WsNecessityConnector : NecessityConnector<TwinoWebSocket, WebSocketMessage>
     {
+        /// <summary>
+        /// Creates new necessity connector for websocket connections
+        /// </summary>
         public WsNecessityConnector(Func<TwinoWebSocket> createInstance = null)
             : base(createInstance)
         {

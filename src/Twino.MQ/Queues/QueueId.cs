@@ -10,6 +10,9 @@ namespace Twino.MQ.Queues
         /// </summary>
         public ushort Value { get; }
 
+        /// <summary>
+        /// Creates new queue id reference type
+        /// </summary>
         public QueueId(ushort value)
         {
             Value = value;

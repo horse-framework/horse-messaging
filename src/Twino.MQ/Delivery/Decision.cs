@@ -50,6 +50,9 @@ namespace Twino.MQ.Delivery
         /// </summary>
         public readonly DeliveryAcknowledgeDecision SendAcknowledge;
 
+        /// <summary>
+        /// Creates new decision without keeping messages and acknowledge
+        /// </summary>
         public Decision(bool allow, bool save)
         {
             Allow = allow;
@@ -58,6 +61,9 @@ namespace Twino.MQ.Delivery
             SendAcknowledge = DeliveryAcknowledgeDecision.None;
         }
 
+        /// <summary>
+        /// Creates new decision with full parameters
+        /// </summary>
         public Decision(bool allow, bool save, bool keep, DeliveryAcknowledgeDecision sendAcknowledge)
         {
             Allow = allow;

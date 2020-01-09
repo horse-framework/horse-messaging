@@ -35,7 +35,7 @@ namespace Twino.MQ.Clients
         /// Client name.
         /// </summary>
         public string Name { get; internal set; }
-        
+
         /// <summary>
         /// True, if the client is a instanced server
         /// </summary>
@@ -64,12 +64,18 @@ namespace Twino.MQ.Clients
         /// </summary>
         public MqServer MqServer { get; }
 
+        /// <summary>
+        /// Creates new MQ Client
+        /// </summary>
         public MqClient(MqServer server, IConnectionInfo info) : base(server.Server, info)
         {
             MqServer = server;
             IsConnected = true;
         }
 
+        /// <summary>
+        /// Creates new MQ Client
+        /// </summary>
         public MqClient(MqServer server, IConnectionInfo info, IUniqueIdGenerator generator, bool useUniqueMessageId = true)
             : base(server.Server, info, generator, useUniqueMessageId)
         {

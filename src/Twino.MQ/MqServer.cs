@@ -66,6 +66,11 @@ namespace Twino.MQ
         /// Client connect and disconnect operations
         /// </summary>
         public IClientHandler ClientHandler { get; set; }
+        
+        /// <summary>
+        /// Client message received handler (for only server-type messages)
+        /// </summary>
+        public IServerMessageHandler ServerMessageHandler { get; set; }
 
         /// <summary>
         /// Default channel event handler.

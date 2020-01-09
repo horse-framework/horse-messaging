@@ -34,6 +34,9 @@ namespace Twino.Core
         Http
     }
 
+    /// <summary>
+    /// Connection information for a TCP Client
+    /// </summary>
     public interface IConnectionInfo
     {
         /// <summary>

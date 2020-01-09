@@ -149,7 +149,6 @@ namespace Twino.Ioc
         /// <summary>
         /// Adds a transient service pool to the container
         /// </summary>
-        /// <param name="options">Options function</param>
         void AddTransientPool<TService, TImplementation>()
             where TService : class
             where TImplementation : class, TService;
@@ -157,7 +156,6 @@ namespace Twino.Ioc
         /// <summary>
         /// Adds a scoped service pool to the container
         /// </summary>
-        /// <param name="options">Options function</param>
         void AddScopedPool<TService, TImplementation>()
             where TService : class
             where TImplementation : class, TService;

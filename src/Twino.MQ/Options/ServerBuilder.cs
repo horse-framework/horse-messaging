@@ -19,6 +19,7 @@ namespace Twino.MQ.Options
         private IChannelEventHandler _channelEventHandler;
         private IChannelAuthenticator _channelAuthenticator;
         private IMessageDeliveryHandler _messageDeliveryHandler;
+        private IServerMessageHandler _serverMessageHandler;
 
         private JObject _object;
 
@@ -68,6 +69,9 @@ namespace Twino.MQ.Options
 
             if (_clientHandler != null)
                 server.ClientHandler = _clientHandler;
+
+            if (_serverMessageHandler != null)
+                server.ServerMessageHandler = _serverMessageHandler;
 
             JObject channelToken = _object["Channels"] as JObject;
             if (channelToken == null)
@@ -241,13 +245,15 @@ namespace Twino.MQ.Options
         {
             _clientAuthenticator = authenticator;
         }
+
         /// <summary>
         /// Adds client authenticator implementation to builder
         /// </summary>
-        public void AddAuthenticator<T>( ) where T: class, IClientAuthenticator, new()
+        public void AddAuthenticator<T>() where T : class, IClientAuthenticator, new()
         {
             _clientAuthenticator = new T();
         }
+
         /// <summary>
         /// Adds client authenticator implementation to builder
         /// </summary>
@@ -264,6 +270,7 @@ namespace Twino.MQ.Options
         {
             _clientAuthorization = authorization;
         }
+
         /// <summary>
         /// Adds authorization implementation to builder
         /// </summary>
@@ -271,6 +278,7 @@ namespace Twino.MQ.Options
         {
             _clientAuthorization = new T();
         }
+
         /// <summary>
         /// Adds authorization implementation to builder
         /// </summary>
@@ -287,6 +295,7 @@ namespace Twino.MQ.Options
         {
             _clientHandler = handler;
         }
+
         /// <summary>
         /// Adds client handler implementation to builder
         /// </summary>
@@ -294,6 +303,7 @@ namespace Twino.MQ.Options
         {
             _clientHandler = new T();
         }
+
         /// <summary>
         /// Adds client handler implementation to builder
         /// </summary>
@@ -310,6 +320,7 @@ namespace Twino.MQ.Options
         {
             _channelEventHandler = handler;
         }
+
         /// <summary>
         /// Adds default channel handler implementation to builder
         /// </summary>
@@ -317,6 +328,7 @@ namespace Twino.MQ.Options
         {
             _channelEventHandler = new T();
         }
+
         /// <summary>
         /// Adds default channel handler implementation to builder
         /// </summary>
@@ -333,6 +345,7 @@ namespace Twino.MQ.Options
         {
             _channelAuthenticator = authenticator;
         }
+
         /// <summary>
         /// Adds default channel authenticator implementation to builder
         /// </summary>
@@ -340,6 +353,7 @@ namespace Twino.MQ.Options
         {
             _channelAuthenticator = new T();
         }
+
         /// <summary>
         /// Adds default channel authenticator implementation to builder
         /// </summary>
@@ -356,6 +370,7 @@ namespace Twino.MQ.Options
         {
             _messageDeliveryHandler = handler;
         }
+
         /// <summary>
         /// Adds default delivery handler implementation to builder
         /// </summary>
@@ -363,6 +378,7 @@ namespace Twino.MQ.Options
         {
             _messageDeliveryHandler = new T();
         }
+
         /// <summary>
         /// Adds default delivery handler implementation to builder
         /// </summary>
@@ -371,6 +387,33 @@ namespace Twino.MQ.Options
             IMessageDeliveryHandler handler = Activator.CreateInstance(typeof(T), ctorArgs) as IMessageDeliveryHandler;
             _messageDeliveryHandler = handler;
         }
+
+
+        /// <summary>
+        /// Adds default delivery handler implementation to builder
+        /// </summary>
+        public void AddServerMessageHandler(IServerMessageHandler handler)
+        {
+            _serverMessageHandler = handler;
+        }
+
+        /// <summary>
+        /// Adds default delivery handler implementation to builder
+        /// </summary>
+        public void AddServerMessageHandler<T>() where T : class, IServerMessageHandler, new()
+        {
+            _serverMessageHandler = new T();
+        }
+
+        /// <summary>
+        /// Adds default delivery handler implementation to builder
+        /// </summary>
+        public void AddServerMessageHandler<T>(params object[] ctorArgs) where T : class, IServerMessageHandler, new()
+        {
+            IServerMessageHandler handler = Activator.CreateInstance(typeof(T), ctorArgs) as IServerMessageHandler;
+            _serverMessageHandler = handler;
+        }
+
         #endregion
     }
 }

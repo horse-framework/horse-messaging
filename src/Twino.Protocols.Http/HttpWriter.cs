@@ -22,6 +22,9 @@ namespace Twino.Protocols.Http
         /// </summary>
         private readonly HttpOptions _options;
 
+        /// <summary>
+        /// Creates new HTTP 1.1 protocol writer with specified options
+        /// </summary>
         public HttpWriter(HttpOptions options)
         {
             _options = options;
