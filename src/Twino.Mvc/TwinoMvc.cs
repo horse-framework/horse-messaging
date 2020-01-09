@@ -95,6 +95,9 @@ namespace Twino.Mvc
 
         #region Constructors - Destructors
 
+        /// <summary>
+        /// Creates new Twino MVC
+        /// </summary>
         public TwinoMvc()
         {
             Routes = new List<RouteLeaf>();

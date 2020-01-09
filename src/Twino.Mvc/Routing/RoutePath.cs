@@ -38,19 +38,20 @@
         /// </summary>
         public string Value { get; set; }
 
+        /// <summary>
+        /// Creates new empty route path
+        /// </summary>
         public RoutePath()
         {
         }
 
+        /// <summary>
+        /// Creates new route path with type and value
+        /// </summary>
         public RoutePath(RouteType type, string value)
         {
             Type = type;
             Value = value;
-        }
-
-        public override string ToString()
-        {
-            return "[" + Type + "] " + Value;
         }
     }
 }

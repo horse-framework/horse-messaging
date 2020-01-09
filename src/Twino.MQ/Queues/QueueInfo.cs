@@ -65,6 +65,9 @@ namespace Twino.MQ.Queues
         /// </summary>
         public long AcknowledgedMessages => _acknowledgedMessages;
 
+        /// <summary>
+        /// Timed out acknowledge count
+        /// </summary>
         public long _acknowledgedMessages;
 
         /// <summary>

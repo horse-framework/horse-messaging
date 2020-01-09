@@ -9,6 +9,9 @@ namespace Twino.Client.TMQ.Connectors
     /// </summary>
     public class TmqNecessityConnector : NecessityConnector<TmqClient, TmqMessage>
     {
+        /// <summary>
+        /// Creates new necessity connector for TMQ protocol clients
+        /// </summary>
         public TmqNecessityConnector(Func<TmqClient> createInstance = null) : base(createInstance)
         {
         }

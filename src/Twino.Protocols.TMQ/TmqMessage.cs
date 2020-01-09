@@ -93,15 +93,24 @@ namespace Twino.Protocols.TMQ
 
         #region Constructors
 
+        /// <summary>
+        /// Creates new empty TMQ Protocol message
+        /// </summary>
         public TmqMessage()
         {
         }
 
+        /// <summary>
+        /// Creates new TMQ Protocol message with specified type
+        /// </summary>
         public TmqMessage(MessageType type)
         {
             Type = type;
         }
 
+        /// <summary>
+        /// Creates new TMQ Protocol message with specified type and target
+        /// </summary>
         public TmqMessage(MessageType type, string target)
         {
             Type = type;

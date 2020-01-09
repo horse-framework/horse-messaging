@@ -283,21 +283,34 @@ namespace Twino.Mvc.Controllers
         
         #region Execution Events
 
+        /// <summary>
+        /// Called right before action is executed.
+        /// If result of context is set, action execution will be discarded.
+        /// </summary>
         protected virtual Task OnActionExecuting(ActionDescriptor descriptor, FilterContext context)
         {
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Called right after action is executed.
+        /// </summary>
         protected virtual Task OnActionExecuted(ActionDescriptor descriptor, FilterContext context, IActionResult result)
         {
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Triggers OnActionExecuting event
+        /// </summary>
         internal async Task CallActionExecuting(ActionDescriptor descriptor, FilterContext context)
         {
             await OnActionExecuting(descriptor, context);
         }
 
+        /// <summary>
+        /// Triggers OnActionExecuted event
+        /// </summary>
         internal async Task CallActionExecuted(ActionDescriptor descriptor, FilterContext context, IActionResult result)
         {
             await OnActionExecuted(descriptor, context, result);

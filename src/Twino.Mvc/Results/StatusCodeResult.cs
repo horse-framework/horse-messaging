@@ -1,5 +1,4 @@
-﻿using Twino.Mvc.Controllers;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -9,6 +8,9 @@ using Twino.Protocols.Http;
 
 namespace Twino.Mvc.Results
 {
+    /// <summary>
+    /// IActionResult object that refers an HTTP status code
+    /// </summary>
     public class StatusCodeResult : IActionResult
     {
         /// <summary>
@@ -31,6 +33,9 @@ namespace Twino.Mvc.Results
         /// </summary>
         public Dictionary<string, string> Headers { get; private set; }
 
+        /// <summary>
+        /// Creates new StatusCodeResult from HTTP Status code
+        /// </summary>
         public StatusCodeResult(HttpStatusCode code)
         {
             Headers = new Dictionary<string, string>();

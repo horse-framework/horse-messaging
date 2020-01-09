@@ -5,6 +5,9 @@ using Twino.Protocols.WebSocket;
 
 namespace Twino.Client.WebSocket
 {
+    /// <summary>
+    /// Extension methods for websocket clients
+    /// </summary>
     public static class ConnectorExtensions
     {
         private static readonly WebSocketWriter _writer = new WebSocketWriter();

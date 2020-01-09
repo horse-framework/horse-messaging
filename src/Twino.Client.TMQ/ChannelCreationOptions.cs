@@ -28,6 +28,9 @@ namespace Twino.Client.TMQ
         /// </summary>
         public string Authenticator { get; set; }
 
+        /// <summary>
+        /// Serializes channel creation options to key-value lines (HTTP Request like)
+        /// </summary>
         public override string Serialize(ushort contentType)
         {
             string queue = base.Serialize(contentType);

@@ -1,5 +1,4 @@
 ﻿using System;
-using Twino.Mvc.Controllers;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -33,14 +32,20 @@ namespace Twino.Mvc.Results
         /// Additional custom headers with key and value
         /// </summary>
         public Dictionary<string, string> Headers { get; }
-        
+
+        /// <summary>
+        /// Creates new empty JSON result
+        /// </summary>
         public JsonResult(HttpStatusCode code = HttpStatusCode.OK)
         {
             Code = code;
             ContentType = ContentTypes.APPLICATION_JSON;
             Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
         }
-        
+
+        /// <summary>
+        /// Creates new JSON result
+        /// </summary>
         public JsonResult(object model, HttpStatusCode code = HttpStatusCode.OK)
         {
             Code = code;
@@ -48,7 +53,7 @@ namespace Twino.Mvc.Results
             Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
             Set(model);
         }
-        
+
         /// <summary>
         /// Sets json objects of json result
         /// </summary>

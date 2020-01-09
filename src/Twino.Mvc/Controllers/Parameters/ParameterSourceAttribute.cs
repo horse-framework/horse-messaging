@@ -19,10 +19,16 @@ namespace Twino.Mvc.Controllers.Parameters
         /// </summary>
         public string Name { get; }
 
+        /// <summary>
+        /// Creates source attribute, used by FromBody, FromHeader etc. attributes
+        /// </summary>
         public ParameterSourceAttribute() : this(null)
         {
         }
 
+        /// <summary>
+        /// Creates source attribute, used by FromBody, FromHeader etc. attributes
+        /// </summary>
         public ParameterSourceAttribute(string name)
         {
             Name = name;

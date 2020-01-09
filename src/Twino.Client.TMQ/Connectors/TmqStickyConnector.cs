@@ -13,8 +13,15 @@ namespace Twino.Client.TMQ.Connectors
     public class TmqStickyConnector : StickyConnector<TmqClient, TmqMessage>
     {
         private MessageReader _reader;
+
+        /// <summary>
+        /// Default TMQ Message reader for connector
+        /// </summary>
         public MessageReader Reader => _reader;
 
+        /// <summary>
+        /// Creates new sticky connector for TMQ protocol clients
+        /// </summary>
         public TmqStickyConnector(TimeSpan reconnectInterval, Func<TmqClient> createInstance = null)
             : base(reconnectInterval, createInstance)
         {
@@ -36,6 +43,9 @@ namespace Twino.Client.TMQ.Connectors
             _reader = new MessageReader(serailizationAction);
         }
 
+        /// <summary>
+        /// Called when a message is received from server
+        /// </summary>
         protected override void ClientMessageReceived(ClientSocketBase<TmqMessage> client, TmqMessage payload)
         {
             base.ClientMessageReceived(client, payload);

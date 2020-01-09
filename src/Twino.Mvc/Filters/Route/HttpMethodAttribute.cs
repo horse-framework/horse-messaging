@@ -20,6 +20,10 @@ namespace Twino.Mvc.Filters.Route
         /// </summary>
         public string Pattern { get; internal set; }
 
+        /// <summary>
+        /// Creates new HTTP Method attribute with specified path.
+        /// Used by HttpGet, HttpPost, HttPut, HttpDelete etc. attributes
+        /// </summary>
         public HttpMethodAttribute(string method, string pattern)
         {
             Method = method;

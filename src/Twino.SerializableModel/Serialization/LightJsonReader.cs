@@ -27,12 +27,18 @@ namespace Twino.SerializableModel.Serialization
         
         #region Init - Dispose
         
+        /// <summary>
+        /// Creates new light json reader with JSON data
+        /// </summary>
         public LightJsonReader(string json)
         {
             _stringReader = new StringReader(json);
             Reader = new JsonTextReader(_stringReader);
         }
 
+        /// <summary>
+        /// Disposes light json reader and releases all resources
+        /// </summary>
         public void Dispose()
         {
             _stringReader?.Dispose();

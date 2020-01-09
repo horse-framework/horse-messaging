@@ -2,6 +2,9 @@ using System.Threading.Tasks;
 
 namespace Twino.Ioc.Pool
 {
+    /// <summary>
+    /// Service pool implementation, contains multiple services with same type
+    /// </summary>
     public interface IServicePool
     {
         /// <summary>
@@ -11,7 +14,7 @@ namespace Twino.Ioc.Pool
         
         /// <summary>
         /// Gets and locks a service instance.
-        /// Return type should be PoolServiceDescriptor<TService> 
+        /// Return type should be PoolServiceDescriptor with generic TService template 
         /// </summary>
         /// <returns></returns>
         Task<PoolServiceDescriptor> GetAndLock(IContainerScope scope = null);

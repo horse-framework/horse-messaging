@@ -25,6 +25,9 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         private readonly ITwinoServer _server;
 
+        /// <summary>
+        /// Creates new TMQ Protocol handler
+        /// </summary>
         public TwinoTmqProtocol(ITwinoServer server, IProtocolConnectionHandler<TmqServerSocket, TmqMessage> handler)
         {
             _server = server;

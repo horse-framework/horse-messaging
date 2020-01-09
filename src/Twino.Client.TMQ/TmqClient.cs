@@ -95,6 +95,9 @@ namespace Twino.Client.TMQ
 
         #region Constructors - Destructors
 
+        /// <summary>
+        /// Creates new TMQ protocol client
+        /// </summary>
         public TmqClient()
         {
             Data.Method = "CONNECT";

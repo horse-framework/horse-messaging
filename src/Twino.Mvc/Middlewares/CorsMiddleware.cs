@@ -14,27 +14,30 @@ namespace Twino.Mvc.Middlewares
         /// "*" for all origins. Otherwise type with comma seperator
         /// </summary>
         public string AllowedOrigins { get; set; }
-        
+
         /// <summary>
         /// Allowed such as GET, POST, PUT
         /// </summary>
         public string AllowedMethods { get; set; }
-        
+
         /// <summary>
         /// Allowed header keys
         /// </summary>
         public string AllowedHeaders { get; set; }
-        
+
         /// <summary>
         /// Allowed max-age in seconds. Default is 3600.
         /// </summary>
         public string AllowMaxAge { get; set; }
-        
+
         /// <summary>
         /// True, if need to allow credentials
         /// </summary>
         public bool AllowCredentials { get; set; }
 
+        /// <summary>
+        /// Allows all methods and origins and "access-control-allow-origin, content-type, content-length, authorization" headers
+        /// </summary>
         public void AllowAll()
         {
             AllowedOrigins = "*";
@@ -44,6 +47,9 @@ namespace Twino.Mvc.Middlewares
             AllowCredentials = true;
         }
 
+        /// <summary>
+        /// Invokes middleware for each request
+        /// </summary>
         public async Task Invoke(HttpRequest request, HttpResponse response, MiddlewareResultHandler setResult)
         {
             if (AllowCredentials)

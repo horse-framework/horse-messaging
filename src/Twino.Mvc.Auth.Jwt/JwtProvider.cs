@@ -18,6 +18,9 @@ namespace Twino.Mvc.Auth.Jwt
         /// </summary>
         private JwtOptions Options { get; }
 
+        /// <summary>
+        /// Creates new Jwt Provider with specified options
+        /// </summary>
         public JwtProvider(JwtOptions options)
         {
             Options = options;

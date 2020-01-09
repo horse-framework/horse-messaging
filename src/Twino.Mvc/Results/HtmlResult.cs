@@ -33,6 +33,9 @@ namespace Twino.Mvc.Results
         /// </summary>
         public Dictionary<string, string> Headers { get; }
 
+        /// <summary>
+        /// Creates new HTML Result from HTML string
+        /// </summary>
         public HtmlResult(string content)
         {
             Code = HttpStatusCode.OK;
@@ -40,8 +43,10 @@ namespace Twino.Mvc.Results
             Headers = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
             Stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
         }
-        
-        
+
+        /// <summary>
+        /// Creates new HTML result from byte array
+        /// </summary>
         public HtmlResult(byte[] bytes)
         {
             Code = HttpStatusCode.OK;

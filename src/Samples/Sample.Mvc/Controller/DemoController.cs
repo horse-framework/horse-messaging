@@ -52,7 +52,6 @@ namespace Sample.Mvc.Controller
         [HttpGet("get/{?id}")]
         public IActionResult Get([FromRoute] int? id)
         {
-            throw new NotImplementedException();
             Thread.Sleep(100);
             return String("Hello world: " + id);
         }

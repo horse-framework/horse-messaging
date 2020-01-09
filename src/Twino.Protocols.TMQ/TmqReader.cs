@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace Twino.Protocols.TMQ
 {
+    /// <summary>
+    /// TMQ Protocol reader
+    /// </summary>
     public class TmqReader
     {
         /// <summary>
