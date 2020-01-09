@@ -102,8 +102,8 @@ namespace Test.Mq
         public async Task FromClientToClientTimeout()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42303);
-            server.Start();
+            server.Initialize(42393);
+            server.Start(15, 15);
             
             server.Server.Server.Options.PingInterval = 300;
             server.Server.Server.Options.RequestTimeout = 300;
@@ -117,8 +117,8 @@ namespace Test.Mq
             client1.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
             client2.AutoAcknowledge = false;
 
-            await client1.ConnectAsync("tmq://localhost:42303");
-            await client2.ConnectAsync("tmq://localhost:42303");
+            await client1.ConnectAsync("tmq://localhost:42393");
+            await client2.ConnectAsync("tmq://localhost:42393");
 
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);

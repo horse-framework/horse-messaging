@@ -76,6 +76,12 @@ namespace Twino.MQ.Network
                 case KnownContentTypes.QueueInformation:
                     await GetQueueInformation(client, message);
                     break;
+
+                //for not-defines content types, use user-defined message handler
+                default:
+                    if (_server.ServerMessageHandler != null)
+                        await _server.ServerMessageHandler.Received(client, message);
+                    break;
             }
         }
 

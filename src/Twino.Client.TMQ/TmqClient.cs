@@ -489,9 +489,7 @@ namespace Twino.Client.TMQ
             message.SetSource(_clientId);
             message.AcknowledgeRequired = true;
             message.ResponseRequired = false;
-
-            if (string.IsNullOrEmpty(message.MessageId) && UseUniqueMessageId)
-                message.SetMessageId(UniqueIdGenerator.Create());
+            message.SetMessageId(UniqueIdGenerator.Create());
 
             if (string.IsNullOrEmpty(message.MessageId))
                 throw new ArgumentNullException("Messages without unique id cannot be acknowledged");
