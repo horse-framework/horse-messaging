@@ -79,6 +79,9 @@ namespace Twino.Protocols.Http
         /// </summary>
         public HttpOptions Options { get; set; }
 
+        /// <summary>
+        /// Creates new Twino HTTP protocol handler
+        /// </summary>
         public TwinoHttpProtocol(ITwinoServer server, IProtocolConnectionHandler<SocketBase, HttpMessage> handler, HttpOptions options)
         {
             Options = options;

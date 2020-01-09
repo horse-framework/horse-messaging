@@ -7,6 +7,9 @@ using Twino.SerializableModel.Serialization;
 
 namespace Twino.SerializableModel
 {
+    /// <summary>
+    /// Extension methods for twino serializable models
+    /// </summary>
     public static class Extensions
     {
         private static readonly WebSocketWriter _writer = new WebSocketWriter();

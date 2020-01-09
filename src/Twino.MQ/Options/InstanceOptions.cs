@@ -1,5 +1,8 @@
 namespace Twino.MQ.Options
 {
+    /// <summary>
+    /// Distributed instance options
+    /// </summary>
     public class InstanceOptions
     {
         /// <summary>

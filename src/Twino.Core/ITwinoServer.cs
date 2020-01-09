@@ -3,6 +3,9 @@ using Twino.Core.Protocols;
 
 namespace Twino.Core
 {
+    /// <summary>
+    /// Twino TCP Server implementation
+    /// </summary>
     public interface ITwinoServer
     {
         /// <summary>

@@ -47,9 +47,24 @@ namespace Twino.Client.Connectors
         /// </summary>
         private readonly List<string> _hosts;
 
+        /// <summary>
+        /// Client connected event handler
+        /// </summary>
         public event SocketStatusHandler Connected;
+        
+        /// <summary>
+        /// Client disconnected event handler
+        /// </summary>
         public event SocketStatusHandler Disconnected;
+        
+        /// <summary>
+        /// Message received from server handler
+        /// </summary>
         public event ClientMessageHandler<TMessage> MessageReceived;
+        
+        /// <summary>
+        /// Exception thrown event handler in tcp operations
+        /// </summary>
         public event ConnectorExceptionHandler<TClient, TMessage> ExceptionThrown;
 
         /// <summary>
@@ -80,6 +95,10 @@ namespace Twino.Client.Connectors
         /// </summary>
         private readonly Func<TClient> _createInstance;
 
+        /// <summary>
+        /// Gets currently active client object of connector
+        /// </summary>
+        /// <returns></returns>
         public TClient GetClient()
         {
             return _client;
@@ -87,11 +106,17 @@ namespace Twino.Client.Connectors
 
         #endregion
 
+        /// <summary>
+        /// Creates new connector base
+        /// </summary>
         protected ConnectorBase()
             : this(null)
         {
         }
 
+        /// <summary>
+        /// Creates new connector base with Client instance creation action
+        /// </summary>
         protected ConnectorBase(Func<TClient> createInstance)
         {
             _createInstance = createInstance;

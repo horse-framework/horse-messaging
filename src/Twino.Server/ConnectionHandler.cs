@@ -24,6 +24,9 @@ namespace Twino.Server
         /// </summary>
         private readonly HostListener _listener;
 
+        /// <summary>
+        /// Creates new connection handler for listening specified port
+        /// </summary>
         public ConnectionHandler(TwinoServer server, HostListener listener)
         {
             _server = server;

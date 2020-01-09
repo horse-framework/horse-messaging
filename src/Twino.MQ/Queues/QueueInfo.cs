@@ -116,6 +116,9 @@ namespace Twino.MQ.Queues
 
         #region Constructor - Reset
 
+        /// <summary>
+        /// Creates new queue statistics information object
+        /// </summary>
         public QueueInfo()
         {
             CreatedDate = DateTime.UtcNow;

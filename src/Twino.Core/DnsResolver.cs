@@ -24,10 +24,8 @@ namespace Twino.Core
 
             //host search helps to find "domain.com" value of full url and removes protocol, path, port strings from the url
             //while removing this strings, they will also set to result
-            string host_search = "";
-
             //remove protocol from host search
-            host_search = protocol_index > 0 ? url.Substring(protocol_index + 2) : url;
+            var host_search = protocol_index > 0 ? url.Substring(protocol_index + 2) : url;
 
             //if path specified set it to result and remove path from the host search
             if (hasPath)

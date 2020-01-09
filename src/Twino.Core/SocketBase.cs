@@ -82,11 +82,17 @@ namespace Twino.Core
 
         #region Constructors
 
+        /// <summary>
+        /// Socket base constructor for client sockets
+        /// </summary>
         protected SocketBase()
         {
             PongTime = DateTime.UtcNow.AddSeconds(15);
         }
 
+        /// <summary>
+        /// Socket base constructor for server sockets
+        /// </summary>
         protected SocketBase(IConnectionInfo info)
         {
             PongTime = DateTime.UtcNow.AddSeconds(15);

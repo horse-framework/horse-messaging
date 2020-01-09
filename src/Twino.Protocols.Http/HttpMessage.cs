@@ -15,10 +15,16 @@ namespace Twino.Protocols.Http
         /// </summary>
         public HttpResponse Response { get; set; }
 
+        /// <summary>
+        /// Creates new empty HTTP Message
+        /// </summary>
         public HttpMessage()
         {
         }
 
+        /// <summary>
+        /// Creates new HTTP Message with request and response
+        /// </summary>
         public HttpMessage(HttpRequest request, HttpResponse response)
         {
             Request = request;

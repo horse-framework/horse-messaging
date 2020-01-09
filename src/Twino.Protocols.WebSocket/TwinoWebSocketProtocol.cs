@@ -13,6 +13,9 @@ namespace Twino.Protocols.WebSocket
     /// </summary>
     public class TwinoWebSocketProtocol : ITwinoProtocol
     {
+        /// <summary>
+        /// Protocol name
+        /// </summary>
         public string Name => "websocket";
 
         /// <summary>
@@ -25,6 +28,9 @@ namespace Twino.Protocols.WebSocket
         /// </summary>
         private readonly ITwinoServer _server;
 
+        /// <summary>
+        /// Creates new Websocket protocol handler
+        /// </summary>
         public TwinoWebSocketProtocol(ITwinoServer server, IProtocolConnectionHandler<WsServerSocket, WebSocketMessage> handler)
         {
             _server = server;

@@ -13,11 +13,17 @@ namespace Twino.Client.Connectors
     public class NecessityConnector<TClient, TMessage> : ConnectorBase<TClient, TMessage>
         where TClient : ClientSocketBase<TMessage>, new()
     {
+        /// <summary>
+        /// Creates new necessity connector
+        /// </summary>
         public NecessityConnector(Func<TClient> createInstance)
             : base(createInstance)
         {
         }
 
+        /// <summary>
+        /// Creates new necessity connector
+        /// </summary>
         public NecessityConnector()
         {
         }

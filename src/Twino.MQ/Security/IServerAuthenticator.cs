@@ -5,6 +5,9 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Security
 {
+    /// <summary>
+    /// Authenticates clients to connect server and receive messages
+    /// </summary>
     public interface IServerAuthenticator
     {
         /// <summary>

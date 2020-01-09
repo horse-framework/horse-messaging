@@ -5,6 +5,9 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Queues
 {
+    /// <summary>
+    /// Build options object with data over network
+    /// </summary>
     public class NetworkOptionsBuilder
     {
         /// <summary>

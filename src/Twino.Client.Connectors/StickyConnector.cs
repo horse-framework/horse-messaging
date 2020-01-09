@@ -26,6 +26,9 @@ namespace Twino.Client.Connectors
 
         private Timer _timer;
 
+        /// <summary>
+        /// Creates new sticky connector
+        /// </summary>
         public StickyConnector(TimeSpan reconnectInterval, Func<TClient> createInstance = null)
             : base(createInstance)
         {

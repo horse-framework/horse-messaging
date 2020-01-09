@@ -10,11 +10,17 @@ namespace Twino.Client.Connectors
     public class SingleMessageConnector<TClient, TMessage> : NecessityConnector<TClient, TMessage>
         where TClient : ClientSocketBase<TMessage>, new()
     {
+        /// <summary>
+        /// Creates new single message connector
+        /// </summary>
         public SingleMessageConnector(Func<TClient> createInstance)
             : base(createInstance)
         {
         }
 
+        /// <summary>
+        /// Creates new single message connector
+        /// </summary>
         public SingleMessageConnector()
         {
         }

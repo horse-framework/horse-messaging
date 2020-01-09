@@ -16,6 +16,10 @@ namespace Twino.Protocols.Http
         /// </summary>
         private readonly ContentEncodings[] _supportedEncodings;
 
+        /// <summary>
+        /// Creates new content writer with supported encodings
+        /// </summary>
+        /// <param name="supportedEncodings"></param>
         public ContentWriter(ContentEncodings[] supportedEncodings)
         {
             _supportedEncodings = supportedEncodings;

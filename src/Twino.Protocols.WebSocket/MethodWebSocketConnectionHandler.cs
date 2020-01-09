@@ -4,8 +4,14 @@ using Twino.Core.Protocols;
 
 namespace Twino.Protocols.WebSocket
 {
+    /// <summary>
+    /// Websocket message received handler for server-side sockets
+    /// </summary>
     public delegate Task WebSocketMessageRecievedHandler(WsServerSocket socket, WebSocketMessage message);
 
+    /// <summary>
+    /// Websocket connected handler for server-side sockets
+    /// </summary>
     public delegate Task WebSocketConnectedHandler(WsServerSocket socket, ConnectionData data);
 
     /// <summary>

@@ -22,6 +22,9 @@ namespace Twino.Mvc.Auth
         /// </summary>
         public Func<ActionDescriptor, FilterContext, bool> Func { get; private set; }
 
+        /// <summary>
+        /// Creates new policy with an action
+        /// </summary>
         public Policy(string name, Func<ActionDescriptor, FilterContext, bool> func)
         {
             Name = name;
