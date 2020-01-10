@@ -42,6 +42,7 @@ namespace Twino.Client.WebSocket
                 Client = new TcpClient();
                 Client.Connect(host.IPAddress, host.Port);
                 IsConnected = true;
+                IsSsl = host.SSL;
 
                 //creates SSL Stream or Insecure stream
                 if (host.SSL)
@@ -89,6 +90,7 @@ namespace Twino.Client.WebSocket
                 Client = new TcpClient();
                 await Client.ConnectAsync(host.IPAddress, host.Port);
                 IsConnected = true;
+                IsSsl = host.SSL;
 
                 //creates SSL Stream or Insecure stream
                 if (host.SSL)
