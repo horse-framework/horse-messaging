@@ -64,13 +64,13 @@ namespace Twino.Ioc
                 throw new InvalidOperationException($"Specified service type is already added into service container: {serviceType.Name}");
 
             ServiceDescriptor descriptor = new ServiceDescriptor
-                                           {
-                                               ServiceType = serviceType,
-                                               ImplementationType = implementationType,
-                                               Instance = null,
-                                               Implementation = ImplementationType.Transient,
-                                               AfterCreatedMethod = afterCreated
-                                           };
+            {
+                ServiceType = serviceType,
+                ImplementationType = implementationType,
+                Instance = null,
+                Implementation = ImplementationType.Transient,
+                AfterCreatedMethod = afterCreated
+            };
 
             Items.Add(serviceType, descriptor);
         }
@@ -114,13 +114,13 @@ namespace Twino.Ioc
                 throw new InvalidOperationException("Specified service type is already added into service container");
 
             ServiceDescriptor descriptor = new ServiceDescriptor
-                                           {
-                                               ServiceType = serviceType,
-                                               ImplementationType = implementationType,
-                                               Instance = null,
-                                               Implementation = ImplementationType.Scoped,
-                                               AfterCreatedMethod = afterCreated
-                                           };
+            {
+                ServiceType = serviceType,
+                ImplementationType = implementationType,
+                Instance = null,
+                Implementation = ImplementationType.Scoped,
+                AfterCreatedMethod = afterCreated
+            };
 
             Items.Add(serviceType, descriptor);
         }
@@ -177,12 +177,12 @@ namespace Twino.Ioc
         public void AddSingleton(Type serviceType, Type implementationType)
         {
             ServiceDescriptor descriptor = new ServiceDescriptor
-                                           {
-                                               ServiceType = serviceType,
-                                               ImplementationType = implementationType,
-                                               Instance = null,
-                                               Implementation = ImplementationType.Singleton
-                                           };
+            {
+                ServiceType = serviceType,
+                ImplementationType = implementationType,
+                Instance = null,
+                Implementation = ImplementationType.Singleton
+            };
 
             Items.Add(serviceType, descriptor);
         }
@@ -194,13 +194,13 @@ namespace Twino.Ioc
         public void AddSingleton(Type serviceType, Type implementationType, Delegate afterCreated)
         {
             ServiceDescriptor descriptor = new ServiceDescriptor
-                                           {
-                                               ServiceType = serviceType,
-                                               ImplementationType = implementationType,
-                                               Instance = null,
-                                               Implementation = ImplementationType.Singleton,
-                                               AfterCreatedMethod = afterCreated
-                                           };
+            {
+                ServiceType = serviceType,
+                ImplementationType = implementationType,
+                Instance = null,
+                Implementation = ImplementationType.Singleton,
+                AfterCreatedMethod = afterCreated
+            };
 
             Items.Add(serviceType, descriptor);
         }
@@ -213,12 +213,12 @@ namespace Twino.Ioc
             Type implementationType = instance.GetType();
 
             ServiceDescriptor descriptor = new ServiceDescriptor
-                                           {
-                                               ServiceType = serviceType,
-                                               ImplementationType = implementationType,
-                                               Instance = instance,
-                                               Implementation = ImplementationType.Singleton
-                                           };
+            {
+                ServiceType = serviceType,
+                ImplementationType = implementationType,
+                Instance = instance,
+                Implementation = ImplementationType.Singleton
+            };
 
             Items.Add(serviceType, descriptor);
         }
@@ -359,13 +359,13 @@ namespace Twino.Ioc
         {
             ServicePool<TService, TImplementation> pool = new ServicePool<TService, TImplementation>(type, this, options, instance);
             ServiceDescriptor descriptor = new ServiceDescriptor
-                                           {
-                                               IsPool = true,
-                                               ServiceType = typeof(TService),
-                                               ImplementationType = typeof(ServicePool<TService, TImplementation>),
-                                               Instance = pool,
-                                               Implementation = ImplementationType.Singleton
-                                           };
+            {
+                IsPool = true,
+                ServiceType = typeof(TService),
+                ImplementationType = typeof(ServicePool<TService, TImplementation>),
+                Instance = pool,
+                Implementation = ImplementationType.Singleton
+            };
 
             Items.Add(typeof(TService), descriptor);
         }
@@ -384,7 +384,7 @@ namespace Twino.Ioc
             if (o == null)
                 throw new NullReferenceException("Could not get service from container");
 
-            return (TService) o;
+            return (TService)o;
         }
 
         /// <summary>
@@ -398,9 +398,47 @@ namespace Twino.Ioc
             if (descriptor == null)
                 throw new KeyNotFoundException($"Service type is not found: {serviceType.Name}");
 
+            return await Get(descriptor, scope);
+        }
+
+        /// <summary>
+        /// Try gets the service from the container.
+        /// </summary>
+        public Task<bool> TryGet<TService>(out TService service, IContainerScope scope = null) where TService : class
+        {
+            bool result = TryGet(typeof(TService), out object o, scope).Result;
+            service = (TService)o;
+            return Task.FromResult(result);
+        }
+
+        /// <summary>
+        /// Try gets the service from the container.
+        /// </summary>
+        public Task<bool> TryGet(Type serviceType, out object service, IContainerScope scope = null)
+        {
+            if (serviceType == typeof(IServiceContainer))
+            {
+                service = this;
+                return Task.FromResult(true);
+            }
+
+            ServiceDescriptor descriptor = GetDescriptor(serviceType);
+            if (descriptor == null)
+            {
+                service = null;
+                return Task.FromResult(false);
+            }
+
+            service = Get(descriptor, scope).Result;
+            return Task.FromResult(true);
+        }
+
+
+        private async Task<object> Get(ServiceDescriptor descriptor, IContainerScope scope = null)
+        {
             if (descriptor.IsPool)
             {
-                IServicePool pool = (IServicePool) descriptor.Instance;
+                IServicePool pool = (IServicePool)descriptor.Instance;
                 PoolServiceDescriptor pdesc = await pool.GetAndLock(scope);
 
                 if (pdesc == null)
@@ -419,13 +457,13 @@ namespace Twino.Ioc
             {
                 //create new instance
                 case ImplementationType.Transient:
-                {
-                    object o = await CreateInstance(descriptor.ImplementationType, scope);
-                    if (descriptor.AfterCreatedMethod != null)
-                        descriptor.AfterCreatedMethod.DynamicInvoke(o);
+                    {
+                        object o = await CreateInstance(descriptor.ImplementationType, scope);
+                        if (descriptor.AfterCreatedMethod != null)
+                            descriptor.AfterCreatedMethod.DynamicInvoke(o);
 
-                    return o;
-                }
+                        return o;
+                    }
 
                 case ImplementationType.Scoped:
                     if (scope == null)
@@ -511,7 +549,7 @@ namespace Twino.Ioc
         {
             ServiceDescriptor descriptor = GetDescriptor<TService>();
 
-            IServicePool pool = (IServicePool) descriptor.Instance;
+            IServicePool pool = (IServicePool)descriptor.Instance;
             pool.ReleaseInstance(service);
         }
 

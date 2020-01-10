@@ -168,7 +168,7 @@ namespace Twino.Mvc
             if (!CheckControllerAuthority(match, context, response))
                 return;
 
-            if (!ExecuteBeforeControllerFilters(match, context, response))
+            if (!await ExecuteBeforeControllerFilters(match, context, response))
                 return;
 
             TwinoController controller = await Mvc.ControllerFactory.CreateInstance(Mvc, match.Route.ControllerType, request, response, scope);
@@ -180,7 +180,7 @@ namespace Twino.Mvc
 
             controller.User = user;
 
-            if (!ExecuteAfterControllerFilters(match, context, response, controller))
+            if (!await ExecuteAfterControllerFilters(match, context, response, controller))
                 return;
 
             //fill action descriptor
@@ -194,7 +194,7 @@ namespace Twino.Mvc
             if (!CheckActionAuthority(match, context, response, descriptor))
                 return;
 
-            if (!CheckActionExecutingFilters(match, context, response, controller, descriptor))
+            if (!await CheckActionExecutingFilters(match, context, response, controller, descriptor))
                 return;
 
             await controller.CallActionExecuting(descriptor, context);
@@ -395,7 +395,7 @@ namespace Twino.Mvc
         /// <summary>
         /// Executes before controller filters. Returns true, if execution can resume.
         /// </summary>
-        private bool ExecuteBeforeControllerFilters(RouteMatch match, FilterContext context, HttpResponse response)
+        private async Task<bool> ExecuteBeforeControllerFilters(RouteMatch match, FilterContext context, HttpResponse response)
         {
             if (!match.Route.HasControllerBeforeFilter)
                 return true;
@@ -404,13 +404,13 @@ namespace Twino.Mvc
             IBeforeControllerFilter[] filters = (IBeforeControllerFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IBeforeControllerFilter), true);
 
             //call BeforeCreated methods of controller attributes
-            return CallFilters(response, context, filters, async filter => await filter.OnBefore(context));
+            return await CallFilters(response, context, filters, async filter => await filter.OnBefore(context));
         }
 
         /// <summary>
         /// Executes after controller filters. Returns true, if execution can resume.
         /// </summary>
-        private bool ExecuteAfterControllerFilters(RouteMatch match, FilterContext context, HttpResponse response, IController controller)
+        private async Task<bool> ExecuteAfterControllerFilters(RouteMatch match, FilterContext context, HttpResponse response, IController controller)
         {
             if (!match.Route.HasControllerAfterFilter)
                 return true;
@@ -419,7 +419,7 @@ namespace Twino.Mvc
             IAfterControllerFilter[] filters = (IAfterControllerFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IAfterControllerFilter), true);
 
             //call AfterCreated methods of controller attributes
-            return CallFilters(response, context, filters, async filter => await filter.OnAfter(controller, context));
+            return await CallFilters(response, context, filters, async filter => await filter.OnAfter(controller, context));
         }
 
         /// <summary>
@@ -448,7 +448,7 @@ namespace Twino.Mvc
         /// <summary>
         /// Calls controller and action executing filters
         /// </summary>
-        private bool CheckActionExecutingFilters(RouteMatch match, FilterContext context, HttpResponse response, IController controller, ActionDescriptor descriptor)
+        private async Task<bool> CheckActionExecutingFilters(RouteMatch match, FilterContext context, HttpResponse response, IController controller, ActionDescriptor descriptor)
         {
             if (match.Route.HasControllerExecutingFilter)
             {
@@ -456,7 +456,7 @@ namespace Twino.Mvc
                 IActionExecutingFilter[] filters = (IActionExecutingFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IActionExecutingFilter), true);
 
                 //call BeforeCreated methods of controller attributes
-                bool resume = CallFilters(response, context, filters, async filter => await filter.OnExecuting(controller, descriptor, context));
+                bool resume = await CallFilters(response, context, filters, async filter => await filter.OnExecuting(controller, descriptor, context));
                 if (!resume)
                     return false;
             }
@@ -467,7 +467,7 @@ namespace Twino.Mvc
                 IActionExecutingFilter[] filters = (IActionExecutingFilter[]) match.Route.ActionType.GetCustomAttributes(typeof(IActionExecutingFilter), true);
 
                 //call BeforeCreated methods of controller attributes
-                bool resume = CallFilters(response, context, filters, async filter => await filter.OnExecuting(controller, descriptor, context));
+                bool resume = await CallFilters(response, context, filters, async filter => await filter.OnExecuting(controller, descriptor, context));
                 if (!resume)
                     return false;
             }
@@ -521,15 +521,15 @@ namespace Twino.Mvc
         /// Filter parameter action calling is used many times in Request method.
         /// CallFilters method is created to avoid to type this code many times
         /// </summary>
-        private bool CallFilters<TFilter>(HttpResponse response,
+        private async Task<bool> CallFilters<TFilter>(HttpResponse response,
                                           FilterContext context,
                                           IEnumerable<TFilter> items,
-                                          Action<TFilter> action,
+                                          Func<TFilter, Task> action,
                                           bool skipResultChanges = false)
         {
             foreach (TFilter item in items)
             {
-                action(item);
+                await action(item);
 
                 if (skipResultChanges)
                     continue;

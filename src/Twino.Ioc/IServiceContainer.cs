@@ -24,7 +24,7 @@ namespace Twino.Ioc
         void AddTransient<TService, TImplementation>(Action<TImplementation> afterCreated)
             where TService : class
             where TImplementation : class, TService;
-        
+
         /// <summary>
         /// Adds a service to the container
         /// </summary>
@@ -225,9 +225,20 @@ namespace Twino.Ioc
             where TService : class;
 
         /// <summary>
+        /// Try gets the service from the container.
+        /// </summary>
+        Task<bool> TryGet<TService>(out TService service, IContainerScope scope = null)
+            where TService : class;
+
+        /// <summary>
         /// Gets the service from the container.
         /// </summary>
         Task<object> Get(Type serviceType, IContainerScope scope = null);
+
+        /// <summary>
+        /// Try gets the service from the container.
+        /// </summary>
+        Task<bool> TryGet(Type serviceType, out object service, IContainerScope scope = null);
 
         /// <summary>
         /// Gets descriptor of type
@@ -238,7 +249,7 @@ namespace Twino.Ioc
         /// Gets descriptor of type
         /// </summary>
         ServiceDescriptor GetDescriptor(Type serviceType);
-        
+
         #endregion
 
         #region Instance - Scope
