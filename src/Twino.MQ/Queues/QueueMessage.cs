@@ -36,11 +36,6 @@ namespace Twino.MQ.Queues
         public bool IsSaved { get; internal set; }
 
         /// <summary>
-        /// True, if message sending skipped by user
-        /// </summary>
-        public bool IsSkipped { get; internal set; }
-
-        /// <summary>
         /// True, if acknowledge message for the message is received
         /// </summary>
         public bool IsAcknowledged { get; internal set; }
@@ -71,6 +66,11 @@ namespace Twino.MQ.Queues
         /// Last decision for the message
         /// </summary>
         public Decision Decision { get; set; }
+        
+        /// <summary>
+        /// If true, message is in queue
+        /// </summary>
+        internal bool IsInQueue { get; set; }
 
         /// <summary>
         /// Creates new QueueMessage from TmqMessage with save status
