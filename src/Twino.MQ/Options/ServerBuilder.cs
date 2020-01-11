@@ -194,6 +194,10 @@ namespace Twino.MQ.Options
             if (allowMultipleQueues != null)
                 options.AllowMultipleQueues = allowMultipleQueues.Value<bool>();
 
+            JToken clientLimit = from["ClientLimit"];
+            if (clientLimit != null)
+                options.ClientLimit = clientLimit.Value<int>();
+
             SetQueuePropertyValues(from, options);
         }
 
