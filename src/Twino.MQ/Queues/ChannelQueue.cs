@@ -492,7 +492,14 @@ namespace Twino.MQ.Queues
                 Info.AddError();
                 try
                 {
-                    _ = DeliveryHandler.ExceptionThrown(this, held, ex);
+                    Decision decision = await DeliveryHandler.ExceptionThrown(this, held, ex);
+                    if (held != null)
+                    {
+                        await ApplyDecision(decision, held);
+
+                        if (decision.KeepMessage && !held.IsInQueue)
+                            PutMessageBack(held);
+                    }
                 }
                 catch //if developer does wrong operation, we should not stop
                 {
@@ -945,7 +952,7 @@ namespace Twino.MQ.Queues
             {
                 if (Options.HideClientNames)
                     deliveryMessage.SetSource(null);
-                
+
                 await ApplyDecision(decision, delivery.Message, deliveryMessage);
             }
 
