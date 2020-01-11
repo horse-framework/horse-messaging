@@ -1,5 +1,4 @@
 using System.Threading.Tasks;
-using Microsoft.VisualBasic;
 using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
 using Twino.MQ.Queues;
@@ -55,51 +54,75 @@ namespace Twino.MQ.Network
             //consumer is trying to pull from the queue
             //in false cases, we won't send any response, cuz client is pending only queue messages, not response messages
             if (message.Length == 0 && message.ResponseRequired)
-            {
-                //only pull statused queues can handle this request
-                if (queue.Status != QueueStatus.Pull)
-                    return;
-
-                //client cannot pull message from the channel not in
-                ChannelClient channelClient = channel.FindClient(client);
-                if (channelClient == null)
-                    return;
-
-                //check authorization
-                if (_server.Authorization != null)
-                {
-                    bool grant = await _server.Authorization.CanPullFromQueue(channelClient, queue);
-                    if (!grant)
-                        return;
-                }
-
-                await queue.Pull(channelClient, message);
-            }
+                await HandlePullRequest(client, message, channel, queue);
 
             //message have a content, this is the real message from producer to the queue
             else
+                await HandlePush(client, message, queue);
+        }
+
+        /// <summary>
+        /// Handles pulling a message from a queue
+        /// </summary>
+        private async Task HandlePullRequest(MqClient client, TmqMessage message, Channel channel, ChannelQueue queue)
+        {
+            //only pull statused queues can handle this request
+            if (queue.Status != QueueStatus.Pull)
             {
-                //check authority
-                if (_server.Authorization != null)
-                {
-                    bool grant = await _server.Authorization.CanMessageToQueue(client, queue, message);
-                    if (!grant)
-                    {
-                        if (!string.IsNullOrEmpty(message.MessageId))
-                            await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
-                        return;
-                    }
-                }
-
-                //prepare the message
-                QueueMessage queueMessage = new QueueMessage(message);
-                queueMessage.Source = client;
-
-                //push the message
-                bool sent = await queue.Push(queueMessage, client);
-                if (!sent)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Failed));
+                if (!string.IsNullOrEmpty(message.MessageId))
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.BadRequest));
+                return;
             }
+
+            //client cannot pull message from the channel not in
+            ChannelClient channelClient = channel.FindClient(client);
+            if (channelClient == null)
+            {
+                if (!string.IsNullOrEmpty(message.MessageId))
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                return;
+            }
+
+            //check authorization
+            if (_server.Authorization != null)
+            {
+                bool grant = await _server.Authorization.CanPullFromQueue(channelClient, queue);
+                if (!grant)
+                {
+                    if (!string.IsNullOrEmpty(message.MessageId))
+                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                    return;
+                }
+            }
+
+            await queue.Pull(channelClient, message);
+        }
+
+        /// <summary>
+        /// Handles pushing a message into a queue
+        /// </summary>
+        private async Task HandlePush(MqClient client, TmqMessage message, ChannelQueue queue)
+        {
+            //check authority
+            if (_server.Authorization != null)
+            {
+                bool grant = await _server.Authorization.CanMessageToQueue(client, queue, message);
+                if (!grant)
+                {
+                    if (!string.IsNullOrEmpty(message.MessageId))
+                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                    return;
+                }
+            }
+
+            //prepare the message
+            QueueMessage queueMessage = new QueueMessage(message);
+            queueMessage.Source = client;
+
+            //push the message
+            bool sent = await queue.Push(queueMessage, client);
+            if (!sent)
+                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Failed));
         }
     }
 }
