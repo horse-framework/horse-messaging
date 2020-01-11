@@ -714,7 +714,10 @@ namespace Twino.MQ.Queues
                 {
                     //we don't need push and pull
                     if (_highPriorityMessages.Count == 0)
+                    {
+                        message.IsInQueue = false;
                         return message;
+                    }
 
                     _highPriorityMessages.AddLast(message);
                     message.IsInQueue = true;
@@ -728,7 +731,10 @@ namespace Twino.MQ.Queues
                 {
                     //we don't need push and pull
                     if (_regularMessages.Count == 0)
+                    {
+                        message.IsInQueue = false;
                         return message;
+                    }
 
                     _regularMessages.AddLast(message);
                     message.IsInQueue = true;
@@ -861,7 +867,7 @@ namespace Twino.MQ.Queues
         /// If acknowledge is chosen, sends an ack message to source.
         /// Returns true is allowed
         /// </summary>
-        internal async Task<bool> ApplyDecision(Decision decision, QueueMessage message)
+        internal async Task<bool> ApplyDecision(Decision decision, QueueMessage message, TmqMessage customAck = null)
         {
             if (decision.SaveMessage && !message.IsSaved)
             {
@@ -876,7 +882,7 @@ namespace Twino.MQ.Queues
             {
                 if (message.Source != null && message.Source.IsConnected)
                 {
-                    TmqMessage acknowledge = message.Message.CreateAcknowledge();
+                    TmqMessage acknowledge = customAck ?? message.Message.CreateAcknowledge();
                     await message.Source.SendAsync(acknowledge);
                 }
             }
@@ -936,7 +942,12 @@ namespace Twino.MQ.Queues
             Decision decision = await DeliveryHandler.AcknowledgeReceived(this, deliveryMessage, delivery);
 
             if (delivery != null)
-                await ApplyDecision(decision, delivery.Message);
+            {
+                if (Options.HideClientNames)
+                    deliveryMessage.SetSource(null);
+                
+                await ApplyDecision(decision, delivery.Message, deliveryMessage);
+            }
 
             ReleaseAcknowledgeLock(true);
         }

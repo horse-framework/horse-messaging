@@ -59,7 +59,7 @@ namespace Test.Mq.Internal
         public async Task<Decision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery)
         {
             _server.OnAcknowledge++;
-            return await Task.FromResult(new Decision(true, false));
+            return await Task.FromResult(new Decision(true, false, false, DeliveryAcknowledgeDecision.Always));
         }
 
         public async Task<Decision> MessageTimedOut(ChannelQueue queue, QueueMessage message)
