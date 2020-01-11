@@ -16,13 +16,13 @@ namespace Twino.MQ
         /// Do nothing
         /// </summary>
         Nothing,
-        
+
         /// <summary>
         /// Sends acknowldege message to it's owner
         /// </summary>
         SendToOwner
     }
-    
+
     /// <summary>
     /// Message send and receive operations implementation
     /// (before starting to send, before and after single message sending, after sending completed, delivery and responses, time up)
@@ -45,13 +45,19 @@ namespace Twino.MQ
         /// This method is called for each message and each receiver.
         /// This method decides if it is sent.
         /// </summary>
-        Task<bool> CanConsumerReceive(ChannelQueue queue, QueueMessage message, MqClient receiver);
+        Task<Decision> CanConsumerReceive(ChannelQueue queue, QueueMessage message, MqClient receiver);
 
         /// <summary>
         /// After sending message to a receiver.
         /// This method is called for each message and each receiver.
         /// </summary>
-        Task ConsumerReceived(ChannelQueue queue, MessageDelivery delivery, MqClient receiver);
+        Task<Decision> ConsumerReceived(ChannelQueue queue, MessageDelivery delivery, MqClient receiver);
+
+        /// <summary>
+        /// After sending message to a receiver.
+        /// This method is called for each message and each receiver.
+        /// </summary>
+        Task<Decision> ConsumerReceiveFailed(ChannelQueue queue, MessageDelivery delivery, MqClient receiver);
 
         /// <summary>
         /// Called when a message sending operation is completed.
@@ -61,18 +67,18 @@ namespace Twino.MQ
         /// <summary>
         /// Called when a receiver sends an acknowledge message.
         /// </summary>
-        Task<AcknowledgeDecision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery);
+        Task<Decision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery);
 
         /// <summary>
         /// Message is queued but no receiver found and time is up
         /// </summary>
-        Task MessageTimedOut(ChannelQueue queue, QueueMessage message);
+        Task<Decision> MessageTimedOut(ChannelQueue queue, QueueMessage message);
 
         /// <summary>
         /// Called when message requested acknowledge but acknowledge message isn't received in time
         /// </summary>
         /// <returns></returns>
-        Task AcknowledgeTimedOut(ChannelQueue queue, MessageDelivery delivery);
+        Task<Decision> AcknowledgeTimedOut(ChannelQueue queue, MessageDelivery delivery);
 
         /// <summary>
         /// Message is about to remove
@@ -82,7 +88,7 @@ namespace Twino.MQ
         /// <summary>
         /// Called when an exception is thrown
         /// </summary>
-        Task ExceptionThrown(ChannelQueue queue, QueueMessage message, Exception exception);
+        Task<Decision> ExceptionThrown(ChannelQueue queue, QueueMessage message, Exception exception);
 
         /// <summary>
         /// After the operation of the message is completed, if save is selected, this method is called.

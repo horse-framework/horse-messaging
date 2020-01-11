@@ -12,7 +12,7 @@ namespace Twino.Client.TMQ
         /// If true, channel supports multiple queues
         /// </summary>
         public bool? AllowMultipleQueues { get; set; }
-        
+
         /// <summary>
         /// Allowed queues for channel
         /// </summary>
@@ -22,11 +22,17 @@ namespace Twino.Client.TMQ
         /// Registry key for channel event handler
         /// </summary>
         public string EventHandler { get; set; }
-        
+
         /// <summary>
         /// Registry key for channel authenticator
         /// </summary>
         public string Authenticator { get; set; }
+
+        /// <summary>
+        /// Maximum client limit of the channel.
+        /// Zero is unlimited
+        /// </summary>
+        public int ClientLimit { get; set; }
 
         /// <summary>
         /// Serializes channel creation options to key-value lines (HTTP Request like)
@@ -40,6 +46,9 @@ namespace Twino.Client.TMQ
 
             if (AllowMultipleQueues.HasValue)
                 builder.Append(Line(TmqHeaders.ALLOW_MULTIPLE_QUEUES, AllowMultipleQueues.Value));
+
+            if (ClientLimit > 0)
+                builder.Append(Line(TmqHeaders.CLIENT_LIMIT, ClientLimit.ToString()));
 
             if (AllowedQueues != null)
             {

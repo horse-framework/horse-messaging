@@ -12,6 +12,27 @@ using Twino.MQ.Security;
 namespace Twino.MQ
 {
     /// <summary>
+    /// Joining channel result
+    /// </summary>
+    public enum ClientJoinResult
+    {
+        /// <summary>
+        /// Client has joined to channel
+        /// </summary>
+        Ok,
+        
+        /// <summary>
+        /// Unauthorized client
+        /// </summary>
+        Unauthorized,
+        
+        /// <summary>
+        /// Channel is full
+        /// </summary>
+        Full
+    }
+    
+    /// <summary>
     /// Messaging Queue Channel
     /// </summary>
     public class Channel
@@ -225,15 +246,18 @@ namespace Twino.MQ
         /// <summary>
         /// Adds the client to the channel
         /// </summary>
-        public async Task<bool> AddClient(MqClient client)
+        public async Task<ClientJoinResult> AddClient(MqClient client)
         {
             if (Authenticator != null)
             {
                 bool allowed = await Authenticator.Authenticate(this, client);
                 if (!allowed)
-                    return false;
+                    return ClientJoinResult.Unauthorized;
             }
 
+            if (Options.ClientLimit > 0 && _clients.Count >= Options.ClientLimit)
+                return ClientJoinResult.Full;
+            
             ChannelClient cc = new ChannelClient(this, client);
             _clients.Add(cc);
             client.Join(cc);
@@ -245,7 +269,7 @@ namespace Twino.MQ
             foreach (ChannelQueue queue in list)
                 await queue.Trigger();
 
-            return true;
+            return ClientJoinResult.Ok;
         }
 
         /// <summary>

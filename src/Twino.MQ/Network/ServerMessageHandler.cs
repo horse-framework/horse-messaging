@@ -115,9 +115,24 @@ namespace Twino.MQ.Network
                 return;
             }
 
-            bool grant = await channel.AddClient(client);
+            ClientJoinResult result = await channel.AddClient(client);
             if (message.ResponseRequired)
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, grant ? KnownContentTypes.Ok : KnownContentTypes.Unauthorized));
+            {
+                switch (result)
+                {
+                    case ClientJoinResult.Ok:
+                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Ok));
+                        break;
+
+                    case ClientJoinResult.Unauthorized:
+                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                        break;
+
+                    case ClientJoinResult.Full:
+                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Busy));
+                        break;
+                }
+            }
         }
 
         /// <summary>

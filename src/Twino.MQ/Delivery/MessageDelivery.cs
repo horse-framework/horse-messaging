@@ -57,11 +57,6 @@ namespace Twino.MQ.Delivery
         /// </summary>
         public DateTime? AcknowledgeDeadline { get; }
 
-        /// <summary>
-        /// True, if acknowledge message is sent to message source
-        /// </summary>
-        public bool AcknowledgeSentToSource { get; internal set; }
-
         #endregion
 
         #region Constructurs
