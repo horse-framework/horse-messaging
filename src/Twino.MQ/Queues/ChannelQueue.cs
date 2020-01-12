@@ -184,6 +184,136 @@ namespace Twino.MQ.Queues
         }
 
         #endregion
+        
+        #region Messages
+        
+        /// <summary>
+        /// Returns pending high priority messages count
+        /// </summary>
+        public int HighPriorityMessageCount()
+        {
+            return _highPriorityMessages.Count;
+        }
+
+        /// <summary>
+        /// Returns pending regular messages count
+        /// </summary>
+        public int RegularMessageCount()
+        {
+            return _regularMessages.Count;
+        }
+        
+        /// <summary>
+        /// Finds and returns next queue message.
+        /// Message will not be removed from the queue.
+        /// If there is no message in queue, returns null
+        /// </summary>
+        public QueueMessage FindNextMessage()
+        {
+            if (_highPriorityMessages.Count > 0)
+            {
+                lock (_highPriorityMessages)
+                    return _highPriorityMessages.First.Value;
+            }
+            
+            if (_regularMessages.Count > 0)
+            {
+                lock (_regularMessages)
+                    return _regularMessages.First.Value;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Clears all messages in queue
+        /// </summary>
+        public void ClearRegularMessages()
+        {
+            lock (_regularMessages)
+                _regularMessages.Clear();
+        }
+        
+        /// <summary>
+        /// Clears all messages in queue
+        /// </summary>
+        public void ClearHighPriorityMessages()
+        {
+            lock (_highPriorityMessages)
+                _highPriorityMessages.Clear();
+        }
+
+        /// <summary>
+        /// Clears all messages in queue
+        /// </summary>
+        public void ClearAllMessages()
+        {
+            ClearRegularMessages();
+            ClearHighPriorityMessages();
+        }
+
+        /// <summary>
+        /// Changes message priority.
+        /// Removes message from previous prio queue and puts it new prio queue.
+        /// If putBack is true, item will be put to the end of the queue
+        /// </summary>
+        public async Task<bool> ChangeMessagePriority(QueueMessage message, bool highPriority, bool putBack = true)
+        {
+            if (message.Message.HighPriority == highPriority)
+                return false;
+
+            await RemoveMessage(message, true, true);
+            message.Message.HighPriority = highPriority;
+            
+            if (highPriority)
+            {
+                lock (_highPriorityMessages)
+                {
+                    if (putBack)
+                        _highPriorityMessages.AddLast(message);
+                    else
+                        _highPriorityMessages.AddFirst(message);
+                }
+            }
+            else
+            {
+                lock (_regularMessages)
+                {
+                    if (putBack)
+                        _regularMessages.AddLast(message);
+                    else
+                        _regularMessages.AddFirst(message);
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Removes the message from the queue.
+        /// Remove operation will be canceled If force is false and message is not sent.
+        /// If silent is false, MessageRemoved method of delivery handler is called
+        /// </summary>
+        public async Task<bool> RemoveMessage(QueueMessage message, bool force = false, bool silent = false)
+        {
+            if (!force && !message.IsSent)
+                return false;
+
+            if (message.Message.HighPriority)
+                _highPriorityMessages.Remove(message);
+            else
+                _regularMessages.Remove(message);
+
+            if (!silent)
+            {
+                Info.AddMessageRemove();
+                await DeliveryHandler.MessageRemoved(this, message);
+            }
+
+            return true;
+        }
+
+        #endregion
 
         #region Fill
 
@@ -330,27 +460,7 @@ namespace Twino.MQ.Queues
 
         #endregion
 
-        #region Messaging Actions
-
-        /// <summary>
-        /// Removes the message from the queue.
-        /// Remove operation will be canceled If force is false and message is not sent
-        /// </summary>
-        public async Task<bool> RemoveMessage(QueueMessage message, bool force = false)
-        {
-            if (!force && !message.IsSent)
-                return false;
-
-            if (message.Message.HighPriority)
-                _highPriorityMessages.Remove(message);
-            else
-                _regularMessages.Remove(message);
-
-            Info.AddMessageRemove();
-            await DeliveryHandler.MessageRemoved(this, message);
-
-            return true;
-        }
+        #region Delivery
 
         /// <summary>
         /// Client pulls a message from the queue
@@ -689,7 +799,7 @@ namespace Twino.MQ.Queues
         /// Creates final decision from multiple decisions.
         /// Final decision has bests choices for each decision.
         /// </summary>
-        private Decision CreateFinalDecision(Decision final, Decision decision)
+        private static Decision CreateFinalDecision(Decision final, Decision decision)
         {
             bool allow = false;
             bool keep = false;
