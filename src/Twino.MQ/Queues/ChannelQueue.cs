@@ -411,6 +411,32 @@ namespace Twino.MQ.Queues
             }
         }
 
+        /// <summary>
+        /// Fills TMQ Message objects to the queue
+        /// </summary>
+        public void FillMessage(IEnumerable<TmqMessage> messages, bool isSaved)
+        {
+            foreach (TmqMessage message in messages)
+            {
+                message.SetTarget(Channel.Name);
+                message.ContentType = Id;
+
+                if (Options.UseMessageId && string.IsNullOrEmpty(message.MessageId))
+                    message.SetMessageId(Channel.Server.MessageIdGenerator.Create());
+
+                message.CalculateLengths();
+
+                QueueMessage qm = new QueueMessage(message, isSaved);
+
+                if (message.HighPriority)
+                    lock (_highPriorityMessages)
+                        _highPriorityMessages.AddLast(qm);
+                else
+                    lock (_regularMessages)
+                        _regularMessages.AddLast(qm);
+            }
+        }
+
         #endregion
 
         #region Status Actions
