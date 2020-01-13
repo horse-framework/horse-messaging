@@ -75,10 +75,5 @@ namespace Twino.Core
         /// </summary>
         /// <returns></returns>
         Stream GetStream();
-
-        /// <summary>
-        /// call when client sends pong message as ping asnwer
-        /// </summary>
-        void PongReceived();
     }
 }

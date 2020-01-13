@@ -202,7 +202,7 @@ namespace Twino.Core
         /// </summary>
         protected void SetOnMessageReceived(TMessage message)
         {
-            LastAliveDate = DateTime.UtcNow;
+            KeepAlive();
             MessageReceived?.Invoke(this, message);
         }
     }

@@ -49,17 +49,8 @@ namespace Twino.Protocols.WebSocket
                 code -= 128;
 
             message.OpCode = (SocketOpCode) code;
-
-            switch (message.OpCode)
-            {
-                case SocketOpCode.Continue:
-                case SocketOpCode.Terminate:
-                    return null;
-                
-                case SocketOpCode.Ping:
-                case SocketOpCode.Pong:
-                    return message;
-            }
+            if (message.OpCode == SocketOpCode.Terminate)
+                return null;
 
             byte maskbyte = frames[1];
             if (maskbyte > 127)
@@ -78,11 +69,11 @@ namespace Twino.Protocols.WebSocket
                     return null;
             }
 
-            bool success = await ReadContent(stream, message, length);
-            if (!success)
-                return null;
+            if (length == 0)
+                return message;
 
-            return message;
+            bool success = await ReadContent(stream, message, length);
+            return success ? message : null;
         }
 
         /// <summary>

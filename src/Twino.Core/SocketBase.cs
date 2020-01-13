@@ -44,11 +44,6 @@ namespace Twino.Core
         public bool IsSsl { get; protected set; }
 
         /// <summary>
-        /// The last PONG received time. If this time is before last second PING time, the client will be removed.
-        /// </summary>
-        internal DateTime PongTime { get; set; }
-
-        /// <summary>
         /// When client is disconnected and disposed,
         /// The message will be sent to all event subscribers.
         /// Sometimes multiple errors occur when the connection is failed.
@@ -77,6 +72,11 @@ namespace Twino.Core
         /// Used for preventing unnecessary ping/pong traffic
         /// </summary>
         public DateTime LastAliveDate { get; protected set; } = DateTime.UtcNow;
+        
+        /// <summary>
+        /// True, If a pong must received asap
+        /// </summary>
+        internal bool PongRequired { get; set; }
 
         #endregion
 
@@ -87,7 +87,6 @@ namespace Twino.Core
         /// </summary>
         protected SocketBase()
         {
-            PongTime = DateTime.UtcNow.AddSeconds(15);
         }
 
         /// <summary>
@@ -95,7 +94,6 @@ namespace Twino.Core
         /// </summary>
         protected SocketBase(IConnectionInfo info)
         {
-            PongTime = DateTime.UtcNow.AddSeconds(15);
             IsSsl = info.IsSsl;
             IsConnected = true;
             Stream = info.GetStream();
@@ -148,8 +146,8 @@ namespace Twino.Core
                 if (Stream == null || data == null)
                     return false;
 
-                LastAliveDate = DateTime.UtcNow;
                 await Stream.WriteAsync(data);
+                LastAliveDate = DateTime.UtcNow;
                 return true;
             }
             catch
@@ -168,8 +166,6 @@ namespace Twino.Core
             {
                 if (Stream == null || data == null)
                     return false;
-
-                LastAliveDate = DateTime.UtcNow;
                 
                 if (IsSsl)
                 {
@@ -187,6 +183,7 @@ namespace Twino.Core
                 else
                     Stream.BeginWrite(data, 0, data.Length, EndWrite, data);
 
+                LastAliveDate = DateTime.UtcNow;
                 return true;
             }
             catch
@@ -219,6 +216,15 @@ namespace Twino.Core
             }, "", false);
         }
 
+        /// <summary>
+        /// Updates socket alive date
+        /// </summary>
+        public void KeepAlive()
+        {
+            LastAliveDate = DateTime.UtcNow;
+            PongRequired = false;
+        }
+        
         #endregion
 
         #region Abstract Methods
@@ -303,7 +309,7 @@ namespace Twino.Core
         /// </summary>
         /// <returns></returns>
         public abstract void Pong();
-
+        
         #endregion
     }
 }

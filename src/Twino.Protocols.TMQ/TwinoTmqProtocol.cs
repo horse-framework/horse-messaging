@@ -138,7 +138,9 @@ namespace Twino.Protocols.TMQ
                 //if user makes a mistake in received method, we should not interrupt connection handling
                 try
                 {
-                    await _handler.Received(_server, info, (TmqServerSocket) handshakeResult.Socket, message);
+                    TmqServerSocket socket = (TmqServerSocket) handshakeResult.Socket;
+                    socket.KeepAlive();
+                    await _handler.Received(_server, info, socket, message);
                 }
                 catch (Exception e)
                 {
