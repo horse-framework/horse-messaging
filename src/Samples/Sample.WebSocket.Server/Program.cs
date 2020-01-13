@@ -52,7 +52,7 @@ namespace Sample.WebSocket.Server
             ServerWsHandler handler = new ServerWsHandler();
             TwinoServer server = new TwinoServer(new ServerOptions
                                                  {
-                                                     PingInterval = 8,
+                                                     PingInterval = 15,
                                                      Hosts = new List<HostOptions>
                                                              {
                                                                  new HostOptions

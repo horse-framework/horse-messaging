@@ -85,14 +85,6 @@ namespace Twino.Server
         }
 
         /// <summary>
-        /// Completes socket pong receive operations 
-        /// </summary>
-        public void PongReceived()
-        {
-            Socket.PongTime = DateTime.UtcNow.AddSeconds(1);
-        }
-
-        /// <summary>
         /// Closes and disposes all resources of the request
         /// </summary>
         public void Close()

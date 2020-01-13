@@ -112,7 +112,8 @@ namespace Twino.Protocols.WebSocket
                     info.Close();
                     return;
                 }
-                
+
+                handshakeResult.Socket.KeepAlive();
                 await ProcessMessage(info, handshakeResult.Socket, message);
             }
         }
@@ -178,7 +179,7 @@ namespace Twino.Protocols.WebSocket
 
                 //client sent response pong to ping message
                 case SocketOpCode.Pong:
-                    info.PongReceived();
+                    socket.KeepAlive();
                     break;
             }
         }

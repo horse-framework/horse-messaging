@@ -217,7 +217,7 @@ namespace Twino.MQ.Network
 
                 //client sends PONG message
                 case MessageType.Pong:
-                    info.PongReceived();
+                    mc.KeepAlive();
                     break;
 
                 //close the client's connection

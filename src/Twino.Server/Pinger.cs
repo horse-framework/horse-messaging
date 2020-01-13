@@ -13,12 +13,12 @@ namespace Twino.Server
         /// <summary>
         /// Connected piped clients
         /// </summary>
-        private readonly List<SocketPingInfo> _clients = new List<SocketPingInfo>();
+        private readonly List<SocketBase> _clients = new List<SocketBase>();
 
         /// <summary>
         /// Newly connected piped clients
         /// </summary>
-        private readonly List<SocketPingInfo> _incoming = new List<SocketPingInfo>();
+        private readonly List<SocketBase> _incoming = new List<SocketBase>();
 
         /// <summary>
         /// Disconnected clients that they are not removed from the container yet
@@ -79,7 +79,7 @@ namespace Twino.Server
         public void Add(SocketBase socket)
         {
             lock (_incoming)
-                _incoming.Add(new SocketPingInfo(socket));
+                _incoming.Add(socket);
         }
 
         /// <summary>
@@ -119,8 +119,8 @@ namespace Twino.Server
                 if (_incoming.Count == 0)
                     return;
 
-                foreach (SocketPingInfo info in _incoming)
-                    _clients.Add(info);
+                foreach (SocketBase socket in _incoming)
+                    _clients.Add(socket);
 
                 _incoming.Clear();
             }
@@ -132,25 +132,27 @@ namespace Twino.Server
         /// </summary>
         private void PingClients()
         {
-            foreach (SocketPingInfo info in _clients)
+            foreach (SocketBase socket in _clients)
             {
-                if (info.Socket == null || !info.Socket.IsConnected)
+                if (socket == null || !socket.IsConnected)
                 {
-                    Remove(info.Socket);
+                    Remove(socket);
                     continue;
                 }
 
-                if (info.Socket.LastAliveDate + _interval > DateTime.UtcNow || info.Last + _interval > DateTime.UtcNow)
+                if (socket.LastAliveDate + _interval > DateTime.UtcNow)
                     continue;
 
-                if (!info.New && info.Socket.PongTime < info.Last)
+                if (socket.PongRequired)
                 {
-                    info.Socket.Disconnect();
-                    Remove(info.Socket);
-                    continue;
+                    socket.Disconnect();
+                    Remove(socket);
                 }
-
-                info.Ping();
+                else
+                {
+                    socket.Ping();
+                    socket.PongRequired = true;
+                }
             }
         }
 
@@ -164,7 +166,7 @@ namespace Twino.Server
                 if (_outgoing.Count == 0)
                     return;
 
-                _clients.RemoveAll(x => _outgoing.Contains(x.Socket));
+                _clients.RemoveAll(x => _outgoing.Contains(x));
                 _outgoing.Clear();
             }
         }
