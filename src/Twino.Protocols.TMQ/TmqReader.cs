@@ -144,6 +144,9 @@ namespace Twino.Protocols.TMQ
             {
                 int rcount = (int) (left > blen ? blen : left);
                 int read = await stream.ReadAsync(_buffer, 0, rcount);
+                if (read == 0)
+                    break;
+                
                 left -= (uint) read;
                 await message.Content.WriteAsync(_buffer, 0, read);
             } while (left > 0);
