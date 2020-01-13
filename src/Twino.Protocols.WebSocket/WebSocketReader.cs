@@ -124,6 +124,9 @@ namespace Twino.Protocols.WebSocket
                     size = (length - total);
 
                 int read = await stream.ReadAsync(_buffer, 0, (int) size);
+                if (read == 0)
+                    break;
+
                 total += read;
 
                 if (message.Masking)
@@ -131,7 +134,8 @@ namespace Twino.Protocols.WebSocket
                         _buffer[i] = (byte) (_buffer[i] ^ message.Mask[i % 4]);
 
                 await message.Content.WriteAsync(_buffer, 0, read);
-            } while (total < length);
+            }
+            while (total < length);
         }
 
         /// <summary>
@@ -148,7 +152,8 @@ namespace Twino.Protocols.WebSocket
                     return false;
 
                 total += read;
-            } while (total < length);
+            }
+            while (total < length);
 
             return true;
         }
