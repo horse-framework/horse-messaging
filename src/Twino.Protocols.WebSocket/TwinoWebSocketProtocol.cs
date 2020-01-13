@@ -107,13 +107,12 @@ namespace Twino.Protocols.WebSocket
             while (info.Socket != null && info.Socket.IsConnected)
             {
                 WebSocketMessage message = await reader.Read(stream);
-
                 if (message == null)
                 {
                     info.Close();
                     return;
                 }
-
+                
                 await ProcessMessage(info, handshakeResult.Socket, message);
             }
         }
@@ -171,7 +170,7 @@ namespace Twino.Protocols.WebSocket
                 case SocketOpCode.Terminate:
                     info.Close();
                     break;
-                
+
                 //if client sends a ping message, response with pong
                 case SocketOpCode.Ping:
                     await socket.SendAsync(PredefinedMessages.PONG);

@@ -49,7 +49,7 @@ namespace Sample.WebSocket.Client
             cx.MessageReceived += (c, m) => Console.WriteLine("# " + m);
             cx.Connected += c => Console.WriteLine("Connected");
             cx.Disconnected += c => Console.WriteLine("Disconnected");
-            cx.Connect("ws://127.0.0.1:84");
+            cx.Connect("ws://127.0.0.1:83");
             while (true)
             {
                 string s = Console.ReadLine();
