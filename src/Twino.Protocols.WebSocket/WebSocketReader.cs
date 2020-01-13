@@ -67,7 +67,9 @@ namespace Twino.Protocols.WebSocket
                     return null;
             }
 
-            await ReadContent(stream, message, length);
+            bool success = await ReadContent(stream, message, length);
+            if (!success)
+                return null;
 
             return message;
         }
@@ -111,7 +113,7 @@ namespace Twino.Protocols.WebSocket
         /// Reads message content from stream
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task ReadContent(Stream stream, WebSocketMessage message, long length)
+        private async Task<bool> ReadContent(Stream stream, WebSocketMessage message, long length)
         {
             long total = 0;
             if (message.Content == null)
@@ -125,7 +127,7 @@ namespace Twino.Protocols.WebSocket
 
                 int read = await stream.ReadAsync(_buffer, 0, (int) size);
                 if (read == 0)
-                    break;
+                    return false;
 
                 total += read;
 
@@ -136,6 +138,8 @@ namespace Twino.Protocols.WebSocket
                 await message.Content.WriteAsync(_buffer, 0, read);
             }
             while (total < length);
+
+            return true;
         }
 
         /// <summary>

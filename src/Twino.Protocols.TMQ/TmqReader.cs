@@ -35,7 +35,9 @@ namespace Twino.Protocols.TMQ
             
             message.Ttl--;
 
-            await ReadContent(message, stream);
+            bool success = await ReadContent(message, stream);
+            if (!success)
+                return null;
 
             if (message.Content != null && message.Content.Position > 0)
                 message.Content.Position = 0;
@@ -121,7 +123,7 @@ namespace Twino.Protocols.TMQ
         /// Reads message content
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task ReadContent(TmqMessage message, Stream stream)
+        private async Task<bool> ReadContent(TmqMessage message, Stream stream)
         {
             if (message.MessageIdLength > 0)
                 message.MessageId = await ReadOctetSizeData(stream, message.MessageIdLength);
@@ -133,7 +135,7 @@ namespace Twino.Protocols.TMQ
                 message.Target = await ReadOctetSizeData(stream, message.TargetLength);
 
             if (message.Length == 0)
-                return;
+                return true;
 
             if (message.Content == null)
                 message.Content = new MemoryStream();
@@ -145,11 +147,13 @@ namespace Twino.Protocols.TMQ
                 int rcount = (int) (left > blen ? blen : left);
                 int read = await stream.ReadAsync(_buffer, 0, rcount);
                 if (read == 0)
-                    break;
+                    return false;
                 
                 left -= (uint) read;
                 await message.Content.WriteAsync(_buffer, 0, read);
             } while (left > 0);
+
+            return true;
         }
 
         /// <summary>
