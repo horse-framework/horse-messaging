@@ -35,6 +35,9 @@ namespace Twino.Protocols.TMQ
             
             message.Ttl--;
 
+            if (message.Length == 0)
+                return message;
+
             bool success = await ReadContent(message, stream);
             if (!success)
                 return null;

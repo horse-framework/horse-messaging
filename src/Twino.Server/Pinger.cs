@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Net.Sockets;
 using System.Threading;
 using Twino.Core;
 
@@ -141,15 +140,15 @@ namespace Twino.Server
                     continue;
                 }
 
+                if (info.Socket.LastAliveDate + _interval > DateTime.UtcNow || info.Last + _interval > DateTime.UtcNow)
+                    continue;
+
                 if (!info.New && info.Socket.PongTime < info.Last)
                 {
                     info.Socket.Disconnect();
                     Remove(info.Socket);
                     continue;
                 }
-
-                if (info.Socket.LastAliveDate + _interval > DateTime.UtcNow || info.Last + _interval > DateTime.UtcNow)
-                    continue;
 
                 info.Ping();
             }

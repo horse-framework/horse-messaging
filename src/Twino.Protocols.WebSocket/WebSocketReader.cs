@@ -50,6 +50,17 @@ namespace Twino.Protocols.WebSocket
 
             message.OpCode = (SocketOpCode) code;
 
+            switch (message.OpCode)
+            {
+                case SocketOpCode.Continue:
+                case SocketOpCode.Terminate:
+                    return null;
+                
+                case SocketOpCode.Ping:
+                case SocketOpCode.Pong:
+                    return message;
+            }
+
             byte maskbyte = frames[1];
             if (maskbyte > 127)
             {
@@ -136,8 +147,7 @@ namespace Twino.Protocols.WebSocket
                         _buffer[i] = (byte) (_buffer[i] ^ message.Mask[i % 4]);
 
                 await message.Content.WriteAsync(_buffer, 0, read);
-            }
-            while (total < length);
+            } while (total < length);
 
             return true;
         }
@@ -156,8 +166,7 @@ namespace Twino.Protocols.WebSocket
                     return false;
 
                 total += read;
-            }
-            while (total < length);
+            } while (total < length);
 
             return true;
         }

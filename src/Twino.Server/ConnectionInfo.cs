@@ -89,7 +89,7 @@ namespace Twino.Server
         /// </summary>
         public void PongReceived()
         {
-            Socket.PongTime = DateTime.UtcNow;
+            Socket.PongTime = DateTime.UtcNow.AddSeconds(1);
         }
 
         /// <summary>

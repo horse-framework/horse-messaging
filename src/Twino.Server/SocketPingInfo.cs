@@ -12,17 +12,17 @@ namespace Twino.Server
         /// The client
         /// </summary>
         public SocketBase Socket { get; }
-        
+
         /// <summary>
         /// Last ping time
         /// </summary>
         public DateTime Last { get; private set; }
-        
+
         /// <summary>
         /// If true, first ping did not send
         /// </summary>
         public bool New { get; private set; }
-        
+
         public SocketPingInfo(SocketBase socket)
         {
             Socket = socket;
@@ -36,7 +36,7 @@ namespace Twino.Server
         public void Ping()
         {
             Last = DateTime.UtcNow;
-            
+
             if (New)
                 New = false;
 

@@ -1,5 +1,7 @@
 ﻿using Twino.Server;
 using System;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Core.Protocols;
@@ -12,12 +14,14 @@ namespace Sample.WebSocket.Server
     /// </summary>
     public class ServerWsHandler : IProtocolConnectionHandler<WsServerSocket, WebSocketMessage>
     {
+        private int _online;
+
+        public int Online => _online;
+
         public async Task<WsServerSocket> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
             WsServerSocket socket = new WsServerSocket(server, connection);
-            Program.ServerClient = socket;
-            Console.WriteLine("> Connected");
-
+            Interlocked.Increment(ref _online);
             return await Task.FromResult(socket);
         }
 
@@ -34,7 +38,7 @@ namespace Sample.WebSocket.Server
 
         public async Task Disconnected(ITwinoServer server, WsServerSocket client)
         {
-            Console.WriteLine("> Disconnected");
+            Interlocked.Decrement(ref _online);
             await Task.CompletedTask;
         }
     }
@@ -45,15 +49,26 @@ namespace Sample.WebSocket.Server
 
         static void Main(string[] args)
         {
-            TwinoServer server = new TwinoServer();
-            server.UseWebSockets(new ServerWsHandler());
+            ServerWsHandler handler = new ServerWsHandler();
+            TwinoServer server = new TwinoServer(new ServerOptions
+                                                 {
+                                                     PingInterval = 8,
+                                                     Hosts = new List<HostOptions>
+                                                             {
+                                                                 new HostOptions
+                                                                 {
+                                                                     Port = 83
+                                                                 }
+                                                             }
+                                                 });
+            server.UseWebSockets(handler);
 
-            server.Start(82);
+            server.Start();
 
             while (true)
             {
-                string msg = Console.ReadLine();
-                ServerClient.Send(msg);
+                Console.ReadLine();
+                Console.WriteLine(handler.Online + " Online");
             }
         }
     }
