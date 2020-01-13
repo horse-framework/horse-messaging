@@ -328,6 +328,7 @@ namespace Twino.MQ.Queues
                 message.FirstAcquirer = true;
                 message.HighPriority = highPriority;
                 message.AcknowledgeRequired = Options.RequestAcknowledge;
+                message.ContentType = Id;
 
                 if (Options.UseMessageId)
                     message.SetMessageId(Channel.Server.MessageIdGenerator.Create());
@@ -359,6 +360,7 @@ namespace Twino.MQ.Queues
                 message.FirstAcquirer = true;
                 message.HighPriority = highPriority;
                 message.AcknowledgeRequired = Options.RequestAcknowledge;
+                message.ContentType = Id;
 
                 if (Options.UseMessageId)
                     message.SetMessageId(Channel.Server.MessageIdGenerator.Create());
@@ -389,6 +391,7 @@ namespace Twino.MQ.Queues
                 message.FirstAcquirer = true;
                 message.HighPriority = highPriority;
                 message.AcknowledgeRequired = Options.RequestAcknowledge;
+                message.ContentType = Id;
 
                 if (Options.UseMessageId)
                     message.SetMessageId(Channel.Server.MessageIdGenerator.Create());
