@@ -6,9 +6,9 @@
         <Product>Twino.SerializableModel</Product>
         <Description>Twino Serializable Model library for object based communication with text-based protocols</Description>
         <PackageTags>twino,tcp,server,http,websocket,serilizable,model</PackageTags>
-        <AssemblyVersion>2.3.10</AssemblyVersion>
-        <FileVersion>2.3.10</FileVersion>
-        <PackageVersion>2.3.10</PackageVersion>
+        <AssemblyVersion>2.3.12</AssemblyVersion>
+        <FileVersion>2.3.12</FileVersion>
+        <PackageVersion>2.3.12</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü</Authors>
         <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
