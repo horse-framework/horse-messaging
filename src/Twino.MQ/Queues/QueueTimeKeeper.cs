@@ -49,8 +49,11 @@ namespace Twino.MQ.Queues
             {
                 try
                 {
-                    if ((_queue.Options.Status == QueueStatus.Push || _queue.Options.Status == QueueStatus.Pull)
+                    if ((_queue.Options.Status == QueueStatus.Push ||
+                         _queue.Options.Status == QueueStatus.Pull ||
+                         _queue.Options.Status == QueueStatus.RoundRobin)
                         && _queue.Options.MessageTimeout > TimeSpan.Zero)
+                        
                         await ProcessReceiveTimeup();
 
                     await ProcessDeliveries();
