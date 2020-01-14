@@ -13,51 +13,6 @@ using Twino.Protocols.TMQ;
 namespace Twino.MQ.Queues
 {
     /// <summary>
-    /// Queue status
-    /// </summary>
-    public enum QueueStatus
-    {
-        /// <summary>
-        /// Queue messaging is in running state.
-        /// Messages are not queued, producers push the message and if there are available consumers, message is sent to them.
-        /// Otherwise, message is deleted.
-        /// If you need to keep messages and transmit only live messages, Route is good status to consume less resource.
-        /// </summary>
-        Route,
-
-        /// <summary>
-        /// Queue messaging is in running state.
-        /// Producers push the message into the queue and consumer receive when message is pushed
-        /// </summary>
-        Push,
-
-        /// <summary>
-        /// Load balancing status. Queue messaging is in running state.
-        /// Producers push the message into the queue and consumer receive when message is pushed.
-        /// If there are no available consumers, message will be kept in queue like push status.
-        /// </summary>
-        RoundRobin,
-
-        /// <summary>
-        /// Queue messaging is in running state.
-        /// Producers push message into queue, consumers receive the messages when they requested.
-        /// Each message is sent only one-receiver at same time.
-        /// Request operation removes the message from the queue.
-        /// </summary>
-        Pull,
-
-        /// <summary>
-        /// Queue messages are accepted from producers but they are not sending to consumers even they request new messages. 
-        /// </summary>
-        Paused,
-
-        /// <summary>
-        /// Queue messages are removed, producers can't push any message to the queue and consumers can't receive any message
-        /// </summary>
-        Stopped
-    }
-
-    /// <summary>
     /// Channel queue.
     /// Keeps queued messages and subscribed clients.
     /// </summary>
@@ -129,9 +84,9 @@ namespace Twino.MQ.Queues
         private readonly QueueTimeKeeper _timeKeeper;
 
         /// <summary>
-        /// 
+        /// Wait acknowledge cross thread locker
         /// </summary>
-        private readonly SemaphoreSlim _semaphore;
+        private SemaphoreSlim _semaphore;
 
         /// <summary>
         /// This task holds the code until acknowledge is received
@@ -142,6 +97,12 @@ namespace Twino.MQ.Queues
         /// Round robin client list index
         /// </summary>
         private int _roundRobinIndex = -1;
+
+        /// <summary>
+        /// Trigger locker field.
+        /// Used to prevent concurrent trigger method calls.
+        /// </summary>
+        private volatile bool _triggering;
 
         #endregion
 
@@ -177,6 +138,12 @@ namespace Twino.MQ.Queues
 
             lock (RegularLinkedList)
                 RegularLinkedList.Clear();
+
+            if (_semaphore != null)
+            {
+                _semaphore.Dispose();
+                _semaphore = null;
+            }
         }
 
         #endregion
@@ -468,7 +435,7 @@ namespace Twino.MQ.Queues
             Status = status;
 
             //trigger queued messages
-            if (status == QueueStatus.Route || status == QueueStatus.Push)
+            if (status == QueueStatus.Route || status == QueueStatus.Push || status == QueueStatus.RoundRobin)
                 await Trigger();
         }
 
@@ -652,6 +619,10 @@ namespace Twino.MQ.Queues
         /// </summary>
         public async Task Trigger()
         {
+            if (_triggering)
+                return;
+
+            _triggering = true;
             if (Status == QueueStatus.Push || Status == QueueStatus.RoundRobin)
             {
                 if (HighPriorityLinkedList.Count > 0)
@@ -660,6 +631,8 @@ namespace Twino.MQ.Queues
                 if (RegularLinkedList.Count > 0)
                     await ProcessPendingMessages(RegularLinkedList);
             }
+
+            _triggering = false;
         }
 
         /// <summary>
@@ -668,7 +641,8 @@ namespace Twino.MQ.Queues
         /// </summary>
         private async Task ProcessPendingMessages(LinkedList<QueueMessage> list)
         {
-            while (true)
+            int max = list.Count;
+            for (int i = 0; i < max; i++)
             {
                 QueueMessage message;
                 lock (list)
@@ -726,7 +700,7 @@ namespace Twino.MQ.Queues
             //if there are not receivers, complete send operation
             if (clients.Count == 0)
             {
-                if (Status == QueueStatus.Push || Status == QueueStatus.RoundRobin && message.Decision.KeepMessage)
+                if (Status == QueueStatus.Push || Status == QueueStatus.RoundRobin)
                     PutMessageBack(message);
                 else
                 {
@@ -749,6 +723,7 @@ namespace Twino.MQ.Queues
             byte[] messageData = await _writer.Create(message.Message);
 
             Decision final = new Decision(false, false, false, DeliveryAcknowledgeDecision.None);
+            bool messageIsSent = false;
 
             //to all receivers
             foreach (ChannelClient client in clients)
@@ -777,6 +752,8 @@ namespace Twino.MQ.Queues
 
                 if (sent)
                 {
+                    messageIsSent = true;
+
                     //adds the delivery to time keeper to check timing up
                     _timeKeeper.AddAcknowledgeCheck(delivery);
 
@@ -811,7 +788,9 @@ namespace Twino.MQ.Queues
                 return;
 
             //after all sending operations completed, calls implementation send completed method and complete the operation
-            Info.AddMessageSend();
+            if (messageIsSent)
+                Info.AddMessageSend();
+            
             message.Decision = await DeliveryHandler.EndSend(this, message);
             await ApplyDecision(message.Decision, message);
 
@@ -833,11 +812,18 @@ namespace Twino.MQ.Queues
             bool save = false;
             DeliveryAcknowledgeDecision ack = DeliveryAcknowledgeDecision.None;
 
-            if (decision.Allow) allow = true;
-            if (decision.KeepMessage) keep = true;
-            if (decision.SaveMessage) save = true;
+            if (decision.Allow)
+                allow = true;
+            
+            if (decision.KeepMessage)
+                keep = true;
+            
+            if (decision.SaveMessage)
+                save = true;
+            
             if (decision.SendAcknowledge == DeliveryAcknowledgeDecision.Always)
                 ack = DeliveryAcknowledgeDecision.Always;
+            
             else if (decision.SendAcknowledge == DeliveryAcknowledgeDecision.IfSaved && final.SendAcknowledge == DeliveryAcknowledgeDecision.None)
                 ack = DeliveryAcknowledgeDecision.IfSaved;
 
@@ -1059,6 +1045,9 @@ namespace Twino.MQ.Queues
                 return;
 
             //lock the object, because pending ack message should be queued
+            if (_semaphore == null)
+                _semaphore = new SemaphoreSlim(1, 1024);
+
             await _semaphore.WaitAsync();
             try
             {

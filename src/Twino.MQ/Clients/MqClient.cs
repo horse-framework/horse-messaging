@@ -9,6 +9,8 @@ namespace Twino.MQ.Clients
     /// </summary>
     public class MqClient : TmqServerSocket
     {
+        #region Properties
+
         /// <summary>
         /// Channels that client is in
         /// </summary>
@@ -64,6 +66,10 @@ namespace Twino.MQ.Clients
         /// </summary>
         public MqServer MqServer { get; }
 
+        #endregion
+
+        #region Constructors
+
         /// <summary>
         /// Creates new MQ Client
         /// </summary>
@@ -83,15 +89,19 @@ namespace Twino.MQ.Clients
             IsConnected = true;
         }
 
+        #endregion
+
+        #region Actions
+
         /// <summary>
         /// Gets all channels of the client
         /// </summary>
         public IEnumerable<ChannelClient> GetChannels()
         {
-            List<ChannelClient> list = new List<ChannelClient>();
+            List<ChannelClient> list;
+
             lock (_channels)
-                foreach (ChannelClient ch in _channels)
-                    list.Add(ch);
+                list = new List<ChannelClient>(_channels);
 
             return list;
         }
@@ -113,5 +123,7 @@ namespace Twino.MQ.Clients
             lock (_channels)
                 _channels.Remove(channel);
         }
+
+        #endregion
     }
 }

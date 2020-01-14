@@ -279,16 +279,27 @@ namespace Twino.MQ.Queues
                 target.AllowedQueues = AllowedQueues;
         }
 
+        /// <summary>
+        /// Creates new key value line from boolean value.
+        /// Value is stored as 0 or 1
+        /// </summary>
         private static string Line(string key, bool value)
         {
             return key + ": " + (value ? "1" : "0") + "\r\n";
         }
 
+        /// <summary>
+        /// Creates new key value line from string value
+        /// </summary>
         private static string Line(string key, string value)
         {
             return key + ": " + value + "\r\n";
         }
 
+        /// <summary>
+        /// Creates new key value line from TimeSpan value.
+        /// Value is stored as numeric milliseconds
+        /// </summary>
         private static string Line(string key, TimeSpan value)
         {
             int ms = Convert.ToInt32(value.TotalMilliseconds.ToString());
