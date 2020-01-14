@@ -16,6 +16,7 @@ using Twino.Ioc;
 using Twino.MQ;
 using Twino.MQ.Clients;
 using Twino.MQ.Delivery;
+using Twino.MQ.Options;
 using Twino.MQ.Queues;
 using Twino.Mvc;
 using Twino.Mvc.Controllers;
@@ -46,13 +47,28 @@ namespace Playground
         static void Main(string[] args)
         { 
             TwinoServer server = new TwinoServer();
-            
-            TwinoMvc mvc = new TwinoMvc();
-            mvc.Init();
-            mvc.IsDevelopment = true;
-            server.UseMvc(mvc);
 
-            server.Start(80);
+            MqServer mq = new MqServer();
+            mq.SetDefaultDeliveryHandler(new TestDeliveryHandler(new TestMqServer()));
+            
+            mq.Options.MessageTimeout = TimeSpan.FromMilliseconds(1000);
+            mq.Options.Status = QueueStatus.Push;
+            server.UseMqServer(mq);
+            
+            server.Start(81);
+            
+            Thread.Sleep(1000);
+            Channel ch = mq.CreateChannel("a1");
+            var queue = ch.CreateQueue(123).Result;
+
+            TmqClient client = new TmqClient();
+            client.Connect("tmq://127.0.0.1:81");
+            while (true)
+            {
+                client.Push("a1", 123, "Hello world", false);
+                Thread.Sleep(1);
+            }
+            
             server.BlockWhileRunning();
         }
     }
