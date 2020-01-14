@@ -29,7 +29,6 @@ using Xunit;
 
 namespace Playground
 {
-
     [Route("")]
     [Route("home")]
     public class HomeController : TwinoController
@@ -41,34 +40,35 @@ namespace Playground
             return String("Hello, World!");
         }
     }
-    
+
     class Program
     {
         static void Main(string[] args)
-        { 
+        {
             TwinoServer server = new TwinoServer();
 
             MqServer mq = new MqServer();
             mq.SetDefaultDeliveryHandler(new TestDeliveryHandler(new TestMqServer()));
-            
+
+            mq.Options.AutoChannelCreation = true;
+            mq.Options.AutoQueueCreation = true;
             mq.Options.MessageTimeout = TimeSpan.FromMilliseconds(1000);
             mq.Options.Status = QueueStatus.Push;
             server.UseMqServer(mq);
-            
+
             server.Start(81);
             
-            Thread.Sleep(1000);
-            Channel ch = mq.CreateChannel("a1");
-            var queue = ch.CreateQueue(123).Result;
-
             TmqClient client = new TmqClient();
             client.Connect("tmq://127.0.0.1:81");
             while (true)
             {
                 client.Push("a1", 123, "Hello world", false);
-                Thread.Sleep(1);
+                Console.ReadLine();
+                QueueInformation info = client.GetQueueInfo("a1", 123).Result;
+                Console.WriteLine(info);
+                Console.ReadLine();
             }
-            
+
             server.BlockWhileRunning();
         }
     }
