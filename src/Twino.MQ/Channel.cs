@@ -20,18 +20,18 @@ namespace Twino.MQ
         /// Client has joined to channel
         /// </summary>
         Ok,
-        
+
         /// <summary>
         /// Unauthorized client
         /// </summary>
         Unauthorized,
-        
+
         /// <summary>
         /// Channel is full
         /// </summary>
         Full
     }
-    
+
     /// <summary>
     /// Messaging Queue Channel
     /// </summary>
@@ -244,6 +244,15 @@ namespace Twino.MQ
         #region Client Actions
 
         /// <summary>
+        /// Returns client count in the channel
+        /// </summary>
+        /// <returns></returns>
+        public int ClientsCount()
+        {
+            return _clients.Count;
+        }
+
+        /// <summary>
         /// Adds the client to the channel
         /// </summary>
         public async Task<ClientJoinResult> AddClient(MqClient client)
@@ -257,7 +266,7 @@ namespace Twino.MQ
 
             if (Options.ClientLimit > 0 && _clients.Count >= Options.ClientLimit)
                 return ClientJoinResult.Full;
-            
+
             ChannelClient cc = new ChannelClient(this, client);
             _clients.Add(cc);
             client.Join(cc);
@@ -309,7 +318,7 @@ namespace Twino.MQ
         {
             return _clients.Find(x => x.Client.UniqueId == uniqueId);
         }
-        
+
         /// <summary>
         /// Finds client in the channel
         /// </summary>

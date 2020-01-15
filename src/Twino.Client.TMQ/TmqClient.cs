@@ -946,7 +946,7 @@ namespace Twino.Client.TMQ
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ResponseRequired = true;
-            message.ContentType = KnownContentTypes.ChannelInformation;
+            message.ContentType = KnownContentTypes.QueueInformation;
             message.SetTarget(channel);
             message.SetMessageId(UniqueIdGenerator.Create());
             message.Content = new MemoryStream(BitConverter.GetBytes(id));

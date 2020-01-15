@@ -26,13 +26,6 @@ namespace Twino.MQ.Queues
         private Timer _timer;
 
         /// <summary>
-        /// Processing timed out messages.
-        /// This list is used as temp list.
-        /// To prevent re-allocations, defined in here.
-        /// </summary>
-        private readonly List<QueueMessage> _timeupMessages = new List<QueueMessage>(16);
-
-        /// <summary>
         /// All following deliveries
         /// </summary>
         private readonly List<MessageDelivery> _deliveries = new List<MessageDelivery>(1024);
@@ -54,11 +47,20 @@ namespace Twino.MQ.Queues
             TimeSpan interval = TimeSpan.FromMilliseconds(1000);
             _timer = new Timer(async s =>
             {
-                if ((_queue.Options.Status == QueueStatus.Push || _queue.Options.Status == QueueStatus.Pull)
-                    && _queue.Options.MessageTimeout > TimeSpan.Zero)
-                    await ProcessReceiveTimeup();
+                try
+                {
+                    if ((_queue.Options.Status == QueueStatus.Push ||
+                         _queue.Options.Status == QueueStatus.Pull ||
+                         _queue.Options.Status == QueueStatus.RoundRobin)
+                        && _queue.Options.MessageTimeout > TimeSpan.Zero)
+                        
+                        await ProcessReceiveTimeup();
 
-                await ProcessDeliveries();
+                    await ProcessDeliveries();
+                }
+                catch
+                {
+                }
             }, null, interval, interval);
         }
 
@@ -88,22 +90,22 @@ namespace Twino.MQ.Queues
         /// </summary>
         private async Task ProcessReceiveTimeup()
         {
-            _timeupMessages.Clear();
+            List<QueueMessage> temp = new List<QueueMessage>();
             lock (_queue.HighPriorityLinkedList)
-                ProcessReceiveTimeupOnList(_queue.HighPriorityLinkedList);
+                ProcessReceiveTimeupOnList(_queue.HighPriorityLinkedList, temp);
 
-            foreach (QueueMessage message in _timeupMessages)
+            foreach (QueueMessage message in temp)
             {
                 _queue.Info.AddMessageTimeout();
                 Decision decision = await _queue.DeliveryHandler.MessageTimedOut(_queue, message);
                 await _queue.ApplyDecision(decision, message);
             }
 
-            _timeupMessages.Clear();
+            temp.Clear();
             lock (_queue.RegularLinkedList)
-                ProcessReceiveTimeupOnList(_queue.RegularLinkedList);
+                ProcessReceiveTimeupOnList(_queue.RegularLinkedList, temp);
 
-            foreach (QueueMessage message in _timeupMessages)
+            foreach (QueueMessage message in temp)
             {
                 _queue.Info.AddMessageTimeout();
                 Decision decision = await _queue.DeliveryHandler.MessageTimedOut(_queue, message);
@@ -114,7 +116,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Checks messages in the list and adds them into time up message list and remove from the queue if they are expired.
         /// </summary>
-        private void ProcessReceiveTimeupOnList(LinkedList<QueueMessage> list)
+        private void ProcessReceiveTimeupOnList(LinkedList<QueueMessage> list, List<QueueMessage> temp)
         {
             foreach (QueueMessage message in list)
             {
@@ -122,10 +124,10 @@ namespace Twino.MQ.Queues
                     continue;
 
                 if (DateTime.UtcNow > message.Deadline.Value)
-                    _timeupMessages.Add(message);
+                    temp.Add(message);
             }
 
-            foreach (QueueMessage message in _timeupMessages)
+            foreach (QueueMessage message in temp)
                 list.Remove(message);
         }
 

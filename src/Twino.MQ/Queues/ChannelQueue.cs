@@ -13,51 +13,6 @@ using Twino.Protocols.TMQ;
 namespace Twino.MQ.Queues
 {
     /// <summary>
-    /// Queue status
-    /// </summary>
-    public enum QueueStatus
-    {
-        /// <summary>
-        /// Queue messaging is in running state.
-        /// Messages are not queued, producers push the message and if there are available consumers, message is sent to them.
-        /// Otherwise, message is deleted.
-        /// If you need to keep messages and transmit only live messages, Route is good status to consume less resource.
-        /// </summary>
-        Route,
-
-        /// <summary>
-        /// Queue messaging is in running state.
-        /// Producers push the message into the queue and consumer receive when message is pushed
-        /// </summary>
-        Push,
-
-        /// <summary>
-        /// Load balancing status. Queue messaging is in running state.
-        /// Producers push the message into the queue and consumer receive when message is pushed.
-        /// If there are no available consumers, message will be kept in queue like push status.
-        /// </summary>
-        RoundRobin,
-
-        /// <summary>
-        /// Queue messaging is in running state.
-        /// Producers push message into queue, consumers receive the messages when they requested.
-        /// Each message is sent only one-receiver at same time.
-        /// Request operation removes the message from the queue.
-        /// </summary>
-        Pull,
-
-        /// <summary>
-        /// Queue messages are accepted from producers but they are not sending to consumers even they request new messages. 
-        /// </summary>
-        Paused,
-
-        /// <summary>
-        /// Queue messages are removed, producers can't push any message to the queue and consumers can't receive any message
-        /// </summary>
-        Stopped
-    }
-
-    /// <summary>
     /// Channel queue.
     /// Keeps queued messages and subscribed clients.
     /// </summary>
@@ -100,26 +55,22 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// High priority message list
         /// </summary>
-        private readonly LinkedList<QueueMessage> _highPriorityMessages = new LinkedList<QueueMessage>();
+        public IEnumerable<QueueMessage> HighPriorityMessages => HighPriorityLinkedList;
 
         /// <summary>
-        /// Low/Standard priority message list
+        /// High priority message list
         /// </summary>
-        private readonly LinkedList<QueueMessage> _regularMessages = new LinkedList<QueueMessage>();
+        internal readonly LinkedList<QueueMessage> HighPriorityLinkedList = new LinkedList<QueueMessage>();
 
         /// <summary>
-        /// Standard prefential messages
+        /// Standard priority queue message
         /// </summary>
-        public IEnumerable<QueueMessage> HighPriorityMessages => _highPriorityMessages;
-
-        internal LinkedList<QueueMessage> HighPriorityLinkedList => _highPriorityMessages;
+        public IEnumerable<QueueMessage> RegularMessages => RegularLinkedList;
 
         /// <summary>
-        /// Standard queued messages
+        /// Standard priority queue message
         /// </summary>
-        public IEnumerable<QueueMessage> RegularMessages => _regularMessages;
-
-        internal LinkedList<QueueMessage> RegularLinkedList => _regularMessages;
+        internal readonly LinkedList<QueueMessage> RegularLinkedList = new LinkedList<QueueMessage>();
 
         /// <summary>
         /// Default TMQ Writer class for the queue
@@ -133,9 +84,9 @@ namespace Twino.MQ.Queues
         private readonly QueueTimeKeeper _timeKeeper;
 
         /// <summary>
-        /// 
+        /// Wait acknowledge cross thread locker
         /// </summary>
-        private readonly SemaphoreSlim _semaphore;
+        private SemaphoreSlim _semaphore;
 
         /// <summary>
         /// This task holds the code until acknowledge is received
@@ -146,6 +97,12 @@ namespace Twino.MQ.Queues
         /// Round robin client list index
         /// </summary>
         private int _roundRobinIndex = -1;
+
+        /// <summary>
+        /// Trigger locker field.
+        /// Used to prevent concurrent trigger method calls.
+        /// </summary>
+        private volatile bool _triggering;
 
         #endregion
 
@@ -176,23 +133,29 @@ namespace Twino.MQ.Queues
         {
             await _timeKeeper.Destroy();
 
-            lock (_highPriorityMessages)
-                _highPriorityMessages.Clear();
+            lock (HighPriorityLinkedList)
+                HighPriorityLinkedList.Clear();
 
-            lock (_regularMessages)
-                _regularMessages.Clear();
+            lock (RegularLinkedList)
+                RegularLinkedList.Clear();
+
+            if (_semaphore != null)
+            {
+                _semaphore.Dispose();
+                _semaphore = null;
+            }
         }
 
         #endregion
-        
+
         #region Messages
-        
+
         /// <summary>
         /// Returns pending high priority messages count
         /// </summary>
         public int HighPriorityMessageCount()
         {
-            return _highPriorityMessages.Count;
+            return HighPriorityLinkedList.Count;
         }
 
         /// <summary>
@@ -200,9 +163,9 @@ namespace Twino.MQ.Queues
         /// </summary>
         public int RegularMessageCount()
         {
-            return _regularMessages.Count;
+            return RegularLinkedList.Count;
         }
-        
+
         /// <summary>
         /// Finds and returns next queue message.
         /// Message will not be removed from the queue.
@@ -210,16 +173,16 @@ namespace Twino.MQ.Queues
         /// </summary>
         public QueueMessage FindNextMessage()
         {
-            if (_highPriorityMessages.Count > 0)
+            if (HighPriorityLinkedList.Count > 0)
             {
-                lock (_highPriorityMessages)
-                    return _highPriorityMessages.First.Value;
+                lock (HighPriorityLinkedList)
+                    return HighPriorityLinkedList.First.Value;
             }
-            
-            if (_regularMessages.Count > 0)
+
+            if (RegularLinkedList.Count > 0)
             {
-                lock (_regularMessages)
-                    return _regularMessages.First.Value;
+                lock (RegularLinkedList)
+                    return RegularLinkedList.First.Value;
             }
 
             return null;
@@ -230,17 +193,17 @@ namespace Twino.MQ.Queues
         /// </summary>
         public void ClearRegularMessages()
         {
-            lock (_regularMessages)
-                _regularMessages.Clear();
+            lock (RegularLinkedList)
+                RegularLinkedList.Clear();
         }
-        
+
         /// <summary>
         /// Clears all messages in queue
         /// </summary>
         public void ClearHighPriorityMessages()
         {
-            lock (_highPriorityMessages)
-                _highPriorityMessages.Clear();
+            lock (HighPriorityLinkedList)
+                HighPriorityLinkedList.Clear();
         }
 
         /// <summary>
@@ -264,25 +227,25 @@ namespace Twino.MQ.Queues
 
             await RemoveMessage(message, true, true);
             message.Message.HighPriority = highPriority;
-            
+
             if (highPriority)
             {
-                lock (_highPriorityMessages)
+                lock (HighPriorityLinkedList)
                 {
                     if (putBack)
-                        _highPriorityMessages.AddLast(message);
+                        HighPriorityLinkedList.AddLast(message);
                     else
-                        _highPriorityMessages.AddFirst(message);
+                        HighPriorityLinkedList.AddFirst(message);
                 }
             }
             else
             {
-                lock (_regularMessages)
+                lock (RegularLinkedList)
                 {
                     if (putBack)
-                        _regularMessages.AddLast(message);
+                        RegularLinkedList.AddLast(message);
                     else
-                        _regularMessages.AddFirst(message);
+                        RegularLinkedList.AddFirst(message);
                 }
             }
 
@@ -300,9 +263,9 @@ namespace Twino.MQ.Queues
                 return false;
 
             if (message.Message.HighPriority)
-                _highPriorityMessages.Remove(message);
+                HighPriorityLinkedList.Remove(message);
             else
-                _regularMessages.Remove(message);
+                RegularLinkedList.Remove(message);
 
             if (!silent)
             {
@@ -341,11 +304,11 @@ namespace Twino.MQ.Queues
                 QueueMessage qm = new QueueMessage(message, createAsSaved);
 
                 if (highPriority)
-                    lock (_highPriorityMessages)
-                        _highPriorityMessages.AddLast(qm);
+                    lock (HighPriorityLinkedList)
+                        HighPriorityLinkedList.AddLast(qm);
                 else
-                    lock (_regularMessages)
-                        _regularMessages.AddLast(qm);
+                    lock (RegularLinkedList)
+                        RegularLinkedList.AddLast(qm);
             }
         }
 
@@ -372,11 +335,11 @@ namespace Twino.MQ.Queues
                 QueueMessage qm = new QueueMessage(message, createAsSaved);
 
                 if (highPriority)
-                    lock (_highPriorityMessages)
-                        _highPriorityMessages.AddLast(qm);
+                    lock (HighPriorityLinkedList)
+                        HighPriorityLinkedList.AddLast(qm);
                 else
-                    lock (_regularMessages)
-                        _regularMessages.AddLast(qm);
+                    lock (RegularLinkedList)
+                        RegularLinkedList.AddLast(qm);
             }
         }
 
@@ -403,11 +366,11 @@ namespace Twino.MQ.Queues
                 QueueMessage qm = new QueueMessage(message, createAsSaved);
 
                 if (highPriority)
-                    lock (_highPriorityMessages)
-                        _highPriorityMessages.AddLast(qm);
+                    lock (HighPriorityLinkedList)
+                        HighPriorityLinkedList.AddLast(qm);
                 else
-                    lock (_regularMessages)
-                        _regularMessages.AddLast(qm);
+                    lock (RegularLinkedList)
+                        RegularLinkedList.AddLast(qm);
             }
         }
 
@@ -429,11 +392,11 @@ namespace Twino.MQ.Queues
                 QueueMessage qm = new QueueMessage(message, isSaved);
 
                 if (message.HighPriority)
-                    lock (_highPriorityMessages)
-                        _highPriorityMessages.AddLast(qm);
+                    lock (HighPriorityLinkedList)
+                        HighPriorityLinkedList.AddLast(qm);
                 else
-                    lock (_regularMessages)
-                        _regularMessages.AddLast(qm);
+                    lock (RegularLinkedList)
+                        RegularLinkedList.AddLast(qm);
             }
         }
 
@@ -460,11 +423,11 @@ namespace Twino.MQ.Queues
             //clear all queue messages if new status is stopped
             if (status == QueueStatus.Stopped)
             {
-                lock (_highPriorityMessages)
-                    _highPriorityMessages.Clear();
+                lock (HighPriorityLinkedList)
+                    HighPriorityLinkedList.Clear();
 
-                lock (_regularMessages)
-                    _regularMessages.Clear();
+                lock (RegularLinkedList)
+                    RegularLinkedList.Clear();
 
                 _timeKeeper.Reset();
             }
@@ -472,7 +435,7 @@ namespace Twino.MQ.Queues
             Status = status;
 
             //trigger queued messages
-            if (status == QueueStatus.Route || status == QueueStatus.Push)
+            if (status == QueueStatus.Route || status == QueueStatus.Push || status == QueueStatus.RoundRobin)
                 await Trigger();
         }
 
@@ -502,24 +465,24 @@ namespace Twino.MQ.Queues
             QueueMessage message = null;
 
             //pull from prefential messages
-            if (_highPriorityMessages.Count > 0)
-                lock (_highPriorityMessages)
+            if (HighPriorityLinkedList.Count > 0)
+                lock (HighPriorityLinkedList)
                 {
-                    message = _highPriorityMessages.First.Value;
-                    _highPriorityMessages.RemoveFirst();
+                    message = HighPriorityLinkedList.First.Value;
+                    HighPriorityLinkedList.RemoveFirst();
 
                     if (message != null)
                         message.IsInQueue = false;
                 }
 
             //if there is no prefential message, pull from standard messages
-            if (message == null && _regularMessages.Count > 0)
+            if (message == null && RegularLinkedList.Count > 0)
             {
-                lock (_regularMessages)
+                lock (RegularLinkedList)
 
                 {
-                    message = _regularMessages.First.Value;
-                    _regularMessages.RemoveFirst();
+                    message = RegularLinkedList.First.Value;
+                    RegularLinkedList.RemoveFirst();
 
                     if (message != null)
                         message.IsInQueue = false;
@@ -618,11 +581,11 @@ namespace Twino.MQ.Queues
                     case QueueStatus.Pull:
                     case QueueStatus.Paused:
                         if (message.Message.HighPriority)
-                            lock (_highPriorityMessages)
-                                _highPriorityMessages.AddLast(message);
+                            lock (HighPriorityLinkedList)
+                                HighPriorityLinkedList.AddLast(message);
                         else
-                            lock (_regularMessages)
-                                _regularMessages.AddLast(message);
+                            lock (RegularLinkedList)
+                                RegularLinkedList.AddLast(message);
                         break;
                 }
             }
@@ -656,14 +619,23 @@ namespace Twino.MQ.Queues
         /// </summary>
         public async Task Trigger()
         {
+            if (Channel.ClientsCount() == 0)
+                return;
+            
+            if (_triggering)
+                return;
+
+            _triggering = true;
             if (Status == QueueStatus.Push || Status == QueueStatus.RoundRobin)
             {
-                if (_highPriorityMessages.Count > 0)
-                    await ProcessPendingMessages(_highPriorityMessages);
+                if (HighPriorityLinkedList.Count > 0)
+                    await ProcessPendingMessages(HighPriorityLinkedList);
 
-                if (_regularMessages.Count > 0)
-                    await ProcessPendingMessages(_regularMessages);
+                if (RegularLinkedList.Count > 0)
+                    await ProcessPendingMessages(RegularLinkedList);
             }
+
+            _triggering = false;
         }
 
         /// <summary>
@@ -672,7 +644,8 @@ namespace Twino.MQ.Queues
         /// </summary>
         private async Task ProcessPendingMessages(LinkedList<QueueMessage> list)
         {
-            while (true)
+            int max = list.Count;
+            for (int i = 0; i < max; i++)
             {
                 QueueMessage message;
                 lock (list)
@@ -730,7 +703,7 @@ namespace Twino.MQ.Queues
             //if there are not receivers, complete send operation
             if (clients.Count == 0)
             {
-                if (Status == QueueStatus.Push || Status == QueueStatus.RoundRobin && message.Decision.KeepMessage)
+                if (Status == QueueStatus.Push || Status == QueueStatus.RoundRobin)
                     PutMessageBack(message);
                 else
                 {
@@ -753,6 +726,7 @@ namespace Twino.MQ.Queues
             byte[] messageData = await _writer.Create(message.Message);
 
             Decision final = new Decision(false, false, false, DeliveryAcknowledgeDecision.None);
+            bool messageIsSent = false;
 
             //to all receivers
             foreach (ChannelClient client in clients)
@@ -781,6 +755,8 @@ namespace Twino.MQ.Queues
 
                 if (sent)
                 {
+                    messageIsSent = true;
+
                     //adds the delivery to time keeper to check timing up
                     _timeKeeper.AddAcknowledgeCheck(delivery);
 
@@ -815,7 +791,9 @@ namespace Twino.MQ.Queues
                 return;
 
             //after all sending operations completed, calls implementation send completed method and complete the operation
-            Info.AddMessageSend();
+            if (messageIsSent)
+                Info.AddMessageSend();
+
             message.Decision = await DeliveryHandler.EndSend(this, message);
             await ApplyDecision(message.Decision, message);
 
@@ -837,11 +815,18 @@ namespace Twino.MQ.Queues
             bool save = false;
             DeliveryAcknowledgeDecision ack = DeliveryAcknowledgeDecision.None;
 
-            if (decision.Allow) allow = true;
-            if (decision.KeepMessage) keep = true;
-            if (decision.SaveMessage) save = true;
+            if (decision.Allow)
+                allow = true;
+
+            if (decision.KeepMessage)
+                keep = true;
+
+            if (decision.SaveMessage)
+                save = true;
+
             if (decision.SendAcknowledge == DeliveryAcknowledgeDecision.Always)
                 ack = DeliveryAcknowledgeDecision.Always;
+
             else if (decision.SendAcknowledge == DeliveryAcknowledgeDecision.IfSaved && final.SendAcknowledge == DeliveryAcknowledgeDecision.None)
                 ack = DeliveryAcknowledgeDecision.IfSaved;
 
@@ -858,36 +843,36 @@ namespace Twino.MQ.Queues
             QueueMessage held;
             if (message.Message.HighPriority)
             {
-                lock (_highPriorityMessages)
+                lock (HighPriorityLinkedList)
                 {
                     //we don't need push and pull
-                    if (_highPriorityMessages.Count == 0)
+                    if (HighPriorityLinkedList.Count == 0)
                     {
                         message.IsInQueue = false;
                         return message;
                     }
 
-                    _highPriorityMessages.AddLast(message);
+                    HighPriorityLinkedList.AddLast(message);
                     message.IsInQueue = true;
-                    held = _highPriorityMessages.First.Value;
-                    _highPriorityMessages.RemoveFirst();
+                    held = HighPriorityLinkedList.First.Value;
+                    HighPriorityLinkedList.RemoveFirst();
                 }
             }
             else
             {
-                lock (_regularMessages)
+                lock (RegularLinkedList)
                 {
                     //we don't need push and pull
-                    if (_regularMessages.Count == 0)
+                    if (RegularLinkedList.Count == 0)
                     {
                         message.IsInQueue = false;
                         return message;
                     }
 
-                    _regularMessages.AddLast(message);
+                    RegularLinkedList.AddLast(message);
                     message.IsInQueue = true;
-                    held = _regularMessages.First.Value;
-                    _regularMessages.RemoveFirst();
+                    held = RegularLinkedList.First.Value;
+                    RegularLinkedList.RemoveFirst();
                 }
             }
 
@@ -995,14 +980,14 @@ namespace Twino.MQ.Queues
 
             if (message.Message.HighPriority)
             {
-                lock (_highPriorityMessages)
-                    _highPriorityMessages.AddFirst(message);
+                lock (HighPriorityLinkedList)
+                    HighPriorityLinkedList.AddFirst(message);
             }
 
             else
             {
-                lock (_regularMessages)
-                    _regularMessages.AddFirst(message);
+                lock (RegularLinkedList)
+                    RegularLinkedList.AddFirst(message);
             }
 
             message.IsInQueue = true;
@@ -1063,6 +1048,9 @@ namespace Twino.MQ.Queues
                 return;
 
             //lock the object, because pending ack message should be queued
+            if (_semaphore == null)
+                _semaphore = new SemaphoreSlim(1, 1024);
+
             await _semaphore.WaitAsync();
             try
             {
