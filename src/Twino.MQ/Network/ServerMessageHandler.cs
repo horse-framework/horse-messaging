@@ -283,7 +283,7 @@ namespace Twino.MQ.Network
                                                  SendOnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
                                                  RequestAcknowledge = channel.Options.RequestAcknowledge,
                                                  AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
-                                                 MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout),
+                                                 MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
                                                  WaitForAcknowledge = channel.Options.WaitForAcknowledge,
                                                  HideClientNames = channel.Options.HideClientNames
                                              };
@@ -497,7 +497,7 @@ namespace Twino.MQ.Network
                                                SendOnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
                                                RequestAcknowledge = channel.Options.RequestAcknowledge,
                                                AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
-                                               MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout),
+                                               MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
                                                WaitForAcknowledge = channel.Options.WaitForAcknowledge,
                                                HideClientNames = channel.Options.HideClientNames
                                            };
