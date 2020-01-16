@@ -551,6 +551,85 @@ namespace Twino.Client.TMQ
         }
 
         #endregion
+        
+        #region Send By
+        
+        /// <summary>
+        /// Sends a JSON message by receiver name
+        /// </summary>
+        public async Task<bool> SendJsonByNameAsync<T>(string name, ushort contentType, T model, bool toOnlyFirstReceiver, bool waitAcknowledge)
+        {
+            return await SendJsonToFullAsync("@name:" + name, contentType, model, toOnlyFirstReceiver, waitAcknowledge);
+        }
+
+        /// <summary>
+        /// Sends a JSON message by receiver type
+        /// </summary>
+        public async Task<bool> SendJsonByTypeAsync<T>(string type, ushort contentType, T model, bool toOnlyFirstReceiver, bool waitAcknowledge)
+        {
+            return await SendJsonToFullAsync("@type:" + type, contentType, model, toOnlyFirstReceiver, waitAcknowledge);
+        }
+
+        /// <summary>
+        /// Sends a JSON message by full name
+        /// </summary>
+        private async Task<bool> SendJsonToFullAsync<T>(string fullname, ushort contentType, T model, bool toOnlyFirstReceiver, bool waitAcknowledge)
+        {
+            TmqMessage message = new TmqMessage();
+            message.SetTarget(fullname);
+            message.FirstAcquirer = toOnlyFirstReceiver;
+            message.ContentType = contentType;
+            await message.SetJsonContent(model);
+
+            if (waitAcknowledge)
+                return await SendWithAcknowledge(message);
+
+            return await SendAsync(message);
+        }
+
+        /// <summary>
+        /// Sends a memory stream message by receiver name
+        /// </summary>
+        public async Task<bool> SendByNameAsync(string name, ushort contentType, MemoryStream content, bool toOnlyFirstReceiver, bool waitAcknowledge)
+        {
+            TmqMessage message = new TmqMessage();
+            message.SetTarget("@name:" + name);
+            message.FirstAcquirer = toOnlyFirstReceiver;
+            message.ContentType = contentType;
+            message.Content = content;
+
+            if (waitAcknowledge)
+                return await SendWithAcknowledge(message);
+
+            return await SendAsync(message);
+        }
+
+        /// <summary>
+        /// Sends a memory stream message by receiver type
+        /// </summary>
+        public async Task<bool> SendByTypeAsync(string type, ushort contentType, MemoryStream content, bool toOnlyFirstReceiver, bool waitAcknowledge)
+        {
+            return await SendByFullAsync("@type:" + type, contentType, content, toOnlyFirstReceiver, waitAcknowledge);
+        }
+
+        /// <summary>
+        /// Sends a memory stream message by full name
+        /// </summary>
+        private async Task<bool> SendByFullAsync(string fullname, ushort contentType, MemoryStream content, bool toOnlyFirstReceiver, bool waitAcknowledge)
+        {
+            TmqMessage message = new TmqMessage();
+            message.SetTarget(fullname);
+            message.FirstAcquirer = toOnlyFirstReceiver;
+            message.ContentType = contentType;
+            message.Content = content;
+
+            if (waitAcknowledge)
+                return await SendWithAcknowledge(message);
+
+            return await SendAsync(message);
+        }
+
+        #endregion
 
         #region Acknowledge - Response
 

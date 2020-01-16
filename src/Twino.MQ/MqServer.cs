@@ -375,7 +375,7 @@ namespace Twino.MQ
         /// </summary>
         public List<MqClient> FindClientByType(string type)
         {
-            return _clients.FindAll(x => x.Name == type);
+            return _clients.FindAll(x => x.Type == type);
         }
 
         #endregion

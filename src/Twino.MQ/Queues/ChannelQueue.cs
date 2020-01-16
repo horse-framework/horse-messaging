@@ -237,6 +237,8 @@ namespace Twino.MQ.Queues
                     else
                         HighPriorityLinkedList.AddFirst(message);
                 }
+
+                Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
             }
             else
             {
@@ -247,6 +249,8 @@ namespace Twino.MQ.Queues
                     else
                         RegularLinkedList.AddFirst(message);
                 }
+
+                Info.UpdateRegularMessageCount(RegularLinkedList.Count);
             }
 
             return true;
@@ -296,10 +300,7 @@ namespace Twino.MQ.Queues
                 if (Options.UseMessageId)
                     message.SetMessageId(Channel.Server.MessageIdGenerator.Create());
 
-                message.Content = new MemoryStream();
-                await System.Text.Json.JsonSerializer.SerializeAsync(message.Content, item);
-
-                message.CalculateLengths();
+                await message.SetJsonContent(item);
 
                 QueueMessage qm = new QueueMessage(message, createAsSaved);
 
@@ -310,10 +311,46 @@ namespace Twino.MQ.Queues
                     lock (RegularLinkedList)
                         RegularLinkedList.AddLast(qm);
             }
+
+            Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
+            Info.UpdateRegularMessageCount(RegularLinkedList.Count);
         }
 
         /// <summary>
-        /// Fills JSON object data to the queue
+        /// Fills JSON object data to the queue.
+        /// Creates new TmqMessage and before writing content and adding into queue calls the action.
+        /// </summary>
+        public async Task FillJson<T>(IEnumerable<T> items, bool createAsSaved, Action<TmqMessage, T> action) where T : class
+        {
+            foreach (T item in items)
+            {
+                TmqMessage message = new TmqMessage(MessageType.Channel, Channel.Name);
+                message.FirstAcquirer = true;
+                message.AcknowledgeRequired = Options.RequestAcknowledge;
+                message.ContentType = Id;
+
+                if (Options.UseMessageId)
+                    message.SetMessageId(Channel.Server.MessageIdGenerator.Create());
+
+                action(message, item);
+                await message.SetJsonContent(item);
+
+                QueueMessage qm = new QueueMessage(message, createAsSaved);
+
+                if (message.HighPriority)
+                    lock (HighPriorityLinkedList)
+                        HighPriorityLinkedList.AddLast(qm);
+                else
+                    lock (RegularLinkedList)
+                        RegularLinkedList.AddLast(qm);
+            }
+
+            Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
+            Info.UpdateRegularMessageCount(RegularLinkedList.Count);
+        }
+
+        /// <summary>
+        /// Fills string data to the queue
         /// </summary>
         public void FillString(IEnumerable<string> items, bool createAsSaved, bool highPriority)
         {
@@ -341,10 +378,13 @@ namespace Twino.MQ.Queues
                     lock (RegularLinkedList)
                         RegularLinkedList.AddLast(qm);
             }
+
+            Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
+            Info.UpdateRegularMessageCount(RegularLinkedList.Count);
         }
 
         /// <summary>
-        /// Fills JSON object data to the queue
+        /// Fills binary data to the queue
         /// </summary>
         public void FillData(IEnumerable<byte[]> items, bool createAsSaved, bool highPriority)
         {
@@ -372,6 +412,9 @@ namespace Twino.MQ.Queues
                     lock (RegularLinkedList)
                         RegularLinkedList.AddLast(qm);
             }
+
+            Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
+            Info.UpdateRegularMessageCount(RegularLinkedList.Count);
         }
 
         /// <summary>
@@ -398,6 +441,9 @@ namespace Twino.MQ.Queues
                     lock (RegularLinkedList)
                         RegularLinkedList.AddLast(qm);
             }
+
+            Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
+            Info.UpdateRegularMessageCount(RegularLinkedList.Count);
         }
 
         #endregion
@@ -581,11 +627,19 @@ namespace Twino.MQ.Queues
                     case QueueStatus.Pull:
                     case QueueStatus.Paused:
                         if (message.Message.HighPriority)
+                        {
                             lock (HighPriorityLinkedList)
                                 HighPriorityLinkedList.AddLast(message);
+                            
+                            Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
+                        }
                         else
+                        {
                             lock (RegularLinkedList)
                                 RegularLinkedList.AddLast(message);
+
+                            Info.UpdateRegularMessageCount(RegularLinkedList.Count);
+                        }
                         break;
                 }
             }
@@ -621,7 +675,7 @@ namespace Twino.MQ.Queues
         {
             if (Channel.ClientsCount() == 0)
                 return;
-            
+
             if (_triggering)
                 return;
 
@@ -768,7 +822,7 @@ namespace Twino.MQ.Queues
                     delivery.MarkAsSent();
 
                     //do after send operations for per message
-                    Info.AddConsumerReceive();
+                    Info.AddDelivery();
                     Decision d = await DeliveryHandler.ConsumerReceived(this, delivery, client.Client);
                     final = CreateFinalDecision(final, d);
 
@@ -856,6 +910,7 @@ namespace Twino.MQ.Queues
                     message.IsInQueue = true;
                     held = HighPriorityLinkedList.First.Value;
                     HighPriorityLinkedList.RemoveFirst();
+                    Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
                 }
             }
             else
@@ -873,6 +928,7 @@ namespace Twino.MQ.Queues
                     message.IsInQueue = true;
                     held = RegularLinkedList.First.Value;
                     RegularLinkedList.RemoveFirst();
+                    Info.UpdateRegularMessageCount(RegularLinkedList.Count);
                 }
             }
 
@@ -940,7 +996,7 @@ namespace Twino.MQ.Queues
                 delivery.MarkAsSent();
 
                 //do after send operations for per message
-                Info.AddConsumerReceive();
+                Info.AddDelivery();
                 message.Decision = await DeliveryHandler.ConsumerReceived(this, delivery, requester.Client);
 
                 //after all sending operations completed, calls implementation send completed method and complete the operation
@@ -982,12 +1038,16 @@ namespace Twino.MQ.Queues
             {
                 lock (HighPriorityLinkedList)
                     HighPriorityLinkedList.AddFirst(message);
+
+                Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
             }
 
             else
             {
                 lock (RegularLinkedList)
                     RegularLinkedList.AddFirst(message);
+
+                Info.UpdateRegularMessageCount(RegularLinkedList.Count);
             }
 
             message.IsInQueue = true;

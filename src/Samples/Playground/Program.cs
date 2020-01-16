@@ -52,12 +52,12 @@ namespace Playground
 
             mq.Options.AutoChannelCreation = true;
             mq.Options.AutoQueueCreation = true;
-            mq.Options.MessageTimeout = TimeSpan.FromMilliseconds(1000);
+            mq.Options.MessageTimeout = TimeSpan.FromSeconds(1000);
             mq.Options.Status = QueueStatus.Push;
             server.UseMqServer(mq);
 
             server.Start(81);
-            
+
             TmqClient client = new TmqClient();
             client.Connect("tmq://127.0.0.1:81");
             while (true)

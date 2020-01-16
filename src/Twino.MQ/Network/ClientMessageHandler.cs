@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
@@ -30,12 +31,36 @@ namespace Twino.MQ.Network
             if (message.Target.StartsWith("@name:"))
             {
                 List<MqClient> receivers = _server.FindClientByName(message.Target.Substring(6));
-                await ProcessMultipleReceiverClientMessage(client, receivers, message);
+                if (receivers.Count > 0)
+                {
+                    if (message.FirstAcquirer)
+                    {
+                        MqClient first = receivers.FirstOrDefault();
+                        receivers.Clear();
+                        receivers.Add(first);
+                    }
+
+                    await ProcessMultipleReceiverClientMessage(client, receivers, message);
+                }
+                else if (message.ResponseRequired)
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
             }
             else if (message.Target.StartsWith("@type:"))
             {
                 List<MqClient> receivers = _server.FindClientByType(message.Target.Substring(6));
-                await ProcessMultipleReceiverClientMessage(client, receivers, message);
+                if (receivers.Count > 0)
+                {
+                    if (message.FirstAcquirer)
+                    {
+                        MqClient first = receivers.FirstOrDefault();
+                        receivers.Clear();
+                        receivers.Add(first);
+                    }
+
+                    await ProcessMultipleReceiverClientMessage(client, receivers, message);
+                }
+                else if (message.ResponseRequired)
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
             }
             else
                 await ProcessSingleReceiverClientMessage(client, message);
