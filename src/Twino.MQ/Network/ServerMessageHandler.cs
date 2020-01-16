@@ -492,14 +492,25 @@ namespace Twino.MQ.Network
                                                Channel = channel.Name,
                                                Id = id,
                                                Status = queue.Status.ToString().ToLower(),
-                                               HighPriorityMessages = queue.HighPriorityLinkedList.Count,
-                                               RegularMessages = queue.RegularLinkedList.Count,
+                                               InQueueHighPriorityMessages = queue.HighPriorityLinkedList.Count,
+                                               InQueueRegularMessages = queue.RegularLinkedList.Count,
                                                SendOnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
                                                RequestAcknowledge = channel.Options.RequestAcknowledge,
                                                AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
                                                MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
                                                WaitForAcknowledge = channel.Options.WaitForAcknowledge,
-                                               HideClientNames = channel.Options.HideClientNames
+                                               HideClientNames = channel.Options.HideClientNames,
+                                               ReceivedMessages = queue.Info.ReceivedMessages,
+                                               SentMessages = queue.Info.SentMessages,
+                                               Deliveries = queue.Info.Deliveries,
+                                               Unacknowledges = queue.Info.Unacknowledges,
+                                               Acknowledges = queue.Info.Acknowledges,
+                                               TimeoutMessages = queue.Info.TimedOutMessages,
+                                               SavedMessages = queue.Info.MessageSaved,
+                                               RemovedMessages = queue.Info.MessageRemoved,
+                                               Errors = queue.Info.ErrorCount,
+                                               LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
+                                               LastMessageSent = queue.Info.GetLastMessageSendUnix()
                                            };
 
             TmqMessage response = message.CreateResponse();

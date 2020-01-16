@@ -18,18 +18,18 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Pending high priority message count in queue
         /// </summary>
-        public long HighPriorityMessagesInQueue => _highPriorityMessagesInQueue;
+        public long InQueueHighPriorityMessages => _inQueueHighPriorityMessages;
 
-        private long _highPriorityMessagesInQueue;
+        private long _inQueueHighPriorityMessages;
 
         /// <summary>
         /// Pending regular message count in queue
         /// </summary>
-        public long RegularMessagesInQueue => _regularMessagesInQueue;
+        public long InQueueRegularMessages => _inQueueRegularMessages;
 
-        private long _regularMessagesInQueue;
+        private long _inQueueRegularMessages;
 
-        
+
         /// <summary>
         /// Total received messages from producers
         /// </summary>
@@ -49,9 +49,9 @@ namespace Twino.MQ.Queues
         /// Total consumer message receive count.
         /// If 2 are sent to 5 consumers, this value will be 10.
         /// </summary>
-        public long ConsumerReceived => _consumerReceived;
+        public long Deliveries => _deliveries;
 
-        private long _consumerReceived;
+        private long _deliveries;
 
         /// <summary>
         /// Timed out message count
@@ -63,21 +63,21 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Timed out acknowledge count
         /// </summary>
-        public long AcknowledgedMessages => _acknowledgedMessages;
+        public long Acknowledges => _acknowledges;
 
         /// <summary>
         /// Timed out acknowledge count
         /// </summary>
-        public long _acknowledgedMessages;
+        private long _acknowledges;
 
         /// <summary>
         /// Acknowledge timed out message count.
         /// When a message is sent to x consumers, x ack should be received.
         /// If received ack messages less than x, this value will increase.
         /// </summary>
-        public long TimedOutAcknowledges => _timedOutAcknowledges;
+        public long Unacknowledges => _unacknowledges;
 
-        private long _timedOutAcknowledges;
+        private long _unacknowledges;
 
         /// <summary>
         /// Removed message count
@@ -103,7 +103,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Last message received date
         /// </summary>
-        public DateTime? LastMessageReceivedDate { get; private set; }
+        public DateTime? LastMessageReceiveDate { get; private set; }
 
         /// <summary>
         /// Last message sent date
@@ -114,6 +114,30 @@ namespace Twino.MQ.Queues
         /// Queue status name
         /// </summary>
         public string Status { get; internal set; }
+
+        /// <summary>
+        /// Returns last message received date in unix milliseconds
+        /// </summary>
+        public long GetLastMessageReceiveUnix()
+        {
+            if (!LastMessageReceiveDate.HasValue)
+                return 0;
+
+            TimeSpan span = LastMessageReceiveDate.Value - new DateTime(1970, 1, 1);
+            return Convert.ToInt64(span.TotalMilliseconds);
+        }
+
+        /// <summary>
+        /// Returns last message sent date in unix milliseconds
+        /// </summary>
+        public long GetLastMessageSendUnix()
+        {
+            if (!LastMessageSendDate.HasValue)
+                return 0;
+
+            TimeSpan span = LastMessageSendDate.Value - new DateTime(1970, 1, 1);
+            return Convert.ToInt64(span.TotalMilliseconds);
+        }
 
         #endregion
 
@@ -134,17 +158,17 @@ namespace Twino.MQ.Queues
         {
             Volatile.Write(ref _receivedMessages, 0);
             Volatile.Write(ref _sentMessages, 0);
-            Volatile.Write(ref _consumerReceived, 0);
+            Volatile.Write(ref _deliveries, 0);
             Volatile.Write(ref _timedOutMessages, 0);
-            Volatile.Write(ref _acknowledgedMessages, 0);
-            Volatile.Write(ref _timedOutAcknowledges, 0);
+            Volatile.Write(ref _acknowledges, 0);
+            Volatile.Write(ref _unacknowledges, 0);
             Volatile.Write(ref _messageRemoved, 0);
             Volatile.Write(ref _messageSaved, 0);
             Volatile.Write(ref _errorCount, 0);
-            Volatile.Write(ref _highPriorityMessagesInQueue, 0);
-            Volatile.Write(ref _regularMessagesInQueue, 0);
+            Volatile.Write(ref _inQueueHighPriorityMessages, 0);
+            Volatile.Write(ref _inQueueRegularMessages, 0);
 
-            LastMessageReceivedDate = null;
+            LastMessageReceiveDate = null;
             LastMessageSendDate = null;
         }
 
@@ -157,7 +181,7 @@ namespace Twino.MQ.Queues
         /// </summary>
         internal void AddMessageReceive()
         {
-            LastMessageReceivedDate = DateTime.UtcNow;
+            LastMessageReceiveDate = DateTime.UtcNow;
             Interlocked.Increment(ref _receivedMessages);
         }
 
@@ -173,9 +197,9 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Increases consumer messave receive count
         /// </summary>
-        internal void AddConsumerReceive()
+        internal void AddDelivery()
         {
-            Interlocked.Increment(ref _consumerReceived);
+            Interlocked.Increment(ref _deliveries);
         }
 
         /// <summary>
@@ -191,15 +215,15 @@ namespace Twino.MQ.Queues
         /// </summary>
         internal void AddAcknowledge()
         {
-            Interlocked.Increment(ref _acknowledgedMessages);
+            Interlocked.Increment(ref _acknowledges);
         }
 
         /// <summary>
         /// Increases acknowledge timeout count
         /// </summary>
-        internal void AddAcknowledgeTimeout()
+        internal void AddUnacknowledge()
         {
-            Interlocked.Increment(ref _timedOutAcknowledges);
+            Interlocked.Increment(ref _unacknowledges);
         }
 
         /// <summary>
@@ -231,7 +255,7 @@ namespace Twino.MQ.Queues
         /// </summary>
         internal void UpdateHighPriorityMessageCount(long value)
         {
-            _highPriorityMessagesInQueue = value;
+            _inQueueHighPriorityMessages = value;
         }
 
         /// <summary>
@@ -239,9 +263,9 @@ namespace Twino.MQ.Queues
         /// </summary>
         internal void UpdateRegularMessageCount(long value)
         {
-            _regularMessagesInQueue = value;
+            _inQueueRegularMessages = value;
         }
-        
+
         #endregion
     }
 }
