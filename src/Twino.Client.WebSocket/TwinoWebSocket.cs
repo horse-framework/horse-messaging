@@ -145,9 +145,6 @@ namespace Twino.Client.WebSocket
                 throw new InvalidOperationException("Unexpected server response");
 
             string statusCode = first.Substring(i1, i2 - i1).Trim();
-            if (statusCode.StartsWith("4"))
-                throw new NotSupportedException("Server doesn't support web socket protocol: " + statusCode);
-
             if (statusCode != "101")
                 throw new InvalidOperationException("Connection Error: " + statusCode);
 
