@@ -78,6 +78,11 @@ namespace Twino.MQ.Network
                     await UpdateQueue(client, message);
                     break;
 
+                //get queue information list
+                case KnownContentTypes.QueueList:
+                    await GetQueueList(client, message);
+                    break;
+
                 //get queue information
                 case KnownContentTypes.QueueInformation:
                     await GetQueueInformation(client, message);
@@ -501,6 +506,68 @@ namespace Twino.MQ.Network
         }
 
         /// <summary>
+        /// Finds all queues in channel
+        /// </summary>
+        private async Task GetQueueList(MqClient client, TmqMessage message)
+        {
+            Channel channel = _server.FindChannel(message.Target);
+            if (channel == null)
+            {
+                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                return;
+            }
+
+            //authenticate for channel
+            if (_server.DefaultChannelAuthenticator != null)
+            {
+                bool grant = await _server.DefaultChannelAuthenticator.Authenticate(channel, client);
+                if (!grant)
+                {
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                    return;
+                }
+            }
+
+            List<QueueInformation> list = new List<QueueInformation>();
+            foreach (ChannelQueue queue in channel.QueuesClone)
+            {
+                if (queue == null)
+                    continue;
+
+                list.Add(new QueueInformation
+                         {
+                             Channel = channel.Name,
+                             Id = queue.Id,
+                             Status = queue.Status.ToString().ToLower(),
+                             InQueueHighPriorityMessages = queue.HighPriorityLinkedList.Count,
+                             InQueueRegularMessages = queue.RegularLinkedList.Count,
+                             SendOnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
+                             RequestAcknowledge = channel.Options.RequestAcknowledge,
+                             AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
+                             MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
+                             WaitForAcknowledge = channel.Options.WaitForAcknowledge,
+                             HideClientNames = channel.Options.HideClientNames,
+                             ReceivedMessages = queue.Info.ReceivedMessages,
+                             SentMessages = queue.Info.SentMessages,
+                             Deliveries = queue.Info.Deliveries,
+                             Unacknowledges = queue.Info.Unacknowledges,
+                             Acknowledges = queue.Info.Acknowledges,
+                             TimeoutMessages = queue.Info.TimedOutMessages,
+                             SavedMessages = queue.Info.MessageSaved,
+                             RemovedMessages = queue.Info.MessageRemoved,
+                             Errors = queue.Info.ErrorCount,
+                             LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
+                             LastMessageSent = queue.Info.GetLastMessageSendUnix()
+                         });
+            }
+
+            TmqMessage response = message.CreateResponse();
+            message.ContentType = KnownContentTypes.QueueList;
+            await response.SetJsonContent(list);
+            await client.SendAsync(response);
+        }
+
+        /// <summary>
         /// Finds the queue and sends the information
         /// </summary>
         private async Task GetQueueInformation(MqClient client, TmqMessage message)
@@ -560,7 +627,7 @@ namespace Twino.MQ.Network
                                            };
 
             TmqMessage response = message.CreateResponse();
-            message.ContentType = KnownContentTypes.ChannelInformation;
+            message.ContentType = KnownContentTypes.QueueInformation;
             await response.SetJsonContent(information);
             await client.SendAsync(response);
         }
