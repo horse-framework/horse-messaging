@@ -100,6 +100,12 @@ namespace Twino.Client.TMQ
         public string MessageDeliveryHandler { get; set; }
 
         /// <summary>
+        /// Maximum message limit of the queue
+        /// Zero is unlimited
+        /// </summary>
+        public int MessageLimit { get; set; }
+
+        /// <summary>
         /// Serializes options and creates key value pair
         /// </summary>
         public virtual string Serialize(ushort contentType)
@@ -134,6 +140,9 @@ namespace Twino.Client.TMQ
 
             if (!string.IsNullOrEmpty(MessageDeliveryHandler))
                 builder.Append(Line(TmqHeaders.MESSAGE_DELIVERY_HANDLER, MessageDeliveryHandler));
+
+            if (MessageLimit > 0)
+                builder.Append(Line(TmqHeaders.MESSAGE_LIMIT, MessageLimit.ToString()));
 
             return builder.ToString();
         }

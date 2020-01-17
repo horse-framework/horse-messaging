@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +13,27 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Queues
 {
+    /// <summary>
+    /// Result sets of push operations
+    /// </summary>
+    public enum PushResult
+    {
+        /// <summary>
+        /// Message is pushed successfuly
+        /// </summary>
+        Success,
+
+        /// <summary>
+        /// Message limit is exceeded in queue, push failed
+        /// </summary>
+        LimitExceeded,
+
+        /// <summary>
+        /// Queue status does not support pushing messages 
+        /// </summary>
+        StatusNotSupported
+    }
+
     /// <summary>
     /// Channel queue.
     /// Keeps queued messages and subscribed clients.
@@ -123,7 +145,7 @@ namespace Twino.MQ.Queues
             _timeKeeper.Run();
 
             if (options.WaitForAcknowledge)
-                _semaphore = new SemaphoreSlim(1, 1024);
+                _semaphore = new SemaphoreSlim(1, 1);
         }
 
         /// <summary>
@@ -287,8 +309,15 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Fills JSON object data to the queue
         /// </summary>
-        public async Task FillJson<T>(IEnumerable<T> items, bool createAsSaved, bool highPriority) where T : class
+        public async Task<PushResult> FillJson<T>(IEnumerable<T> items, bool createAsSaved, bool highPriority) where T : class
         {
+            if (Status == QueueStatus.Stopped)
+                return PushResult.StatusNotSupported;
+
+            int max = HighPriorityLinkedList.Count + RegularLinkedList.Count + items.Count();
+            if (Options.MessageLimit > 0 && max > Options.MessageLimit)
+                return PushResult.LimitExceeded;
+            
             foreach (T item in items)
             {
                 TmqMessage message = new TmqMessage(MessageType.Channel, Channel.Name);
@@ -314,14 +343,22 @@ namespace Twino.MQ.Queues
 
             Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
             Info.UpdateRegularMessageCount(RegularLinkedList.Count);
+            return PushResult.Success;
         }
 
         /// <summary>
         /// Fills JSON object data to the queue.
         /// Creates new TmqMessage and before writing content and adding into queue calls the action.
         /// </summary>
-        public async Task FillJson<T>(IEnumerable<T> items, bool createAsSaved, Action<TmqMessage, T> action) where T : class
+        public async Task<PushResult> FillJson<T>(IEnumerable<T> items, bool createAsSaved, Action<TmqMessage, T> action) where T : class
         {
+            if (Status == QueueStatus.Stopped)
+                return PushResult.StatusNotSupported;
+
+            int max = HighPriorityLinkedList.Count + RegularLinkedList.Count + items.Count();
+            if (Options.MessageLimit > 0 && max > Options.MessageLimit)
+                return PushResult.LimitExceeded;
+
             foreach (T item in items)
             {
                 TmqMessage message = new TmqMessage(MessageType.Channel, Channel.Name);
@@ -347,13 +384,21 @@ namespace Twino.MQ.Queues
 
             Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
             Info.UpdateRegularMessageCount(RegularLinkedList.Count);
+            return PushResult.Success;
         }
 
         /// <summary>
         /// Fills string data to the queue
         /// </summary>
-        public void FillString(IEnumerable<string> items, bool createAsSaved, bool highPriority)
+        public PushResult FillString(IEnumerable<string> items, bool createAsSaved, bool highPriority)
         {
+            if (Status == QueueStatus.Stopped)
+                return PushResult.StatusNotSupported;
+
+            int max = HighPriorityLinkedList.Count + RegularLinkedList.Count + items.Count();
+            if (Options.MessageLimit > 0 && max > Options.MessageLimit)
+                return PushResult.LimitExceeded;
+
             foreach (string item in items)
             {
                 TmqMessage message = new TmqMessage(MessageType.Channel, Channel.Name);
@@ -381,13 +426,21 @@ namespace Twino.MQ.Queues
 
             Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
             Info.UpdateRegularMessageCount(RegularLinkedList.Count);
+            return PushResult.Success;
         }
 
         /// <summary>
         /// Fills binary data to the queue
         /// </summary>
-        public void FillData(IEnumerable<byte[]> items, bool createAsSaved, bool highPriority)
+        public PushResult FillData(IEnumerable<byte[]> items, bool createAsSaved, bool highPriority)
         {
+            if (Status == QueueStatus.Stopped)
+                return PushResult.StatusNotSupported;
+
+            int max = HighPriorityLinkedList.Count + RegularLinkedList.Count + items.Count();
+            if (Options.MessageLimit > 0 && max > Options.MessageLimit)
+                return PushResult.LimitExceeded;
+
             foreach (byte[] item in items)
             {
                 TmqMessage message = new TmqMessage(MessageType.Channel, Channel.Name);
@@ -415,13 +468,21 @@ namespace Twino.MQ.Queues
 
             Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
             Info.UpdateRegularMessageCount(RegularLinkedList.Count);
+            return PushResult.Success;
         }
 
         /// <summary>
         /// Fills TMQ Message objects to the queue
         /// </summary>
-        public void FillMessage(IEnumerable<TmqMessage> messages, bool isSaved)
+        public PushResult FillMessage(IEnumerable<TmqMessage> messages, bool isSaved)
         {
+            if (Status == QueueStatus.Stopped)
+                return PushResult.StatusNotSupported;
+
+            int max = HighPriorityLinkedList.Count + RegularLinkedList.Count + messages.Count();
+            if (Options.MessageLimit > 0 && max > Options.MessageLimit)
+                return PushResult.LimitExceeded;
+
             foreach (TmqMessage message in messages)
             {
                 message.SetTarget(Channel.Name);
@@ -444,6 +505,7 @@ namespace Twino.MQ.Queues
 
             Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
             Info.UpdateRegularMessageCount(RegularLinkedList.Count);
+            return PushResult.Success;
         }
 
         #endregion
@@ -566,10 +628,13 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Pushes a message into the queue.
         /// </summary>
-        internal async Task<bool> Push(QueueMessage message, MqClient sender)
+        internal async Task<PushResult> Push(QueueMessage message, MqClient sender)
         {
             if (Status == QueueStatus.Stopped)
-                return false;
+                return PushResult.StatusNotSupported;
+
+            if (Options.MessageLimit > 0 && HighPriorityLinkedList.Count + RegularLinkedList.Count >= Options.MessageLimit)
+                return PushResult.LimitExceeded;
 
             //prepare properties
             message.Message.FirstAcquirer = true;
@@ -587,7 +652,7 @@ namespace Twino.MQ.Queues
                 Decision decision = await DeliveryHandler.ReceivedFromProducer(this, message, sender);
                 bool allow = await ApplyDecision(decision, message);
                 if (!allow)
-                    return true;
+                    return PushResult.Success;
 
                 //if we have an option maximum wait duration for message, set it after message joined to the queue.
                 //time keeper will check this value and if message time is up, it will remove message from the queue.
@@ -630,7 +695,7 @@ namespace Twino.MQ.Queues
                         {
                             lock (HighPriorityLinkedList)
                                 HighPriorityLinkedList.AddLast(message);
-                            
+
                             Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
                         }
                         else
@@ -640,6 +705,7 @@ namespace Twino.MQ.Queues
 
                             Info.UpdateRegularMessageCount(RegularLinkedList.Count);
                         }
+
                         break;
                 }
             }
@@ -662,7 +728,7 @@ namespace Twino.MQ.Queues
                 }
             }
 
-            return true;
+            return PushResult.Success;
         }
 
         /// <summary>
@@ -1109,7 +1175,7 @@ namespace Twino.MQ.Queues
 
             //lock the object, because pending ack message should be queued
             if (_semaphore == null)
-                _semaphore = new SemaphoreSlim(1, 1024);
+                _semaphore = new SemaphoreSlim(1, 1);
 
             await _semaphore.WaitAsync();
             try

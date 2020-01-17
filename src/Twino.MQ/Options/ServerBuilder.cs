@@ -223,6 +223,7 @@ namespace Twino.MQ.Options
             options.MessageTimeout = other.MessageTimeout;
             options.UseMessageId = other.UseMessageId;
             options.SendOnlyFirstAcquirer = other.SendOnlyFirstAcquirer;
+            options.MessageLimit = other.MessageLimit;
             options.ClientLimit = other.ClientLimit;
             options.QueueLimit = other.QueueLimit;
 
@@ -240,6 +241,7 @@ namespace Twino.MQ.Options
             options.MessageTimeout = other.MessageTimeout;
             options.UseMessageId = other.UseMessageId;
             options.SendOnlyFirstAcquirer = other.SendOnlyFirstAcquirer;
+            options.MessageLimit = other.MessageLimit;
 
             return options;
         }

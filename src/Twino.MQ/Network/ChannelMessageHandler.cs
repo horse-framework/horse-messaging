@@ -29,7 +29,7 @@ namespace Twino.MQ.Network
 
             //if auto creation active, try to create channel
             if (channel == null && _server.Options.AutoChannelCreation)
-                channel = _server.CreateChannel(message.Target);
+                channel = _server.FindOrCreateChannel(message.Target);
 
             if (channel == null)
             {
@@ -42,7 +42,7 @@ namespace Twino.MQ.Network
 
             //if auto creation active, try to create queue
             if (queue == null && _server.Options.AutoQueueCreation)
-                queue = await channel.CreateQueue(message.ContentType);
+                queue = await channel.FindOrCreateQueue(message.ContentType);
 
             if (queue == null)
             {
@@ -120,9 +120,11 @@ namespace Twino.MQ.Network
             queueMessage.Source = client;
 
             //push the message
-            bool sent = await queue.Push(queueMessage, client);
-            if (!sent)
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Failed));
+            PushResult result = await queue.Push(queueMessage, client);
+            if (result == PushResult.StatusNotSupported)
+                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unacceptable));
+            else if (result == PushResult.LimitExceeded)
+                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.LimitExceeded));
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using Twino.Client.TMQ;
@@ -30,6 +31,22 @@ namespace Twino.MQ.Network
         #endregion
 
         public async Task Handle(MqClient client, TmqMessage message)
+        {
+            try
+            {
+                await Handle(client, message);
+            }
+            catch (OperationCanceledException)
+            {
+                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.LimitExceeded));
+            }
+            catch (DuplicateNameException)
+            {
+                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Duplicate));
+            }
+        }
+
+        private async Task HandleUnsafe(MqClient client, TmqMessage message)
         {
             switch (message.ContentType)
             {
@@ -107,7 +124,7 @@ namespace Twino.MQ.Network
 
             //if auto creation active, try to create channel
             if (channel == null && _server.Options.AutoChannelCreation)
-                channel = _server.CreateChannel(message.Target);
+                channel = _server.FindOrCreateChannel(message.Target);
 
             if (channel == null)
             {
@@ -131,7 +148,7 @@ namespace Twino.MQ.Network
             {
                 switch (result)
                 {
-                    case ClientJoinResult.Ok:
+                    case ClientJoinResult.Success:
                         await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Ok));
                         break;
 

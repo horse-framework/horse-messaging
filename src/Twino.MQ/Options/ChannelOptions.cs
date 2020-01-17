@@ -17,13 +17,13 @@ namespace Twino.MQ.Options
         public ushort[] AllowedQueues { get; set; }
 
         /// <summary>
-        /// Maximum client limit of the channel.
+        /// Maximum client limit of the channel
         /// Zero is unlimited
         /// </summary>
         public int ClientLimit { get; set; }
         
         /// <summary>
-        /// Maximum queue limit of the channel.
+        /// Maximum queue limit of the channel
         /// Zero is unlimited
         /// </summary>
         public int QueueLimit { get; set; }
@@ -45,6 +45,7 @@ namespace Twino.MQ.Options
                        UseMessageId = options.UseMessageId,
                        WaitForAcknowledge = options.WaitForAcknowledge,
                        SendOnlyFirstAcquirer = options.SendOnlyFirstAcquirer,
+                       MessageLimit = options.MessageLimit,
                        ClientLimit = options.ClientLimit,
                        QueueLimit = options.QueueLimit
                    };

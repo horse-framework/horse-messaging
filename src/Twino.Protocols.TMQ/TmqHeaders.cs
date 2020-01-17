@@ -106,6 +106,11 @@ namespace Twino.Protocols.TMQ
         public const string QUEUE_LIMIT = "Queue-Limit";
 
         /// <summary>
+        /// "Message-Limit"
+        /// </summary>
+        public const string MESSAGE_LIMIT = "Message-Limit";
+
+        /// <summary>
         /// "Allowed-Queues"
         /// </summary>
         public const string ALLOWED_QUEUES = "Allowed-Queues";

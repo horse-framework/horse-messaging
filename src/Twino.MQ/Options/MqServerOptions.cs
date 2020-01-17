@@ -28,6 +28,12 @@ namespace Twino.MQ.Options
         public bool AutoQueueCreation { get; set; }
 
         /// <summary>
+        /// Maximum channel limit of the server
+        /// Zero is unlimited.
+        /// </summary>
+        public int ChannelLimit { get; set; }
+
+        /// <summary>
         /// Other server instance informations that will be connected
         /// </summary>
         public InstanceOptions[] Instances { get; set; }
