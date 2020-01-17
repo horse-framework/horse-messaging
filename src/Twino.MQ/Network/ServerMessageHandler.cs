@@ -8,6 +8,7 @@ using Twino.MQ.Options;
 using Twino.MQ.Queues;
 using Twino.MQ.Security;
 using Twino.Protocols.TMQ;
+using Twino.Protocols.TMQ.Models;
 
 namespace Twino.MQ.Network
 {

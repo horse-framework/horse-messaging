@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Protocols.TMQ;
+using Twino.Protocols.TMQ.Models;
 
 namespace Twino.Client.TMQ
 {
