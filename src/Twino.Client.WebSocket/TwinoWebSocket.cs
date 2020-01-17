@@ -261,7 +261,7 @@ namespace Twino.Client.WebSocket
         }
 
         /// <summary>
-        /// Sends websocekt ping message
+        /// Sends websocket ping message
         /// </summary>
         public sealed override void Ping()
         {
@@ -269,7 +269,7 @@ namespace Twino.Client.WebSocket
         }
 
         /// <summary>
-        /// Sends websocekt pong message
+        /// Sends websocket pong message
         /// </summary>
         public sealed override void Pong()
         {
