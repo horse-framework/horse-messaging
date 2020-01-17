@@ -31,14 +31,14 @@ namespace Twino.MQ
         /// <summary>
         /// All channels of the server
         /// </summary>
-        public IEnumerable<Channel> Channels => _channels.GetUnsafeList();
+        public IEnumerable<Channel> Channels => _channels.GetAsClone();
 
         private readonly SafeList<MqClient> _clients;
 
         /// <summary>
         /// All connected clients in the server
         /// </summary>
-        public IEnumerable<MqClient> Clients => _clients.GetUnsafeList();
+        public IEnumerable<MqClient> Clients => _clients.GetAsClone();
 
         /// <summary>
         /// Underlying Twino Server

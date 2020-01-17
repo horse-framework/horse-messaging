@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Twino.Client.TMQ;
@@ -28,7 +29,6 @@ namespace Twino.MQ.Network
 
         #endregion
 
-
         public async Task Handle(MqClient client, TmqMessage message)
         {
             switch (message.ContentType)
@@ -46,6 +46,11 @@ namespace Twino.MQ.Network
                 //create only channel
                 case KnownContentTypes.CreateChannel:
                     await CreateChannel(client, message, false);
+                    break;
+
+                //get channel information list
+                case KnownContentTypes.ChannelList:
+                    await GetChannelList(client, message);
                     break;
 
                 //get channel information
@@ -250,6 +255,46 @@ namespace Twino.MQ.Network
             }
 
             await _server.RemoveChannel(channel);
+        }
+
+        /// <summary>
+        /// Finds the channel and sends the information
+        /// </summary>
+        private async Task GetChannelList(MqClient client, TmqMessage message)
+        {
+            List<ChannelInformation> list = new List<ChannelInformation>();
+            foreach (Channel channel in _server.Channels)
+            {
+                if (channel == null)
+                    continue;
+
+                //authenticate for channel
+                if (_server.DefaultChannelAuthenticator != null)
+                {
+                    bool grant = await _server.DefaultChannelAuthenticator.Authenticate(channel, client);
+                    if (!grant)
+                        continue;
+                }
+
+                list.Add(new ChannelInformation
+                         {
+                             Name = channel.Name,
+                             Queues = channel.QueuesClone.Select(x => x.Id).ToArray(),
+                             AllowMultipleQueues = channel.Options.AllowMultipleQueues,
+                             AllowedQueues = channel.Options.AllowedQueues,
+                             SendOnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
+                             RequestAcknowledge = channel.Options.RequestAcknowledge,
+                             AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
+                             MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
+                             WaitForAcknowledge = channel.Options.WaitForAcknowledge,
+                             HideClientNames = channel.Options.HideClientNames
+                         });
+            }
+
+            TmqMessage response = message.CreateResponse();
+            message.ContentType = KnownContentTypes.ChannelList;
+            await response.SetJsonContent(list);
+            await client.SendAsync(response);
         }
 
         /// <summary>

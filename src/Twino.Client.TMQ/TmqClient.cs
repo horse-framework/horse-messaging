@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -949,6 +950,30 @@ namespace Twino.Client.TMQ
                 return default;
 
             return await response.GetJsonContent<ChannelInformation>();
+        }
+        
+
+        /// <summary>
+        /// Gets all channels in server
+        /// </summary>
+        public async Task<List<ChannelInformation>> GetChannels()
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ResponseRequired = true;
+            message.ContentType = KnownContentTypes.ChannelList;
+            message.SetMessageId(UniqueIdGenerator.Create());
+
+            Task<TmqMessage> task = _follower.FollowResponse(message);
+            bool sent = await SendAsync(message);
+            if (!sent)
+                return null;
+
+            TmqMessage response = await task;
+            if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
+                return default;
+
+            return await response.GetJsonContent<List<ChannelInformation>>();
         }
 
         #endregion
