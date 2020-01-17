@@ -46,6 +46,11 @@ namespace Twino.Protocols.TMQ
         public const ushort Duplicate = 481;
 
         /// <summary>
+        /// "482" Limit exceeded, such as, maximum queue limit of a channel
+        /// </summary>
+        public const ushort LimitExceeded = 482;
+
+        /// <summary>
         /// "500" Process failed
         /// </summary>
         public const ushort Failed = 500;
@@ -104,6 +109,11 @@ namespace Twino.Protocols.TMQ
         /// "615" Gets queue information
         /// </summary>
         public const ushort QueueInformation = 615;
+
+        /// <summary>
+        /// "616" Gets queue information list of a channel
+        /// </summary>
+        public const ushort QueueList = 616;
 
         /// <summary>
         /// "621" Gets active instance list

@@ -35,6 +35,12 @@ namespace Twino.Client.TMQ
         public int ClientLimit { get; set; }
 
         /// <summary>
+        /// Maximum queue limit of the channel.
+        /// Zero is unlimited
+        /// </summary>
+        public int QueueLimit { get; set; }
+
+        /// <summary>
         /// Serializes channel creation options to key-value lines (HTTP Request like)
         /// </summary>
         public override string Serialize(ushort contentType)
@@ -49,6 +55,9 @@ namespace Twino.Client.TMQ
 
             if (ClientLimit > 0)
                 builder.Append(Line(TmqHeaders.CLIENT_LIMIT, ClientLimit.ToString()));
+
+            if (QueueLimit > 0)
+                builder.Append(Line(TmqHeaders.QUEUE_LIMIT, QueueLimit.ToString()));
 
             if (AllowedQueues != null)
             {

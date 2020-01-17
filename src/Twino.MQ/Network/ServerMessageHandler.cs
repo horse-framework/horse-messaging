@@ -130,7 +130,7 @@ namespace Twino.MQ.Network
                         break;
 
                     case ClientJoinResult.Full:
-                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Busy));
+                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.LimitExceeded));
                         break;
                 }
             }

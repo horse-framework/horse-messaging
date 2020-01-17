@@ -23,6 +23,12 @@ namespace Twino.MQ.Options
         public int ClientLimit { get; set; }
         
         /// <summary>
+        /// Maximum queue limit of the channel.
+        /// Zero is unlimited
+        /// </summary>
+        public int QueueLimit { get; set; }
+
+        /// <summary>
         /// Clones channel options from another options
         /// </summary>
         internal static ChannelOptions CloneFrom(ChannelOptions options)
@@ -39,7 +45,8 @@ namespace Twino.MQ.Options
                        UseMessageId = options.UseMessageId,
                        WaitForAcknowledge = options.WaitForAcknowledge,
                        SendOnlyFirstAcquirer = options.SendOnlyFirstAcquirer,
-                       ClientLimit = options.ClientLimit
+                       ClientLimit = options.ClientLimit,
+                       QueueLimit = options.QueueLimit
                    };
         }
     }
