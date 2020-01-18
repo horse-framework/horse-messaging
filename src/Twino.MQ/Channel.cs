@@ -217,7 +217,7 @@ namespace Twino.MQ
                 if (!Options.AllowedQueues.Contains(queueId))
                     return null;
 
-            if (Options.QueueLimit >= _queues.Count)
+            if (Options.QueueLimit > 0 && Options.QueueLimit >= _queues.Count)
                 throw new OperationCanceledException("Queue limit is exceeded for the channel");
 
             ChannelQueue queue = _queues.Find(x => x.Id == queueId);
