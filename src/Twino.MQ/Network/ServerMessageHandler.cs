@@ -4,6 +4,7 @@ using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using Twino.Client.TMQ;
+using Twino.Client.TMQ.Connectors;
 using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
@@ -34,7 +35,7 @@ namespace Twino.MQ.Network
         {
             try
             {
-                await Handle(client, message);
+                await HandleUnsafe(client, message);
             }
             catch (OperationCanceledException)
             {
@@ -103,6 +104,11 @@ namespace Twino.MQ.Network
                 //get queue information
                 case KnownContentTypes.QueueInformation:
                     await GetQueueInformation(client, message);
+                    break;
+
+                //get queue information
+                case KnownContentTypes.InstanceList:
+                    await GetInstanceList(client, message);
                     break;
 
                 //for not-defines content types, use user-defined message handler
@@ -650,5 +656,60 @@ namespace Twino.MQ.Network
         }
 
         #endregion
+
+        /// <summary>
+        /// Gets connected instance list
+        /// </summary>
+        private async Task GetInstanceList(MqClient client, TmqMessage message)
+        {
+            if (_server.Authorization != null)
+            {
+                bool grant = await _server.Authorization.CanManageInstances(client, message);
+                if (!grant)
+                {
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                    return;
+                }
+            }
+
+            List<InstanceInformation> list = new List<InstanceInformation>();
+
+            //slave instances
+            List<SlaveInstance> slaves = _server.SlaveInstances.GetAsClone();
+            foreach (SlaveInstance slave in slaves)
+            {
+                list.Add(new InstanceInformation
+                         {
+                             IsSlave = true,
+                             Host = slave.RemoteHost,
+                             IsConnected = slave.Client.IsConnected,
+                             Id = slave.Client.UniqueId,
+                             Name = slave.Client.Name,
+                             Lifetime = slave.ConnectedDate.LifetimeMilliseconds()
+                         });
+            }
+
+            //master instances
+            foreach (TmqStickyConnector connector in _server.InstanceConnectors)
+            {
+                InstanceOptions options = connector.Tag as InstanceOptions;
+                TmqClient c = connector.GetClient();
+
+                list.Add(new InstanceInformation
+                         {
+                             IsSlave = false,
+                             Host = options?.Host,
+                             IsConnected = connector.IsConnected,
+                             Id = c.ClientId,
+                             Name = options?.Name,
+                             Lifetime = Convert.ToInt64(connector.Lifetime.TotalMilliseconds)
+                         });
+            }
+
+            TmqMessage response = message.CreateResponse();
+            message.ContentType = KnownContentTypes.InstanceList;
+            await response.SetJsonContent(list);
+            await client.SendAsync(response);
+        }
     }
 }

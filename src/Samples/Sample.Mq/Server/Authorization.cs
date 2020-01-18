@@ -57,5 +57,10 @@ namespace Sample.Mq.Server
             Console.WriteLine("can pull from queue True");
             return await Task.FromResult(true);
         }
+
+        public async Task<bool> CanManageInstances(MqClient client, TmqMessage request)
+        {
+            return await Task.FromResult(true);
+        }
     }
 }

@@ -104,6 +104,11 @@ namespace Twino.Client.Connectors
             return _client;
         }
 
+        /// <summary>
+        /// User-defined tag object for the connector
+        /// </summary>
+        public object Tag { get; set; }
+
         #endregion
 
         /// <summary>

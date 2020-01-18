@@ -49,5 +49,10 @@ namespace Twino.MQ.Security
         /// Returns true, if client can pull a message from the queue
         /// </summary>
         Task<bool> CanPullFromQueue(ChannelClient client, ChannelQueue queue);
+        
+        /// <summary>
+        /// Returns true, if client can manage instances
+        /// </summary>
+        Task<bool> CanManageInstances(MqClient client, TmqMessage request);
     }
 }

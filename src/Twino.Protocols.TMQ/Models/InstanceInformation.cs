@@ -14,9 +14,16 @@ namespace Twino.Protocols.TMQ.Models
         /// If false, connection is incoming.
         /// Remote server is sending data tis server.
         /// </summary>
-        [JsonProperty("isSlave")]
-        [JsonPropertyName("isSlave")]
+        [JsonProperty("slave")]
+        [JsonPropertyName("slave")]
         public bool IsSlave { get; set; }
+
+        /// <summary>
+        /// True, if connection is alive
+        /// </summary>
+        [JsonProperty("connected")]
+        [JsonPropertyName("connected")]
+        public bool IsConnected { get; set; }
 
         /// <summary>
         /// Instance host name
@@ -40,17 +47,10 @@ namespace Twino.Protocols.TMQ.Models
         public string Name { get; set; }
 
         /// <summary>
-        /// Instance type
+        /// lifetime in milliseconds
         /// </summary>
-        [JsonProperty("type")]
-        [JsonPropertyName("type")]
-        public string Type { get; set; }
-
-        /// <summary>
-        /// Connected date in unix milliseconds
-        /// </summary>
-        [JsonProperty("connectedDate")]
-        [JsonPropertyName("connectedDate")]
-        public long ConnectedDate { get; set; }
+        [JsonProperty("lifetime")]
+        [JsonPropertyName("lifetime")]
+        public long Lifetime { get; set; }
     }
 }

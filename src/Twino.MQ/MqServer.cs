@@ -112,6 +112,11 @@ namespace Twino.MQ
         internal TmqStickyConnector[] InstanceConnectors => _connectors;
 
         /// <summary>
+        /// Other Twino MQ server insantaces that are sending messages to this server
+        /// </summary>
+        internal SafeList<SlaveInstance> SlaveInstances { get; set; } = new SafeList<SlaveInstance>(16);
+
+        /// <summary>
         /// Implementation registry library.
         /// Implementation instances are kept in this registry by their keys.
         /// </summary>
@@ -170,15 +175,19 @@ namespace Twino.MQ
                 TmqStickyConnector connector = options.KeepMessages
                                                    ? new TmqAbsoluteConnector(reconnect, () => CreateInstanceClient(options))
                                                    : new TmqStickyConnector(reconnect, () => CreateInstanceClient(options));
-
+                
                 _connectors[i] = connector;
+                connector.Tag = options;
+
+                connector.AddHost(options.Host);
+                connector.Run();
             }
         }
 
         /// <summary>
         /// Client creation action for server instances
         /// </summary>
-        private TmqClient CreateInstanceClient(InstanceOptions options)
+        private static TmqClient CreateInstanceClient(InstanceOptions options)
         {
             TmqClient client = new TmqClient();
             client.SetClientName(options.Name);

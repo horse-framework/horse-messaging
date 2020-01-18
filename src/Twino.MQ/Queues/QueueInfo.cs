@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using Twino.MQ.Helpers;
 
 namespace Twino.MQ.Queues
 {
@@ -123,8 +124,7 @@ namespace Twino.MQ.Queues
             if (!LastMessageReceiveDate.HasValue)
                 return 0;
 
-            TimeSpan span = LastMessageReceiveDate.Value - new DateTime(1970, 1, 1);
-            return Convert.ToInt64(span.TotalMilliseconds);
+            return LastMessageReceiveDate.Value.ToUnixMilliseconds();
         }
 
         /// <summary>
@@ -135,8 +135,7 @@ namespace Twino.MQ.Queues
             if (!LastMessageSendDate.HasValue)
                 return 0;
 
-            TimeSpan span = LastMessageSendDate.Value - new DateTime(1970, 1, 1);
-            return Convert.ToInt64(span.TotalMilliseconds);
+            return LastMessageSendDate.Value.ToUnixMilliseconds();
         }
 
         #endregion
