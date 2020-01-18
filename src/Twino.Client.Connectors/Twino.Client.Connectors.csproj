@@ -6,9 +6,9 @@
         <Product>Twino.Client.Connectors</Product>
         <Description>Connectors for twino WebSocket and TMQ protocols</Description>
         <PackageTags>twino,server,client,connector,websocket,tmq</PackageTags>
-        <AssemblyVersion>2.3.16</AssemblyVersion>
-        <FileVersion>2.3.16</FileVersion>
-        <PackageVersion>2.3.16</PackageVersion>
+        <AssemblyVersion>2.4.2</AssemblyVersion>
+        <FileVersion>2.4.2</FileVersion>
+        <PackageVersion>2.4.2</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü</Authors>
         <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
