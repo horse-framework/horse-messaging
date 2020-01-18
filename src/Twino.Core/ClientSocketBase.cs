@@ -57,6 +57,9 @@ namespace Twino.Core
             if (_pingTimer != null)
                 DestroyPingTimer();
 
+            if (PingInterval == TimeSpan.Zero)
+                return;
+
             _pingTimer = new Timer(s =>
             {
                 if (!IsConnected)
