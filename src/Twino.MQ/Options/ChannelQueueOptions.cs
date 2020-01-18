@@ -51,6 +51,12 @@ namespace Twino.MQ.Options
         public QueueStatus Status { get; set; } = QueueStatus.Route;
 
         /// <summary>
+        /// Maximum message limit of the queue
+        /// Zero is unlimited
+        /// </summary>
+        public int MessageLimit { get; set; }
+
+        /// <summary>
         /// Creates clone of the object
         /// </summary>
         /// <returns></returns>
@@ -86,6 +92,9 @@ namespace Twino.MQ.Options
 
                 else if (pair.Value.Equals(TmqHeaders.MESSAGE_TIMEOUT, StringComparison.InvariantCultureIgnoreCase))
                     MessageTimeout = TimeSpan.FromMilliseconds(Convert.ToInt32(pair.Value));
+
+                else if (pair.Value.Equals(TmqHeaders.MESSAGE_LIMIT, StringComparison.InvariantCultureIgnoreCase))
+                    MessageLimit = Convert.ToInt32(pair.Value);
 
                 else if (pair.Value.Equals(TmqHeaders.QUEUE_STATUS, StringComparison.InvariantCultureIgnoreCase))
                 {
@@ -140,7 +149,8 @@ namespace Twino.MQ.Options
                        HideClientNames = options.HideClientNames,
                        UseMessageId = options.UseMessageId,
                        WaitForAcknowledge = options.WaitForAcknowledge,
-                       SendOnlyFirstAcquirer = options.SendOnlyFirstAcquirer
+                       SendOnlyFirstAcquirer = options.SendOnlyFirstAcquirer,
+                       MessageLimit = options.MessageLimit
                    };
         }
     }

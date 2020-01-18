@@ -85,6 +85,13 @@ namespace Twino.MQ.Network
                     return null;
 
                 client.IsInstanceServer = true;
+                _server.SlaveInstances.Add(new SlaveInstance
+                                           {
+                                               ConnectedDate = DateTime.UtcNow,
+                                               Client = client,
+                                               RemoteHost = client.Info.Client.Client.RemoteEndPoint.ToString().Split(':')[0]
+                                           });
+                
                 await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
             }
 
@@ -130,8 +137,13 @@ namespace Twino.MQ.Network
         public async Task Disconnected(ITwinoServer server, TmqServerSocket client)
         {
             MqClient mqClient = (MqClient) client;
-            await _server.RemoveClient(mqClient);
+            if (mqClient.IsInstanceServer)
+            {
+                _server.SlaveInstances.FindAndRemove(x => x.Client == client);
+                return;
+            }
 
+            await _server.RemoveClient(mqClient);
             if (_server.ClientHandler != null)
                 await _server.ClientHandler.Disconnected(_server, mqClient);
         }

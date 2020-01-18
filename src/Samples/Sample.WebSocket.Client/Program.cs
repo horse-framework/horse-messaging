@@ -2,10 +2,7 @@
 using Twino.Mvc.Filters.Route;
 using Twino.Server;
 using System;
-using System.Net.Sockets;
 using System.Threading.Tasks;
-using Microsoft.Win32.SafeHandles;
-using Twino.Client;
 using Twino.Client.WebSocket;
 using Twino.Mvc;
 using Twino.Protocols.WebSocket;
@@ -50,6 +47,7 @@ namespace Sample.WebSocket.Client
             cx.Connected += c => Console.WriteLine("Connected");
             cx.Disconnected += c => Console.WriteLine("Disconnected");
             cx.Connect("ws://127.0.0.1:83");
+
             while (true)
             {
                 string s = Console.ReadLine();

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Twino.Core;
 
 namespace Twino.Client.Connectors
@@ -10,6 +11,18 @@ namespace Twino.Client.Connectors
     /// </summary>
     public delegate void ConnectorExceptionHandler<in TClient, TMessage>(IConnector<TClient, TMessage> connector, Exception ex)
         where TClient : ClientSocketBase<TMessage>, new();
+
+    /// <summary>
+    /// Function definition for client message received event
+    /// </summary>
+    public delegate void ConnectorMessageHandler<in TClient, in TMessage>(TClient client, TMessage message)
+        where TClient : ClientSocketBase<TMessage>, new();
+
+    /// <summary>
+    /// Function definition for client connection and disconnection events
+    /// </summary>
+    public delegate void ConnectorConnectionHandler<in TClient>(TClient client)
+        where TClient : SocketBase, new();
 
     /// <summary>
     /// Base class for all connectors
@@ -50,18 +63,18 @@ namespace Twino.Client.Connectors
         /// <summary>
         /// Client connected event handler
         /// </summary>
-        public event SocketStatusHandler Connected;
-        
+        public event ConnectorConnectionHandler<TClient> Connected;
+
         /// <summary>
         /// Client disconnected event handler
         /// </summary>
-        public event SocketStatusHandler Disconnected;
-        
+        public event ConnectorConnectionHandler<TClient> Disconnected;
+
         /// <summary>
         /// Message received from server handler
         /// </summary>
-        public event ClientMessageHandler<TMessage> MessageReceived;
-        
+        public event ConnectorMessageHandler<TClient, TMessage> MessageReceived;
+
         /// <summary>
         /// Exception thrown event handler in tcp operations
         /// </summary>
@@ -103,6 +116,11 @@ namespace Twino.Client.Connectors
         {
             return _client;
         }
+
+        /// <summary>
+        /// User-defined tag object for the connector
+        /// </summary>
+        public object Tag { get; set; }
 
         #endregion
 
@@ -290,7 +308,7 @@ namespace Twino.Client.Connectors
         /// </summary>
         protected virtual void ClientMessageReceived(ClientSocketBase<TMessage> client, TMessage payload)
         {
-            MessageReceived?.Invoke(client, payload);
+            MessageReceived?.Invoke((TClient) client, payload);
         }
 
         /// <summary>
@@ -298,7 +316,7 @@ namespace Twino.Client.Connectors
         /// </summary>
         protected virtual void ClientDisconnected(SocketBase client)
         {
-            Disconnected?.Invoke(client);
+            Disconnected?.Invoke((TClient) client);
         }
 
         /// <summary>
@@ -309,7 +327,7 @@ namespace Twino.Client.Connectors
             _connectionCount++;
             _lastConnection = DateTime.UtcNow;
 
-            Connected?.Invoke(client);
+            Connected?.Invoke((TClient) client);
         }
 
         /// <summary>
@@ -318,6 +336,14 @@ namespace Twino.Client.Connectors
         public virtual bool Send(byte[] data)
         {
             return _client != null && _client.Send(data);
+        }
+
+        /// <summary>
+        /// Sends the message to the server.
+        /// </summary>
+        public virtual async Task<bool> SendAsync(byte[] data)
+        {
+            return _client != null && await _client.SendAsync(data);
         }
 
         #endregion

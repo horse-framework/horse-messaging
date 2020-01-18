@@ -198,6 +198,10 @@ namespace Twino.MQ.Options
             if (clientLimit != null)
                 options.ClientLimit = clientLimit.Value<int>();
 
+            JToken queueLimit = from["QueueLimit"];
+            if (queueLimit != null)
+                options.QueueLimit = queueLimit.Value<int>();
+
             SetQueuePropertyValues(from, options);
         }
 
@@ -219,6 +223,9 @@ namespace Twino.MQ.Options
             options.MessageTimeout = other.MessageTimeout;
             options.UseMessageId = other.UseMessageId;
             options.SendOnlyFirstAcquirer = other.SendOnlyFirstAcquirer;
+            options.MessageLimit = other.MessageLimit;
+            options.ClientLimit = other.ClientLimit;
+            options.QueueLimit = other.QueueLimit;
 
             return options;
         }
@@ -234,6 +241,7 @@ namespace Twino.MQ.Options
             options.MessageTimeout = other.MessageTimeout;
             options.UseMessageId = other.UseMessageId;
             options.SendOnlyFirstAcquirer = other.SendOnlyFirstAcquirer;
+            options.MessageLimit = other.MessageLimit;
 
             return options;
         }

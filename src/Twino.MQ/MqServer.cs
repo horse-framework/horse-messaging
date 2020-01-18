@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.Client.TMQ;
 using Twino.Client.TMQ.Connectors;
@@ -31,14 +32,14 @@ namespace Twino.MQ
         /// <summary>
         /// All channels of the server
         /// </summary>
-        public IEnumerable<Channel> Channels => _channels.GetUnsafeList();
+        public IEnumerable<Channel> Channels => _channels.GetAsClone();
 
         private readonly SafeList<MqClient> _clients;
 
         /// <summary>
         /// All connected clients in the server
         /// </summary>
-        public IEnumerable<MqClient> Clients => _clients.GetUnsafeList();
+        public IEnumerable<MqClient> Clients => _clients.GetAsClone();
 
         /// <summary>
         /// Underlying Twino Server
@@ -66,7 +67,7 @@ namespace Twino.MQ
         /// Client connect and disconnect operations
         /// </summary>
         public IClientHandler ClientHandler { get; set; }
-        
+
         /// <summary>
         /// Client message received handler (for only server-type messages)
         /// </summary>
@@ -111,10 +112,20 @@ namespace Twino.MQ
         internal TmqStickyConnector[] InstanceConnectors => _connectors;
 
         /// <summary>
+        /// Other Twino MQ server insantaces that are sending messages to this server
+        /// </summary>
+        internal SafeList<SlaveInstance> SlaveInstances { get; set; } = new SafeList<SlaveInstance>(16);
+
+        /// <summary>
         /// Implementation registry library.
         /// Implementation instances are kept in this registry by their keys.
         /// </summary>
         public ImplementationRegistry Registry { get; } = new ImplementationRegistry();
+
+        /// <summary>
+        /// Locker object for preventing to create duplicated channels when requests are concurrent and auto channel creation is enabled
+        /// </summary>
+        private readonly SemaphoreSlim _findOrCreateChannelLocker = new SemaphoreSlim(1, 1);
 
         #endregion
 
@@ -164,15 +175,19 @@ namespace Twino.MQ
                 TmqStickyConnector connector = options.KeepMessages
                                                    ? new TmqAbsoluteConnector(reconnect, () => CreateInstanceClient(options))
                                                    : new TmqStickyConnector(reconnect, () => CreateInstanceClient(options));
-
+                
                 _connectors[i] = connector;
+                connector.Tag = options;
+
+                connector.AddHost(options.Host);
+                connector.Run();
             }
         }
 
         /// <summary>
         /// Client creation action for server instances
         /// </summary>
-        private TmqClient CreateInstanceClient(InstanceOptions options)
+        private static TmqClient CreateInstanceClient(InstanceOptions options)
         {
             TmqClient client = new TmqClient();
             client.SetClientName(options.Name);
@@ -188,6 +203,7 @@ namespace Twino.MQ
         /// <summary>
         /// Sets server authenticator for using multiple servers
         /// </summary>
+        /// <exception cref="ReadOnlyException">Thrown when server authenticator already is set</exception>
         public void SetServerAuthenticator(IServerAuthenticator authenticator)
         {
             if (ServerAuthenticator != null)
@@ -199,6 +215,7 @@ namespace Twino.MQ
         /// <summary>
         /// Sets default channel event handler and authenticator
         /// </summary>
+        /// <exception cref="ReadOnlyException">Thrown when default channel event handler or default channel authenticator already is set</exception>
         public void SetDefaultChannelHandler(IChannelEventHandler eventHandler, IChannelAuthenticator authenticator)
         {
             if (DefaultChannelEventHandler != null)
@@ -215,6 +232,7 @@ namespace Twino.MQ
         /// <summary>
         /// Sets default queue event handler, authenticator and message delivery handler
         /// </summary>
+        /// <exception cref="ReadOnlyException">Thrown when default message delivery handler already is set</exception>
         public void SetDefaultDeliveryHandler(IMessageDeliveryHandler deliveryHandler)
         {
             if (DefaultDeliveryHandler != null)
@@ -230,6 +248,9 @@ namespace Twino.MQ
         /// <summary>
         /// Creates new channel with default options, without event handler and authenticator
         /// </summary>
+        /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
+        /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>
+        /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same name</exception>
         public Channel CreateChannel(string name)
         {
             if (DefaultDeliveryHandler == null)
@@ -241,6 +262,9 @@ namespace Twino.MQ
         /// <summary>
         /// Creates new channel with default options, without event handler and authenticator
         /// </summary>
+        /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
+        /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>
+        /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same name</exception>
         public Channel CreateChannel(string name, Action<ChannelOptions> optionsAction)
         {
             if (DefaultDeliveryHandler == null)
@@ -252,6 +276,8 @@ namespace Twino.MQ
         /// <summary>
         /// Creates new channel with custom event handler, authenticator and default options
         /// </summary>
+        /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>
+        /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same name</exception>
         public Channel CreateChannel(string name,
                                      IChannelAuthenticator authenticator,
                                      IChannelEventHandler eventHandler,
@@ -264,6 +290,8 @@ namespace Twino.MQ
         /// <summary>
         /// Creates new channel with custom event handler, authenticator and options
         /// </summary>
+        /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>
+        /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same name</exception>
         public Channel CreateChannel(string name,
                                      IChannelAuthenticator authenticator,
                                      IChannelEventHandler eventHandler,
@@ -278,12 +306,17 @@ namespace Twino.MQ
         /// <summary>
         /// Creates new channel with custom event handler, authenticator and options
         /// </summary>
+        /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>
+        /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same name</exception>
         public Channel CreateChannel(string name,
                                      IChannelAuthenticator authenticator,
                                      IChannelEventHandler eventHandler,
                                      IMessageDeliveryHandler deliveryHandler,
                                      ChannelOptions options)
         {
+            if (Options.ChannelLimit > 0 && _channels.Count >= Options.ChannelLimit)
+                throw new OperationCanceledException("Channel limit is exceeded for the server");
+
             Channel channel = _channels.Find(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
             if (channel != null)
                 throw new DuplicateNameException("There is already a channel with same name: " + name);
@@ -300,6 +333,21 @@ namespace Twino.MQ
         {
             Channel channel = _channels.Find(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
             return channel;
+        }
+
+        /// <summary>
+        /// Searches the channel, if channel could not be found, it will be created
+        /// </summary>
+        public Channel FindOrCreateChannel(string name)
+        {
+            lock (_findOrCreateChannelLocker)
+            {
+                Channel channel = FindChannel(name);
+                if (channel == null)
+                    channel = CreateChannel(name);
+
+                return channel;
+            }
         }
 
         /// <summary>

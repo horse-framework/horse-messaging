@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
-namespace Twino.Client.TMQ
+namespace Twino.Protocols.TMQ.Models
 {
     /// <summary>
     /// Queue information

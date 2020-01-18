@@ -25,7 +25,7 @@ namespace Twino.Client.Connectors
         public TimeSpan Interval { get; set; }
 
         private Timer _timer;
-
+        
         /// <summary>
         /// Creates new sticky connector
         /// </summary>
