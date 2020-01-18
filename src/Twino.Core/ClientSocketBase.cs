@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Twino.Core
 {
     /// <summary>
-    /// Function definition for parameterless web sockets
+    /// Function definition for client message received event
     /// </summary>
     public delegate void ClientMessageHandler<TMessage>(ClientSocketBase<TMessage> client, TMessage message);
 
