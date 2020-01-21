@@ -40,9 +40,9 @@ namespace Twino.Protocols.TMQ.Models
         /// <summary>
         /// If true, messages will send to only first acquirers
         /// </summary>
-        [JsonProperty("sendOnlyFirstAcquirer")]
-        [JsonPropertyName("sendOnlyFirstAcquirer")]
-        public bool SendOnlyFirstAcquirer { get; set; }
+        [JsonProperty("onlyFirstAcquirer")]
+        [JsonPropertyName("onlyFirstAcquirer")]
+        public bool OnlyFirstAcquirer { get; set; }
 
         /// <summary>
         /// If true, messages will request acknowledge from receivers

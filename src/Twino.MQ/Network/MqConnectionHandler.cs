@@ -91,7 +91,7 @@ namespace Twino.MQ.Network
                                                Client = client,
                                                RemoteHost = client.Info.Client.Client.RemoteEndPoint.ToString().Split(':')[0]
                                            });
-                
+
                 await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
             }
 
