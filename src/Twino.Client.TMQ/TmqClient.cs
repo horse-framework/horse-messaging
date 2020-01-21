@@ -356,6 +356,7 @@ namespace Twino.Client.TMQ
             if (message.Ttl < 0)
                 return;
 
+            KeepAlive();
             switch (message.Type)
             {
                 case MessageType.Server:
