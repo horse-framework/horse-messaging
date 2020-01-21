@@ -587,7 +587,6 @@ namespace Twino.MQ.Queues
             if (message == null && RegularLinkedList.Count > 0)
             {
                 lock (RegularLinkedList)
-
                 {
                     message = RegularLinkedList.First.Value;
                     RegularLinkedList.RemoveFirst();
@@ -650,6 +649,8 @@ namespace Twino.MQ.Queues
                 //fire message receive event
                 Info.AddMessageReceive();
                 Decision decision = await DeliveryHandler.ReceivedFromProducer(this, message, sender);
+                message.Decision = decision;
+                
                 bool allow = await ApplyDecision(decision, message);
                 if (!allow)
                     return PushResult.Success;
@@ -1094,9 +1095,6 @@ namespace Twino.MQ.Queues
         /// </summary>
         private void PutMessageBack(QueueMessage message)
         {
-            if (message.IsFirstQueue)
-                message.IsFirstQueue = false;
-
             if (message.IsInQueue)
                 return;
 
