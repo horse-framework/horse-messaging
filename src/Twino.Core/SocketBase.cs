@@ -72,7 +72,7 @@ namespace Twino.Core
         /// Used for preventing unnecessary ping/pong traffic
         /// </summary>
         public DateTime LastAliveDate { get; protected set; } = DateTime.UtcNow;
-        
+
         /// <summary>
         /// True, If a pong must received asap
         /// </summary>
@@ -125,6 +125,8 @@ namespace Twino.Core
                     if (!_writeCompleted)
                         _writeCompleted = true;
                 }
+
+                KeepAlive();
             }
             catch
             {
@@ -147,7 +149,7 @@ namespace Twino.Core
                     return false;
 
                 await Stream.WriteAsync(data);
-                LastAliveDate = DateTime.UtcNow;
+                KeepAlive();
                 return true;
             }
             catch
@@ -166,7 +168,7 @@ namespace Twino.Core
             {
                 if (Stream == null || data == null)
                     return false;
-                
+
                 if (IsSsl)
                 {
                     lock (Stream)
@@ -183,7 +185,6 @@ namespace Twino.Core
                 else
                     Stream.BeginWrite(data, 0, data.Length, EndWrite, data);
 
-                LastAliveDate = DateTime.UtcNow;
                 return true;
             }
             catch
@@ -224,7 +225,7 @@ namespace Twino.Core
             LastAliveDate = DateTime.UtcNow;
             PongRequired = false;
         }
-        
+
         #endregion
 
         #region Abstract Methods
@@ -309,7 +310,7 @@ namespace Twino.Core
         /// </summary>
         /// <returns></returns>
         public abstract void Pong();
-        
+
         #endregion
     }
 }
