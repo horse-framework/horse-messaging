@@ -48,7 +48,7 @@ namespace Twino.Protocols.TMQ.Models
         /// </summary>
         [JsonProperty("onlyFirstAcquirer")]
         [JsonPropertyName("onlyFirstAcquirer")]
-        public bool SendOnlyFirstAcquirer { get; set; }
+        public bool OnlyFirstAcquirer { get; set; }
 
         /// <summary>
         /// If true, messages will request acknowledge from receivers
@@ -88,8 +88,8 @@ namespace Twino.Protocols.TMQ.Models
         /// <summary>
         /// If true, server doesn't send client name to receivers in queueus.
         /// </summary>
-        [JsonProperty("hideClientName")]
-        [JsonPropertyName("hideClientName")]
+        [JsonProperty("hideClientNames")]
+        [JsonPropertyName("hideClientNames")]
         public bool HideClientNames { get; set; }
 
         /// <summary>
