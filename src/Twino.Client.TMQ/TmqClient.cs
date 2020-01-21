@@ -356,6 +356,7 @@ namespace Twino.Client.TMQ
             if (message.Ttl < 0)
                 return;
 
+            KeepAlive();
             switch (message.Type)
             {
                 case MessageType.Server:
@@ -952,7 +953,6 @@ namespace Twino.Client.TMQ
             return await response.GetJsonContent<ChannelInformation>();
         }
 
-
         /// <summary>
         /// Gets all channels in server
         /// </summary>
@@ -1090,6 +1090,33 @@ namespace Twino.Client.TMQ
                 return default;
 
             return await response.GetJsonContent<QueueInformation>();
+        }
+
+        #endregion
+
+        #region Instance
+
+        /// <summary>
+        /// Gets all instances connected to server
+        /// </summary>
+        public async Task<List<InstanceInformation>> GetInstances()
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ResponseRequired = true;
+            message.ContentType = KnownContentTypes.InstanceList;
+            message.SetMessageId(UniqueIdGenerator.Create());
+
+            Task<TmqMessage> task = _follower.FollowResponse(message);
+            bool sent = await SendAsync(message);
+            if (!sent)
+                return null;
+
+            TmqMessage response = await task;
+            if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
+                return default;
+
+            return await response.GetJsonContent<List<InstanceInformation>>();
         }
 
         #endregion

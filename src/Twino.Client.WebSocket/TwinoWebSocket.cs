@@ -240,6 +240,7 @@ namespace Twino.Client.WebSocket
                 return;
             }
 
+            KeepAlive();
             switch (message.OpCode)
             {
                 case SocketOpCode.Binary:

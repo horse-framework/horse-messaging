@@ -205,7 +205,6 @@ namespace Twino.Core
         /// </summary>
         protected void SetOnMessageReceived(TMessage message)
         {
-            KeepAlive();
             MessageReceived?.Invoke(this, message);
         }
     }
