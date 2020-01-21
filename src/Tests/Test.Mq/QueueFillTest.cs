@@ -33,8 +33,11 @@ namespace Test.Mq
             Assert.NotNull(routeA);
             Assert.NotNull(pushA);
 
-            await routeA.FillJson(items, false, false);
-            await pushA.FillJson(items, false, false);
+            QueueFiller fillerRouteA = new QueueFiller(routeA);
+            QueueFiller fillerPushA = new QueueFiller(pushA);
+            
+            await fillerRouteA.FillJson(items, false, false);
+            await fillerPushA.FillJson(items, false, false);
 
             await Task.Delay(500);
             Assert.NotEmpty(routeA.RegularMessages);
@@ -58,8 +61,9 @@ namespace Test.Mq
             ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
             Assert.NotNull(queue);
 
-            queue.FillString(items, false, true);
-            queue.FillString(items, false, false);
+            QueueFiller filler = new QueueFiller(queue);
+            filler.FillString(items, false, true);
+            filler.FillString(items, false, false);
 
             await Task.Delay(500);
             Assert.NotEmpty(queue.HighPriorityMessages);
@@ -83,8 +87,9 @@ namespace Test.Mq
             ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
             Assert.NotNull(queue);
 
-            queue.FillData(items, false, true);
-            queue.FillData(items, false, false);
+            QueueFiller filler = new QueueFiller(queue);
+            filler.FillData(items, false, true);
+            filler.FillData(items, false, false);
 
             await Task.Delay(500);
             Assert.NotEmpty(queue.HighPriorityMessages);
