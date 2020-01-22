@@ -375,7 +375,7 @@ namespace Twino.MQ
             if (channel.EventHandler != null)
                 await channel.EventHandler.OnChannelRemoved(channel);
 
-            channel.Destroy();
+            await channel.Destroy();
         }
 
         #endregion

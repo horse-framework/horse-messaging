@@ -134,10 +134,32 @@ namespace Twino.MQ
         /// <summary>
         /// Destroys the channel, clears all queues and clients 
         /// </summary>
-        public void Destroy()
+        public async Task Destroy()
         {
             _clients.Clear();
+            
+            List<ChannelQueue> queues = _queues.GetAsClone();
             _queues.Clear();
+            
+            foreach (ChannelQueue queue in queues)
+                await queue.Destroy();
+            
+        }
+
+        /// <summary>
+        /// If all queues are empty and there is no client, destroys the channel 
+        /// </summary>
+        private async Task CheckAutoDestroy()
+        {
+            List<ChannelQueue> list = _queues.GetAsClone();
+
+            foreach (ChannelQueue queue in list)
+            {
+                if (!queue.IsEmpty())
+                    return;
+            }
+
+            await Server.RemoveChannel(this);
         }
 
         #endregion
@@ -332,6 +354,9 @@ namespace Twino.MQ
 
             if (EventHandler != null)
                 await EventHandler.OnClientLeft(client);
+
+            if (Options.DestroyWhenEmpty && _clients.Count == 0)
+                await CheckAutoDestroy();
         }
 
         /// <summary>
@@ -343,8 +368,11 @@ namespace Twino.MQ
 
             if (EventHandler != null)
                 await EventHandler.OnClientLeft(client);
+
+            if (Options.DestroyWhenEmpty && _clients.Count == 0)
+                await CheckAutoDestroy();
         }
-        
+
         /// <summary>
         /// Removes client from the channel
         /// </summary>
@@ -359,6 +387,9 @@ namespace Twino.MQ
 
             if (EventHandler != null)
                 await EventHandler.OnClientLeft(cc);
+
+            if (Options.DestroyWhenEmpty && _clients.Count == 0)
+                await CheckAutoDestroy();
 
             return true;
         }

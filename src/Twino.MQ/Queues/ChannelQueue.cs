@@ -323,6 +323,14 @@ namespace Twino.MQ.Queues
             }
         }
 
+        /// <summary>
+        /// Returns true, if there are no messages in queue
+        /// </summary>
+        public bool IsEmpty()
+        {
+            return HighPriorityLinkedList.Count == 0 && RegularLinkedList.Count == 0;
+        }
+        
         #endregion
 
         #region Status Actions
