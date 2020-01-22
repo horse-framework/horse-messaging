@@ -35,6 +35,9 @@ namespace Twino.MQ.Queues.States
             ProcessingMessage = held;
             PushResult result = await ProcessMessage(held);
             ProcessingMessage = null;
+
+            await Trigger();
+
             return result;
         }
 
@@ -50,7 +53,7 @@ namespace Twino.MQ.Queues.States
             if (clients.Count == 0)
             {
                 _queue.AddMessage(message, false);
-                return PushResult.Success;
+                return PushResult.NoConsumers;
             }
 
             //if to process next message is requires previous message acknowledge, wait here
@@ -227,7 +230,12 @@ namespace Twino.MQ.Queues.States
 
                 try
                 {
-                    await ProcessMessage(message);
+                    PushResult pr = await ProcessMessage(message);
+                    if (pr == PushResult.NoConsumers)
+                    {
+                        _queue.AddMessage(message, false);
+                        return;
+                    }
                 }
                 catch (Exception ex)
                 {

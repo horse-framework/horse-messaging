@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Delivery;
@@ -84,16 +85,19 @@ namespace Twino.MQ.Queues.States
         {
             QueueMessage held = GetFirstMessageFromQueue(message);
             ChannelClient cc = _queue.Channel.GetNextRRClient(ref _roundRobinIndex);
-            
-            ProcessingMessage = held;
-            
-            if (cc != null)
-                await ProcessMessage(held, cc);
-            else
+            if (cc == null)
+            {
                 _queue.AddMessage(held, false);
+                return PushResult.NoConsumers;
+            }
 
+            ProcessingMessage = held;
+            PushResult result = await ProcessMessage(held, cc);
             ProcessingMessage = null;
-            return PushResult.Success;
+
+            await Trigger();
+
+            return result;
         }
 
         private async Task<PushResult> ProcessMessage(QueueMessage message, ChannelClient receiver)
@@ -190,9 +194,14 @@ namespace Twino.MQ.Queues.States
                 {
                     ChannelClient cc = _queue.Channel.GetNextRRClient(ref _roundRobinIndex);
                     if (cc == null)
+                    {
+                        _queue.AddMessage(message, false);
                         break;
+                    }
 
+                    ProcessingMessage = message;
                     await ProcessMessage(message, cc);
+                    ProcessingMessage = null;
                 }
                 catch (Exception ex)
                 {

@@ -404,8 +404,6 @@ namespace Twino.MQ.Queues
             if (Options.HideClientNames)
                 message.Message.SetSource(null);
 
-            //process the message
-            QueueMessage held = null;
             try
             {
                 //fire message receive event

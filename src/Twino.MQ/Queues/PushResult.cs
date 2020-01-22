@@ -11,6 +11,16 @@ namespace Twino.MQ.Queues
         Success,
 
         /// <summary>
+        /// Queue is empty
+        /// </summary>
+        Empty,
+
+        /// <summary>
+        /// There are no consumers in channel
+        /// </summary>
+        NoConsumers,
+
+        /// <summary>
         /// Message limit is exceeded in queue, push failed
         /// </summary>
         LimitExceeded,

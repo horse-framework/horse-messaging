@@ -27,7 +27,16 @@ namespace Twino.MQ.Queues.States
         public async Task<PushResult> Push(QueueMessage message, MqClient sender)
         {
             ProcessingMessage = message;
-            
+            PushResult result = await ProcessMessage(message, sender);
+            ProcessingMessage = null;
+
+            await Trigger();
+
+            return result;
+        }
+
+        private async Task<PushResult> ProcessMessage(QueueMessage message, MqClient sender)
+        {
             //if we need acknowledge from receiver, it has a deadline.
             DateTime? ackDeadline = null;
             if (_queue.Options.RequestAcknowledge)
@@ -40,7 +49,7 @@ namespace Twino.MQ.Queues.States
                 _queue.Info.AddMessageRemove();
                 _ = _queue.DeliveryHandler.MessageRemoved(_queue, message);
 
-                return PushResult.Success;
+                return PushResult.NoConsumers;
             }
 
             //if to process next message is requires previous message acknowledge, wait here
@@ -132,7 +141,6 @@ namespace Twino.MQ.Queues.States
                 _ = _queue.DeliveryHandler.MessageRemoved(_queue, message);
             }
 
-            ProcessingMessage = null;
             return PushResult.Success;
         }
 
@@ -167,7 +175,9 @@ namespace Twino.MQ.Queues.States
 
                 try
                 {
-                    await Push(message, null);
+                    PushResult pr = await Push(message, null);
+                    if (pr == PushResult.Empty || pr == PushResult.NoConsumers)
+                        return;
                 }
                 catch (Exception ex)
                 {
