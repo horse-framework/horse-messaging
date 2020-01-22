@@ -396,10 +396,7 @@ namespace Twino.MQ
         internal async Task RemoveClient(MqClient client)
         {
             _clients.Remove(client);
-
-            IEnumerable<Channel> list = _channels.GetAsClone();
-            foreach (Channel channel in list)
-                await channel.RemoveClient(client);
+            await client.LeaveFromAllChannels();
         }
 
         /// <summary>

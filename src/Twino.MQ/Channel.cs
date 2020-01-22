@@ -335,6 +335,17 @@ namespace Twino.MQ
         }
 
         /// <summary>
+        /// Removes client from the channel, does not call MqClient's remove method
+        /// </summary>
+        internal async Task RemoveClientSilent(ChannelClient client)
+        {
+            _clients.Remove(client);
+
+            if (EventHandler != null)
+                await EventHandler.OnClientLeft(client);
+        }
+        
+        /// <summary>
         /// Removes client from the channel
         /// </summary>
         public async Task<bool> RemoveClient(MqClient client)

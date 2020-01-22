@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Protocols.TMQ;
 
@@ -122,6 +124,23 @@ namespace Twino.MQ.Clients
         {
             lock (_channels)
                 _channels.Remove(channel);
+        }
+
+        /// <summary>
+        /// Leaves client from all channels
+        /// </summary>
+        internal async Task LeaveFromAllChannels()
+        {
+            List<ChannelClient> list;
+            lock (_channels)
+            {
+                list = new List<ChannelClient>(_channels);
+                _channels.Clear();
+            }
+
+            foreach (ChannelClient cc in list)
+                if (cc.Channel != null)
+                    await cc.Channel.RemoveClientSilent(cc);
         }
 
         #endregion
