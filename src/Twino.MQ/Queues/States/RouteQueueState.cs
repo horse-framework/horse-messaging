@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Delivery;
@@ -151,6 +152,16 @@ namespace Twino.MQ.Queues.States
 
             if (_queue.RegularLinkedList.Count > 0)
                 await ProcessPendingMessages(_queue.RegularLinkedList);
+        }
+
+        public Task<QueueStatusAction> EnterStatus(QueueStatus previousStatus)
+        {
+            return Task.FromResult(QueueStatusAction.AllowAndTrigger);
+        }
+
+        public Task<QueueStatusAction> LeaveStatus(QueueStatus nextStatus)
+        {
+            return Task.FromResult(QueueStatusAction.Allow);
         }
 
         /// <summary>

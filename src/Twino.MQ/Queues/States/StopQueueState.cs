@@ -29,5 +29,23 @@ namespace Twino.MQ.Queues.States
         {
             return Task.CompletedTask;
         }
+
+        public Task<QueueStatusAction> EnterStatus(QueueStatus previousStatus)
+        {
+            lock (_queue.HighPriorityLinkedList)
+                _queue.HighPriorityLinkedList.Clear();
+
+            lock (_queue.RegularLinkedList)
+                _queue.RegularLinkedList.Clear();
+
+            _queue.TimeKeeper.Reset();
+
+            return Task.FromResult(QueueStatusAction.Allow);
+        }
+
+        public Task<QueueStatusAction> LeaveStatus(QueueStatus nextStatus)
+        {
+            return Task.FromResult(QueueStatusAction.Allow);
+        }
     }
 }

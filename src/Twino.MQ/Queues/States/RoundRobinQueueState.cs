@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Delivery;
@@ -217,5 +216,16 @@ namespace Twino.MQ.Queues.States
                 }
             }
         }
+        
+        public Task<QueueStatusAction> EnterStatus(QueueStatus previousStatus)
+        {
+            return Task.FromResult(QueueStatusAction.AllowAndTrigger);
+        }
+
+        public Task<QueueStatusAction> LeaveStatus(QueueStatus nextStatus)
+        {
+            return Task.FromResult(QueueStatusAction.Allow);
+        }
+
     }
 }

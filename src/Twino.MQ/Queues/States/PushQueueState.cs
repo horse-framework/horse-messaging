@@ -208,6 +208,16 @@ namespace Twino.MQ.Queues.States
                 await ProcessPendingMessages(_queue.RegularLinkedList);
         }
 
+        public Task<QueueStatusAction> EnterStatus(QueueStatus previousStatus)
+        {
+            return Task.FromResult(QueueStatusAction.AllowAndTrigger);
+        }
+
+        public Task<QueueStatusAction> LeaveStatus(QueueStatus nextStatus)
+        {
+            return Task.FromResult(QueueStatusAction.Allow);
+        }
+
         /// <summary>
         /// Start to process all pending messages.
         /// This method is called after a client is subscribed to the queue.

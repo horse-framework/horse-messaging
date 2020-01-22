@@ -170,5 +170,15 @@ namespace Twino.MQ.Queues.States
         {
             return Task.CompletedTask;
         }
+
+        public Task<QueueStatusAction> EnterStatus(QueueStatus previousStatus)
+        {
+            return Task.FromResult(QueueStatusAction.Allow);
+        }
+
+        public Task<QueueStatusAction> LeaveStatus(QueueStatus nextStatus)
+        {
+            return Task.FromResult(QueueStatusAction.Allow);
+        }
     }
 }

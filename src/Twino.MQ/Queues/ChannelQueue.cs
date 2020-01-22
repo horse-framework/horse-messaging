@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
@@ -48,7 +49,7 @@ namespace Twino.MQ.Queues
         /// Queue messaging handler.
         /// If null, server's default delivery will be used.
         /// </summary>
-        public IMessageDeliveryHandler DeliveryHandler { get; }
+        public IMessageDeliveryHandler DeliveryHandler { get; private set; }
 
         /// <summary>
         /// Queue statistics and information
@@ -329,36 +330,47 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Sets status of the queue
         /// </summary>
-        public async Task SetStatus(QueueStatus status)
+        public async Task SetStatus(QueueStatus status, IMessageDeliveryHandler newDeliveryHandler = null)
         {
-            QueueStatus old = Status;
-            if (old == status)
+            QueueStatus prevStatus = Status;
+            IQueueState prevState = State;
+
+            if (prevStatus == status)
                 return;
 
-            if (Channel.EventHandler != null)
+            QueueStatusAction leave = await State.LeaveStatus(status);
+
+            if (leave == QueueStatusAction.Deny)
+                return;
+
+            if (leave == QueueStatusAction.DenyAndTrigger)
             {
-                bool allowed = await Channel.EventHandler.OnQueueStatusChanged(this, old, status);
-                if (!allowed)
-                    return;
+                _triggering = false;
+                await Trigger();
+                return;
             }
 
-            //clear all queue messages if new status is stopped
-            if (status == QueueStatus.Stopped)
-            {
-                lock (HighPriorityLinkedList)
-                    HighPriorityLinkedList.Clear();
-
-                lock (RegularLinkedList)
-                    RegularLinkedList.Clear();
-
-                TimeKeeper.Reset();
-            }
-
+            _triggering = false;
             Status = status;
             State = QueueStateFactory.Create(this, status);
 
-            //trigger queued messages
-            if (status == QueueStatus.Route || status == QueueStatus.Push || status == QueueStatus.RoundRobin)
+            QueueStatusAction enter = await State.EnterStatus(prevStatus);
+            if (enter == QueueStatusAction.Deny || enter == QueueStatusAction.DenyAndTrigger)
+            {
+                Status = prevStatus;
+                State = prevState;
+                await prevState.EnterStatus(prevStatus);
+
+                if (enter == QueueStatusAction.DenyAndTrigger)
+                    await Trigger();
+
+                return;
+            }
+
+            if (Channel.EventHandler != null)
+                await Channel.EventHandler.OnQueueStatusChanged(this, prevStatus, status);
+
+            if (enter == QueueStatusAction.AllowAndTrigger)
                 await Trigger();
         }
 
