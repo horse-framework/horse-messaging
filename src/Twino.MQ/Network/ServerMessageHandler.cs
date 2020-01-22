@@ -315,7 +315,10 @@ namespace Twino.MQ.Network
                              AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
                              MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
                              WaitForAcknowledge = channel.Options.WaitForAcknowledge,
-                             HideClientNames = channel.Options.HideClientNames
+                             HideClientNames = channel.Options.HideClientNames,
+                             QueueLimit = channel.Options.QueueLimit,
+                             ClientLimit = channel.Options.ClientLimit,
+                             DestroyWhenEmpty = channel.Options.DestroyWhenEmpty
                          });
             }
 
@@ -359,7 +362,10 @@ namespace Twino.MQ.Network
                                                  AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
                                                  MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
                                                  WaitForAcknowledge = channel.Options.WaitForAcknowledge,
-                                                 HideClientNames = channel.Options.HideClientNames
+                                                 HideClientNames = channel.Options.HideClientNames,
+                                                 QueueLimit = channel.Options.QueueLimit,
+                                                 ClientLimit = channel.Options.ClientLimit,
+                                                 DestroyWhenEmpty = channel.Options.DestroyWhenEmpty
                                              };
 
             TmqMessage response = message.CreateResponse();

@@ -202,6 +202,10 @@ namespace Twino.MQ.Options
             if (queueLimit != null)
                 options.QueueLimit = queueLimit.Value<int>();
 
+            JToken destroyWhenEmpty = from["DestroyWhenEmpty"];
+            if (destroyWhenEmpty != null)
+                options.DestroyWhenEmpty = destroyWhenEmpty.Value<bool>();
+
             SetQueuePropertyValues(from, options);
         }
 
@@ -226,6 +230,7 @@ namespace Twino.MQ.Options
             options.MessageLimit = other.MessageLimit;
             options.ClientLimit = other.ClientLimit;
             options.QueueLimit = other.QueueLimit;
+            options.DestroyWhenEmpty = other.DestroyWhenEmpty;
 
             return options;
         }

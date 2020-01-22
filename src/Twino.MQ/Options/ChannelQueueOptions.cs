@@ -134,7 +134,7 @@ namespace Twino.MQ.Options
                 }
             }
         }
-        
+
         /// <summary>
         /// Clones channel queue options from another options
         /// </summary>
