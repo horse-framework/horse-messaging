@@ -95,7 +95,7 @@ namespace Twino.MQ.Network
                 }
             }
 
-            await queue.Pull(channelClient, message);
+            await queue.State.Pull(channelClient, message);
         }
 
         /// <summary>

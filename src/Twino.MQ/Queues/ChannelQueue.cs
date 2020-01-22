@@ -4,8 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Delivery;
-using Twino.MQ.Helpers;
 using Twino.MQ.Options;
+using Twino.MQ.Queues.States;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Queues
@@ -27,6 +27,11 @@ namespace Twino.MQ.Queues
         /// Queue status
         /// </summary>
         public QueueStatus Status { get; private set; }
+
+        /// <summary>
+        /// Current status state object
+        /// </summary>
+        internal IQueueState State { get; private set; }
 
         /// <summary>
         /// Queue content type
@@ -71,15 +76,10 @@ namespace Twino.MQ.Queues
         internal readonly LinkedList<QueueMessage> RegularLinkedList = new LinkedList<QueueMessage>();
 
         /// <summary>
-        /// Default TMQ Writer class for the queue
-        /// </summary>
-        private static readonly TmqWriter _writer = new TmqWriter();
-
-        /// <summary>
         /// Time keeper for the queue.
         /// Checks message receiver deadlines and delivery deadlines.
         /// </summary>
-        private readonly QueueTimeKeeper _timeKeeper;
+        internal QueueTimeKeeper TimeKeeper { get; }
 
         /// <summary>
         /// Wait acknowledge cross thread locker
@@ -90,11 +90,6 @@ namespace Twino.MQ.Queues
         /// This task holds the code until acknowledge is received
         /// </summary>
         private TaskCompletionSource<bool> _acknowledgeCallback;
-
-        /// <summary>
-        /// Round robin client list index
-        /// </summary>
-        private int _roundRobinIndex = -1;
 
         /// <summary>
         /// Trigger locker field.
@@ -116,9 +111,10 @@ namespace Twino.MQ.Queues
             Options = options;
             Status = options.Status;
             DeliveryHandler = deliveryHandler;
+            State = QueueStateFactory.Create(this, options.Status);
 
-            _timeKeeper = new QueueTimeKeeper(this);
-            _timeKeeper.Run();
+            TimeKeeper = new QueueTimeKeeper(this);
+            TimeKeeper.Run();
 
             if (options.WaitForAcknowledge)
                 _semaphore = new SemaphoreSlim(1, 1);
@@ -129,7 +125,7 @@ namespace Twino.MQ.Queues
         /// </summary>
         public async Task Destroy()
         {
-            await _timeKeeper.Destroy();
+            await TimeKeeper.Destroy();
 
             lock (HighPriorityLinkedList)
                 HighPriorityLinkedList.Clear();
@@ -278,6 +274,54 @@ namespace Twino.MQ.Queues
             return true;
         }
 
+        /// <summary>
+        /// Adds message into the queue
+        /// </summary>
+        internal void AddMessage(QueueMessage message, bool toEnd = true)
+        {
+            if (message.IsInQueue)
+                return;
+
+            if (message.Message.HighPriority)
+            {
+                lock (HighPriorityLinkedList)
+                {
+                    //re-check when locked.
+                    //it's checked before lock, because we dont wanna lock anything in non-concurrent already queued situations
+                    if (message.IsInQueue)
+                        return;
+
+                    if (toEnd)
+                        HighPriorityLinkedList.AddLast(message);
+                    else
+                        HighPriorityLinkedList.AddFirst(message);
+
+                    message.IsInQueue = true;
+                }
+
+                Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
+            }
+            else
+            {
+                lock (RegularLinkedList)
+                {
+                    //re-check when locked
+                    //it's checked before lock, because we dont wanna lock anything in non-concurrent already queued situations
+                    if (message.IsInQueue)
+                        return;
+
+                    if (toEnd)
+                        RegularLinkedList.AddLast(message);
+                    else
+                        RegularLinkedList.AddFirst(message);
+
+                    message.IsInQueue = true;
+                }
+
+                Info.UpdateRegularMessageCount(RegularLinkedList.Count);
+            }
+        }
+
         #endregion
 
         #region Status Actions
@@ -307,10 +351,11 @@ namespace Twino.MQ.Queues
                 lock (RegularLinkedList)
                     RegularLinkedList.Clear();
 
-                _timeKeeper.Reset();
+                TimeKeeper.Reset();
             }
 
             Status = status;
+            State = QueueStateFactory.Create(this, status);
 
             //trigger queued messages
             if (status == QueueStatus.Route || status == QueueStatus.Push || status == QueueStatus.RoundRobin)
@@ -333,68 +378,6 @@ namespace Twino.MQ.Queues
         #region Delivery
 
         /// <summary>
-        /// Client pulls a message from the queue
-        /// </summary>
-        internal async Task Pull(ChannelClient client, TmqMessage request)
-        {
-            if (Status != QueueStatus.Pull)
-                return;
-
-            QueueMessage message = null;
-
-            //pull from prefential messages
-            if (HighPriorityLinkedList.Count > 0)
-                lock (HighPriorityLinkedList)
-                {
-                    message = HighPriorityLinkedList.First.Value;
-                    HighPriorityLinkedList.RemoveFirst();
-
-                    if (message != null)
-                        message.IsInQueue = false;
-                }
-
-            //if there is no prefential message, pull from standard messages
-            if (message == null && RegularLinkedList.Count > 0)
-            {
-                lock (RegularLinkedList)
-                {
-                    message = RegularLinkedList.First.Value;
-                    RegularLinkedList.RemoveFirst();
-
-                    if (message != null)
-                        message.IsInQueue = false;
-                }
-            }
-
-            //there is no pullable message
-            if (message == null)
-            {
-                await client.Client.SendAsync(MessageBuilder.ResponseStatus(request, KnownContentTypes.NotFound));
-                return;
-            }
-
-            try
-            {
-                await ProcessPullMessage(client, request, message);
-            }
-            catch (Exception ex)
-            {
-                Info.AddError();
-                try
-                {
-                    Decision decision = await DeliveryHandler.ExceptionThrown(this, message, ex);
-                    await ApplyDecision(decision, message);
-
-                    if (decision.KeepMessage && !message.IsInQueue)
-                        PutMessageBack(message);
-                }
-                catch //if developer does wrong operation, we should not stop
-                {
-                }
-            }
-        }
-
-        /// <summary>
         /// Pushes a message into the queue.
         /// </summary>
         internal async Task<PushResult> Push(QueueMessage message, MqClient sender)
@@ -409,6 +392,15 @@ namespace Twino.MQ.Queues
             message.Message.FirstAcquirer = true;
             message.Message.AcknowledgeRequired = Options.RequestAcknowledge;
 
+            //if message doesn't have message id and "UseMessageId" option is enabled, create new message id for the message
+            if (Options.UseMessageId && string.IsNullOrEmpty(message.Message.MessageId))
+                message.Message.SetMessageId(Channel.Server.MessageIdGenerator.Create());
+
+            //if we have an option maximum wait duration for message, set it after message joined to the queue.
+            //time keeper will check this value and if message time is up, it will remove message from the queue.
+            if (Options.MessageTimeout > TimeSpan.Zero)
+                message.Deadline = DateTime.UtcNow.Add(Options.MessageTimeout);
+
             if (Options.HideClientNames)
                 message.Message.SetSource(null);
 
@@ -420,78 +412,25 @@ namespace Twino.MQ.Queues
                 Info.AddMessageReceive();
                 Decision decision = await DeliveryHandler.ReceivedFromProducer(this, message, sender);
                 message.Decision = decision;
-                
+
                 bool allow = await ApplyDecision(decision, message);
                 if (!allow)
                     return PushResult.Success;
 
-                //if we have an option maximum wait duration for message, set it after message joined to the queue.
-                //time keeper will check this value and if message time is up, it will remove message from the queue.
-                if (Options.MessageTimeout > TimeSpan.Zero)
-                    message.Deadline = DateTime.UtcNow.Add(Options.MessageTimeout);
-
-                //if message doesn't have message id and "UseMessageId" option is enabled, create new message id for the message
-                if (Options.UseMessageId && string.IsNullOrEmpty(message.Message.MessageId))
-                    message.Message.SetMessageId(Channel.Server.MessageIdGenerator.Create());
-
-                switch (Status)
-                {
-                    //just send the message to receivers
-                    case QueueStatus.Route:
-                        held = message;
-                        await ProcessMessage(message);
-                        break;
-
-                    //keep the message in queue send send it to receivers
-                    //if there is no receiver, message will kept back in the queue
-                    case QueueStatus.Push:
-                        held = PullMessage(message);
-                        await ProcessMessage(held);
-                        break;
-
-                    //redirects message to consumers with round robin algorithm
-                    case QueueStatus.RoundRobin:
-                        held = PullMessage(message);
-                        ChannelClient cc = Channel.GetNextRRClient(ref _roundRobinIndex);
-                        if (cc != null)
-                            await ProcessMessage(held, cc);
-                        else
-                            PutMessageBack(held);
-                        break;
-
-                    //dont send the message, just put it to queue
-                    case QueueStatus.Pull:
-                    case QueueStatus.Paused:
-                        if (message.Message.HighPriority)
-                        {
-                            lock (HighPriorityLinkedList)
-                                HighPriorityLinkedList.AddLast(message);
-
-                            Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
-                        }
-                        else
-                        {
-                            lock (RegularLinkedList)
-                                RegularLinkedList.AddLast(message);
-
-                            Info.UpdateRegularMessageCount(RegularLinkedList.Count);
-                        }
-
-                        break;
-                }
+                return await State.Push(message, sender);
             }
             catch (Exception ex)
             {
                 Info.AddError();
                 try
                 {
-                    Decision decision = await DeliveryHandler.ExceptionThrown(this, held, ex);
-                    if (held != null)
+                    Decision decision = await DeliveryHandler.ExceptionThrown(this, State.ProcessingMessage, ex);
+                    if (State.ProcessingMessage != null)
                     {
-                        await ApplyDecision(decision, held);
+                        await ApplyDecision(decision, State.ProcessingMessage);
 
-                        if (decision.KeepMessage && !held.IsInQueue)
-                            PutMessageBack(held);
+                        if (decision.KeepMessage && !State.ProcessingMessage.IsInQueue)
+                            AddMessage(State.ProcessingMessage, false);
                     }
                 }
                 catch //if developer does wrong operation, we should not stop
@@ -517,189 +456,19 @@ namespace Twino.MQ.Queues
                 return;
 
             _triggering = true;
-            if (Status == QueueStatus.Push || Status == QueueStatus.RoundRobin)
-            {
-                if (HighPriorityLinkedList.Count > 0)
-                    await ProcessPendingMessages(HighPriorityLinkedList);
-
-                if (RegularLinkedList.Count > 0)
-                    await ProcessPendingMessages(RegularLinkedList);
-            }
-
+            await State.Trigger();
             _triggering = false;
         }
 
-        /// <summary>
-        /// Start to process all pending messages.
-        /// This method is called after a client is subscribed to the queue.
-        /// </summary>
-        private async Task ProcessPendingMessages(LinkedList<QueueMessage> list)
-        {
-            int max = list.Count;
-            for (int i = 0; i < max; i++)
-            {
-                QueueMessage message;
-                lock (list)
-                {
-                    if (list.Count == 0)
-                        return;
+        #endregion
 
-                    message = list.First.Value;
-                    list.RemoveFirst();
-                    message.IsInQueue = false;
-                }
-
-                try
-                {
-                    await ProcessMessage(message);
-                }
-                catch (Exception ex)
-                {
-                    Info.AddError();
-                    try
-                    {
-                        Decision decision = await DeliveryHandler.ExceptionThrown(this, message, ex);
-                        await ApplyDecision(decision, message);
-                    }
-                    catch //if developer does wrong operation, we should not stop
-                    {
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Searches receivers of the message and process the send operation
-        /// </summary>
-        private async Task ProcessMessage(QueueMessage message, ChannelClient singleClient = null)
-        {
-            //if we need acknowledge, we are sending this information to receivers that we require response
-            message.Message.AcknowledgeRequired = Options.RequestAcknowledge;
-
-            //if we need acknowledge from receiver, it has a deadline.
-            DateTime? deadline = null;
-            if (Options.RequestAcknowledge)
-                deadline = DateTime.UtcNow.Add(Options.AcknowledgeTimeout);
-
-            //find receivers. if single client assigned, create one-element list
-            List<ChannelClient> clients;
-            if (singleClient == null)
-                clients = Channel.ClientsClone;
-            else
-            {
-                clients = new List<ChannelClient>();
-                clients.Add(singleClient);
-            }
-
-            //if there are not receivers, complete send operation
-            if (clients.Count == 0)
-            {
-                if (Status == QueueStatus.Push || Status == QueueStatus.RoundRobin)
-                    PutMessageBack(message);
-                else
-                {
-                    Info.AddMessageRemove();
-                    _ = DeliveryHandler.MessageRemoved(this, message);
-                }
-
-                return;
-            }
-
-            //if to process next message is requires previous message acknowledge, wait here
-            if (Options.RequestAcknowledge && Options.WaitForAcknowledge)
-                await WaitForAcknowledge(message);
-
-            message.Decision = await DeliveryHandler.BeginSend(this, message);
-            if (!await ApplyDecision(message.Decision, message))
-                return;
-
-            //create prepared message data
-            byte[] messageData = await _writer.Create(message.Message);
-
-            Decision final = new Decision(false, false, false, DeliveryAcknowledgeDecision.None);
-            bool messageIsSent = false;
-
-            //to all receivers
-            foreach (ChannelClient client in clients)
-            {
-                //to only online receivers
-                if (!client.Client.IsConnected)
-                    continue;
-
-                //somehow if code comes here (it should not cuz of last "break" in this foreach, break
-                if (!message.Message.FirstAcquirer && Options.SendOnlyFirstAcquirer)
-                    break;
-
-                //call before send and check decision
-                Decision ccrd = await DeliveryHandler.CanConsumerReceive(this, message, client.Client);
-                final = CreateFinalDecision(final, ccrd);
-
-                if (!ccrd.Allow)
-                    continue;
-
-                //create delivery object
-                MessageDelivery delivery = new MessageDelivery(message, client, deadline);
-                delivery.FirstAcquirer = message.Message.FirstAcquirer;
-
-                //send the message
-                bool sent = client.Client.Send(messageData);
-
-                if (sent)
-                {
-                    messageIsSent = true;
-
-                    //adds the delivery to time keeper to check timing up
-                    _timeKeeper.AddAcknowledgeCheck(delivery);
-
-                    //set as sent, if message is sent to it's first acquirer,
-                    //set message first acquirer false and re-create byte array data of the message
-                    bool firstAcquirer = message.Message.FirstAcquirer;
-
-                    //mark message is sent
-                    delivery.MarkAsSent();
-
-                    //do after send operations for per message
-                    Info.AddDelivery();
-                    Decision d = await DeliveryHandler.ConsumerReceived(this, delivery, client.Client);
-                    final = CreateFinalDecision(final, d);
-
-                    //if we are sending to only first acquirer, break
-                    if (Options.SendOnlyFirstAcquirer && firstAcquirer)
-                        break;
-
-                    if (firstAcquirer && clients.Count > 1)
-                        messageData = await _writer.Create(message.Message);
-                }
-                else
-                {
-                    Decision d = await DeliveryHandler.ConsumerReceiveFailed(this, delivery, client.Client);
-                    final = CreateFinalDecision(final, d);
-                }
-            }
-
-            message.Decision = final;
-            if (!await ApplyDecision(final, message))
-                return;
-
-            //after all sending operations completed, calls implementation send completed method and complete the operation
-            if (messageIsSent)
-                Info.AddMessageSend();
-
-            message.Decision = await DeliveryHandler.EndSend(this, message);
-            await ApplyDecision(message.Decision, message);
-
-            if (message.Decision.Allow && !message.Decision.KeepMessage)
-            {
-                Info.AddMessageRemove();
-                _ = DeliveryHandler.MessageRemoved(this, message);
-            }
-        }
+        #region Decision
 
         /// <summary>
         /// Creates final decision from multiple decisions.
         /// Final decision has bests choices for each decision.
         /// </summary>
-        private static Decision CreateFinalDecision(Decision final, Decision decision)
+        internal static Decision CreateFinalDecision(Decision final, Decision decision)
         {
             bool allow = false;
             bool keep = false;
@@ -722,169 +491,6 @@ namespace Twino.MQ.Queues
                 ack = DeliveryAcknowledgeDecision.IfSaved;
 
             return new Decision(allow, save, keep, ack);
-        }
-
-        /// <summary>
-        /// Adds the message to the queue and pulls first message from the queue.
-        /// Usually first message equals message itself.
-        /// But sometimes, previous messages might be pending in the queue.
-        /// </summary>
-        private QueueMessage PullMessage(QueueMessage message)
-        {
-            QueueMessage held;
-            if (message.Message.HighPriority)
-            {
-                lock (HighPriorityLinkedList)
-                {
-                    //we don't need push and pull
-                    if (HighPriorityLinkedList.Count == 0)
-                    {
-                        message.IsInQueue = false;
-                        return message;
-                    }
-
-                    HighPriorityLinkedList.AddLast(message);
-                    message.IsInQueue = true;
-                    held = HighPriorityLinkedList.First.Value;
-                    HighPriorityLinkedList.RemoveFirst();
-                    Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
-                }
-            }
-            else
-            {
-                lock (RegularLinkedList)
-                {
-                    //we don't need push and pull
-                    if (RegularLinkedList.Count == 0)
-                    {
-                        message.IsInQueue = false;
-                        return message;
-                    }
-
-                    RegularLinkedList.AddLast(message);
-                    message.IsInQueue = true;
-                    held = RegularLinkedList.First.Value;
-                    RegularLinkedList.RemoveFirst();
-                    Info.UpdateRegularMessageCount(RegularLinkedList.Count);
-                }
-            }
-
-            if (held != null)
-                held.IsInQueue = false;
-
-            return held;
-        }
-
-        /// <summary>
-        /// Process pull request and sends queue message to requester as response
-        /// </summary>
-        private async Task ProcessPullMessage(ChannelClient requester, TmqMessage request, QueueMessage message)
-        {
-            //if we need acknowledge, we are sending this information to receivers that we require response
-            message.Message.AcknowledgeRequired = Options.RequestAcknowledge;
-
-            //if we need acknowledge from receiver, it has a deadline.
-            DateTime? deadline = null;
-            if (Options.RequestAcknowledge)
-                deadline = DateTime.UtcNow.Add(Options.AcknowledgeTimeout);
-
-            //if to process next message is requires previous message acknowledge, wait here
-            if (Options.RequestAcknowledge && Options.WaitForAcknowledge)
-                await WaitForAcknowledge(message);
-
-            message.Decision = await DeliveryHandler.BeginSend(this, message);
-            if (!await ApplyDecision(message.Decision, message))
-                return;
-
-            //if message is sent before and this is second client, skip the process
-            bool skip = !message.Message.FirstAcquirer && Options.SendOnlyFirstAcquirer;
-            if (skip)
-            {
-                if (!message.Decision.KeepMessage)
-                {
-                    Info.AddMessageRemove();
-                    _ = DeliveryHandler.MessageRemoved(this, message);
-                }
-
-                return;
-            }
-
-            //call before send and check decision
-            message.Decision = await DeliveryHandler.CanConsumerReceive(this, message, requester.Client);
-            if (!await ApplyDecision(message.Decision, message))
-                return;
-
-            //create delivery object
-            MessageDelivery delivery = new MessageDelivery(message, requester, deadline);
-            delivery.FirstAcquirer = message.Message.FirstAcquirer;
-
-            //change to response message, send, change back to channel message
-            string mid = message.Message.MessageId;
-            message.Message.SetMessageId(request.MessageId);
-            message.Message.Type = MessageType.Response;
-
-            bool sent = requester.Client.Send(message.Message);
-            message.Message.SetMessageId(mid);
-            message.Message.Type = MessageType.Channel;
-
-            if (sent)
-            {
-                _timeKeeper.AddAcknowledgeCheck(delivery);
-                delivery.MarkAsSent();
-
-                //do after send operations for per message
-                Info.AddDelivery();
-                message.Decision = await DeliveryHandler.ConsumerReceived(this, delivery, requester.Client);
-
-                //after all sending operations completed, calls implementation send completed method and complete the operation
-                Info.AddMessageSend();
-
-                if (!await ApplyDecision(message.Decision, message))
-                    return;
-            }
-            else
-            {
-                message.Decision = await DeliveryHandler.ConsumerReceiveFailed(this, delivery, requester.Client);
-                if (!await ApplyDecision(message.Decision, message))
-                    return;
-            }
-
-            message.Decision = await DeliveryHandler.EndSend(this, message);
-            await ApplyDecision(message.Decision, message);
-
-            if (message.Decision.Allow && !message.Decision.KeepMessage)
-            {
-                Info.AddMessageRemove();
-                _ = DeliveryHandler.MessageRemoved(this, message);
-            }
-        }
-
-        /// <summary>
-        /// If there is no available receiver when after a message is helded to send to receivers,
-        /// This methods puts the message back.
-        /// </summary>
-        private void PutMessageBack(QueueMessage message)
-        {
-            if (message.IsInQueue)
-                return;
-
-            if (message.Message.HighPriority)
-            {
-                lock (HighPriorityLinkedList)
-                    HighPriorityLinkedList.AddFirst(message);
-
-                Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
-            }
-
-            else
-            {
-                lock (RegularLinkedList)
-                    RegularLinkedList.AddFirst(message);
-
-                Info.UpdateRegularMessageCount(RegularLinkedList.Count);
-            }
-
-            message.IsInQueue = true;
         }
 
         /// <summary>
@@ -914,7 +520,7 @@ namespace Twino.MQ.Queues
             }
 
             if (decision.KeepMessage)
-                PutMessageBack(message);
+                AddMessage(message, false);
 
             else if (!decision.Allow)
             {
@@ -932,7 +538,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// When wait for acknowledge is active, this method locks the queue until acknowledge is received
         /// </summary>
-        private async Task WaitForAcknowledge(QueueMessage message)
+        internal async Task WaitForAcknowledge(QueueMessage message)
         {
             //if we will lock the queue until ack received, we must request ack
             if (!message.Message.AcknowledgeRequired)
@@ -962,7 +568,7 @@ namespace Twino.MQ.Queues
         /// </summary>
         internal async Task AcknowledgeDelivered(MqClient from, TmqMessage deliveryMessage)
         {
-            MessageDelivery delivery = _timeKeeper.FindDelivery(from, deliveryMessage.MessageId);
+            MessageDelivery delivery = TimeKeeper.FindDelivery(from, deliveryMessage.MessageId);
 
             if (delivery != null)
                 delivery.MarkAsAcknowledged();
