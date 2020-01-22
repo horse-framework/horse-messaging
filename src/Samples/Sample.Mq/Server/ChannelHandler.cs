@@ -38,10 +38,10 @@ namespace Sample.Mq.Server
             await Task.CompletedTask;
         }
 
-        public async Task<bool> OnQueueStatusChanged(ChannelQueue queue, QueueStatus from, QueueStatus to)
+        public async Task OnQueueStatusChanged(ChannelQueue queue, QueueStatus from, QueueStatus to)
         {
             Console.WriteLine($"{queue.Id} queue status changed from {from} to {to}");
-            return await Task.FromResult(true);
+            await Task.CompletedTask;
         }
     }
 }

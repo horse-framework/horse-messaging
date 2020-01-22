@@ -29,6 +29,11 @@ namespace Twino.MQ.Options
         public int QueueLimit { get; set; }
 
         /// <summary>
+        /// If true, channel will be destroyed when there are no messages in queues and there are no consumers available
+        /// </summary>
+        public bool DestroyWhenEmpty { get; set; }
+
+        /// <summary>
         /// Clones channel options from another options
         /// </summary>
         internal static ChannelOptions CloneFrom(ChannelOptions options)
@@ -47,7 +52,8 @@ namespace Twino.MQ.Options
                        SendOnlyFirstAcquirer = options.SendOnlyFirstAcquirer,
                        MessageLimit = options.MessageLimit,
                        ClientLimit = options.ClientLimit,
-                       QueueLimit = options.QueueLimit
+                       QueueLimit = options.QueueLimit,
+                       DestroyWhenEmpty = options.DestroyWhenEmpty 
                    };
         }
     }

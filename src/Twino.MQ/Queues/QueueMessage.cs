@@ -57,12 +57,6 @@ namespace Twino.MQ.Queues
         public bool IsTimedOut { get; internal set; }
 
         /// <summary>
-        /// True, if message is first in queue.
-        /// If first operation skipped, or remove is skipped, message will be still in the queue but this value will be false. 
-        /// </summary>
-        public bool IsFirstQueue { get; set; }
-        
-        /// <summary>
         /// Last decision for the message
         /// </summary>
         public Decision Decision { get; set; }

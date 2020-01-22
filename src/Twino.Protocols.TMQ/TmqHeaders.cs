@@ -96,6 +96,11 @@ namespace Twino.Protocols.TMQ
         public const string ALLOW_MULTIPLE_QUEUES = "Allow-Multiple-Queues";
 
         /// <summary>
+        /// "Destroy-When-Empty"
+        /// </summary>
+        public const string DESTROY_WHEN_EMPTY = "Destroy-When-Empty";
+
+        /// <summary>
         /// "Client-Limit"
         /// </summary>
         public const string CLIENT_LIMIT = "Client-Limit";

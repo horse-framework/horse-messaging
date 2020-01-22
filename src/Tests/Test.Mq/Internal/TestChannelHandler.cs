@@ -38,10 +38,10 @@ namespace Test.Mq.Internal
             await Task.CompletedTask;
         }
 
-        public async Task<bool> OnQueueStatusChanged(ChannelQueue queue, QueueStatus @from, QueueStatus to)
+        public async Task OnQueueStatusChanged(ChannelQueue queue, QueueStatus @from, QueueStatus to)
         {
             _server.OnQueueStatusChanged++;
-            return await Task.FromResult(true);
+            await Task.CompletedTask;
         }
 
         public async Task OnChannelRemoved(Channel channel)

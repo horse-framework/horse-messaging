@@ -32,13 +32,18 @@ namespace Twino.Client.TMQ
         /// Maximum client limit of the channel.
         /// Zero is unlimited
         /// </summary>
-        public int ClientLimit { get; set; }
+        public int? ClientLimit { get; set; }
 
         /// <summary>
         /// Maximum queue limit of the channel.
         /// Zero is unlimited
         /// </summary>
-        public int QueueLimit { get; set; }
+        public int? QueueLimit { get; set; }
+
+        /// <summary>
+        /// If true, channel will be destroyed when there are no messages in queues and there are no consumers available
+        /// </summary>
+        public bool? DestroyWhenEmpty { get; set; }
 
         /// <summary>
         /// Serializes channel creation options to key-value lines (HTTP Request like)
@@ -53,11 +58,14 @@ namespace Twino.Client.TMQ
             if (AllowMultipleQueues.HasValue)
                 builder.Append(Line(TmqHeaders.ALLOW_MULTIPLE_QUEUES, AllowMultipleQueues.Value));
 
-            if (ClientLimit > 0)
-                builder.Append(Line(TmqHeaders.CLIENT_LIMIT, ClientLimit.ToString()));
+            if (DestroyWhenEmpty.HasValue)
+                builder.Append(Line(TmqHeaders.DESTROY_WHEN_EMPTY, DestroyWhenEmpty.Value));
 
-            if (QueueLimit > 0)
-                builder.Append(Line(TmqHeaders.QUEUE_LIMIT, QueueLimit.ToString()));
+            if (ClientLimit.HasValue)
+                builder.Append(Line(TmqHeaders.CLIENT_LIMIT, ClientLimit.Value.ToString()));
+
+            if (QueueLimit.HasValue)
+                builder.Append(Line(TmqHeaders.QUEUE_LIMIT, QueueLimit.Value.ToString()));
 
             if (AllowedQueues != null)
             {

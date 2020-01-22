@@ -69,10 +69,8 @@ namespace Twino.Core
                 }
 
                 if (DateTime.UtcNow - LastAliveDate > PingInterval)
-                {
-                    LastAliveDate = DateTime.UtcNow;
                     Ping();
-                }
+                
             }, null, 5000, 5000);
         }
 
@@ -94,7 +92,7 @@ namespace Twino.Core
         protected override void OnConnected()
         {
             CreatePingTimer();
-            LastAliveDate = DateTime.UtcNow;
+            KeepAlive();
 
             base.OnConnected();
         }

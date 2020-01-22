@@ -10,6 +10,8 @@ namespace Twino.MQ.Queues
     /// </summary>
     public class NetworkOptionsBuilder
     {
+        #region Properties
+
         /// <summary>
         /// Queue content type
         /// </summary>
@@ -56,6 +58,29 @@ namespace Twino.MQ.Queues
         public QueueStatus? Status { get; set; }
 
         /// <summary>
+        /// Maximum message limit of the queue
+        /// Zero is unlimited
+        /// </summary>
+        public int? MessageLimit { get; set; }
+
+        /// <summary>
+        /// Maximum client limit of the channel
+        /// Zero is unlimited
+        /// </summary>
+        public int? ClientLimit { get; set; }
+
+        /// <summary>
+        /// Maximum queue limit of the channel
+        /// Zero is unlimited
+        /// </summary>
+        public int? QueueLimit { get; set; }
+
+        /// <summary>
+        /// If true, channel will be destroyed when there are no messages in queues and there are no consumers available
+        /// </summary>
+        public bool? DestroyWhenEmpty { get; set; }
+
+        /// <summary>
         /// Registry key for message delivery handler
         /// </summary>
         public string MessageDeliveryHandler { get; set; }
@@ -79,6 +104,10 @@ namespace Twino.MQ.Queues
         /// Allowed queues for channel
         /// </summary>
         public ushort[] AllowedQueues { get; set; }
+
+        #endregion
+
+        #region Serialization
 
         /// <summary>
         /// Serializes options and creates key value pair
@@ -127,6 +156,18 @@ namespace Twino.MQ.Queues
 
                 builder.Append(Line(TmqHeaders.ALLOWED_QUEUES, list));
             }
+
+            if (DestroyWhenEmpty.HasValue)
+                builder.Append(Line(TmqHeaders.DESTROY_WHEN_EMPTY, DestroyWhenEmpty.Value));
+
+            if (MessageLimit.HasValue)
+                builder.Append(Line(TmqHeaders.MESSAGE_LIMIT, MessageLimit.Value.ToString()));
+
+            if (ClientLimit.HasValue)
+                builder.Append(Line(TmqHeaders.CLIENT_LIMIT, ClientLimit.Value.ToString()));
+
+            if (QueueLimit.HasValue)
+                builder.Append(Line(TmqHeaders.QUEUE_LIMIT, QueueLimit.Value.ToString()));
 
             if (!string.IsNullOrEmpty(MessageDeliveryHandler))
                 builder.Append(Line(TmqHeaders.MESSAGE_DELIVERY_HANDLER, MessageDeliveryHandler));
@@ -187,6 +228,18 @@ namespace Twino.MQ.Queues
                         AllowedQueues[i] = Convert.ToUInt16(spx[i]);
                 }
 
+                if (key.Equals(TmqHeaders.DESTROY_WHEN_EMPTY, StringComparison.InvariantCultureIgnoreCase))
+                    DestroyWhenEmpty = value == "1" || value == "true";
+
+                if (key.Equals(TmqHeaders.MESSAGE_LIMIT, StringComparison.InvariantCultureIgnoreCase))
+                    MessageLimit = Convert.ToInt32(value);
+
+                if (key.Equals(TmqHeaders.CLIENT_LIMIT, StringComparison.InvariantCultureIgnoreCase))
+                    ClientLimit = Convert.ToInt32(value);
+
+                if (key.Equals(TmqHeaders.QUEUE_LIMIT, StringComparison.InvariantCultureIgnoreCase))
+                    QueueLimit = Convert.ToInt32(value);
+
                 if (key.Equals(TmqHeaders.MESSAGE_DELIVERY_HANDLER, StringComparison.InvariantCultureIgnoreCase))
                     MessageDeliveryHandler = value;
 
@@ -235,6 +288,10 @@ namespace Twino.MQ.Queues
             }
         }
 
+        #endregion
+
+        #region Apply
+
         /// <summary>
         /// Applies non-null values to channel queue options
         /// </summary>
@@ -279,6 +336,10 @@ namespace Twino.MQ.Queues
                 target.AllowedQueues = AllowedQueues;
         }
 
+        #endregion
+
+        #region Helpers
+
         /// <summary>
         /// Creates new key value line from boolean value.
         /// Value is stored as 0 or 1
@@ -305,5 +366,7 @@ namespace Twino.MQ.Queues
             int ms = Convert.ToInt32(value.TotalMilliseconds.ToString());
             return key + ": " + ms + "\r\n";
         }
+
+        #endregion
     }
 }
