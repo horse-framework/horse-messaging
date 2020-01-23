@@ -147,26 +147,34 @@ namespace Twino.Protocols.TMQ.Models
         [JsonProperty("removedMsgs")]
         [JsonPropertyName("removedMsgs")]
         public long RemovedMessages { get; set; }
-        
+
         /// <summary>
         /// Total error count
         /// </summary>
         [JsonProperty("errors")]
         [JsonPropertyName("errors")]
         public long Errors { get; set; }
-        
+
         /// <summary>
         /// Last message receive date in UNIX milliseconds
         /// </summary>
         [JsonProperty("lastMsgReceived")]
         [JsonPropertyName("lastMsgReceived")]
         public long LastMessageReceived { get; set; }
-        
+
         /// <summary>
         /// Last message send date in UNIX milliseconds
         /// </summary>
         [JsonProperty("lastMsgSent")]
         [JsonPropertyName("lastMsgSent")]
         public long LastMessageSent { get; set; }
+
+        /// <summary>
+        /// Maximum message limit of the queue
+        /// Zero is unlimited
+        /// </summary>
+        [JsonProperty("messageLimit")]
+        [JsonPropertyName("messageLimit")]
+        public int MessageLimit { get; set; }
     }
 }
