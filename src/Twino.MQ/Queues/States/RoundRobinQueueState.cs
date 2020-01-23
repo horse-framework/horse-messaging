@@ -94,7 +94,7 @@ namespace Twino.MQ.Queues.States
             PushResult result = await ProcessMessage(held, cc);
             ProcessingMessage = null;
 
-            await Trigger();
+            await _queue.Trigger();
 
             return result;
         }
