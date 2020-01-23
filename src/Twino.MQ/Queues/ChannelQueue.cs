@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
@@ -85,7 +84,12 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Wait acknowledge cross thread locker
         /// </summary>
-        private SemaphoreSlim _semaphore;
+        private SemaphoreSlim _ackSemaphore;
+
+        /// <summary>
+        /// Pushing messages cross thread locker
+        /// </summary>
+        private SemaphoreSlim _pushSemaphore = new SemaphoreSlim(1, 1);
 
         /// <summary>
         /// This task holds the code until acknowledge is received
@@ -118,7 +122,7 @@ namespace Twino.MQ.Queues
             TimeKeeper.Run();
 
             if (options.WaitForAcknowledge)
-                _semaphore = new SemaphoreSlim(1, 1);
+                _ackSemaphore = new SemaphoreSlim(1, 1);
         }
 
         /// <summary>
@@ -134,10 +138,16 @@ namespace Twino.MQ.Queues
             lock (RegularLinkedList)
                 RegularLinkedList.Clear();
 
-            if (_semaphore != null)
+            if (_ackSemaphore != null)
             {
-                _semaphore.Dispose();
-                _semaphore = null;
+                _ackSemaphore.Dispose();
+                _ackSemaphore = null;
+            }
+
+            if (_pushSemaphore != null)
+            {
+                _pushSemaphore.Dispose();
+                _pushSemaphore = null;
             }
         }
 
@@ -330,7 +340,7 @@ namespace Twino.MQ.Queues
         {
             return HighPriorityLinkedList.Count == 0 && RegularLinkedList.Count == 0;
         }
-        
+
         #endregion
 
         #region Status Actions
@@ -435,7 +445,15 @@ namespace Twino.MQ.Queues
                 if (!allow)
                     return PushResult.Success;
 
-                return await State.Push(message, sender);
+                await _pushSemaphore.WaitAsync();
+                try
+                {
+                    return await State.Push(message, sender);
+                }
+                finally
+                {
+                    _pushSemaphore.Release();
+                }
             }
             catch (Exception ex)
             {
@@ -566,10 +584,10 @@ namespace Twino.MQ.Queues
                 return;
 
             //lock the object, because pending ack message should be queued
-            if (_semaphore == null)
-                _semaphore = new SemaphoreSlim(1, 1);
+            if (_ackSemaphore == null)
+                _ackSemaphore = new SemaphoreSlim(1, 1);
 
-            await _semaphore.WaitAsync();
+            await _ackSemaphore.WaitAsync();
             try
             {
                 bool received = await _acknowledgeCallback.Task;
@@ -577,7 +595,7 @@ namespace Twino.MQ.Queues
             }
             finally
             {
-                _semaphore.Release();
+                _ackSemaphore.Release();
             }
         }
 
