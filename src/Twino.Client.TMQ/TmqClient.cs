@@ -553,6 +553,28 @@ namespace Twino.Client.TMQ
             return await SendAsync(message);
         }
 
+        /// <summary>
+        /// Sends a message, waits response and deserializes JSON response to T template type
+        /// </summary>
+        public async Task<T> SendAndGetJson<T>(TmqMessage message)
+        {
+            message.ResponseRequired = true;
+            
+            if (string.IsNullOrEmpty(message.MessageId))
+                message.SetMessageId(UniqueIdGenerator.Create());
+
+            Task<TmqMessage> task = _follower.FollowResponse(message);
+            bool sent = await SendAsync(message);
+            if (!sent)
+                return default;
+
+            TmqMessage response = await task;
+            if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
+                return default;
+
+            return await response.GetJsonContent<T>();
+        }
+
         #endregion
 
         #region Send By
@@ -929,53 +951,6 @@ namespace Twino.Client.TMQ
             return await WaitResponseOk(message, verifyResponse);
         }
 
-        /// <summary>
-        /// Finds the channel and gets information if exists
-        /// </summary>
-        public async Task<ChannelInformation> GetChannelInfo(string name)
-        {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ResponseRequired = true;
-            message.ContentType = KnownContentTypes.ChannelInformation;
-            message.SetTarget(name);
-            message.SetMessageId(UniqueIdGenerator.Create());
-
-            Task<TmqMessage> task = _follower.FollowResponse(message);
-            bool sent = await SendAsync(message);
-            if (!sent)
-                return null;
-
-            TmqMessage response = await task;
-            if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
-                return default;
-
-            return await response.GetJsonContent<ChannelInformation>();
-        }
-
-        /// <summary>
-        /// Gets all channels in server
-        /// </summary>
-        public async Task<List<ChannelInformation>> GetChannels()
-        {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ResponseRequired = true;
-            message.ContentType = KnownContentTypes.ChannelList;
-            message.SetMessageId(UniqueIdGenerator.Create());
-
-            Task<TmqMessage> task = _follower.FollowResponse(message);
-            bool sent = await SendAsync(message);
-            if (!sent)
-                return null;
-
-            TmqMessage response = await task;
-            if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
-                return default;
-
-            return await response.GetJsonContent<List<ChannelInformation>>();
-        }
-
         #endregion
 
         #region Queue
@@ -1041,82 +1016,6 @@ namespace Twino.Client.TMQ
             message.Content = new MemoryStream(Encoding.UTF8.GetBytes(options.Serialize(queueId)));
 
             return await WaitResponseOk(message, true);
-        }
-
-        /// <summary>
-        /// Finds all queues in channel
-        /// </summary>
-        public async Task<List<QueueInformation>> GetQueues(string channel)
-        {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ResponseRequired = true;
-            message.ContentType = KnownContentTypes.QueueList;
-            message.SetTarget(channel);
-            message.SetMessageId(UniqueIdGenerator.Create());
-
-            Task<TmqMessage> task = _follower.FollowResponse(message);
-            bool sent = await SendAsync(message);
-            if (!sent)
-                return null;
-
-            TmqMessage response = await task;
-            if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
-                return default;
-
-            return await response.GetJsonContent<List<QueueInformation>>();
-        }
-
-        /// <summary>
-        /// Finds the queue and gets information if exists
-        /// </summary>
-        public async Task<QueueInformation> GetQueueInfo(string channel, ushort id)
-        {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ResponseRequired = true;
-            message.ContentType = KnownContentTypes.QueueInformation;
-            message.SetTarget(channel);
-            message.SetMessageId(UniqueIdGenerator.Create());
-            message.Content = new MemoryStream(BitConverter.GetBytes(id));
-
-            Task<TmqMessage> task = _follower.FollowResponse(message);
-            bool sent = await SendAsync(message);
-            if (!sent)
-                return null;
-
-            TmqMessage response = await task;
-            if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
-                return default;
-
-            return await response.GetJsonContent<QueueInformation>();
-        }
-
-        #endregion
-
-        #region Instance
-
-        /// <summary>
-        /// Gets all instances connected to server
-        /// </summary>
-        public async Task<List<InstanceInformation>> GetInstances()
-        {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ResponseRequired = true;
-            message.ContentType = KnownContentTypes.InstanceList;
-            message.SetMessageId(UniqueIdGenerator.Create());
-
-            Task<TmqMessage> task = _follower.FollowResponse(message);
-            bool sent = await SendAsync(message);
-            if (!sent)
-                return null;
-
-            TmqMessage response = await task;
-            if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
-                return default;
-
-            return await response.GetJsonContent<List<InstanceInformation>>();
         }
 
         #endregion

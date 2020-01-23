@@ -48,6 +48,7 @@ namespace Twino.Client.TMQ
             Source = new TaskCompletionSource<bool>();
         }
 
+        /// <inheritdoc />
         public override void Set(object value)
         {
             Source.SetResult(value != null);
@@ -66,6 +67,7 @@ namespace Twino.Client.TMQ
             Source = new TaskCompletionSource<TmqMessage>();
         }
 
+        /// <inheritdoc />
         public override void Set(object value)
         {
             if (value == null)

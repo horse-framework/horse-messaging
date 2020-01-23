@@ -42,9 +42,7 @@ namespace Twino.Client.TMQ.Connectors
             _reader = new MessageReader(serailizationAction);
         }
 
-        /// <summary>
-        /// Called when a message is received from server
-        /// </summary>
+        /// <inheritdoc />
         protected override void ClientMessageReceived(ClientSocketBase<TmqMessage> client, TmqMessage payload)
         {
             base.ClientMessageReceived(client, payload);
