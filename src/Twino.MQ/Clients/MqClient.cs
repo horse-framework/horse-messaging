@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,12 +32,12 @@ namespace Twino.MQ.Clients
 
         /// <summary>
         /// Client's unique id.
-        /// If it's null or empty, server will create new unique id for the client.
+        /// If it's null or empty, server will create new unique id for the client
         /// </summary>
         public string UniqueId { get; internal set; }
 
         /// <summary>
-        /// Client name.
+        /// Client name
         /// </summary>
         public string Name { get; internal set; }
 
@@ -67,6 +68,11 @@ namespace Twino.MQ.Clients
         /// Messaging queue server
         /// </summary>
         public MqServer MqServer { get; }
+
+        /// <summary>
+        /// The time instance created
+        /// </summary>
+        public DateTime ConnectedDate { get; } = DateTime.UtcNow;
 
         #endregion
 

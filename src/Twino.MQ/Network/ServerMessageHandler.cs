@@ -297,9 +297,9 @@ namespace Twino.MQ.Network
                     continue;
 
                 //authenticate for channel
-                if (_server.DefaultChannelAuthenticator != null)
+                if (_server.Authorization != null)
                 {
-                    bool grant = await _server.DefaultChannelAuthenticator.Authenticate(channel, client);
+                    bool grant = await _server.Authorization.CanReceiveChannelInfo(client, channel);
                     if (!grant)
                         continue;
                 }
@@ -341,14 +341,11 @@ namespace Twino.MQ.Network
             }
 
             //authenticate for channel
-            if (_server.DefaultChannelAuthenticator != null)
+            if (_server.Authorization != null)
             {
-                bool grant = await _server.DefaultChannelAuthenticator.Authenticate(channel, client);
+                bool grant = await _server.Authorization.CanReceiveChannelInfo(client, channel);
                 if (!grant)
-                {
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
                     return;
-                }
             }
 
             ChannelInformation information = new ChannelInformation
@@ -371,6 +368,53 @@ namespace Twino.MQ.Network
             TmqMessage response = message.CreateResponse();
             message.ContentType = KnownContentTypes.ChannelInformation;
             await response.SetJsonContent(information);
+            await client.SendAsync(response);
+        }
+
+        /// <summary>
+        /// Gets active consumers of channel 
+        /// </summary>
+        public async Task GetChannelConsumers(MqClient client, TmqMessage message)
+        {
+            Channel channel = _server.FindChannel(message.Target);
+
+            //if auto creation active, try to create channel
+            if (channel == null && _server.Options.AutoChannelCreation)
+                channel = _server.FindOrCreateChannel(message.Target);
+
+            if (channel == null)
+            {
+                if (message.ResponseRequired)
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+
+                return;
+            }
+
+            if (_server.Authorization != null)
+            {
+                bool grant = await _server.Authorization.CanReceiveChannelConsumers(client, channel);
+                if (!grant)
+                {
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                    return;
+                }
+            }
+            
+            List<ClientInformation> list = new List<ClientInformation>();
+            
+            foreach (ChannelClient cc in channel.ClientsClone)
+                list.Add(new ClientInformation
+                         {
+                             Id = cc.Client.UniqueId,
+                             Name = cc.Client.Name,
+                             Type = cc.Client.Type,
+                             IsAuthenticated = cc.Client.IsAuthenticated,
+                             Online = cc.JoinDate.LifetimeMilliseconds(),
+                         });
+
+            TmqMessage response = message.CreateResponse();
+            message.ContentType = KnownContentTypes.ChannelConsumers;
+            await response.SetJsonContent(list);
             await client.SendAsync(response);
         }
 
@@ -547,14 +591,11 @@ namespace Twino.MQ.Network
             }
 
             //authenticate for channel
-            if (_server.DefaultChannelAuthenticator != null)
+            if (_server.Authorization != null)
             {
-                bool grant = await _server.DefaultChannelAuthenticator.Authenticate(channel, client);
+                bool grant = await _server.Authorization.CanReceiveChannelQueues(client, channel);
                 if (!grant)
-                {
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
                     return;
-                }
             }
 
             List<QueueInformation> list = new List<QueueInformation>();
@@ -610,14 +651,11 @@ namespace Twino.MQ.Network
             }
 
             //authenticate for channel
-            if (_server.DefaultChannelAuthenticator != null)
+            if (_server.Authorization != null)
             {
-                bool grant = await _server.DefaultChannelAuthenticator.Authenticate(channel, client);
+                bool grant = await _server.Authorization.CanReceiveChannelQueues(client, channel);
                 if (!grant)
-                {
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
                     return;
-                }
             }
 
             byte[] bytes = new byte[2];
@@ -664,6 +702,8 @@ namespace Twino.MQ.Network
         }
 
         #endregion
+
+        #region Instance
 
         /// <summary>
         /// Gets connected instance list
@@ -719,5 +759,44 @@ namespace Twino.MQ.Network
             await response.SetJsonContent(list);
             await client.SendAsync(response);
         }
+
+        #endregion
+
+        #region Client
+
+        /// <summary>
+        /// Gets all connected clients
+        /// </summary>
+        public async Task GetClients(MqClient client, TmqMessage message)
+        {
+            if (_server.Authorization != null)
+            {
+                bool grant = await _server.Authorization.CanReceiveClients(client);
+                if (!grant)
+                {
+                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                    return;
+                }
+            }
+
+            List<ClientInformation> list = new List<ClientInformation>();
+
+            foreach (MqClient mc in _server.Clients)
+                list.Add(new ClientInformation
+                         {
+                             Id = mc.UniqueId,
+                             Name = mc.Name,
+                             Type = mc.Type,
+                             IsAuthenticated = mc.IsAuthenticated,
+                             Online = mc.ConnectedDate.LifetimeMilliseconds(),
+                         });
+
+            TmqMessage response = message.CreateResponse();
+            message.ContentType = KnownContentTypes.ClientList;
+            await response.SetJsonContent(list);
+            await client.SendAsync(response);
+        }
+
+        #endregion
     }
 }

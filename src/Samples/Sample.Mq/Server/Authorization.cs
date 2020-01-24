@@ -62,5 +62,25 @@ namespace Sample.Mq.Server
         {
             return await Task.FromResult(true);
         }
+
+        public async Task<bool> CanReceiveClients(MqClient client)
+        {
+            return await Task.FromResult(true);
+        }
+
+        public async Task<bool> CanReceiveChannelInfo(MqClient client, Channel channel)
+        {
+            return await Task.FromResult(true);
+        }
+
+        public async Task<bool> CanReceiveChannelConsumers(MqClient client, Channel channel)
+        {
+            return await Task.FromResult(true);
+        }
+
+        public async Task<bool> CanReceiveChannelQueues(MqClient client, Channel channel)
+        {
+            return await Task.FromResult(true);
+        }
     }
 }
