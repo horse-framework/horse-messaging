@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Timers;
 using Twino.Core;
 
 namespace Twino.Client.Connectors
@@ -62,7 +61,7 @@ namespace Twino.Client.Connectors
         /// <summary>
         /// Failed messages cleanup timer
         /// </summary>
-        private readonly Timer _messageTimer;
+        private readonly ThreadTimer _messageTimer;
 
         /// <summary>
         /// True when failed message processing is started until it finished.
@@ -84,16 +83,14 @@ namespace Twino.Client.Connectors
 
             Connected += AbsoluteConnector_Connected;
 
-            _messageTimer = new Timer(500);
-            _messageTimer.Elapsed += MessageTimerElapsed;
-            _messageTimer.AutoReset = true;
+            _messageTimer = new ThreadTimer(MessageTimerElapsed, TimeSpan.FromMilliseconds(500));
             _messageTimer.Start();
         }
 
         /// <summary>
         /// With this timer, failed messages is proceed
         /// </summary>
-        private void MessageTimerElapsed(object sender, ElapsedEventArgs e)
+        private void MessageTimerElapsed()
         {
             if (_messagesProcessing || _failedMessages.Count == 0)
                 return;

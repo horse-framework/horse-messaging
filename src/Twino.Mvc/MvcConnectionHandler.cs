@@ -217,7 +217,7 @@ namespace Twino.Mvc
             }
             else
             {
-                TaskCompletionSource<bool> source = new TaskCompletionSource<bool>();
+                TaskCompletionSource<bool> source = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
                 ThreadPool.QueueUserWorkItem(async t =>
                 {
                     try

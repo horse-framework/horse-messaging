@@ -23,7 +23,7 @@ namespace Twino.Server
         /// <summary>
         /// timeout timer
         /// </summary>
-        private Timer _timer;
+        private ThreadTimer _timer;
         
         /// <summary>
         /// clients' timeout total milliseconds
@@ -33,7 +33,7 @@ namespace Twino.Server
         /// <summary>
         /// timer interval
         /// </summary>
-        private readonly int _tickInterval;
+        private readonly TimeSpan _tickInterval;
 
         /// <summary>
         /// Creates new timeout handler with specified timeout milliseconds and check timer interval
@@ -41,7 +41,7 @@ namespace Twino.Server
         internal TimeoutHandler(int timeoutMilliseconds, int tickInterval)
         {
             _timeoutMilliseconds = timeoutMilliseconds;
-            _tickInterval = tickInterval;
+            _tickInterval = TimeSpan.FromMilliseconds(tickInterval);
         }
 
         /// <summary>
@@ -49,16 +49,8 @@ namespace Twino.Server
         /// </summary>
         internal void Start()
         {
-            _timer = new Timer(state =>
-            {
-                try
-                {
-                    Tick();
-                }
-                catch
-                {
-                }
-            }, null, _tickInterval, _tickInterval);
+            _timer = new ThreadTimer(Tick, _tickInterval);
+            _timer.Start();
         }
 
         /// <summary>
@@ -66,7 +58,7 @@ namespace Twino.Server
         /// </summary>
         internal void Stop()
         {
-            _timer.Dispose();
+            _timer.Stop();
             _timer = null;
         }
 

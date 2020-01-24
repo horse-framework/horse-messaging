@@ -45,7 +45,7 @@ namespace Twino.Client.TMQ
 
         public AcknowledgeMessageDescriptor(TmqMessage message, DateTime expiration) : base(message, expiration)
         {
-            Source = new TaskCompletionSource<bool>();
+            Source = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
         /// <inheritdoc />
@@ -64,7 +64,7 @@ namespace Twino.Client.TMQ
 
         public ResponseMessageDescriptor(TmqMessage message, DateTime expiration) : base(message, expiration)
         {
-            Source = new TaskCompletionSource<TmqMessage>();
+            Source = new TaskCompletionSource<TmqMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
         /// <inheritdoc />

@@ -1,7 +1,6 @@
 using System;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Twino.Core
@@ -43,7 +42,7 @@ namespace Twino.Core
         /// If client is working on passive mode,
         /// we will need to send ping messages to recognize if it's disconnected or just server is not sending messages
         /// </summary>
-        private Timer _pingTimer;
+        private ThreadTimer _pingTimer;
 
         #endregion
 
@@ -60,7 +59,7 @@ namespace Twino.Core
             if (PingInterval == TimeSpan.Zero)
                 return;
 
-            _pingTimer = new Timer(s =>
+            _pingTimer = new ThreadTimer(() =>
             {
                 if (!IsConnected)
                 {
@@ -71,7 +70,8 @@ namespace Twino.Core
                 if (DateTime.UtcNow - LastAliveDate > PingInterval)
                     Ping();
                 
-            }, null, 5000, 5000);
+            }, TimeSpan.FromMilliseconds(5000));
+            _pingTimer.Start();
         }
 
         /// <summary>
@@ -82,7 +82,7 @@ namespace Twino.Core
             if (_pingTimer == null)
                 return;
 
-            _pingTimer.Dispose();
+            _pingTimer.Stop();
             _pingTimer = null;
         }
 
