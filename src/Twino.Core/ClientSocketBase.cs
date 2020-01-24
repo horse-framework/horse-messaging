@@ -1,6 +1,7 @@
 using System;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Twino.Core
@@ -71,7 +72,8 @@ namespace Twino.Core
                     Ping();
                 
             }, TimeSpan.FromMilliseconds(5000));
-            _pingTimer.Start();
+            
+            _pingTimer.Start(ThreadPriority.Lowest);
         }
 
         /// <summary>

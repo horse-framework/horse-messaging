@@ -4,19 +4,44 @@ using System.Threading;
 
 namespace Twino.Core
 {
+    /// <summary>
+    /// Thread timer exception handler
+    /// </summary>
     public delegate void TimerExceptionHandler(ThreadTimer sender, Exception exception);
 
+    /// <summary>
+    /// Thread based timer
+    /// </summary>
     public class ThreadTimer
     {
+        /// <summary>
+        /// Triggered when an exception is thrown inside of timer elapse
+        /// </summary>
         public event TimerExceptionHandler OnException;
 
+        /// <summary>
+        /// If true, next tick waits previous if it's execution time is longer than interval duration.
+        /// Default is true
+        /// </summary>
         public bool WaitTickCompletion { get; set; } = true;
+
+        /// <summary>
+        /// True, if timer is running
+        /// </summary>
         public bool IsRunning { get; private set; }
+
+        /// <summary>
+        /// Timer elapse interval
+        /// </summary>
         public TimeSpan Interval { get; }
 
         private Thread _thread;
         private readonly Action _action;
+        private object _locker = new object();
 
+        /// <summary>
+        /// Created new thread-based timer
+        /// </summary>
         public ThreadTimer(Action action, TimeSpan interval)
         {
             Interval = interval;
@@ -24,15 +49,21 @@ namespace Twino.Core
         }
 
         /// <summary>
-        /// 
+        /// Starts the timer
         /// </summary>
-        /// <exception cref="InvalidOperationException"></exception>
-        public void Start()
+        /// <exception cref="InvalidOperationException">Thrown if timer is already started</exception>
+        public void Start(ThreadPriority priority = ThreadPriority.Normal)
         {
             if (_thread != null)
                 throw new InvalidOperationException("Timer is already running");
 
-            IsRunning = true;
+            lock (_locker)
+            {
+                if (IsRunning)
+                    throw new InvalidOperationException("Timer is already running");
+
+                IsRunning = true;
+            }
 
             _thread = new Thread(() =>
             {
@@ -64,16 +95,25 @@ namespace Twino.Core
             });
 
             _thread.IsBackground = true;
+            _thread.Priority = priority;
             _thread.Start();
         }
 
+        /// <summary>
+        /// Stop the timer and disposes all sources
+        /// </summary>
         public void Stop()
         {
-            IsRunning = false;
+            lock (_locker)
+                IsRunning = false;
+            
             _thread.Abort();
             _thread = null;
         }
 
+        /// <summary>
+        /// Executes action in safe and triggers exception event, if an exception is thrown
+        /// </summary>
         private void Execute()
         {
             try

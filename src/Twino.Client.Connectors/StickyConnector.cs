@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using Twino.Core;
 
 namespace Twino.Client.Connectors
@@ -70,7 +71,8 @@ namespace Twino.Client.Connectors
                     }
                 }
             }, Interval);
-            _timer.Start();
+            
+            _timer.Start(ThreadPriority.BelowNormal);
         }
 
         /// <summary>

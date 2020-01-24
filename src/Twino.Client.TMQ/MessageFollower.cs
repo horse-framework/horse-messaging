@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Protocols.TMQ;
@@ -43,7 +44,7 @@ namespace Twino.Client.TMQ
         public void Run()
         {
             _timer = new ThreadTimer(CheckExpirations, TimeSpan.FromMilliseconds(1000));
-            _timer.Start();
+            _timer.Start(ThreadPriority.BelowNormal);
         }
 
         /// <summary>

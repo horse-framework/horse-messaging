@@ -51,7 +51,7 @@ namespace Twino.Server
         public void Start()
         {
             _timer = new ThreadTimer(Tick, TIMER_INTERVAL);
-            _timer.Start();
+            _timer.Start(ThreadPriority.Lowest);
         }
 
         /// <summary>

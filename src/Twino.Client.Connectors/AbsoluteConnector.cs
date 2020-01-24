@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using Twino.Core;
 
 namespace Twino.Client.Connectors
@@ -84,7 +85,7 @@ namespace Twino.Client.Connectors
             Connected += AbsoluteConnector_Connected;
 
             _messageTimer = new ThreadTimer(MessageTimerElapsed, TimeSpan.FromMilliseconds(500));
-            _messageTimer.Start();
+            _messageTimer.Start(ThreadPriority.Normal);
         }
 
         /// <summary>

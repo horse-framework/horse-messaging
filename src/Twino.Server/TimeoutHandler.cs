@@ -50,7 +50,7 @@ namespace Twino.Server
         internal void Start()
         {
             _timer = new ThreadTimer(Tick, _tickInterval);
-            _timer.Start();
+            _timer.Start(ThreadPriority.Lowest);
         }
 
         /// <summary>
