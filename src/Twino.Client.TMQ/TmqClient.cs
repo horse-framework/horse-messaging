@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -9,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Protocols.TMQ;
-using Twino.Protocols.TMQ.Models;
 
 namespace Twino.Client.TMQ
 {
@@ -556,23 +554,24 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a message, waits response and deserializes JSON response to T template type
         /// </summary>
-        public async Task<T> SendAndGetJson<T>(TmqMessage message)
+        public async Task<TmqResult<T>> SendAndGetJson<T>(TmqMessage message)
         {
             message.ResponseRequired = true;
-            
+
             if (string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(UniqueIdGenerator.Create());
 
             Task<TmqMessage> task = _follower.FollowResponse(message);
             bool sent = await SendAsync(message);
             if (!sent)
-                return default;
+                return new TmqResult<T>(TmqResponseCode.SendError);
 
             TmqMessage response = await task;
             if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
-                return default;
+                return TmqResult<T>.FromContentType(message.ContentType);
 
-            return await response.GetJsonContent<T>();
+            T model = await response.GetJsonContent<T>();
+            return new TmqResult<T>(TmqResponseCode.Ok, model);
         }
 
         #endregion
@@ -675,7 +674,7 @@ namespace Twino.Client.TMQ
         /// if verify requires, waits response and checkes status code of the response.
         /// returns true if Ok.
         /// </summary>
-        private async Task<bool> WaitResponseOk(TmqMessage message, bool verifyResponse)
+        protected async Task<TmqResponseCode> WaitResponse(TmqMessage message, bool verifyResponse)
         {
             Task<TmqMessage> task = null;
             if (verifyResponse)
@@ -683,15 +682,17 @@ namespace Twino.Client.TMQ
 
             bool sent = await SendAsync(message);
             if (!sent)
-                return false;
+                return TmqResponseCode.SendError;
 
             if (verifyResponse)
             {
                 TmqMessage response = await task;
-                return response != null && response.ContentType == KnownContentTypes.Ok;
+                return response == null
+                           ? TmqResponseCode.Unknown
+                           : (TmqResponseCode) response.ContentType;
             }
 
-            return true;
+            return TmqResponseCode.Ok;
         }
 
         /// <summary>
@@ -867,7 +868,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Joins to a channel
         /// </summary>
-        public async Task<bool> Join(string channel, bool verifyResponse)
+        public async Task<TmqResponseCode> Join(string channel, bool verifyResponse)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -878,13 +879,13 @@ namespace Twino.Client.TMQ
             if (verifyResponse)
                 message.SetMessageId(UniqueIdGenerator.Create());
 
-            return await WaitResponseOk(message, verifyResponse);
+            return await WaitResponse(message, verifyResponse);
         }
 
         /// <summary>
         /// Leaves from a channel
         /// </summary>
-        public async Task<bool> Leave(string channel, bool verifyResponse)
+        public async Task<TmqResponseCode> Leave(string channel, bool verifyResponse)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -895,13 +896,13 @@ namespace Twino.Client.TMQ
             if (verifyResponse)
                 message.SetMessageId(UniqueIdGenerator.Create());
 
-            return await WaitResponseOk(message, verifyResponse);
+            return await WaitResponse(message, verifyResponse);
         }
 
         /// <summary>
         /// Creates a new channel without any queue
         /// </summary>
-        public async Task<bool> CreateChannel(string channel, bool verifyResponse)
+        public async Task<TmqResponseCode> CreateChannel(string channel, bool verifyResponse)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -912,13 +913,13 @@ namespace Twino.Client.TMQ
             if (verifyResponse)
                 message.SetMessageId(UniqueIdGenerator.Create());
 
-            return await WaitResponseOk(message, verifyResponse);
+            return await WaitResponse(message, verifyResponse);
         }
 
         /// <summary>
         /// Creates a new channel without any queue
         /// </summary>
-        public async Task<bool> CreateChannel(string channel, Action<ChannelCreationOptions> optionsAction)
+        public async Task<TmqResponseCode> CreateChannel(string channel, Action<ChannelCreationOptions> optionsAction)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -931,24 +932,7 @@ namespace Twino.Client.TMQ
             optionsAction(options);
             message.Content = new MemoryStream(Encoding.UTF8.GetBytes(options.Serialize(0)));
 
-            return await WaitResponseOk(message, true);
-        }
-
-        /// <summary>
-        /// Removes a channel and all queues in it
-        /// </summary>
-        public async Task<bool> RemoveChannel(string channel, bool verifyResponse)
-        {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.RemoveChannel;
-            message.SetTarget(channel);
-            message.ResponseRequired = verifyResponse;
-
-            if (verifyResponse)
-                message.SetMessageId(UniqueIdGenerator.Create());
-
-            return await WaitResponseOk(message, verifyResponse);
+            return await WaitResponse(message, true);
         }
 
         #endregion
@@ -958,7 +942,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Creates new queue in server
         /// </summary>
-        public async Task<bool> CreateQueue(string channel, ushort queueId, bool verifyResponse, Action<QueueOptions> optionsAction = null)
+        public async Task<TmqResponseCode> CreateQueue(string channel, ushort queueId, bool verifyResponse, Action<QueueOptions> optionsAction = null)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -978,44 +962,7 @@ namespace Twino.Client.TMQ
             if (verifyResponse)
                 message.SetMessageId(UniqueIdGenerator.Create());
 
-            return await WaitResponseOk(message, verifyResponse);
-        }
-
-        /// <summary>
-        /// Removes a queue in a channel in server
-        /// </summary>
-        public async Task<bool> RemoveQueue(string channel, ushort queueId, bool verifyResponse)
-        {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.RemoveQueue;
-            message.SetTarget(channel);
-            message.ResponseRequired = verifyResponse;
-            message.Content = new MemoryStream(BitConverter.GetBytes(queueId));
-
-            if (verifyResponse)
-                message.SetMessageId(UniqueIdGenerator.Create());
-
-            return await WaitResponseOk(message, verifyResponse);
-        }
-
-        /// <summary>
-        /// Updates queue options
-        /// </summary>
-        public async Task<bool> SetQueueOptions(string channel, ushort queueId, Action<QueueOptions> optionsAction)
-        {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.UpdateQueue;
-            message.SetTarget(channel);
-            message.ResponseRequired = true;
-            message.SetMessageId(UniqueIdGenerator.Create());
-
-            QueueOptions options = new QueueOptions();
-            optionsAction(options);
-            message.Content = new MemoryStream(Encoding.UTF8.GetBytes(options.Serialize(queueId)));
-
-            return await WaitResponseOk(message, true);
+            return await WaitResponse(message, verifyResponse);
         }
 
         #endregion

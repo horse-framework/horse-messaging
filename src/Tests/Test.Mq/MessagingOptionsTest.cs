@@ -52,8 +52,8 @@ namespace Test.Mq
                     received = true;
             };
 
-            bool joined = await client.Join(channel.Name, true);
-            Assert.True(joined);
+            TmqResponseCode joined = await client.Join(channel.Name, true);
+            Assert.Equal(TmqResponseCode.Ok, joined);
             await Task.Delay(1500);
 
             Assert.Empty(queue.RegularMessages);
@@ -80,8 +80,8 @@ namespace Test.Mq
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
-            bool joined = await client.Join(channel.Name, true);
-            Assert.True(joined);
+            TmqResponseCode joined = await client.Join(channel.Name, true);
+            Assert.Equal(TmqResponseCode.Ok, joined);
             await Task.Delay(250);
 
             bool received = false;
@@ -126,8 +126,8 @@ namespace Test.Mq
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
-            bool joined = await client.Join(channel.Name, true);
-            Assert.True(joined);
+            TmqResponseCode joined = await client.Join(channel.Name, true);
+            Assert.Equal(TmqResponseCode.Ok, joined);
             await Task.Delay(250);
 
             bool received = false;
@@ -183,8 +183,8 @@ namespace Test.Mq
             Assert.NotEmpty(queue.RegularMessages);
             Assert.False(received);
 
-            bool joined = await client.Join(channel.Name, true);
-            Assert.True(joined);
+            TmqResponseCode joined = await client.Join(channel.Name, true);
+            Assert.Equal(TmqResponseCode.Ok, joined);
             await Task.Delay(1500);
 
             Assert.Empty(queue.RegularMessages);
@@ -228,8 +228,8 @@ namespace Test.Mq
                         received[no - 1] = true;
                 };
 
-                bool joined = await client.Join(channel.Name, true);
-                Assert.True(joined);
+                TmqResponseCode joined = await client.Join(channel.Name, true);
+                Assert.Equal(TmqResponseCode.Ok, joined);
                 await Task.Delay(250);
                 return client;
             }
@@ -298,12 +298,12 @@ namespace Test.Mq
 
             await Task.Delay(1500);
 
-            bool joined = await client1.Join(channel.Name, true);
-            Assert.True(joined);
+            TmqResponseCode joined = await client1.Join(channel.Name, true);
+            Assert.Equal(TmqResponseCode.Ok, joined);
             joined = await client2.Join(channel.Name, true);
-            Assert.True(joined);
+            Assert.Equal(TmqResponseCode.Ok, joined);
             joined = await client3.Join(channel.Name, true);
-            Assert.True(joined);
+            Assert.Equal(TmqResponseCode.Ok, joined);
             await Task.Delay(250);
 
             Assert.Empty(queue.HighPriorityMessages);
@@ -353,8 +353,8 @@ namespace Test.Mq
                     received = true;
             };
 
-            bool joined = await client.Join(channel.Name, true);
-            Assert.True(joined);
+            TmqResponseCode joined = await client.Join(channel.Name, true);
+            Assert.Equal(TmqResponseCode.Ok, joined);
             await Task.Delay(1500);
 
             Assert.Empty(queue.RegularMessages);
@@ -386,8 +386,8 @@ namespace Test.Mq
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
-            bool joined = await client.Join(channel.Name, true);
-            Assert.True(joined);
+            TmqResponseCode joined = await client.Join(channel.Name, true);
+            Assert.Equal(TmqResponseCode.Ok, joined);
             await Task.Delay(250);
 
             bool received = false;
@@ -435,10 +435,10 @@ namespace Test.Mq
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
-            bool joined1 = await client1.Join(channel.Name, true);
-            bool joined2 = await client2.Join(channel.Name, true);
-            Assert.True(joined1);
-            Assert.True(joined2);
+            TmqResponseCode joined1 = await client1.Join(channel.Name, true);
+            TmqResponseCode joined2 = await client2.Join(channel.Name, true);
+            Assert.Equal(TmqResponseCode.Ok, joined1);
+            Assert.Equal(TmqResponseCode.Ok, joined2);
             await Task.Delay(250);
 
             bool receive1 = false;
@@ -508,8 +508,8 @@ namespace Test.Mq
                     received = true;
             };
 
-            bool joined = await client.Join(channel.Name, true);
-            Assert.True(joined);
+            TmqResponseCode joined = await client.Join(channel.Name, true);
+            Assert.Equal(TmqResponseCode.Ok, joined);
             await Task.Delay(1500);
 
             Assert.Empty(queue.RegularMessages);
@@ -542,8 +542,8 @@ namespace Test.Mq
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
-            bool joined = await client.Join(channel.Name, true);
-            Assert.True(joined);
+            TmqResponseCode joined = await client.Join(channel.Name, true);
+            Assert.Equal(TmqResponseCode.Ok, joined);
             await Task.Delay(250);
 
             bool received = false;
@@ -592,10 +592,10 @@ namespace Test.Mq
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
-            bool joined1 = await client1.Join(channel.Name, true);
-            bool joined2 = await client2.Join(channel.Name, true);
-            Assert.True(joined1);
-            Assert.True(joined2);
+            TmqResponseCode joined1 = await client1.Join(channel.Name, true);
+            TmqResponseCode joined2 = await client2.Join(channel.Name, true);
+            Assert.Equal(TmqResponseCode.Ok, joined1);
+            Assert.Equal(TmqResponseCode.Ok, joined2);
             await Task.Delay(250);
 
             bool receive1 = false;
@@ -652,8 +652,8 @@ namespace Test.Mq
             client.CatchAcknowledgeMessages = true;
             Assert.True(client.IsConnected);
 
-            bool joined = await client.Join("ch-1", true);
-            Assert.True(joined);
+            TmqResponseCode joined = await client.Join("ch-1", true);
+            Assert.Equal(TmqResponseCode.Ok, joined);
 
             TmqMessage received = null;
             TmqMessage ack = null;
