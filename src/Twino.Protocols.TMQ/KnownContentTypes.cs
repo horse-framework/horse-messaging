@@ -86,14 +86,14 @@ namespace Twino.Protocols.TMQ
         public const ushort ChannelInformation = 605;
         
         /// <summary>
-        /// "606" Gets all consumers of a channel
-        /// </summary>
-        public const ushort ChannelConsumers = 606;
-
-        /// <summary>
         /// "606" Gets active channel list in server
         /// </summary>
         public const ushort ChannelList = 606;
+
+        /// <summary>
+        /// "607" Gets all consumers of a channel
+        /// </summary>
+        public const ushort ChannelConsumers = 607;
 
         /// <summary>
         /// "610" Creates new queue

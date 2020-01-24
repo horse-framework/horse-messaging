@@ -61,7 +61,12 @@ namespace Twino.MQ
         /// <summary>
         /// Authorization implementation for client operations
         /// </summary>
-        public IClientAuthorization Authorization { get; }
+        public IClientAuthorization Authorization { get; set; }
+
+        /// <summary>
+        /// Authorization implementation for administration operations
+        /// </summary>
+        public IAdminAuthorization AdminAuthorization { get; set; }
 
         /// <summary>
         /// Client connect and disconnect operations
