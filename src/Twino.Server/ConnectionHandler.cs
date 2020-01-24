@@ -2,7 +2,6 @@ using System;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
-using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Core.Protocols;
@@ -65,7 +64,6 @@ namespace Twino.Server
         /// </summary>
         private async Task AcceptClient(TcpClient tcp)
         {
-            await Task.Yield();
             ConnectionInfo info = null;
             try
             {
