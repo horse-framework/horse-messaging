@@ -49,18 +49,7 @@ namespace Twino.Server
                 try
                 {
                     TcpClient tcp = await _listener.Listener.AcceptTcpClientAsync();
-                    ThreadPool.UnsafeQueueUserWorkItem(async t =>
-                    {
-                        try
-                        {
-                            await AcceptClient(t);
-                        }
-                        catch (Exception ex)
-                        {
-                            if (_server.Logger != null)
-                                _server.Logger.LogException("Unhandled Exception", ex);
-                        }
-                    }, tcp, false);
+                    _ = AcceptClient(tcp);
                 }
                 catch (Exception ex)
                 {
@@ -76,19 +65,21 @@ namespace Twino.Server
         /// </summary>
         private async Task AcceptClient(TcpClient tcp)
         {
-            if (_listener == null)
-                return;
-
-            ConnectionInfo info = new ConnectionInfo(tcp, _listener)
-                                  {
-                                      State = ConnectionStates.Pending,
-                                      MaxAlive = DateTime.UtcNow + TimeSpan.FromSeconds(_server.Options.RequestTimeout)
-                                  };
-
-            _listener.KeepAliveManager.Add(info);
-
+            await Task.Yield();
+            ConnectionInfo info = null;
             try
             {
+                if (_listener == null)
+                    return;
+
+                info = new ConnectionInfo(tcp, _listener)
+                       {
+                           State = ConnectionStates.Pending,
+                           MaxAlive = DateTime.UtcNow + TimeSpan.FromSeconds(_server.Options.RequestTimeout)
+                       };
+
+                _listener.KeepAliveManager.Add(info);
+
                 //ssl handshaking
                 if (_listener.Options.SslEnabled)
                 {
@@ -122,7 +113,7 @@ namespace Twino.Server
                         hsresult.PreviouslyRead = pbytes;
                         info.Protocol = protocol;
                         info.Socket = hsresult.Socket;
-                        
+
                         if (info.Socket != null)
                             info.Socket.SetOnConnected();
 
@@ -140,7 +131,7 @@ namespace Twino.Server
             }
             catch (Exception ex)
             {
-                info.Close();
+                info?.Close();
                 _server.RaiseException(ex);
             }
         }

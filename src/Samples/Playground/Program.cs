@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core;
@@ -12,26 +13,23 @@ namespace Playground
     {
         static void Main(string[] args)
         {
-            List<ThreadTimer> timers = new List<ThreadTimer>();
-            for (int i = 0; i < 17; i++)
+            for (int i = 0; i < 250; i++)
             {
-                ThreadTimer timer = new ThreadTimer(A, TimeSpan.FromMilliseconds(1000));
-                timer.WaitTickCompletion = false;
-                timer.Start();
-                timers.Add(timer);
+                Thread.Sleep(100);
+                _ = T();
             }
-
-            while (true)
-            {
-                Console.Write(".");
-                Thread.Sleep(50);
-            }
+            
+            Console.ReadLine();
+            Console.WriteLine(".");
+            Console.ReadLine();
+            Console.WriteLine(".");
+            Console.ReadLine();
         }
 
-        private static void A()
+        private static async Task T()
         {
-            Thread.Sleep(5000);
-            Console.Write("*");
+            Console.Write(".");
+            await Task.Delay(1000);
         }
     }
 }

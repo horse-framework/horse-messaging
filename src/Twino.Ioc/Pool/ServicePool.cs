@@ -106,7 +106,17 @@ namespace Twino.Ioc.Pool
 
             //if there is no available instance and there is no space to create new
             TaskCompletionSource<PoolServiceDescriptor<TService>> completionSource = new TaskCompletionSource<PoolServiceDescriptor<TService>>(TaskCreationOptions.RunContinuationsAsynchronously);
-            ThreadPool.UnsafeQueueUserWorkItem(async state => await WaitForAvailable(scope, state), completionSource, false);
+            ThreadPool.UnsafeQueueUserWorkItem(async state =>
+            {
+                try
+                {
+                    await WaitForAvailable(scope, state);
+                }
+                catch (Exception e)
+                {
+                    completionSource.SetException(e);
+                }
+            }, completionSource, false);
 
             return await completionSource.Task;
         }
@@ -125,7 +135,7 @@ namespace Twino.Ioc.Pool
                 {
                     await Task.Delay(5);
                     PoolServiceDescriptor<TService> pdesc = GetFromCreatedItem(scope);
-                    
+
                     if (pdesc != null)
                     {
                         state.SetResult(pdesc);

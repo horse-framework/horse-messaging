@@ -179,7 +179,7 @@ namespace Twino.Server
                     server.Listener.Start(Options.MaximumPendingConnections);
 
                 ConnectionHandler handler = new ConnectionHandler(this, server);
-                server.Handle = new Thread(async () => await handler.Handle());
+                server.Handle = new Thread(() => _ = handler.Handle());
                 server.Handle.IsBackground = true;
                 server.Handle.Priority = ThreadPriority.Highest;
                 server.Handle.Start();
