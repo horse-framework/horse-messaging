@@ -37,7 +37,7 @@ namespace Twino.Core
 
         private Thread _thread;
         private readonly Action _action;
-        private object _locker = new object();
+        private readonly object _locker = new object();
 
         /// <summary>
         /// Created new thread-based timer

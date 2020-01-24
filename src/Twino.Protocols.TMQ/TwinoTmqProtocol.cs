@@ -135,16 +135,15 @@ namespace Twino.Protocols.TMQ
                 if (message.Ttl < 0)
                     continue;
 
-                _ = ProcessMessage(info, message, handshakeResult);
+                _ = ProcessMessage(info, message, (TmqServerSocket) handshakeResult.Socket);
             }
         }
 
-        private async Task ProcessMessage(IConnectionInfo info, TmqMessage message, ProtocolHandshakeResult handshakeResult)
+        private async Task ProcessMessage(IConnectionInfo info, TmqMessage message, TmqServerSocket socket)
         {
             //if user makes a mistake in received method, we should not interrupt connection handling
             try
             {
-                TmqServerSocket socket = (TmqServerSocket) handshakeResult.Socket;
                 socket.KeepAlive();
                 await _handler.Received(_server, info, socket, message);
             }
