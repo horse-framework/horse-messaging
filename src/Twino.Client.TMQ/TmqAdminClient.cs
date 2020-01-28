@@ -80,6 +80,7 @@ namespace Twino.Client.TMQ
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
+            message.SetTarget(channel);
             message.ContentType = KnownContentTypes.ChannelConsumers;
 
             return await SendAndGetJson<List<ClientInformation>>(message);
