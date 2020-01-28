@@ -84,11 +84,16 @@ namespace Twino.Protocols.TMQ
         /// "605" Gets channel information
         /// </summary>
         public const ushort ChannelInformation = 605;
-
+        
         /// <summary>
         /// "606" Gets active channel list in server
         /// </summary>
         public const ushort ChannelList = 606;
+
+        /// <summary>
+        /// "607" Gets all consumers of a channel
+        /// </summary>
+        public const ushort ChannelConsumers = 607;
 
         /// <summary>
         /// "610" Creates new queue
@@ -119,5 +124,11 @@ namespace Twino.Protocols.TMQ
         /// "621" Gets active instance list
         /// </summary>
         public const ushort InstanceList = 621;
+        
+        /// <summary>
+        /// "631" Gets all connected clients
+        /// </summary>
+        public const ushort ClientList = 631;
+        
     }
 }

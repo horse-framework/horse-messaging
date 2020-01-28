@@ -38,8 +38,8 @@ namespace Test.Mq
                 await consumer.ConnectAsync("tmq://localhost:" + port);
                 Assert.True(consumer.IsConnected);
                 consumer.MessageReceived += (c, m) => Interlocked.Increment(ref msgReceived);
-                bool joined = await consumer.Join("ch-route", true);
-                Assert.True(joined);
+                TmqResponseCode joined = await consumer.Join("ch-route", true);
+                Assert.Equal(TmqResponseCode.Ok, joined);
             }
 
             await producer.Push("ch-route", MessageA.ContentType, "Hello, World!", false);
@@ -68,8 +68,8 @@ namespace Test.Mq
             await consumer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
             consumer.MessageReceived += (c, m) => msgReceived = true;
-            bool joined = await consumer.Join("ch-route", true);
-            Assert.True(joined);
+            TmqResponseCode joined = await consumer.Join("ch-route", true);
+            Assert.Equal(TmqResponseCode.Ok, joined);
 
             await Task.Delay(800);
             Assert.False(msgReceived);
@@ -100,8 +100,8 @@ namespace Test.Mq
             consumer.ClientId = "consumer";
             await consumer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
-            bool joined = await consumer.Join("ch-route", true);
-            Assert.True(joined);
+            TmqResponseCode joined = await consumer.Join("ch-route", true);
+            Assert.Equal(TmqResponseCode.Ok, joined);
 
             bool ack = await producer.Push("ch-route", MessageA.ContentType, "Hello, World!", true);
             Assert.Equal(queueAckIsActive, ack);

@@ -24,7 +24,7 @@ namespace Twino.Client.Connectors
         /// </summary>
         public TimeSpan Interval { get; set; }
 
-        private Timer _timer;
+        private ThreadTimer _timer;
         
         /// <summary>
         /// Creates new sticky connector
@@ -45,13 +45,11 @@ namespace Twino.Client.Connectors
             if (_timer != null)
                 return;
 
-            int interval = Convert.ToInt32(Interval.TotalMilliseconds);
-
-            _timer = new Timer(s =>
+            _timer = new ThreadTimer(() =>
             {
                 if (!IsRunning)
                 {
-                    _timer.Dispose();
+                    _timer.Stop();
                     _timer = null;
                     return;
                 }
@@ -72,7 +70,9 @@ namespace Twino.Client.Connectors
                         _connecting = false;
                     }
                 }
-            }, null, 0, interval);
+            }, Interval);
+            
+            _timer.Start(ThreadPriority.BelowNormal);
         }
 
         /// <summary>

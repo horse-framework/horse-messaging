@@ -52,6 +52,7 @@ namespace Test.Mq.Internal
             Server.SetDefaultChannelHandler(new TestChannelHandler(this), null);
             Server.SetDefaultDeliveryHandler(new TestDeliveryHandler(this));
             Server.ClientHandler = new TestClientHandler(this);
+            Server.AdminAuthorization = new TestAdminAuthorization();
 
             Channel channel = Server.CreateChannel("ch-1");
             channel.CreateQueue(MessageA.ContentType).Wait();

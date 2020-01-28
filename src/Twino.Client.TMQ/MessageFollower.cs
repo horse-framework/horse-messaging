@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Twino.Core;
 using Twino.Protocols.TMQ;
 
 namespace Twino.Client.TMQ
@@ -25,7 +26,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Expiration timer
         /// </summary>
-        private Timer _timer;
+        private ThreadTimer _timer;
 
         /// <summary>
         /// Client of the follower
@@ -42,7 +43,8 @@ namespace Twino.Client.TMQ
         /// </summary>
         public void Run()
         {
-            _timer = new Timer(s => { CheckExpirations(); }, null, 1000, 1000);
+            _timer = new ThreadTimer(CheckExpirations, TimeSpan.FromMilliseconds(1000));
+            _timer.Start(ThreadPriority.BelowNormal);
         }
 
         /// <summary>
@@ -50,7 +52,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         public void Dispose()
         {
-            _timer?.Dispose();
+            _timer?.Stop();
         }
 
         /// <summary>

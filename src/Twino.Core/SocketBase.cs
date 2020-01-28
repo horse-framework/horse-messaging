@@ -52,10 +52,10 @@ namespace Twino.Core
         private volatile bool _disconnectedWarn;
 
         /// <summary>
-        /// After endWrite called, this value will be set as true.
-        /// This value is used for manipulating SslStream multiple write operation
+        /// SslStream does not support concurrent write operations.
+        /// This semaphore is used to handle that issue
         /// </summary>
-        private volatile bool _writeCompleted = true;
+        private SemaphoreSlim _ss;
 
         /// <summary>
         /// Triggered when the client is connected
@@ -97,6 +97,9 @@ namespace Twino.Core
             IsSsl = info.IsSsl;
             IsConnected = true;
             Stream = info.GetStream();
+
+            if (IsSsl)
+                _ss = new SemaphoreSlim(1, 1);
         }
 
         #endregion
@@ -112,25 +115,17 @@ namespace Twino.Core
             {
                 if (IsSsl)
                 {
-                    lock (Stream)
-                    {
-                        Stream.EndWrite(ar);
-                        _writeCompleted = true;
-                    }
+                    Stream.EndWrite(ar);
+                    ReleaseSslLock();
                 }
                 else
-                {
                     Stream.EndRead(ar);
-
-                    if (!_writeCompleted)
-                        _writeCompleted = true;
-                }
 
                 KeepAlive();
             }
             catch
             {
-                _writeCompleted = true;
+                ReleaseSslLock();
                 Disconnect();
             }
         }
@@ -140,20 +135,33 @@ namespace Twino.Core
         /// </summary>
         public async Task<bool> SendAsync(byte[] data)
         {
-            if (IsSsl)
-                return await Task.FromResult(Send(data));
-
             try
             {
                 if (Stream == null || data == null)
+                {
+                    ReleaseSslLock();
                     return false;
+                }
+
+                if (IsSsl)
+                {
+                    if (_ss == null)
+                        _ss = new SemaphoreSlim(1, 1);
+
+                    await _ss.WaitAsync();
+                }
 
                 await Stream.WriteAsync(data);
+
+                if (IsSsl)
+                    ReleaseSslLock();
+
                 KeepAlive();
                 return true;
             }
             catch
             {
+                ReleaseSslLock();
                 Disconnect();
                 return false;
             }
@@ -171,50 +179,20 @@ namespace Twino.Core
 
                 if (IsSsl)
                 {
-                    lock (Stream)
-                    {
-                        if (!_writeCompleted)
-                            SendQueue(data);
-                        else
-                        {
-                            _writeCompleted = false;
-                            Stream.BeginWrite(data, 0, data.Length, EndWrite, data);
-                        }
-                    }
-                }
-                else
-                    Stream.BeginWrite(data, 0, data.Length, EndWrite, data);
+                    if (_ss == null)
+                        _ss = new SemaphoreSlim(1, 1);
 
+                    _ss.Wait();
+                }
+
+                Stream.BeginWrite(data, 0, data.Length, EndWrite, data);
                 return true;
             }
             catch
             {
-                _writeCompleted = true;
                 Disconnect();
                 return false;
             }
-        }
-
-        /// <summary>
-        /// Over SslStream, writing another package before first package's callback is called, throws NotSupportedException.
-        /// This method is for fixing that issue.
-        /// When Send method is called before previous callback, sending operation will call this method.
-        /// This method waits for callback operation async, and calls send method again.
-        /// </summary>
-        private void SendQueue(byte[] data)
-        {
-            DateTime until = DateTime.UtcNow.AddSeconds(5);
-            ThreadPool.UnsafeQueueUserWorkItem(async (s) =>
-            {
-                while (!_writeCompleted)
-                {
-                    await Task.Delay(1);
-                    if (DateTime.UtcNow > until)
-                        return;
-                }
-
-                Send(data);
-            }, "", false);
         }
 
         /// <summary>
@@ -224,6 +202,24 @@ namespace Twino.Core
         {
             LastAliveDate = DateTime.UtcNow;
             PongRequired = false;
+        }
+
+        /// <summary>
+        /// Releases ssl semaphore 
+        /// </summary>
+        private void ReleaseSslLock()
+        {
+            if (!IsSsl)
+                return;
+            
+            try
+            {
+                if (_ss != null && _ss.CurrentCount == 0)
+                    _ss.Release();
+            }
+            catch
+            {
+            }
         }
 
         #endregion

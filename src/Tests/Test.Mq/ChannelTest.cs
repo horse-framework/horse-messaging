@@ -25,8 +25,8 @@ namespace Test.Mq
             TmqClient client = new TmqClient();
             client.Connect("tmq://localhost:41201");
 
-            bool joined = await client.Join("ch-1", false);
-            Assert.True(joined);
+            TmqResponseCode joined = await client.Join("ch-1", false);
+            Assert.Equal(TmqResponseCode.Ok, joined);
             await Task.Delay(1000);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -49,8 +49,8 @@ namespace Test.Mq
             TmqClient client = new TmqClient();
             client.Connect("tmq://localhost:41202");
 
-            bool joined = await client.Join("ch-1", true);
-            Assert.True(joined);
+            TmqResponseCode joined = await client.Join("ch-1", true);
+            Assert.Equal(TmqResponseCode.Ok, joined);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
@@ -72,11 +72,11 @@ namespace Test.Mq
             TmqClient client = new TmqClient();
             client.Connect("tmq://localhost:41203");
 
-            bool joined = await client.Join("ch-1", true);
-            Assert.True(joined);
+            TmqResponseCode joined = await client.Join("ch-1", true);
+            Assert.Equal(TmqResponseCode.Ok, joined);
 
-            bool left = await client.Leave("ch-1", false);
-            Assert.True(left);
+            TmqResponseCode left = await client.Leave("ch-1", false);
+            Assert.Equal(TmqResponseCode.Ok, left);
             await Task.Delay(1000);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -99,11 +99,11 @@ namespace Test.Mq
             TmqClient client = new TmqClient();
             client.Connect("tmq://localhost:41204");
 
-            bool joined = await client.Join("ch-1", true);
-            Assert.True(joined);
+            TmqResponseCode joined = await client.Join("ch-1", true);
+            Assert.Equal(TmqResponseCode.Ok, joined);
 
-            bool left = await client.Leave("ch-1", true);
-            Assert.True(left);
+            TmqResponseCode left = await client.Leave("ch-1", true);
+            Assert.Equal(TmqResponseCode.Ok, left);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
@@ -129,13 +129,13 @@ namespace Test.Mq
             TmqClient client = new TmqClient();
             client.Connect("tmq://localhost:" + port);
 
-            bool created = await client.CreateChannel("new-channel", verifyResponse);
+            TmqResponseCode created = await client.CreateChannel("new-channel", verifyResponse);
             if (verifyResponse)
-                Assert.True(created);
+                Assert.Equal(TmqResponseCode.Ok, created);
             else
             {
                 await Task.Delay(1000);
-                Assert.True(created);
+                Assert.Equal(TmqResponseCode.Ok, created);
             }
         }
 
@@ -150,14 +150,14 @@ namespace Test.Mq
             await client.ConnectAsync("tmq://localhost:41206");
             Assert.True(client.IsConnected);
 
-            bool created = await client.CreateChannel("new-channel", o =>
+            TmqResponseCode created = await client.CreateChannel("new-channel", o =>
             {
                 o.AllowMultipleQueues = false;
                 o.SendOnlyFirstAcquirer = true;
                 o.AcknowledgeTimeout = TimeSpan.FromSeconds(33);
                 o.Status = MessagingQueueStatus.Pull;
             });
-            Assert.True(created);
+            Assert.Equal(TmqResponseCode.Ok, created);
 
             Channel found = server.Server.FindChannel("new-channel");
             Assert.NotNull(found);

@@ -32,8 +32,8 @@ namespace Test.Mq
             await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            bool joined = await client.Join("ch-1", true);
-            Assert.True(joined);
+            TmqResponseCode joined = await client.Join("ch-1", true);
+            Assert.Equal(TmqResponseCode.Ok, joined);
             await Task.Delay(250);
 
             TmqMessage received = null;

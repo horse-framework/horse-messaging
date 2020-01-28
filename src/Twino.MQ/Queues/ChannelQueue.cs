@@ -591,7 +591,7 @@ namespace Twino.MQ.Queues
             try
             {
                 bool received = await _acknowledgeCallback.Task;
-                _acknowledgeCallback = new TaskCompletionSource<bool>();
+                _acknowledgeCallback = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             }
             finally
             {

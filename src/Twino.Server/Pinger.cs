@@ -28,9 +28,9 @@ namespace Twino.Server
         /// <summary>
         /// Pinger timer
         /// </summary>
-        private Timer _timer;
+        private ThreadTimer _timer;
 
-        private static readonly int TIMER_INTERVAL = 5000;
+        private static readonly TimeSpan TIMER_INTERVAL = TimeSpan.FromMilliseconds(5000);
 
         /// <summary>
         /// Ping time interval
@@ -50,7 +50,8 @@ namespace Twino.Server
         /// </summary>
         public void Start()
         {
-            _timer = new Timer(state => Tick(), null, TIMER_INTERVAL, TIMER_INTERVAL);
+            _timer = new ThreadTimer(Tick, TIMER_INTERVAL);
+            _timer.Start(ThreadPriority.Lowest);
         }
 
         /// <summary>
@@ -60,7 +61,7 @@ namespace Twino.Server
         {
             if (_timer != null)
             {
-                _timer.Dispose();
+                _timer.Stop();
                 _timer = null;
             }
 

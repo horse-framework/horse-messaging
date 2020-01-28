@@ -135,18 +135,22 @@ namespace Twino.Protocols.TMQ
                 if (message.Ttl < 0)
                     continue;
 
-                //if user makes a mistake in received method, we should not interrupt connection handling
-                try
-                {
-                    TmqServerSocket socket = (TmqServerSocket) handshakeResult.Socket;
-                    socket.KeepAlive();
-                    await _handler.Received(_server, info, socket, message);
-                }
-                catch (Exception e)
-                {
-                    if (_server.Logger != null)
-                        _server.Logger.LogException("Unhandled Exception", e);
-                }
+                _ = ProcessMessage(info, message, (TmqServerSocket) handshakeResult.Socket);
+            }
+        }
+
+        private async Task ProcessMessage(IConnectionInfo info, TmqMessage message, TmqServerSocket socket)
+        {
+            //if user makes a mistake in received method, we should not interrupt connection handling
+            try
+            {
+                socket.KeepAlive();
+                await _handler.Received(_server, info, socket, message);
+            }
+            catch (Exception e)
+            {
+                if (_server.Logger != null)
+                    _server.Logger.LogException("Unhandled Exception", e);
             }
         }
 
