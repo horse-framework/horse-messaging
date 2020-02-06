@@ -4,6 +4,8 @@ namespace Twino.MQ.Data
 {
     public class DatabaseOptions
     {
+        public string Filename { get; set; }
+        
         public bool AutoShrink { get; set; }
         public TimeSpan ShrinkInterval { get; set; }
         

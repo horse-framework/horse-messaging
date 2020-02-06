@@ -15,18 +15,20 @@ namespace Twino.MQ.Data
         private readonly DataMessageSerializer _serializer = new DataMessageSerializer();
         private bool _shrinkRequired;
 
-        public DatabaseFile File { get; }
-
         private readonly List<string> _deletedMessages = new List<string>();
         private readonly Dictionary<string, TmqMessage> _messages = new Dictionary<string, TmqMessage>(StringComparer.InvariantCultureIgnoreCase);
+
+        public DatabaseFile File { get; }
+        public DatabaseOptions Options { get; }
 
         #endregion
 
         #region Open - Close
 
-        public Database(string filename)
+        public Database(DatabaseOptions options)
         {
-            File = new DatabaseFile(filename);
+            Options = options;
+            File = new DatabaseFile(options.Filename);
         }
 
         public void Open()
