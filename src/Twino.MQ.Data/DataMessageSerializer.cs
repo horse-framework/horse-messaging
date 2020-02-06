@@ -121,6 +121,25 @@ namespace Twino.MQ.Data
             stream.WriteByte(length);
             await stream.WriteAsync(Encoding.UTF8.GetBytes(id));
         }
+        
+        internal async Task<bool> WriteContent(int length, Stream from, Stream to)
+        {
+            await to.WriteAsync(BitConverter.GetBytes(length));
+            
+            int left = length;
+            byte[] buffer = new byte[256];
+            while (left > 0)
+            {
+                int l = left > buffer.Length ? buffer.Length : left;
+                int read = await from.ReadAsync(buffer, 0, l);
+                if (read == 0)
+                    return false;
+                left -= read;
+                await to.WriteAsync(buffer, 0, read);
+            }
+
+            return true;
+        }
 
         #endregion
     }

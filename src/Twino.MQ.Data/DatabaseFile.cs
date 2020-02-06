@@ -16,12 +16,11 @@ namespace Twino.MQ.Data
         {
             Filename = filename;
         }
-        
+
         public Stream GetStream()
         {
-            return null;
+            throw new NotImplementedException();
         }
-
 
         public async Task Flush()
         {
@@ -32,11 +31,15 @@ namespace Twino.MQ.Data
         {
             throw new NotImplementedException();
         }
-        
+
         public async Task Close()
         {
             throw new NotImplementedException();
         }
 
+        public async Task<bool> Delete()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
