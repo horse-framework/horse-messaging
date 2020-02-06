@@ -6,13 +6,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Twino.MQ" Version="2.6.2" />
-      <PackageReference Include="Twino.Mvc.Auth.Jwt" Version="2.6.2" />
+      <PackageReference Include="Microsoft.Data.Sqlite" Version="3.1.1" />
     </ItemGroup>
 
     <ItemGroup>
       <Folder Include="Controllers" />
-      <Folder Include="Data" />
       <Folder Include="Handlers" />
     </ItemGroup>
 
@@ -26,6 +24,12 @@
 
     <ItemGroup>
       <None Remove="Panel\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Twino.MQ\Twino.MQ.csproj" />
+      <ProjectReference Include="..\Twino.Mvc.Auth.Jwt\Twino.Mvc.Auth.Jwt.csproj" />
+      <ProjectReference Include="..\Twino.Mvc\Twino.Mvc.csproj" />
     </ItemGroup>
 
 </Project>

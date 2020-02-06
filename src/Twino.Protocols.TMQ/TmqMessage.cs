@@ -1,6 +1,10 @@
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+
+[assembly: InternalsVisibleTo("Twino.MQ.Data")]
+[assembly: InternalsVisibleTo("Twino.MQ.Server")]
 
 namespace Twino.Protocols.TMQ
 {
@@ -88,6 +92,12 @@ namespace Twino.Protocols.TMQ
         /// Message content stream
         /// </summary>
         public MemoryStream Content { get; set; }
+
+        /// <summary>
+        /// For putting some extra data to the message.
+        /// This property is not proceed by any operation.
+        /// </summary>
+        public object Payload { get; set; }
 
         #endregion
 

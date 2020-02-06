@@ -5,6 +5,11 @@ using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core;
+using Twino.MQ;
+using Twino.MQ.Handlers;
+using Twino.MQ.Helpers;
+using Twino.MQ.Queues;
+using Twino.Protocols.TMQ;
 using Xunit.Sdk;
 
 namespace Playground
@@ -13,23 +18,11 @@ namespace Playground
     {
         static void Main(string[] args)
         {
-            for (int i = 0; i < 250; i++)
-            {
-                Thread.Sleep(100);
-                _ = T();
-            }
-            
-            Console.ReadLine();
-            Console.WriteLine(".");
-            Console.ReadLine();
-            Console.WriteLine(".");
-            Console.ReadLine();
-        }
+            MqServer server = new MqServer();
+            server.SetDefaultDeliveryHandler(new JustAllowDeliveryHandler());
 
-        private static async Task T()
-        {
-            Console.Write(".");
-            await Task.Delay(1000);
+            Channel ch = server.CreateChannel("channelName");
+            ChannelQueue q = ch.CreateQueue(123).Result;
         }
     }
 }

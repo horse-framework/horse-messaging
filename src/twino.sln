@@ -81,6 +81,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Mq", "Tests\Test.Mq\Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.MQ.Server", "Twino.MQ.Server\Twino.MQ.Server.csproj", "{E4C3538A-26FA-406C-AFCC-FF98E38FD5AF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.MQ.Data", "Twino.MQ.Data\Twino.MQ.Data.csproj", "{45017EA4-63E1-49BF-8B53-25A45ADF8FCD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -223,6 +225,10 @@ Global
 		{E4C3538A-26FA-406C-AFCC-FF98E38FD5AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E4C3538A-26FA-406C-AFCC-FF98E38FD5AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E4C3538A-26FA-406C-AFCC-FF98E38FD5AF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{45017EA4-63E1-49BF-8B53-25A45ADF8FCD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{45017EA4-63E1-49BF-8B53-25A45ADF8FCD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{45017EA4-63E1-49BF-8B53-25A45ADF8FCD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{45017EA4-63E1-49BF-8B53-25A45ADF8FCD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
