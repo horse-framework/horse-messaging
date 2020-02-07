@@ -51,7 +51,7 @@ namespace Twino.MQ.Data
             {
                 Stream stream = File.GetStream();
                 stream.Seek(0, SeekOrigin.Begin);
-                while (stream.CanRead)
+                while (stream.Position < stream.Length)
                 {
                     DataMessage message = await _serializer.Read(stream);
                     switch (message.Type)

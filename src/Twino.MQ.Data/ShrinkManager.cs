@@ -54,7 +54,7 @@ namespace Twino.MQ.Data
             _shrinking = true;
             bool backup = false;
             await using MemoryStream ms = new MemoryStream();
-            
+
             await _database.WaitForLock();
             try
             {
@@ -64,7 +64,7 @@ namespace Twino.MQ.Data
 
                 deletedItems.Clear();
 
-                foreach (KeyValuePair<string,TmqMessage> kv in messages)
+                foreach (KeyValuePair<string, TmqMessage> kv in messages)
                     await _serializer.Write(ms, kv.Value);
 
                 backup = await _database.File.Backup(BackupOption.Move);
@@ -74,16 +74,18 @@ namespace Twino.MQ.Data
                 ms.Position = 0;
                 _database.File.Open();
                 await ms.CopyToAsync(_database.File.GetStream());
-                
+
                 if (!_database.Options.CreateBackupOnShrink)
                 {
                     try
                     {
                         File.Delete(_database.File.Filename + ".backup");
                     }
-                    catch { }
+                    catch
+                    {
+                    }
                 }
-                
+
                 return true;
             }
             catch
@@ -96,9 +98,11 @@ namespace Twino.MQ.Data
                         File.Delete(_database.File.Filename);
                         File.Move(_database.File.Filename + ".backup", _database.File.Filename);
                     }
-                    catch { }
+                    catch
+                    {
+                    }
                 }
-                
+
                 return false;
             }
             finally
@@ -196,7 +200,7 @@ namespace Twino.MQ.Data
                 //write left data from file to shrink file before swap-chain
                 Stream stream = _database.File.GetStream();
                 stream.Seek(_end, SeekOrigin.Begin);
-                while (stream.CanRead)
+                while (stream.Position < stream.Length)
                 {
                     int read = await stream.ReadAsync(buffer, 0, buffer.Length);
                     if (read == 0)
@@ -217,7 +221,9 @@ namespace Twino.MQ.Data
                     {
                         File.Delete(_database.File.Filename + ".backup");
                     }
-                    catch { }
+                    catch
+                    {
+                    }
                 }
 
                 _database.File.Open();

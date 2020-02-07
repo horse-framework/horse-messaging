@@ -90,7 +90,7 @@ namespace Twino.MQ.Data
             WriteType(stream, DataType.Insert);
             await WriteId(stream, message.MessageId);
             message.Content.Position = 0;
-            await ReadIntoContent(message.Content, stream);
+            await WriteContent(Convert.ToInt32(message.Length), message.Content, stream);
         }
 
         public async Task WriteDelete(Stream stream, TmqMessage message)
@@ -121,11 +121,11 @@ namespace Twino.MQ.Data
             stream.WriteByte(length);
             await stream.WriteAsync(Encoding.UTF8.GetBytes(id));
         }
-        
+
         internal async Task<bool> WriteContent(int length, Stream from, Stream to)
         {
             await to.WriteAsync(BitConverter.GetBytes(length));
-            
+
             int left = length;
             byte[] buffer = new byte[256];
             while (left > 0)
