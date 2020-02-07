@@ -28,20 +28,20 @@ namespace Twino.MQ.Data
         public Database(DatabaseOptions options)
         {
             Options = options;
-            File = new DatabaseFile(options.Filename);
+            File = new DatabaseFile(options);
             _shrinkManager = new ShrinkManager(this);
         }
 
         public async Task Open()
         {
-            File.Open();
+            await File.Open();
             await Load();
 
             if (_deletedMessages.Count > 0)
                 await _shrinkManager.FullShrink(_messages, _deletedMessages);
 
             if (Options.AutoShrink)
-                _shrinkManager.Start(Options.ShrinkInterval);
+                await _shrinkManager.Start(Options.ShrinkInterval);
         }
 
         private async Task Load()
@@ -74,7 +74,7 @@ namespace Twino.MQ.Data
 
         public async Task Close()
         {
-            _shrinkManager.Stop();
+            await _shrinkManager.Stop();
             await File.Close();
         }
 
@@ -145,6 +145,8 @@ namespace Twino.MQ.Data
 
                 if (Options.InstantFlush)
                     await stream.FlushAsync();
+                else
+                    File.FlushRequired = true;
 
                 return true;
             }
@@ -181,6 +183,8 @@ namespace Twino.MQ.Data
 
                 if (Options.InstantFlush)
                     await stream.FlushAsync();
+                else
+                    File.FlushRequired = true;
 
                 return true;
             }

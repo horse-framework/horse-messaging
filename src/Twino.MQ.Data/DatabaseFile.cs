@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Twino.MQ.Data
@@ -14,10 +15,15 @@ namespace Twino.MQ.Data
         public string Filename { get; }
 
         private FileStream _file;
+        private DatabaseOptions _options;
+        private Timer _flushTimer;
 
-        public DatabaseFile(string filename)
+        internal bool FlushRequired { get; set; }
+
+        public DatabaseFile(DatabaseOptions options)
         {
-            Filename = filename;
+            _options = options;
+            Filename = options.Filename;
         }
 
         public Stream GetStream()
@@ -31,13 +37,42 @@ namespace Twino.MQ.Data
                 await _file.FlushAsync();
         }
 
-        public void Open()
+        public async Task Open()
         {
             if (_file != null)
                 return;
 
             _file = new FileStream(Filename, FileMode.OpenOrCreate, FileAccess.ReadWrite);
             _file.Seek(_file.Length, SeekOrigin.Begin);
+
+            if (_options.AutoFlush)
+                await StartFlushTimer();
+        }
+
+        private async Task StartFlushTimer()
+        {
+            if (_flushTimer != null)
+            {
+                await _flushTimer.DisposeAsync();
+                _flushTimer = null;
+            }
+
+            _flushTimer = new Timer(async s =>
+            {
+                try
+                {
+                    if (_file != null)
+                    {
+                        if (FlushRequired)
+                            FlushRequired = false;
+
+                        await _file.FlushAsync();
+                    }
+                }
+                catch
+                {
+                }
+            }, "", _options.FlushInterval, _options.FlushInterval);
         }
 
         public async Task Close()
@@ -48,6 +83,12 @@ namespace Twino.MQ.Data
             await _file.FlushAsync();
             await _file.DisposeAsync();
             _file = null;
+
+            if (_flushTimer != null)
+            {
+                await _flushTimer.DisposeAsync();
+                _flushTimer = null;
+            }
         }
 
         public async Task<bool> Delete()
@@ -90,6 +131,5 @@ namespace Twino.MQ.Data
                 return false;
             }
         }
-        
     }
 }

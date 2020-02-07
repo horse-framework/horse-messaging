@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.Protocols.TMQ;
 
@@ -17,6 +18,7 @@ namespace Twino.MQ.Data
         private volatile bool _shrinking;
         private long _end;
         private List<string> _deletedMessages;
+        private Timer _autoShrinkTimer;
 
         internal bool ShrinkRequired { get; set; }
 
@@ -27,12 +29,28 @@ namespace Twino.MQ.Data
             _database = database;
         }
 
-        internal void Start(TimeSpan interval)
+        internal async Task Start(TimeSpan interval)
         {
+            if (_autoShrinkTimer != null)
+                await Stop();
+
+            _autoShrinkTimer = new Timer(async s =>
+            {
+                try
+                {
+                    if (ShrinkRequired)
+                        await _database.Shrink();
+                }
+                catch
+                {
+                }
+            }, "", interval, interval);
         }
 
-        internal void Stop()
+        internal async Task Stop()
         {
+            await _autoShrinkTimer.DisposeAsync();
+            _autoShrinkTimer = null;
         }
 
         private async Task CloseFile()
@@ -72,7 +90,7 @@ namespace Twino.MQ.Data
                     return false;
 
                 ms.Position = 0;
-                _database.File.Open();
+                await _database.File.Open();
                 await ms.CopyToAsync(_database.File.GetStream());
                 await _database.File.Flush();
 
@@ -228,7 +246,7 @@ namespace Twino.MQ.Data
                     }
                 }
 
-                _database.File.Open();
+                await _database.File.Open();
                 return true;
             }
             catch

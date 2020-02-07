@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Twino.MQ.Data;
 using Twino.Protocols.TMQ;
@@ -13,9 +13,9 @@ namespace Playground
             Database database = new Database(new DatabaseOptions
                                              {
                                                  Filename = "/home/mehmet/Desktop/test.tdb",
-                                                 AutoFlush = false,
-                                                 AutoShrink = false,
-                                                 InstantFlush = true,
+                                                 AutoFlush = true,
+                                                 AutoShrink = true,
+                                                 InstantFlush = false,
                                                  ShrinkInterval = TimeSpan.FromSeconds(30),
                                                  FlushInterval = TimeSpan.FromSeconds(5),
                                                  CreateBackupOnShrink = true
@@ -24,32 +24,54 @@ namespace Playground
             await database.Open();
             var messages = await database.List();
             Console.WriteLine($"There are {messages.Count} messages in database");
-            int x = 0;
-            List<TmqMessage> remove = new List<TmqMessage>();
-            foreach (KeyValuePair<string,TmqMessage> v in messages)
-            {
-                Console.WriteLine(v.Value.ToString());
-                x++;
-                if (x == 3 || x == 4 || x == 6)
-                    remove.Add(v.Value);
-            }
 
-            foreach (TmqMessage tmqMessage in remove)
-                await database.Delete(tmqMessage);
-
-            await database.Shrink();
-            
             DefaultUniqueIdGenerator generator = new DefaultUniqueIdGenerator();
             while (true)
             {
-                Console.ReadLine();
-                TmqMessage message = new TmqMessage(MessageType.Channel, "channel");
-                message.SetMessageId(generator.Create());
-                message.SetStringContent("Hello, World!");
+                string command = Console.ReadLine();
+                if (string.IsNullOrEmpty(command))
+                    break;
 
-                bool saved = await database.Insert(message);
-                Console.WriteLine(saved ? "Saved" : "Failed");
+                switch (command.ToLower())
+                {
+                    case "i":
+                        for (int i = 0; i < 300; i++)
+                        {
+                            TmqMessage message = new TmqMessage(MessageType.Channel, "channel");
+                            message.SetMessageId(generator.Create());
+                            message.SetStringContent("Hello, World!");
+
+                            bool saved = await database.Insert(message);
+                            Console.WriteLine(saved ? "Saved" : "Failed");
+                        }
+
+                        break;
+
+                    case "d":
+                        for (int j = 0; j < 100; j++)
+                        {
+                            var list = await database.List();
+                            if (list.Count > 2)
+                            {
+                                Random rnd = new Random();
+                                int i = rnd.Next(1, list.Count - 1);
+                                var first = list.Skip(i).FirstOrDefault();
+                                bool deleted = await database.Delete(first.Key);
+                                Console.WriteLine($"Delete {first.Value} is {deleted}");
+                            }
+                        }
+
+                        break;
+
+                    case "s":
+                        bool shrink = await database.Shrink();
+                        Console.WriteLine($"Database shrink: {shrink}");
+                        break;
+                }
             }
+
+            await database.Close();
+            Console.WriteLine("Database closed");
         }
     }
 }
