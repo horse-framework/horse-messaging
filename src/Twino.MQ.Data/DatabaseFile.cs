@@ -1,16 +1,19 @@
-using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
 namespace Twino.MQ.Data
 {
+    public enum BackupOption
+    {
+        Copy,
+        Move
+    }
+
     public class DatabaseFile
     {
         public string Filename { get; }
 
         private FileStream _file;
-        private FileStream _shrink;
 
         public DatabaseFile(string filename)
         {
@@ -19,27 +22,72 @@ namespace Twino.MQ.Data
 
         public Stream GetStream()
         {
-            throw new NotImplementedException();
+            return _file;
         }
 
         public async Task Flush()
         {
-            throw new NotImplementedException();
+            if (_file != null)
+                await _file.FlushAsync();
         }
 
-        public async Task Open()
+        public void Open()
         {
-            throw new NotImplementedException();
+            if (_file != null)
+                return;
+
+            _file = new FileStream(Filename, FileMode.OpenOrCreate, FileAccess.ReadWrite);
         }
 
         public async Task Close()
         {
-            throw new NotImplementedException();
+            if (_file == null)
+                return;
+
+            await _file.FlushAsync();
+            await _file.DisposeAsync();
+            _file = null;
         }
 
         public async Task<bool> Delete()
         {
-            throw new NotImplementedException();
+            if (_file != null)
+                await Close();
+
+            try
+            {
+                File.Delete(Filename);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
+
+        public async Task<bool> Backup(BackupOption option)
+        {
+            if (_file == null)
+                return false;
+
+            try
+            {
+                await _file.FlushAsync();
+                _file.Close();
+                await _file.DisposeAsync();
+
+                if (option == BackupOption.Move)
+                    File.Move(Filename, Filename + ".backup");
+                else
+                    File.Copy(Filename, Filename + ".backup");
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        
     }
 }

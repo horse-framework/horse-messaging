@@ -13,7 +13,7 @@ namespace Twino.MQ.Data
 
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         private readonly DataMessageSerializer _serializer = new DataMessageSerializer();
-        private bool _shrinkRequired;
+        private readonly ShrinkManager _shrinkManager;
 
         private readonly List<string> _deletedMessages = new List<string>();
         private readonly Dictionary<string, TmqMessage> _messages = new Dictionary<string, TmqMessage>(StringComparer.InvariantCultureIgnoreCase);
@@ -29,21 +29,53 @@ namespace Twino.MQ.Data
         {
             Options = options;
             File = new DatabaseFile(options.Filename);
+            _shrinkManager = new ShrinkManager(this);
         }
 
-        public void Open()
+        public async Task Open()
         {
-            throw new NotImplementedException();
+            File.Open();
+            await Load();
+
+            if (_deletedMessages.Count > 0)
+                await _shrinkManager.FullShrink(_messages, _deletedMessages);
+
+            if (Options.AutoShrink)
+                _shrinkManager.Start(Options.ShrinkInterval);
         }
 
-        public void Close()
+        private async Task Load()
         {
-            throw new NotImplementedException();
+            await WaitForLock();
+            try
+            {
+                Stream stream = File.GetStream();
+                stream.Seek(0, SeekOrigin.Begin);
+                while (stream.CanRead)
+                {
+                    DataMessage message = await _serializer.Read(stream);
+                    switch (message.Type)
+                    {
+                        case DataType.Insert:
+                            _messages.Add(message.Id, message.Message);
+                            break;
+
+                        case DataType.Delete:
+                            _deletedMessages.Add(message.Id);
+                            break;
+                    }
+                }
+            }
+            finally
+            {
+                ReleaseLock();
+            }
         }
 
-        public async Task Load()
+        public async Task Close()
         {
-            throw new NotImplementedException();
+            _shrinkManager.Stop();
+            await File.Close();
         }
 
         #endregion
@@ -58,7 +90,6 @@ namespace Twino.MQ.Data
 
         public async Task<bool> Shrink()
         {
-            ShrinkManager manager = new ShrinkManager(this);
             Stream stream = File.GetStream();
             long position = stream.Position;
 
@@ -66,17 +97,16 @@ namespace Twino.MQ.Data
             lock (_deletedMessages)
                 msgs = new List<string>(_deletedMessages);
 
-            bool success = await manager.Shrink(position, msgs);
+            bool success = await _shrinkManager.Shrink(position, msgs);
 
             //sync deleted messages array
             if (success)
             {
-                if (manager.DeletedMessages.Count > 0)
+                if (_shrinkManager.DeletedMessages.Count > 0)
                     lock (_deletedMessages)
-                        _deletedMessages.RemoveAll(x => manager.DeletedMessages.Contains(x));
+                        _deletedMessages.RemoveAll(x => _shrinkManager.DeletedMessages.Contains(x));
             }
 
-            _shrinkRequired = false;
             return success;
         }
 
@@ -100,6 +130,9 @@ namespace Twino.MQ.Data
 
         public async Task<bool> Insert(TmqMessage message)
         {
+            if (string.IsNullOrEmpty(message.MessageId))
+                return false;
+
             await WaitForLock();
             try
             {
@@ -109,6 +142,10 @@ namespace Twino.MQ.Data
                 _messages.Add(message.MessageId, message);
                 Stream stream = File.GetStream();
                 await _serializer.Write(stream, message);
+
+                if (Options.InstantFlush)
+                    await stream.FlushAsync();
+
                 return true;
             }
             catch
@@ -123,6 +160,9 @@ namespace Twino.MQ.Data
 
         public async Task<bool> Delete(TmqMessage message)
         {
+            if (string.IsNullOrEmpty(message.MessageId))
+                return false;
+
             return await Delete(message.MessageId);
         }
 
@@ -135,8 +175,11 @@ namespace Twino.MQ.Data
                 await _serializer.WriteDelete(stream, message);
                 _messages.Remove(message);
 
-                if (!_shrinkRequired)
-                    _shrinkRequired = true;
+                if (!_shrinkManager.ShrinkRequired)
+                    _shrinkManager.ShrinkRequired = true;
+
+                if (Options.InstantFlush)
+                    await stream.FlushAsync();
 
                 return true;
             }

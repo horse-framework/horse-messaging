@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Data
 {
@@ -17,6 +18,8 @@ namespace Twino.MQ.Data
         private long _end;
         private List<string> _deletedMessages;
 
+        internal bool ShrinkRequired { get; set; }
+
         public List<string> DeletedMessages { get; private set; } = new List<string>();
 
         public ShrinkManager(Database database)
@@ -24,15 +27,84 @@ namespace Twino.MQ.Data
             _database = database;
         }
 
-        private async Task Close()
+        internal void Start(TimeSpan interval)
+        {
+        }
+
+        internal void Stop()
+        {
+        }
+
+        private async Task CloseFile()
         {
             _file.Close();
             await _file.DisposeAsync();
             _file = null;
+        }
 
+        private async Task CloseShrink()
+        {
             _shrink.Close();
             await _shrink.DisposeAsync();
             _shrink = null;
+        }
+
+        public async Task<bool> FullShrink(Dictionary<string, TmqMessage> messages, List<string> deletedItems)
+        {
+            _shrinking = true;
+            bool backup = false;
+            await using MemoryStream ms = new MemoryStream();
+            
+            await _database.WaitForLock();
+            try
+            {
+                //shrink whole file
+                foreach (string deletedItem in deletedItems)
+                    messages.Remove(deletedItem);
+
+                deletedItems.Clear();
+
+                foreach (KeyValuePair<string,TmqMessage> kv in messages)
+                    await _serializer.Write(ms, kv.Value);
+
+                backup = await _database.File.Backup(BackupOption.Move);
+                if (!backup)
+                    return false;
+
+                ms.Position = 0;
+                _database.File.Open();
+                await ms.CopyToAsync(_database.File.GetStream());
+                
+                if (!_database.Options.CreateBackupOnShrink)
+                {
+                    try
+                    {
+                        File.Delete(_database.File.Filename + ".backup");
+                    }
+                    catch { }
+                }
+                
+                return true;
+            }
+            catch
+            {
+                //reverse
+                if (backup)
+                {
+                    try
+                    {
+                        File.Delete(_database.File.Filename);
+                        File.Move(_database.File.Filename + ".backup", _database.File.Filename);
+                    }
+                    catch { }
+                }
+                
+                return false;
+            }
+            finally
+            {
+                _database.ReleaseLock();
+            }
         }
 
         public async Task<bool> Shrink(long position, List<string> deletedMessages)
@@ -57,6 +129,7 @@ namespace Twino.MQ.Data
             bool sync = await SyncShrink();
 
             _shrinking = false;
+            ShrinkRequired = false;
             return sync;
         }
 
@@ -99,7 +172,7 @@ namespace Twino.MQ.Data
                         }
                         else
                             deletedMessages.Add(id);
-                        
+
                         break;
                 }
             }
@@ -113,17 +186,41 @@ namespace Twino.MQ.Data
 
         private async Task<bool> SyncShrink()
         {
+            byte[] buffer = new byte[10240];
+
             await _shrink.FlushAsync();
-            await Close();
+            await CloseFile();
             await _database.WaitForLock();
             try
             {
+                //write left data from file to shrink file before swap-chain
+                Stream stream = _database.File.GetStream();
+                stream.Seek(_end, SeekOrigin.Begin);
+                while (stream.CanRead)
+                {
+                    int read = await stream.ReadAsync(buffer, 0, buffer.Length);
+                    if (read == 0)
+                        break;
+
+                    await _shrink.WriteAsync(buffer, 0, read);
+                }
+
+                await CloseShrink();
                 await _database.File.Close();
 
                 File.Move(_database.File.Filename, _database.File.Filename + ".backup", true);
                 File.Move(_database.File.Filename + ".shrink", _database.File.Filename, true);
 
-                await _database.File.Open();
+                if (!_database.Options.CreateBackupOnShrink)
+                {
+                    try
+                    {
+                        File.Delete(_database.File.Filename + ".backup");
+                    }
+                    catch { }
+                }
+
+                _database.File.Open();
                 return true;
             }
             catch
