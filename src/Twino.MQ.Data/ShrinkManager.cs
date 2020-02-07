@@ -74,6 +74,7 @@ namespace Twino.MQ.Data
                 ms.Position = 0;
                 _database.File.Open();
                 await ms.CopyToAsync(_database.File.GetStream());
+                await _database.File.Flush();
 
                 if (!_database.Options.CreateBackupOnShrink)
                 {
@@ -107,6 +108,7 @@ namespace Twino.MQ.Data
             }
             finally
             {
+                _shrinking = false;
                 _database.ReleaseLock();
             }
         }
@@ -170,10 +172,7 @@ namespace Twino.MQ.Data
 
                     case DataType.Delete:
                         if (!deleted)
-                        {
-                            ms.WriteByte((byte) type);
-                            await _serializer.WriteId(ms, id);
-                        }
+                            await _serializer.WriteDelete(ms, id);
                         else
                             deletedMessages.Add(id);
 
@@ -199,14 +198,17 @@ namespace Twino.MQ.Data
             {
                 //write left data from file to shrink file before swap-chain
                 Stream stream = _database.File.GetStream();
-                stream.Seek(_end, SeekOrigin.Begin);
-                while (stream.Position < stream.Length)
+                if (stream.Length > _end)
                 {
-                    int read = await stream.ReadAsync(buffer, 0, buffer.Length);
-                    if (read == 0)
-                        break;
+                    stream.Seek(_end, SeekOrigin.Begin);
+                    while (stream.Position < stream.Length)
+                    {
+                        int read = await stream.ReadAsync(buffer, 0, buffer.Length);
+                        if (read == 0)
+                            break;
 
-                    await _shrink.WriteAsync(buffer, 0, read);
+                        await _shrink.WriteAsync(buffer, 0, read);
+                    }
                 }
 
                 await CloseShrink();

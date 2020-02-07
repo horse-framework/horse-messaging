@@ -37,6 +37,7 @@ namespace Twino.MQ.Data
                 return;
 
             _file = new FileStream(Filename, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+            _file.Seek(_file.Length, SeekOrigin.Begin);
         }
 
         public async Task Close()
@@ -75,6 +76,7 @@ namespace Twino.MQ.Data
                 await _file.FlushAsync();
                 _file.Close();
                 await _file.DisposeAsync();
+                _file = null;
 
                 if (option == BackupOption.Move)
                     File.Move(Filename, Filename + ".backup");

@@ -174,6 +174,7 @@ namespace Twino.MQ.Data
                 Stream stream = File.GetStream();
                 await _serializer.WriteDelete(stream, message);
                 _messages.Remove(message);
+                _deletedMessages.Add(message);
 
                 if (!_shrinkManager.ShrinkRequired)
                     _shrinkManager.ShrinkRequired = true;
