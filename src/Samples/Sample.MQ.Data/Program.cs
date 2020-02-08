@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
-using Twino.MQ.Data;
-using Twino.Protocols.TMQ;
+﻿using System.Threading.Tasks;
 
 namespace Sample.MQ.Data
 {
@@ -12,8 +6,11 @@ namespace Sample.MQ.Data
     {
         static async Task Main(string[] args)
         {
-            Overload o = new Overload();
-            await o.OverloadAsync();
+            while (true)
+            {
+                Overload o = new Overload();
+                await o.OverloadAsync();   
+            }
         }
         
     }

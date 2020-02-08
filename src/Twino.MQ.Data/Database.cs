@@ -51,9 +51,13 @@ namespace Twino.MQ.Data
             {
                 Stream stream = File.GetStream();
                 stream.Seek(0, SeekOrigin.Begin);
-                while (stream.Position < stream.Length)
+                await using MemoryStream ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+                ms.Position = 0;
+                
+                while (ms.Position < ms.Length)
                 {
-                    DataMessage message = await _serializer.Read(stream);
+                    DataMessage message = await _serializer.Read(ms);
                     switch (message.Type)
                     {
                         case DataType.Insert:
@@ -91,7 +95,16 @@ namespace Twino.MQ.Data
         public async Task<bool> Shrink()
         {
             Stream stream = File.GetStream();
-            long position = stream.Position;
+            await WaitForLock();
+            long position;
+            try
+            {
+                position = stream.Position;
+            }
+            finally
+            {
+                ReleaseLock();
+            }
 
             List<string> msgs;
             lock (_deletedMessages)
@@ -218,7 +231,7 @@ namespace Twino.MQ.Data
         {
             return _messages.Count;
         }
-        
+
         #endregion
     }
 }

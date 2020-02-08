@@ -57,7 +57,10 @@ namespace Twino.MQ.Data
                 return;
 
             _file = new FileStream(Filename, FileMode.OpenOrCreate, FileAccess.ReadWrite);
-            _file.Seek(_file.Length, SeekOrigin.Begin);
+
+            if (_file.Length > 0)
+                _file.Seek(0, SeekOrigin.End);
+                //_file.Seek(_file.Length, SeekOrigin.Begin);
 
             if (_database.Options.AutoFlush)
                 await StartFlushTimer();
@@ -143,9 +146,9 @@ namespace Twino.MQ.Data
                 await Close(dblock);
 
                 if (option == BackupOption.Move)
-                    File.Move(Filename, Filename + ".backup");
+                    File.Move(Filename, Filename + ".backup", true);
                 else
-                    File.Copy(Filename, Filename + ".backup");
+                    File.Copy(Filename, Filename + ".backup", true);
 
                 return true;
             }

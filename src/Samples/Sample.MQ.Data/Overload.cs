@@ -25,7 +25,7 @@ namespace Sample.MQ.Data
                                        {
                                            Filename = "/home/mehmet/Desktop/tdb/test.tdb",
                                            AutoShrink = true,
-                                           ShrinkInterval = TimeSpan.FromMilliseconds(6000),
+                                           ShrinkInterval = TimeSpan.FromMilliseconds(15000),
                                            AutoFlush = true,
                                            InstantFlush = false,
                                            FlushInterval = TimeSpan.FromMilliseconds(250),
@@ -37,6 +37,7 @@ namespace Sample.MQ.Data
             await db.Open();
             sw1.Stop();
             Console.WriteLine($"Database loaded with {db.ItemsCount()} in {sw1.ElapsedMilliseconds} ms");
+            Console.ReadLine();
             
             _running = true;
             _totalDelete = 0;
@@ -45,14 +46,14 @@ namespace Sample.MQ.Data
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            for (int i = 0; i < 35; i++)
+            for (int i = 0; i < 20; i++)
             {
                 Thread thread = new Thread(async () =>
                 {
                     Random rnd = new Random();
                     while (_running)
                     {
-                        Thread.Sleep(rnd.Next(1, 10));
+                        Thread.Sleep(rnd.Next(1, 5));
                         try
                         {
                             if (rnd.NextDouble() < 0.75)
@@ -101,11 +102,11 @@ namespace Sample.MQ.Data
             }
 
             SpinWait spin = new SpinWait();
-            while (sw.ElapsedMilliseconds < 30000)
+            while (sw.ElapsedMilliseconds < 600000)
                 spin.SpinOnce();
 
             _running = false;
-            Thread.Sleep(5000);
+            Thread.Sleep(3000);
 
             int left = _totalInsert - _totalDelete;
             var items = await db.List();
