@@ -28,7 +28,7 @@ namespace Twino.MQ.Data
         public Database(DatabaseOptions options)
         {
             Options = options;
-            File = new DatabaseFile(options);
+            File = new DatabaseFile(this);
             _shrinkManager = new ShrinkManager(this);
         }
 
@@ -214,6 +214,11 @@ namespace Twino.MQ.Data
             return messages;
         }
 
+        public int ItemsCount()
+        {
+            return _messages.Count;
+        }
+        
         #endregion
     }
 }

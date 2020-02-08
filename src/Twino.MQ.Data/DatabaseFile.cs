@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,15 +16,15 @@ namespace Twino.MQ.Data
         public string Filename { get; }
 
         private FileStream _file;
-        private DatabaseOptions _options;
         private Timer _flushTimer;
+        private readonly Database _database;
 
         internal bool FlushRequired { get; set; }
 
-        public DatabaseFile(DatabaseOptions options)
+        public DatabaseFile(Database database)
         {
-            _options = options;
-            Filename = options.Filename;
+            _database = database;
+            Filename = database.Options.Filename;
         }
 
         public Stream GetStream()
@@ -31,10 +32,23 @@ namespace Twino.MQ.Data
             return _file;
         }
 
-        public async Task Flush()
+        public async Task Flush(bool dblock = true)
         {
-            if (_file != null)
+            if (_file == null)
+                return;
+
+            if (dblock)
+                await _database.WaitForLock();
+
+            try
+            {
                 await _file.FlushAsync();
+            }
+            finally
+            {
+                if (dblock)
+                    _database.ReleaseLock();
+            }
         }
 
         public async Task Open()
@@ -45,11 +59,11 @@ namespace Twino.MQ.Data
             _file = new FileStream(Filename, FileMode.OpenOrCreate, FileAccess.ReadWrite);
             _file.Seek(_file.Length, SeekOrigin.Begin);
 
-            if (_options.AutoFlush)
+            if (_database.Options.AutoFlush)
                 await StartFlushTimer();
         }
 
-        private async Task StartFlushTimer()
+        internal async Task StartFlushTimer()
         {
             if (_flushTimer != null)
             {
@@ -64,30 +78,42 @@ namespace Twino.MQ.Data
                     if (_file != null)
                     {
                         if (FlushRequired)
+                        {
                             FlushRequired = false;
-
-                        await _file.FlushAsync();
+                            await Flush();
+                        }
                     }
                 }
                 catch
                 {
                 }
-            }, "", _options.FlushInterval, _options.FlushInterval);
+            }, "", TimeSpan.FromSeconds(2), _database.Options.FlushInterval);
         }
 
-        public async Task Close()
+        public async Task Close(bool dblock = true)
         {
             if (_file == null)
                 return;
 
-            await _file.FlushAsync();
-            await _file.DisposeAsync();
-            _file = null;
+            if (dblock)
+                await _database.WaitForLock();
 
-            if (_flushTimer != null)
+            try
             {
-                await _flushTimer.DisposeAsync();
-                _flushTimer = null;
+                await _file.FlushAsync();
+                await _file.DisposeAsync();
+                _file = null;
+
+                if (_flushTimer != null)
+                {
+                    await _flushTimer.DisposeAsync();
+                    _flushTimer = null;
+                }
+            }
+            finally
+            {
+                if (dblock)
+                    _database.ReleaseLock();
             }
         }
 
@@ -107,17 +133,14 @@ namespace Twino.MQ.Data
             }
         }
 
-        public async Task<bool> Backup(BackupOption option)
+        public async Task<bool> Backup(BackupOption option, bool dblock = true)
         {
             if (_file == null)
                 return false;
 
             try
             {
-                await _file.FlushAsync();
-                _file.Close();
-                await _file.DisposeAsync();
-                _file = null;
+                await Close(dblock);
 
                 if (option == BackupOption.Move)
                     File.Move(Filename, Filename + ".backup");

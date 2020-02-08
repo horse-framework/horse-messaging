@@ -49,8 +49,11 @@ namespace Twino.MQ.Data
 
         internal async Task Stop()
         {
-            await _autoShrinkTimer.DisposeAsync();
-            _autoShrinkTimer = null;
+            if (_autoShrinkTimer != null)
+            {
+                await _autoShrinkTimer.DisposeAsync();
+                _autoShrinkTimer = null;
+            }
         }
 
         private async Task CloseFile()
@@ -85,14 +88,14 @@ namespace Twino.MQ.Data
                 foreach (KeyValuePair<string, TmqMessage> kv in messages)
                     await _serializer.Write(ms, kv.Value);
 
-                backup = await _database.File.Backup(BackupOption.Move);
+                backup = await _database.File.Backup(BackupOption.Move, false);
                 if (!backup)
                     return false;
 
                 ms.Position = 0;
                 await _database.File.Open();
                 await ms.CopyToAsync(_database.File.GetStream());
-                await _database.File.Flush();
+                await _database.File.Flush(false);
 
                 if (!_database.Options.CreateBackupOnShrink)
                 {
@@ -229,8 +232,9 @@ namespace Twino.MQ.Data
                     }
                 }
 
+                await _shrink.FlushAsync();
                 await CloseShrink();
-                await _database.File.Close();
+                await _database.File.Close(false);
 
                 File.Move(_database.File.Filename, _database.File.Filename + ".backup", true);
                 File.Move(_database.File.Filename + ".shrink", _database.File.Filename, true);
