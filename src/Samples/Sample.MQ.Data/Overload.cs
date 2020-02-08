@@ -46,7 +46,7 @@ namespace Sample.MQ.Data
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            for (int i = 0; i < 20; i++)
+            for (int i = 0; i < 40; i++)
             {
                 Thread thread = new Thread(async () =>
                 {

@@ -12,8 +12,8 @@ namespace Twino.MQ.Data
         private readonly Database _database;
         private readonly DataMessageSerializer _serializer = new DataMessageSerializer();
 
-        private FileStream _file;
-        private FileStream _shrink;
+        private MemoryStream _source;
+        private FileStream _target;
 
         private volatile bool _shrinking;
         private long _end;
@@ -56,18 +56,24 @@ namespace Twino.MQ.Data
             }
         }
 
-        private async Task CloseFile()
+        private async Task DisposeSource()
         {
-            _file.Close();
-            await _file.DisposeAsync();
-            _file = null;
+            if (_source == null)
+                return;
+            
+            _source.Close();
+            await _source.DisposeAsync();
+            _source = null;
         }
 
-        private async Task CloseShrink()
+        private async Task CloseTarget()
         {
-            _shrink.Close();
-            await _shrink.DisposeAsync();
-            _shrink = null;
+            if (_target == null)
+                return;
+            
+            _target.Close();
+            await _target.DisposeAsync();
+            _target = null;
         }
 
         public async Task<bool> FullShrink(Dictionary<string, TmqMessage> messages, List<string> deletedItems)
@@ -142,9 +148,18 @@ namespace Twino.MQ.Data
             _shrinking = true;
             _end = position;
             _deletedMessages = deletedMessages;
+            
+            if (_source != null)
+                await DisposeSource();
 
-            _file = new FileStream(_database.File.Filename, FileMode.Open, FileAccess.Read);
-            _shrink = new FileStream(_database.File.Filename + ".shrink", FileMode.Create, FileAccess.Write);
+            await using (FileStream file = new FileStream(_database.File.Filename, FileMode.Open, FileAccess.Read))
+            {
+                _source = new MemoryStream();
+                await CopyStream(file, _source, Convert.ToInt32(_end));
+                _source.Position = 0;
+            }
+
+            _target = new FileStream(_database.File.Filename + ".shrink", FileMode.Create, FileAccess.Write);
 
             bool proceed = await ProcessShrink();
             if (!proceed)
@@ -165,26 +180,26 @@ namespace Twino.MQ.Data
             List<string> deletedMessages = new List<string>();
             await using MemoryStream ms = new MemoryStream(Convert.ToInt32(_end));
 
-            while (_file.Position < _end)
+            while (_source.Position < _source.Length)
             {
-                DataType type = _serializer.ReadType(_file);
-                string id = await _serializer.ReadId(_file);
+                DataType type = _serializer.ReadType(_source);
+                string id = await _serializer.ReadId(_source);
                 bool deleted = _deletedMessages.Contains(id);
 
                 switch (type)
                 {
                     case DataType.Insert:
-                        int length = await _serializer.ReadLength(_file);
+                        int length = await _serializer.ReadLength(_source);
                         if (deleted)
                         {
-                            _file.Seek(length, SeekOrigin.Current);
+                            _source.Seek(length, SeekOrigin.Current);
                             deletedMessages.Add(id);
                         }
                         else
                         {
                             ms.WriteByte((byte) type);
                             await _serializer.WriteId(ms, id);
-                            bool written = await _serializer.WriteContent(length, _file, ms);
+                            bool written = await _serializer.WriteContent(length, _source, ms);
                             if (!written)
                                 return false;
                         }
@@ -202,18 +217,31 @@ namespace Twino.MQ.Data
             }
 
             ms.Position = 0;
-            await ms.CopyToAsync(_shrink);
+            await ms.CopyToAsync(_target);
 
             DeletedMessages = deletedMessages;
             return true;
+        }
+
+        private async Task CopyStream(Stream from, Stream to, int length)
+        {
+            byte[] buffer = new byte[10240];
+            int left = length;
+            while (left > 0)
+            {
+                int size = left < buffer.Length ? left : buffer.Length;
+                int read = await from.ReadAsync(buffer, 0, size);
+                left -= read;
+                await to.WriteAsync(buffer, 0, read);
+            }
         }
 
         private async Task<bool> SyncShrink()
         {
             byte[] buffer = new byte[10240];
 
-            await _shrink.FlushAsync();
-            await CloseFile();
+            await _target.FlushAsync();
+            await DisposeSource();
             await _database.WaitForLock();
             try
             {
@@ -228,12 +256,12 @@ namespace Twino.MQ.Data
                         if (read == 0)
                             break;
 
-                        await _shrink.WriteAsync(buffer, 0, read);
+                        await _target.WriteAsync(buffer, 0, read);
                     }
                 }
 
-                await _shrink.FlushAsync();
-                await CloseShrink();
+                await _target.FlushAsync();
+                await CloseTarget();
                 await _database.File.Close(false);
 
                 File.Move(_database.File.Filename, _database.File.Filename + ".backup", true);
