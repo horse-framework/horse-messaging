@@ -7,13 +7,28 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Data
 {
+    /// <summary>
+    /// Message serializer object.
+    /// Serializes messages for keeping in database file.
+    /// And deserializes them to extract from file to queue usage. 
+    /// </summary>
     public class DataMessageSerializer
     {
+        /// <summary>
+        /// Default TMQ Protocol reader
+        /// </summary>
         private readonly TmqReader _reader = new TmqReader();
+        
+        /// <summary>
+        /// Default TMQ Protocol writer
+        /// </summary>
         private readonly TmqWriter _writer = new TmqWriter();
 
         #region Read
 
+        /// <summary>
+        /// Reads a data message object from the stream
+        /// </summary>
         public async Task<DataMessage> Read(Stream stream)
         {
             DataType type = ReadType(stream);
@@ -30,12 +45,18 @@ namespace Twino.MQ.Data
             return new DataMessage(DataType.Insert, id, msg);
         }
 
+        /// <summary>
+        /// Reads only message type from stream
+        /// </summary>
         internal DataType ReadType(Stream stream)
         {
             int b = stream.ReadByte();
             return (DataType) b;
         }
 
+        /// <summary>
+        /// Reads id length byte and id itself from stream
+        /// </summary>
         internal async Task<string> ReadId(Stream stream)
         {
             int size = stream.ReadByte();
@@ -48,6 +69,9 @@ namespace Twino.MQ.Data
             return Encoding.UTF8.GetString(data, 0, data.Length);
         }
 
+        /// <summary>
+        /// Reads message length from stream
+        /// </summary>
         internal async Task<int> ReadLength(Stream stream)
         {
             byte[] lb = new byte[4];
@@ -58,6 +82,9 @@ namespace Twino.MQ.Data
             return BitConverter.ToInt32(lb);
         }
 
+        /// <summary>
+        /// Reads a content with it's length bytes from a stream and writes the data to another stream
+        /// </summary>
         internal async Task<bool> ReadIntoContent(Stream stream, Stream readInto)
         {
             byte[] lb = new byte[4];
@@ -86,6 +113,9 @@ namespace Twino.MQ.Data
 
         #region Write
 
+        /// <summary>
+        /// Writes a message to a stream
+        /// </summary>
         public async Task Write(Stream stream, TmqMessage message)
         {
             WriteType(stream, DataType.Insert);
@@ -99,6 +129,9 @@ namespace Twino.MQ.Data
             await WriteContent(Convert.ToInt32(ms.Length), ms, stream);
         }
 
+        /// <summary>
+        /// Write message delete opereation to the stream
+        /// </summary>
         public async Task WriteDelete(Stream stream, TmqMessage message)
         {
             stream.WriteByte((byte) DataType.Delete);
@@ -106,18 +139,27 @@ namespace Twino.MQ.Data
             await stream.WriteAsync(Encoding.UTF8.GetBytes(message.MessageId));
         }
 
+        /// <summary>
+        /// Write message delete opereation to the stream
+        /// </summary>
         public async Task WriteDelete(Stream stream, string messageId)
         {
             WriteType(stream, DataType.Delete);
             await WriteId(stream, messageId);
         }
 
+        /// <summary>
+        /// Writes message data type to the stream
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteType(Stream stream, DataType type)
         {
             stream.WriteByte((byte) type);
         }
 
+        /// <summary>
+        /// Writes message id length and id value to the stream
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public async Task WriteId(Stream stream, string id)
         {
@@ -127,6 +169,9 @@ namespace Twino.MQ.Data
             await stream.WriteAsync(Encoding.UTF8.GetBytes(id));
         }
 
+        /// <summary>
+        /// Writes specified bytes content to target stream from source stream
+        /// </summary>
         internal async Task<bool> WriteContent(int length, Stream from, Stream to)
         {
             await to.WriteAsync(BitConverter.GetBytes(length));

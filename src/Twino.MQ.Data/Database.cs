@@ -7,24 +7,57 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Data
 {
+    /// <summary>
+    /// Messaging Queue database.
+    /// Keeps only one queue data, insert and delete operations are supported, update is not supported.
+    /// </summary>
     public class Database
     {
         #region Properties
 
+        /// <summary>
+        /// IO Locker
+        /// </summary>
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+        
+        /// <summary>
+        /// Database file message serializer
+        /// </summary>
         private readonly DataMessageSerializer _serializer = new DataMessageSerializer();
+        
+        /// <summary>
+        /// Database shrink manager
+        /// </summary>
         private readonly ShrinkManager _shrinkManager;
 
+        /// <summary>
+        /// Recently deleted message id list
+        /// </summary>
         private readonly List<string> _deletedMessages = new List<string>();
+        
+        /// <summary>
+        /// All messages in queue
+        /// </summary>
         private readonly Dictionary<string, TmqMessage> _messages = new Dictionary<string, TmqMessage>(StringComparer.InvariantCultureIgnoreCase);
 
+        /// <summary>
+        /// Database file
+        /// </summary>
         public DatabaseFile File { get; }
+        
+        /// <summary>
+        /// Database options.
+        /// Applied once when database Open method is called.
+        /// </summary>
         public DatabaseOptions Options { get; }
 
         #endregion
 
         #region Open - Close
 
+        /// <summary>
+        /// Creates new queue database
+        /// </summary>
         public Database(DatabaseOptions options)
         {
             Options = options;
@@ -32,6 +65,9 @@ namespace Twino.MQ.Data
             _shrinkManager = new ShrinkManager(this);
         }
 
+        /// <summary>
+        /// Opens database connection
+        /// </summary>
         public async Task Open()
         {
             await File.Open();
@@ -44,6 +80,9 @@ namespace Twino.MQ.Data
                 _shrinkManager.Start(Options.ShrinkInterval);
         }
 
+        /// <summary>
+        /// Loads all data into memory from disk
+        /// </summary>
         private async Task Load()
         {
             await WaitForLock();
@@ -76,6 +115,9 @@ namespace Twino.MQ.Data
             }
         }
 
+        /// <summary>
+        /// Closes the database
+        /// </summary>
         public async Task Close()
         {
             _shrinkManager.Stop();
@@ -86,12 +128,20 @@ namespace Twino.MQ.Data
 
         #region Management
 
+        /// <summary>
+        /// Removes database and deletes file
+        /// </summary>
+        /// <returns></returns>
         public async Task<bool> RemoveDatabase()
         {
             await File.Close();
             return await File.Delete();
         }
 
+        /// <summary>
+        /// Shrinks database transactions and reduces file size on disk
+        /// </summary>
+        /// <returns></returns>
         public async Task<bool> Shrink()
         {
             Stream stream = File.GetStream();
@@ -127,12 +177,18 @@ namespace Twino.MQ.Data
 
         #region Lock
 
-        public async Task WaitForLock()
+        /// <summary>
+        /// Waits for IO lock
+        /// </summary>
+        internal async Task WaitForLock()
         {
             await _semaphore.WaitAsync();
         }
 
-        public void ReleaseLock()
+        /// <summary>
+        /// Releases IO lock
+        /// </summary>
+        internal void ReleaseLock()
         {
             _semaphore.Release();
         }
@@ -141,6 +197,10 @@ namespace Twino.MQ.Data
 
         #region Insert - Delete - List
 
+        /// <summary>
+        /// Inserts new message to database
+        /// </summary>
+        /// <returns></returns>
         public async Task<bool> Insert(TmqMessage message)
         {
             if (string.IsNullOrEmpty(message.MessageId))
@@ -173,6 +233,9 @@ namespace Twino.MQ.Data
             }
         }
 
+        /// <summary>
+        /// Deletes the message from database
+        /// </summary>
         public async Task<bool> Delete(TmqMessage message)
         {
             if (string.IsNullOrEmpty(message.MessageId))
@@ -181,6 +244,9 @@ namespace Twino.MQ.Data
             return await Delete(message.MessageId);
         }
 
+        /// <summary>
+        /// Deletes the message from database
+        /// </summary>
         public async Task<bool> Delete(string message)
         {
             await WaitForLock();
@@ -211,6 +277,10 @@ namespace Twino.MQ.Data
             }
         }
 
+        /// <summary>
+        /// Lists all messages in database
+        /// </summary>
+        /// <returns></returns>
         public async Task<Dictionary<string, TmqMessage>> List()
         {
             Dictionary<string, TmqMessage> messages;
@@ -227,7 +297,10 @@ namespace Twino.MQ.Data
             return messages;
         }
 
-        public int ItemsCount()
+        /// <summary>
+        /// Gets message count in database
+        /// </summary>
+        public int MessageCount()
         {
             return _messages.Count;
         }

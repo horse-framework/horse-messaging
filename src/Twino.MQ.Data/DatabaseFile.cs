@@ -5,33 +5,74 @@ using System.Threading.Tasks;
 
 namespace Twino.MQ.Data
 {
+    /// <summary>
+    /// Database file backup options
+    /// </summary>
     public enum BackupOption
     {
+        /// <summary>
+        /// Creates new backup file as copy of database file
+        /// </summary>
         Copy,
+        
+        /// <summary>
+        /// Renames database file
+        /// </summary>
         Move
     }
 
+    /// <summary>
+    /// Database file and operations belong it
+    /// </summary>
     public class DatabaseFile
     {
+        /// <summary>
+        /// File name. May be relative or absolute full path.
+        /// </summary>
         public string Filename { get; }
 
+        /// <summary>
+        /// File stream object of the database file
+        /// </summary>
         private FileStream _file;
+        
+        /// <summary>
+        /// File auto flush timer
+        /// </summary>
         private Timer _flushTimer;
+        
+        /// <summary>
+        /// Database object
+        /// </summary>
         private readonly Database _database;
 
+        /// <summary>
+        /// Managed by database and file objects.
+        /// If true, auto flush timer will call flush method of the file
+        /// </summary>
         internal bool FlushRequired { get; set; }
 
+        /// <summary>
+        /// Creates new database file
+        /// </summary>
         public DatabaseFile(Database database)
         {
             _database = database;
             Filename = database.Options.Filename;
         }
 
+        /// <summary>
+        /// Gets current open file stream
+        /// </summary>
         public Stream GetStream()
         {
             return _file;
         }
 
+        /// <summary>
+        /// Flushes file stream.
+        /// If dblock is true, operation will block all insert, delete and shrink operations til end
+        /// </summary>
         public async Task Flush(bool dblock = true)
         {
             if (_file == null)
@@ -51,6 +92,9 @@ namespace Twino.MQ.Data
             }
         }
 
+        /// <summary>
+        /// Opens database file and seeks to end
+        /// </summary>
         public async Task Open()
         {
             if (_file != null)
@@ -60,12 +104,14 @@ namespace Twino.MQ.Data
 
             if (_file.Length > 0)
                 _file.Seek(0, SeekOrigin.End);
-                //_file.Seek(_file.Length, SeekOrigin.Begin);
 
             if (_database.Options.AutoFlush)
                 await StartFlushTimer();
         }
 
+        /// <summary>
+        /// Starts flush timer for database file stream
+        /// </summary>
         internal async Task StartFlushTimer()
         {
             if (_flushTimer != null)
@@ -93,6 +139,10 @@ namespace Twino.MQ.Data
             }, "", TimeSpan.FromSeconds(2), _database.Options.FlushInterval);
         }
 
+        /// <summary>
+        /// Closes database file stream.
+        /// If dblock is true, operation will block all insert, delete and shrink operations til end
+        /// </summary>
         public async Task Close(bool dblock = true)
         {
             if (_file == null)
@@ -120,6 +170,9 @@ namespace Twino.MQ.Data
             }
         }
 
+        /// <summary>
+        /// Deletes database file
+        /// </summary>
         public async Task<bool> Delete()
         {
             if (_file != null)
@@ -136,6 +189,10 @@ namespace Twino.MQ.Data
             }
         }
 
+        /// <summary>
+        /// Backups database file.
+        /// If dblock is true, operation will block all insert, delete and shrink operations til end
+        /// </summary>
         public async Task<bool> Backup(BackupOption option, bool dblock = true)
         {
             if (_file == null)

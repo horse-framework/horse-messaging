@@ -8,28 +8,83 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Data
 {
+    /// <summary>
+    /// Manages shrink operations for the database
+    /// </summary>
     public class ShrinkManager
     {
+        #region Fields - Properties
+
+        /// <summary>
+        /// Database itself
+        /// </summary>
         private readonly Database _database;
+
+        /// <summary>
+        /// Default data serializer
+        /// </summary>
         private readonly DataMessageSerializer _serializer = new DataMessageSerializer();
 
+        /// <summary>
+        /// Source database stream that will be shrunken
+        /// </summary>
         private MemoryStream _source;
+
+        /// <summary>
+        /// New file stream, shrunken data will be writted to this stream
+        /// </summary>
         private FileStream _target;
 
+        /// <summary>
+        /// True, if shrink operation is in process
+        /// </summary>
         private volatile bool _shrinking;
+
+        /// <summary>
+        /// Source stream's ending position
+        /// </summary>
         private long _end;
+
+        /// <summary>
+        /// Found and deleted files after shrink operation
+        /// </summary>
         private HashSet<string> _deletedMessages;
+
+        /// <summary>
+        /// Auto shrink timer object
+        /// </summary>
         private ThreadTimer _autoShrinkTimer;
 
+        /// <summary>
+        /// If true, a new delete request is proceed and database file requires to be shrunken
+        /// </summary>
         internal bool ShrinkRequired { get; set; }
 
+        /// <summary>
+        /// As a shrink result, deleted messages via shrink operation
+        /// </summary>
         public List<string> DeletedMessages { get; private set; } = new List<string>();
 
+        /// <summary>
+        /// Buffer for shrink operations
+        /// </summary>
+        private readonly byte[] _buffer = new byte[10240];
+
+        #endregion
+
+        #region Create - Start - Stop - Dispose
+
+        /// <summary>
+        /// Creates new shrink manager for the database
+        /// </summary>
         public ShrinkManager(Database database)
         {
             _database = database;
         }
 
+        /// <summary>
+        /// Starts shrink timer
+        /// </summary>
         internal void Start(TimeSpan interval)
         {
             if (_autoShrinkTimer != null)
@@ -52,6 +107,9 @@ namespace Twino.MQ.Data
             _autoShrinkTimer.Start(ThreadPriority.BelowNormal);
         }
 
+        /// <summary>
+        /// Stop shrink timer
+        /// </summary>
         internal void Stop()
         {
             if (_autoShrinkTimer != null)
@@ -61,6 +119,9 @@ namespace Twino.MQ.Data
             }
         }
 
+        /// <summary>
+        /// Disposes source shrink stream
+        /// </summary>
         private async Task DisposeSource()
         {
             if (_source == null)
@@ -71,6 +132,9 @@ namespace Twino.MQ.Data
             _source = null;
         }
 
+        /// <summary>
+        /// Closes target shrink file stream
+        /// </summary>
         private async Task CloseTarget()
         {
             if (_target == null)
@@ -81,6 +145,14 @@ namespace Twino.MQ.Data
             _target = null;
         }
 
+        #endregion
+
+        #region Shrink
+
+        /// <summary>
+        /// Shrinks whole data in database file.
+        /// In this operation, database file will be locked 
+        /// </summary>
         public async Task<bool> FullShrink(Dictionary<string, TmqMessage> messages, List<string> deletedItems)
         {
             _shrinking = true;
@@ -145,6 +217,10 @@ namespace Twino.MQ.Data
             }
         }
 
+        /// <summary>
+        /// Shrinks database file from begin to position pointer.
+        /// This is a partial shrink and can run almost without any lock and thread-block operations.
+        /// </summary>
         public async Task<bool> Shrink(long position, List<string> deletedMessages)
         {
             if (_shrinking)
@@ -180,6 +256,9 @@ namespace Twino.MQ.Data
             return sync;
         }
 
+        /// <summary>
+        /// Reads all shrink area and process messages if they are deleted or not
+        /// </summary>
         private async Task<bool> ProcessShrink()
         {
             List<string> deletedMessages = new List<string>();
@@ -228,23 +307,11 @@ namespace Twino.MQ.Data
             return true;
         }
 
-        private async Task CopyStream(Stream from, Stream to, int length)
-        {
-            byte[] buffer = new byte[10240];
-            int left = length;
-            while (left > 0)
-            {
-                int size = left < buffer.Length ? left : buffer.Length;
-                int read = await from.ReadAsync(buffer, 0, size);
-                left -= read;
-                await to.WriteAsync(buffer, 0, read);
-            }
-        }
-
+        /// <summary>
+        /// Merges shrink file with current database file and completes shrink operation
+        /// </summary>
         private async Task<bool> SyncShrink()
         {
-            byte[] buffer = new byte[10240];
-
             await _target.FlushAsync();
             await DisposeSource();
             await _database.WaitForLock();
@@ -257,11 +324,11 @@ namespace Twino.MQ.Data
                     stream.Seek(_end, SeekOrigin.Begin);
                     while (stream.Position < stream.Length)
                     {
-                        int read = await stream.ReadAsync(buffer, 0, buffer.Length);
+                        int read = await stream.ReadAsync(_buffer, 0, _buffer.Length);
                         if (read == 0)
                             break;
 
-                        await _target.WriteAsync(buffer, 0, read);
+                        await _target.WriteAsync(_buffer, 0, read);
                     }
                 }
 
@@ -295,5 +362,26 @@ namespace Twino.MQ.Data
                 _database.ReleaseLock();
             }
         }
+
+        #endregion
+
+        #region Helpers
+
+        /// <summary>
+        /// Copies data from source stream to target stream only first length bytes.
+        /// </summary>
+        private async Task CopyStream(Stream from, Stream to, int length)
+        {
+            int left = length;
+            while (left > 0)
+            {
+                int size = left < _buffer.Length ? left : _buffer.Length;
+                int read = await from.ReadAsync(_buffer, 0, size);
+                left -= read;
+                await to.WriteAsync(_buffer, 0, read);
+            }
+        }
+
+        #endregion
     }
 }

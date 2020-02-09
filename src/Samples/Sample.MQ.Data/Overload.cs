@@ -36,7 +36,7 @@ namespace Sample.MQ.Data
             sw1.Start();
             await db.Open();
             sw1.Stop();
-            Console.WriteLine($"Database loaded with {db.ItemsCount()} in {sw1.ElapsedMilliseconds} ms");
+            Console.WriteLine($"Database loaded with {db.MessageCount()} in {sw1.ElapsedMilliseconds} ms");
             Console.ReadLine();
             
             _running = true;
