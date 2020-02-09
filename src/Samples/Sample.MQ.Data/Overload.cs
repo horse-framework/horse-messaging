@@ -46,14 +46,14 @@ namespace Sample.MQ.Data
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            for (int i = 0; i < 40; i++)
+            for (int i = 0; i < 50; i++)
             {
                 Thread thread = new Thread(async () =>
                 {
                     Random rnd = new Random();
                     while (_running)
                     {
-                        Thread.Sleep(rnd.Next(1, 5));
+                        Thread.Sleep(rnd.Next(1, 15));
                         try
                         {
                             if (rnd.NextDouble() < 0.75)
@@ -88,8 +88,6 @@ namespace Sample.MQ.Data
                                         _totalDelete++;
                                     }
                                 }
-
-                                //delete
                             }
                         }
                         catch
@@ -102,7 +100,7 @@ namespace Sample.MQ.Data
             }
 
             SpinWait spin = new SpinWait();
-            while (sw.ElapsedMilliseconds < 600000)
+            while (sw.ElapsedMilliseconds < 6000000)
                 spin.SpinOnce();
 
             _running = false;

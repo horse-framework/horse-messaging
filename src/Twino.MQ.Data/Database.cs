@@ -41,7 +41,7 @@ namespace Twino.MQ.Data
                 await _shrinkManager.FullShrink(_messages, _deletedMessages);
 
             if (Options.AutoShrink)
-                await _shrinkManager.Start(Options.ShrinkInterval);
+                _shrinkManager.Start(Options.ShrinkInterval);
         }
 
         private async Task Load()
@@ -54,7 +54,7 @@ namespace Twino.MQ.Data
                 await using MemoryStream ms = new MemoryStream();
                 await stream.CopyToAsync(ms);
                 ms.Position = 0;
-                
+
                 while (ms.Position < ms.Length)
                 {
                     DataMessage message = await _serializer.Read(ms);
@@ -78,7 +78,7 @@ namespace Twino.MQ.Data
 
         public async Task Close()
         {
-            await _shrinkManager.Stop();
+            _shrinkManager.Stop();
             await File.Close();
         }
 

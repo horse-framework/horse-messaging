@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Twino.Core;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Data
@@ -17,8 +18,8 @@ namespace Twino.MQ.Data
 
         private volatile bool _shrinking;
         private long _end;
-        private List<string> _deletedMessages;
-        private Timer _autoShrinkTimer;
+        private HashSet<string> _deletedMessages;
+        private ThreadTimer _autoShrinkTimer;
 
         internal bool ShrinkRequired { get; set; }
 
@@ -29,29 +30,33 @@ namespace Twino.MQ.Data
             _database = database;
         }
 
-        internal async Task Start(TimeSpan interval)
+        internal void Start(TimeSpan interval)
         {
             if (_autoShrinkTimer != null)
-                await Stop();
+                Stop();
 
-            _autoShrinkTimer = new Timer(async s =>
+            _autoShrinkTimer = new ThreadTimer(async () =>
             {
                 try
                 {
+                    if (_shrinking)
+                        return;
+
                     if (ShrinkRequired)
                         await _database.Shrink();
                 }
                 catch
                 {
                 }
-            }, "", interval, interval);
+            }, interval);
+            _autoShrinkTimer.Start(ThreadPriority.BelowNormal);
         }
 
-        internal async Task Stop()
+        internal void Stop()
         {
             if (_autoShrinkTimer != null)
             {
-                await _autoShrinkTimer.DisposeAsync();
+                _autoShrinkTimer.Stop();
                 _autoShrinkTimer = null;
             }
         }
@@ -60,7 +65,7 @@ namespace Twino.MQ.Data
         {
             if (_source == null)
                 return;
-            
+
             _source.Close();
             await _source.DisposeAsync();
             _source = null;
@@ -70,7 +75,7 @@ namespace Twino.MQ.Data
         {
             if (_target == null)
                 return;
-            
+
             _target.Close();
             await _target.DisposeAsync();
             _target = null;
@@ -147,8 +152,8 @@ namespace Twino.MQ.Data
 
             _shrinking = true;
             _end = position;
-            _deletedMessages = deletedMessages;
-            
+            _deletedMessages = new HashSet<string>(deletedMessages);
+
             if (_source != null)
                 await DisposeSource();
 
