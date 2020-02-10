@@ -102,6 +102,11 @@ namespace Twino.MQ.Queues
         /// </summary>
         private volatile bool _triggering;
 
+        /// <summary>
+        /// Payload object for end-user usage
+        /// </summary>
+        public object Payload { get; set; }
+
         #endregion
 
         #region Constructors - Destroy

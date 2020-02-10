@@ -108,6 +108,11 @@ namespace Twino.MQ
         /// </summary>
         private readonly SemaphoreSlim _findOrCreateQueueLocker = new SemaphoreSlim(1, 1);
 
+        /// <summary>
+        /// Payload object for end-user usage
+        /// </summary>
+        public object Payload { get; set; }
+        
         #endregion
 
         #region Constructors

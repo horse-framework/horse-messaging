@@ -93,12 +93,6 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public MemoryStream Content { get; set; }
 
-        /// <summary>
-        /// For putting some extra data to the message.
-        /// This property is not proceed by any operation.
-        /// </summary>
-        public object Payload { get; set; }
-
         #endregion
 
         #region Constructors
