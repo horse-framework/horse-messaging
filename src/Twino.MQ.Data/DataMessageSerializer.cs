@@ -24,6 +24,14 @@ namespace Twino.MQ.Data
         /// </summary>
         private readonly TmqWriter _writer = new TmqWriter();
 
+        /// <summary>
+        /// Creates new data message serializer
+        /// </summary>
+        public DataMessageSerializer()
+        {
+            _reader.DecreaseTTL = false;
+        }
+
         #region Read
 
         /// <summary>

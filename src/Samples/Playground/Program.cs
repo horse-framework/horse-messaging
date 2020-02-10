@@ -64,8 +64,8 @@ namespace Playground
                         break;
 
                     case "s":
-                        bool shrink = await database.Shrink();
-                        Console.WriteLine($"Database shrink: {shrink}");
+                        ShrinkInfo shrink = await database.Shrink();
+                        Console.WriteLine($"Database shrink: {shrink.Successful} in {shrink.TotalDuration.TotalMilliseconds} ms");
                         break;
                 }
             }

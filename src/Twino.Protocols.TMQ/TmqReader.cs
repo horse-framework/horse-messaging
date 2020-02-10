@@ -19,6 +19,11 @@ namespace Twino.Protocols.TMQ
         private const int REQUIRED_SIZE = 8;
 
         /// <summary>
+        /// If true, each read operation decreases TTL value of the message
+        /// </summary>
+        public bool DecreaseTTL { get; set; } = true;
+
+        /// <summary>
         /// Reads TMQ message from stream
         /// </summary>
         public async Task<TmqMessage> Read(Stream stream)
@@ -32,8 +37,9 @@ namespace Twino.Protocols.TMQ
             done = await ProcessRequiredFrame(message, bytes, stream);
             if (!done)
                 return null;
-            
-            message.Ttl--;
+
+            if (DecreaseTTL)
+                message.Ttl--;
 
             bool success = await ReadContent(message, stream);
             if (!success)
@@ -148,10 +154,11 @@ namespace Twino.Protocols.TMQ
                 int read = await stream.ReadAsync(_buffer, 0, rcount);
                 if (read == 0)
                     return false;
-                
+
                 left -= (uint) read;
                 await message.Content.WriteAsync(_buffer, 0, read);
-            } while (left > 0);
+            }
+            while (left > 0);
 
             return true;
         }
@@ -180,7 +187,8 @@ namespace Twino.Protocols.TMQ
                     return false;
 
                 total += read;
-            } while (total < length);
+            }
+            while (total < length);
 
             return true;
         }

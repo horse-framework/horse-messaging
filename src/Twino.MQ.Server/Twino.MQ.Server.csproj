@@ -27,6 +27,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Twino.MQ.Data\Twino.MQ.Data.csproj" />
       <ProjectReference Include="..\Twino.MQ\Twino.MQ.csproj" />
       <ProjectReference Include="..\Twino.Mvc.Auth.Jwt\Twino.Mvc.Auth.Jwt.csproj" />
       <ProjectReference Include="..\Twino.Mvc\Twino.Mvc.csproj" />

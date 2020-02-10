@@ -13,18 +13,27 @@ namespace Twino.MQ.Data
     /// </summary>
     public class Database
     {
+        #region Events
+
+        /// <summary>
+        /// Triggered after database shrink is completed
+        /// </summary>
+        public event Action<Database, ShrinkInfo> OnShrink;
+
+        #endregion
+
         #region Properties
 
         /// <summary>
         /// IO Locker
         /// </summary>
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
-        
+
         /// <summary>
         /// Database file message serializer
         /// </summary>
         private readonly DataMessageSerializer _serializer = new DataMessageSerializer();
-        
+
         /// <summary>
         /// Database shrink manager
         /// </summary>
@@ -34,7 +43,7 @@ namespace Twino.MQ.Data
         /// Recently deleted message id list
         /// </summary>
         private readonly List<string> _deletedMessages = new List<string>();
-        
+
         /// <summary>
         /// All messages in queue
         /// </summary>
@@ -44,7 +53,7 @@ namespace Twino.MQ.Data
         /// Database file
         /// </summary>
         public DatabaseFile File { get; }
-        
+
         /// <summary>
         /// Database options.
         /// Applied once when database Open method is called.
@@ -142,35 +151,48 @@ namespace Twino.MQ.Data
         /// Shrinks database transactions and reduces file size on disk
         /// </summary>
         /// <returns></returns>
-        public async Task<bool> Shrink()
+        public async Task<ShrinkInfo> Shrink()
         {
-            Stream stream = File.GetStream();
-            await WaitForLock();
-            long position;
+            ShrinkInfo info = null;
+            
             try
             {
-                position = stream.Position;
+                Stream stream = File.GetStream();
+                await WaitForLock();
+                long position;
+                try
+                {
+                    position = stream.Position;
+                }
+                finally
+                {
+                    ReleaseLock();
+                }
+
+                List<string> msgs;
+                lock (_deletedMessages)
+                    msgs = new List<string>(_deletedMessages);
+
+                info = await _shrinkManager.Shrink(position, msgs);
+
+                //sync deleted messages array
+                if (info.Successful)
+                {
+                    if (_shrinkManager.DeletedMessages.Count > 0)
+                        lock (_deletedMessages)
+                            _deletedMessages.RemoveAll(x => _shrinkManager.DeletedMessages.Contains(x));
+                }
             }
-            finally
+            catch (Exception ex)
             {
-                ReleaseLock();
+                if (info == null)
+                    info = new ShrinkInfo();
+
+                info.Error = ex;
             }
 
-            List<string> msgs;
-            lock (_deletedMessages)
-                msgs = new List<string>(_deletedMessages);
-
-            bool success = await _shrinkManager.Shrink(position, msgs);
-
-            //sync deleted messages array
-            if (success)
-            {
-                if (_shrinkManager.DeletedMessages.Count > 0)
-                    lock (_deletedMessages)
-                        _deletedMessages.RemoveAll(x => _shrinkManager.DeletedMessages.Contains(x));
-            }
-
-            return success;
+            OnShrink?.Invoke(this, info);
+            return info;
         }
 
         #endregion

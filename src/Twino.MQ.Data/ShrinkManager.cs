@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -69,6 +70,8 @@ namespace Twino.MQ.Data
         /// Buffer for shrink operations
         /// </summary>
         private readonly byte[] _buffer = new byte[10240];
+
+        private ShrinkInfo _info;
 
         #endregion
 
@@ -193,8 +196,9 @@ namespace Twino.MQ.Data
 
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine(ex);
                 //reverse
                 if (backup)
                 {
@@ -221,14 +225,20 @@ namespace Twino.MQ.Data
         /// Shrinks database file from begin to position pointer.
         /// This is a partial shrink and can run almost without any lock and thread-block operations.
         /// </summary>
-        public async Task<bool> Shrink(long position, List<string> deletedMessages)
+        public async Task<ShrinkInfo> Shrink(long position, List<string> deletedMessages)
         {
+            _info = new ShrinkInfo();
+
             if (_shrinking)
-                return false;
+                return _info;
+
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
 
             _shrinking = true;
             _end = position;
             _deletedMessages = new HashSet<string>(deletedMessages);
+            _info.OldSize = _end;
 
             if (_source != null)
                 await DisposeSource();
@@ -242,18 +252,32 @@ namespace Twino.MQ.Data
 
             _target = new FileStream(_database.File.Filename + ".shrink", FileMode.Create, FileAccess.Write);
 
+            sw.Stop();
+            _info.PreparationDuration = sw.Elapsed;
+            sw.Reset();
+            sw.Start();
+
             bool proceed = await ProcessShrink();
+            sw.Stop();
+            _info.TruncateDuration = sw.Elapsed;
+            sw.Reset();
+
             if (!proceed)
             {
                 _shrinking = false;
-                return false;
+                return _info;
             }
 
+            sw.Start();
             bool sync = await SyncShrink();
+            sw.Stop();
+            _info.SyncDuration = sw.Elapsed;
 
             _shrinking = false;
             ShrinkRequired = false;
-            return sync;
+            _info.Successful = sync;
+
+            return _info;
         }
 
         /// <summary>
@@ -314,6 +338,9 @@ namespace Twino.MQ.Data
         {
             await _target.FlushAsync();
             await DisposeSource();
+
+            _info.NewSize = _target.Length;
+
             await _database.WaitForLock();
             try
             {
@@ -333,6 +360,8 @@ namespace Twino.MQ.Data
                 }
 
                 await _target.FlushAsync();
+                _info.CurrentDatabaseSize = _target.Length;
+
                 await CloseTarget();
                 await _database.File.Close(false);
 
