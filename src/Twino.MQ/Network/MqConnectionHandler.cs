@@ -40,7 +40,7 @@ namespace Twino.MQ.Network
             _clientHandler = new ClientMessageHandler(server);
             _responseHandler = new ResponseMessageHandler(server);
             _acknowledgeHandler = new AcknowledgeMessageHandler(server);
-            _instanceHandler = new InstanceMessageHandler(server);
+            _instanceHandler = new NodeMessageHandler(server);
         }
 
         #endregion
@@ -73,52 +73,26 @@ namespace Twino.MQ.Network
             client.Name = data.Properties.GetStringValue(TmqHeaders.CLIENT_NAME);
             client.Type = data.Properties.GetStringValue(TmqHeaders.CLIENT_TYPE);
 
-            //connecting client is a MQ server 
-            string serverValue = data.Properties.GetStringValue(TmqHeaders.TWINO_MQ_SERVER);
-            if (!string.IsNullOrEmpty(serverValue) && (serverValue.Equals("1") || serverValue.Equals("true", StringComparison.InvariantCultureIgnoreCase)))
+            //authenticates client
+            if (_server.Authenticator != null)
             {
-                if (_server.ServerAuthenticator == null)
-                    return null;
-
-                bool accepted = await _server.ServerAuthenticator.Authenticate(_server, client);
-                if (!accepted)
-                    return null;
-
-                client.IsInstanceServer = true;
-                _server.SlaveInstances.Add(new SlaveInstance
-                                           {
-                                               ConnectedDate = DateTime.UtcNow,
-                                               Client = client,
-                                               RemoteHost = client.Info.Client.Client.RemoteEndPoint.ToString().Split(':')[0]
-                                           });
-
-                await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
-            }
-
-            //connecting client is a producer/consumer client
-            else
-            {
-                //authenticates client
-                if (_server.Authenticator != null)
+                client.IsAuthenticated = await _server.Authenticator.Authenticate(_server, client);
+                if (!client.IsAuthenticated)
                 {
-                    client.IsAuthenticated = await _server.Authenticator.Authenticate(_server, client);
-                    if (!client.IsAuthenticated)
-                    {
-                        await client.SendAsync(MessageBuilder.Unauthorized());
-                        return null;
-                    }
+                    await client.SendAsync(MessageBuilder.Unauthorized());
+                    return null;
                 }
-
-                //client authenticated, add it into the connected clients list
-                _server.AddClient(client);
-
-                //send response message to the client, client should check unique id,
-                //if client's unique id isn't permitted, server will create new id for client and send it as response
-                await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
-
-                if (_server.ClientHandler != null)
-                    await _server.ClientHandler.Connected(_server, client);
             }
+
+            //client authenticated, add it into the connected clients list
+            _server.AddClient(client);
+
+            //send response message to the client, client should check unique id,
+            //if client's unique id isn't permitted, server will create new id for client and send it as response
+            await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
+
+            if (_server.ClientHandler != null)
+                await _server.ClientHandler.Connected(_server, client);
 
             return client;
         }
@@ -137,12 +111,6 @@ namespace Twino.MQ.Network
         public async Task Disconnected(ITwinoServer server, TmqServerSocket client)
         {
             MqClient mqClient = (MqClient) client;
-            if (mqClient.IsInstanceServer)
-            {
-                _server.SlaveInstances.FindAndRemove(x => x.Client == client);
-                return;
-            }
-
             await _server.RemoveClient(mqClient);
             if (_server.ClientHandler != null)
                 await _server.ClientHandler.Disconnected(_server, mqClient);
@@ -182,37 +150,41 @@ namespace Twino.MQ.Network
                 return;
             }
 
-            await RouteToHandler(mc, message, info);
+            await RouteToHandler(mc, message, false);
         }
 
         /// <summary>
         /// Routes message to it's type handler
         /// </summary>
-        private async Task RouteToHandler(MqClient mc, TmqMessage message, IConnectionInfo info)
+        internal async Task RouteToHandler(MqClient mc, TmqMessage message, bool fromNode)
         {
             switch (message.Type)
             {
                 //client sends a queue message in a channel
                 case MessageType.Channel:
-                    await _instanceHandler.Handle(mc, message);
+                    if (!fromNode)
+                        await _instanceHandler.Handle(mc, message);
                     await _channelHandler.Handle(mc, message);
                     break;
 
                 //clients sends a message to another client
                 case MessageType.Client:
-                    await _instanceHandler.Handle(mc, message);
+                    if (!fromNode)
+                        await _instanceHandler.Handle(mc, message);
                     await _clientHandler.Handle(mc, message);
                     break;
 
                 //client sends an acknowledge message of a message
                 case MessageType.Acknowledge:
-                    await _instanceHandler.Handle(mc, message);
+                    if (!fromNode)
+                        await _instanceHandler.Handle(mc, message);
                     await _acknowledgeHandler.Handle(mc, message);
                     break;
 
                 //client sends a response message for a message
                 case MessageType.Response:
-                    await _instanceHandler.Handle(mc, message);
+                    if (!fromNode)
+                        await _instanceHandler.Handle(mc, message);
                     await _responseHandler.Handle(mc, message);
                     break;
 

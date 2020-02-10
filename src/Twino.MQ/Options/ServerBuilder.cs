@@ -55,9 +55,9 @@ namespace Twino.MQ.Options
             MqServerOptions options = new MqServerOptions();
             SetServerPropertyValues(_object, options);
 
-            options.Instances = _object["Instances"] != null
-                                    ? _object["Instances"].ToObject<InstanceOptions[]>()
-                                    : new InstanceOptions[0];
+            options.Nodes = _object["Nodes"] != null
+                                    ? _object["Nodes"].ToObject<NodeOptions[]>()
+                                    : new NodeOptions[0];
 
             MqServer server = new MqServer(options, _clientAuthenticator, _clientAuthorization);
 

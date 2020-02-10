@@ -67,6 +67,16 @@ namespace Twino.Server
         /// </summary>
         public event TwinoInnerExceptionHandler OnInnerException;
 
+        /// <summary>
+        /// Triggered when the server is started
+        /// </summary>
+        public event Action<TwinoServer> OnStarted;
+        
+        /// <summary>
+        /// Triggered when the server is stopped
+        /// </summary>
+        public event Action<TwinoServer> OnStopped;
+
         #endregion
 
         #region Constructors
@@ -193,6 +203,8 @@ namespace Twino.Server
                 Pinger = new Pinger(this, TimeSpan.FromSeconds(Options.PingInterval));
                 Pinger.Start();
             }
+
+            OnStarted?.Invoke(this);
         }
 
         /// <summary>
@@ -225,6 +237,8 @@ namespace Twino.Server
                 handler.Dispose();
 
             _handlers.Clear();
+            
+            OnStopped?.Invoke(this);
         }
 
         #endregion

@@ -47,10 +47,9 @@ namespace Twino.MQ
         public TwinoServer Server { get; internal set; }
 
         /// <summary>
-        /// Server authenticator implementation.
-        /// If null, all servers will be rejected.
+        /// Node server for distribitued systems
         /// </summary>
-        internal IServerAuthenticator ServerAuthenticator { get; private set; }
+        public NodeServer NodeServer { get; }
 
         /// <summary>
         /// Client authenticator implementation.
@@ -107,21 +106,6 @@ namespace Twino.MQ
         public IUniqueIdGenerator ClientIdGenerator { get; set; } = new DefaultUniqueIdGenerator();
 
         /// <summary>
-        /// Instance connectors
-        /// </summary>
-        private TmqStickyConnector[] _connectors = new TmqStickyConnector[0];
-
-        /// <summary>
-        /// Instance connectors
-        /// </summary>
-        internal TmqStickyConnector[] InstanceConnectors => _connectors;
-
-        /// <summary>
-        /// Other Twino MQ server insantaces that are sending messages to this server
-        /// </summary>
-        internal SafeList<SlaveInstance> SlaveInstances { get; set; } = new SafeList<SlaveInstance>(16);
-
-        /// <summary>
         /// Implementation registry library.
         /// Implementation instances are kept in this registry by their keys.
         /// </summary>
@@ -158,64 +142,14 @@ namespace Twino.MQ
             _channels = new SafeList<Channel>(256);
             _clients = new SafeList<MqClient>(2048);
 
-            InitInstances();
-        }
+            NodeServer = new NodeServer(this);
 
-
-        /// <summary>
-        /// Init instance options and starts the connections
-        /// </summary>
-        private void InitInstances()
-        {
-            if (Options.Instances == null || Options.Instances.Length < 1)
-                return;
-
-            _connectors = new TmqStickyConnector[Options.Instances.Length];
-
-            for (int i = 0; i < _connectors.Length; i++)
-            {
-                InstanceOptions options = Options.Instances[i];
-                TimeSpan reconnect = TimeSpan.FromMilliseconds(options.ReconnectWait);
-
-                TmqStickyConnector connector = options.KeepMessages
-                                                   ? new TmqAbsoluteConnector(reconnect, () => CreateInstanceClient(options))
-                                                   : new TmqStickyConnector(reconnect, () => CreateInstanceClient(options));
-                
-                _connectors[i] = connector;
-                connector.Tag = options;
-
-                connector.AddHost(options.Host);
-                connector.Run();
-            }
-        }
-
-        /// <summary>
-        /// Client creation action for server instances
-        /// </summary>
-        private static TmqClient CreateInstanceClient(InstanceOptions options)
-        {
-            TmqClient client = new TmqClient();
-            client.SetClientName(options.Name);
-            client.SetClientToken(options.Token);
-            client.SetClientType("server");
-            return client;
+            NodeServer.Initialize();
         }
 
         #endregion
 
         #region Set Default Interfaces
-
-        /// <summary>
-        /// Sets server authenticator for using multiple servers
-        /// </summary>
-        /// <exception cref="ReadOnlyException">Thrown when server authenticator already is set</exception>
-        public void SetServerAuthenticator(IServerAuthenticator authenticator)
-        {
-            if (ServerAuthenticator != null)
-                throw new ReadOnlyException("Server authenticator can be set only once");
-
-            ServerAuthenticator = authenticator;
-        }
 
         /// <summary>
         /// Sets default channel event handler and authenticator
