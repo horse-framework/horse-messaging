@@ -196,9 +196,8 @@ namespace Twino.MQ.Data
 
                 return true;
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine(ex);
                 //reverse
                 if (backup)
                 {
@@ -235,49 +234,56 @@ namespace Twino.MQ.Data
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            _shrinking = true;
-            _end = position;
-            _deletedMessages = new HashSet<string>(deletedMessages);
-            _info.OldSize = _end;
-
-            if (_source != null)
-                await DisposeSource();
-
-            await using (FileStream file = new FileStream(_database.File.Filename, FileMode.Open, FileAccess.Read))
+            try
             {
-                _source = new MemoryStream();
-                await CopyStream(file, _source, Convert.ToInt32(_end));
-                _source.Position = 0;
-            }
+                _shrinking = true;
+                _end = position;
+                _deletedMessages = new HashSet<string>(deletedMessages);
+                _info.OldSize = _end;
 
-            _target = new FileStream(_database.File.Filename + ".shrink", FileMode.Create, FileAccess.Write);
+                if (_source != null)
+                    await DisposeSource();
 
-            sw.Stop();
-            _info.PreparationDuration = sw.Elapsed;
-            sw.Reset();
-            sw.Start();
+                await using (FileStream file = new FileStream(_database.File.Filename, FileMode.Open, FileAccess.Read))
+                {
+                    int capacity = Convert.ToInt32(_end);
+                    _source = new MemoryStream(capacity);
+                    await CopyStream(file, _source, capacity);
+                    _source.Position = 0;
+                }
 
-            bool proceed = await ProcessShrink();
-            sw.Stop();
-            _info.TruncateDuration = sw.Elapsed;
-            sw.Reset();
+                _target = new FileStream(_database.File.Filename + ".shrink", FileMode.Create, FileAccess.Write);
 
-            if (!proceed)
-            {
-                _shrinking = false;
+                sw.Stop();
+                _info.PreparationDuration = sw.Elapsed;
+                sw.Reset();
+                sw.Start();
+
+                bool proceed = await ProcessShrink();
+                sw.Stop();
+                _info.TruncateDuration = sw.Elapsed;
+                sw.Reset();
+
+                if (!proceed)
+                {
+                    _shrinking = false;
+                    return _info;
+                }
+
+                sw.Start();
+                bool sync = await SyncShrink();
+                sw.Stop();
+                
+                _info.SyncDuration = sw.Elapsed;
+                _info.Successful = sync;
+
                 return _info;
             }
-
-            sw.Start();
-            bool sync = await SyncShrink();
-            sw.Stop();
-            _info.SyncDuration = sw.Elapsed;
-
-            _shrinking = false;
-            ShrinkRequired = false;
-            _info.Successful = sync;
-
-            return _info;
+            finally
+            {
+                ShrinkRequired = false;
+                _shrinking = false;
+            }
         }
 
         /// <summary>

@@ -42,12 +42,15 @@ namespace Twino.MQ.Data
             DataType type = ReadType(stream);
             string id = await ReadId(stream);
 
+            if (string.IsNullOrEmpty(id))
+                return new DataMessage(DataType.Empty, null);
+
             if (type == DataType.Delete)
                 return new DataMessage(DataType.Delete, id);
 
             int size = await ReadLength(stream);
             if (size == 0)
-                return new DataMessage(DataType.Empty, null);
+                return new DataMessage(DataType.Empty, id);
 
             TmqMessage msg = await _reader.Read(stream);
             return new DataMessage(DataType.Insert, id, msg);
@@ -68,6 +71,9 @@ namespace Twino.MQ.Data
         internal async Task<string> ReadId(Stream stream)
         {
             int size = stream.ReadByte();
+            if (size > 256)
+                return null;
+            
             byte[] data = new byte[size];
             int read = await stream.ReadAsync(data, 0, data.Length);
 

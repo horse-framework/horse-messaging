@@ -106,9 +106,15 @@ namespace Twino.MQ.Data
                 while (ms.Position < ms.Length)
                 {
                     DataMessage message = await _serializer.Read(ms);
+                    if (string.IsNullOrEmpty(message.Id))
+                        continue;
+
                     switch (message.Type)
                     {
                         case DataType.Insert:
+                            if (message.Message?.Content == null || message.Message.Content.Length < 1)
+                                continue;
+
                             _messages.Add(message.Id, message.Message);
                             break;
 
@@ -154,24 +160,25 @@ namespace Twino.MQ.Data
         public async Task<ShrinkInfo> Shrink()
         {
             ShrinkInfo info = null;
-            
+
             try
             {
                 Stream stream = File.GetStream();
+                List<string> msgs;
+
                 await WaitForLock();
                 long position;
                 try
                 {
                     position = stream.Position;
+                    msgs = _deletedMessages.Count > 0
+                               ? new List<string>(_deletedMessages)
+                               : new List<string>();
                 }
                 finally
                 {
                     ReleaseLock();
                 }
-
-                List<string> msgs;
-                lock (_deletedMessages)
-                    msgs = new List<string>(_deletedMessages);
 
                 info = await _shrinkManager.Shrink(position, msgs);
 
@@ -179,8 +186,17 @@ namespace Twino.MQ.Data
                 if (info.Successful)
                 {
                     if (_shrinkManager.DeletedMessages.Count > 0)
-                        lock (_deletedMessages)
+                    {
+                        await WaitForLock();
+                        try
+                        {
                             _deletedMessages.RemoveAll(x => _shrinkManager.DeletedMessages.Contains(x));
+                        }
+                        finally
+                        {
+                            ReleaseLock();
+                        }
+                    }
                 }
             }
             catch (Exception ex)

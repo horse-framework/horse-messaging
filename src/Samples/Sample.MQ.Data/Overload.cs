@@ -32,13 +32,24 @@ namespace Sample.MQ.Data
                                            CreateBackupOnShrink = true
                                        });
 
+            db.OnShrink += (database, info) =>
+            {
+                if (info.Successful)
+                    Console.WriteLine($"Shrink completed in {info.TotalDuration.TotalMilliseconds} ms, " +
+                                      $"prp:{info.PreparationDuration.TotalMilliseconds} ms, " +
+                                      $"trn:{info.TruncateDuration.TotalMilliseconds} ms, " +
+                                      $"sync:{info.SyncDuration.TotalMilliseconds} ms");
+                else
+                    Console.WriteLine("Shrink failed: " + info.Error);
+            };
+
             Stopwatch sw1 = new Stopwatch();
             sw1.Start();
             await db.Open();
             sw1.Stop();
             Console.WriteLine($"Database loaded with {db.MessageCount()} in {sw1.ElapsedMilliseconds} ms");
             Console.ReadLine();
-            
+
             _running = true;
             _totalDelete = 0;
             _totalInsert = 0;
@@ -53,10 +64,10 @@ namespace Sample.MQ.Data
                     Random rnd = new Random();
                     while (_running)
                     {
-                        Thread.Sleep(rnd.Next(1, 15));
+                        Thread.Sleep(rnd.Next(1, 16));
                         try
                         {
-                            if (rnd.NextDouble() < 0.75)
+                            if (rnd.NextDouble() < 0.68)
                             {
                                 TmqMessage msg = CreateMessage();
 
