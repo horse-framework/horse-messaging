@@ -1,0 +1,30 @@
+.statusbar {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  align-content: stretch;
+  width: 100%;
+}
+.left {
+  flex: 1 1 auto;
+  align-items: flex-start;
+  align-content: flex-start;
+  text-align: left;
+}
+.right {
+  flex: 1 2 auto;
+  display: flex;
+  align-items: flex-end;
+  align-content: flex-end;
+  text-align: right;
+  justify-content: flex-end;
+}
+
+.value {
+  flex: 0 0 auto;
+  padding: 3px 0px;
+  text-transform: uppercase;
+  color: #808080;
+  font-size: 11px;
+  font-weight: 500;
+}

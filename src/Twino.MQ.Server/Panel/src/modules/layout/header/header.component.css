@@ -1,0 +1,90 @@
+.top {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  align-content: stretch;
+  background-color: #eee;
+  border-bottom: 1px solid #ccc;
+}
+
+.logo {
+  flex: 0 0 auto;
+  margin-right: 100px;
+}
+
+.logo strong {
+  font-weight: 300;
+  color: #333;
+  font-size: 22px;
+  padding: 0px;
+  margin: 20px;
+  display: block;
+}
+
+.menu {
+  flex: 1 1 auto;
+}
+
+.menu ul {
+  display: block;
+  margin: 25px 0px -2px 0px;
+  padding: 0px;
+}
+
+.menu ul li {
+  display: inline-block;
+  border: 1px solid transparent;
+  margin-right: 10px;
+}
+
+.menu ul li a {
+  display: block;
+  text-decoration: none;
+  padding: 12px 24px 8px 24px;
+  color: #727272;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 19px;
+}
+
+.menu ul li:hover a {
+  color: #222;
+}
+.menu ul li.active {
+  border-color: #ccc;
+  border-bottom-color: #fff;
+  background-color: #fff;
+  font-weight: 700;
+  color: #222;
+}
+
+.profile {
+  flex: 0 2 auto;
+  text-align: right;
+  padding: 24px 24px 10px 24px;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.profile span {
+  color: #444;
+}
+
+.profile a::before {
+  content: "[";
+  padding-right: 5px;
+}
+.profile a::after {
+  content: "]";
+  padding-left: 5px;
+}
+.profile a {
+  cursor: pointer;
+  margin-left: 20px;
+  text-decoration: none;
+  color: #888;
+}
+
+.profile a:hover {
+  color: #10a040;
+}
