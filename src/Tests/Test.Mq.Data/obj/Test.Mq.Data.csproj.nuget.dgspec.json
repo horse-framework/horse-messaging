@@ -1,21 +1,18 @@
 {
   "format": 1,
   "restore": {
-    "/home/mehmet/Projects/twino/src/Tests/Test.Mq.Data/Test.Mq.Data.csproj": {}
+    "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Tests/Test.Mq.Data/Test.Mq.Data.csproj": {}
   },
   "projects": {
-    "/home/mehmet/Projects/twino/src/Tests/Test.Mq.Data/Test.Mq.Data.csproj": {
+    "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Tests/Test.Mq.Data/Test.Mq.Data.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/mehmet/Projects/twino/src/Tests/Test.Mq.Data/Test.Mq.Data.csproj",
+        "projectUniqueName": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Tests/Test.Mq.Data/Test.Mq.Data.csproj",
         "projectName": "Test.Mq.Data",
-        "projectPath": "/home/mehmet/Projects/twino/src/Tests/Test.Mq.Data/Test.Mq.Data.csproj",
+        "projectPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Tests/Test.Mq.Data/Test.Mq.Data.csproj",
         "packagesPath": "/home/mehmet/.nuget/packages/",
-        "outputPath": "/home/mehmet/Projects/twino/src/Tests/Test.Mq.Data/obj/",
+        "outputPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Tests/Test.Mq.Data/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "/usr/share/dotnet/sdk/NuGetFallbackFolder"
-        ],
         "configFilePaths": [
           "/home/mehmet/.config/NuGet/NuGet.Config"
         ],
@@ -23,14 +20,13 @@
           "netcoreapp3.0"
         ],
         "sources": {
-          "https://api.nuget.org/v3/index.json": {},
-          "https://pkgs.dev.azure.com/btcturk/_packaging/btctradersource/nuget/v3/index.json": {}
+          "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "netcoreapp3.0": {
             "projectReferences": {
-              "/home/mehmet/Projects/twino/src/Twino.MQ.Data/Twino.MQ.Data.csproj": {
-                "projectPath": "/home/mehmet/Projects/twino/src/Twino.MQ.Data/Twino.MQ.Data.csproj"
+              "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.MQ.Data/Twino.MQ.Data.csproj": {
+                "projectPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.MQ.Data/Twino.MQ.Data.csproj"
               }
             }
           }
@@ -82,22 +78,19 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/3.1.101/RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/3.0.102/RuntimeIdentifierGraph.json"
         }
       }
     },
-    "/home/mehmet/Projects/twino/src/Twino.Client.Connectors/Twino.Client.Connectors.csproj": {
+    "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Client.Connectors/Twino.Client.Connectors.csproj": {
       "version": "2.6.2",
       "restore": {
-        "projectUniqueName": "/home/mehmet/Projects/twino/src/Twino.Client.Connectors/Twino.Client.Connectors.csproj",
+        "projectUniqueName": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Client.Connectors/Twino.Client.Connectors.csproj",
         "projectName": "Twino.Client.Connectors",
-        "projectPath": "/home/mehmet/Projects/twino/src/Twino.Client.Connectors/Twino.Client.Connectors.csproj",
+        "projectPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Client.Connectors/Twino.Client.Connectors.csproj",
         "packagesPath": "/home/mehmet/.nuget/packages/",
-        "outputPath": "/home/mehmet/Projects/twino/src/Twino.Client.Connectors/obj/",
+        "outputPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Client.Connectors/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "/usr/share/dotnet/sdk/NuGetFallbackFolder"
-        ],
         "configFilePaths": [
           "/home/mehmet/.config/NuGet/NuGet.Config"
         ],
@@ -105,14 +98,13 @@
           "netcoreapp3.0"
         ],
         "sources": {
-          "https://api.nuget.org/v3/index.json": {},
-          "https://pkgs.dev.azure.com/btcturk/_packaging/btctradersource/nuget/v3/index.json": {}
+          "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "netcoreapp3.0": {
             "projectReferences": {
-              "/home/mehmet/Projects/twino/src/Twino.Core/Twino.Core.csproj": {
-                "projectPath": "/home/mehmet/Projects/twino/src/Twino.Core/Twino.Core.csproj"
+              "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Core/Twino.Core.csproj": {
+                "projectPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Core/Twino.Core.csproj"
               }
             }
           }
@@ -146,22 +138,19 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/3.1.101/RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/3.0.102/RuntimeIdentifierGraph.json"
         }
       }
     },
-    "/home/mehmet/Projects/twino/src/Twino.Client.TMQ/Twino.Client.TMQ.csproj": {
+    "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Client.TMQ/Twino.Client.TMQ.csproj": {
       "version": "2.6.2",
       "restore": {
-        "projectUniqueName": "/home/mehmet/Projects/twino/src/Twino.Client.TMQ/Twino.Client.TMQ.csproj",
+        "projectUniqueName": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Client.TMQ/Twino.Client.TMQ.csproj",
         "projectName": "Twino.Client.TMQ",
-        "projectPath": "/home/mehmet/Projects/twino/src/Twino.Client.TMQ/Twino.Client.TMQ.csproj",
+        "projectPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Client.TMQ/Twino.Client.TMQ.csproj",
         "packagesPath": "/home/mehmet/.nuget/packages/",
-        "outputPath": "/home/mehmet/Projects/twino/src/Twino.Client.TMQ/obj/",
+        "outputPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Client.TMQ/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "/usr/share/dotnet/sdk/NuGetFallbackFolder"
-        ],
         "configFilePaths": [
           "/home/mehmet/.config/NuGet/NuGet.Config"
         ],
@@ -169,17 +158,16 @@
           "netcoreapp3.0"
         ],
         "sources": {
-          "https://api.nuget.org/v3/index.json": {},
-          "https://pkgs.dev.azure.com/btcturk/_packaging/btctradersource/nuget/v3/index.json": {}
+          "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "netcoreapp3.0": {
             "projectReferences": {
-              "/home/mehmet/Projects/twino/src/Twino.Client.Connectors/Twino.Client.Connectors.csproj": {
-                "projectPath": "/home/mehmet/Projects/twino/src/Twino.Client.Connectors/Twino.Client.Connectors.csproj"
+              "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Client.Connectors/Twino.Client.Connectors.csproj": {
+                "projectPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Client.Connectors/Twino.Client.Connectors.csproj"
               },
-              "/home/mehmet/Projects/twino/src/Twino.Protocols.TMQ/Twino.Protocols.TMQ.csproj": {
-                "projectPath": "/home/mehmet/Projects/twino/src/Twino.Protocols.TMQ/Twino.Protocols.TMQ.csproj"
+              "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Protocols.TMQ/Twino.Protocols.TMQ.csproj": {
+                "projectPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Protocols.TMQ/Twino.Protocols.TMQ.csproj"
               }
             }
           }
@@ -213,22 +201,19 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/3.1.101/RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/3.0.102/RuntimeIdentifierGraph.json"
         }
       }
     },
-    "/home/mehmet/Projects/twino/src/Twino.Core/Twino.Core.csproj": {
+    "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Core/Twino.Core.csproj": {
       "version": "2.6.2",
       "restore": {
-        "projectUniqueName": "/home/mehmet/Projects/twino/src/Twino.Core/Twino.Core.csproj",
+        "projectUniqueName": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Core/Twino.Core.csproj",
         "projectName": "Twino.Core",
-        "projectPath": "/home/mehmet/Projects/twino/src/Twino.Core/Twino.Core.csproj",
+        "projectPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Core/Twino.Core.csproj",
         "packagesPath": "/home/mehmet/.nuget/packages/",
-        "outputPath": "/home/mehmet/Projects/twino/src/Twino.Core/obj/",
+        "outputPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Core/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "/usr/share/dotnet/sdk/NuGetFallbackFolder"
-        ],
         "configFilePaths": [
           "/home/mehmet/.config/NuGet/NuGet.Config"
         ],
@@ -236,8 +221,7 @@
           "netcoreapp3.0"
         ],
         "sources": {
-          "https://api.nuget.org/v3/index.json": {},
-          "https://pkgs.dev.azure.com/btcturk/_packaging/btctradersource/nuget/v3/index.json": {}
+          "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "netcoreapp3.0": {
@@ -279,22 +263,19 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/3.1.101/RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/3.0.102/RuntimeIdentifierGraph.json"
         }
       }
     },
-    "/home/mehmet/Projects/twino/src/Twino.MQ.Data/Twino.MQ.Data.csproj": {
+    "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.MQ.Data/Twino.MQ.Data.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/mehmet/Projects/twino/src/Twino.MQ.Data/Twino.MQ.Data.csproj",
+        "projectUniqueName": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.MQ.Data/Twino.MQ.Data.csproj",
         "projectName": "Twino.MQ.Data",
-        "projectPath": "/home/mehmet/Projects/twino/src/Twino.MQ.Data/Twino.MQ.Data.csproj",
+        "projectPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.MQ.Data/Twino.MQ.Data.csproj",
         "packagesPath": "/home/mehmet/.nuget/packages/",
-        "outputPath": "/home/mehmet/Projects/twino/src/Twino.MQ.Data/obj/",
+        "outputPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.MQ.Data/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "/usr/share/dotnet/sdk/NuGetFallbackFolder"
-        ],
         "configFilePaths": [
           "/home/mehmet/.config/NuGet/NuGet.Config"
         ],
@@ -302,14 +283,13 @@
           "netcoreapp3.0"
         ],
         "sources": {
-          "https://api.nuget.org/v3/index.json": {},
-          "https://pkgs.dev.azure.com/btcturk/_packaging/btctradersource/nuget/v3/index.json": {}
+          "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "netcoreapp3.0": {
             "projectReferences": {
-              "/home/mehmet/Projects/twino/src/Twino.MQ/Twino.MQ.csproj": {
-                "projectPath": "/home/mehmet/Projects/twino/src/Twino.MQ/Twino.MQ.csproj"
+              "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.MQ/Twino.MQ.csproj": {
+                "projectPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.MQ/Twino.MQ.csproj"
               }
             }
           }
@@ -343,22 +323,19 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/3.1.101/RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/3.0.102/RuntimeIdentifierGraph.json"
         }
       }
     },
-    "/home/mehmet/Projects/twino/src/Twino.MQ/Twino.MQ.csproj": {
+    "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.MQ/Twino.MQ.csproj": {
       "version": "2.6.2",
       "restore": {
-        "projectUniqueName": "/home/mehmet/Projects/twino/src/Twino.MQ/Twino.MQ.csproj",
+        "projectUniqueName": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.MQ/Twino.MQ.csproj",
         "projectName": "Twino.MQ",
-        "projectPath": "/home/mehmet/Projects/twino/src/Twino.MQ/Twino.MQ.csproj",
+        "projectPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.MQ/Twino.MQ.csproj",
         "packagesPath": "/home/mehmet/.nuget/packages/",
-        "outputPath": "/home/mehmet/Projects/twino/src/Twino.MQ/obj/",
+        "outputPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.MQ/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "/usr/share/dotnet/sdk/NuGetFallbackFolder"
-        ],
         "configFilePaths": [
           "/home/mehmet/.config/NuGet/NuGet.Config"
         ],
@@ -366,20 +343,19 @@
           "netcoreapp3.0"
         ],
         "sources": {
-          "https://api.nuget.org/v3/index.json": {},
-          "https://pkgs.dev.azure.com/btcturk/_packaging/btctradersource/nuget/v3/index.json": {}
+          "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "netcoreapp3.0": {
             "projectReferences": {
-              "/home/mehmet/Projects/twino/src/Twino.Client.TMQ/Twino.Client.TMQ.csproj": {
-                "projectPath": "/home/mehmet/Projects/twino/src/Twino.Client.TMQ/Twino.Client.TMQ.csproj"
+              "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Client.TMQ/Twino.Client.TMQ.csproj": {
+                "projectPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Client.TMQ/Twino.Client.TMQ.csproj"
               },
-              "/home/mehmet/Projects/twino/src/Twino.Protocols.TMQ/Twino.Protocols.TMQ.csproj": {
-                "projectPath": "/home/mehmet/Projects/twino/src/Twino.Protocols.TMQ/Twino.Protocols.TMQ.csproj"
+              "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Protocols.TMQ/Twino.Protocols.TMQ.csproj": {
+                "projectPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Protocols.TMQ/Twino.Protocols.TMQ.csproj"
               },
-              "/home/mehmet/Projects/twino/src/Twino.Server/Twino.Server.csproj": {
-                "projectPath": "/home/mehmet/Projects/twino/src/Twino.Server/Twino.Server.csproj"
+              "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Server/Twino.Server.csproj": {
+                "projectPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Server/Twino.Server.csproj"
               }
             }
           }
@@ -413,22 +389,19 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/3.1.101/RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/3.0.102/RuntimeIdentifierGraph.json"
         }
       }
     },
-    "/home/mehmet/Projects/twino/src/Twino.Protocols.TMQ/Twino.Protocols.TMQ.csproj": {
+    "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Protocols.TMQ/Twino.Protocols.TMQ.csproj": {
       "version": "2.6.2",
       "restore": {
-        "projectUniqueName": "/home/mehmet/Projects/twino/src/Twino.Protocols.TMQ/Twino.Protocols.TMQ.csproj",
+        "projectUniqueName": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Protocols.TMQ/Twino.Protocols.TMQ.csproj",
         "projectName": "Twino.Protocols.TMQ",
-        "projectPath": "/home/mehmet/Projects/twino/src/Twino.Protocols.TMQ/Twino.Protocols.TMQ.csproj",
+        "projectPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Protocols.TMQ/Twino.Protocols.TMQ.csproj",
         "packagesPath": "/home/mehmet/.nuget/packages/",
-        "outputPath": "/home/mehmet/Projects/twino/src/Twino.Protocols.TMQ/obj/",
+        "outputPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Protocols.TMQ/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "/usr/share/dotnet/sdk/NuGetFallbackFolder"
-        ],
         "configFilePaths": [
           "/home/mehmet/.config/NuGet/NuGet.Config"
         ],
@@ -436,14 +409,13 @@
           "netcoreapp3.0"
         ],
         "sources": {
-          "https://api.nuget.org/v3/index.json": {},
-          "https://pkgs.dev.azure.com/btcturk/_packaging/btctradersource/nuget/v3/index.json": {}
+          "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "netcoreapp3.0": {
             "projectReferences": {
-              "/home/mehmet/Projects/twino/src/Twino.Core/Twino.Core.csproj": {
-                "projectPath": "/home/mehmet/Projects/twino/src/Twino.Core/Twino.Core.csproj"
+              "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Core/Twino.Core.csproj": {
+                "projectPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Core/Twino.Core.csproj"
               }
             }
           }
@@ -477,22 +449,19 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/3.1.101/RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/3.0.102/RuntimeIdentifierGraph.json"
         }
       }
     },
-    "/home/mehmet/Projects/twino/src/Twino.Server/Twino.Server.csproj": {
+    "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Server/Twino.Server.csproj": {
       "version": "2.6.2",
       "restore": {
-        "projectUniqueName": "/home/mehmet/Projects/twino/src/Twino.Server/Twino.Server.csproj",
+        "projectUniqueName": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Server/Twino.Server.csproj",
         "projectName": "Twino.Server",
-        "projectPath": "/home/mehmet/Projects/twino/src/Twino.Server/Twino.Server.csproj",
+        "projectPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Server/Twino.Server.csproj",
         "packagesPath": "/home/mehmet/.nuget/packages/",
-        "outputPath": "/home/mehmet/Projects/twino/src/Twino.Server/obj/",
+        "outputPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Server/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "/usr/share/dotnet/sdk/NuGetFallbackFolder"
-        ],
         "configFilePaths": [
           "/home/mehmet/.config/NuGet/NuGet.Config"
         ],
@@ -500,14 +469,13 @@
           "netcoreapp3.0"
         ],
         "sources": {
-          "https://api.nuget.org/v3/index.json": {},
-          "https://pkgs.dev.azure.com/btcturk/_packaging/btctradersource/nuget/v3/index.json": {}
+          "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "netcoreapp3.0": {
             "projectReferences": {
-              "/home/mehmet/Projects/twino/src/Twino.Core/Twino.Core.csproj": {
-                "projectPath": "/home/mehmet/Projects/twino/src/Twino.Core/Twino.Core.csproj"
+              "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Core/Twino.Core.csproj": {
+                "projectPath": "/home/mehmet/Projects/github/mhelvacikoylu/twino/src/Twino.Core/Twino.Core.csproj"
               }
             }
           }
@@ -541,7 +509,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/3.1.101/RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/3.0.102/RuntimeIdentifierGraph.json"
         }
       }
     }
