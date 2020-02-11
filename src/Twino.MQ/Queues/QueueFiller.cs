@@ -34,7 +34,7 @@ namespace Twino.MQ.Queues
             int max = _queue.HighPriorityLinkedList.Count + _queue.RegularLinkedList.Count + items.Count();
             if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
                 return PushResult.LimitExceeded;
-
+            
             foreach (T item in items)
             {
                 TmqMessage message = new TmqMessage(MessageType.Channel, _queue.Channel.Name);
@@ -47,7 +47,7 @@ namespace Twino.MQ.Queues
                     message.SetMessageId(_queue.Channel.Server.MessageIdGenerator.Create());
 
                 await message.SetJsonContent(item);
-
+                
                 QueueMessage qm = new QueueMessage(message, createAsSaved);
 
                 if (highPriority)

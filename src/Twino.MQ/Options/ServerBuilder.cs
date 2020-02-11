@@ -228,6 +228,7 @@ namespace Twino.MQ.Options
             options.UseMessageId = other.UseMessageId;
             options.SendOnlyFirstAcquirer = other.SendOnlyFirstAcquirer;
             options.MessageLimit = other.MessageLimit;
+            options.MessageSizeLimit = other.MessageSizeLimit;
             options.ClientLimit = other.ClientLimit;
             options.QueueLimit = other.QueueLimit;
             options.DestroyWhenEmpty = other.DestroyWhenEmpty;
@@ -247,6 +248,7 @@ namespace Twino.MQ.Options
             options.UseMessageId = other.UseMessageId;
             options.SendOnlyFirstAcquirer = other.SendOnlyFirstAcquirer;
             options.MessageLimit = other.MessageLimit;
+            options.MessageSizeLimit = other.MessageSizeLimit;
 
             return options;
         }

@@ -683,7 +683,8 @@ namespace Twino.MQ.Network
                              Errors = queue.Info.ErrorCount,
                              LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
                              LastMessageSent = queue.Info.GetLastMessageSendUnix(),
-                             MessageLimit = queue.Options.MessageLimit
+                             MessageLimit = queue.Options.MessageLimit,
+                             MessageSizeLimit = queue.Options.MessageSizeLimit
                          });
             }
 
@@ -756,7 +757,8 @@ namespace Twino.MQ.Network
                                                Errors = queue.Info.ErrorCount,
                                                LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
                                                LastMessageSent = queue.Info.GetLastMessageSendUnix(),
-                                               MessageLimit = queue.Options.MessageLimit
+                                               MessageLimit = queue.Options.MessageLimit,
+                                               MessageSizeLimit = queue.Options.MessageSizeLimit
                                            };
 
             TmqMessage response = message.CreateResponse();

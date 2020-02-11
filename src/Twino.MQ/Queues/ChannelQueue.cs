@@ -423,6 +423,9 @@ namespace Twino.MQ.Queues
             if (Options.MessageLimit > 0 && HighPriorityLinkedList.Count + RegularLinkedList.Count >= Options.MessageLimit)
                 return PushResult.LimitExceeded;
 
+            if (Options.MessageSizeLimit > 0 && message.Message.Length > Options.MessageSizeLimit)
+                return PushResult.LimitExceeded;
+
             //prepare properties
             message.Message.FirstAcquirer = true;
             message.Message.AcknowledgeRequired = Options.RequestAcknowledge;
