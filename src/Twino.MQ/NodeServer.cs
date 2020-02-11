@@ -46,7 +46,8 @@ namespace Twino.MQ
         /// </summary>
         internal NodeConnectionHandler ConnectionHandler { get; set; }
 
-        private bool _subscribed = false;
+        private bool _subscribed;
+        private TwinoServer _nodeServer;
 
         #endregion
 
@@ -125,36 +126,50 @@ namespace Twino.MQ
             _subscribed = true;
 
             server.OnStarted += s => _ = Start();
-            server.OnStopped += s => _ = Stop();
+            server.OnStopped += s => Stop();
 
             if (server.IsRunning)
                 _ = Start();
         }
 
         /// <summary>
-        /// 
+        /// Starts new server, connects to remote node clients and starts to listen incoming node connections
         /// </summary>
         public async Task Start()
         {
             foreach (TmqStickyConnector connector in Connectors)
                 connector.Run();
 
-            //start to listen node server
+            if (_nodeServer != null && _nodeServer.IsRunning)
+            {
+                _nodeServer.Stop();
+                _nodeServer = null;
+                await Task.Delay(500);
+            }
 
-            throw new NotImplementedException();
+            if (Server.Options.NodeHost == null)
+                return;
+
+            _nodeServer = new TwinoServer(new ServerOptions
+                                          {
+                                              Hosts = new List<HostOptions> {Server.Options.NodeHost},
+                                              PingInterval = 15,
+                                              RequestTimeout = 15
+                                          });
+
+            _nodeServer.Start();
         }
 
         /// <summary>
-        /// 
+        /// Stop node server, disconnects from remote node servers and stops to listen incoming node client connections
         /// </summary>
-        public async Task Stop()
+        public void Stop()
         {
             foreach (TmqStickyConnector connector in Connectors)
                 connector.Abort();
 
-            //stop listening node server
-
-            throw new NotImplementedException();
+            _nodeServer.Stop();
+            _nodeServer = null;
         }
 
         #endregion

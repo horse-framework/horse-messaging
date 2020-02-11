@@ -1,3 +1,5 @@
+using Twino.Server;
+
 namespace Twino.MQ.Options
 {
     /// <summary>
@@ -39,8 +41,8 @@ namespace Twino.MQ.Options
         public NodeOptions[] Nodes { get; set; }
 
         /// <summary>
-        /// The port number that others nodes connect
+        /// Node server host options
         /// </summary>
-        public int NodePort { get; set; }
+        public HostOptions NodeHost { get; set; }
     }
 }
