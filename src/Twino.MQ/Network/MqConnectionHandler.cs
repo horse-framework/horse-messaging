@@ -65,6 +65,9 @@ namespace Twino.MQ.Network
                 return null;
             }
 
+            if (_server.Options.ClientLimit > 0 && _server.GetOnlineClients() >= _server.Options.ClientLimit)
+                return null;
+
             //creates new mq client object 
             MqClient client = new MqClient(_server, connection, _server.MessageIdGenerator, _server.Options.UseMessageId);
             client.Data = data;

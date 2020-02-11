@@ -362,6 +362,14 @@ namespace Twino.MQ
             return _clients.FindAll(x => x.Type == type);
         }
 
+        /// <summary>
+        /// Returns online clients
+        /// </summary>
+        public int GetOnlineClients()
+        {
+            return _clients.Count;
+        }
+
         #endregion
     }
 }
