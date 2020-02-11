@@ -553,11 +553,15 @@ namespace Twino.MQ.Queues
             if (decision.SendAcknowledge == DeliveryAcknowledgeDecision.Always ||
                 decision.SendAcknowledge == DeliveryAcknowledgeDecision.IfSaved && message.IsSaved)
             {
+                TmqMessage acknowledge = customAck ?? message.Message.CreateAcknowledge();
                 if (message.Source != null && message.Source.IsConnected)
                 {
-                    TmqMessage acknowledge = customAck ?? message.Message.CreateAcknowledge();
-                    await message.Source.SendAsync(acknowledge);
+                    bool sent = await message.Source.SendAsync(acknowledge);
+                    if (decision.AcknowledgeDelivery != null)
+                        await decision.AcknowledgeDelivery(message, message.Source, sent);
                 }
+                else if (decision.AcknowledgeDelivery != null)
+                    await decision.AcknowledgeDelivery(message, message.Source, false);
             }
 
             if (decision.KeepMessage)
