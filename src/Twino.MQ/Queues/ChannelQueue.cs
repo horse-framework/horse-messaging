@@ -102,6 +102,11 @@ namespace Twino.MQ.Queues
         /// </summary>
         private volatile bool _triggering;
 
+        /// <summary>
+        /// Payload object for end-user usage
+        /// </summary>
+        public object Payload { get; set; }
+
         #endregion
 
         #region Constructors - Destroy
@@ -418,6 +423,9 @@ namespace Twino.MQ.Queues
             if (Options.MessageLimit > 0 && HighPriorityLinkedList.Count + RegularLinkedList.Count >= Options.MessageLimit)
                 return PushResult.LimitExceeded;
 
+            if (Options.MessageSizeLimit > 0 && message.Message.Length > Options.MessageSizeLimit)
+                return PushResult.LimitExceeded;
+
             //prepare properties
             message.Message.FirstAcquirer = true;
             message.Message.AcknowledgeRequired = Options.RequestAcknowledge;
@@ -548,11 +556,15 @@ namespace Twino.MQ.Queues
             if (decision.SendAcknowledge == DeliveryAcknowledgeDecision.Always ||
                 decision.SendAcknowledge == DeliveryAcknowledgeDecision.IfSaved && message.IsSaved)
             {
+                TmqMessage acknowledge = customAck ?? message.Message.CreateAcknowledge();
                 if (message.Source != null && message.Source.IsConnected)
                 {
-                    TmqMessage acknowledge = customAck ?? message.Message.CreateAcknowledge();
-                    await message.Source.SendAsync(acknowledge);
+                    bool sent = await message.Source.SendAsync(acknowledge);
+                    if (decision.AcknowledgeDelivery != null)
+                        await decision.AcknowledgeDelivery(message, message.Source, sent);
                 }
+                else if (decision.AcknowledgeDelivery != null)
+                    await decision.AcknowledgeDelivery(message, message.Source, false);
             }
 
             if (decision.KeepMessage)

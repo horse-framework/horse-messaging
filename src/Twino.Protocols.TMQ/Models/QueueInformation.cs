@@ -176,5 +176,13 @@ namespace Twino.Protocols.TMQ.Models
         [JsonProperty("messageLimit")]
         [JsonPropertyName("messageLimit")]
         public int MessageLimit { get; set; }
+        
+        /// <summary>
+        /// Maximum message size limit
+        /// Zero is unlimited
+        /// </summary>
+        [JsonProperty("messageSize")]
+        [JsonPropertyName("messageSize")]
+        public ulong MessageSizeLimit { get; set; }
     }
 }

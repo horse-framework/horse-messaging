@@ -51,6 +51,7 @@ namespace Twino.MQ.Options
                        WaitForAcknowledge = options.WaitForAcknowledge,
                        SendOnlyFirstAcquirer = options.SendOnlyFirstAcquirer,
                        MessageLimit = options.MessageLimit,
+                       MessageSizeLimit = options.MessageSizeLimit,
                        ClientLimit = options.ClientLimit,
                        QueueLimit = options.QueueLimit,
                        DestroyWhenEmpty = options.DestroyWhenEmpty 

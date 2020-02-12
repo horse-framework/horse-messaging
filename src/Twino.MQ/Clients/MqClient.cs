@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Protocols.TMQ;
@@ -42,11 +41,6 @@ namespace Twino.MQ.Clients
         public string Name { get; internal set; }
 
         /// <summary>
-        /// True, if the client is a instanced server
-        /// </summary>
-        public bool IsInstanceServer { get; internal set; }
-
-        /// <summary>
         /// Client type.
         /// If different type of clients join your server, you can categorize them with this type value.
         /// </summary>
@@ -73,6 +67,11 @@ namespace Twino.MQ.Clients
         /// The time instance created
         /// </summary>
         public DateTime ConnectedDate { get; } = DateTime.UtcNow;
+
+        /// <summary>
+        /// Remote host of the node server
+        /// </summary>
+        public string RemoteHost { get; set; }
 
         #endregion
 

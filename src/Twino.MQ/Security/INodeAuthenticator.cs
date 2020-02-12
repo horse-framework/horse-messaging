@@ -8,17 +8,17 @@ namespace Twino.MQ.Security
     /// <summary>
     /// Authenticates clients to connect server and receive messages
     /// </summary>
-    public interface IServerAuthenticator
+    public interface INodeAuthenticator
     {
         /// <summary>
-        /// Checks if the instance can connect to the server
+        /// Checks if the node can connect to the server
         /// It should return true if allowed.
         /// </summary>
-        Task<bool> Authenticate(MqServer server, MqClient client);
+        Task<bool> Authenticate(NodeServer server, MqClient client);
 
         /// <summary>
-        /// Checks if the messsage should be sent to the instance
+        /// Checks if the messsage should be sent to the node
         /// </summary>
-        Task<bool> CanReceive(TmqClient instanceClient, TmqMessage message);
+        Task<bool> CanReceive(TmqClient node, TmqMessage message);
     }
 }

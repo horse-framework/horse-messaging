@@ -8,6 +8,7 @@
     <ItemGroup>
       <ProjectReference Include="..\..\Tests\Test.Mq\Test.Mq.csproj" />
       <ProjectReference Include="..\..\Twino.Client.WebSocket\Twino.Client.WebSocket.csproj" />
+      <ProjectReference Include="..\..\Twino.MQ.Data\Twino.MQ.Data.csproj" />
       <ProjectReference Include="..\..\Twino.Mvc\Twino.Mvc.csproj" />
       <ProjectReference Include="..\..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
       <ProjectReference Include="..\..\Twino.Protocols.WebSocket\Twino.Protocols.WebSocket.csproj" />

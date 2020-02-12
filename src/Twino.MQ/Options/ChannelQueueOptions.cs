@@ -57,6 +57,12 @@ namespace Twino.MQ.Options
         public int MessageLimit { get; set; }
 
         /// <summary>
+        /// Maximum message size limit
+        /// Zero is unlimited
+        /// </summary>
+        public ulong MessageSizeLimit { get; set; }
+
+        /// <summary>
         /// Creates clone of the object
         /// </summary>
         /// <returns></returns>
@@ -95,6 +101,9 @@ namespace Twino.MQ.Options
 
                 else if (pair.Value.Equals(TmqHeaders.MESSAGE_LIMIT, StringComparison.InvariantCultureIgnoreCase))
                     MessageLimit = Convert.ToInt32(pair.Value);
+
+                else if (pair.Value.Equals(TmqHeaders.MESSAGE_SIZE_LIMIT, StringComparison.InvariantCultureIgnoreCase))
+                    MessageSizeLimit = Convert.ToUInt64(pair.Value);
 
                 else if (pair.Value.Equals(TmqHeaders.QUEUE_STATUS, StringComparison.InvariantCultureIgnoreCase))
                 {
@@ -150,7 +159,8 @@ namespace Twino.MQ.Options
                        UseMessageId = options.UseMessageId,
                        WaitForAcknowledge = options.WaitForAcknowledge,
                        SendOnlyFirstAcquirer = options.SendOnlyFirstAcquirer,
-                       MessageLimit = options.MessageLimit
+                       MessageLimit = options.MessageLimit,
+                       MessageSizeLimit = options.MessageSizeLimit
                    };
         }
     }

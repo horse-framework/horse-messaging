@@ -1,6 +1,10 @@
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+
+[assembly: InternalsVisibleTo("Twino.MQ.Data")]
+[assembly: InternalsVisibleTo("Twino.MQ.Server")]
 
 namespace Twino.Protocols.TMQ
 {

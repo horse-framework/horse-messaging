@@ -1,12 +1,12 @@
 namespace Twino.MQ.Options
 {
     /// <summary>
-    /// Distributed instance options
+    /// Distributed node options
     /// </summary>
-    public class InstanceOptions
+    public class NodeOptions
     {
         /// <summary>
-        /// Descriptor name for the instance
+        /// Descriptor name for the node
         /// </summary>
         public string Name { get; set; }
 
@@ -16,12 +16,12 @@ namespace Twino.MQ.Options
         public string Host { get; set; }
 
         /// <summary>
-        /// Authentication token for the instance
+        /// Authentication token for the node
         /// </summary>
         public string Token { get; set; }
 
         /// <summary>
-        /// If true, messages will will queued if instances are not connected, and they will be sent after short disconnections
+        /// If true, messages will will queued if nodes are not connected, and they will be sent after short disconnections
         /// </summary>
         public bool KeepMessages { get; set; }
 

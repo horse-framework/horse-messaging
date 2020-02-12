@@ -5,7 +5,7 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Network
 {
-    internal class InstanceMessageHandler : INetworkMessageHandler
+    internal class NodeMessageHandler : INetworkMessageHandler
     {
         #region Fields
 
@@ -19,7 +19,7 @@ namespace Twino.MQ.Network
         /// </summary>
         private static readonly TmqWriter _writer = new TmqWriter();
 
-        public InstanceMessageHandler(MqServer server)
+        public NodeMessageHandler(MqServer server)
         {
             _server = server;
         }
@@ -28,18 +28,14 @@ namespace Twino.MQ.Network
 
         public async Task Handle(MqClient client, TmqMessage message)
         {
-            //to prevent receive same message from instanced server that already sent from this server
-            if (client.IsInstanceServer)
-                return;
-
             //if server is not set or there is no connected server
-            if (_server.ServerAuthenticator == null || _server.InstanceConnectors.Length == 0)
+            if (_server.NodeServer.Connectors.Length == 0)
                 return;
 
             byte[] mdata = await _writer.Create(message);
-            foreach (TmqStickyConnector connector in _server.InstanceConnectors)
+            foreach (TmqStickyConnector connector in _server.NodeServer.Connectors)
             {
-                bool grant = await _server.ServerAuthenticator.CanReceive(connector.GetClient(), message);
+                bool grant = _server.NodeServer.Authenticator == null || await _server.NodeServer.Authenticator.CanReceive(connector.GetClient(), message);
 
                 if (grant)
                     connector.Send(mdata);

@@ -1,5 +1,19 @@
+using System;
+using System.Threading.Tasks;
+using Twino.MQ.Clients;
+using Twino.MQ.Queues;
+using Twino.Protocols.TMQ;
+
 namespace Twino.MQ.Delivery
 {
+
+    /// <summary>
+    /// When sending ack to producer is decided.
+    /// An acknowledge message is sent to producer.
+    /// This handler is called after acknowledge send operation.
+    /// </summary>
+    public delegate Task QueueAcknowledgeDeliveryHandler(QueueMessage message, MqClient producer, bool success);
+    
     /// <summary>
     /// Decision description for each step in message delivery
     /// </summary>
@@ -30,6 +44,11 @@ namespace Twino.MQ.Delivery
         public readonly DeliveryAcknowledgeDecision SendAcknowledge;
 
         /// <summary>
+        /// If acknowledge is decided, this method will be called after acknowledge sent or failed
+        /// </summary>
+        public QueueAcknowledgeDeliveryHandler AcknowledgeDelivery;
+        
+        /// <summary>
         /// Creates new decision without keeping messages and acknowledge
         /// </summary>
         public Decision(bool allow, bool save)
@@ -38,6 +57,7 @@ namespace Twino.MQ.Delivery
             SaveMessage = save;
             KeepMessage = false;
             SendAcknowledge = DeliveryAcknowledgeDecision.None;
+            AcknowledgeDelivery = null;
         }
 
         /// <summary>
@@ -49,8 +69,21 @@ namespace Twino.MQ.Delivery
             SaveMessage = save;
             KeepMessage = keep;
             SendAcknowledge = sendAcknowledge;
+            AcknowledgeDelivery = null;
         }
 
+        /// <summary>
+        /// Creates new decision with full parameters
+        /// </summary>
+        public Decision(bool allow, bool save, bool keep, DeliveryAcknowledgeDecision sendAcknowledge, QueueAcknowledgeDeliveryHandler acknowledgeDelivery)
+        {
+            Allow = allow;
+            SaveMessage = save;
+            KeepMessage = keep;
+            SendAcknowledge = sendAcknowledge;
+            AcknowledgeDelivery = acknowledgeDelivery;
+        }
+        
         /// <summary>
         /// Creates allow decision.
         /// Value does not save, keep and send acknowledge

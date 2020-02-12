@@ -67,6 +67,11 @@ namespace Twino.MQ.Queues
         internal bool IsInQueue { get; set; }
 
         /// <summary>
+        /// Payload object for end-user usage
+        /// </summary>
+        public object Payload { get; set; }
+
+        /// <summary>
         /// Creates new QueueMessage from TmqMessage with save status
         /// </summary>
         public QueueMessage(TmqMessage message, bool isSaved = false)

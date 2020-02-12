@@ -31,6 +31,8 @@ namespace Twino.MQ.Network
 
         #endregion
 
+        #region Handle
+
         public async Task Handle(MqClient client, TmqMessage message)
         {
             try
@@ -128,6 +130,8 @@ namespace Twino.MQ.Network
                     break;
             }
         }
+
+        #endregion
 
         #region Channel
 
@@ -679,7 +683,8 @@ namespace Twino.MQ.Network
                              Errors = queue.Info.ErrorCount,
                              LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
                              LastMessageSent = queue.Info.GetLastMessageSendUnix(),
-                             MessageLimit = queue.Options.MessageLimit
+                             MessageLimit = queue.Options.MessageLimit,
+                             MessageSizeLimit = queue.Options.MessageSizeLimit
                          });
             }
 
@@ -752,7 +757,8 @@ namespace Twino.MQ.Network
                                                Errors = queue.Info.ErrorCount,
                                                LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
                                                LastMessageSent = queue.Info.GetLastMessageSendUnix(),
-                                               MessageLimit = queue.Options.MessageLimit
+                                               MessageLimit = queue.Options.MessageLimit,
+                                               MessageSizeLimit = queue.Options.MessageSizeLimit
                                            };
 
             TmqMessage response = message.CreateResponse();
@@ -790,24 +796,24 @@ namespace Twino.MQ.Network
             List<InstanceInformation> list = new List<InstanceInformation>();
 
             //slave instances
-            List<SlaveInstance> slaves = _server.SlaveInstances.GetAsClone();
-            foreach (SlaveInstance slave in slaves)
+            List<MqClient> slaves = _server.NodeServer.Clients.GetAsClone();
+            foreach (MqClient slave in slaves)
             {
                 list.Add(new InstanceInformation
                          {
                              IsSlave = true,
                              Host = slave.RemoteHost,
-                             IsConnected = slave.Client.IsConnected,
-                             Id = slave.Client.UniqueId,
-                             Name = slave.Client.Name,
+                             IsConnected = slave.IsConnected,
+                             Id = slave.UniqueId,
+                             Name = slave.Name,
                              Lifetime = slave.ConnectedDate.LifetimeMilliseconds()
                          });
             }
 
             //master instances
-            foreach (TmqStickyConnector connector in _server.InstanceConnectors)
+            foreach (TmqStickyConnector connector in _server.NodeServer.Connectors)
             {
-                InstanceOptions options = connector.Tag as InstanceOptions;
+                NodeOptions options = connector.Tag as NodeOptions;
                 TmqClient c = connector.GetClient();
 
                 list.Add(new InstanceInformation
