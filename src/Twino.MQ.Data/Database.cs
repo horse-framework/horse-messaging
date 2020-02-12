@@ -20,6 +20,11 @@ namespace Twino.MQ.Data
         /// </summary>
         public event Action<Database, ShrinkInfo> OnShrink;
 
+        /// <summary>
+        /// Triggered when an error has occured
+        /// </summary>
+        public event Action<ErrorHint, Exception> OnError;
+
         #endregion
 
         #region Properties
@@ -124,7 +129,7 @@ namespace Twino.MQ.Data
                     }
                 }
             }
-            finally
+            finally 
             {
                 ReleaseLock();
             }
@@ -137,6 +142,14 @@ namespace Twino.MQ.Data
         {
             _shrinkManager.Stop();
             await File.Close();
+        }
+
+        /// <summary>
+        /// Triggers error event of database
+        /// </summary>
+        internal void TriggerError(ErrorHint hint, Exception e)
+        {
+            OnError?.Invoke(hint, e);
         }
 
         #endregion
@@ -198,6 +211,8 @@ namespace Twino.MQ.Data
                         }
                     }
                 }
+
+                OnShrink?.Invoke(this, info);
             }
             catch (Exception ex)
             {
@@ -205,9 +220,9 @@ namespace Twino.MQ.Data
                     info = new ShrinkInfo();
 
                 info.Error = ex;
+                TriggerError(ErrorHint.Shrink, ex);
             }
 
-            OnShrink?.Invoke(this, info);
             return info;
         }
 
@@ -261,8 +276,9 @@ namespace Twino.MQ.Data
 
                 return true;
             }
-            catch
+            catch (Exception e)
             {
+                TriggerError(ErrorHint.Insert, e);
                 return false;
             }
             finally
@@ -305,8 +321,9 @@ namespace Twino.MQ.Data
 
                 return true;
             }
-            catch
+            catch (Exception e)
             {
+                TriggerError(ErrorHint.Delete, e);
                 return false;
             }
             finally

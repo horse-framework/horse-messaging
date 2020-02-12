@@ -95,17 +95,12 @@ namespace Twino.MQ.Data
 
             _autoShrinkTimer = new ThreadTimer(async () =>
             {
-                try
-                {
-                    if (_shrinking)
-                        return;
+                if (_shrinking)
+                    return;
 
-                    if (ShrinkRequired)
-                        await _database.Shrink();
-                }
-                catch
-                {
-                }
+                if (ShrinkRequired)
+                    await _database.Shrink();
+                
             }, interval);
             _autoShrinkTimer.Start(ThreadPriority.BelowNormal);
         }
@@ -196,8 +191,9 @@ namespace Twino.MQ.Data
 
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                _database.TriggerError(ErrorHint.ShrinkAfterLoad, ex);
                 //reverse
                 if (backup)
                 {
@@ -206,8 +202,9 @@ namespace Twino.MQ.Data
                         File.Delete(_database.File.Filename);
                         File.Move(_database.File.Filename + ".backup", _database.File.Filename);
                     }
-                    catch
+                    catch (Exception e)
                     {
+                        _database.TriggerError(ErrorHint.ReverseFromBackup, e);
                     }
                 }
 
@@ -273,7 +270,7 @@ namespace Twino.MQ.Data
                 sw.Start();
                 bool sync = await SyncShrink();
                 sw.Stop();
-                
+
                 _info.SyncDuration = sw.Elapsed;
                 _info.Successful = sync;
 
@@ -388,8 +385,9 @@ namespace Twino.MQ.Data
                 await _database.File.Open();
                 return true;
             }
-            catch
+            catch (Exception e)
             {
+                _database.TriggerError(ErrorHint.SyncShrinkFiles, e);
                 return false;
             }
             finally

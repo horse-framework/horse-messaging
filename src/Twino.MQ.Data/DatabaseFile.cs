@@ -183,8 +183,9 @@ namespace Twino.MQ.Data
                 File.Delete(Filename);
                 return true;
             }
-            catch
+            catch (Exception e)
             {
+                _database.TriggerError(ErrorHint.DeleteDatabaseFile, e);
                 return false;
             }
         }
@@ -209,8 +210,9 @@ namespace Twino.MQ.Data
 
                 return true;
             }
-            catch
+            catch (Exception e)
             {
+                _database.TriggerError(ErrorHint.Backup, e);
                 return false;
             }
         }
