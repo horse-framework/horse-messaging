@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
-using Twino.Client.TMQ;
-using Twino.Client.TMQ.Connectors;
 using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
@@ -262,6 +260,10 @@ namespace Twino.MQ
 
             channel = new Channel(this, options, name, authenticator, eventHandler, deliveryHandler);
             _channels.Add(channel);
+
+            if (eventHandler != null)
+                _ = eventHandler.OnChannelCreated(channel);
+
             return channel;
         }
 

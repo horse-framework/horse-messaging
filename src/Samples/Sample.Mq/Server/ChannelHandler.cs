@@ -32,6 +32,12 @@ namespace Sample.Mq.Server
             await Task.CompletedTask;
         }
 
+        public async Task OnChannelCreated(Channel channel)
+        {
+            Console.WriteLine($"Channel is created {channel.Name}");
+            await Task.CompletedTask;
+        }
+
         public async Task OnChannelRemoved(Channel channel)
         {
             Console.WriteLine($"Channel is removed {channel.Name}");

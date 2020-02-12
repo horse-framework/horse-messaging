@@ -44,6 +44,11 @@ namespace Test.Mq.Internal
             await Task.CompletedTask;
         }
 
+        public async Task OnChannelCreated(Channel channel)
+        {
+            await Task.CompletedTask;
+        }
+
         public async Task OnChannelRemoved(Channel channel)
         {
             _server.OnChannelRemoved++;
