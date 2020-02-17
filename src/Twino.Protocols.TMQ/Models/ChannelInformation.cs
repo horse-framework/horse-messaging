@@ -87,6 +87,14 @@ namespace Twino.Protocols.TMQ.Models
         public bool HideClientNames { get; set; }
         
         /// <summary>
+        /// Online and subscribed clients in the channel
+        /// Zero is unlimited
+        /// </summary>
+        [JsonProperty("activeClients")]
+        [JsonPropertyName("activeClients")]
+        public int ActiveClients { get; set; }
+
+        /// <summary>
         /// Maximum client limit of the channel
         /// Zero is unlimited
         /// </summary>

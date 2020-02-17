@@ -340,7 +340,8 @@ namespace Twino.MQ.Network
                              HideClientNames = channel.Options.HideClientNames,
                              QueueLimit = channel.Options.QueueLimit,
                              ClientLimit = channel.Options.ClientLimit,
-                             DestroyWhenEmpty = channel.Options.DestroyWhenEmpty
+                             DestroyWhenEmpty = channel.Options.DestroyWhenEmpty,
+                             ActiveClients = channel.ClientsCount()
                          });
             }
 
@@ -393,7 +394,8 @@ namespace Twino.MQ.Network
                                                  HideClientNames = channel.Options.HideClientNames,
                                                  QueueLimit = channel.Options.QueueLimit,
                                                  ClientLimit = channel.Options.ClientLimit,
-                                                 DestroyWhenEmpty = channel.Options.DestroyWhenEmpty
+                                                 DestroyWhenEmpty = channel.Options.DestroyWhenEmpty,
+                                                 ActiveClients = channel.ClientsCount()
                                              };
 
             TmqMessage response = message.CreateResponse();
