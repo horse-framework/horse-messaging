@@ -670,6 +670,27 @@ namespace Twino.Client.TMQ
         }
 
         /// <summary>
+        /// Sends unacknowledge message for the message.
+        /// </summary>
+        public async Task<bool> SendUnacknowledge(TmqMessage message)
+        {
+            if (!message.AcknowledgeRequired)
+                return false;
+
+            TmqMessage ack = new TmqMessage();
+
+            ack.FirstAcquirer = message.FirstAcquirer;
+            ack.HighPriority = message.HighPriority;
+            ack.Type = MessageType.Acknowledge;
+            ack.SetMessageId(message.MessageId);
+            ack.ContentType = message.ContentType;
+            ack.SetTarget(message.Type == MessageType.Channel ? message.Target : message.Source);
+            ack.SetStringContent("FAILED");
+
+            return await SendAsync(ack);
+        }
+
+        /// <summary>
         /// Sends message.
         /// if verify requires, waits response and checkes status code of the response.
         /// returns true if Ok.

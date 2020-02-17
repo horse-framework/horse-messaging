@@ -36,11 +36,6 @@ namespace Twino.MQ.Queues
         public bool IsSaved { get; internal set; }
 
         /// <summary>
-        /// True, if acknowledge message for the message is received
-        /// </summary>
-        public bool IsAcknowledged { get; internal set; }
-
-        /// <summary>
         /// True, if is sent
         /// </summary>
         public bool IsSent { get; internal set; }

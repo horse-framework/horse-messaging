@@ -5,6 +5,32 @@ using Twino.MQ.Queues;
 namespace Twino.MQ.Delivery
 {
     /// <summary>
+    /// Delivery acknowledge status
+    /// </summary>
+    public enum DeliveryAcknowledge
+    {
+        /// <summary>
+        /// There is no ack message from consumer
+        /// </summary>
+        None,
+
+        /// <summary>
+        /// Consumer sent a successful acknowledge for the message
+        /// </summary>
+        Acknowledge,
+
+        /// <summary>
+        /// Consumer sent a failed acknowledge for the message
+        /// </summary>
+        Unacknowledge,
+
+        /// <summary>
+        /// Acknowledge timed out
+        /// </summary>
+        Timeout
+    }
+
+    /// <summary>
     /// Message delivery data for a single message to a single receiver
     /// </summary>
     public class MessageDelivery
@@ -37,14 +63,9 @@ namespace Twino.MQ.Delivery
         public DateTime SendDate { get; private set; }
 
         /// <summary>
-        /// If true, acknowledge is received
+        /// Message acknowledge status
         /// </summary>
-        public bool IsAcknowledged { get; private set; }
-
-        /// <summary>
-        /// If true, receivers does not send acknowledge message in acknowledge pending duration.
-        /// </summary>
-        public bool IsAcknowledgeTimedUp { get; private set; }
+        public DeliveryAcknowledge Acknowledge { get; private set; }
 
         /// <summary>
         /// Acknowledge receive time
@@ -99,20 +120,21 @@ namespace Twino.MQ.Delivery
         /// <summary>
         /// Marks message as acknowledged
         /// </summary>
-        public void MarkAsAcknowledged()
+        public void MarkAsAcknowledged(bool success)
         {
-            IsAcknowledged = true;
+            Acknowledge = success
+                              ? DeliveryAcknowledge.Acknowledge
+                              : DeliveryAcknowledge.Unacknowledge;
+
             AcknowledgeDate = DateTime.UtcNow;
-            Message.IsAcknowledged = true;
         }
 
         /// <summary>
         /// Marks acknowledge is timed up
         /// </summary>
-        public void MarkAsAcknowledgeTimedUp()
+        public void MarkAsAcknowledgeTimeout()
         {
-            IsAcknowledged = false;
-            IsAcknowledgeTimedUp = true;
+            Acknowledge = DeliveryAcknowledge.Timeout;
         }
 
         #endregion

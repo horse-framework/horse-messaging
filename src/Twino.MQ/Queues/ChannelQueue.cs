@@ -618,11 +618,21 @@ namespace Twino.MQ.Queues
         {
             MessageDelivery delivery = TimeKeeper.FindDelivery(from, deliveryMessage.MessageId);
 
-            if (delivery != null)
-                delivery.MarkAsAcknowledged();
+            bool success = true;
+            if (deliveryMessage.Length > 0 && deliveryMessage.Content != null)
+            {
+                string msg = deliveryMessage.Content.ToString();
+                if (msg.Equals("FAILED", StringComparison.InvariantCultureIgnoreCase) || msg.Equals("TIMEOUT", StringComparison.InvariantCultureIgnoreCase))
+                    success = false;
+            }
 
-            Info.AddAcknowledge();
-            Decision decision = await DeliveryHandler.AcknowledgeReceived(this, deliveryMessage, delivery);
+            if (delivery != null)
+                delivery.MarkAsAcknowledged(success);
+
+            if (success)
+                Info.AddAcknowledge();
+            
+            Decision decision = await DeliveryHandler.AcknowledgeReceived(this, deliveryMessage, delivery, success);
 
             if (delivery != null)
             {

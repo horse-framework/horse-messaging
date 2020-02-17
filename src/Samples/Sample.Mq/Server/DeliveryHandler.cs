@@ -46,7 +46,7 @@ namespace Sample.Mq.Server
             return await Task.FromResult(new Decision(true, true));
         }
 
-        public async Task<Decision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery)
+        public async Task<Decision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
             Console.WriteLine($"Acknowledge received in {queue.Id} queue in {queue.Channel.Name}");
             return await Task.FromResult(new Decision(true, false, false, DeliveryAcknowledgeDecision.IfSaved));
