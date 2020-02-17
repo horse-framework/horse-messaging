@@ -105,7 +105,7 @@ namespace Twino.MQ.Handlers
         /// Decision: Allow.
         /// If AcknowledgeWhen is AfterAcknowledge, acknowledge is sent to producer.
         /// </summary>
-        public async Task<Decision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery)
+        public async Task<Decision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
             if (_when == AcknowledgeWhen.AfterAcknowledge)
                 return await Task.FromResult(new Decision(true, false, false, DeliveryAcknowledgeDecision.Always));

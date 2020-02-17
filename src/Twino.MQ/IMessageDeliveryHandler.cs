@@ -67,7 +67,7 @@ namespace Twino.MQ
         /// <summary>
         /// Called when a receiver sends an acknowledge message.
         /// </summary>
-        Task<Decision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery);
+        Task<Decision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery, bool success);
 
         /// <summary>
         /// Message is queued but no receiver found and time is up

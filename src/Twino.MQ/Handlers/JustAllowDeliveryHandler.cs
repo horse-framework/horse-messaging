@@ -64,7 +64,7 @@ namespace Twino.MQ.Handlers
         /// <summary>
         /// Decision: Allow
         /// </summary>
-        public async Task<Decision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery)
+        public async Task<Decision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
             return await Task.FromResult(new Decision(true, false));
         }

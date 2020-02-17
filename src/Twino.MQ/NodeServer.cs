@@ -103,7 +103,7 @@ namespace Twino.MQ
         /// Sets node authenticator for using multiple nodes
         /// </summary>
         /// <exception cref="ReadOnlyException">Thrown when node authenticator already is set</exception>
-        public void SetServerAuthenticator(INodeAuthenticator authenticator)
+        public void SetAuthenticator(INodeAuthenticator authenticator)
         {
             if (Authenticator != null)
                 throw new ReadOnlyException("Node authenticator can be set only once");

@@ -33,11 +33,15 @@ namespace Twino.MQ
         /// Called when queue status has changed
         /// </summary>
         Task OnQueueStatusChanged(ChannelQueue queue, QueueStatus from, QueueStatus to);
-        
+
+        /// <summary>
+        /// Called when a new channel is created
+        /// </summary>
+        Task OnChannelCreated(Channel channel);
+
         /// <summary>
         /// Called when channel is removed
         /// </summary>
         Task OnChannelRemoved(Channel channel);
-
     }
 }

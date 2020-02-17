@@ -107,9 +107,6 @@ namespace Twino.Mvc
             }
             catch (Exception ex)
             {
-                if (request.Response.StreamSuppressed && request.Response.ResponseStream != null)
-                    GC.ReRegisterForFinalize(request.Response.ResponseStream);
-
                 if (Mvc.IsDevelopment)
                 {
                     IErrorHandler handler = new DevelopmentErrorHandler();
@@ -119,6 +116,9 @@ namespace Twino.Mvc
                     await Mvc.ErrorHandler.Error(request, ex);
                 else
                     WriteResponse(request.Response, StatusCodeResult.InternalServerError());
+
+                if (request.Response.StreamSuppressed && request.Response.ResponseStream != null)
+                    GC.ReRegisterForFinalize(request.Response.ResponseStream);
             }
             finally
             {
@@ -522,10 +522,10 @@ namespace Twino.Mvc
         /// CallFilters method is created to avoid to type this code many times
         /// </summary>
         private async Task<bool> CallFilters<TFilter>(HttpResponse response,
-                                          FilterContext context,
-                                          IEnumerable<TFilter> items,
-                                          Func<TFilter, Task> action,
-                                          bool skipResultChanges = false)
+                                                      FilterContext context,
+                                                      IEnumerable<TFilter> items,
+                                                      Func<TFilter, Task> action,
+                                                      bool skipResultChanges = false)
         {
             foreach (TFilter item in items)
             {

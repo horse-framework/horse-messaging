@@ -56,7 +56,7 @@ namespace Test.Mq.Internal
             return await Task.FromResult(new Decision(true, true));
         }
 
-        public async Task<Decision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery)
+        public async Task<Decision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
             _server.OnAcknowledge++;
             return await Task.FromResult(new Decision(true, false, false, DeliveryAcknowledgeDecision.Always));

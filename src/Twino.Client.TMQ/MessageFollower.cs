@@ -101,6 +101,18 @@ namespace Twino.Client.TMQ
             if (descriptor == null)
                 return;
 
+            if (message.Content != null && message.Length > 0)
+            {
+                string response = message.ToString();
+                if (response.Equals("FAILED", StringComparison.InvariantCultureIgnoreCase) ||
+                    response.Equals("TIMEOUT", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    descriptor.Completed = true;
+                    descriptor.Set(null);
+                    return;
+                }
+            }
+
             descriptor.Completed = true;
             descriptor.Set(new object());
         }
