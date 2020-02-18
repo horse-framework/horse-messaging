@@ -24,16 +24,20 @@ namespace Twino.MQ.Queues.States
             return Task.FromResult(PullResult.StatusNotSupported);
         }
 
-        public async Task<PushResult> Push(QueueMessage message, MqClient sender)
+        public QueueMessage EnqueueDequeue(QueueMessage message)
         {
             //if we have an option maximum wait duration for message, set it after message joined to the queue.
             //time keeper will check this value and if message time is up, it will remove message from the queue.
             if (_queue.Options.MessageTimeout > TimeSpan.Zero)
                 message.Deadline = DateTime.UtcNow.Add(_queue.Options.MessageTimeout);
 
-            QueueMessage held = GetFirstMessageFromQueue(message);
-            ProcessingMessage = held;
-            PushResult result = await ProcessMessage(held);
+            return GetFirstMessageFromQueue(message);
+        }
+
+        public async Task<PushResult> Push(QueueMessage message, MqClient sender)
+        {
+            ProcessingMessage = message;
+            PushResult result = await ProcessMessage(message);
             ProcessingMessage = null;
 
             await _queue.Trigger();

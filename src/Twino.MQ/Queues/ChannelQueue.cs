@@ -87,6 +87,11 @@ namespace Twino.MQ.Queues
         private SemaphoreSlim _ackSemaphore;
 
         /// <summary>
+        /// Sync object for inserting messages into queue as FIFO
+        /// </summary>
+        private SemaphoreSlim _syncSemaphore = new SemaphoreSlim(1, 1);
+
+        /// <summary>
         /// Pushing messages cross thread locker
         /// </summary>
         private SemaphoreSlim _pushSemaphore = new SemaphoreSlim(1, 1);
@@ -453,10 +458,21 @@ namespace Twino.MQ.Queues
                 if (!allow)
                     return PushResult.Success;
 
+                QueueMessage queued;
+                await _syncSemaphore.WaitAsync();
+                try
+                {
+                    queued = State.EnqueueDequeue(message);
+                }
+                finally
+                {
+                    _syncSemaphore.Release();
+                }
+
                 await _pushSemaphore.WaitAsync();
                 try
                 {
-                    return await State.Push(message, sender);
+                    return await State.Push(queued, sender);
                 }
                 finally
                 {
@@ -631,7 +647,7 @@ namespace Twino.MQ.Queues
 
             if (success)
                 Info.AddAcknowledge();
-            
+
             Decision decision = await DeliveryHandler.AcknowledgeReceived(this, deliveryMessage, delivery, success);
 
             if (delivery != null)

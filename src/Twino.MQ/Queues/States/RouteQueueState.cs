@@ -25,6 +25,11 @@ namespace Twino.MQ.Queues.States
             return Task.FromResult(PullResult.StatusNotSupported);
         }
 
+        public QueueMessage EnqueueDequeue(QueueMessage message)
+        {
+            return message;
+        }
+
         public async Task<PushResult> Push(QueueMessage message, MqClient sender)
         {
             ProcessingMessage = message;

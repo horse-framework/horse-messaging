@@ -8,9 +8,11 @@ namespace Twino.MQ.Queues.States
     {
         QueueMessage ProcessingMessage { get; }
 
-        Task<PullResult> Pull(ChannelClient client, TmqMessage request);
-
+        QueueMessage EnqueueDequeue(QueueMessage message);
+        
         Task<PushResult> Push(QueueMessage message, MqClient sender);
+
+        Task<PullResult> Pull(ChannelClient client, TmqMessage request);
 
         Task Trigger();
 

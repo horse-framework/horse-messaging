@@ -80,18 +80,27 @@ namespace Twino.MQ.Queues.States
             return held;
         }
 
+        public QueueMessage EnqueueDequeue(QueueMessage message)
+        {
+            //if we have an option maximum wait duration for message, set it after message joined to the queue.
+            //time keeper will check this value and if message time is up, it will remove message from the queue.
+            if (_queue.Options.MessageTimeout > TimeSpan.Zero)
+                message.Deadline = DateTime.UtcNow.Add(_queue.Options.MessageTimeout);
+
+            return GetFirstMessageFromQueue(message);
+        }
+
         public async Task<PushResult> Push(QueueMessage message, MqClient sender)
         {
-            QueueMessage held = GetFirstMessageFromQueue(message);
             ChannelClient cc = _queue.Channel.GetNextRRClient(ref _roundRobinIndex);
             if (cc == null)
             {
-                _queue.AddMessage(held, false);
+                _queue.AddMessage(message, false);
                 return PushResult.NoConsumers;
             }
 
-            ProcessingMessage = held;
-            PushResult result = await ProcessMessage(held, cc);
+            ProcessingMessage = message;
+            PushResult result = await ProcessMessage(message, cc);
             ProcessingMessage = null;
 
             await _queue.Trigger();
@@ -216,7 +225,7 @@ namespace Twino.MQ.Queues.States
                 }
             }
         }
-        
+
         public Task<QueueStatusAction> EnterStatus(QueueStatus previousStatus)
         {
             return Task.FromResult(QueueStatusAction.AllowAndTrigger);
@@ -226,6 +235,5 @@ namespace Twino.MQ.Queues.States
         {
             return Task.FromResult(QueueStatusAction.Allow);
         }
-
     }
 }
