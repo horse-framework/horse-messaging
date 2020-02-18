@@ -6,7 +6,7 @@
         <Product>Twino.Client.Connectors</Product>
         <Description>Connectors for twino WebSocket and TMQ protocols</Description>
         <PackageTags>twino,server,client,connector,websocket,tmq</PackageTags>
-.        <AssemblyVersion>2.7.4</AssemblyVersion>
+        <AssemblyVersion>2.7.4</AssemblyVersion>
         <FileVersion>2.7.4</FileVersion>
         <PackageVersion>2.7.4</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
