@@ -132,9 +132,13 @@ namespace Twino.MQ.Delivery
         /// <summary>
         /// Marks acknowledge is timed up
         /// </summary>
-        public void MarkAsAcknowledgeTimeout()
+        public bool MarkAsAcknowledgeTimeout()
         {
+            if (Acknowledge != DeliveryAcknowledge.None)
+                return false;
+            
             Acknowledge = DeliveryAcknowledge.Timeout;
+            return true;
         }
 
         #endregion

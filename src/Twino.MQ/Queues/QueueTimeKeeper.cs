@@ -133,7 +133,7 @@ namespace Twino.MQ.Queues
             lock (_deliveries)
                 foreach (MessageDelivery delivery in _deliveries)
                 {
-                    //message acknowledge or came here accidently :)
+                    //ack or unack is received, or message acknowledge or came here accidently :)
                     if (delivery.Acknowledge != DeliveryAcknowledge.None || !delivery.AcknowledgeDeadline.HasValue)
                         rdlist.Add(new Tuple<bool, MessageDelivery>(false, delivery));
 
@@ -151,7 +151,10 @@ namespace Twino.MQ.Queues
                 MessageDelivery delivery = tuple.Item2;
                 if (tuple.Item1)
                 {
-                    delivery.MarkAsAcknowledgeTimeout();
+                    bool marked = delivery.MarkAsAcknowledgeTimeout();
+                    if (!marked)
+                        continue;
+
                     _queue.Info.AddUnacknowledge();
                     Decision decision = await _queue.DeliveryHandler.AcknowledgeTimedOut(_queue, delivery);
 
