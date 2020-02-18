@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Delivery;
@@ -23,6 +22,11 @@ namespace Twino.MQ.Queues.States
         public Task<PullResult> Pull(ChannelClient client, TmqMessage request)
         {
             return Task.FromResult(PullResult.StatusNotSupported);
+        }
+
+        public QueueMessage EnqueueDequeue(QueueMessage message)
+        {
+            return message;
         }
 
         public async Task<PushResult> Push(QueueMessage message, MqClient sender)

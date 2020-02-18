@@ -67,11 +67,11 @@ namespace Twino.MQ.Queues.States
 
             message.Decision = await _queue.DeliveryHandler.EndSend(_queue, message);
             await _queue.ApplyDecision(message.Decision, message);
-            
+
             return PullResult.Success;
         }
 
-        public Task<PushResult> Push(QueueMessage message, MqClient sender)
+        public QueueMessage EnqueueDequeue(QueueMessage message)
         {
             //if we need acknowledge, we are sending this information to receivers that we require response
             message.Message.AcknowledgeRequired = _queue.Options.RequestAcknowledge;
@@ -81,6 +81,11 @@ namespace Twino.MQ.Queues.States
             _queue.ClearAllMessages();
             _queue.AddMessage(message);
 
+            return message;
+        }
+
+        public Task<PushResult> Push(QueueMessage message, MqClient sender)
+        {
             return Task.FromResult(PushResult.Success);
         }
 

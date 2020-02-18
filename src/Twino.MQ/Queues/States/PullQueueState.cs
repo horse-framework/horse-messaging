@@ -160,9 +160,32 @@ namespace Twino.MQ.Queues.States
             }
         }
 
+        public QueueMessage EnqueueDequeue(QueueMessage message)
+        {
+            if (message.Message.HighPriority)
+            {
+                lock (_queue.HighPriorityLinkedList)
+                {
+                    _queue.HighPriorityLinkedList.AddLast(message);
+                    message.IsInQueue = true;
+                    _queue.Info.UpdateHighPriorityMessageCount(_queue.HighPriorityLinkedList.Count);
+                }
+            }
+            else
+            {
+                lock (_queue.RegularLinkedList)
+                {
+                    _queue.RegularLinkedList.AddLast(message);
+                    message.IsInQueue = true;
+                    _queue.Info.UpdateRegularMessageCount(_queue.RegularLinkedList.Count);
+                }
+            }
+
+            return message;
+        }
+
         public Task<PushResult> Push(QueueMessage message, MqClient sender)
         {
-            _queue.AddMessage(message);
             return Task.FromResult(PushResult.Success);
         }
 
