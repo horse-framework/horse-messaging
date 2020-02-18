@@ -89,7 +89,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Sync object for inserting messages into queue as FIFO
         /// </summary>
-        private SemaphoreSlim _syncSemaphore = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _syncSemaphore = new SemaphoreSlim(1, 1);
 
         /// <summary>
         /// Pushing messages cross thread locker
@@ -458,6 +458,7 @@ namespace Twino.MQ.Queues
                 if (!allow)
                     return PushResult.Success;
 
+                //add message into queue
                 QueueMessage queued;
                 await _syncSemaphore.WaitAsync();
                 try
@@ -516,8 +517,16 @@ namespace Twino.MQ.Queues
                 return;
 
             _triggering = true;
-            await State.Trigger();
-            _triggering = false;
+            await _syncSemaphore.WaitAsync();
+            try
+            {
+                await State.Trigger();
+            }
+            finally
+            {
+                _triggering = false;
+                _syncSemaphore.Release();
+            }
         }
 
         #endregion
