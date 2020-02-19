@@ -66,9 +66,7 @@ namespace Twino.MQ.Delivery
         /// <summary>
         /// Message acknowledge status
         /// </summary>
-        public DeliveryAcknowledge Acknowledge => _acknowledge;
-
-        private volatile DeliveryAcknowledge _acknowledge = DeliveryAcknowledge.None;
+        public DeliveryAcknowledge Acknowledge { get; private set; }
 
         /// <summary>
         /// Acknowledge receive time
@@ -125,7 +123,7 @@ namespace Twino.MQ.Delivery
         /// </summary>
         public void MarkAsAcknowledged(bool success)
         {
-            _acknowledge = success
+            Acknowledge = success
                                ? DeliveryAcknowledge.Acknowledge
                                : DeliveryAcknowledge.Unacknowledge;
 
@@ -137,10 +135,10 @@ namespace Twino.MQ.Delivery
         /// </summary>
         public bool MarkAsAcknowledgeTimeout()
         {
-            if (_acknowledge != DeliveryAcknowledge.None)
+            if (Acknowledge != DeliveryAcknowledge.None)
                 return false;
 
-            _acknowledge = DeliveryAcknowledge.Timeout;
+            Acknowledge = DeliveryAcknowledge.Timeout;
             return true;
         }
 
