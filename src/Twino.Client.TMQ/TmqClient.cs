@@ -677,14 +677,7 @@ namespace Twino.Client.TMQ
             if (!message.AcknowledgeRequired)
                 return false;
 
-            TmqMessage ack = new TmqMessage();
-
-            ack.FirstAcquirer = message.FirstAcquirer;
-            ack.HighPriority = message.HighPriority;
-            ack.Type = MessageType.Acknowledge;
-            ack.SetMessageId(message.MessageId);
-            ack.ContentType = message.ContentType;
-            ack.SetTarget(message.Type == MessageType.Channel ? message.Target : message.Source);
+            TmqMessage ack = message.CreateAcknowledge();
             ack.SetStringContent("FAILED");
 
             return await SendAsync(ack);

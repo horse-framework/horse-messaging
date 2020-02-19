@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Twino.MQ.Clients;
 using Twino.MQ.Queues;
 
@@ -65,7 +66,9 @@ namespace Twino.MQ.Delivery
         /// <summary>
         /// Message acknowledge status
         /// </summary>
-        public DeliveryAcknowledge Acknowledge { get; private set; }
+        public DeliveryAcknowledge Acknowledge => _acknowledge;
+
+        private volatile DeliveryAcknowledge _acknowledge = DeliveryAcknowledge.None;
 
         /// <summary>
         /// Acknowledge receive time
@@ -122,9 +125,9 @@ namespace Twino.MQ.Delivery
         /// </summary>
         public void MarkAsAcknowledged(bool success)
         {
-            Acknowledge = success
-                              ? DeliveryAcknowledge.Acknowledge
-                              : DeliveryAcknowledge.Unacknowledge;
+            _acknowledge = success
+                               ? DeliveryAcknowledge.Acknowledge
+                               : DeliveryAcknowledge.Unacknowledge;
 
             AcknowledgeDate = DateTime.UtcNow;
         }
@@ -134,10 +137,10 @@ namespace Twino.MQ.Delivery
         /// </summary>
         public bool MarkAsAcknowledgeTimeout()
         {
-            if (Acknowledge != DeliveryAcknowledge.None)
+            if (_acknowledge != DeliveryAcknowledge.None)
                 return false;
-            
-            Acknowledge = DeliveryAcknowledge.Timeout;
+
+            _acknowledge = DeliveryAcknowledge.Timeout;
             return true;
         }
 
