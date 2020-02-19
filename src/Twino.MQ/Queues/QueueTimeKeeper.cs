@@ -57,7 +57,9 @@ namespace Twino.MQ.Queues
 
                 await ProcessDeliveries();
             }
-            catch { }
+            catch
+            {
+            }
         }
 
         /// <summary>
@@ -163,10 +165,10 @@ namespace Twino.MQ.Queues
                             released = true;
                             _queue.ReleaseAcknowledgeLock(false);
                         }
-                        
+
                         continue;
                     }
-                    
+
                     _queue.Info.AddUnacknowledge();
                     Decision decision = await _queue.DeliveryHandler.AcknowledgeTimedOut(_queue, delivery);
 
@@ -211,6 +213,34 @@ namespace Twino.MQ.Queues
                                                  && x.Message.Message.MessageId == messageId);
 
             return delivery;
+        }
+
+        /// <summary>
+        /// Finds delivery from message id and removes it from deliveries
+        /// </summary>
+        public MessageDelivery FindAndRemoveDelivery(MqClient client, string messageId)
+        {
+            MessageDelivery delivery;
+
+            lock (_deliveries)
+            {
+                delivery = _deliveries.Find(x => x.Receiver != null
+                                              && x.Receiver.Client.UniqueId == client.UniqueId
+                                              && x.Message.Message.MessageId == messageId);
+                
+                _deliveries.Remove(delivery);
+            }
+
+            return delivery;
+        }
+
+        /// <summary>
+        /// Removes delivery from being tracked
+        /// </summary>
+        internal void RemoveDelivery(MessageDelivery delivery)
+        {
+            lock (_deliveries)
+                _deliveries.Remove(delivery);
         }
 
         #endregion
