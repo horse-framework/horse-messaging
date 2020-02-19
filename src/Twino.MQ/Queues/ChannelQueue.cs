@@ -656,6 +656,8 @@ namespace Twino.MQ.Queues
 
             if (success)
                 Info.AddAcknowledge();
+            else
+                Info.AddUnacknowledge();
 
             Decision decision = await DeliveryHandler.AcknowledgeReceived(this, deliveryMessage, delivery, success);
 

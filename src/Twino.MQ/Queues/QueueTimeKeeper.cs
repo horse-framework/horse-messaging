@@ -45,15 +45,19 @@ namespace Twino.MQ.Queues
         public void Run()
         {
             TimeSpan interval = TimeSpan.FromMilliseconds(1000);
-            _timer = new Timer(s => _ = Elapse(), null, interval, interval);
+            _timer = new Timer(async s => await Elapse(), null, interval, interval);
         }
 
         private async Task Elapse()
         {
-            if (_queue.Options.Status != QueueStatus.Route && _queue.Options.MessageTimeout > TimeSpan.Zero)
-                await ProcessReceiveTimeup();
+            try
+            {
+                if (_queue.Options.Status != QueueStatus.Route && _queue.Options.MessageTimeout > TimeSpan.Zero)
+                    await ProcessReceiveTimeup();
 
-            await ProcessDeliveries();
+                await ProcessDeliveries();
+            }
+            catch { }
         }
 
         /// <summary>
@@ -133,7 +137,7 @@ namespace Twino.MQ.Queues
             lock (_deliveries)
                 foreach (MessageDelivery delivery in _deliveries)
                 {
-                    //ack or unack is received, or message acknowledge or came here accidently :)
+                    //message acknowledge or came here accidently :)
                     if (delivery.Acknowledge != DeliveryAcknowledge.None || !delivery.AcknowledgeDeadline.HasValue)
                         rdlist.Add(new Tuple<bool, MessageDelivery>(false, delivery));
 
@@ -153,8 +157,16 @@ namespace Twino.MQ.Queues
                 {
                     bool marked = delivery.MarkAsAcknowledgeTimeout();
                     if (!marked)
+                    {
+                        if (!released)
+                        {
+                            released = true;
+                            _queue.ReleaseAcknowledgeLock(false);
+                        }
+                        
                         continue;
-
+                    }
+                    
                     _queue.Info.AddUnacknowledge();
                     Decision decision = await _queue.DeliveryHandler.AcknowledgeTimedOut(_queue, delivery);
 
