@@ -835,6 +835,47 @@ namespace Twino.Client.TMQ
             return await WaitForAcknowledge(message, waitAcknowledge);
         }
 
+        /// <summary>
+        /// Pushes a message to a queue and does not wait for acknowledge.
+        /// Uses legacy callback method instead of async
+        /// </summary>
+        public bool PushJsonSync(string channel, ushort queueId, object jsonObject)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Channel;
+            message.ContentType = queueId;
+            message.SetTarget(channel);
+            message.AcknowledgeRequired = false;
+            byte[] data = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(jsonObject, jsonObject.GetType());
+            message.Content = new MemoryStream(data);
+            message.Content.Position = 0;
+
+            if (UseUniqueMessageId)
+                message.SetMessageId(UniqueIdGenerator.Create());
+
+            return Send(message);
+        }
+
+        /// <summary>
+        /// Pushes a message to a queue and does not wait for acknowledge.
+        /// Uses legacy callback method instead of async
+        /// </summary>
+        public bool PushSync(string channel, ushort queueId, byte[] data)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Channel;
+            message.ContentType = queueId;
+            message.SetTarget(channel);
+            message.AcknowledgeRequired = false;
+            message.Content = new MemoryStream(data);
+            message.Content.Position = 0;
+
+            if (UseUniqueMessageId)
+                message.SetMessageId(UniqueIdGenerator.Create());
+
+            return Send(message);
+        }
+
         #endregion
 
         #region Pull
