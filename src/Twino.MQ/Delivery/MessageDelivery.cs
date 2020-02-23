@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Twino.MQ.Clients;
 using Twino.MQ.Queues;
 
@@ -123,8 +124,8 @@ namespace Twino.MQ.Delivery
         public void MarkAsAcknowledged(bool success)
         {
             Acknowledge = success
-                              ? DeliveryAcknowledge.Acknowledge
-                              : DeliveryAcknowledge.Unacknowledge;
+                               ? DeliveryAcknowledge.Acknowledge
+                               : DeliveryAcknowledge.Unacknowledge;
 
             AcknowledgeDate = DateTime.UtcNow;
         }
@@ -132,9 +133,13 @@ namespace Twino.MQ.Delivery
         /// <summary>
         /// Marks acknowledge is timed up
         /// </summary>
-        public void MarkAsAcknowledgeTimeout()
+        public bool MarkAsAcknowledgeTimeout()
         {
+            if (Acknowledge != DeliveryAcknowledge.None)
+                return false;
+
             Acknowledge = DeliveryAcknowledge.Timeout;
+            return true;
         }
 
         #endregion

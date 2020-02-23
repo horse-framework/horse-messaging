@@ -10,9 +10,8 @@ namespace Sample.MQ.Data
 {
     public class Overload
     {
-        private volatile int _totalInsert;
-        private volatile int _failedInsert;
-        private volatile int _totalDelete;
+        private int _totalInsert;
+        private int _totalDelete;
 
         private volatile bool _running;
 
@@ -53,7 +52,6 @@ namespace Sample.MQ.Data
             _running = true;
             _totalDelete = 0;
             _totalInsert = 0;
-            _failedInsert = 0;
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
@@ -74,29 +72,25 @@ namespace Sample.MQ.Data
                                 bool added = await db.Insert(msg);
                                 if (added)
                                 {
-                                    _totalInsert++;
+                                    Interlocked.Increment(ref _totalInsert);
                                     lock (_idList)
                                         _idList.Add(msg.MessageId);
                                 }
-                                else
-                                    _failedInsert++;
                             }
                             else
                             {
                                 if (_idList.Count > 50)
                                 {
-                                    int index = rnd.Next(_idList.Count - 40);
-                                    string deleteId;
                                     lock (_idList)
-                                        deleteId = _idList[index];
-
-                                    bool deleted = await db.Delete(deleteId);
-                                    if (deleted)
                                     {
-                                        lock (_idList)
+                                        int index = rnd.Next(_idList.Count - 40);
+                                        string deleteId = _idList[index];
+                                        bool deleted = db.Delete(deleteId).Result;
+                                        if (deleted)
+                                        {
                                             _idList.RemoveAt(index);
-
-                                        _totalDelete++;
+                                            Interlocked.Increment(ref _totalDelete);
+                                        }
                                     }
                                 }
                             }
@@ -110,25 +104,25 @@ namespace Sample.MQ.Data
                 thread.Start();
             }
 
-            SpinWait spin = new SpinWait();
-            while (sw.ElapsedMilliseconds < 6000000)
-                spin.SpinOnce();
+            Console.ReadLine();
 
             _running = false;
-            Thread.Sleep(3000);
+            await db.Close();
+            Thread.Sleep(1000);
 
             int left = _totalInsert - _totalDelete;
             var items = await db.List();
+            Console.WriteLine("insert : " + _totalInsert);
+            Console.WriteLine("delete : " + _totalDelete);
+            Console.WriteLine("id count : " + _idList.Count);
             Console.WriteLine("left : " + left);
             Console.WriteLine("items : " + items.Count);
 
-            await db.Close();
-            Thread.Sleep(1000);
             db = new Database(new DatabaseOptions
                               {
                                   Filename = "/home/mehmet/Desktop/tdb/test.tdb",
                                   AutoShrink = false,
-                                  ShrinkInterval = TimeSpan.FromMilliseconds(3500),
+                                  ShrinkInterval = TimeSpan.FromMilliseconds(3000),
                                   AutoFlush = true,
                                   InstantFlush = false,
                                   FlushInterval = TimeSpan.FromMilliseconds(250),
@@ -141,7 +135,8 @@ namespace Sample.MQ.Data
             sw2.Stop();
             Console.WriteLine("loaded with shrink in " + sw2.ElapsedMilliseconds + " ms");
 
-            Console.WriteLine("items : " + items.Count);
+            var nitems = await db.List();
+            Console.WriteLine("items : " + nitems.Count);
             Console.ReadLine();
         }
 

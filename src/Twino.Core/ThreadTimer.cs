@@ -106,8 +106,14 @@ namespace Twino.Core
         {
             lock (_locker)
                 IsRunning = false;
-            
-            _thread.Abort();
+
+            //throws exception in non-supported platforms such as ubuntu
+            try
+            {
+                _thread.Abort();
+            }
+            catch { }
+
             _thread = null;
         }
 

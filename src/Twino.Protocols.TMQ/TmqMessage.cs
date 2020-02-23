@@ -1,4 +1,5 @@
 using System.IO;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -151,7 +152,7 @@ namespace Twino.Protocols.TMQ
             Target = target;
             TargetLength = string.IsNullOrEmpty(target) ? 0 : Encoding.UTF8.GetByteCount(target);
         }
-        
+
         /// <summary>
         /// Checks message id, source, target and content properties.
         /// If they have a value, sets to length properties to their lengths
@@ -217,7 +218,7 @@ namespace Twino.Protocols.TMQ
             TmqMessage message = new TmqMessage();
 
             message.FirstAcquirer = FirstAcquirer;
-            message.HighPriority = HighPriority;
+            message.HighPriority = Type == MessageType.Client;
             message.Type = MessageType.Acknowledge;
             message.SetMessageId(MessageId);
             message.ContentType = ContentType;

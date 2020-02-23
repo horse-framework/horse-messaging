@@ -641,7 +641,7 @@ namespace Twino.MQ.Queues
         /// </summary>
         internal async Task AcknowledgeDelivered(MqClient from, TmqMessage deliveryMessage)
         {
-            MessageDelivery delivery = TimeKeeper.FindDelivery(from, deliveryMessage.MessageId);
+            MessageDelivery delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
 
             bool success = true;
             if (deliveryMessage.Length > 0 && deliveryMessage.Content != null)
@@ -656,6 +656,8 @@ namespace Twino.MQ.Queues
 
             if (success)
                 Info.AddAcknowledge();
+            else
+                Info.AddUnacknowledge();
 
             Decision decision = await DeliveryHandler.AcknowledgeReceived(this, deliveryMessage, delivery, success);
 

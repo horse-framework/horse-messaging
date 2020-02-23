@@ -45,15 +45,21 @@ namespace Twino.MQ.Queues
         public void Run()
         {
             TimeSpan interval = TimeSpan.FromMilliseconds(1000);
-            _timer = new Timer(s => _ = Elapse(), null, interval, interval);
+            _timer = new Timer(async s => await Elapse(), null, interval, interval);
         }
 
         private async Task Elapse()
         {
-            if (_queue.Options.Status != QueueStatus.Route && _queue.Options.MessageTimeout > TimeSpan.Zero)
-                await ProcessReceiveTimeup();
+            try
+            {
+                if (_queue.Options.Status != QueueStatus.Route && _queue.Options.MessageTimeout > TimeSpan.Zero)
+                    await ProcessReceiveTimeup();
 
-            await ProcessDeliveries();
+                await ProcessDeliveries();
+            }
+            catch
+            {
+            }
         }
 
         /// <summary>
@@ -151,7 +157,18 @@ namespace Twino.MQ.Queues
                 MessageDelivery delivery = tuple.Item2;
                 if (tuple.Item1)
                 {
-                    delivery.MarkAsAcknowledgeTimeout();
+                    bool marked = delivery.MarkAsAcknowledgeTimeout();
+                    if (!marked)
+                    {
+                        if (!released)
+                        {
+                            released = true;
+                            _queue.ReleaseAcknowledgeLock(false);
+                        }
+
+                        continue;
+                    }
+
                     _queue.Info.AddUnacknowledge();
                     Decision decision = await _queue.DeliveryHandler.AcknowledgeTimedOut(_queue, delivery);
 
@@ -196,6 +213,34 @@ namespace Twino.MQ.Queues
                                                  && x.Message.Message.MessageId == messageId);
 
             return delivery;
+        }
+
+        /// <summary>
+        /// Finds delivery from message id and removes it from deliveries
+        /// </summary>
+        public MessageDelivery FindAndRemoveDelivery(MqClient client, string messageId)
+        {
+            MessageDelivery delivery;
+
+            lock (_deliveries)
+            {
+                delivery = _deliveries.Find(x => x.Receiver != null
+                                              && x.Receiver.Client.UniqueId == client.UniqueId
+                                              && x.Message.Message.MessageId == messageId);
+                
+                _deliveries.Remove(delivery);
+            }
+
+            return delivery;
+        }
+
+        /// <summary>
+        /// Removes delivery from being tracked
+        /// </summary>
+        internal void RemoveDelivery(MessageDelivery delivery)
+        {
+            lock (_deliveries)
+                _deliveries.Remove(delivery);
         }
 
         #endregion

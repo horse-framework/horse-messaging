@@ -46,7 +46,7 @@ namespace Twino.MQ.Delivery
         /// <summary>
         /// If acknowledge is decided, this method will be called after acknowledge sent or failed
         /// </summary>
-        public QueueAcknowledgeDeliveryHandler AcknowledgeDelivery;
+        public readonly QueueAcknowledgeDeliveryHandler AcknowledgeDelivery;
         
         /// <summary>
         /// Creates new decision without keeping messages and acknowledge
