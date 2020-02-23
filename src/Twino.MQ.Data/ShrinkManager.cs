@@ -47,11 +47,6 @@ namespace Twino.MQ.Data
         private long _end;
 
         /// <summary>
-        /// Found and deleted files after shrink operation
-        /// </summary>
-        private HashSet<string> _deletedMessages;
-
-        /// <summary>
         /// Auto shrink timer object
         /// </summary>
         private ThreadTimer _autoShrinkTimer;
@@ -62,9 +57,9 @@ namespace Twino.MQ.Data
         internal bool ShrinkRequired { get; set; }
 
         /// <summary>
-        /// As a shrink result, deleted messages via shrink operation
+        /// Found and deleted files after shrink operation
         /// </summary>
-        public List<string> DeletedMessages { get; private set; } = new List<string>();
+        private HashSet<string> _deletingMessages;
 
         /// <summary>
         /// Buffer for shrink operations
@@ -100,7 +95,6 @@ namespace Twino.MQ.Data
 
                 if (ShrinkRequired)
                     await _database.Shrink();
-                
             }, interval);
             _autoShrinkTimer.Start(ThreadPriority.BelowNormal);
         }
@@ -235,7 +229,7 @@ namespace Twino.MQ.Data
             {
                 _shrinking = true;
                 _end = position;
-                _deletedMessages = new HashSet<string>(deletedMessages);
+                _deletingMessages = new HashSet<string>(deletedMessages);
                 _info.OldSize = _end;
 
                 if (_source != null)
@@ -288,24 +282,21 @@ namespace Twino.MQ.Data
         /// </summary>
         private async Task<bool> ProcessShrink()
         {
-            List<string> deletedMessages = new List<string>();
             await using MemoryStream ms = new MemoryStream(Convert.ToInt32(_end));
 
             while (_source.Position < _source.Length)
             {
                 DataType type = _serializer.ReadType(_source);
                 string id = await _serializer.ReadId(_source);
-                bool deleted = _deletedMessages.Contains(id);
+
+                bool deleted = _deletingMessages.Contains(id);
 
                 switch (type)
                 {
                     case DataType.Insert:
                         int length = await _serializer.ReadLength(_source);
                         if (deleted)
-                        {
                             _source.Seek(length, SeekOrigin.Current);
-                            deletedMessages.Add(id);
-                        }
                         else
                         {
                             ms.WriteByte((byte) type);
@@ -320,8 +311,6 @@ namespace Twino.MQ.Data
                     case DataType.Delete:
                         if (!deleted)
                             await _serializer.WriteDelete(ms, id);
-                        else
-                            deletedMessages.Add(id);
 
                         break;
                 }
@@ -330,7 +319,6 @@ namespace Twino.MQ.Data
             ms.Position = 0;
             await ms.CopyToAsync(_target);
 
-            DeletedMessages = deletedMessages;
             return true;
         }
 

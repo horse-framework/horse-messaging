@@ -47,7 +47,7 @@ namespace Twino.MQ.Data
         /// <summary>
         /// Recently deleted message id list
         /// </summary>
-        private readonly List<string> _deletedMessages = new List<string>();
+        private List<string> _deletedMessages = new List<string>();
 
         /// <summary>
         /// All messages in queue
@@ -129,7 +129,7 @@ namespace Twino.MQ.Data
                     }
                 }
             }
-            finally 
+            finally
             {
                 ReleaseLock();
             }
@@ -141,6 +141,7 @@ namespace Twino.MQ.Data
         public async Task Close()
         {
             _shrinkManager.Stop();
+            await Shrink();
             await File.Close();
         }
 
@@ -178,11 +179,13 @@ namespace Twino.MQ.Data
             {
                 Stream stream = File.GetStream();
                 List<string> msgs;
+                long position;
+                int count;
 
                 await WaitForLock();
-                long position;
                 try
                 {
+                    count = _deletedMessages.Count;
                     position = stream.Position;
                     msgs = _deletedMessages.Count > 0
                                ? new List<string>(_deletedMessages)
@@ -198,12 +201,15 @@ namespace Twino.MQ.Data
                 //sync deleted messages array
                 if (info.Successful)
                 {
-                    if (_shrinkManager.DeletedMessages.Count > 0)
+                    if (count > 0)
                     {
                         await WaitForLock();
                         try
                         {
-                            _deletedMessages.RemoveAll(x => _shrinkManager.DeletedMessages.Contains(x));
+                            if (_deletedMessages.Count > count)
+                                _deletedMessages = _deletedMessages.GetRange(count, _deletedMessages.Count - count);
+                            else
+                                _deletedMessages.Clear();
                         }
                         finally
                         {
