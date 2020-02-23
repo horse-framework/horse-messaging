@@ -225,10 +225,11 @@ namespace Twino.MQ.Queues
             lock (_deliveries)
             {
                 delivery = _deliveries.Find(x => x.Receiver != null
-                                              && x.Receiver.Client.UniqueId == client.UniqueId
-                                              && x.Message.Message.MessageId == messageId);
-                
-                _deliveries.Remove(delivery);
+                                                 && x.Receiver.Client.UniqueId == client.UniqueId
+                                                 && x.Message.Message.MessageId == messageId);
+
+                if (delivery != null)
+                    _deliveries.Remove(delivery);
             }
 
             return delivery;
