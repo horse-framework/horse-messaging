@@ -643,6 +643,24 @@ namespace Twino.MQ.Queues
         {
             MessageDelivery delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
 
+            //when server and consumer are in pc,
+            //sometimes consumer sends ack before server start to follow ack of the message
+            //that happens when ack message is arrived in less than 0.01ms
+            //in that situation, server can't find the delivery with FindAndRemoveDelivery, it returns null
+            //so we need to check it again after a few milliseconds
+            if (delivery == null)
+            {
+                await Task.Delay(1);
+                delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
+
+                //try again
+                if (delivery == null)
+                {
+                    await Task.Delay(3);
+                    delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
+                }
+            }
+
             bool success = true;
             if (deliveryMessage.Length > 0 && deliveryMessage.Content != null)
             {
