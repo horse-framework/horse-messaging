@@ -483,7 +483,11 @@ namespace Twino.MQ.Queues
                     if (queued == null)
                         return PushResult.Success;
 
-                    return await State.Push(queued, sender);
+                    PushResult pr = await State.Push(queued, sender);
+                    if (State.TriggerSupported)
+                        _ = Trigger();
+
+                    return pr;
                 }
                 finally
                 {
