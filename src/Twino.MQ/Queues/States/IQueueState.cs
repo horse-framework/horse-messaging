@@ -7,14 +7,16 @@ namespace Twino.MQ.Queues.States
     internal interface IQueueState
     {
         QueueMessage ProcessingMessage { get; }
-
-        QueueMessage EnqueueDequeue(QueueMessage message);
         
+        bool TriggerSupported { get; }
+        
+        bool CanEnqueue(QueueMessage message);
+        
+        QueueMessage Dequeue(QueueMessage lastEnqueued);
+
         Task<PushResult> Push(QueueMessage message, MqClient sender);
 
         Task<PullResult> Pull(ChannelClient client, TmqMessage request);
-
-        Task Trigger();
 
         Task<QueueStatusAction> EnterStatus(QueueStatus previousStatus);
         

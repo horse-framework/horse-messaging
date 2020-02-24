@@ -10,6 +10,7 @@ namespace Twino.MQ.Queues.States
     internal class RouteQueueState : IQueueState
     {
         public QueueMessage ProcessingMessage { get; private set; }
+        public bool TriggerSupported => true;
 
         private static readonly TmqWriter _writer = new TmqWriter();
         private readonly ChannelQueue _queue;
@@ -24,9 +25,14 @@ namespace Twino.MQ.Queues.States
             return Task.FromResult(PullResult.StatusNotSupported);
         }
 
-        public QueueMessage EnqueueDequeue(QueueMessage message)
+        public bool CanEnqueue(QueueMessage message)
         {
-            return message;
+            return false;
+        }
+
+        public QueueMessage Dequeue(QueueMessage lastEnqueued)
+        {
+            return lastEnqueued;
         }
 
         public async Task<PushResult> Push(QueueMessage message, MqClient sender)
@@ -34,9 +40,6 @@ namespace Twino.MQ.Queues.States
             ProcessingMessage = message;
             PushResult result = await ProcessMessage(message, sender);
             ProcessingMessage = null;
-
-            await _queue.Trigger();
-
             return result;
         }
 
@@ -149,15 +152,6 @@ namespace Twino.MQ.Queues.States
             return PushResult.Success;
         }
 
-        public async Task Trigger()
-        {
-            if (_queue.HighPriorityLinkedList.Count > 0)
-                await ProcessPendingMessages(_queue.HighPriorityLinkedList);
-
-            if (_queue.RegularLinkedList.Count > 0)
-                await ProcessPendingMessages(_queue.RegularLinkedList);
-        }
-
         public Task<QueueStatusAction> EnterStatus(QueueStatus previousStatus)
         {
             return Task.FromResult(QueueStatusAction.AllowAndTrigger);
@@ -172,25 +166,40 @@ namespace Twino.MQ.Queues.States
         /// Start to process all pending messages.
         /// This method is called after a client is subscribed to the queue.
         /// </summary>
-        private async Task ProcessPendingMessages(LinkedList<QueueMessage> list)
+        private async Task ProcessPendingMessages(bool high)
         {
-            int max = list.Count;
-            for (int i = 0; i < max; i++)
+            while (true)
             {
                 QueueMessage message;
-                lock (list)
-                {
-                    if (list.Count == 0)
-                        return;
 
-                    message = list.First.Value;
-                    list.RemoveFirst();
-                    message.IsInQueue = false;
+                if (high)
+                {
+                    lock (_queue.HighPriorityLinkedList)
+                    {
+                        if (_queue.HighPriorityLinkedList.Count == 0)
+                            return;
+
+                        message = _queue.HighPriorityLinkedList.First.Value;
+                        _queue.HighPriorityLinkedList.RemoveFirst();
+                        message.IsInQueue = false;
+                    }
+                }
+                else
+                {
+                    lock (_queue.RegularLinkedList)
+                    {
+                        if (_queue.RegularLinkedList.Count == 0)
+                            return;
+
+                        message = _queue.RegularLinkedList.First.Value;
+                        _queue.RegularLinkedList.RemoveFirst();
+                        message.IsInQueue = false;
+                    }
                 }
 
                 try
                 {
-                    PushResult pr = await Push(message, null);
+                    PushResult pr = await ProcessMessage(message, null);
                     if (pr == PushResult.Empty || pr == PushResult.NoConsumers)
                         return;
                 }

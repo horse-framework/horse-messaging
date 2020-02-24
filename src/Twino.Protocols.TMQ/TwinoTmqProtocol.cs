@@ -135,7 +135,7 @@ namespace Twino.Protocols.TMQ
                 if (message.Ttl < 0)
                     continue;
 
-                _ = ProcessMessage(info, message, (TmqServerSocket) handshakeResult.Socket);
+                await ProcessMessage(info, message, (TmqServerSocket) handshakeResult.Socket);
             }
         }
 
