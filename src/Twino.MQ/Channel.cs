@@ -112,7 +112,7 @@ namespace Twino.MQ
         /// Payload object for end-user usage
         /// </summary>
         public object Payload { get; set; }
-        
+
         #endregion
 
         #region Constructors
@@ -142,13 +142,12 @@ namespace Twino.MQ
         public async Task Destroy()
         {
             _clients.Clear();
-            
+
             List<ChannelQueue> queues = _queues.GetAsClone();
             _queues.Clear();
-            
+
             foreach (ChannelQueue queue in queues)
                 await queue.Destroy();
-            
         }
 
         /// <summary>
@@ -344,7 +343,7 @@ namespace Twino.MQ
 
             IEnumerable<ChannelQueue> list = _queues.GetAsClone();
             foreach (ChannelQueue queue in list)
-                await queue.Trigger();
+                _ = queue.Trigger();
 
             return ClientJoinResult.Success;
         }
