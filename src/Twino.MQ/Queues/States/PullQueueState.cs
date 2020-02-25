@@ -10,6 +10,7 @@ namespace Twino.MQ.Queues.States
     internal class PullQueueState : IQueueState
     {
         public QueueMessage ProcessingMessage { get; private set; }
+        public bool TriggerSupported => false;
 
         private readonly ChannelQueue _queue;
 
@@ -22,9 +23,10 @@ namespace Twino.MQ.Queues.States
         {
             QueueMessage message = null;
 
-            //pull from prefential messages
-            if (_queue.HighPriorityLinkedList.Count > 0)
-                lock (_queue.HighPriorityLinkedList)
+            await _queue.RunInListSync(() =>
+            {
+                //pull from prefential messages
+                if (_queue.HighPriorityLinkedList.Count > 0)
                 {
                     message = _queue.HighPriorityLinkedList.First.Value;
                     _queue.HighPriorityLinkedList.RemoveFirst();
@@ -33,10 +35,8 @@ namespace Twino.MQ.Queues.States
                         message.IsInQueue = false;
                 }
 
-            //if there is no prefential message, pull from standard messages
-            if (message == null && _queue.RegularLinkedList.Count > 0)
-            {
-                lock (_queue.RegularLinkedList)
+                //if there is no prefential message, pull from standard messages
+                if (message == null && _queue.RegularLinkedList.Count > 0)
                 {
                     message = _queue.RegularLinkedList.First.Value;
                     _queue.RegularLinkedList.RemoveFirst();
@@ -44,7 +44,7 @@ namespace Twino.MQ.Queues.States
                     if (message != null)
                         message.IsInQueue = false;
                 }
-            }
+            });
 
             //there is no pullable message
             if (message == null)
@@ -160,38 +160,14 @@ namespace Twino.MQ.Queues.States
             }
         }
 
-        public QueueMessage EnqueueDequeue(QueueMessage message)
+        public bool CanEnqueue(QueueMessage message)
         {
-            if (message.Message.HighPriority)
-            {
-                lock (_queue.HighPriorityLinkedList)
-                {
-                    _queue.HighPriorityLinkedList.AddLast(message);
-                    message.IsInQueue = true;
-                    _queue.Info.UpdateHighPriorityMessageCount(_queue.HighPriorityLinkedList.Count);
-                }
-            }
-            else
-            {
-                lock (_queue.RegularLinkedList)
-                {
-                    _queue.RegularLinkedList.AddLast(message);
-                    message.IsInQueue = true;
-                    _queue.Info.UpdateRegularMessageCount(_queue.RegularLinkedList.Count);
-                }
-            }
-
-            return message;
+            return true;
         }
 
-        public Task<PushResult> Push(QueueMessage message, MqClient sender)
+        public Task<PushResult> Push(QueueMessage message)
         {
             return Task.FromResult(PushResult.Success);
-        }
-
-        public Task Trigger()
-        {
-            return Task.CompletedTask;
         }
 
         public Task<QueueStatusAction> EnterStatus(QueueStatus previousStatus)

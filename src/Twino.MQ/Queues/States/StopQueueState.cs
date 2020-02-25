@@ -7,6 +7,7 @@ namespace Twino.MQ.Queues.States
     internal class StopQueueState : IQueueState
     {
         public QueueMessage ProcessingMessage { get; private set; }
+        public bool TriggerSupported => false;
 
         private readonly ChannelQueue _queue;
 
@@ -20,19 +21,14 @@ namespace Twino.MQ.Queues.States
             return Task.FromResult(PullResult.StatusNotSupported);
         }
 
-        public QueueMessage EnqueueDequeue(QueueMessage message)
+        public bool CanEnqueue(QueueMessage message)
         {
-            return message;
+            return false;
         }
 
-        public Task<PushResult> Push(QueueMessage message, MqClient sender)
+        public Task<PushResult> Push(QueueMessage message)
         {
             return Task.FromResult(PushResult.StatusNotSupported);
-        }
-
-        public Task Trigger()
-        {
-            return Task.CompletedTask;
         }
 
         public Task<QueueStatusAction> EnterStatus(QueueStatus previousStatus)

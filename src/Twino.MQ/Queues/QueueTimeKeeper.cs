@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
+using Twino.Core;
 using Twino.MQ.Clients;
 using Twino.MQ.Delivery;
 
@@ -23,7 +23,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Timeout checker timer
         /// </summary>
-        private Timer _timer;
+        private ThreadTimer _timer;
 
         /// <summary>
         /// All following deliveries
@@ -45,7 +45,8 @@ namespace Twino.MQ.Queues
         public void Run()
         {
             TimeSpan interval = TimeSpan.FromMilliseconds(1000);
-            _timer = new Timer(async s => await Elapse(), null, interval, interval);
+            _timer = new ThreadTimer(async () => await Elapse(), interval);
+            _timer.Start();
         }
 
         private async Task Elapse()
@@ -79,7 +80,12 @@ namespace Twino.MQ.Queues
             Reset();
 
             if (_timer != null)
-                await _timer.DisposeAsync();
+            {
+                 _timer.Stop();
+                 _timer = null;
+            }
+
+            await Task.CompletedTask;
         }
 
         /// <summary>
@@ -224,11 +230,15 @@ namespace Twino.MQ.Queues
 
             lock (_deliveries)
             {
-                delivery = _deliveries.Find(x => x.Receiver != null
-                                              && x.Receiver.Client.UniqueId == client.UniqueId
-                                              && x.Message.Message.MessageId == messageId);
-                
-                _deliveries.Remove(delivery);
+                int index = _deliveries.FindIndex(x => x.Receiver != null
+                                                       && x.Receiver.Client.UniqueId == client.UniqueId
+                                                       && x.Message.Message.MessageId == messageId);
+
+                if (index < 0)
+                    return null;
+
+                delivery = _deliveries[index];
+                _deliveries.RemoveAt(index);
             }
 
             return delivery;

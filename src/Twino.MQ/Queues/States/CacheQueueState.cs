@@ -9,6 +9,7 @@ namespace Twino.MQ.Queues.States
     internal class CacheQueueState : IQueueState
     {
         public QueueMessage ProcessingMessage { get; private set; }
+        public bool TriggerSupported => false;
 
         private readonly ChannelQueue _queue;
 
@@ -71,7 +72,7 @@ namespace Twino.MQ.Queues.States
             return PullResult.Success;
         }
 
-        public QueueMessage EnqueueDequeue(QueueMessage message)
+        public bool CanEnqueue(QueueMessage message)
         {
             //if we need acknowledge, we are sending this information to receivers that we require response
             message.Message.AcknowledgeRequired = _queue.Options.RequestAcknowledge;
@@ -79,19 +80,12 @@ namespace Twino.MQ.Queues.States
             message.Message.Type = MessageType.Response;
 
             _queue.ClearAllMessages();
-            _queue.AddMessage(message);
-
-            return message;
+            return true;
         }
 
-        public Task<PushResult> Push(QueueMessage message, MqClient sender)
+        public Task<PushResult> Push(QueueMessage message)
         {
             return Task.FromResult(PushResult.Success);
-        }
-
-        public Task Trigger()
-        {
-            return Task.CompletedTask;
         }
 
         public Task<QueueStatusAction> EnterStatus(QueueStatus previousStatus)

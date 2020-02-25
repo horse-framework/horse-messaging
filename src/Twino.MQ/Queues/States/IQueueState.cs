@@ -8,16 +8,16 @@ namespace Twino.MQ.Queues.States
     {
         QueueMessage ProcessingMessage { get; }
 
-        QueueMessage EnqueueDequeue(QueueMessage message);
-        
-        Task<PushResult> Push(QueueMessage message, MqClient sender);
+        bool TriggerSupported { get; }
+
+        bool CanEnqueue(QueueMessage message);
+
+        Task<PushResult> Push(QueueMessage message);
 
         Task<PullResult> Pull(ChannelClient client, TmqMessage request);
 
-        Task Trigger();
-
         Task<QueueStatusAction> EnterStatus(QueueStatus previousStatus);
-        
+
         Task<QueueStatusAction> LeaveStatus(QueueStatus nextStatus);
     }
 }

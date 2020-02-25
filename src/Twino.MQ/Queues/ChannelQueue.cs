@@ -84,17 +84,17 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Wait acknowledge cross thread locker
         /// </summary>
-        private SemaphoreSlim _ackSemaphore;
+        private SemaphoreSlim _ackSync;
 
         /// <summary>
         /// Sync object for inserting messages into queue as FIFO
         /// </summary>
-        private readonly SemaphoreSlim _syncSemaphore = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _listSync = new SemaphoreSlim(1, 1);
 
         /// <summary>
         /// Pushing messages cross thread locker
         /// </summary>
-        private SemaphoreSlim _pushSemaphore = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _pushSync = new SemaphoreSlim(1, 1);
 
         /// <summary>
         /// This task holds the code until acknowledge is received
@@ -111,6 +111,12 @@ namespace Twino.MQ.Queues
         /// Payload object for end-user usage
         /// </summary>
         public object Payload { get; set; }
+
+        /// <summary>
+        /// Checks queue if trigger required triggers.
+        /// In usual, this timer should never start to triggers, it's just plan b.
+        /// </summary>
+        private Timer _triggerTimer;
 
         #endregion
 
@@ -132,7 +138,13 @@ namespace Twino.MQ.Queues
             TimeKeeper.Run();
 
             if (options.WaitForAcknowledge)
-                _ackSemaphore = new SemaphoreSlim(1, 1);
+                _ackSync = new SemaphoreSlim(1, 1);
+
+            _triggerTimer = new Timer(a =>
+            {
+                if (!_triggering && State.TriggerSupported)
+                    _ = Trigger();
+            }, null, TimeSpan.FromSeconds(5000), TimeSpan.FromSeconds(5000));
         }
 
         /// <summary>
@@ -148,16 +160,22 @@ namespace Twino.MQ.Queues
             lock (RegularLinkedList)
                 RegularLinkedList.Clear();
 
-            if (_ackSemaphore != null)
+            if (_ackSync != null)
             {
-                _ackSemaphore.Dispose();
-                _ackSemaphore = null;
+                _ackSync.Dispose();
+                _ackSync = null;
             }
 
-            if (_pushSemaphore != null)
+            if (_listSync != null)
+                _listSync.Dispose();
+
+            if (_pushSync != null)
+                _pushSync.Dispose();
+
+            if (_triggerTimer != null)
             {
-                _pushSemaphore.Dispose();
-                _pushSemaphore = null;
+                await _triggerTimer.DisposeAsync();
+                _triggerTimer = null;
             }
         }
 
@@ -243,29 +261,31 @@ namespace Twino.MQ.Queues
             await RemoveMessage(message, true, true);
             message.Message.HighPriority = highPriority;
 
-            if (highPriority)
+            await _listSync.WaitAsync();
+            try
             {
-                lock (HighPriorityLinkedList)
+                if (highPriority)
                 {
                     if (putBack)
                         HighPriorityLinkedList.AddLast(message);
                     else
                         HighPriorityLinkedList.AddFirst(message);
-                }
 
-                Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
-            }
-            else
-            {
-                lock (RegularLinkedList)
+                    Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
+                }
+                else
                 {
                     if (putBack)
                         RegularLinkedList.AddLast(message);
                     else
                         RegularLinkedList.AddFirst(message);
-                }
 
-                Info.UpdateRegularMessageCount(RegularLinkedList.Count);
+                    Info.UpdateRegularMessageCount(RegularLinkedList.Count);
+                }
+            }
+            finally
+            {
+                _listSync.Release();
             }
 
             return true;
@@ -281,10 +301,18 @@ namespace Twino.MQ.Queues
             if (!force && !message.IsSent)
                 return false;
 
-            if (message.Message.HighPriority)
-                HighPriorityLinkedList.Remove(message);
-            else
-                RegularLinkedList.Remove(message);
+            await _listSync.WaitAsync();
+            try
+            {
+                if (message.Message.HighPriority)
+                    HighPriorityLinkedList.Remove(message);
+                else
+                    RegularLinkedList.Remove(message);
+            }
+            finally
+            {
+                _listSync.Release();
+            }
 
             if (!silent)
             {
@@ -373,12 +401,10 @@ namespace Twino.MQ.Queues
 
             if (leave == QueueStatusAction.DenyAndTrigger)
             {
-                _triggering = false;
                 await Trigger();
                 return;
             }
 
-            _triggering = false;
             Status = status;
             State = QueueStateFactory.Create(this, status);
 
@@ -399,7 +425,7 @@ namespace Twino.MQ.Queues
                 await Channel.EventHandler.OnQueueStatusChanged(this, prevStatus, status);
 
             if (enter == QueueStatusAction.AllowAndTrigger)
-                await Trigger();
+                _ = Trigger();
         }
 
         /// <summary>
@@ -458,27 +484,17 @@ namespace Twino.MQ.Queues
                 if (!allow)
                     return PushResult.Success;
 
-                //add message into queue
-                QueueMessage queued;
-                await _syncSemaphore.WaitAsync();
-                try
+                if (State.CanEnqueue(message))
                 {
-                    queued = State.EnqueueDequeue(message);
+                    await RunInListSync(() => AddMessage(message));
+                    
+                    if (State.TriggerSupported && !_triggering)
+                        _ = Trigger();
                 }
-                finally
-                {
-                    _syncSemaphore.Release();
-                }
+                else
+                    _ = State.Push(message);
 
-                await _pushSemaphore.WaitAsync();
-                try
-                {
-                    return await State.Push(queued, sender);
-                }
-                finally
-                {
-                    _pushSemaphore.Release();
-                }
+                return PushResult.Success;
             }
             catch (Exception ex)
             {
@@ -502,6 +518,19 @@ namespace Twino.MQ.Queues
             return PushResult.Success;
         }
 
+        internal async Task RunInListSync(Action action)
+        {
+            await _listSync.WaitAsync();
+            try
+            {
+                action();
+            }
+            finally
+            {
+                _listSync.Release();
+            }
+        }
+
         /// <summary>
         /// Checks all pending messages and subscribed receivers.
         /// If they should receive the messages, runs the process.
@@ -510,22 +539,87 @@ namespace Twino.MQ.Queues
         /// </summary>
         public async Task Trigger()
         {
-            if (Channel.ClientsCount() == 0)
-                return;
-
             if (_triggering)
                 return;
 
-            _triggering = true;
-            await _syncSemaphore.WaitAsync();
+            await _pushSync.WaitAsync();
             try
             {
-                await State.Trigger();
+                if (_triggering || !State.TriggerSupported)
+                    return;
+
+                if (Channel.ClientsCount() == 0)
+                    return;
+
+                _triggering = true;
+
+                if (HighPriorityLinkedList.Count > 0)
+                    await ProcessPendingMessages(true);
+
+                if (RegularLinkedList.Count > 0)
+                    await ProcessPendingMessages(false);
             }
             finally
             {
                 _triggering = false;
-                _syncSemaphore.Release();
+                _pushSync.Release();
+            }
+        }
+
+
+        /// <summary>
+        /// Start to process all pending messages.
+        /// This method is called after a client is subscribed to the queue.
+        /// </summary>
+        private async Task ProcessPendingMessages(bool high)
+        {
+            while (State.TriggerSupported)
+            {
+                QueueMessage message;
+
+                if (high)
+                {
+                    lock (HighPriorityLinkedList)
+                    {
+                        if (HighPriorityLinkedList.Count == 0)
+                            return;
+
+                        message = HighPriorityLinkedList.First.Value;
+                        HighPriorityLinkedList.RemoveFirst();
+                        message.IsInQueue = false;
+                    }
+                }
+                else
+                {
+                    lock (RegularLinkedList)
+                    {
+                        if (RegularLinkedList.Count == 0)
+                            return;
+
+                        message = RegularLinkedList.First.Value;
+                        RegularLinkedList.RemoveFirst();
+                        message.IsInQueue = false;
+                    }
+                }
+
+                try
+                {
+                    PushResult pr = await State.Push(message);
+                    if (pr == PushResult.Empty || pr == PushResult.NoConsumers)
+                        return;
+                }
+                catch (Exception ex)
+                {
+                    Info.AddError();
+                    try
+                    {
+                        Decision decision = await DeliveryHandler.ExceptionThrown(this, message, ex);
+                        await ApplyDecision(decision, message);
+                    }
+                    catch //if developer does wrong operation, we should not stop
+                    {
+                    }
+                }
             }
         }
 
@@ -621,10 +715,10 @@ namespace Twino.MQ.Queues
                 return;
 
             //lock the object, because pending ack message should be queued
-            if (_ackSemaphore == null)
-                _ackSemaphore = new SemaphoreSlim(1, 1);
+            if (_ackSync == null)
+                _ackSync = new SemaphoreSlim(1, 1);
 
-            await _ackSemaphore.WaitAsync();
+            await _ackSync.WaitAsync();
             try
             {
                 bool received = await _acknowledgeCallback.Task;
@@ -632,7 +726,7 @@ namespace Twino.MQ.Queues
             }
             finally
             {
-                _ackSemaphore.Release();
+                _ackSync.Release();
             }
         }
 
@@ -642,6 +736,24 @@ namespace Twino.MQ.Queues
         internal async Task AcknowledgeDelivered(MqClient from, TmqMessage deliveryMessage)
         {
             MessageDelivery delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
+
+            //when server and consumer are in pc,
+            //sometimes consumer sends ack before server start to follow ack of the message
+            //that happens when ack message is arrived in less than 0.01ms
+            //in that situation, server can't find the delivery with FindAndRemoveDelivery, it returns null
+            //so we need to check it again after a few milliseconds
+            if (delivery == null)
+            {
+                await Task.Delay(1);
+                delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
+
+                //try again
+                if (delivery == null)
+                {
+                    await Task.Delay(3);
+                    delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
+                }
+            }
 
             bool success = true;
             if (deliveryMessage.Length > 0 && deliveryMessage.Content != null)

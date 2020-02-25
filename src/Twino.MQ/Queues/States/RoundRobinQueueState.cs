@@ -10,6 +10,7 @@ namespace Twino.MQ.Queues.States
     internal class RoundRobinQueueState : IQueueState
     {
         public QueueMessage ProcessingMessage { get; private set; }
+        public bool TriggerSupported => true;
 
         private static readonly TmqWriter _writer = new TmqWriter();
         private readonly ChannelQueue _queue;
@@ -29,68 +30,17 @@ namespace Twino.MQ.Queues.States
             return Task.FromResult(PullResult.StatusNotSupported);
         }
 
-        /// <summary>
-        /// Adds the message to the queue and pulls first message from the queue.
-        /// Usually first message equals message itself.
-        /// But sometimes, previous messages might be pending in the queue.
-        /// </summary>
-        private QueueMessage GetFirstMessageFromQueue(QueueMessage message)
-        {
-            QueueMessage held;
-            if (message.Message.HighPriority)
-            {
-                lock (_queue.HighPriorityLinkedList)
-                {
-                    //we don't need push and pull
-                    if (_queue.HighPriorityLinkedList.Count == 0)
-                    {
-                        message.IsInQueue = false;
-                        return message;
-                    }
-
-                    _queue.HighPriorityLinkedList.AddLast(message);
-                    message.IsInQueue = true;
-                    held = _queue.HighPriorityLinkedList.First.Value;
-                    _queue.HighPriorityLinkedList.RemoveFirst();
-                    _queue.Info.UpdateHighPriorityMessageCount(_queue.HighPriorityLinkedList.Count);
-                }
-            }
-            else
-            {
-                lock (_queue.RegularLinkedList)
-                {
-                    //we don't need push and pull
-                    if (_queue.RegularLinkedList.Count == 0)
-                    {
-                        message.IsInQueue = false;
-                        return message;
-                    }
-
-                    _queue.RegularLinkedList.AddLast(message);
-                    message.IsInQueue = true;
-                    held = _queue.RegularLinkedList.First.Value;
-                    _queue.RegularLinkedList.RemoveFirst();
-                    _queue.Info.UpdateRegularMessageCount(_queue.RegularLinkedList.Count);
-                }
-            }
-
-            if (held != null)
-                held.IsInQueue = false;
-
-            return held;
-        }
-
-        public QueueMessage EnqueueDequeue(QueueMessage message)
+        public bool CanEnqueue(QueueMessage message)
         {
             //if we have an option maximum wait duration for message, set it after message joined to the queue.
             //time keeper will check this value and if message time is up, it will remove message from the queue.
             if (_queue.Options.MessageTimeout > TimeSpan.Zero)
                 message.Deadline = DateTime.UtcNow.Add(_queue.Options.MessageTimeout);
 
-            return GetFirstMessageFromQueue(message);
+            return true;
         }
 
-        public async Task<PushResult> Push(QueueMessage message, MqClient sender)
+        public async Task<PushResult> Push(QueueMessage message)
         {
             ChannelClient cc = _queue.Channel.GetNextRRClient(ref _roundRobinIndex);
             if (cc == null)
@@ -102,8 +52,6 @@ namespace Twino.MQ.Queues.States
             ProcessingMessage = message;
             PushResult result = await ProcessMessage(message, cc);
             ProcessingMessage = null;
-
-            await _queue.Trigger();
 
             return result;
         }
@@ -167,63 +115,6 @@ namespace Twino.MQ.Queues.States
             }
 
             return PushResult.Success;
-        }
-
-        public async Task Trigger()
-        {
-            if (_queue.HighPriorityLinkedList.Count > 0)
-                await ProcessPendingMessages(_queue.HighPriorityLinkedList);
-
-            if (_queue.RegularLinkedList.Count > 0)
-                await ProcessPendingMessages(_queue.RegularLinkedList);
-        }
-
-        /// <summary>
-        /// Start to process all pending messages.
-        /// This method is called after a client is subscribed to the queue.
-        /// </summary>
-        private async Task ProcessPendingMessages(LinkedList<QueueMessage> list)
-        {
-            int max = list.Count;
-            for (int i = 0; i < max; i++)
-            {
-                QueueMessage message;
-                lock (list)
-                {
-                    if (list.Count == 0)
-                        return;
-
-                    message = list.First.Value;
-                    list.RemoveFirst();
-                    message.IsInQueue = false;
-                }
-
-                try
-                {
-                    ChannelClient cc = _queue.Channel.GetNextRRClient(ref _roundRobinIndex);
-                    if (cc == null)
-                    {
-                        _queue.AddMessage(message, false);
-                        break;
-                    }
-
-                    ProcessingMessage = message;
-                    await ProcessMessage(message, cc);
-                    ProcessingMessage = null;
-                }
-                catch (Exception ex)
-                {
-                    _queue.Info.AddError();
-                    try
-                    {
-                        Decision decision = await _queue.DeliveryHandler.ExceptionThrown(_queue, message, ex);
-                        await _queue.ApplyDecision(decision, message);
-                    }
-                    catch //if developer does wrong operation, we should not stop
-                    {
-                    }
-                }
-            }
         }
 
         public Task<QueueStatusAction> EnterStatus(QueueStatus previousStatus)

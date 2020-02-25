@@ -286,6 +286,15 @@ namespace Twino.Client.WebSocket
             return Send(data);
         }
 
+        /// <summary>
+        /// Sends a string websocket message
+        /// </summary>
+        public async Task<bool> SendAsync(string message)
+        {
+            byte[] data = await _writer.Create(message);
+            return await SendAsync(data);
+        }
+
         #endregion
     }
 }
