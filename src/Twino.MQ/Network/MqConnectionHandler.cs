@@ -153,8 +153,7 @@ namespace Twino.MQ.Network
                 return;
             }
 
-            _ = RouteToHandler(mc, message, false);
-            await Task.CompletedTask;
+            await RouteToHandler(mc, message, false);
         }
 
         /// <summary>
