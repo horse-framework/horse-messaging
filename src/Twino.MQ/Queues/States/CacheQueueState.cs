@@ -83,12 +83,7 @@ namespace Twino.MQ.Queues.States
             return true;
         }
 
-        public QueueMessage Dequeue(QueueMessage message)
-        {
-            return _queue.FindNextMessage();
-        }
-
-        public Task<PushResult> Push(QueueMessage message, MqClient sender)
+        public Task<PushResult> Push(QueueMessage message)
         {
             return Task.FromResult(PushResult.Success);
         }

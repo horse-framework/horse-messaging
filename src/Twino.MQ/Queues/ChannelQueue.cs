@@ -112,6 +112,12 @@ namespace Twino.MQ.Queues
         /// </summary>
         public object Payload { get; set; }
 
+        /// <summary>
+        /// Checks queue if trigger required triggers.
+        /// In usual, this timer should never start to triggers, it's just plan b.
+        /// </summary>
+        private Timer _triggerTimer;
+
         #endregion
 
         #region Constructors - Destroy
@@ -133,6 +139,12 @@ namespace Twino.MQ.Queues
 
             if (options.WaitForAcknowledge)
                 _ackSync = new SemaphoreSlim(1, 1);
+
+            _triggerTimer = new Timer(a =>
+            {
+                if (!_triggering && State.TriggerSupported)
+                    _ = Trigger();
+            }, null, TimeSpan.FromSeconds(5000), TimeSpan.FromSeconds(5000));
         }
 
         /// <summary>
@@ -159,6 +171,12 @@ namespace Twino.MQ.Queues
 
             if (_pushSync != null)
                 _pushSync.Dispose();
+
+            if (_triggerTimer != null)
+            {
+                await _triggerTimer.DisposeAsync();
+                _triggerTimer = null;
+            }
         }
 
         #endregion
@@ -383,12 +401,10 @@ namespace Twino.MQ.Queues
 
             if (leave == QueueStatusAction.DenyAndTrigger)
             {
-                _triggering = false;
                 await Trigger();
                 return;
             }
 
-            _triggering = false;
             Status = status;
             State = QueueStateFactory.Create(this, status);
 
@@ -409,7 +425,7 @@ namespace Twino.MQ.Queues
                 await Channel.EventHandler.OnQueueStatusChanged(this, prevStatus, status);
 
             if (enter == QueueStatusAction.AllowAndTrigger)
-                await Trigger();
+                _ = Trigger();
         }
 
         /// <summary>
@@ -469,30 +485,16 @@ namespace Twino.MQ.Queues
                     return PushResult.Success;
 
                 if (State.CanEnqueue(message))
+                {
                     await RunInListSync(() => AddMessage(message));
-
-                await _pushSync.WaitAsync();
-                try
-                {
-                    if (_triggering)
-                        return PushResult.Success;
-
-                    QueueMessage queued = null;
-                    await RunInListSync(() => queued = State.Dequeue(message));
-
-                    if (queued == null)
-                        return PushResult.Success;
-
-                    PushResult pr = await State.Push(queued, sender);
-                    if (State.TriggerSupported)
+                    
+                    if (State.TriggerSupported && !_triggering)
                         _ = Trigger();
+                }
+                else
+                    _ = State.Push(message);
 
-                    return pr;
-                }
-                finally
-                {
-                    _pushSync.Release();
-                }
+                return PushResult.Success;
             }
             catch (Exception ex)
             {
@@ -529,19 +531,6 @@ namespace Twino.MQ.Queues
             }
         }
 
-        internal async Task RunInListSync(Func<Task> action)
-        {
-            await _listSync.WaitAsync();
-            try
-            {
-                await action();
-            }
-            finally
-            {
-                _listSync.Release();
-            }
-        }
-
         /// <summary>
         /// Checks all pending messages and subscribed receivers.
         /// If they should receive the messages, runs the process.
@@ -553,11 +542,15 @@ namespace Twino.MQ.Queues
             if (_triggering)
                 return;
 
-            if (Channel.ClientsCount() == 0)
-                return;
-
-            if (State.TriggerSupported)
+            await _pushSync.WaitAsync();
+            try
             {
+                if (_triggering || !State.TriggerSupported)
+                    return;
+
+                if (Channel.ClientsCount() == 0)
+                    return;
+
                 _triggering = true;
 
                 if (HighPriorityLinkedList.Count > 0)
@@ -565,8 +558,11 @@ namespace Twino.MQ.Queues
 
                 if (RegularLinkedList.Count > 0)
                     await ProcessPendingMessages(false);
-
+            }
+            finally
+            {
                 _triggering = false;
+                _pushSync.Release();
             }
         }
 
@@ -577,7 +573,7 @@ namespace Twino.MQ.Queues
         /// </summary>
         private async Task ProcessPendingMessages(bool high)
         {
-            while (true)
+            while (State.TriggerSupported)
             {
                 QueueMessage message;
 
@@ -608,7 +604,7 @@ namespace Twino.MQ.Queues
 
                 try
                 {
-                    PushResult pr = await State.Push(message, null);
+                    PushResult pr = await State.Push(message);
                     if (pr == PushResult.Empty || pr == PushResult.NoConsumers)
                         return;
                 }

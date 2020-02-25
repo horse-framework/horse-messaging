@@ -30,20 +30,15 @@ namespace Twino.MQ.Queues.States
             return false;
         }
 
-        public QueueMessage Dequeue(QueueMessage lastEnqueued)
-        {
-            return lastEnqueued;
-        }
-
-        public async Task<PushResult> Push(QueueMessage message, MqClient sender)
+        public async Task<PushResult> Push(QueueMessage message)
         {
             ProcessingMessage = message;
-            PushResult result = await ProcessMessage(message, sender);
+            PushResult result = await ProcessMessage(message);
             ProcessingMessage = null;
             return result;
         }
 
-        private async Task<PushResult> ProcessMessage(QueueMessage message, MqClient sender)
+        private async Task<PushResult> ProcessMessage(QueueMessage message)
         {
             //if we need acknowledge from receiver, it has a deadline.
             DateTime? ackDeadline = null;
@@ -199,7 +194,7 @@ namespace Twino.MQ.Queues.States
 
                 try
                 {
-                    PushResult pr = await ProcessMessage(message, null);
+                    PushResult pr = await ProcessMessage(message);
                     if (pr == PushResult.Empty || pr == PushResult.NoConsumers)
                         return;
                 }

@@ -26,12 +26,7 @@ namespace Twino.MQ.Queues.States
             return false;
         }
 
-        public QueueMessage Dequeue(QueueMessage lastEnqueued)
-        {
-            return null;
-        }
-
-        public Task<PushResult> Push(QueueMessage message, MqClient sender)
+        public Task<PushResult> Push(QueueMessage message)
         {
             return Task.FromResult(PushResult.StatusNotSupported);
         }

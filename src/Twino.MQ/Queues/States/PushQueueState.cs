@@ -35,32 +35,7 @@ namespace Twino.MQ.Queues.States
             return true;
         }
 
-        public QueueMessage Dequeue(QueueMessage lastEnqueued)
-        {
-            //we don't need push and pull
-            if (_queue.HighPriorityLinkedList != null && _queue.HighPriorityLinkedList.Count > 0)
-            {
-                QueueMessage held = _queue.HighPriorityLinkedList.First.Value;
-                held.IsInQueue = false;
-                _queue.HighPriorityLinkedList.RemoveFirst();
-                _queue.Info.UpdateHighPriorityMessageCount(_queue.HighPriorityLinkedList.Count);
-                return held;
-            }
-
-            //we don't need push and pull
-            if (_queue.RegularLinkedList != null && _queue.RegularLinkedList.Count > 0)
-            {
-                QueueMessage held = _queue.RegularLinkedList.First.Value;
-                held.IsInQueue = false;
-                _queue.RegularLinkedList.RemoveFirst();
-                _queue.Info.UpdateRegularMessageCount(_queue.RegularLinkedList.Count);
-                return held;
-            }
-
-            return null;
-        }
-
-        public async Task<PushResult> Push(QueueMessage message, MqClient sender)
+        public async Task<PushResult> Push(QueueMessage message)
         {
             ProcessingMessage = message;
             PushResult result = await ProcessMessage(message);
