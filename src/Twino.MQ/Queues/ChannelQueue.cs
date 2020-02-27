@@ -487,7 +487,7 @@ namespace Twino.MQ.Queues
                 if (State.CanEnqueue(message))
                 {
                     await RunInListSync(() => AddMessage(message));
-                    
+
                     if (State.TriggerSupported && !_triggering)
                         _ = Trigger();
                 }

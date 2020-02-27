@@ -18,7 +18,7 @@ namespace Twino.Mvc.Controllers.Parameters
         /// <summary>
         /// Creates from query attribute with specified name
         /// </summary>
-        public FromQueryAttribute(string name): base(name)
+        public FromQueryAttribute(string name) : base(name)
         {
             Source = ParameterSource.QueryString;
         }

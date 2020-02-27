@@ -1,5 +1,4 @@
 using System;
-using System.Security.Cryptography;
 
 namespace Twino.Client.TMQ.Connectors
 {
@@ -11,7 +10,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Creates new absolute connector for TMQ protocol clients
         /// </summary>
-        public TmqAbsoluteConnector(TimeSpan reconnectInterval, Func<TmqClient> createInstance = null) 
+        public TmqAbsoluteConnector(TimeSpan reconnectInterval, Func<TmqClient> createInstance = null)
             : base(reconnectInterval, createInstance)
         {
         }

@@ -83,7 +83,7 @@ namespace Twino.MQ.Network
         /// </summary>
         public async Task Received(ITwinoServer server, IConnectionInfo info, TmqServerSocket client, TmqMessage message)
         {
-            MqClient mc = (MqClient) client;
+            MqClient mc = (MqClient)client;
             await _connectionHandler.RouteToHandler(mc, message, true);
         }
 
@@ -92,7 +92,7 @@ namespace Twino.MQ.Network
         /// </summary>
         public async Task Disconnected(ITwinoServer server, TmqServerSocket client)
         {
-            MqClient node = (MqClient) client;
+            MqClient node = (MqClient)client;
             _server.Clients.Remove(node);
             await Task.CompletedTask;
         }

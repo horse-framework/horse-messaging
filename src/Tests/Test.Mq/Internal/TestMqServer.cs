@@ -35,7 +35,7 @@ namespace Test.Mq.Internal
         public int ClientDisconnected { get; set; }
 
         public int Port { get; private set; }
-        
+
         public bool SendAcknowledgeFromMQ { get; set; }
 
         public void Initialize(int port)
@@ -43,7 +43,7 @@ namespace Test.Mq.Internal
             Port = port;
 
             MqServerOptions mqOptions = new MqServerOptions();
-            mqOptions.AllowedQueues = new[] {MessageA.ContentType, MessageB.ContentType, MessageC.ContentType};
+            mqOptions.AllowedQueues = new[] { MessageA.ContentType, MessageB.ContentType, MessageC.ContentType };
             mqOptions.AllowMultipleQueues = true;
             mqOptions.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
             mqOptions.MessageTimeout = TimeSpan.FromSeconds(12);
@@ -60,19 +60,19 @@ namespace Test.Mq.Internal
 
             Channel channel0 = Server.CreateChannel("ch-0");
             channel0.CreateQueue(MessageA.ContentType).Wait();
-            
+
             Channel croute = Server.CreateChannel("ch-route");
             croute.Options.Status = QueueStatus.Route;
             croute.CreateQueue(MessageA.ContentType).Wait();
-            
+
             Channel cpush = Server.CreateChannel("ch-push");
             cpush.Options.Status = QueueStatus.Push;
             cpush.CreateQueue(MessageA.ContentType).Wait();
-            
+
             Channel cpull = Server.CreateChannel("ch-pull");
             cpull.Options.Status = QueueStatus.Pull;
             cpull.CreateQueue(MessageA.ContentType).Wait();
-            
+
             Channel cround = Server.CreateChannel("ch-round");
             cround.Options.Status = QueueStatus.RoundRobin;
             cround.CreateQueue(MessageA.ContentType).Wait();

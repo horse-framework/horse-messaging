@@ -1,5 +1,5 @@
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Twino.Protocols.TMQ.Models
 {
@@ -176,7 +176,7 @@ namespace Twino.Protocols.TMQ.Models
         [JsonProperty("messageLimit")]
         [JsonPropertyName("messageLimit")]
         public int MessageLimit { get; set; }
-        
+
         /// <summary>
         /// Maximum message size limit
         /// Zero is unlimited

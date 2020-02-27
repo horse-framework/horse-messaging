@@ -8,7 +8,7 @@ namespace Test.SocketModels
     {
         private readonly IModelWriter _writer;
         private readonly IModelReader _reader;
-        
+
         public DefaultModelRW()
         {
             _writer = new TwinoModelWriter();
@@ -31,16 +31,16 @@ namespace Test.SocketModels
         public void ReadDefaultModel()
         {
             string serialized = "[123,{\"type\":123,\"name\":\"Default\",\"number\":500}]";
-            
-            DefaultModel model = (DefaultModel) _reader.Read(typeof(DefaultModel), serialized);
+
+            DefaultModel model = (DefaultModel)_reader.Read(typeof(DefaultModel), serialized);
             DefaultModel gmodel = _reader.Read<DefaultModel>(serialized);
 
             Assert.Equal(123, model.Type);
             Assert.Equal(123, gmodel.Type);
-            
+
             Assert.Equal(500, model.Number);
             Assert.Equal(500, gmodel.Number);
-            
+
             Assert.Equal("Default", model.Name);
             Assert.Equal("Default", gmodel.Name);
         }
@@ -61,20 +61,20 @@ namespace Test.SocketModels
         public void ReadCriticalModel()
         {
             string serialized = "[123,{\"type\":123,\"name\":\"Critical\",\"number\":500}]";
-            
-            CriticalModel model = (CriticalModel) _reader.Read(typeof(CriticalModel), serialized);
+
+            CriticalModel model = (CriticalModel)_reader.Read(typeof(CriticalModel), serialized);
             CriticalModel gmodel = _reader.Read<CriticalModel>(serialized);
 
             Assert.Equal(123, model.Type);
             Assert.Equal(123, gmodel.Type);
-            
+
             Assert.Equal(500, model.Number);
             Assert.Equal(500, gmodel.Number);
-            
+
             Assert.Equal("Critical", model.Name);
             Assert.Equal("Critical", gmodel.Name);
         }
-        
+
         [Fact]
         public void WriteReadDefaultModel()
         {
@@ -84,16 +84,16 @@ namespace Test.SocketModels
             smodel.Name = "Default";
 
             string serialized = _writer.Serialize(smodel);
-            
-            DefaultModel model = (DefaultModel) _reader.Read(typeof(DefaultModel), serialized);
+
+            DefaultModel model = (DefaultModel)_reader.Read(typeof(DefaultModel), serialized);
             DefaultModel gmodel = _reader.Read<DefaultModel>(serialized);
 
             Assert.Equal(123, model.Type);
             Assert.Equal(123, gmodel.Type);
-            
+
             Assert.Equal(500, model.Number);
             Assert.Equal(500, gmodel.Number);
-            
+
             Assert.Equal("Default", model.Name);
             Assert.Equal("Default", gmodel.Name);
         }
@@ -105,18 +105,18 @@ namespace Test.SocketModels
             smodel.Type = 123;
             smodel.Number = 500;
             smodel.Name = "Critical";
-            
+
             string serialized = _writer.Serialize(smodel);
-            
-            CriticalModel model = (CriticalModel) _reader.Read(typeof(CriticalModel), serialized);
+
+            CriticalModel model = (CriticalModel)_reader.Read(typeof(CriticalModel), serialized);
             CriticalModel gmodel = _reader.Read<CriticalModel>(serialized);
 
             Assert.Equal(123, model.Type);
             Assert.Equal(123, gmodel.Type);
-            
+
             Assert.Equal(500, model.Number);
             Assert.Equal(500, gmodel.Number);
-            
+
             Assert.Equal("Critical", model.Name);
             Assert.Equal("Critical", gmodel.Name);
         }

@@ -1,10 +1,10 @@
-﻿using Twino.Mvc.Auth;
+﻿using Sample.Mvc.Models;
+using System;
+using Twino.Mvc;
+using Twino.Mvc.Auth;
 using Twino.Mvc.Controllers;
 using Twino.Mvc.Controllers.Parameters;
 using Twino.Mvc.Filters.Route;
-using Sample.Mvc.Models;
-using System;
-using Twino.Mvc;
 
 namespace Sample.Mvc.Controller
 {
@@ -39,7 +39,7 @@ namespace Sample.Mvc.Controller
         }
 
         [HttpGet("complex/[action]/path/{id}/{?opt}")]
-        public IActionResult Act(int id, int?opt)
+        public IActionResult Act(int id, int? opt)
         {
             return String("Complex Act: " + id + ", " + (opt.HasValue ? opt.Value : -1).ToString());
         }

@@ -16,7 +16,7 @@ namespace Twino.Protocols.WebSocket
         /// </summary>
         public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
-            return await Task.FromResult((SocketBase) null);
+            return await Task.FromResult((SocketBase)null);
         }
 
         /// <summary>

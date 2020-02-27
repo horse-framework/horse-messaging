@@ -1,5 +1,5 @@
-﻿using System.Collections.Generic;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Twino.Server
@@ -42,7 +42,7 @@ namespace Twino.Server
         /// <summary>
         /// Supported options files
         /// </summary>
-        private static readonly string[] OptionsFiles = {"server.json", "twino.json"};
+        private static readonly string[] OptionsFiles = { "server.json", "twino.json" };
 
         /// <summary>
         /// Finds the filename from supported file list.
@@ -95,18 +95,18 @@ namespace Twino.Server
         public static ServerOptions CreateDefault()
         {
             return new ServerOptions
-                   {
-                       RequestTimeout = 120,
-                       MaximumPendingConnections = 0,
-                       PingInterval = 120,
-                       Hosts = new List<HostOptions>
+            {
+                RequestTimeout = 120,
+                MaximumPendingConnections = 0,
+                PingInterval = 120,
+                Hosts = new List<HostOptions>
                                {
                                    new HostOptions
                                    {
                                        Port = 80
                                    }
                                }
-                   };
+            };
         }
     }
 }

@@ -15,7 +15,7 @@ namespace Test.Mq.Models
         public MessageC()
         {
         }
-        
+
         public MessageC(string name, string username)
         {
             Name = name;

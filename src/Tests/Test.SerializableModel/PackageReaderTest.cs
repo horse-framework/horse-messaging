@@ -25,7 +25,7 @@ namespace Test.SocketModels
             TwinoWebSocket client = new TwinoWebSocket();
             client.Connect("127.0.0.1", 44351, false);
 
-            client.Send(new DefaultModel {Name = "Mehmet", Number = 500});
+            client.Send(new DefaultModel { Name = "Mehmet", Number = 500 });
 
             //wait for async package reading
             System.Threading.Thread.Sleep(2000);
@@ -51,8 +51,8 @@ namespace Test.SocketModels
             TwinoWebSocket client = new TwinoWebSocket();
             client.Connect("127.0.0.1", 44352, false);
 
-            client.Send(new DefaultModel {Name = "Default", Number = 501});
-            client.Send(new CriticalModel {Name = "Critical", Number = 502});
+            client.Send(new DefaultModel { Name = "Default", Number = 501 });
+            client.Send(new CriticalModel { Name = "Critical", Number = 502 });
 
             //wait for async package reading
             await Task.Delay(2000);

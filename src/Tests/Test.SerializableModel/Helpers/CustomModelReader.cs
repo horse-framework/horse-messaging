@@ -34,7 +34,7 @@ namespace Test.SocketModels.Helpers
             int index;
             int code = ReadType(serialized, out index);
 
-            ISerializableModel model = (ISerializableModel) Newtonsoft.Json.JsonConvert.DeserializeObject(serialized.Substring(index + 1), type);
+            ISerializableModel model = (ISerializableModel)Newtonsoft.Json.JsonConvert.DeserializeObject(serialized.Substring(index + 1), type);
 
             if (verify && code != model.Type)
                 return null;

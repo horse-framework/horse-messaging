@@ -1,7 +1,7 @@
-﻿using System;
+﻿using Sample.Mq.Server;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Sample.Mq.Server;
 using Twino.MQ;
 using Twino.MQ.Options;
 using Twino.Server;

@@ -147,7 +147,7 @@ namespace Twino.Protocols.Http
                     //if reading header is finished, redirect to content reading
                     if (!_readingHeaders)
                     {
-                        start = await ReadContent(request, _stream.GetBuffer(), start, (int) _stream.Length - start);
+                        start = await ReadContent(request, _stream.GetBuffer(), start, (int)_stream.Length - start);
                         requiredMoreData = ContentLength < request.ContentLength;
                         continue;
                     }
@@ -155,7 +155,7 @@ namespace Twino.Protocols.Http
                     //reading first line for http method, url and versio
                     if (_firstLine)
                     {
-                        start = ReadRequestInfo(request, _stream.GetBuffer(), (int) _stream.Length, out requiredMoreData);
+                        start = ReadRequestInfo(request, _stream.GetBuffer(), (int)_stream.Length, out requiredMoreData);
 
                         //reading first line isn't completed, we need to feed data and re-read first line
                         if (!requiredMoreData)
@@ -164,7 +164,7 @@ namespace Twino.Protocols.Http
 
                     //reading headers
                     else
-                        start = ReadHeaderLine(request, _stream.GetBuffer(), start, (int) _stream.Length - start, out requiredMoreData);
+                        start = ReadHeaderLine(request, _stream.GetBuffer(), start, (int)_stream.Length - start, out requiredMoreData);
 
                     if (requiredMoreData)
                         break;
@@ -436,13 +436,13 @@ namespace Twino.Protocols.Http
                     }
 
                     request.Files = data.Where(x => x.IsFile).Select(x => new FormFile
-                                                                          {
-                                                                              Filename = x.Filename,
-                                                                              Name = x.Name,
-                                                                              Size = Convert.ToInt32(x.Stream.Length),
-                                                                              Stream = x.Stream,
-                                                                              ContentType = x.ContentType
-                                                                          });
+                    {
+                        Filename = x.Filename,
+                        Name = x.Name,
+                        Size = Convert.ToInt32(x.Stream.Length),
+                        Stream = x.Stream,
+                        ContentType = x.ContentType
+                    });
                 }
                 else
                 {

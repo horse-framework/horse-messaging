@@ -13,7 +13,7 @@ namespace Twino.Server
         /// Port listener object of the host
         /// </summary>
         public TcpListener Listener { get; set; }
-        
+
         /// <summary>
         /// TCP connection accepting thread
         /// </summary>
@@ -28,7 +28,7 @@ namespace Twino.Server
         /// Host listener options
         /// </summary>
         public HostOptions Options { get; set; }
-        
+
         /// <summary>
         /// Request keep alive manager for disposing incompleted connections
         /// </summary>

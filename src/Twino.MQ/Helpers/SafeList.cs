@@ -158,7 +158,7 @@ namespace Twino.MQ.Helpers
 
             return default;
         }
-        
+
         /// <summary>
         /// Finds all elements within a filter
         /// </summary>

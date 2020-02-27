@@ -1,6 +1,6 @@
+using Sample.Mq.Models;
 using System;
 using System.Threading;
-using Sample.Mq.Models;
 using Twino.Client.TMQ;
 using Twino.Client.TMQ.Connectors;
 using Twino.Core;
@@ -58,7 +58,7 @@ namespace Sample.Mq
         private void Connected(SocketBase client)
         {
             Console.WriteLine("producer connection established");
-            TmqClient tmq = (TmqClient) client;
+            TmqClient tmq = (TmqClient)client;
             if (_firstConnection)
             {
                 _firstConnection = false;
@@ -80,7 +80,7 @@ namespace Sample.Mq
                 TmqMessage response = message.CreateResponse();
                 response.ContentType = ModelTypes.ProducerResponse;
                 response.SetJsonContent(model);
-                TmqClient tmq = (TmqClient) client;
+                TmqClient tmq = (TmqClient)client;
                 tmq.Send(response);
             }
         }

@@ -49,13 +49,13 @@ namespace Twino.Mvc.Auth.Jwt
             string tokenString = new JwtSecurityTokenHandler().WriteToken(token);
 
             return new JwtToken
-                   {
-                       Created = token.ValidFrom,
-                       Expires = token.ValidTo,
-                       Issuer = token.Issuer,
-                       Token = tokenString,
-                       Scheme = HttpHeaders.BEARER
-                   };
+            {
+                Created = token.ValidFrom,
+                Expires = token.ValidTo,
+                Issuer = token.Issuer,
+                Token = tokenString,
+                Scheme = HttpHeaders.BEARER
+            };
         }
 
         /// <summary>

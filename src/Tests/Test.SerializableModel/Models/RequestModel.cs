@@ -1,5 +1,5 @@
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 using Twino.SerializableModel;
 
 namespace Test.SocketModels.Models
@@ -9,11 +9,11 @@ namespace Test.SocketModels.Models
         [JsonProperty("type")]
         [JsonPropertyName("type")]
         public int Type { get; set; } = 100;
-        
+
         [JsonProperty("delay")]
         [JsonPropertyName("delay")]
         public int Delay { get; set; }
-        
+
         [JsonProperty("value")]
         [JsonPropertyName("value")]
         public string Value { get; set; }

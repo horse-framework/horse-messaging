@@ -308,7 +308,7 @@ namespace Twino.Client.Connectors
         /// </summary>
         protected virtual void ClientMessageReceived(ClientSocketBase<TMessage> client, TMessage payload)
         {
-            MessageReceived?.Invoke((TClient) client, payload);
+            MessageReceived?.Invoke((TClient)client, payload);
         }
 
         /// <summary>
@@ -316,7 +316,7 @@ namespace Twino.Client.Connectors
         /// </summary>
         protected virtual void ClientDisconnected(SocketBase client)
         {
-            Disconnected?.Invoke((TClient) client);
+            Disconnected?.Invoke((TClient)client);
         }
 
         /// <summary>
@@ -327,7 +327,7 @@ namespace Twino.Client.Connectors
             _connectionCount++;
             _lastConnection = DateTime.UtcNow;
 
-            Connected?.Invoke((TClient) client);
+            Connected?.Invoke((TClient)client);
         }
 
         /// <summary>

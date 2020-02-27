@@ -299,7 +299,7 @@ namespace Twino.MQ.Data
                             _source.Seek(length, SeekOrigin.Current);
                         else
                         {
-                            ms.WriteByte((byte) type);
+                            ms.WriteByte((byte)type);
                             await _serializer.WriteId(ms, id);
                             bool written = await _serializer.WriteContent(length, _source, ms);
                             if (!written)

@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using Twino.Client.Connectors;
 using Twino.Client.WebSocket;
 using Twino.Client.WebSocket.Connectors;
 using Twino.Core;

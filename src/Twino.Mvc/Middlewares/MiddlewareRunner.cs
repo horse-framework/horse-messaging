@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using Twino.Mvc.Controllers;
 using Twino.Ioc;
 using Twino.Protocols.Http;
 
@@ -55,7 +54,7 @@ namespace Twino.Mvc.Middlewares
                 return descriptor.Instance;
 
             if (descriptor.ConstructorParameters.Length == 0)
-                return (IMiddleware) Activator.CreateInstance(descriptor.MiddlewareType);
+                return (IMiddleware)Activator.CreateInstance(descriptor.MiddlewareType);
 
             object[] parameters = new object[descriptor.ConstructorParameters.Length];
             for (int i = 0; i < descriptor.ConstructorParameters.Length; i++)
@@ -65,7 +64,7 @@ namespace Twino.Mvc.Middlewares
                 parameters[i] = o;
             }
 
-            return (IMiddleware) Activator.CreateInstance(descriptor.MiddlewareType, parameters);
+            return (IMiddleware)Activator.CreateInstance(descriptor.MiddlewareType, parameters);
         }
     }
 }

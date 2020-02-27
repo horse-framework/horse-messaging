@@ -14,7 +14,7 @@ namespace Benchmark.Json
             server.UseHttp(async (request, response) =>
             {
                 if (request.Path.Equals("/json", StringComparison.InvariantCultureIgnoreCase))
-                    response.SetToJson(new {message = "Hello, World!"});
+                    response.SetToJson(new { message = "Hello, World!" });
                 else
                     response.StatusCode = HttpStatusCode.NotFound;
 

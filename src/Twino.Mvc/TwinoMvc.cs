@@ -1,16 +1,16 @@
-﻿using Twino.Mvc.Auth;
-using Twino.Mvc.Controllers;
-using Twino.Mvc.Errors;
-using Twino.Mvc.Middlewares;
-using Twino.Mvc.Results;
-using Twino.Mvc.Routing;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Reflection;
 using Twino.Core;
 using Twino.Ioc;
+using Twino.Mvc.Auth;
+using Twino.Mvc.Controllers;
+using Twino.Mvc.Errors;
+using Twino.Mvc.Middlewares;
+using Twino.Mvc.Results;
+using Twino.Mvc.Routing;
 
 namespace Twino.Mvc
 {
@@ -26,7 +26,7 @@ namespace Twino.Mvc
         /// Loads all types in assembly implemented from IController and their actions with Http Method Attribute.
         /// </summary>
         internal List<RouteLeaf> Routes { get; private set; }
-        
+
         /// <summary>
         /// File download routes
         /// </summary>

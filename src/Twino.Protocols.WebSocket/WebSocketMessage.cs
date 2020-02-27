@@ -75,10 +75,10 @@ namespace Twino.Protocols.WebSocket
         public static WebSocketMessage FromString(string message)
         {
             return new WebSocketMessage
-                   {
-                       OpCode = SocketOpCode.UTF8,
-                       Content = new MemoryStream(Encoding.UTF8.GetBytes(message))
-                   };
+            {
+                OpCode = SocketOpCode.UTF8,
+                Content = new MemoryStream(Encoding.UTF8.GetBytes(message))
+            };
         }
 
         /// <summary>

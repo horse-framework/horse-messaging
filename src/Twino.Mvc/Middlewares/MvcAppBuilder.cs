@@ -32,11 +32,11 @@ namespace Twino.Mvc.Middlewares
         public void UseMiddleware(IMiddleware middleware)
         {
             MiddlewareDescriptor desc = new MiddlewareDescriptor
-                                        {
-                                            Instance = middleware,
-                                            MiddlewareType = middleware.GetType(),
-                                            ConstructorParameters = null
-                                        };
+            {
+                Instance = middleware,
+                MiddlewareType = middleware.GetType(),
+                ConstructorParameters = null
+            };
             Descriptors.Add(desc);
         }
 
@@ -50,11 +50,11 @@ namespace Twino.Mvc.Middlewares
                 throw new ArgumentException(typeof(TMiddleware) + " has no acceptable constructor");
 
             MiddlewareDescriptor desc = new MiddlewareDescriptor
-                                        {
-                                            Instance = null,
-                                            MiddlewareType = typeof(TMiddleware),
-                                            ConstructorParameters = ctor.GetParameters().Select(x => x.ParameterType).ToArray()
-                                        };
+            {
+                Instance = null,
+                MiddlewareType = typeof(TMiddleware),
+                ConstructorParameters = ctor.GetParameters().Select(x => x.ParameterType).ToArray()
+            };
             Descriptors.Add(desc);
         }
 
@@ -66,7 +66,7 @@ namespace Twino.Mvc.Middlewares
         /// </summary>
         public void UseFiles(string urlPath, string physicalPath)
         {
-            Mvc.FileRoutes.Add(new FileRoute(urlPath, new[] {physicalPath}));
+            Mvc.FileRoutes.Add(new FileRoute(urlPath, new[] { physicalPath }));
         }
 
         /// <summary>
@@ -86,7 +86,7 @@ namespace Twino.Mvc.Middlewares
         /// </summary>
         public void UseFiles(string urlPath, string physicalPath, Func<HttpRequest, HttpStatusCode> validation)
         {
-            Mvc.FileRoutes.Add(new FileRoute(urlPath, new[] {physicalPath}, validation));
+            Mvc.FileRoutes.Add(new FileRoute(urlPath, new[] { physicalPath }, validation));
         }
 
         /// <summary>

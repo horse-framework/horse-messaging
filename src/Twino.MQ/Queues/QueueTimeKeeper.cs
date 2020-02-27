@@ -81,8 +81,8 @@ namespace Twino.MQ.Queues
 
             if (_timer != null)
             {
-                 _timer.Stop();
-                 _timer = null;
+                _timer.Stop();
+                _timer = null;
             }
 
             await Task.CompletedTask;

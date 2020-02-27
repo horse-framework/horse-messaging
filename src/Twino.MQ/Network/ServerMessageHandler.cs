@@ -327,22 +327,22 @@ namespace Twino.MQ.Network
                     continue;
 
                 list.Add(new ChannelInformation
-                         {
-                             Name = channel.Name,
-                             Queues = channel.QueuesClone.Select(x => x.Id).ToArray(),
-                             AllowMultipleQueues = channel.Options.AllowMultipleQueues,
-                             AllowedQueues = channel.Options.AllowedQueues,
-                             OnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
-                             RequestAcknowledge = channel.Options.RequestAcknowledge,
-                             AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
-                             MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
-                             WaitForAcknowledge = channel.Options.WaitForAcknowledge,
-                             HideClientNames = channel.Options.HideClientNames,
-                             QueueLimit = channel.Options.QueueLimit,
-                             ClientLimit = channel.Options.ClientLimit,
-                             DestroyWhenEmpty = channel.Options.DestroyWhenEmpty,
-                             ActiveClients = channel.ClientsCount()
-                         });
+                {
+                    Name = channel.Name,
+                    Queues = channel.QueuesClone.Select(x => x.Id).ToArray(),
+                    AllowMultipleQueues = channel.Options.AllowMultipleQueues,
+                    AllowedQueues = channel.Options.AllowedQueues,
+                    OnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
+                    RequestAcknowledge = channel.Options.RequestAcknowledge,
+                    AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
+                    MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
+                    WaitForAcknowledge = channel.Options.WaitForAcknowledge,
+                    HideClientNames = channel.Options.HideClientNames,
+                    QueueLimit = channel.Options.QueueLimit,
+                    ClientLimit = channel.Options.ClientLimit,
+                    DestroyWhenEmpty = channel.Options.DestroyWhenEmpty,
+                    ActiveClients = channel.ClientsCount()
+                });
             }
 
             TmqMessage response = message.CreateResponse();
@@ -381,22 +381,22 @@ namespace Twino.MQ.Network
             }
 
             ChannelInformation information = new ChannelInformation
-                                             {
-                                                 Name = channel.Name,
-                                                 Queues = channel.QueuesClone.Select(x => x.Id).ToArray(),
-                                                 AllowMultipleQueues = channel.Options.AllowMultipleQueues,
-                                                 AllowedQueues = channel.Options.AllowedQueues,
-                                                 OnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
-                                                 RequestAcknowledge = channel.Options.RequestAcknowledge,
-                                                 AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
-                                                 MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
-                                                 WaitForAcknowledge = channel.Options.WaitForAcknowledge,
-                                                 HideClientNames = channel.Options.HideClientNames,
-                                                 QueueLimit = channel.Options.QueueLimit,
-                                                 ClientLimit = channel.Options.ClientLimit,
-                                                 DestroyWhenEmpty = channel.Options.DestroyWhenEmpty,
-                                                 ActiveClients = channel.ClientsCount()
-                                             };
+            {
+                Name = channel.Name,
+                Queues = channel.QueuesClone.Select(x => x.Id).ToArray(),
+                AllowMultipleQueues = channel.Options.AllowMultipleQueues,
+                AllowedQueues = channel.Options.AllowedQueues,
+                OnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
+                RequestAcknowledge = channel.Options.RequestAcknowledge,
+                AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
+                MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
+                WaitForAcknowledge = channel.Options.WaitForAcknowledge,
+                HideClientNames = channel.Options.HideClientNames,
+                QueueLimit = channel.Options.QueueLimit,
+                ClientLimit = channel.Options.ClientLimit,
+                DestroyWhenEmpty = channel.Options.DestroyWhenEmpty,
+                ActiveClients = channel.ClientsCount()
+            };
 
             TmqMessage response = message.CreateResponse();
             message.ContentType = KnownContentTypes.ChannelInformation;
@@ -444,13 +444,13 @@ namespace Twino.MQ.Network
 
             foreach (ChannelClient cc in channel.ClientsClone)
                 list.Add(new ClientInformation
-                         {
-                             Id = cc.Client.UniqueId,
-                             Name = cc.Client.Name,
-                             Type = cc.Client.Type,
-                             IsAuthenticated = cc.Client.IsAuthenticated,
-                             Online = cc.JoinDate.LifetimeMilliseconds(),
-                         });
+                {
+                    Id = cc.Client.UniqueId,
+                    Name = cc.Client.Name,
+                    Type = cc.Client.Type,
+                    IsAuthenticated = cc.Client.IsAuthenticated,
+                    Online = cc.JoinDate.LifetimeMilliseconds(),
+                });
 
             TmqMessage response = message.CreateResponse();
             message.ContentType = KnownContentTypes.ChannelConsumers;
@@ -662,32 +662,32 @@ namespace Twino.MQ.Network
                     continue;
 
                 list.Add(new QueueInformation
-                         {
-                             Channel = channel.Name,
-                             Id = queue.Id,
-                             Status = queue.Status.ToString().ToLower(),
-                             InQueueHighPriorityMessages = queue.HighPriorityLinkedList.Count,
-                             InQueueRegularMessages = queue.RegularLinkedList.Count,
-                             OnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
-                             RequestAcknowledge = channel.Options.RequestAcknowledge,
-                             AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
-                             MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
-                             WaitForAcknowledge = channel.Options.WaitForAcknowledge,
-                             HideClientNames = channel.Options.HideClientNames,
-                             ReceivedMessages = queue.Info.ReceivedMessages,
-                             SentMessages = queue.Info.SentMessages,
-                             Deliveries = queue.Info.Deliveries,
-                             Unacknowledges = queue.Info.Unacknowledges,
-                             Acknowledges = queue.Info.Acknowledges,
-                             TimeoutMessages = queue.Info.TimedOutMessages,
-                             SavedMessages = queue.Info.MessageSaved,
-                             RemovedMessages = queue.Info.MessageRemoved,
-                             Errors = queue.Info.ErrorCount,
-                             LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
-                             LastMessageSent = queue.Info.GetLastMessageSendUnix(),
-                             MessageLimit = queue.Options.MessageLimit,
-                             MessageSizeLimit = queue.Options.MessageSizeLimit
-                         });
+                {
+                    Channel = channel.Name,
+                    Id = queue.Id,
+                    Status = queue.Status.ToString().ToLower(),
+                    InQueueHighPriorityMessages = queue.HighPriorityLinkedList.Count,
+                    InQueueRegularMessages = queue.RegularLinkedList.Count,
+                    OnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
+                    RequestAcknowledge = channel.Options.RequestAcknowledge,
+                    AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
+                    MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
+                    WaitForAcknowledge = channel.Options.WaitForAcknowledge,
+                    HideClientNames = channel.Options.HideClientNames,
+                    ReceivedMessages = queue.Info.ReceivedMessages,
+                    SentMessages = queue.Info.SentMessages,
+                    Deliveries = queue.Info.Deliveries,
+                    Unacknowledges = queue.Info.Unacknowledges,
+                    Acknowledges = queue.Info.Acknowledges,
+                    TimeoutMessages = queue.Info.TimedOutMessages,
+                    SavedMessages = queue.Info.MessageSaved,
+                    RemovedMessages = queue.Info.MessageRemoved,
+                    Errors = queue.Info.ErrorCount,
+                    LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
+                    LastMessageSent = queue.Info.GetLastMessageSendUnix(),
+                    MessageLimit = queue.Options.MessageLimit,
+                    MessageSizeLimit = queue.Options.MessageSizeLimit
+                });
             }
 
             TmqMessage response = message.CreateResponse();
@@ -736,32 +736,32 @@ namespace Twino.MQ.Network
             }
 
             QueueInformation information = new QueueInformation
-                                           {
-                                               Channel = channel.Name,
-                                               Id = id,
-                                               Status = queue.Status.ToString().ToLower(),
-                                               InQueueHighPriorityMessages = queue.HighPriorityLinkedList.Count,
-                                               InQueueRegularMessages = queue.RegularLinkedList.Count,
-                                               OnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
-                                               RequestAcknowledge = channel.Options.RequestAcknowledge,
-                                               AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
-                                               MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
-                                               WaitForAcknowledge = channel.Options.WaitForAcknowledge,
-                                               HideClientNames = channel.Options.HideClientNames,
-                                               ReceivedMessages = queue.Info.ReceivedMessages,
-                                               SentMessages = queue.Info.SentMessages,
-                                               Deliveries = queue.Info.Deliveries,
-                                               Unacknowledges = queue.Info.Unacknowledges,
-                                               Acknowledges = queue.Info.Acknowledges,
-                                               TimeoutMessages = queue.Info.TimedOutMessages,
-                                               SavedMessages = queue.Info.MessageSaved,
-                                               RemovedMessages = queue.Info.MessageRemoved,
-                                               Errors = queue.Info.ErrorCount,
-                                               LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
-                                               LastMessageSent = queue.Info.GetLastMessageSendUnix(),
-                                               MessageLimit = queue.Options.MessageLimit,
-                                               MessageSizeLimit = queue.Options.MessageSizeLimit
-                                           };
+            {
+                Channel = channel.Name,
+                Id = id,
+                Status = queue.Status.ToString().ToLower(),
+                InQueueHighPriorityMessages = queue.HighPriorityLinkedList.Count,
+                InQueueRegularMessages = queue.RegularLinkedList.Count,
+                OnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
+                RequestAcknowledge = channel.Options.RequestAcknowledge,
+                AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
+                MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
+                WaitForAcknowledge = channel.Options.WaitForAcknowledge,
+                HideClientNames = channel.Options.HideClientNames,
+                ReceivedMessages = queue.Info.ReceivedMessages,
+                SentMessages = queue.Info.SentMessages,
+                Deliveries = queue.Info.Deliveries,
+                Unacknowledges = queue.Info.Unacknowledges,
+                Acknowledges = queue.Info.Acknowledges,
+                TimeoutMessages = queue.Info.TimedOutMessages,
+                SavedMessages = queue.Info.MessageSaved,
+                RemovedMessages = queue.Info.MessageRemoved,
+                Errors = queue.Info.ErrorCount,
+                LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
+                LastMessageSent = queue.Info.GetLastMessageSendUnix(),
+                MessageLimit = queue.Options.MessageLimit,
+                MessageSizeLimit = queue.Options.MessageSizeLimit
+            };
 
             TmqMessage response = message.CreateResponse();
             message.ContentType = KnownContentTypes.QueueInformation;
@@ -802,14 +802,14 @@ namespace Twino.MQ.Network
             foreach (MqClient slave in slaves)
             {
                 list.Add(new InstanceInformation
-                         {
-                             IsSlave = true,
-                             Host = slave.RemoteHost,
-                             IsConnected = slave.IsConnected,
-                             Id = slave.UniqueId,
-                             Name = slave.Name,
-                             Lifetime = slave.ConnectedDate.LifetimeMilliseconds()
-                         });
+                {
+                    IsSlave = true,
+                    Host = slave.RemoteHost,
+                    IsConnected = slave.IsConnected,
+                    Id = slave.UniqueId,
+                    Name = slave.Name,
+                    Lifetime = slave.ConnectedDate.LifetimeMilliseconds()
+                });
             }
 
             //master instances
@@ -819,14 +819,14 @@ namespace Twino.MQ.Network
                 TmqClient c = connector.GetClient();
 
                 list.Add(new InstanceInformation
-                         {
-                             IsSlave = false,
-                             Host = options?.Host,
-                             IsConnected = connector.IsConnected,
-                             Id = c.ClientId,
-                             Name = options?.Name,
-                             Lifetime = Convert.ToInt64(connector.Lifetime.TotalMilliseconds)
-                         });
+                {
+                    IsSlave = false,
+                    Host = options?.Host,
+                    IsConnected = connector.IsConnected,
+                    Id = c.ClientId,
+                    Name = options?.Name,
+                    Lifetime = Convert.ToInt64(connector.Lifetime.TotalMilliseconds)
+                });
             }
 
             TmqMessage response = message.CreateResponse();
@@ -865,13 +865,13 @@ namespace Twino.MQ.Network
 
             foreach (MqClient mc in _server.Clients)
                 list.Add(new ClientInformation
-                         {
-                             Id = mc.UniqueId,
-                             Name = mc.Name,
-                             Type = mc.Type,
-                             IsAuthenticated = mc.IsAuthenticated,
-                             Online = mc.ConnectedDate.LifetimeMilliseconds(),
-                         });
+                {
+                    Id = mc.UniqueId,
+                    Name = mc.Name,
+                    Type = mc.Type,
+                    IsAuthenticated = mc.IsAuthenticated,
+                    Online = mc.ConnectedDate.LifetimeMilliseconds(),
+                });
 
             TmqMessage response = message.CreateResponse();
             message.ContentType = KnownContentTypes.ClientList;
