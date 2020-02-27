@@ -23,12 +23,12 @@ namespace Twino.Ioc.Pool
         /// <summary>
         /// Active instances
         /// </summary>
-        private readonly List<PoolServiceDescriptor<TService>> _descriptors = new List<PoolServiceDescriptor<TService>>();
+        protected readonly List<PoolServiceDescriptor<TService>> _descriptors = new List<PoolServiceDescriptor<TService>>();
 
         /// <summary>
         /// Initializer function for new created instances in pool
         /// </summary>
-        private readonly Action<TService> _func;
+        protected readonly Action<TService> _func;
 
         /// <summary>
         /// Pool options
@@ -176,7 +176,7 @@ namespace Twino.Ioc.Pool
         /// <summary>
         /// Creates new instance and adds to pool
         /// </summary>
-        private async Task<PoolServiceDescriptor<TService>> CreateNew(IContainerScope scope, bool locked)
+        protected virtual async Task<PoolServiceDescriptor<TService>> CreateNew(IContainerScope scope, bool locked)
         {
             PoolServiceDescriptor<TService> descriptor = new PoolServiceDescriptor<TService>();
             descriptor.Locked = locked;
@@ -188,12 +188,71 @@ namespace Twino.Ioc.Pool
                 //we couldn't find any created instance. create new.
                 object instance = await Container.CreateInstance(typeof(TImplementation), scope);
                 scope.PutItem(typeof(TService), instance);
-                descriptor.Instance = (TService) instance;
+                descriptor.Instance = (TService)instance;
             }
             else
             {
                 object instance = await Container.CreateInstance(typeof(TImplementation), scope);
-                descriptor.Instance = (TService) instance;
+                descriptor.Instance = (TService)instance;
+            }
+
+            if (_func != null)
+                _func(descriptor.Instance);
+
+            lock (_descriptors)
+                _descriptors.Add(descriptor);
+
+            return descriptor;
+        }
+    }
+
+    /// <summary>
+    /// IOC Pool container.
+    /// Contains same service instances in the pool.
+    /// Provides available instances to requesters and guarantees that only requester uses same instances at same time
+    /// </summary>
+    public class ServicePool<TService, TImplementation, TProxy> : ServicePool<TService, TImplementation>
+        where TService : class
+        where TImplementation : class, TService
+        where TProxy : class, IServiceProxy
+    {
+
+        /// <summary>
+        /// Crates new service pool belong the container with options and after instance creation functions
+        /// </summary>
+        /// <param name="type">Implementation type</param>
+        /// <param name="container">Parent container</param>
+        /// <param name="ofunc">Options function</param>
+        /// <param name="func">After each instance is created, to do custom initialization, this method will be called.</param>
+        public ServicePool(ImplementationType type, IServiceContainer container, Action<ServicePoolOptions> ofunc, Action<TService> func)
+            : base(type, container, ofunc, func)
+        { }
+
+        /// <summary>
+        /// Creates new instance and adds to pool
+        /// </summary>
+        protected override async Task<PoolServiceDescriptor<TService>> CreateNew(IContainerScope scope, bool locked)
+        {
+            PoolServiceDescriptor<TService> descriptor = new PoolServiceDescriptor<TService>();
+            descriptor.Locked = locked;
+            descriptor.Scope = scope;
+            descriptor.LockExpiration = DateTime.UtcNow.Add(Options.MaximumLockDuration);
+
+            if (Type == ImplementationType.Scoped && scope != null)
+            {
+                //we couldn't find any created instance. create new.
+                object instance = await Container.CreateInstance(typeof(TImplementation), scope);
+                IServiceProxy p = (IServiceProxy)await Container.CreateInstance(typeof(TProxy), scope);
+                object proxyObj = p.Proxy(instance);
+                scope.PutItem(typeof(TService), proxyObj);
+                descriptor.Instance = (TService)proxyObj;
+            }
+            else
+            {
+                object instance = await Container.CreateInstance(typeof(TImplementation), scope);
+                IServiceProxy p = (IServiceProxy)await Container.CreateInstance(typeof(TProxy), scope);
+                object proxyObj = p.Proxy(instance);
+                descriptor.Instance = (TService)proxyObj;
             }
 
             if (_func != null)

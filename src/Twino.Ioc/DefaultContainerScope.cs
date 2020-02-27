@@ -40,7 +40,7 @@ namespace Twino.Ioc
         public async Task<TService> Get<TService>(IServiceContainer services) where TService : class
         {
             object o = await Get(typeof(TService), services);
-            return (TService) o;
+            return (TService)o;
         }
 
         /// <summary>
@@ -78,6 +78,12 @@ namespace Twino.Ioc
             if (descriptor.AfterCreatedMethod != null)
                 descriptor.AfterCreatedMethod.DynamicInvoke(instance);
 
+            if (descriptor.ProxyType != null)
+            {
+                IServiceProxy p = (IServiceProxy)await services.CreateInstance(descriptor.ProxyType, this);
+                return p.Proxy(instance);
+
+            }
             return instance;
         }
 
@@ -95,7 +101,7 @@ namespace Twino.Ioc
                         _poolInstances[pool].Add(descriptor);
                 }
                 else
-                    _poolInstances.Add(pool, new List<PoolServiceDescriptor> {descriptor});
+                    _poolInstances.Add(pool, new List<PoolServiceDescriptor> { descriptor });
             }
         }
 

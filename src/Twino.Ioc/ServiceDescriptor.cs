@@ -50,12 +50,12 @@ namespace Twino.Ioc
         /// <summary>
         /// Decorator type.
         /// </summary>
-        public Type DecoratorType { get; set; }
+        public Type ProxyType { get; set; }
 
         /// <summary>
         /// Decorator instance
         /// </summary>
-        public IServiceProxy DecoratorInstance { get; set; }
+        public IServiceProxy ProxyInstance { get; set; }
 
         /// <summary>
         /// Implementation method

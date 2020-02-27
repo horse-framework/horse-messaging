@@ -21,10 +21,10 @@ namespace Twino.Ioc
         /// <summary>
         /// Adds a service to the container
         /// </summary>
-        void AddTransient<TService, TImplementation, TDecorator>()
+        void AddTransient<TService, TImplementation, TProxy>()
             where TService : class
             where TImplementation : class, TService
-            where TDecorator : class, IServiceProxy;
+            where TProxy : class, IServiceProxy;
 
         /// <summary>
         /// Adds a service to the container
@@ -32,6 +32,14 @@ namespace Twino.Ioc
         void AddTransient<TService, TImplementation>(Action<TImplementation> afterCreated)
             where TService : class
             where TImplementation : class, TService;
+
+        /// <summary>
+        /// Adds a service to the container
+        /// </summary>
+        void AddTransient<TService, TImplementation, TProxy>(Action<TImplementation> afterCreated)
+            where TService : class
+            where TImplementation : class, TService
+            where TProxy : class, IServiceProxy;
 
         /// <summary>
         /// Adds a service to the container
@@ -62,9 +70,25 @@ namespace Twino.Ioc
         /// <summary>
         /// Adds a service to the container
         /// </summary>
+        void AddScoped<TService, TImplementation, TProxy>()
+           where TService : class
+           where TImplementation : class, TService
+           where TProxy : class, IServiceProxy;
+
+        /// <summary>
+        /// Adds a service to the container
+        /// </summary>
         void AddScoped<TService, TImplementation>(Action<TImplementation> afterCreated)
             where TService : class
             where TImplementation : class, TService;
+
+        /// <summary>
+        /// Adds a service to the container
+        /// </summary>
+        void AddScoped<TService, TImplementation, TProxy>(Action<TImplementation> afterCreated)
+            where TService : class
+            where TImplementation : class, TService
+            where TProxy : class, IServiceProxy;
 
         /// <summary>
         /// Adds a service to the container
@@ -74,7 +98,12 @@ namespace Twino.Ioc
         /// <summary>
         /// Adds a service to the container
         /// </summary>
-        void AddScoped(Type serviceType, Type implementationType, Delegate afterCreated);
+        void AddScoped(Type serviceType, Type implementationType, Type proxyType);
+
+        /// <summary>
+        /// Adds a service to the container
+        /// </summary>
+        void AddScoped(Type serviceType, Type implementationType, Type proxyType, Delegate afterCreated);
 
         #endregion
 
@@ -87,6 +116,15 @@ namespace Twino.Ioc
         void AddSingleton<TService, TImplementation>()
             where TService : class
             where TImplementation : class, TService;
+
+        /// <summary>
+        /// Adds a singleton service to the container.
+        /// Service will be created with first call.
+        /// </summary>
+        void AddSingleton<TService, TImplementation, TProxy>()
+            where TService : class
+            where TImplementation : class, TService
+            where TProxy : class, IServiceProxy;
 
         /// <summary>
         /// Adds a singleton service with instance to the container.
@@ -110,10 +148,24 @@ namespace Twino.Ioc
             where TImplementation : class, TService;
 
         /// <summary>
+        /// Adds a singleton service to container
+        /// </summary>
+        void AddSingleton<TService, TImplementation, TProxy>(Action<TImplementation> afterCreated)
+            where TService : class
+            where TImplementation : class, TService
+            where TProxy : class, IServiceProxy;
+
+        /// <summary>
         /// Adds a singleton service to the container.
         /// Service will be created with first call.
         /// </summary>
         void AddSingleton(Type serviceType, Type implementationType);
+
+        /// <summary>
+        /// Adds a singleton service to the container.
+        /// Service will be created with first call.
+        /// </summary>
+        void AddSingleton(Type serviceType, Type implementationType, Type proxyType);
 
         /// <summary>
         /// Adds a singleton service with instance to the container.

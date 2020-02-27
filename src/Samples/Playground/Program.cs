@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Twino.Ioc;
 using Twino.MQ.Data;
@@ -7,59 +8,73 @@ using Twino.Protocols.TMQ;
 
 namespace Playground
 {
-    public interface ITestService
+
+    interface IService1
     {
-        void Test();
+        void Test1();
     }
 
-    public class TestService : ITestService
+    interface IService2
+    {
+        void Test2();
+    }
+
+    class Service1 : IService1
     {
 
-        private readonly IDenemeInjector denemeInjector;
-
-        public TestService(IDenemeInjector inj)
+        public void Test1()
         {
-            denemeInjector = inj;
-            denemeInjector.Inject();
-        }
-
-        public void Test()
-        {
-            Console.WriteLine("Emre");
+            Console.WriteLine("echo 1");
         }
     }
 
-    public class TestProxy : ITestService
+    class Service2 : IService2
     {
-        public void Test()
+        public void Test2()
+        { }
+    }
+
+    interface IService3 { }
+    class Service3 : IService3
+    {
+        public Service3(IService1 service1)
         {
-            Console.WriteLine("Emre 2");
+            service1.Test1();
         }
     }
 
-    public class TestServiceDecorator : IServiceProxy
+    class Service1Proxy : IServiceProxy
     {
-        public TestServiceDecorator(IDenemeInjector inj)
+        private IService2 _service2;
+        public Service1Proxy(IService2 service2)
         {
-            inj.Inject();
+            _service2 = service2;
         }
 
         public object Proxy(object decorated)
         {
-            return (ITestService)new TestProxy();
+            return DenemeDispatchProxy<IService1>.Create((IService1)decorated, _service2);
         }
     }
 
-    public interface IDenemeInjector
-    {
-        void Inject();
-    }
 
-    public class DenemeInjector : IDenemeInjector
+    class DenemeDispatchProxy<T> : DispatchProxy
     {
-        public void Inject()
+        private T _decorated;
+        private IService2 _service2;
+        public static T Create(T decorated, IService2 service2)
         {
-            Console.WriteLine("Injectli la bu");
+            object proxy = Create<T, DenemeDispatchProxy<T>>();
+            DenemeDispatchProxy<T> instance = (DenemeDispatchProxy<T>)proxy;
+            instance._decorated = decorated;
+            instance._service2 = service2;
+            return (T)proxy;
+        }
+
+        protected override object Invoke(MethodInfo targetMethod, object[] args)
+        {
+            Console.WriteLine("PROXY");
+            return targetMethod.Invoke(_decorated, args);
         }
     }
 
@@ -68,10 +83,10 @@ namespace Playground
         static async Task Main(string[] args)
         {
             var container = new ServiceContainer();
-            container.AddTransient<ITestService, TestService, TestServiceDecorator>();
-            container.AddTransient<IDenemeInjector, DenemeInjector>();
-            var instance = await container.Get<ITestService>();
-            instance.Test();
+            container.AddTransient<IService1, Service1, Service1Proxy>();
+            container.AddTransient<IService2, Service2>();
+            container.AddTransient<IService3, Service3>();
+            var instance3 = await container.Get<IService3>();
             Console.ReadLine();
         }
     }
