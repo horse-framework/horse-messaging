@@ -6,9 +6,9 @@
         <Product>Twino.MQ.Data</Product>
         <Description>Persistant queue message data library for Twino MQ</Description>
         <PackageTags>twino,server,messaging,queue,mq,persistent,database,db</PackageTags>
-        <AssemblyVersion>2.7.10</AssemblyVersion>
-        <FileVersion>2.7.10</FileVersion>
-        <PackageVersion>2.7.10</PackageVersion>
+        <AssemblyVersion>2.7.11</AssemblyVersion>
+        <FileVersion>2.7.11</FileVersion>
+        <PackageVersion>2.7.11</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü</Authors>
         <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
