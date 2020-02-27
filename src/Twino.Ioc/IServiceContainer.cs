@@ -21,6 +21,14 @@ namespace Twino.Ioc
         /// <summary>
         /// Adds a service to the container
         /// </summary>
+        void AddTransient<TService, TImplementation, TDecorator>()
+            where TService : class
+            where TImplementation : class, TService
+            where TDecorator : class, IServiceProxy;
+
+        /// <summary>
+        /// Adds a service to the container
+        /// </summary>
         void AddTransient<TService, TImplementation>(Action<TImplementation> afterCreated)
             where TService : class
             where TImplementation : class, TService;
@@ -33,7 +41,12 @@ namespace Twino.Ioc
         /// <summary>
         /// Adds a service to the container
         /// </summary>
-        void AddTransient(Type serviceType, Type implementationType, Delegate afterCreated);
+        void AddTransient(Type serviceType, Type implementationType, Type decoratorType);
+
+        /// <summary>
+        /// Adds a service to the container
+        /// </summary>
+        void AddTransient(Type serviceType, Type implementationType, Type decoratorType, Delegate afterCreated);
 
         #endregion
 

@@ -40,11 +40,23 @@ namespace Twino.Ioc
         /// <summary>
         /// Adds a service to the container
         /// </summary>
+        public void AddTransient<TService, TImplementation, TDecorator>()
+            where TService : class
+            where TImplementation : class, TService
+            where TDecorator : class, IServiceProxy
+        {
+            AddTransient(typeof(TService), typeof(TImplementation), typeof(TDecorator));
+        }
+
+
+        /// <summary>
+        /// Adds a service to the container
+        /// </summary>
         public void AddTransient<TService, TImplementation>(Action<TImplementation> afterCreated)
             where TService : class
             where TImplementation : class, TService
         {
-            AddTransient(typeof(TService), typeof(TImplementation), afterCreated);
+            AddTransient(typeof(TService), typeof(TImplementation), null, afterCreated);
         }
 
         /// <summary>
@@ -52,13 +64,21 @@ namespace Twino.Ioc
         /// </summary>
         public void AddTransient(Type serviceType, Type implementationType)
         {
-            AddTransient(serviceType, implementationType, null);
+            AddTransient(serviceType, implementationType, null, null);
         }
 
         /// <summary>
         /// Adds a service to the container
         /// </summary>
-        public void AddTransient(Type serviceType, Type implementationType, Delegate afterCreated)
+        public void AddTransient(Type serviceType, Type implementationType, Type decoratorType)
+        {
+            AddTransient(serviceType, implementationType, decoratorType, null);
+        }
+
+        /// <summary>
+        /// Adds a service to the container
+        /// </summary>
+        public void AddTransient(Type serviceType, Type implementationType, Type decoratorType, Delegate afterCreated)
         {
             if (Items.ContainsKey(serviceType))
                 throw new InvalidOperationException($"Specified service type is already added into service container: {serviceType.Name}");
@@ -67,7 +87,9 @@ namespace Twino.Ioc
             {
                 ServiceType = serviceType,
                 ImplementationType = implementationType,
+                DecoratorType = decoratorType,
                 Instance = null,
+                DecoratorInstance = null,
                 Implementation = ImplementationType.Transient,
                 AfterCreatedMethod = afterCreated
             };
@@ -435,6 +457,9 @@ namespace Twino.Ioc
 
         private async Task<object> Get(ServiceDescriptor descriptor, IContainerScope scope = null)
         {
+            if (descriptor.DecoratorType != null)
+                descriptor.DecoratorInstance = (IServiceProxy)await CreateInstance(descriptor.DecoratorType, scope);
+
             if (descriptor.IsPool)
             {
                 IServicePool pool = (IServicePool)descriptor.Instance;
@@ -449,31 +474,29 @@ namespace Twino.Ioc
                 if (scope != null)
                     scope.UsePoolItem(pool, pdesc);
 
-                return pdesc.GetInstance();
+                object o = pdesc.GetInstance();
+                return descriptor.DecoratorInstance is null ? o : descriptor.DecoratorInstance.Proxy(o);
             }
 
             switch (descriptor.Implementation)
             {
                 //create new instance
                 case ImplementationType.Transient:
-                    {
-                        object o = await CreateInstance(descriptor.ImplementationType, scope);
-                        if (descriptor.AfterCreatedMethod != null)
-                            descriptor.AfterCreatedMethod.DynamicInvoke(o);
-
-                        return o;
-                    }
+                    object transient = await CreateInstance(descriptor.ImplementationType, scope);
+                    if (descriptor.AfterCreatedMethod != null)
+                        descriptor.AfterCreatedMethod.DynamicInvoke(transient);
+                    return descriptor.DecoratorInstance is null ? transient : descriptor.DecoratorInstance.Proxy(transient);
 
                 case ImplementationType.Scoped:
                     if (scope == null)
                         throw new InvalidOperationException("Type is registered as Scoped but scope parameter is null for IServiceContainer.Get method");
-
-                    return await scope.Get(descriptor, this);
+                    object scoped = await scope.Get(descriptor, this);
+                    return descriptor.DecoratorInstance is null ? scoped : descriptor.DecoratorInstance.Proxy(scoped);
 
                 case ImplementationType.Singleton:
                     //if instance already created return
                     if (descriptor.Instance != null)
-                        return descriptor.Instance;
+                        return descriptor.DecoratorInstance is null ? descriptor.Instance : descriptor.DecoratorInstance.Proxy(descriptor.Instance);
 
                     //create instance for first time and set Instance property of descriptor to prevent re-create for next times
                     object instance = await CreateInstance(descriptor.ImplementationType, scope);
@@ -481,7 +504,7 @@ namespace Twino.Ioc
                     if (descriptor.AfterCreatedMethod != null)
                         descriptor.AfterCreatedMethod.DynamicInvoke(instance);
 
-                    return instance;
+                    return descriptor.DecoratorInstance is null ? instance : descriptor.DecoratorInstance.Proxy(instance);
 
                 default:
                     return null;

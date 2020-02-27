@@ -16,7 +16,7 @@ namespace Twino.Ioc
         /// Instance is created only once, returns same object for each call
         /// </summary>
         Singleton,
-        
+
         /// <summary>
         /// Instance is created only once for per scope.
         /// For different scopes, different instances are created
@@ -48,6 +48,16 @@ namespace Twino.Ioc
         public object Instance { get; set; }
 
         /// <summary>
+        /// Decorator type.
+        /// </summary>
+        public Type DecoratorType { get; set; }
+
+        /// <summary>
+        /// Decorator instance
+        /// </summary>
+        public IServiceProxy DecoratorInstance { get; set; }
+
+        /// <summary>
         /// Implementation method
         /// </summary>
         public ImplementationType Implementation { get; set; }
@@ -56,7 +66,7 @@ namespace Twino.Ioc
         /// If true, implementation is pool. Instance is type of IServicePool with generic TService template
         /// </summary>
         public bool IsPool { get; set; }
-        
+
         /// <summary>
         /// This method is called after instance is created
         /// </summary>
