@@ -409,12 +409,38 @@ namespace Twino.Ioc
         /// Adds a service pool to the container
         /// </summary>
         /// <param name="options">Options function</param>
+        public void AddTransientPool<TService, TImplementation, TProxy>(Action<ServicePoolOptions> options)
+           where TService : class
+           where TImplementation : class, TService
+           where TProxy : class, IServiceProxy
+        {
+            AddPool<TService, TImplementation, TProxy>(ImplementationType.Transient, options, null);
+        }
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        /// <param name="options">Options function</param>
         /// <param name="instance">After each instance is created, to do custom initialization, this method will be called.</param>
         public void AddTransientPool<TService, TImplementation>(Action<ServicePoolOptions> options, Action<TService> instance)
             where TService : class
             where TImplementation : class, TService
         {
             AddPool<TService, TImplementation>(ImplementationType.Transient, options, instance);
+        }
+
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        /// <param name="options">Options function</param>
+        /// <param name="instance">After each instance is created, to do custom initialization, this method will be called.</param>
+        public void AddTransientPool<TService, TImplementation, TProxy>(Action<ServicePoolOptions> options, Action<TService> instance)
+            where TService : class
+            where TImplementation : class, TService
+            where TProxy : class, IServiceProxy
+        {
+            AddPool<TService, TImplementation, TProxy>(ImplementationType.Transient, options, instance);
         }
 
         /// <summary>
@@ -457,12 +483,46 @@ namespace Twino.Ioc
         /// <summary>
         /// Adds a service pool to the container
         /// </summary>
+        public void AddTransientPool<TService, TImplementation, TProxy>()
+           where TService : class
+           where TImplementation : class, TService
+           where TProxy : class, IServiceProxy
+        {
+            AddScopedPool<TService, TImplementation, TProxy>(null);
+        }
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        public void AddScopedPool<TService, TImplementation, TProxy>()
+            where TService : class
+            where TImplementation : class, TService
+            where TProxy : class, IServiceProxy
+        {
+            AddScopedPool<TService, TImplementation, TProxy>(null);
+        }
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
         /// <param name="options">Options function</param>
         public void AddScopedPool<TService, TImplementation>(Action<ServicePoolOptions> options)
             where TService : class
             where TImplementation : class, TService
         {
             AddPool<TService, TImplementation>(ImplementationType.Scoped, options, null);
+        }
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        /// <param name="options">Options function</param>
+        public void AddScopedPool<TService, TImplementation, TProxy>(Action<ServicePoolOptions> options)
+            where TService : class
+            where TImplementation : class, TService
+            where TProxy : class, IServiceProxy
+        {
+            AddPool<TService, TImplementation, TProxy>(ImplementationType.Scoped, options, null);
         }
 
         /// <summary>
@@ -480,6 +540,19 @@ namespace Twino.Ioc
         /// <summary>
         /// Adds a service pool to the container
         /// </summary>
+        /// <param name="options">Options function</param>
+        /// <param name="instance">After each instance is created, to do custom initialization, this method will be called.</param>
+        public void AddScopedPool<TService, TImplementation, TProxy>(Action<ServicePoolOptions> options, Action<TService> instance)
+            where TService : class
+            where TImplementation : class, TService
+            where TProxy : class, IServiceProxy
+        {
+            AddPool<TService, TImplementation, TProxy>(ImplementationType.Scoped, options, instance);
+        }
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
         /// <param name="type">Implementation type</param>
         /// <param name="options">Options function</param>
         /// <param name="instance">After each instance is created, to do custom initialization, this method will be called.</param>
@@ -492,6 +565,31 @@ namespace Twino.Ioc
             {
                 IsPool = true,
                 ServiceType = typeof(TService),
+                ImplementationType = typeof(ServicePool<TService, TImplementation>),
+                Instance = pool,
+                Implementation = ImplementationType.Singleton
+            };
+
+            Items.Add(typeof(TService), descriptor);
+        }
+
+        /// <summary>
+        /// Adds a service pool to the container
+        /// </summary>
+        /// <param name="type">Implementation type</param>
+        /// <param name="options">Options function</param>
+        /// <param name="instance">After each instance is created, to do custom initialization, this method will be called.</param>
+        private void AddPool<TService, TImplementation, TProxy>(ImplementationType type, Action<ServicePoolOptions> options, Action<TService> instance)
+            where TService : class
+            where TImplementation : class, TService
+            where TProxy : class, IServiceProxy
+        {
+            ServicePool<TService, TImplementation, TProxy> pool = new ServicePool<TService, TImplementation, TProxy>(type, this, options, instance);
+            ServiceDescriptor descriptor = new ServiceDescriptor
+            {
+                IsPool = true,
+                ServiceType = typeof(TService),
+                ProxyType = typeof(TProxy),
                 ImplementationType = typeof(ServicePool<TService, TImplementation>),
                 Instance = pool,
                 Implementation = ImplementationType.Singleton
@@ -748,7 +846,6 @@ namespace Twino.Ioc
         {
             return Contains(typeof(T));
         }
-
         #endregion
     }
 }

@@ -83,10 +83,10 @@ namespace Playground
         static async Task Main(string[] args)
         {
             var container = new ServiceContainer();
-            container.AddTransient<IService1, Service1, Service1Proxy>();
-            container.AddTransient<IService2, Service2>();
-            container.AddTransient<IService3, Service3>();
-            var instance3 = await container.Get<IService3>();
+            container.AddSingleton<IService1, Service1, Service1Proxy>();
+            container.AddSingleton<IService2, Service2>();
+            container.AddSingleton<IService3, Service3>();
+            var instance3 = await container.Get<IService3>(container.CreateScope());
             Console.ReadLine();
         }
     }

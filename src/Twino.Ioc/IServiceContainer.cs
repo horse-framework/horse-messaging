@@ -210,6 +210,7 @@ namespace Twino.Ioc
         void AddTransientPool<TService>(Action<ServicePoolOptions> options, Action<TService> instance)
             where TService : class;
 
+
         /// <summary>
         /// Adds a scoped service pool to the container
         /// </summary>
@@ -217,6 +218,7 @@ namespace Twino.Ioc
         /// <param name="instance">After each instance is created, to do custom initialization, this method will be called.</param>
         void AddScopedPool<TService>(Action<ServicePoolOptions> options, Action<TService> instance)
             where TService : class;
+
 
         /// <summary>
         /// Adds a transient service pool to the container
@@ -226,11 +228,27 @@ namespace Twino.Ioc
             where TImplementation : class, TService;
 
         /// <summary>
+        /// Adds a transient service pool to the container
+        /// </summary>
+        void AddTransientPool<TService, TImplementation, TProxy>()
+            where TService : class
+            where TImplementation : class, TService
+            where TProxy : class, IServiceProxy;
+
+        /// <summary>
         /// Adds a scoped service pool to the container
         /// </summary>
         void AddScopedPool<TService, TImplementation>()
             where TService : class
             where TImplementation : class, TService;
+
+        /// <summary>
+        /// Adds a scoped service pool to the container
+        /// </summary>
+        void AddScopedPool<TService, TImplementation, TProxy>()
+            where TService : class
+            where TImplementation : class, TService
+            where TProxy : class, IServiceProxy;
 
         /// <summary>
         /// Adds a transient service pool to the container
@@ -241,12 +259,30 @@ namespace Twino.Ioc
             where TImplementation : class, TService;
 
         /// <summary>
+        /// Adds a transient service pool to the container
+        /// </summary>
+        /// <param name="options">Options function</param>
+        void AddTransientPool<TService, TImplementation, TProxy>(Action<ServicePoolOptions> options)
+            where TService : class
+            where TImplementation : class, TService
+            where TProxy : class, IServiceProxy;
+
+        /// <summary>
         /// Adds a scoped service pool to the container
         /// </summary>
         /// <param name="options">Options function</param>
         void AddScopedPool<TService, TImplementation>(Action<ServicePoolOptions> options)
             where TService : class
             where TImplementation : class, TService;
+
+        /// <summary>
+        /// Adds a scoped service pool to the container
+        /// </summary>
+        /// <param name="options">Options function</param>
+        void AddScopedPool<TService, TImplementation, TProxy>(Action<ServicePoolOptions> options)
+            where TService : class
+            where TImplementation : class, TService
+            where TProxy : class, IServiceProxy;
 
         /// <summary>
         /// Adds a transient service pool to the container
@@ -258,6 +294,16 @@ namespace Twino.Ioc
             where TImplementation : class, TService;
 
         /// <summary>
+        /// Adds a transient service pool to the container
+        /// </summary>
+        /// <param name="options">Options function</param>
+        /// <param name="instance">After each instance is created, to do custom initialization, this method will be called.</param>
+        void AddTransientPool<TService, TImplementation, TProxy>(Action<ServicePoolOptions> options, Action<TService> instance)
+            where TService : class
+            where TImplementation : class, TService
+            where TProxy : class, IServiceProxy;
+
+        /// <summary>
         /// Adds a scoped service pool to the container
         /// </summary>
         /// <param name="options">Options function</param>
@@ -265,6 +311,16 @@ namespace Twino.Ioc
         void AddScopedPool<TService, TImplementation>(Action<ServicePoolOptions> options, Action<TService> instance)
             where TService : class
             where TImplementation : class, TService;
+
+        /// <summary>
+        /// Adds a scoped service pool to the container
+        /// </summary>
+        /// <param name="options">Options function</param>
+        /// <param name="instance">After each instance is created, to do custom initialization, this method will be called.</param>
+        void AddScopedPool<TService, TImplementation, TProxy>(Action<ServicePoolOptions> options, Action<TService> instance)
+            where TService : class
+            where TImplementation : class, TService
+            where TProxy : class, IServiceProxy;
 
         #endregion
 
