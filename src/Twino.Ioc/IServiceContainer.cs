@@ -90,6 +90,13 @@ namespace Twino.Ioc
             where TService : class;
 
         /// <summary>
+        /// Adds a singleton service to container
+        /// </summary>
+        void AddSingleton<TService, TImplementation>(Action<TImplementation> afterCreated)
+            where TService : class
+            where TImplementation : class, TService;
+
+        /// <summary>
         /// Adds a singleton service to the container.
         /// Service will be created with first call.
         /// </summary>
@@ -249,6 +256,16 @@ namespace Twino.Ioc
         /// Gets descriptor of type
         /// </summary>
         ServiceDescriptor GetDescriptor(Type serviceType);
+
+        /// <summary>
+        /// Check service is in container.
+        /// </summary>
+        bool Contains(Type serviceType);
+
+        /// <summary>
+        /// Check service is in container.
+        /// </summary>
+        bool Contains<T>();
 
         #endregion
 

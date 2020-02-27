@@ -433,7 +433,6 @@ namespace Twino.Ioc
             return Task.FromResult(true);
         }
 
-
         private async Task<object> Get(ServiceDescriptor descriptor, IContainerScope scope = null)
         {
             if (descriptor.IsPool)
@@ -581,6 +580,25 @@ namespace Twino.Ioc
         {
             if (Items.ContainsKey(type))
                 Items.Remove(type);
+        }
+
+        #endregion
+
+        #region Helper
+        /// <summary>
+        /// Check service is in container.
+        /// </summary>
+        public bool Contains(Type serviceType)
+        {
+            return Items.ContainsKey(serviceType);
+        }
+
+        /// <summary>
+        /// Check service is in container.
+        /// </summary>
+        public bool Contains<T>()
+        {
+            return Contains(typeof(T));
         }
 
         #endregion
