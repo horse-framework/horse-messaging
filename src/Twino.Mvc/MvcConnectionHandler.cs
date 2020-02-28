@@ -279,7 +279,7 @@ namespace Twino.Mvc
         /// <summary>
         /// Creates parameter list and sets values for the specified request to the specified route.
         /// </summary>
-        private static List<ParameterValue> FillParameters(HttpRequest request, RouteMatch route)
+        internal static List<ParameterValue> FillParameters(HttpRequest request, RouteMatch route)
         {
             List<ParameterValue> values = new List<ParameterValue>();
             foreach (ActionParameter ap in route.Route.Parameters)

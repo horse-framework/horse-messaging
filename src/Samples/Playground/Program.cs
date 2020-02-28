@@ -17,19 +17,60 @@ namespace Playground
         public string Pass { get; set; }
     }
 
-    [Route("a")]
-    public class AController : TwinoController
+    public class User
     {
-        [HttpPost("b")]
-        public async Task<IActionResult> B([FromForm] Login login)
+        public string Name { get; set; }
+        public string Lastname { get; set; }
+    }
+
+    [Route("x")]
+    public class BController : TwinoController
+    {
+        [HttpGet("c/{?x}")]
+        public async Task<IActionResult> C(string x)
         {
-            return await StringAsync($"hello: {login.User} and {login.Pass}");
+            return await StringAsync("Xhello: " + x);
         }
 
-        [HttpGet("c")]
+        [HttpGet("")]
+        public async Task<IActionResult> B()
+        {
+            return await StringAsync("Xhello");
+        }
+
+        [HttpGet("d")]
+        public async Task<IActionResult> D()
+        {
+            return await StringAsync("Xhello D");
+        }
+    }
+
+
+    [Route("")]
+    public class AController : TwinoController
+    {
+        [HttpGet("c/{?x}")]
+        public async Task<IActionResult> C(string x)
+        {
+            return await StringAsync("hello: " + x);
+        }
+
+        [HttpGet("")]
         public async Task<IActionResult> B()
         {
             return await StringAsync("hello");
+        }
+
+        [HttpGet("d")]
+        public async Task<IActionResult> D()
+        {
+            return await StringAsync("hello D");
+        }
+
+        [HttpGet("e/{x}")]
+        public async Task<IActionResult> E(string x)
+        {
+            return await StringAsync("hello E: " + x);
         }
     }
 

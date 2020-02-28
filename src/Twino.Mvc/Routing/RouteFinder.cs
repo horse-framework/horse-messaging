@@ -58,7 +58,24 @@ namespace Twino.Mvc.Routing
             //for text parts, it should match
             if (leaf.Path.Type == RouteType.Text)
             {
-                bool matched = leaf.Path.Value.Equals(parts[index], StringComparison.InvariantCultureIgnoreCase);
+                if (string.IsNullOrEmpty(leaf.Path.Value))
+                {
+                    if (leaf.Route != null && leaf.Route.Method.Equals(method, StringComparison.InvariantCultureIgnoreCase))
+                        return leaf;
+
+                    foreach (RouteLeaf child in leaf.Children)
+                    {
+                        RouteLeaf rl = FindRouteInLeaf(child, method, parts, index);
+                        if (rl != null)
+                            return rl;
+                    }
+                }
+
+                bool matched = false;
+
+                if (index < parts.Length)
+                    matched = leaf.Path.Value.Equals(parts[index], StringComparison.InvariantCultureIgnoreCase);
+
                 if (!matched)
                     return null;
             }
@@ -106,9 +123,6 @@ namespace Twino.Mvc.Routing
                 }
             }
 
-            if (parts.Length < index + 2)
-                return null;
-
             int next = index + 1;
             foreach (RouteLeaf child in leaf.Children)
             {
@@ -128,7 +142,7 @@ namespace Twino.Mvc.Routing
             //split path to route parts
             string[] parts = request.Path.Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0)
-                parts = new[] { "" };
+                parts = new[] {""};
 
             RouteLeaf route = null;
             foreach (RouteLeaf leaf in routes)
@@ -167,7 +181,8 @@ namespace Twino.Mvc.Routing
                     match.Values.Add(path.Value, parts[route.Index]);
 
                 route = route.Parent;
-            } while (route != null);
+            }
+            while (route != null);
 
             return match;
         }

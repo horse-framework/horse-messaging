@@ -13,8 +13,9 @@ namespace Sample.Mvc.Controller
     {
         private IJwtProvider _jwtProvider;
 
-        public AuthController()
+        public AuthController(IJwtProvider jwtProvider)
         {
+            _jwtProvider = jwtProvider;
         }
 
         [HttpGet("login")]

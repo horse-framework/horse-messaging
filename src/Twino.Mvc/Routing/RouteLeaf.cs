@@ -48,7 +48,7 @@ namespace Twino.Mvc.Routing
             Path = path;
             Parent = parent;
 
-            if (parent != null)
+            if (parent != null && !string.IsNullOrEmpty(parent.Path.Value))
                 Index = parent.Index + 1;
         }
 
