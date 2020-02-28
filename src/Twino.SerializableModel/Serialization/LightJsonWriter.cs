@@ -1,6 +1,6 @@
+using Newtonsoft.Json;
 using System;
 using System.IO;
-using Newtonsoft.Json;
 
 namespace Twino.SerializableModel.Serialization
 {
@@ -10,9 +10,9 @@ namespace Twino.SerializableModel.Serialization
     /// </summary>
     public class LightJsonWriter : IDisposable
     {
-        
+
         #region Fields - Properties
-        
+
         /// <summary>
         /// Newtonsoft JSON text writer
         /// </summary>
@@ -24,9 +24,9 @@ namespace Twino.SerializableModel.Serialization
         private StringWriter _stringWriter;
 
         #endregion
-        
+
         #region Init - Dispose
-        
+
         /// <summary>
         /// Creates new light json writer
         /// </summary>
@@ -46,9 +46,9 @@ namespace Twino.SerializableModel.Serialization
         }
 
         #endregion
-        
+
         #region Write
-        
+
         /// <summary>
         /// Writes a start object token to JSON string.
         /// </summary>
@@ -56,7 +56,7 @@ namespace Twino.SerializableModel.Serialization
         {
             Writer.WriteStartObject();
         }
-        
+
         /// <summary>
         /// Writes two tokens to JSON. One for property name, other for value.
         /// </summary>
@@ -94,8 +94,8 @@ namespace Twino.SerializableModel.Serialization
 
             return GetResult();
         }
-        
+
         #endregion
-        
+
     }
 }

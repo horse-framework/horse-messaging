@@ -14,7 +14,7 @@ namespace Twino.Mvc.Routing
         /// eg: site.com/leaf-index-0/leaf-index-1/...
         /// </summary>
         public int Index { get; }
-        
+
         /// <summary>
         /// Path type and value for leaf
         /// </summary>

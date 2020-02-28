@@ -104,7 +104,7 @@ namespace Test.Ioc
 
             IFirstChildService first = await services.Get<IFirstChildService>();
             Assert.NotEqual(nest.Parent.First.Foo, first.Foo);
-            
+
             ISecondChildService second = await services.Get<ISecondChildService>();
             Assert.NotEqual(nest.Parent.Second.Foo, second.Foo);
 
@@ -121,7 +121,7 @@ namespace Test.Ioc
             n2.Parent.First.Foo = "first-2";
             n2.Parent.Second.Foo = "second-2";
             n2.Single.Foo = "single-2";
-            
+
             INestParentService n3 = await services.Get<INestParentService>(scope);
             Assert.NotEqual(n2.Foo, n3.Foo);
             Assert.NotEqual(n2.Single.Foo, n3.Single.Foo);

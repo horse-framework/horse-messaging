@@ -11,7 +11,7 @@ namespace Benchmark.Mvc.Json
         [HttpGet]
         public async Task<IActionResult> Get()
         {
-            return await JsonAsync(new {message = "Hello, World!"});
+            return await JsonAsync(new { message = "Hello, World!" });
         }
     }
 }

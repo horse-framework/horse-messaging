@@ -14,7 +14,7 @@ namespace Twino.MQ.Data
         /// Creates new backup file as copy of database file
         /// </summary>
         Copy,
-        
+
         /// <summary>
         /// Renames database file
         /// </summary>
@@ -35,12 +35,12 @@ namespace Twino.MQ.Data
         /// File stream object of the database file
         /// </summary>
         private FileStream _file;
-        
+
         /// <summary>
         /// File auto flush timer
         /// </summary>
         private Timer _flushTimer;
-        
+
         /// <summary>
         /// Database object
         /// </summary>

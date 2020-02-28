@@ -1,5 +1,4 @@
 using System.IO;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -162,7 +161,7 @@ namespace Twino.Protocols.TMQ
             MessageIdLength = string.IsNullOrEmpty(MessageId) ? 0 : Encoding.UTF8.GetByteCount(MessageId);
             SourceLength = string.IsNullOrEmpty(Source) ? 0 : Encoding.UTF8.GetByteCount(Source);
             TargetLength = string.IsNullOrEmpty(Target) ? 0 : Encoding.UTF8.GetByteCount(Target);
-            Length = Content != null ? (ulong) Content.Length : 0;
+            Length = Content != null ? (ulong)Content.Length : 0;
         }
 
         /// <summary>
@@ -185,7 +184,7 @@ namespace Twino.Protocols.TMQ
                 return;
 
             Content = new MemoryStream(Encoding.UTF8.GetBytes(content));
-            Length = Content != null ? (ulong) Content.Length : 0;
+            Length = Content != null ? (ulong)Content.Length : 0;
         }
 
         /// <summary>
@@ -195,7 +194,7 @@ namespace Twino.Protocols.TMQ
         {
             Content = new MemoryStream();
             await System.Text.Json.JsonSerializer.SerializeAsync(Content, value, value.GetType());
-            Length = Content != null ? (ulong) Content.Length : 0;
+            Length = Content != null ? (ulong)Content.Length : 0;
         }
 
         /// <summary>

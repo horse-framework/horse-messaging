@@ -89,7 +89,7 @@ namespace Test.Mq
             {
                 TmqMessage rmsg = m.CreateResponse();
                 rmsg.SetStringContent("Response!");
-                await ((TmqClient) c).SendAsync(rmsg);
+                await ((TmqClient)c).SendAsync(rmsg);
             };
 
             TmqMessage msg = new TmqMessage(MessageType.Client, "client-2");

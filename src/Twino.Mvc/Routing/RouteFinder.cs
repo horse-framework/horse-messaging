@@ -90,7 +90,7 @@ namespace Twino.Mvc.Routing
 
                         return null;
                     }
-                    
+
                     if (y.Path.Type != RouteType.OptionalParameter)
                         break;
 
@@ -101,7 +101,7 @@ namespace Twino.Mvc.Routing
 
                         break;
                     }
-                    
+
                     x = y;
                 }
             }
@@ -128,7 +128,7 @@ namespace Twino.Mvc.Routing
             //split path to route parts
             string[] parts = request.Path.Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0)
-                parts = new[] {""};
+                parts = new[] { "" };
 
             RouteLeaf route = null;
             foreach (RouteLeaf leaf in routes)

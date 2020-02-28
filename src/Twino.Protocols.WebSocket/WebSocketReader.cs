@@ -48,7 +48,7 @@ namespace Twino.Protocols.WebSocket
             if (code > 127)
                 code -= 128;
 
-            message.OpCode = (SocketOpCode) code;
+            message.OpCode = (SocketOpCode)code;
             if (message.OpCode == SocketOpCode.Terminate)
                 return null;
 
@@ -94,7 +94,7 @@ namespace Twino.Protocols.WebSocket
                 if (!done)
                     throw new SocketException();
 
-                return BitConverter.ToUInt16(new[] {sbytes[1], sbytes[0]}, 0);
+                return BitConverter.ToUInt16(new[] { sbytes[1], sbytes[0] }, 0);
             }
 
             //reads 9 (1 + long) bytes length
@@ -105,7 +105,7 @@ namespace Twino.Protocols.WebSocket
                 if (!done)
                     throw new SocketException();
 
-                return BitConverter.ToInt64(new[] {sbytes[7], sbytes[6], sbytes[5], sbytes[4], sbytes[3], sbytes[2], sbytes[1], sbytes[0]}, 0);
+                return BitConverter.ToInt64(new[] { sbytes[7], sbytes[6], sbytes[5], sbytes[4], sbytes[3], sbytes[2], sbytes[1], sbytes[0] }, 0);
             }
 
             return 0;
@@ -127,7 +127,7 @@ namespace Twino.Protocols.WebSocket
                 if (total + size > length)
                     size = (length - total);
 
-                int read = await stream.ReadAsync(_buffer, 0, (int) size);
+                int read = await stream.ReadAsync(_buffer, 0, (int)size);
                 if (read == 0)
                     return false;
 
@@ -135,7 +135,7 @@ namespace Twino.Protocols.WebSocket
 
                 if (message.Masking)
                     for (int i = 0; i < read; i++)
-                        _buffer[i] = (byte) (_buffer[i] ^ message.Mask[i % 4]);
+                        _buffer[i] = (byte)(_buffer[i] ^ message.Mask[i % 4]);
 
                 await message.Content.WriteAsync(_buffer, 0, read);
             } while (total < length);

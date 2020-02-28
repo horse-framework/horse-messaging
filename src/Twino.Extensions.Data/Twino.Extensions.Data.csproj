@@ -6,9 +6,9 @@
         <Product>Twino.Extensions.Data</Product>
         <Description>Entity Framework Core Data Context extension for Twino IOC</Description>
         <PackageTags>twino,entity,framework,data,context,factory,ioc,service</PackageTags>
-        <AssemblyVersion>2.7.10</AssemblyVersion>
-        <FileVersion>2.7.10</FileVersion>
-        <PackageVersion>2.7.10</PackageVersion>
+        <AssemblyVersion>2.7.12</AssemblyVersion>
+        <FileVersion>2.7.12</FileVersion>
+        <PackageVersion>2.7.12</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü</Authors>
         <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>

@@ -113,7 +113,7 @@ namespace Twino.Protocols.TMQ
             //if user makes a mistake in ready method, we should not interrupt connection handling
             try
             {
-                await _handler.Ready(_server, (TmqServerSocket) handshakeResult.Socket);
+                await _handler.Ready(_server, (TmqServerSocket)handshakeResult.Socket);
             }
             catch (Exception e)
             {
@@ -135,7 +135,7 @@ namespace Twino.Protocols.TMQ
                 if (message.Ttl < 0)
                     continue;
 
-                await ProcessMessage(info, message, (TmqServerSocket) handshakeResult.Socket);
+                await ProcessMessage(info, message, (TmqServerSocket)handshakeResult.Socket);
             }
         }
 

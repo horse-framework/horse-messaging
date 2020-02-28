@@ -1,11 +1,11 @@
-﻿using Twino.Server;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Core.Protocols;
 using Twino.Protocols.WebSocket;
+using Twino.Server;
 
 namespace Sample.WebSocket.Server
 {
@@ -51,16 +51,16 @@ namespace Sample.WebSocket.Server
         {
             ServerWsHandler handler = new ServerWsHandler();
             TwinoServer server = new TwinoServer(new ServerOptions
-                                                 {
-                                                     PingInterval = 15,
-                                                     Hosts = new List<HostOptions>
+            {
+                PingInterval = 15,
+                Hosts = new List<HostOptions>
                                                              {
                                                                  new HostOptions
                                                                  {
                                                                      Port = 83
                                                                  }
                                                              }
-                                                 });
+            });
             server.UseWebSockets(handler);
 
             server.Start();

@@ -1,8 +1,6 @@
-using System;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Queues;
-using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Delivery
 {
@@ -13,7 +11,7 @@ namespace Twino.MQ.Delivery
     /// This handler is called after acknowledge send operation.
     /// </summary>
     public delegate Task QueueAcknowledgeDeliveryHandler(QueueMessage message, MqClient producer, bool success);
-    
+
     /// <summary>
     /// Decision description for each step in message delivery
     /// </summary>
@@ -47,7 +45,7 @@ namespace Twino.MQ.Delivery
         /// If acknowledge is decided, this method will be called after acknowledge sent or failed
         /// </summary>
         public readonly QueueAcknowledgeDeliveryHandler AcknowledgeDelivery;
-        
+
         /// <summary>
         /// Creates new decision without keeping messages and acknowledge
         /// </summary>
@@ -83,7 +81,7 @@ namespace Twino.MQ.Delivery
             SendAcknowledge = sendAcknowledge;
             AcknowledgeDelivery = acknowledgeDelivery;
         }
-        
+
         /// <summary>
         /// Creates allow decision.
         /// Value does not save, keep and send acknowledge

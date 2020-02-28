@@ -1,5 +1,5 @@
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 using Twino.SerializableModel;
 
 namespace Test.SocketModels.Models

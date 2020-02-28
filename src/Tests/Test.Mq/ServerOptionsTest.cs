@@ -43,7 +43,7 @@ namespace Test.Mq
 
             Channel channel = server.Server.FindChannel("ch-1");
             Assert.NotNull(channel);
-            channel.Options.AllowedQueues = new[] {MessageA.ContentType, MessageB.ContentType, MessageC.ContentType};
+            channel.Options.AllowedQueues = new[] { MessageA.ContentType, MessageB.ContentType, MessageC.ContentType };
 
             ChannelQueue queue1 = await channel.CreateQueue(MessageB.ContentType);
             Assert.NotNull(queue1);

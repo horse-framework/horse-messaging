@@ -60,7 +60,7 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         private static async Task WriteFrame(MemoryStream ms, TmqMessage message)
         {
-            byte type = (byte) message.Type;
+            byte type = (byte)message.Type;
             if (message.FirstAcquirer)
                 type += 128;
             if (message.HighPriority)
@@ -68,7 +68,7 @@ namespace Twino.Protocols.TMQ
 
             ms.WriteByte(type);
 
-            byte ttl = (byte) message.Ttl;
+            byte ttl = (byte)message.Ttl;
             if (ttl > 63)
                 ttl = 63;
 
@@ -80,26 +80,26 @@ namespace Twino.Protocols.TMQ
 
             ms.WriteByte(ttl);
 
-            ms.WriteByte((byte) message.MessageIdLength);
-            ms.WriteByte((byte) message.SourceLength);
-            ms.WriteByte((byte) message.TargetLength);
+            ms.WriteByte((byte)message.MessageIdLength);
+            ms.WriteByte((byte)message.SourceLength);
+            ms.WriteByte((byte)message.TargetLength);
 
             await ms.WriteAsync(BitConverter.GetBytes(message.ContentType));
 
             if (message.Content != null && message.Length == 0)
-                message.Length = (ulong) message.Content.Length;
+                message.Length = (ulong)message.Content.Length;
 
             if (message.Length < 253)
-                ms.WriteByte((byte) message.Length);
+                ms.WriteByte((byte)message.Length);
             else if (message.Length <= ushort.MaxValue)
             {
                 ms.WriteByte(253);
-                await ms.WriteAsync(BitConverter.GetBytes((ushort) message.Length));
+                await ms.WriteAsync(BitConverter.GetBytes((ushort)message.Length));
             }
             else if (message.Length <= uint.MaxValue)
             {
                 ms.WriteByte(254);
-                await ms.WriteAsync(BitConverter.GetBytes((uint) message.Length));
+                await ms.WriteAsync(BitConverter.GetBytes((uint)message.Length));
             }
             else
             {

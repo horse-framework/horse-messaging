@@ -1,5 +1,5 @@
-using System;
 using Newtonsoft.Json;
+using System;
 
 namespace Twino.SerializableModel.Serialization
 {
@@ -8,7 +8,7 @@ namespace Twino.SerializableModel.Serialization
     /// </summary>
     public class TwinoModelReader : IModelReader
     {
-        
+
         private static TwinoModelReader _default;
 
         /// <summary>
@@ -24,7 +24,7 @@ namespace Twino.SerializableModel.Serialization
                 return _default;
             }
         }
-        
+
         /// <summary>
         /// Reads T model from serialized string message
         /// </summary>
@@ -51,12 +51,12 @@ namespace Twino.SerializableModel.Serialization
                 LightJsonReader reader = new LightJsonReader(body);
                 T model = new T();
 
-                IPerformanceCriticalModel pcm = (IPerformanceCriticalModel) model;
+                IPerformanceCriticalModel pcm = (IPerformanceCriticalModel)model;
 
                 reader.StartObject();
                 pcm.Deserialize(reader);
                 reader.EndObject();
-                
+
                 if (verify && model.Type != type)
                     return default;
 
@@ -96,8 +96,8 @@ namespace Twino.SerializableModel.Serialization
             if (critical)
             {
                 LightJsonReader reader = new LightJsonReader(body);
-                
-                model = (ISerializableModel) Activator.CreateInstance(type);
+
+                model = (ISerializableModel)Activator.CreateInstance(type);
                 IPerformanceCriticalModel pcm = (IPerformanceCriticalModel)model;
 
                 reader.StartObject();
@@ -107,7 +107,7 @@ namespace Twino.SerializableModel.Serialization
             else
             {
                 object result = JsonConvert.DeserializeObject(body, type);
-                model = (ISerializableModel) result;
+                model = (ISerializableModel)result;
             }
 
             if (model == null || verify && model.Type != mtype)

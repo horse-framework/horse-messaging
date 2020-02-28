@@ -1,11 +1,11 @@
 using System;
 using System.Net;
+using Test.Mvc.Models;
+using Twino.Mvc;
 using Twino.Mvc.Controllers;
 using Twino.Mvc.Controllers.Parameters;
 using Twino.Mvc.Filters.Route;
 using Twino.Mvc.Results;
-using Test.Mvc.Models;
-using Twino.Mvc;
 
 namespace Test.Mvc.Controllers
 {
@@ -15,7 +15,7 @@ namespace Test.Mvc.Controllers
         [HttpGet("get")]
         public IActionResult Get()
         {
-            return Json(new {Ok = true, Message = "Hello world", Code = 200});
+            return Json(new { Ok = true, Message = "Hello world", Code = 200 });
         }
 
         [HttpPost("login")]
@@ -25,9 +25,9 @@ namespace Test.Mvc.Controllers
                 return new StatusCodeResult(HttpStatusCode.BadRequest);
 
             if (model.Username == "root" && model.Password == "password")
-                return Json(new {Ok = true, Message = "Welcome", Code = 200});
+                return Json(new { Ok = true, Message = "Welcome", Code = 200 });
 
-            return Json(new {Ok = false, Message = "Unauthorized", Code = 401});
+            return Json(new { Ok = false, Message = "Unauthorized", Code = 401 });
         }
 
         [HttpPut("login-form")]

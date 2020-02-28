@@ -63,7 +63,7 @@ namespace Test.Ioc
             await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<IParentService>());
             await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<IFirstChildService>());
             await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<ISecondChildService>());
-            
+
             //another scope should not equal
             IContainerScope scope2 = services.CreateScope();
             IParentService p3 = await services.Get<IParentService>(scope2);

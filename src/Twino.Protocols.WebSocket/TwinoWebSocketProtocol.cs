@@ -94,7 +94,7 @@ namespace Twino.Protocols.WebSocket
             //if user makes a mistake in ready method, we should not interrupt connection handling
             try
             {
-                await _handler.Ready(_server, (WsServerSocket) handshakeResult.Socket);
+                await _handler.Ready(_server, (WsServerSocket)handshakeResult.Socket);
             }
             catch (Exception e)
             {
@@ -157,7 +157,7 @@ namespace Twino.Protocols.WebSocket
                     //if user makes a mistake in received method, we should not interrupt connection handling
                     try
                     {
-                        await _handler.Received(_server, info, (WsServerSocket) socket, message);
+                        await _handler.Received(_server, info, (WsServerSocket)socket, message);
                     }
                     catch (Exception e)
                     {

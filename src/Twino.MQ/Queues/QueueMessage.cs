@@ -55,7 +55,7 @@ namespace Twino.MQ.Queues
         /// Last decision for the message
         /// </summary>
         public Decision Decision { get; set; }
-        
+
         /// <summary>
         /// If true, message is in queue
         /// </summary>

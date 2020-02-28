@@ -106,10 +106,10 @@ namespace Test.Ioc
             IContainerScope scope2 = services.CreateScope();
             ISingleService s = await services.Get<ISingleService>(scope2);
             Assert.NotNull(s);
-            
+
             DateTime end = DateTime.UtcNow;
             TimeSpan time = end - start;
-            
+
             Assert.True(time > TimeSpan.FromMilliseconds(490));
             Assert.True(time < TimeSpan.FromMilliseconds(750));
         }

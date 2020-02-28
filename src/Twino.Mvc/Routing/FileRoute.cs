@@ -33,7 +33,7 @@ namespace Twino.Mvc.Routing
             VirtualPath = virtualPath.EndsWith('/') ? virtualPath : virtualPath + "/";
             PhysicalPaths = physicalPaths;
             Validation = validation;
-            
+
             for (int i = 0; i < PhysicalPaths.Length; i++)
             {
                 if (!PhysicalPaths[i].EndsWith('/'))

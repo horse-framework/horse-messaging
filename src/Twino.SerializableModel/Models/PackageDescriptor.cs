@@ -12,12 +12,12 @@ namespace Twino.SerializableModel.Models
         /// Package type code
         /// </summary>
         public int No { get; set; }
-        
+
         /// <summary>
         /// Package data type
         /// </summary>
         public Type Type { get; set; }
-        
+
         /// <summary>
         /// Actions of package received event
         /// </summary>

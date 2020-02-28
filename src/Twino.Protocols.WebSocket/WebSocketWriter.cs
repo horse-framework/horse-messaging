@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Twino.Core.Protocols;
 
 namespace Twino.Protocols.WebSocket
 {
@@ -17,10 +16,10 @@ namespace Twino.Protocols.WebSocket
         public async Task Write(WebSocketMessage value, Stream stream)
         {
             //fin and op code
-            stream.WriteByte(value.OpCode == SocketOpCode.Binary ? (byte) 0x82 : (byte) 0x81);
+            stream.WriteByte(value.OpCode == SocketOpCode.Binary ? (byte)0x82 : (byte)0x81);
 
             //length
-            await WriteLengthAsync(stream, (ulong) value.Content.Length);
+            await WriteLengthAsync(stream, (ulong)value.Content.Length);
             value.Content.WriteTo(stream);
         }
 
@@ -32,10 +31,10 @@ namespace Twino.Protocols.WebSocket
             await using MemoryStream ms = new MemoryStream();
 
             //fin and op code
-            ms.WriteByte(value.OpCode == SocketOpCode.Binary ? (byte) 0x82 : (byte) 0x81);
+            ms.WriteByte(value.OpCode == SocketOpCode.Binary ? (byte)0x82 : (byte)0x81);
 
             //length
-            await WriteLengthAsync(ms, (ulong) value.Content.Length);
+            await WriteLengthAsync(ms, (ulong)value.Content.Length);
 
             value.Content.WriteTo(ms);
             return ms.ToArray();
@@ -49,7 +48,7 @@ namespace Twino.Protocols.WebSocket
             await using MemoryStream ms = new MemoryStream();
             ms.WriteByte(0x81);
             byte[] bytes = Encoding.UTF8.GetBytes(message);
-            await WriteLengthAsync(ms, (ulong) bytes.Length);
+            await WriteLengthAsync(ms, (ulong)bytes.Length);
             await ms.WriteAsync(bytes);
             return ms.ToArray();
         }
@@ -62,10 +61,10 @@ namespace Twino.Protocols.WebSocket
             await using MemoryStream ms = new MemoryStream();
 
             //fin and op code
-            ms.WriteByte(value.OpCode == SocketOpCode.Binary ? (byte) 0x82 : (byte) 0x81);
+            ms.WriteByte(value.OpCode == SocketOpCode.Binary ? (byte)0x82 : (byte)0x81);
 
             //length
-            await WriteLengthAsync(ms, (ulong) value.Content.Length);
+            await WriteLengthAsync(ms, (ulong)value.Content.Length);
             return ms.ToArray();
         }
 
@@ -86,15 +85,15 @@ namespace Twino.Protocols.WebSocket
         {
             //1 byte length
             if (length < 126)
-                stream.WriteByte((byte) length);
+                stream.WriteByte((byte)length);
 
             //3 (1 + ushort) bytes length
             else if (length <= UInt16.MaxValue)
             {
                 stream.WriteByte(126);
-                ushort len = (ushort) length;
+                ushort len = (ushort)length;
                 byte[] lenbytes = BitConverter.GetBytes(len);
-                await stream.WriteAsync(new[] {lenbytes[1], lenbytes[0]}, 0, 2);
+                await stream.WriteAsync(new[] { lenbytes[1], lenbytes[0] }, 0, 2);
             }
 
             //9 (1 + ulong) bytes length
@@ -103,7 +102,7 @@ namespace Twino.Protocols.WebSocket
                 stream.WriteByte(127);
                 ulong len = length;
                 byte[] lb = BitConverter.GetBytes(len);
-                await stream.WriteAsync(new[] {lb[7], lb[6], lb[5], lb[4], lb[3], lb[2], lb[1], lb[0]}, 0, 8);
+                await stream.WriteAsync(new[] { lb[7], lb[6], lb[5], lb[4], lb[3], lb[2], lb[1], lb[0] }, 0, 8);
             }
         }
     }

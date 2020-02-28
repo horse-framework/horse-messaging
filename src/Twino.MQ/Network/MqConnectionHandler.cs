@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Core.Protocols;
@@ -113,7 +112,7 @@ namespace Twino.MQ.Network
         /// </summary>
         public async Task Disconnected(ITwinoServer server, TmqServerSocket client)
         {
-            MqClient mqClient = (MqClient) client;
+            MqClient mqClient = (MqClient)client;
             await _server.RemoveClient(mqClient);
             if (_server.ClientHandler != null)
                 await _server.ClientHandler.Disconnected(_server, mqClient);
@@ -128,7 +127,7 @@ namespace Twino.MQ.Network
         /// </summary>
         public async Task Received(ITwinoServer server, IConnectionInfo info, TmqServerSocket client, TmqMessage message)
         {
-            MqClient mc = (MqClient) client;
+            MqClient mc = (MqClient)client;
 
             //if client sends anonymous messages and server needs message id, generate new
             if (string.IsNullOrEmpty(message.MessageId))

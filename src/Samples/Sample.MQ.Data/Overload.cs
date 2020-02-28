@@ -21,15 +21,15 @@ namespace Sample.MQ.Data
         public async Task OverloadAsync()
         {
             Database db = new Database(new DatabaseOptions
-                                       {
-                                           Filename = "/home/mehmet/Desktop/tdb/test.tdb",
-                                           AutoShrink = true,
-                                           ShrinkInterval = TimeSpan.FromMilliseconds(15000),
-                                           AutoFlush = true,
-                                           InstantFlush = false,
-                                           FlushInterval = TimeSpan.FromMilliseconds(250),
-                                           CreateBackupOnShrink = true
-                                       });
+            {
+                Filename = "/home/mehmet/Desktop/tdb/test.tdb",
+                AutoShrink = true,
+                ShrinkInterval = TimeSpan.FromMilliseconds(15000),
+                AutoFlush = true,
+                InstantFlush = false,
+                FlushInterval = TimeSpan.FromMilliseconds(250),
+                CreateBackupOnShrink = true
+            });
 
             db.OnShrink += (database, info) =>
             {
@@ -119,15 +119,15 @@ namespace Sample.MQ.Data
             Console.WriteLine("items : " + items.Count);
 
             db = new Database(new DatabaseOptions
-                              {
-                                  Filename = "/home/mehmet/Desktop/tdb/test.tdb",
-                                  AutoShrink = false,
-                                  ShrinkInterval = TimeSpan.FromMilliseconds(3000),
-                                  AutoFlush = true,
-                                  InstantFlush = false,
-                                  FlushInterval = TimeSpan.FromMilliseconds(250),
-                                  CreateBackupOnShrink = true
-                              });
+            {
+                Filename = "/home/mehmet/Desktop/tdb/test.tdb",
+                AutoShrink = false,
+                ShrinkInterval = TimeSpan.FromMilliseconds(3000),
+                AutoFlush = true,
+                InstantFlush = false,
+                FlushInterval = TimeSpan.FromMilliseconds(250),
+                CreateBackupOnShrink = true
+            });
 
             Stopwatch sw2 = new Stopwatch();
             sw2.Start();

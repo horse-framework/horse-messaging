@@ -9,12 +9,12 @@ namespace Twino.Server
         /// Server Listening port number
         /// </summary>
         public int Port { get; set; }
-        
+
         /// <summary>
         /// Accepted hostnames. Set null if all hostnames are accepted.
         /// </summary>
         public string[] Hostnames { get; set; }
-        
+
         /// <summary>
         /// If true, SSL is enabled and server handshakes with clients
         /// </summary>

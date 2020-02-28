@@ -210,7 +210,7 @@ namespace Test.Mq
 
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
-            
+
             queue.Options.SendOnlyFirstAcquirer = true;
 
             bool[] received = new bool[3];
@@ -266,7 +266,7 @@ namespace Test.Mq
 
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
-            
+
             queue.Options.SendOnlyFirstAcquirer = true;
             await queue.SetStatus(QueueStatus.Push);
 
@@ -382,7 +382,7 @@ namespace Test.Mq
 
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
-            
+
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
@@ -431,7 +431,7 @@ namespace Test.Mq
 
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
-            
+
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
@@ -490,7 +490,7 @@ namespace Test.Mq
 
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
-            
+
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
             await queue.SetStatus(QueueStatus.Push);
@@ -537,7 +537,7 @@ namespace Test.Mq
 
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
-            
+
             queue.Options.Status = QueueStatus.Push;
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
@@ -587,7 +587,7 @@ namespace Test.Mq
 
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
-            
+
             queue.Options.Status = QueueStatus.Push;
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
@@ -641,7 +641,7 @@ namespace Test.Mq
             Assert.NotNull(channel);
             ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
             Assert.NotNull(queue);
-            
+
             queue.Options.HideClientNames = enabled;
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
@@ -705,11 +705,11 @@ namespace Test.Mq
             server.Initialize(42599);
             server.Start();
             server.SendAcknowledgeFromMQ = true;
-            
+
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:42599");
             Assert.True(client.IsConnected);
-            
+
             bool ack = await client.Push("ch-route", MessageA.ContentType, "Hello", true);
             Assert.True(ack);
         }

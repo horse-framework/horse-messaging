@@ -58,11 +58,11 @@ namespace Twino.SerializableModel
             else
             {
                 PackageDescriptor descriptor = new PackageDescriptor
-                                               {
-                                                   No = type,
-                                                   Type = typeof(TModel),
-                                                   Actions = new List<Delegate>()
-                                               };
+                {
+                    No = type,
+                    Type = typeof(TModel),
+                    Actions = new List<Delegate>()
+                };
 
                 descriptor.Actions.Add(func);
                 _descriptors.Add(type, descriptor);

@@ -22,7 +22,7 @@ namespace Twino.MQ
 
             if (mqServer.NodeServer != null)
                 mqServer.NodeServer.SubscribeStartStop(server);
-            
+
             return server;
         }
     }

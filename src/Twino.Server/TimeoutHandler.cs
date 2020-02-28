@@ -14,7 +14,7 @@ namespace Twino.Server
         /// newly connected clients. created for optimizing (to not lock real collection)
         /// </summary>
         private readonly List<ConnectionInfo> _incoming = new List<ConnectionInfo>();
-        
+
         /// <summary>
         /// active tcp clients that are checked if they are timed out
         /// </summary>
@@ -24,12 +24,12 @@ namespace Twino.Server
         /// timeout timer
         /// </summary>
         private ThreadTimer _timer;
-        
+
         /// <summary>
         /// clients' timeout total milliseconds
         /// </summary>
         private readonly int _timeoutMilliseconds;
-        
+
         /// <summary>
         /// timer interval
         /// </summary>

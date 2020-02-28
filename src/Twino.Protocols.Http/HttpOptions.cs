@@ -1,6 +1,6 @@
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json.Linq;
 
 namespace Twino.Protocols.Http
 {
@@ -36,10 +36,10 @@ namespace Twino.Protocols.Http
         public static HttpOptions CreateDefault()
         {
             return new HttpOptions
-                   {
-                       HttpConnectionTimeMax = 300,
-                       MaximumRequestLength = 1024 * 100
-                   };
+            {
+                HttpConnectionTimeMax = 300,
+                MaximumRequestLength = 1024 * 100
+            };
         }
 
         /// <summary>

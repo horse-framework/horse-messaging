@@ -11,7 +11,7 @@ namespace Twino.Ioc.Pool
         /// Pool instance implementation type
         /// </summary>
         ImplementationType Type { get; }
-        
+
         /// <summary>
         /// Gets and locks a service instance.
         /// Return type should be PoolServiceDescriptor with generic TService template 

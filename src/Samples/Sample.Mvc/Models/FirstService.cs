@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Sample.Mvc.Models
+﻿namespace Sample.Mvc.Models
 {
     public class FirstService : IFirstService
     {
