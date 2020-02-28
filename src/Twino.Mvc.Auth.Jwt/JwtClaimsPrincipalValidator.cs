@@ -1,7 +1,7 @@
-﻿using System;
+﻿using Microsoft.IdentityModel.Tokens;
+using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using Microsoft.IdentityModel.Tokens;
 using Twino.Protocols.Http;
 
 namespace Twino.Mvc.Auth.Jwt
@@ -66,14 +66,14 @@ namespace Twino.Mvc.Auth.Jwt
 
             JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
             TokenValidationParameters validationParameters = new TokenValidationParameters
-                                                             {
-                                                                 ValidateLifetime = Options.ValidateLifetime,
-                                                                 ValidateAudience = Options.ValidateAudience,
-                                                                 ValidateIssuer = Options.ValidateIssuer,
-                                                                 ValidIssuer = Options.Issuer,
-                                                                 ValidAudience = Options.Audience,
-                                                                 IssuerSigningKey = Options.SigningKey
-                                                             };
+            {
+                ValidateLifetime = Options.ValidateLifetime,
+                ValidateAudience = Options.ValidateAudience,
+                ValidateIssuer = Options.ValidateIssuer,
+                ValidIssuer = Options.Issuer,
+                ValidAudience = Options.Audience,
+                IssuerSigningKey = Options.SigningKey
+            };
 
             ClaimsPrincipal principal = tokenHandler.ValidateToken(value, validationParameters, out validatedToken);
             return principal;

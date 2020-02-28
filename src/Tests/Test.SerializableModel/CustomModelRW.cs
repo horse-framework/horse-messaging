@@ -33,7 +33,7 @@ namespace Test.SocketModels
         {
             string serialized = "123={\"type\":123,\"name\":\"Default\",\"number\":500}";
 
-            DefaultModel model = (DefaultModel) _reader.Read(typeof(DefaultModel), serialized);
+            DefaultModel model = (DefaultModel)_reader.Read(typeof(DefaultModel), serialized);
             DefaultModel gmodel = _reader.Read<DefaultModel>(serialized);
 
             Assert.Equal(123, model.Type);
@@ -56,7 +56,7 @@ namespace Test.SocketModels
 
             string serialized = _writer.Serialize(smodel);
 
-            DefaultModel model = (DefaultModel) _reader.Read(typeof(DefaultModel), serialized);
+            DefaultModel model = (DefaultModel)_reader.Read(typeof(DefaultModel), serialized);
             DefaultModel gmodel = _reader.Read<DefaultModel>(serialized);
 
             Assert.Equal(123, model.Type);

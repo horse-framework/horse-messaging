@@ -67,7 +67,7 @@ namespace Test.Mq
             Assert.NotNull(channel);
             Assert.NotNull(queue);
             Assert.Single(queue.RegularMessages);
-            
+
             bool msgReceived = false;
             TmqClient consumer = new TmqClient();
             consumer.ClientId = "consumer";

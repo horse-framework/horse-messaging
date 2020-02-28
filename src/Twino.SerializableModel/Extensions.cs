@@ -30,10 +30,10 @@ namespace Twino.SerializableModel
         public static void Send<TModel>(this SocketBase socket, TModel model, IModelWriter writer) where TModel : ISerializableModel
         {
             WebSocketMessage message = new WebSocketMessage
-                                       {
-                                           OpCode = SocketOpCode.UTF8,
-                                           Content = new MemoryStream(Encoding.UTF8.GetBytes(writer.Serialize(model)))
-                                       };
+            {
+                OpCode = SocketOpCode.UTF8,
+                Content = new MemoryStream(Encoding.UTF8.GetBytes(writer.Serialize(model)))
+            };
 
             socket.Send(_writer.Create(message).Result);
         }
@@ -54,10 +54,10 @@ namespace Twino.SerializableModel
         public static async Task SendAsync<TModel>(this SocketBase socket, TModel model, IModelWriter writer) where TModel : ISerializableModel
         {
             WebSocketMessage message = new WebSocketMessage
-                                       {
-                                           OpCode = SocketOpCode.UTF8,
-                                           Content = new MemoryStream(Encoding.UTF8.GetBytes(writer.Serialize(model)))
-                                       };
+            {
+                OpCode = SocketOpCode.UTF8,
+                Content = new MemoryStream(Encoding.UTF8.GetBytes(writer.Serialize(model)))
+            };
 
             await socket.SendAsync(await _writer.Create(message));
         }
@@ -69,10 +69,10 @@ namespace Twino.SerializableModel
         public static byte[] ToWebSocketUTF8Data(this ISerializableModel model)
         {
             WebSocketMessage message = new WebSocketMessage
-                                       {
-                                           OpCode = SocketOpCode.UTF8,
-                                           Content = new MemoryStream(Encoding.UTF8.GetBytes(_twriter.Serialize(model)))
-                                       };
+            {
+                OpCode = SocketOpCode.UTF8,
+                Content = new MemoryStream(Encoding.UTF8.GetBytes(_twriter.Serialize(model)))
+            };
 
             return _writer.Create(message).Result;
         }
@@ -84,10 +84,10 @@ namespace Twino.SerializableModel
         public static async Task<byte[]> ToWebSocketUTF8DataAsync(this ISerializableModel model)
         {
             WebSocketMessage message = new WebSocketMessage
-                                       {
-                                           OpCode = SocketOpCode.UTF8,
-                                           Content = new MemoryStream(Encoding.UTF8.GetBytes(_twriter.Serialize(model)))
-                                       };
+            {
+                OpCode = SocketOpCode.UTF8,
+                Content = new MemoryStream(Encoding.UTF8.GetBytes(_twriter.Serialize(model)))
+            };
 
             return await _writer.Create(message);
         }

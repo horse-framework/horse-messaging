@@ -44,7 +44,7 @@ namespace Twino.Protocols.Http
         /// If request needs to switch protocol, this value is the requested protocol name
         /// </summary>
         public string Upgrade { get; internal set; }
-        
+
         /// <summary>
         /// For web socket requests, includes key for websocket client. Otherwise it's null
         /// </summary>

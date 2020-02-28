@@ -49,7 +49,7 @@ namespace Twino.Client.TMQ.Connectors
             base.ClientMessageReceived(client, payload);
 
             if (_reader != null)
-                _reader.Read((TmqClient) client, payload);
+                _reader.Read((TmqClient)client, payload);
         }
 
         /// <summary>

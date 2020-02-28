@@ -84,7 +84,7 @@ namespace Twino.Protocols.Http
         {
             return encoding switch
             {
-                ContentEncodings.Brotli => (Stream) new BrotliStream(parent, CompressionMode.Compress),
+                ContentEncodings.Brotli => (Stream)new BrotliStream(parent, CompressionMode.Compress),
                 ContentEncodings.Deflate => new DeflateStream(parent, CompressionMode.Compress),
                 ContentEncodings.Gzip => new GZipStream(parent, CompressionMode.Compress),
                 _ => null

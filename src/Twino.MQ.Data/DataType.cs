@@ -11,13 +11,13 @@ namespace Twino.MQ.Data
         /// That means, the allocated content will be removed in next shrink.
         /// </summary>
         Empty = 0x00,
-        
+
         /// <summary>
         /// Inserted message data.
         /// This type tells the data is stored and will be.
         /// </summary>
         Insert = 0x10,
-        
+
         /// <summary>
         /// A delete record for a data.
         /// In next shrink, data itself will be found by that delete data and it will be removed.

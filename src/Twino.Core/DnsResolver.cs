@@ -90,12 +90,12 @@ namespace Twino.Core
                         info.Protocol = Protocol.WebSocket;
                         info.SSL = true;
                         break;
-                    
+
                     case "tmq":
                         info.Protocol = Protocol.Tmq;
                         info.SSL = false;
                         break;
-                    
+
                     case "tmqs":
                         info.Protocol = Protocol.Tmq;
                         info.SSL = true;

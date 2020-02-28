@@ -1,13 +1,12 @@
-﻿using Twino.Mvc;
-using Twino.Mvc.Auth;
-using Twino.Mvc.Auth.Jwt;
-using Twino.Mvc.Middlewares;
-using Sample.Mvc.Models;
+﻿using Sample.Mvc.Models;
 using System;
 using System.Net;
 using System.Threading.Tasks;
-using Twino.Core;
 using Twino.Extensions.Http;
+using Twino.Mvc;
+using Twino.Mvc.Auth;
+using Twino.Mvc.Auth.Jwt;
+using Twino.Mvc.Middlewares;
 using Twino.Mvc.Results;
 using Twino.Protocols.Http;
 using Twino.Server;
@@ -59,7 +58,7 @@ namespace Sample.Mvc
                 twino.Policies.Add(Policy.Custom("Custom", (d, c) => true));
                 twino.Services.AddHttpClient();
 
-                twino.StatusCodeResults.Add(HttpStatusCode.Unauthorized, new JsonResult(new {Message = "Access denied"}));
+                twino.StatusCodeResults.Add(HttpStatusCode.Unauthorized, new JsonResult(new { Message = "Access denied" }));
             });
 
             CorsMiddleware cors = new CorsMiddleware();

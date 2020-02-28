@@ -13,7 +13,7 @@ namespace Twino.Client.TMQ.Connectors
     public class TmqSingleMessageConnector : SingleMessageConnector<TmqClient, TmqMessage>
     {
         private MessageReader _reader;
-        
+
         /// <summary>
         /// Default TMQ Message reader for connector
         /// </summary>
@@ -48,7 +48,7 @@ namespace Twino.Client.TMQ.Connectors
             base.ClientMessageReceived(client, payload);
 
             if (_reader != null)
-                _reader.Read((TmqClient) client, payload);
+                _reader.Read((TmqClient)client, payload);
         }
 
         /// <summary>

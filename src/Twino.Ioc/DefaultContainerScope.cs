@@ -78,6 +78,12 @@ namespace Twino.Ioc
             if (descriptor.AfterCreatedMethod != null)
                 descriptor.AfterCreatedMethod.DynamicInvoke(instance);
 
+            if (descriptor.ProxyType != null)
+            {
+                IServiceProxy p = (IServiceProxy) await services.CreateInstance(descriptor.ProxyType, this);
+                return p.Proxy(instance);
+            }
+
             return instance;
         }
 

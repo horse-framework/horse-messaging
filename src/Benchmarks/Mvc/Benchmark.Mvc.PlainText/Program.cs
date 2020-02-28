@@ -1,5 +1,4 @@
 ﻿using Twino.Mvc;
-using Twino.Protocols.Http;
 using Twino.Server;
 
 namespace Benchmark.Mvc.PlainText

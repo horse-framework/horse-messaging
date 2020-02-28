@@ -16,12 +16,12 @@ namespace Twino.MQ.Data
         /// If true, database file will be shrunken automatically in ShrinkInterval interval
         /// </summary>
         public bool AutoShrink { get; set; }
-        
+
         /// <summary>
         /// If AutoShrink is enabled, auto shrink interval duration.
         /// </summary>
         public TimeSpan ShrinkInterval { get; set; }
-        
+
         /// <summary>
         /// If true, backup file will be created after each shrink.
         /// </summary>
@@ -32,12 +32,12 @@ namespace Twino.MQ.Data
         /// This may hurt performance but guarantees flush.
         /// </summary>
         public bool InstantFlush { get; set; }
-        
+
         /// <summary>
         /// If true, database file will be flushed in a period if it's necessary.
         /// </summary>
         public bool AutoFlush { get; set; }
-        
+
         /// <summary>
         /// If AutoFlush is true, database file stream flush interval duration.
         /// </summary>

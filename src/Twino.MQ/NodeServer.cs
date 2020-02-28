@@ -151,11 +151,11 @@ namespace Twino.MQ
                 return;
 
             _nodeServer = new TwinoServer(new ServerOptions
-                                          {
-                                              Hosts = new List<HostOptions> {Server.Options.NodeHost},
-                                              PingInterval = 15,
-                                              RequestTimeout = 15
-                                          });
+            {
+                Hosts = new List<HostOptions> { Server.Options.NodeHost },
+                PingInterval = 15,
+                RequestTimeout = 15
+            });
 
             _nodeServer.Start();
         }

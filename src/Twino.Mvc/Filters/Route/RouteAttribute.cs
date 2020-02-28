@@ -21,7 +21,7 @@ namespace Twino.Mvc.Filters.Route
         {
             Pattern = "[controller]";
         }
-        
+
         /// <summary>
         /// Creates new route attribute with specified pattern
         /// </summary>

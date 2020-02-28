@@ -134,12 +134,12 @@ namespace Twino.Client.Connectors
         private void AddFailedMessage(byte[] preparedData)
         {
             FailedMessage message = new FailedMessage
-                                    {
-                                        Created = DateTime.UtcNow,
-                                        Data = preparedData,
-                                        Sent = false,
-                                        TryCount = 1
-                                    };
+            {
+                Created = DateTime.UtcNow,
+                Data = preparedData,
+                Sent = false,
+                TryCount = 1
+            };
 
             lock (_failedMessages)
                 _failedMessages.Add(message);

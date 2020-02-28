@@ -1,6 +1,6 @@
+using Sample.Mq.Models;
 using System;
 using System.Threading;
-using Sample.Mq.Models;
 using Twino.Client.TMQ;
 using Twino.Client.TMQ.Connectors;
 using Twino.Core;
@@ -59,7 +59,7 @@ namespace Sample.Mq
         {
             Console.WriteLine("consumer connection established");
 
-            TmqClient tc = (TmqClient) client;
+            TmqClient tc = (TmqClient)client;
             tc.AutoAcknowledge = true;
 
             tc.Join("AckChannel", false);

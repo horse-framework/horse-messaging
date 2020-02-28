@@ -31,6 +31,6 @@ namespace Twino.SerializableModel.Serialization
         /// Reads only model type from serialized message
         /// </summary>
         int ReadType(string serialized);
-        
+
     }
 }

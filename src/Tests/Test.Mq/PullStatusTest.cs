@@ -42,7 +42,7 @@ namespace Test.Mq
 
             TmqMessage pull1 = await consumer.Pull("ch-pull", MessageA.ContentType);
             Assert.NotNull(pull1);
-            
+
             TmqMessage pull2 = await consumer.Pull("ch-pull", MessageA.ContentType);
             Assert.Null(pull2);
         }
@@ -54,7 +54,7 @@ namespace Test.Mq
             TestMqServer server = new TestMqServer();
             server.Initialize(port);
             server.Start(300, 300);
-            
+
             Channel channel = server.Server.FindChannel("ch-pull");
             ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
             Assert.NotNull(channel);
@@ -65,10 +65,10 @@ namespace Test.Mq
             TmqClient consumer = new TmqClient();
             consumer.AutoAcknowledge = true;
             consumer.ClientId = "consumer";
-            
+
             await consumer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
-            
+
             bool msgReceived = false;
             consumer.MessageReceived += (c, m) => msgReceived = true;
             TmqResponseCode joined = await consumer.Join("ch-pull", true);

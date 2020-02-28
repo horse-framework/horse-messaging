@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,10 +23,10 @@ namespace Sample.Mvc.Controller
         public IActionResult File()
         {
             FileStream fs = new FileStream("/home/mehmet/Desktop/twino/kmöğx.pdf", FileMode.Open, FileAccess.Read);
-            FileResult file = new FileResult(fs,"kmöğx.pdf");
+            FileResult file = new FileResult(fs, "kmöğx.pdf");
             return file;
         }
-        
+
         [HttpGet("geta/{?id}")]
         public async Task<IActionResult> GetA([FromRoute] int? id)
         {
@@ -76,9 +75,9 @@ namespace Sample.Mvc.Controller
         public async Task<IActionResult> Get2()
         {
             return await JsonAsync(new
-                                   {
-                                       Message = "Hello World 2: "
-                                   });
+            {
+                Message = "Hello World 2: "
+            });
         }
 
         [HttpGet("optional/{?num}")]

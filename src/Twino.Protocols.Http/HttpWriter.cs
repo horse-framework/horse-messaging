@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Twino.Core.Protocols;
 using Twino.Server.Http;
 
 namespace Twino.Protocols.Http

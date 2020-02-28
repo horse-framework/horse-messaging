@@ -9,7 +9,7 @@ namespace Twino.Client.TMQ
         /// Unknown failed response
         /// </summary>
         Unknown = 0,
-        
+
         /// <summary>
         /// Operation succeeded
         /// </summary>
@@ -54,7 +54,7 @@ namespace Twino.Client.TMQ
         /// Target is busy to complete the process
         /// </summary>
         Busy = 503,
-        
+
         /// <summary>
         /// Message could not be sent to the server
         /// </summary>

@@ -146,7 +146,7 @@ namespace Twino.Mvc.Results
         {
             StatusCodeResult result = new StatusCodeResult(HttpStatusCode.MovedPermanently);
             result.Headers.Add(HttpHeaders.LOCATION, location);
-            
+
             result.Stream = new MemoryStream(Encoding.UTF8.GetBytes("<html><head><title>Moved</title></head><body><div>Page moved to <a href=\"" +
                                                                     location +
                                                                     "\">here</a></div></body></html>"));
@@ -168,7 +168,7 @@ namespace Twino.Mvc.Results
         {
             StatusCodeResult result = new StatusCodeResult(HttpStatusCode.Found);
             result.Headers.Add(HttpHeaders.LOCATION, location);
-            
+
             result.Stream = new MemoryStream(Encoding.UTF8.GetBytes("<html><head><title>Moved</title></head><body><div>Page moved to <a href=\"" +
                                                                     location +
                                                                     "\">here</a></div></body></html>"));
@@ -191,7 +191,7 @@ namespace Twino.Mvc.Results
         {
             StatusCodeResult result = new StatusCodeResult(HttpStatusCode.Redirect);
             result.Headers.Add(HttpHeaders.LOCATION, location);
-            
+
             result.Stream = new MemoryStream(Encoding.UTF8.GetBytes("<html><head><title>Moved</title></head><body><div>Page moved to <a href=\"" +
                                                                     location +
                                                                     "\">here</a></div></body></html>"));

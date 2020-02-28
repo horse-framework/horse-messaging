@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Test.Mq.Internal;
 using Twino.Client.TMQ;
 using Twino.Client.WebSocket;
-using Twino.Protocols.Http;
 using Twino.Protocols.TMQ;
 using Xunit;
 
