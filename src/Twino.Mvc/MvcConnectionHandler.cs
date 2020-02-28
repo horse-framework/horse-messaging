@@ -52,7 +52,7 @@ namespace Twino.Mvc
         /// </summary>
         public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
-            return await Task.FromResult((SocketBase)null);
+            return await Task.FromResult((SocketBase) null);
         }
 
         /// <summary>
@@ -157,13 +157,13 @@ namespace Twino.Mvc
                 user = Mvc.ClaimsPrincipalValidator.Get(request);
 
             FilterContext context = new FilterContext
-            {
-                Server = server,
-                Request = request,
-                Response = response,
-                Result = null,
-                User = user
-            };
+                                    {
+                                        Server = server,
+                                        Request = request,
+                                        Response = response,
+                                        Result = null,
+                                        User = user
+                                    };
 
             if (!CheckControllerAuthority(match, context, response))
                 return;
@@ -185,11 +185,11 @@ namespace Twino.Mvc
 
             //fill action descriptor
             ActionDescriptor descriptor = new ActionDescriptor
-            {
-                Controller = controller,
-                Action = match.Route.ActionType,
-                Parameters = FillParameters(request, match)
-            };
+                                          {
+                                              Controller = controller,
+                                              Action = match.Route.ActionType,
+                                              Parameters = FillParameters(request, match)
+                                          };
 
             if (!CheckActionAuthority(match, context, response, descriptor))
                 return;
@@ -211,7 +211,7 @@ namespace Twino.Mvc
         {
             if (match.Route.IsAsyncMethod)
             {
-                Task<IActionResult> task = (Task<IActionResult>)match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray());
+                Task<IActionResult> task = (Task<IActionResult>) match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray());
                 await task;
                 await CompleteActionExecution(match, context, response, controller, descriptor, task.Result);
             }
@@ -222,7 +222,7 @@ namespace Twino.Mvc
                 {
                     try
                     {
-                        IActionResult ar = (IActionResult)match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray());
+                        IActionResult ar = (IActionResult) match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray());
                         await CompleteActionExecution(match, context, response, controller, descriptor, ar);
                         source.SetResult(true);
                     }
@@ -279,91 +279,108 @@ namespace Twino.Mvc
         /// <summary>
         /// Creates parameter list and sets values for the specified request to the specified route.
         /// </summary>
-        private static List<ParameterValue> FillParameters(HttpRequest request, RouteMatch route)
+        internal static List<ParameterValue> FillParameters(HttpRequest request, RouteMatch route)
         {
             List<ParameterValue> values = new List<ParameterValue>();
             foreach (ActionParameter ap in route.Route.Parameters)
             {
-                object value = null;
+                ParameterValue paramValue = new ParameterValue
+                                            {
+                                                Name = ap.ParameterName,
+                                                Type = ap.ParameterType,
+                                                Source = ap.Source
+                                            };
 
                 //by source find the value of the parameter and set it to "value" local variable
                 switch (ap.Source)
                 {
                     case ParameterSource.None:
                     case ParameterSource.Route:
-                        value = route.Values[ap.FromName];
+                        paramValue.Value = ChangeType(route.Values[ap.FromName], ap.ParameterType, ap.Nullable);
                         break;
 
                     case ParameterSource.Body:
+                    {
+                        string content = Encoding.UTF8.GetString(request.ContentStream.ToArray());
+                        if (ap.FromName == "json")
+                            paramValue.Value = Newtonsoft.Json.JsonConvert.DeserializeObject(content, ap.ParameterType);
+                        else if (ap.FromName == "xml")
                         {
-                            string content = Encoding.UTF8.GetString(request.ContentStream.ToArray());
-                            if (ap.FromName == "json")
-                                value = Newtonsoft.Json.JsonConvert.DeserializeObject(content, ap.ParameterType);
-                            else if (ap.FromName == "xml")
-                            {
-                                using MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(content));
-                                XmlSerializer serializer = new XmlSerializer(ap.ParameterType);
-                                value = serializer.Deserialize(ms);
-                            }
-
-                            break;
+                            using MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(content));
+                            XmlSerializer serializer = new XmlSerializer(ap.ParameterType);
+                            paramValue.Value = serializer.Deserialize(ms);
                         }
 
+                        break;
+                    }
+
                     case ParameterSource.Form:
-                        if (request.Form.ContainsKey(ap.FromName))
-                            value = request.Form[ap.FromName];
+                        if (ap.IsClass)
+                        {
+                            object obj = Activator.CreateInstance(ap.ParameterType);
+                            string start = $"{ap.FromName}.";
+                            var props = request.Form.Where(x => x.Key.StartsWith(start, StringComparison.InvariantCultureIgnoreCase));
+                            foreach (var kv in props)
+                            {
+                                string propName = kv.Key.Substring(start.Length);
+                                PropertyInfo propInfo;
+                                ap.ClassProperties.TryGetValue(propName, out propInfo);
+                                if (propInfo != null)
+                                    propInfo.SetValue(obj, ChangeType(kv.Value, propInfo.PropertyType, Nullable.GetUnderlyingType(propInfo.PropertyType) != null));
+                            }
+
+                            paramValue.Value = obj;
+                        }
+                        else if (request.Form.ContainsKey(ap.FromName))
+                            paramValue.Value = ChangeType(request.Form[ap.FromName], ap.ParameterType, ap.Nullable);
+
                         break;
 
                     case ParameterSource.QueryString:
                         if (request.QueryString.ContainsKey(ap.FromName))
-                            value = request.QueryString[ap.FromName];
+                            paramValue.Value = ChangeType(request.QueryString[ap.FromName], ap.ParameterType, ap.Nullable);
                         break;
 
                     case ParameterSource.Header:
                         if (request.Headers.ContainsKey(ap.FromName))
-                            value = request.Headers[ap.FromName];
+                            paramValue.Value = ChangeType(request.Headers[ap.FromName], ap.ParameterType, ap.Nullable);
                         break;
                 }
 
-                //the value must be cast to the specified parameter type.
-                //object boxing may be misleading.
-                //when the parameter type of the method is integer, value could be boxed "3" string.
-                object casted;
-
-                //if the value is null, parameter may be missing
-                if (value == null)
-                    casted = null;
-
-                //if the value and parameter types same, do nothing
-                else if (value.GetType() == ap.ParameterType)
-                    casted = value;
-
-                //need casting. parameter and value types are different
-                else
-                {
-                    //for nullable types, we need extra check (because we need to cast underlying type)
-                    if (ap.Nullable)
-                    {
-                        Type nullable = Nullable.GetUnderlyingType(ap.ParameterType);
-                        casted = Convert.ChangeType(value, nullable);
-                    }
-
-                    //directly cast
-                    else
-                        casted = Convert.ChangeType(value, ap.ParameterType);
-                }
-
                 //return value
-                values.Add(new ParameterValue
-                {
-                    Name = ap.ParameterName,
-                    Type = ap.ParameterType,
-                    Source = ap.Source,
-                    Value = casted
-                });
+                values.Add(paramValue);
             }
 
             return values;
+        }
+
+        /// <summary>
+        /// Converts string value to action parameter type
+        /// </summary>
+        private static object ChangeType(object value, Type type, bool nullable)
+        {
+            //if the value is null, parameter may be missing
+            if (value == null)
+                return null;
+
+            //if the value and parameter types same, do nothing
+            if (value.GetType() == type)
+                return value;
+
+            //need casting. parameter and value types are different
+
+            //for nullable types, we need extra check (because we need to cast underlying type)
+            if (nullable)
+            {
+                Type utype = Nullable.GetUnderlyingType(type);
+                return Convert.ChangeType(value, utype);
+            }
+
+            if (type.IsEnum)
+                return Enum.Parse(type, value.ToString());
+
+            //directly cast
+            return Convert.ChangeType(value, type);
         }
 
         #endregion
@@ -378,7 +395,7 @@ namespace Twino.Mvc
             if (!match.Route.HasControllerAuthorizeFilter)
                 return true;
 
-            AuthorizeAttribute filter = (AuthorizeAttribute)match.Route.ControllerType.GetCustomAttribute(typeof(AuthorizeAttribute));
+            AuthorizeAttribute filter = (AuthorizeAttribute) match.Route.ControllerType.GetCustomAttribute(typeof(AuthorizeAttribute));
             if (filter != null)
             {
                 filter.VerifyAuthority(Mvc, null, context);
@@ -401,7 +418,7 @@ namespace Twino.Mvc
                 return true;
 
             //find controller filters
-            IBeforeControllerFilter[] filters = (IBeforeControllerFilter[])match.Route.ControllerType.GetCustomAttributes(typeof(IBeforeControllerFilter), true);
+            IBeforeControllerFilter[] filters = (IBeforeControllerFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IBeforeControllerFilter), true);
 
             //call BeforeCreated methods of controller attributes
             return await CallFilters(response, context, filters, async filter => await filter.OnBefore(context));
@@ -416,7 +433,7 @@ namespace Twino.Mvc
                 return true;
 
             //find controller filters
-            IAfterControllerFilter[] filters = (IAfterControllerFilter[])match.Route.ControllerType.GetCustomAttributes(typeof(IAfterControllerFilter), true);
+            IAfterControllerFilter[] filters = (IAfterControllerFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IAfterControllerFilter), true);
 
             //call AfterCreated methods of controller attributes
             return await CallFilters(response, context, filters, async filter => await filter.OnAfter(controller, context));
@@ -431,7 +448,7 @@ namespace Twino.Mvc
                 return true;
 
             //check action authorize attribute
-            AuthorizeAttribute filter = (AuthorizeAttribute)match.Route.ActionType.GetCustomAttribute(typeof(AuthorizeAttribute));
+            AuthorizeAttribute filter = (AuthorizeAttribute) match.Route.ActionType.GetCustomAttribute(typeof(AuthorizeAttribute));
             if (filter != null)
             {
                 filter.VerifyAuthority(Mvc, descriptor, context);
@@ -453,7 +470,7 @@ namespace Twino.Mvc
             if (match.Route.HasControllerExecutingFilter)
             {
                 //find controller filters
-                IActionExecutingFilter[] filters = (IActionExecutingFilter[])match.Route.ControllerType.GetCustomAttributes(typeof(IActionExecutingFilter), true);
+                IActionExecutingFilter[] filters = (IActionExecutingFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IActionExecutingFilter), true);
 
                 //call BeforeCreated methods of controller attributes
                 bool resume = await CallFilters(response, context, filters, async filter => await filter.OnExecuting(controller, descriptor, context));
@@ -464,7 +481,7 @@ namespace Twino.Mvc
             if (match.Route.HasActionExecutingFilter)
             {
                 //find controller filters
-                IActionExecutingFilter[] filters = (IActionExecutingFilter[])match.Route.ActionType.GetCustomAttributes(typeof(IActionExecutingFilter), true);
+                IActionExecutingFilter[] filters = (IActionExecutingFilter[]) match.Route.ActionType.GetCustomAttributes(typeof(IActionExecutingFilter), true);
 
                 //call BeforeCreated methods of controller attributes
                 bool resume = await CallFilters(response, context, filters, async filter => await filter.OnExecuting(controller, descriptor, context));
@@ -493,7 +510,7 @@ namespace Twino.Mvc
             if (match.Route.HasActionExecutedFilter)
             {
                 //find controller filters
-                IActionExecutedFilter[] filters = (IActionExecutedFilter[])match.Route.ActionType.GetCustomAttributes(typeof(IActionExecutedFilter), true);
+                IActionExecutedFilter[] filters = (IActionExecutedFilter[]) match.Route.ActionType.GetCustomAttributes(typeof(IActionExecutedFilter), true);
 
                 //call AfterCreated methods of controller attributes
                 foreach (IActionExecutedFilter filter in filters)
@@ -503,7 +520,7 @@ namespace Twino.Mvc
             if (match.Route.HasControllerExecutedFilter)
             {
                 //find controller filters
-                IActionExecutedFilter[] filters = (IActionExecutedFilter[])match.Route.ControllerType.GetCustomAttributes(typeof(IActionExecutedFilter), true);
+                IActionExecutedFilter[] filters = (IActionExecutedFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IActionExecutedFilter), true);
 
                 //call AfterCreated methods of controller attributes
                 foreach (IActionExecutedFilter filter in filters)

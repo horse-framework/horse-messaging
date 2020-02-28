@@ -1,90 +1,89 @@
 ﻿using System;
-using System.Reflection;
+using System.Linq;
 using System.Threading.Tasks;
-using Twino.Ioc;
+using Twino.MQ.Data;
+using Twino.Mvc;
+using Twino.Mvc.Controllers;
+using Twino.Mvc.Controllers.Parameters;
+using Twino.Mvc.Filters.Route;
+using Twino.Protocols.TMQ;
+using Twino.Server;
 
 namespace Playground
 {
-
-    interface IService1
+    public class Login
     {
-        void Test1();
+        public string User { get; set; }
+        public string Pass { get; set; }
     }
 
-    interface IService2
+    public class User
     {
-        void Test2();
+        public string Name { get; set; }
+        public string Lastname { get; set; }
     }
 
-    class Service1 : IService1
+    [Route("x")]
+    public class BController : TwinoController
     {
-
-        public void Test1()
+        [HttpGet("c/{?x}")]
+        public async Task<IActionResult> C(string x)
         {
-            Console.WriteLine("echo 1");
-        }
-    }
-
-    class Service2 : IService2
-    {
-        public void Test2()
-        { }
-    }
-
-    interface IService3 { }
-    class Service3 : IService3
-    {
-        public Service3(IService1 service1)
-        {
-            service1.Test1();
-        }
-    }
-
-    class Service1Proxy : IServiceProxy
-    {
-        private IService2 _service2;
-        public Service1Proxy(IService2 service2)
-        {
-            _service2 = service2;
+            return await StringAsync("Xhello: " + x);
         }
 
-        public object Proxy(object decorated)
+        [HttpGet("")]
+        public async Task<IActionResult> B()
         {
-            return DenemeDispatchProxy<IService1>.Create((IService1)decorated, _service2);
+            return await StringAsync("Xhello");
+        }
+
+        [HttpGet("d")]
+        public async Task<IActionResult> D()
+        {
+            return await StringAsync("Xhello D");
         }
     }
 
 
-    class DenemeDispatchProxy<T> : DispatchProxy
+    [Route("")]
+    public class AController : TwinoController
     {
-        private T _decorated;
-        private IService2 _service2;
-        public static T Create(T decorated, IService2 service2)
+        [HttpGet("c/{?x}")]
+        public async Task<IActionResult> C(string x)
         {
-            object proxy = Create<T, DenemeDispatchProxy<T>>();
-            DenemeDispatchProxy<T> instance = (DenemeDispatchProxy<T>)proxy;
-            instance._decorated = decorated;
-            instance._service2 = service2;
-            return (T)proxy;
+            return await StringAsync("hello: " + x);
         }
 
-        protected override object Invoke(MethodInfo targetMethod, object[] args)
+        [HttpGet("")]
+        public async Task<IActionResult> B()
         {
-            Console.WriteLine("PROXY");
-            return targetMethod.Invoke(_decorated, args);
+            return await StringAsync("hello");
+        }
+
+        [HttpGet("d")]
+        public async Task<IActionResult> D()
+        {
+            return await StringAsync("hello D");
+        }
+
+        [HttpGet("e/{x}")]
+        public async Task<IActionResult> E(string x)
+        {
+            return await StringAsync("hello E: " + x);
         }
     }
 
     class Program
     {
-        static async Task Main(string[] args)
+        static void Main(string[] args)
         {
-            var container = new ServiceContainer();
-            container.AddSingleton<IService1, Service1, Service1Proxy>();
-            container.AddSingleton<IService2, Service2>();
-            container.AddSingleton<IService3, Service3>();
-            var instance3 = await container.Get<IService3>(container.CreateScope());
-            Console.ReadLine();
+            TwinoMvc mvc = new TwinoMvc();
+            mvc.Init();
+            TwinoServer server = new TwinoServer();
+            server.UseMvc(mvc);
+            server.Start(26222);
+            server.BlockWhileRunning();
         }
     }
 }

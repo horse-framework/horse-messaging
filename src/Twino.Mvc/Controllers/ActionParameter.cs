@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Reflection;
 
 namespace Twino.Mvc.Controllers
 {
@@ -84,5 +86,15 @@ namespace Twino.Mvc.Controllers
         /// Usually true when the type is int?, short?, etc.
         /// </summary>
         public bool Nullable { get; set; }
+        
+        /// <summary>
+        /// If true, property is a class
+        /// </summary>
+        public bool IsClass { get; set; }
+
+        /// <summary>
+        /// If parameter is a class, property info list of that class. otherwise, null.
+        /// </summary>
+        public Dictionary<string, PropertyInfo> ClassProperties { get; } = new Dictionary<string, PropertyInfo>(StringComparer.InvariantCultureIgnoreCase);
     }
 }

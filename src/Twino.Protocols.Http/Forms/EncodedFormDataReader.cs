@@ -40,7 +40,7 @@ namespace Twino.Protocols.Http.Forms
                     continue;
 
                 string key = key_value[0];
-                string value = System.Net.WebUtility.HtmlDecode(key_value[1]);
+                string value = System.Net.WebUtility.UrlDecode(key_value[1]);
 
                 if (items.ContainsKey(key))
                     items[key] = "," + value;

@@ -73,14 +73,14 @@ namespace Twino.Mvc.Routing
                             if (i == path.Count - 1)
                             {
                                 leaf.Route = new Route
-                                {
-                                    ActionType = method,
-                                    ControllerType = controllerType,
-                                    Method = info.Method,
-                                    Path = path.ToArray(),
-                                    Parameters = BuildParameters(method),
-                                    IsAsyncMethod = (AsyncStateMachineAttribute)method.GetCustomAttribute(typeof(AsyncStateMachineAttribute)) != null
-                                };
+                                             {
+                                                 ActionType = method,
+                                                 ControllerType = controllerType,
+                                                 Method = info.Method,
+                                                 Path = path.ToArray(),
+                                                 Parameters = BuildParameters(method),
+                                                 IsAsyncMethod = (AsyncStateMachineAttribute) method.GetCustomAttribute(typeof(AsyncStateMachineAttribute)) != null
+                                             };
                             }
                         }
 
@@ -91,6 +91,37 @@ namespace Twino.Mvc.Routing
             }
 
             return routes;
+        }
+
+        /// <summary>
+        /// Sorts all route leaves recursively
+        /// </summary>
+        internal void SortChildren(RouteLeaf leaf)
+        {
+            if (leaf.Children.Count == 0)
+                return;
+
+            SortRoutes(leaf.Children);
+
+            foreach (RouteLeaf child in leaf.Children)
+                SortChildren(child);
+        }
+
+        internal void SortRoutes(List<RouteLeaf> leaves)
+        {
+            if (leaves.Count < 2)
+                return;
+            
+            leaves.Sort((a, b) =>
+            {
+                if (string.IsNullOrEmpty(a.Path.Value))
+                    return 1;
+
+                if (string.IsNullOrEmpty(b.Path.Value))
+                    return -1;
+
+                return 0;
+            });
         }
 
         /// <summary>
@@ -214,11 +245,11 @@ namespace Twino.Mvc.Routing
 
                 string pattern = attr.Pattern ?? "";
                 RouteInfo route = new RouteInfo
-                {
-                    Method = attr.Method,
-                    Pattern = pattern,
-                    Path = pattern.Split('/', StringSplitOptions.RemoveEmptyEntries)
-                };
+                                  {
+                                      Method = attr.Method,
+                                      Pattern = pattern,
+                                      Path = pattern.Split('/', StringSplitOptions.RemoveEmptyEntries)
+                                  };
 
                 routes.Add(route);
             }
@@ -236,10 +267,10 @@ namespace Twino.Mvc.Routing
             if (string.IsNullOrEmpty(fullpath))
             {
                 result.Add(new RoutePath
-                {
-                    Type = RouteType.Text,
-                    Value = ""
-                });
+                           {
+                               Type = RouteType.Text,
+                               Value = ""
+                           });
 
                 return result;
             }
@@ -308,7 +339,7 @@ namespace Twino.Mvc.Routing
                 if (attr != null)
                 {
                     if (attr.Source == ParameterSource.Body)
-                        from = ((FromBodyAttribute)attr).Type.ToString().ToLower();
+                        from = ((FromBodyAttribute) attr).Type.ToString().ToLower();
                     else
                         from = string.IsNullOrEmpty(attr.Name) ? parameter.Name : attr.Name;
                 }
@@ -316,14 +347,22 @@ namespace Twino.Mvc.Routing
                     from = parameter.Name;
 
                 ActionParameter item = new ActionParameter
+                                       {
+                                           ParameterType = parameter.ParameterType,
+                                           ParameterName = parameter.Name,
+                                           FromName = from,
+                                           Index = i,
+                                           Source = attr != null ? attr.Source : ParameterSource.None,
+                                           Nullable = Nullable.GetUnderlyingType(parameter.ParameterType) != null,
+                                           IsClass = parameter.ParameterType.IsClass && parameter.ParameterType != typeof(string)
+                                       };
+
+                if (item.IsClass)
                 {
-                    ParameterType = parameter.ParameterType,
-                    ParameterName = parameter.Name,
-                    FromName = from,
-                    Index = i,
-                    Source = attr != null ? attr.Source : ParameterSource.None,
-                    Nullable = Nullable.GetUnderlyingType(parameter.ParameterType) != null
-                };
+                    PropertyInfo[] properties = parameter.ParameterType.GetProperties();
+                    foreach (PropertyInfo property in properties)
+                        item.ClassProperties.Add(property.Name, property);
+                }
 
                 result[i] = item;
             }
