@@ -94,6 +94,29 @@ namespace Twino.Mvc.Routing
         }
 
         /// <summary>
+        /// Sorts all route leaves recursively
+        /// </summary>
+        internal void SortRoutes(RouteLeaf leaf)
+        {
+            if (leaf.Children.Count == 0)
+                return;
+            
+            leaf.Children.Sort((a, b) =>
+            {
+                if (string.IsNullOrEmpty(a.Path.Value))
+                    return 1;
+
+                if (string.IsNullOrEmpty(b.Path.Value))
+                    return -1;
+
+                return 0;
+            });
+
+            foreach (RouteLeaf child in leaf.Children)
+                SortRoutes(child);
+        }
+
+        /// <summary>
         /// Searches method attributes and applies existing attributes to route
         /// </summary>
         private static void ApplyControllerAttributes(Route route, Type controller)

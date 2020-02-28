@@ -169,6 +169,8 @@ namespace Twino.Mvc
                                .Where(type => interfaceType.IsAssignableFrom(type))
                                .ToList();
 
+            List<RouteLeaf> leaves = new List<RouteLeaf>();
+
             foreach (Type type in types)
             {
                 if (type.IsInterface)
@@ -177,10 +179,14 @@ namespace Twino.Mvc
                 if (type.IsAssignableFrom(typeof(TwinoController)) && typeof(TwinoController).IsAssignableFrom(type))
                     continue;
 
-                IEnumerable<RouteLeaf> routes = builder.BuildRoutes(type);
-                foreach (RouteLeaf route in routes)
-                    Routes.Add(route);
+                leaves.AddRange(builder.BuildRoutes(type));
             }
+
+            foreach (RouteLeaf root in leaves)
+                builder.SortRoutes(root);
+
+            foreach (RouteLeaf route in leaves)
+                Routes.Add(route);
         }
 
         /// <summary>
