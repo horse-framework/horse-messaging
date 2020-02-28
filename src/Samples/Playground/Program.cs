@@ -4,34 +4,45 @@ using System.Threading.Tasks;
 using Twino.MQ.Data;
 using Twino.Mvc;
 using Twino.Mvc.Controllers;
+using Twino.Mvc.Controllers.Parameters;
 using Twino.Mvc.Filters.Route;
 using Twino.Protocols.TMQ;
 using Twino.Server;
 
 namespace Playground
 {
-   [Route("auth")]
-    public class AuthController : TwinoController
+    public class Login
     {
-        [HttpPost("login")]
-        public async Task<IActionResult> Login(string user)
+        public string User { get; set; }
+        public string Pass { get; set; }
+    }
+
+    [Route("a")]
+    public class AController : TwinoController
+    {
+        [HttpPost("b")]
+        public async Task<IActionResult> B([FromForm] Login login)
         {
-            return await StringAsync("ok");
+            return await StringAsync($"hello: {login.User} and {login.Pass}");
+        }
+
+        [HttpGet("c")]
+        public async Task<IActionResult> B()
+        {
+            return await StringAsync("hello");
         }
     }
 
-
     class Program
     {
-        static async Task Main(string[] args)
+        static void Main(string[] args)
         {
             TwinoMvc mvc = new TwinoMvc();
             mvc.Init();
-
             TwinoServer server = new TwinoServer();
             server.UseMvc(mvc);
-            server.Start(441);
-            await server.BlockWhileRunningAsync();
+            server.Start(26222);
+            server.BlockWhileRunning();
         }
     }
 }

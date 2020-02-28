@@ -296,7 +296,7 @@ namespace Twino.Mvc
                 {
                     case ParameterSource.None:
                     case ParameterSource.Route:
-                        paramValue.Value = ChangeType(route.Values[ap.FromName], ap);
+                        paramValue.Value = ChangeType(route.Values[ap.FromName], ap.ParameterType, ap.Nullable);
                         break;
 
                     case ParameterSource.Body:
@@ -326,22 +326,24 @@ namespace Twino.Mvc
                                 PropertyInfo propInfo;
                                 ap.ClassProperties.TryGetValue(propName, out propInfo);
                                 if (propInfo != null)
-                                    propInfo.SetValue(obj, ChangeType(kv.Value, ap));
+                                    propInfo.SetValue(obj, ChangeType(kv.Value, propInfo.PropertyType, Nullable.GetUnderlyingType(propInfo.PropertyType) != null));
                             }
+
+                            paramValue.Value = obj;
                         }
                         else if (request.Form.ContainsKey(ap.FromName))
-                            paramValue.Value = ChangeType(request.Form[ap.FromName], ap);
+                            paramValue.Value = ChangeType(request.Form[ap.FromName], ap.ParameterType, ap.Nullable);
 
                         break;
 
                     case ParameterSource.QueryString:
                         if (request.QueryString.ContainsKey(ap.FromName))
-                            paramValue.Value = ChangeType(request.QueryString[ap.FromName], ap);
+                            paramValue.Value = ChangeType(request.QueryString[ap.FromName], ap.ParameterType, ap.Nullable);
                         break;
 
                     case ParameterSource.Header:
                         if (request.Headers.ContainsKey(ap.FromName))
-                            paramValue.Value = ChangeType(request.Headers[ap.FromName], ap);
+                            paramValue.Value = ChangeType(request.Headers[ap.FromName], ap.ParameterType, ap.Nullable);
                         break;
                 }
 
@@ -355,30 +357,30 @@ namespace Twino.Mvc
         /// <summary>
         /// Converts string value to action parameter type
         /// </summary>
-        private static object ChangeType(object value, ActionParameter parameter)
+        private static object ChangeType(object value, Type type, bool nullable)
         {
             //if the value is null, parameter may be missing
             if (value == null)
                 return null;
 
             //if the value and parameter types same, do nothing
-            if (value.GetType() == parameter.ParameterType)
+            if (value.GetType() == type)
                 return value;
 
             //need casting. parameter and value types are different
 
             //for nullable types, we need extra check (because we need to cast underlying type)
-            if (parameter.Nullable)
+            if (nullable)
             {
-                Type nullable = Nullable.GetUnderlyingType(parameter.ParameterType);
-                return Convert.ChangeType(value, nullable);
+                Type utype = Nullable.GetUnderlyingType(type);
+                return Convert.ChangeType(value, utype);
             }
 
-            if (parameter.ParameterType.IsEnum)
-                return Enum.Parse(parameter.ParameterType, value.ToString());
+            if (type.IsEnum)
+                return Enum.Parse(type, value.ToString());
 
             //directly cast
-            return Convert.ChangeType(value, parameter.ParameterType);
+            return Convert.ChangeType(value, type);
         }
 
         #endregion
