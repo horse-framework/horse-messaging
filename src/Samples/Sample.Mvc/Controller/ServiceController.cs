@@ -1,6 +1,6 @@
+using Sample.Mvc.Models;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Sample.Mvc.Models;
 using Twino.Extensions.Http;
 using Twino.Mvc;
 using Twino.Mvc.Controllers;

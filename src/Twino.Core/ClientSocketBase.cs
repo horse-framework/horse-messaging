@@ -70,9 +70,9 @@ namespace Twino.Core
 
                 if (DateTime.UtcNow - LastAliveDate > PingInterval)
                     Ping();
-                
+
             }, TimeSpan.FromMilliseconds(5000));
-            
+
             _pingTimer.Start(ThreadPriority.Lowest);
         }
 
@@ -142,14 +142,14 @@ namespace Twino.Core
         public void Connect(string ip, int port, bool secure)
         {
             DnsInfo info = new DnsInfo
-                           {
-                               IPAddress = ip,
-                               Hostname = ip,
-                               Port = port,
-                               Path = "/",
-                               Protocol = Protocol.WebSocket,
-                               SSL = secure
-                           };
+            {
+                IPAddress = ip,
+                Hostname = ip,
+                Port = port,
+                Path = "/",
+                Protocol = Protocol.WebSocket,
+                SSL = secure
+            };
 
             IsSsl = secure;
             Connect(info);
@@ -162,14 +162,14 @@ namespace Twino.Core
         public async Task ConnectAsync(string ip, int port, bool secure)
         {
             DnsInfo info = new DnsInfo
-                           {
-                               IPAddress = ip,
-                               Hostname = ip,
-                               Port = port,
-                               Path = "/",
-                               Protocol = Protocol.WebSocket,
-                               SSL = secure
-                           };
+            {
+                IPAddress = ip,
+                Hostname = ip,
+                Port = port,
+                Path = "/",
+                Protocol = Protocol.WebSocket,
+                SSL = secure
+            };
 
             IsSsl = secure;
             await ConnectAsync(info);

@@ -21,7 +21,7 @@ namespace Twino.MQ.Options
         /// Zero is unlimited
         /// </summary>
         public int ClientLimit { get; set; }
-        
+
         /// <summary>
         /// Maximum queue limit of the channel
         /// Zero is unlimited
@@ -39,23 +39,23 @@ namespace Twino.MQ.Options
         internal static ChannelOptions CloneFrom(ChannelOptions options)
         {
             return new ChannelOptions
-                   {
-                       Status = options.Status,
-                       AcknowledgeTimeout = options.AcknowledgeTimeout,
-                       AllowedQueues = options.AllowedQueues,
-                       MessageTimeout = options.MessageTimeout,
-                       RequestAcknowledge = options.RequestAcknowledge,
-                       AllowMultipleQueues = options.AllowMultipleQueues,
-                       HideClientNames = options.HideClientNames,
-                       UseMessageId = options.UseMessageId,
-                       WaitForAcknowledge = options.WaitForAcknowledge,
-                       SendOnlyFirstAcquirer = options.SendOnlyFirstAcquirer,
-                       MessageLimit = options.MessageLimit,
-                       MessageSizeLimit = options.MessageSizeLimit,
-                       ClientLimit = options.ClientLimit,
-                       QueueLimit = options.QueueLimit,
-                       DestroyWhenEmpty = options.DestroyWhenEmpty 
-                   };
+            {
+                Status = options.Status,
+                AcknowledgeTimeout = options.AcknowledgeTimeout,
+                AllowedQueues = options.AllowedQueues,
+                MessageTimeout = options.MessageTimeout,
+                RequestAcknowledge = options.RequestAcknowledge,
+                AllowMultipleQueues = options.AllowMultipleQueues,
+                HideClientNames = options.HideClientNames,
+                UseMessageId = options.UseMessageId,
+                WaitForAcknowledge = options.WaitForAcknowledge,
+                SendOnlyFirstAcquirer = options.SendOnlyFirstAcquirer,
+                MessageLimit = options.MessageLimit,
+                MessageSizeLimit = options.MessageSizeLimit,
+                ClientLimit = options.ClientLimit,
+                QueueLimit = options.QueueLimit,
+                DestroyWhenEmpty = options.DestroyWhenEmpty
+            };
         }
     }
 }

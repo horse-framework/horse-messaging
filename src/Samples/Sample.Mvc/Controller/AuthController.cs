@@ -1,5 +1,5 @@
-﻿using System.Threading.Tasks;
-using Sample.Mvc.Models;
+﻿using Sample.Mvc.Models;
+using System.Threading.Tasks;
 using Twino.Mvc;
 using Twino.Mvc.Auth;
 using Twino.Mvc.Auth.Jwt;
@@ -43,11 +43,11 @@ namespace Sample.Mvc.Controller
         public async Task<IActionResult> Post([FromBody] LoginModel model)
         {
             return await JsonAsync(new
-                                   {
-                                       Ok = true,
-                                       Code = 200,
-                                       Message = "Success: " + model.Username
-                                   });
+            {
+                Ok = true,
+                Code = 200,
+                Message = "Success: " + model.Username
+            });
         }
     }
 }

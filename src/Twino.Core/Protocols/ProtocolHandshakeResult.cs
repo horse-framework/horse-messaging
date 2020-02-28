@@ -16,7 +16,7 @@ namespace Twino.Core.Protocols
         /// If this value is true, it means, we read some part of first message. Read part is in PreviouslyRead array.
         /// </summary>
         public bool ReadAfter { get; set; }
-        
+
         /// <summary>
         /// If true, connection will be kept alive and handler's connected method will be called to create new socket instance.
         /// If false, client connection handlers will not be called.
@@ -33,7 +33,7 @@ namespace Twino.Core.Protocols
         /// If protocol handshaking required a message from server to client, this value contains the message
         /// </summary>
         public byte[] Response { get; set; }
-        
+
         /// <summary>
         /// Connection socket
         /// </summary>

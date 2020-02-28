@@ -1,6 +1,6 @@
+using Newtonsoft.Json;
 using System;
 using System.IO;
-using Newtonsoft.Json;
 
 namespace Twino.SerializableModel.Serialization
 {
@@ -10,9 +10,9 @@ namespace Twino.SerializableModel.Serialization
     /// </summary>
     public class LightJsonReader : IDisposable
     {
-        
+
         #region Fields - Properties
-        
+
         /// <summary>
         /// Newtonsoft JSON text reader
         /// </summary>
@@ -24,9 +24,9 @@ namespace Twino.SerializableModel.Serialization
         private StringReader _stringReader;
 
         #endregion
-        
+
         #region Init - Dispose
-        
+
         /// <summary>
         /// Creates new light json reader with JSON data
         /// </summary>
@@ -44,9 +44,9 @@ namespace Twino.SerializableModel.Serialization
             _stringReader?.Dispose();
             _stringReader = null;
         }
-        
+
         #endregion
-        
+
         #region Read
 
         /// <summary>
@@ -109,13 +109,13 @@ namespace Twino.SerializableModel.Serialization
         public T Read<T>(string propertName = null)
         {
             object value = Read(propertName);
-            return (T) Convert.ChangeType(value, typeof(T));
+            return (T)Convert.ChangeType(value, typeof(T));
         }
-        
+
         #endregion
 
         #region Primitive Types
-        
+
         /// <summary>
         /// Reads value and directly casts it to string
         /// </summary>
@@ -147,7 +147,7 @@ namespace Twino.SerializableModel.Serialization
         {
             return Convert.ToSingle(Read(propertyName));
         }
-        
+
         /// <summary>
         /// Reads value and directly converts it to int
         /// </summary>
@@ -163,7 +163,7 @@ namespace Twino.SerializableModel.Serialization
         {
             return Convert.ToInt64(Read(propertyName));
         }
-        
+
         /// <summary>
         /// Reads value and directly converts it to double
         /// </summary>
@@ -181,6 +181,6 @@ namespace Twino.SerializableModel.Serialization
         }
 
         #endregion
-        
+
     }
 }

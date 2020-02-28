@@ -12,7 +12,7 @@ namespace Twino.Mvc.Controllers.Parameters
         /// JSON Message
         /// </summary>
         Json = 0,
-        
+
         /// <summary>
         /// XML Message
         /// </summary>
@@ -36,11 +36,11 @@ namespace Twino.Mvc.Controllers.Parameters
         public FromBodyAttribute() : this(BodyType.Json)
         {
         }
-        
+
         /// <summary>
         /// Creates new from body attribute for reading specified body type
         /// </summary>
-        public FromBodyAttribute(BodyType type): base(null)
+        public FromBodyAttribute(BodyType type) : base(null)
         {
             Type = type;
             Source = ParameterSource.Body;

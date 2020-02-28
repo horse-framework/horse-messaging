@@ -12,7 +12,7 @@ namespace Twino.MQ
         /// Called when a client is connected and TMQ protocol handshake is completed
         /// </summary>
         Task Connected(MqServer server, MqClient client);
-        
+
         /// <summary>
         /// Called when a client is disconnected and removed from all channels and all queues
         /// </summary>

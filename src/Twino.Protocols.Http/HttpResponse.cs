@@ -21,17 +21,17 @@ namespace Twino.Protocols.Http
         /// Plain text, no encoding is applied
         /// </summary>
         None,
-        
+
         /// <summary>
         /// GZIP Encoding
         /// </summary>
         Gzip,
-        
+
         /// <summary>
         /// Brotli encoding, a.k.a. br
         /// </summary>
         Brotli,
-        
+
         /// <summary>
         /// Deflate encoding
         /// </summary>
@@ -261,11 +261,11 @@ namespace Twino.Protocols.Http
         public static HttpResponse BadRequest()
         {
             return new HttpResponse
-                   {
-                       ContentType = ContentTypes.TEXT_HTML,
-                       StatusCode = HttpStatusCode.BadRequest,
-                       SuppressContentEncoding = true
-                   };
+            {
+                ContentType = ContentTypes.TEXT_HTML,
+                StatusCode = HttpStatusCode.BadRequest,
+                SuppressContentEncoding = true
+            };
         }
 
         /// <summary>
@@ -274,11 +274,11 @@ namespace Twino.Protocols.Http
         public static HttpResponse LengthRequired()
         {
             return new HttpResponse
-                   {
-                       ContentType = ContentTypes.TEXT_HTML,
-                       StatusCode = HttpStatusCode.LengthRequired,
-                       SuppressContentEncoding = true
-                   };
+            {
+                ContentType = ContentTypes.TEXT_HTML,
+                StatusCode = HttpStatusCode.LengthRequired,
+                SuppressContentEncoding = true
+            };
         }
 
         /// <summary>
@@ -287,11 +287,11 @@ namespace Twino.Protocols.Http
         public static HttpResponse RequestUriTooLong()
         {
             return new HttpResponse
-                   {
-                       ContentType = ContentTypes.TEXT_HTML,
-                       StatusCode = HttpStatusCode.RequestUriTooLong,
-                       SuppressContentEncoding = true
-                   };
+            {
+                ContentType = ContentTypes.TEXT_HTML,
+                StatusCode = HttpStatusCode.RequestUriTooLong,
+                SuppressContentEncoding = true
+            };
         }
 
         /// <summary>
@@ -300,11 +300,11 @@ namespace Twino.Protocols.Http
         public static HttpResponse TooManyRequests()
         {
             return new HttpResponse
-                   {
-                       ContentType = ContentTypes.TEXT_HTML,
-                       StatusCode = HttpStatusCode.TooManyRequests,
-                       SuppressContentEncoding = true
-                   };
+            {
+                ContentType = ContentTypes.TEXT_HTML,
+                StatusCode = HttpStatusCode.TooManyRequests,
+                SuppressContentEncoding = true
+            };
         }
 
         /// <summary>
@@ -313,11 +313,11 @@ namespace Twino.Protocols.Http
         public static HttpResponse RequestHeaderFieldsTooLarge()
         {
             return new HttpResponse
-                   {
-                       ContentType = ContentTypes.TEXT_HTML,
-                       StatusCode = HttpStatusCode.RequestHeaderFieldsTooLarge,
-                       SuppressContentEncoding = true
-                   };
+            {
+                ContentType = ContentTypes.TEXT_HTML,
+                StatusCode = HttpStatusCode.RequestHeaderFieldsTooLarge,
+                SuppressContentEncoding = true
+            };
         }
 
         #endregion

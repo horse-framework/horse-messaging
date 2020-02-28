@@ -1,5 +1,3 @@
-using Twino.Protocols.TMQ;
-
 namespace Twino.Client.TMQ
 {
     /// <summary>
@@ -37,7 +35,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         public static TmqResult FromContentType(ushort code)
         {
-            return new TmqResult((TmqResponseCode) code);
+            return new TmqResult((TmqResponseCode)code);
         }
     }
 
@@ -81,7 +79,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         public static TmqResult<TModel> FromContentType(ushort code)
         {
-            return new TmqResult<TModel>((TmqResponseCode) code);
+            return new TmqResult<TModel>((TmqResponseCode)code);
         }
     }
 }

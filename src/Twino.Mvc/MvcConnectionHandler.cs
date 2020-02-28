@@ -1,23 +1,23 @@
-﻿using Twino.Mvc.Controllers;
-using Twino.Mvc.Filters;
-using Twino.Mvc.Routing;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Xml.Serialization;
-using Twino.Mvc.Results;
-using Twino.Mvc.Errors;
 using System.Security.Claims;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
 using Twino.Core;
-using Twino.Mvc.Auth;
 using Twino.Core.Protocols;
-using Twino.Mvc.Middlewares;
 using Twino.Ioc;
+using Twino.Mvc.Auth;
+using Twino.Mvc.Controllers;
+using Twino.Mvc.Errors;
+using Twino.Mvc.Filters;
+using Twino.Mvc.Middlewares;
+using Twino.Mvc.Results;
+using Twino.Mvc.Routing;
 using Twino.Protocols.Http;
 
 namespace Twino.Mvc
@@ -52,7 +52,7 @@ namespace Twino.Mvc
         /// </summary>
         public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
-            return await Task.FromResult((SocketBase) null);
+            return await Task.FromResult((SocketBase)null);
         }
 
         /// <summary>
@@ -157,13 +157,13 @@ namespace Twino.Mvc
                 user = Mvc.ClaimsPrincipalValidator.Get(request);
 
             FilterContext context = new FilterContext
-                                    {
-                                        Server = server,
-                                        Request = request,
-                                        Response = response,
-                                        Result = null,
-                                        User = user
-                                    };
+            {
+                Server = server,
+                Request = request,
+                Response = response,
+                Result = null,
+                User = user
+            };
 
             if (!CheckControllerAuthority(match, context, response))
                 return;
@@ -185,11 +185,11 @@ namespace Twino.Mvc
 
             //fill action descriptor
             ActionDescriptor descriptor = new ActionDescriptor
-                                          {
-                                              Controller = controller,
-                                              Action = match.Route.ActionType,
-                                              Parameters = FillParameters(request, match)
-                                          };
+            {
+                Controller = controller,
+                Action = match.Route.ActionType,
+                Parameters = FillParameters(request, match)
+            };
 
             if (!CheckActionAuthority(match, context, response, descriptor))
                 return;
@@ -211,7 +211,7 @@ namespace Twino.Mvc
         {
             if (match.Route.IsAsyncMethod)
             {
-                Task<IActionResult> task = (Task<IActionResult>) match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray());
+                Task<IActionResult> task = (Task<IActionResult>)match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray());
                 await task;
                 await CompleteActionExecution(match, context, response, controller, descriptor, task.Result);
             }
@@ -222,7 +222,7 @@ namespace Twino.Mvc
                 {
                     try
                     {
-                        IActionResult ar = (IActionResult) match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray());
+                        IActionResult ar = (IActionResult)match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray());
                         await CompleteActionExecution(match, context, response, controller, descriptor, ar);
                         source.SetResult(true);
                     }
@@ -295,19 +295,19 @@ namespace Twino.Mvc
                         break;
 
                     case ParameterSource.Body:
-                    {
-                        string content = Encoding.UTF8.GetString(request.ContentStream.ToArray());
-                        if (ap.FromName == "json")
-                            value = Newtonsoft.Json.JsonConvert.DeserializeObject(content, ap.ParameterType);
-                        else if (ap.FromName == "xml")
                         {
-                            using MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(content));
-                            XmlSerializer serializer = new XmlSerializer(ap.ParameterType);
-                            value = serializer.Deserialize(ms);
-                        }
+                            string content = Encoding.UTF8.GetString(request.ContentStream.ToArray());
+                            if (ap.FromName == "json")
+                                value = Newtonsoft.Json.JsonConvert.DeserializeObject(content, ap.ParameterType);
+                            else if (ap.FromName == "xml")
+                            {
+                                using MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(content));
+                                XmlSerializer serializer = new XmlSerializer(ap.ParameterType);
+                                value = serializer.Deserialize(ms);
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
 
                     case ParameterSource.Form:
                         if (request.Form.ContainsKey(ap.FromName))
@@ -355,12 +355,12 @@ namespace Twino.Mvc
 
                 //return value
                 values.Add(new ParameterValue
-                           {
-                               Name = ap.ParameterName,
-                               Type = ap.ParameterType,
-                               Source = ap.Source,
-                               Value = casted
-                           });
+                {
+                    Name = ap.ParameterName,
+                    Type = ap.ParameterType,
+                    Source = ap.Source,
+                    Value = casted
+                });
             }
 
             return values;
@@ -378,7 +378,7 @@ namespace Twino.Mvc
             if (!match.Route.HasControllerAuthorizeFilter)
                 return true;
 
-            AuthorizeAttribute filter = (AuthorizeAttribute) match.Route.ControllerType.GetCustomAttribute(typeof(AuthorizeAttribute));
+            AuthorizeAttribute filter = (AuthorizeAttribute)match.Route.ControllerType.GetCustomAttribute(typeof(AuthorizeAttribute));
             if (filter != null)
             {
                 filter.VerifyAuthority(Mvc, null, context);
@@ -401,7 +401,7 @@ namespace Twino.Mvc
                 return true;
 
             //find controller filters
-            IBeforeControllerFilter[] filters = (IBeforeControllerFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IBeforeControllerFilter), true);
+            IBeforeControllerFilter[] filters = (IBeforeControllerFilter[])match.Route.ControllerType.GetCustomAttributes(typeof(IBeforeControllerFilter), true);
 
             //call BeforeCreated methods of controller attributes
             return await CallFilters(response, context, filters, async filter => await filter.OnBefore(context));
@@ -416,7 +416,7 @@ namespace Twino.Mvc
                 return true;
 
             //find controller filters
-            IAfterControllerFilter[] filters = (IAfterControllerFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IAfterControllerFilter), true);
+            IAfterControllerFilter[] filters = (IAfterControllerFilter[])match.Route.ControllerType.GetCustomAttributes(typeof(IAfterControllerFilter), true);
 
             //call AfterCreated methods of controller attributes
             return await CallFilters(response, context, filters, async filter => await filter.OnAfter(controller, context));
@@ -431,7 +431,7 @@ namespace Twino.Mvc
                 return true;
 
             //check action authorize attribute
-            AuthorizeAttribute filter = (AuthorizeAttribute) match.Route.ActionType.GetCustomAttribute(typeof(AuthorizeAttribute));
+            AuthorizeAttribute filter = (AuthorizeAttribute)match.Route.ActionType.GetCustomAttribute(typeof(AuthorizeAttribute));
             if (filter != null)
             {
                 filter.VerifyAuthority(Mvc, descriptor, context);
@@ -453,7 +453,7 @@ namespace Twino.Mvc
             if (match.Route.HasControllerExecutingFilter)
             {
                 //find controller filters
-                IActionExecutingFilter[] filters = (IActionExecutingFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IActionExecutingFilter), true);
+                IActionExecutingFilter[] filters = (IActionExecutingFilter[])match.Route.ControllerType.GetCustomAttributes(typeof(IActionExecutingFilter), true);
 
                 //call BeforeCreated methods of controller attributes
                 bool resume = await CallFilters(response, context, filters, async filter => await filter.OnExecuting(controller, descriptor, context));
@@ -464,7 +464,7 @@ namespace Twino.Mvc
             if (match.Route.HasActionExecutingFilter)
             {
                 //find controller filters
-                IActionExecutingFilter[] filters = (IActionExecutingFilter[]) match.Route.ActionType.GetCustomAttributes(typeof(IActionExecutingFilter), true);
+                IActionExecutingFilter[] filters = (IActionExecutingFilter[])match.Route.ActionType.GetCustomAttributes(typeof(IActionExecutingFilter), true);
 
                 //call BeforeCreated methods of controller attributes
                 bool resume = await CallFilters(response, context, filters, async filter => await filter.OnExecuting(controller, descriptor, context));
@@ -493,7 +493,7 @@ namespace Twino.Mvc
             if (match.Route.HasActionExecutedFilter)
             {
                 //find controller filters
-                IActionExecutedFilter[] filters = (IActionExecutedFilter[]) match.Route.ActionType.GetCustomAttributes(typeof(IActionExecutedFilter), true);
+                IActionExecutedFilter[] filters = (IActionExecutedFilter[])match.Route.ActionType.GetCustomAttributes(typeof(IActionExecutedFilter), true);
 
                 //call AfterCreated methods of controller attributes
                 foreach (IActionExecutedFilter filter in filters)
@@ -503,7 +503,7 @@ namespace Twino.Mvc
             if (match.Route.HasControllerExecutedFilter)
             {
                 //find controller filters
-                IActionExecutedFilter[] filters = (IActionExecutedFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IActionExecutedFilter), true);
+                IActionExecutedFilter[] filters = (IActionExecutedFilter[])match.Route.ControllerType.GetCustomAttributes(typeof(IActionExecutedFilter), true);
 
                 //call AfterCreated methods of controller attributes
                 foreach (IActionExecutedFilter filter in filters)

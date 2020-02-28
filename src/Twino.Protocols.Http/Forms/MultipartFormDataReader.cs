@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Twino.Server.Http;
 
 namespace Twino.Protocols.Http.Forms
 {
@@ -11,7 +10,7 @@ namespace Twino.Protocols.Http.Forms
     /// </summary>
     public static class MultipartFormDataReader
     {
-        
+
         /// <summary>
         /// Reads and parses multipart/form-data content from stream
         /// </summary>
@@ -94,7 +93,7 @@ namespace Twino.Protocols.Http.Forms
                                     item.IsFile = true;
                                     item.Filename = val.Substring(PredefinedHeaders.FILENAME_KV_QUOTA.Length,
                                                                   val.Length - PredefinedHeaders.FILENAME_KV_QUOTA.Length - 1);
-                                    
+
                                 }
                             }
                         }

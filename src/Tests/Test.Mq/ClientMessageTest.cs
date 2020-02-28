@@ -106,7 +106,7 @@ namespace Test.Mq
                     TmqMessage rmsg = m.CreateResponse();
                     rmsg.ContentType = 123;
                     rmsg.SetStringContent("Hello, World Response!");
-                    await ((TmqClient) c).SendAsync(rmsg);
+                    await ((TmqClient)c).SendAsync(rmsg);
                 }
             };
 

@@ -51,7 +51,7 @@ namespace Twino.Mvc.Controllers
 
                 //if the application comes here, we are sure all parameters are created
                 //now we can create instance with these parameter values
-                TwinoController result = (TwinoController) Activator.CreateInstance(controllerType, values);
+                TwinoController result = (TwinoController)Activator.CreateInstance(controllerType, values);
 
                 //set the controller properties
                 result.Request = request;

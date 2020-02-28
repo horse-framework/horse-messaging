@@ -71,7 +71,7 @@ namespace Twino.Server
         /// Triggered when the server is started
         /// </summary>
         public event Action<TwinoServer> OnStarted;
-        
+
         /// <summary>
         /// Triggered when the server is stopped
         /// </summary>
@@ -139,10 +139,10 @@ namespace Twino.Server
         {
             Options.Hosts = new List<HostOptions>();
             HostOptions host = new HostOptions
-                               {
-                                   Port = port,
-                                   SslEnabled = false
-                               };
+            {
+                Port = port,
+                SslEnabled = false
+            };
 
             Options.Hosts.Add(host);
 
@@ -237,7 +237,7 @@ namespace Twino.Server
                 handler.Dispose();
 
             _handlers.Clear();
-            
+
             OnStopped?.Invoke(this);
         }
 

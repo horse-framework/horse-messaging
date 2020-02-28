@@ -25,12 +25,12 @@ namespace Twino.Extensions.Http
         internal void AddConfiguration(string name, int poolSize, Action<HttpClient> configureAction)
         {
             HttpClientPoolDescriptor descriptor = new HttpClientPoolDescriptor
-                                                  {
-                                                      Name = name,
-                                                      PoolSize = poolSize,
-                                                      OptionsAction = configureAction,
-                                                      Items = poolSize > 0 ? new PoolItem[poolSize] : null
-                                                  };
+            {
+                Name = name,
+                PoolSize = poolSize,
+                OptionsAction = configureAction,
+                Items = poolSize > 0 ? new PoolItem[poolSize] : null
+            };
 
             _descriptors.Add(name, descriptor);
         }

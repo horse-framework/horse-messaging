@@ -1,5 +1,5 @@
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Twino.Protocols.TMQ.Models
 {
@@ -85,7 +85,7 @@ namespace Twino.Protocols.TMQ.Models
         [JsonProperty("hideClientNames")]
         [JsonPropertyName("hideClientNames")]
         public bool HideClientNames { get; set; }
-        
+
         /// <summary>
         /// Online and subscribed clients in the channel
         /// Zero is unlimited
@@ -101,7 +101,7 @@ namespace Twino.Protocols.TMQ.Models
         [JsonProperty("clientLimit")]
         [JsonPropertyName("clientLimit")]
         public int ClientLimit { get; set; }
-        
+
         /// <summary>
         /// Maximum queue limit of the channel
         /// Zero is unlimited

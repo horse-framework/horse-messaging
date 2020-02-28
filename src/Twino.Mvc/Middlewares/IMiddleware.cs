@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Twino.Mvc.Controllers;
 using Twino.Protocols.Http;
 
 namespace Twino.Mvc.Middlewares

@@ -703,7 +703,7 @@ namespace Twino.Client.TMQ
                 TmqMessage response = await task;
                 return response == null
                            ? TmqResponseCode.Unknown
-                           : (TmqResponseCode) response.ContentType;
+                           : (TmqResponseCode)response.ContentType;
             }
 
             return TmqResponseCode.Ok;

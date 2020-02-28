@@ -70,7 +70,7 @@ namespace Twino.Protocols.TMQ
                 type -= 64;
             }
 
-            message.Type = (MessageType) type;
+            message.Type = (MessageType)type;
 
             byte ttl = bytes[1];
             if (ttl >= 128)
@@ -147,15 +147,15 @@ namespace Twino.Protocols.TMQ
                 message.Content = new MemoryStream();
 
             ulong left = message.Length;
-            ulong blen = (ulong) _buffer.Length;
+            ulong blen = (ulong)_buffer.Length;
             do
             {
-                int rcount = (int) (left > blen ? blen : left);
+                int rcount = (int)(left > blen ? blen : left);
                 int read = await stream.ReadAsync(_buffer, 0, rcount);
                 if (read == 0)
                     return false;
 
-                left -= (uint) read;
+                left -= (uint)read;
                 await message.Content.WriteAsync(_buffer, 0, read);
             }
             while (left > 0);

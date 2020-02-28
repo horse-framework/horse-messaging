@@ -16,7 +16,7 @@ namespace Twino.Protocols.Http.Forms
         /// form-data name
         /// </summary>
         public string Name { get; set; }
-        
+
         /// <summary>
         /// If item is file, filename. otherwise null
         /// </summary>
@@ -26,7 +26,7 @@ namespace Twino.Protocols.Http.Forms
         /// Content type such as "text/plain", "multipart/mixed", "image/gif", "application/octet-stream"
         /// </summary>
         public string ContentType { get; set; }
-        
+
         /// <summary>
         /// If item is mixed, item's boundary value. otherwise null
         /// </summary>

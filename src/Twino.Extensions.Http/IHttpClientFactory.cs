@@ -21,7 +21,7 @@ namespace Twino.Extensions.Http
         /// Releases the HttpClient instance from application default factory
         /// </summary>
         void Release(HttpClient client);
-        
+
         /// <summary>
         /// Releases the HttpClient instance from specified factory
         /// </summary>

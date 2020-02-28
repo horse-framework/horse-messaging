@@ -186,7 +186,7 @@ namespace Twino.MQ.Queues
         /// </summary>
         public void Load(string serialized)
         {
-            string[] lines = serialized.Split(new[] {"\r\n"}, StringSplitOptions.RemoveEmptyEntries);
+            string[] lines = serialized.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             foreach (string line in lines)
             {
                 string[] kv = line.Split(':');

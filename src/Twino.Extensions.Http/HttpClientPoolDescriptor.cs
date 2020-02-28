@@ -58,7 +58,7 @@ namespace Twino.Extensions.Http
                 return;
 
             Instance = new HttpClient();
-            
+
             if (descriptor.OptionsAction != null)
                 descriptor.OptionsAction(Instance);
         }

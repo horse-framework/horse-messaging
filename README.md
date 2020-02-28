@@ -1,14 +1,11 @@
-# Twino
+# What's Twino?
 
-**Twino** is a .NET Core TCP Server provides multiple protocols on same host.<br>
+**Twino** is an extensible .NET Core TCP Server provides multiple protocols on same host.<br>
 **Twino** is a complete Messaging Queue server library.<br>
 **Twino** is a WebSocket server with advanced client management.<br>
-**Twino** is a HTTP server with MVC Support.<br>
-
-Twino HTTP Server supports MVC architecture.<br>
-Twino WebSockets provides advanced WebSocket server management<br>
-Twino MQ provides quick messaging queue server library<br>
-Twino IOC can be used on all protocols.
+**Twino** is an HTTP server with MVC Architecture.<br>
+**Twino** is an IOC Library with service pools and scopes.<br>
+**Twino** is a WebSocket Client.<br>
 
 ## Why Twino?
 

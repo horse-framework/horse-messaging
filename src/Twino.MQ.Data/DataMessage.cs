@@ -11,12 +11,12 @@ namespace Twino.MQ.Data
         /// Message data type
         /// </summary>
         public readonly DataType Type;
-        
+
         /// <summary>
         /// Message id
         /// </summary>
         public readonly string Id;
-        
+
         /// <summary>
         /// TMQ Message itself
         /// </summary>

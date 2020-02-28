@@ -73,7 +73,7 @@ namespace Test.Mq
             Assert.NotNull(channel);
             Assert.NotNull(queue);
             Assert.Single(queue.RegularMessages);
-            
+
             bool msgReceived = false;
             TmqClient consumer = new TmqClient();
             consumer.ClientId = "consumer";
@@ -96,7 +96,7 @@ namespace Test.Mq
             TestMqServer server = new TestMqServer();
             server.Initialize(port);
             server.Start(300, 300);
-            
+
             Channel ch = server.Server.FindChannel("ch-round");
             ChannelQueue queue = ch.Queues.FirstOrDefault();
             Assert.NotNull(queue);

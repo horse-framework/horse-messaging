@@ -71,10 +71,10 @@ namespace Twino.Server
                     return;
 
                 info = new ConnectionInfo(tcp, _listener)
-                       {
-                           State = ConnectionStates.Pending,
-                           MaxAlive = DateTime.UtcNow + TimeSpan.FromSeconds(_server.Options.RequestTimeout)
-                       };
+                {
+                    State = ConnectionStates.Pending,
+                    MaxAlive = DateTime.UtcNow + TimeSpan.FromSeconds(_server.Options.RequestTimeout)
+                };
 
                 _listener.KeepAliveManager.Add(info);
 

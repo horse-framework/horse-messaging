@@ -32,12 +32,12 @@ namespace Twino.Ioc.Pool
         /// Expiration time for locking the instance
         /// </summary>
         public DateTime LockExpiration { get; internal set; }
-        
+
         /// <summary>
         /// True, if service instance is locked by a scope
         /// </summary>
         public bool Locked { get; internal set; }
-        
+
         /// <summary>
         /// Serviece instance locker scope
         /// </summary>

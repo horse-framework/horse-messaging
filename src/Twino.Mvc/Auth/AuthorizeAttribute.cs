@@ -1,7 +1,7 @@
-﻿using Twino.Mvc.Controllers;
+﻿using System;
+using Twino.Mvc.Controllers;
 using Twino.Mvc.Filters;
 using Twino.Mvc.Results;
-using System;
 
 namespace Twino.Mvc.Auth
 {
@@ -28,7 +28,7 @@ namespace Twino.Mvc.Auth
         /// Policy name for authorization
         /// </summary>
         public string Policy { get; set; }
-        
+
         /// <summary>
         /// Creates new default authorize attribute
         /// </summary>
@@ -119,7 +119,7 @@ namespace Twino.Mvc.Auth
 
             string[] claims = Claims.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
-            foreach(string claim in claims)
+            foreach (string claim in claims)
             {
                 if (claim.Contains('='))
                 {

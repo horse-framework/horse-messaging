@@ -9,9 +9,9 @@ namespace Sample.MQ.Data
             while (true)
             {
                 Overload o = new Overload();
-                await o.OverloadAsync();   
+                await o.OverloadAsync();
             }
         }
-        
+
     }
 }

@@ -18,7 +18,7 @@ namespace Twino.Mvc.Controllers.Parameters
         /// <summary>
         /// Creates from header attribute with specified name
         /// </summary>
-        public FromHeaderAttribute(string name): base(name)
+        public FromHeaderAttribute(string name) : base(name)
         {
             Source = ParameterSource.Header;
         }

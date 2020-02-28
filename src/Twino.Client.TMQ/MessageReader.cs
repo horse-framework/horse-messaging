@@ -148,12 +148,12 @@ namespace Twino.Client.TMQ
         public void On<T>(string channel, ushort queueId, Action<T> action)
         {
             QueueSubscription subscription = new QueueSubscription
-                                             {
-                                                 Channel = channel,
-                                                 QueueId = queueId,
-                                                 MessageType = typeof(T),
-                                                 Action = action
-                                             };
+            {
+                Channel = channel,
+                QueueId = queueId,
+                MessageType = typeof(T),
+                Action = action
+            };
 
             lock (_subscriptions)
                 _subscriptions.Add(subscription);
@@ -165,13 +165,13 @@ namespace Twino.Client.TMQ
         public void On<T>(string channel, ushort queueId, Action<T, TmqMessage> action)
         {
             QueueSubscription subscription = new QueueSubscription
-                                             {
-                                                 Channel = channel,
-                                                 QueueId = queueId,
-                                                 MessageType = typeof(T),
-                                                 Action = action,
-                                                 TmqMessageParameter = true
-                                             };
+            {
+                Channel = channel,
+                QueueId = queueId,
+                MessageType = typeof(T),
+                Action = action,
+                TmqMessageParameter = true
+            };
 
             lock (_subscriptions)
                 _subscriptions.Add(subscription);
