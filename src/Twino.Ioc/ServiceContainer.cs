@@ -663,9 +663,6 @@ namespace Twino.Ioc
 
         private async Task<object> Get(ServiceDescriptor descriptor, IContainerScope scope = null)
         {
-            if (descriptor.ProxyType != null)
-                descriptor.ProxyInstance = (IServiceProxy)await CreateInstance(descriptor.ProxyType, scope);
-
             if (descriptor.IsPool)
             {
                 IServicePool pool = (IServicePool)descriptor.Instance;
@@ -766,7 +763,11 @@ namespace Twino.Ioc
         /// </summary>
         public async Task<object> CreateInstance(Type type, IContainerScope scope = null)
         {
-            ConstructorInfo constructor = type.GetConstructors()[0];
+            ConstructorInfo[] ctors = type.GetConstructors(BindingFlags.Public);
+            if (ctors.Length == 0)
+                throw new InvalidOperationException("There is no accessible constructor found in " + type.FullName);
+            
+            ConstructorInfo constructor = ctors[0];
             ParameterInfo[] parameters = constructor.GetParameters();
 
             //if parameterless create directly and return
