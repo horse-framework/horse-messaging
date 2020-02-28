@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Twino.Core;
 using Twino.Ioc;
 using Twino.Mvc.Auth;
@@ -11,6 +12,8 @@ using Twino.Mvc.Errors;
 using Twino.Mvc.Middlewares;
 using Twino.Mvc.Results;
 using Twino.Mvc.Routing;
+
+[assembly:InternalsVisibleTo("Test.Mvc")]
 
 namespace Twino.Mvc
 {
