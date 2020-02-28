@@ -1,11 +1,11 @@
-﻿using Twino.Mvc.Controllers.Parameters;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Twino.Mvc.Auth;
 using Twino.Mvc.Controllers;
+using Twino.Mvc.Controllers.Parameters;
 using Twino.Mvc.Filters;
 using Twino.Mvc.Filters.Route;
 
@@ -322,8 +322,16 @@ namespace Twino.Mvc.Routing
                                            FromName = from,
                                            Index = i,
                                            Source = attr != null ? attr.Source : ParameterSource.None,
-                                           Nullable = Nullable.GetUnderlyingType(parameter.ParameterType) != null
+                                           Nullable = Nullable.GetUnderlyingType(parameter.ParameterType) != null,
+                                           IsClass = parameter.ParameterType.IsClass && parameter.ParameterType != typeof(string)
                                        };
+
+                if (item.IsClass)
+                {
+                    PropertyInfo[] properties = parameter.ParameterType.GetProperties();
+                    foreach (PropertyInfo property in properties)
+                        item.ClassProperties.Add(property.Name, property);
+                }
 
                 result[i] = item;
             }

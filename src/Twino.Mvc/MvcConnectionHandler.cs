@@ -1,23 +1,23 @@
-﻿using Twino.Mvc.Controllers;
-using Twino.Mvc.Filters;
-using Twino.Mvc.Routing;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Xml.Serialization;
-using Twino.Mvc.Results;
-using Twino.Mvc.Errors;
 using System.Security.Claims;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
 using Twino.Core;
-using Twino.Mvc.Auth;
 using Twino.Core.Protocols;
-using Twino.Mvc.Middlewares;
 using Twino.Ioc;
+using Twino.Mvc.Auth;
+using Twino.Mvc.Controllers;
+using Twino.Mvc.Errors;
+using Twino.Mvc.Filters;
+using Twino.Mvc.Middlewares;
+using Twino.Mvc.Results;
+using Twino.Mvc.Routing;
 using Twino.Protocols.Http;
 
 namespace Twino.Mvc
@@ -284,86 +284,101 @@ namespace Twino.Mvc
             List<ParameterValue> values = new List<ParameterValue>();
             foreach (ActionParameter ap in route.Route.Parameters)
             {
-                object value = null;
+                ParameterValue paramValue = new ParameterValue
+                                            {
+                                                Name = ap.ParameterName,
+                                                Type = ap.ParameterType,
+                                                Source = ap.Source
+                                            };
 
                 //by source find the value of the parameter and set it to "value" local variable
                 switch (ap.Source)
                 {
                     case ParameterSource.None:
                     case ParameterSource.Route:
-                        value = route.Values[ap.FromName];
+                        paramValue.Value = ChangeType(route.Values[ap.FromName], ap);
                         break;
 
                     case ParameterSource.Body:
                     {
                         string content = Encoding.UTF8.GetString(request.ContentStream.ToArray());
                         if (ap.FromName == "json")
-                            value = Newtonsoft.Json.JsonConvert.DeserializeObject(content, ap.ParameterType);
+                            paramValue.Value = Newtonsoft.Json.JsonConvert.DeserializeObject(content, ap.ParameterType);
                         else if (ap.FromName == "xml")
                         {
                             using MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(content));
                             XmlSerializer serializer = new XmlSerializer(ap.ParameterType);
-                            value = serializer.Deserialize(ms);
+                            paramValue.Value = serializer.Deserialize(ms);
                         }
 
                         break;
                     }
 
                     case ParameterSource.Form:
-                        if (request.Form.ContainsKey(ap.FromName))
-                            value = request.Form[ap.FromName];
+                        if (ap.IsClass)
+                        {
+                            object obj = Activator.CreateInstance(ap.ParameterType);
+                            string start = $"{ap.FromName}.";
+                            var props = request.Form.Where(x => x.Key.StartsWith(start, StringComparison.InvariantCultureIgnoreCase));
+                            foreach (var kv in props)
+                            {
+                                string propName = kv.Key.Substring(start.Length);
+                                PropertyInfo propInfo;
+                                ap.ClassProperties.TryGetValue(propName, out propInfo);
+                                if (propInfo != null)
+                                    propInfo.SetValue(obj, ChangeType(kv.Value, ap));
+                            }
+                        }
+                        else if (request.Form.ContainsKey(ap.FromName))
+                            paramValue.Value = ChangeType(request.Form[ap.FromName], ap);
+
                         break;
 
                     case ParameterSource.QueryString:
                         if (request.QueryString.ContainsKey(ap.FromName))
-                            value = request.QueryString[ap.FromName];
+                            paramValue.Value = ChangeType(request.QueryString[ap.FromName], ap);
                         break;
 
                     case ParameterSource.Header:
                         if (request.Headers.ContainsKey(ap.FromName))
-                            value = request.Headers[ap.FromName];
+                            paramValue.Value = ChangeType(request.Headers[ap.FromName], ap);
                         break;
                 }
 
-                //the value must be cast to the specified parameter type.
-                //object boxing may be misleading.
-                //when the parameter type of the method is integer, value could be boxed "3" string.
-                object casted;
-
-                //if the value is null, parameter may be missing
-                if (value == null)
-                    casted = null;
-
-                //if the value and parameter types same, do nothing
-                else if (value.GetType() == ap.ParameterType)
-                    casted = value;
-
-                //need casting. parameter and value types are different
-                else
-                {
-                    //for nullable types, we need extra check (because we need to cast underlying type)
-                    if (ap.Nullable)
-                    {
-                        Type nullable = Nullable.GetUnderlyingType(ap.ParameterType);
-                        casted = Convert.ChangeType(value, nullable);
-                    }
-
-                    //directly cast
-                    else
-                        casted = Convert.ChangeType(value, ap.ParameterType);
-                }
-
                 //return value
-                values.Add(new ParameterValue
-                           {
-                               Name = ap.ParameterName,
-                               Type = ap.ParameterType,
-                               Source = ap.Source,
-                               Value = casted
-                           });
+                values.Add(paramValue);
             }
 
             return values;
+        }
+
+        /// <summary>
+        /// Converts string value to action parameter type
+        /// </summary>
+        private static object ChangeType(object value, ActionParameter parameter)
+        {
+            //if the value is null, parameter may be missing
+            if (value == null)
+                return null;
+
+            //if the value and parameter types same, do nothing
+            if (value.GetType() == parameter.ParameterType)
+                return value;
+
+            //need casting. parameter and value types are different
+
+            //for nullable types, we need extra check (because we need to cast underlying type)
+            if (parameter.Nullable)
+            {
+                Type nullable = Nullable.GetUnderlyingType(parameter.ParameterType);
+                return Convert.ChangeType(value, nullable);
+            }
+
+            if (parameter.ParameterType.IsEnum)
+                return Enum.Parse(parameter.ParameterType, value.ToString());
+
+            //directly cast
+            return Convert.ChangeType(value, parameter.ParameterType);
         }
 
         #endregion

@@ -6,10 +6,10 @@ using Twino.Mvc.Filters.Route;
 
 namespace Sample.Mvc.Controller
 {
-    [Route("")]
+    [Route("a")]
     public class HomeController : TwinoController
     {
-        [HttpGet("")]
+        [HttpGet("b")]
         public async Task<IActionResult> Get()
         {
             return await StringAsync("Welcome!");
