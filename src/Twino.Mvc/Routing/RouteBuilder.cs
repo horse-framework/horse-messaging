@@ -96,12 +96,23 @@ namespace Twino.Mvc.Routing
         /// <summary>
         /// Sorts all route leaves recursively
         /// </summary>
-        internal void SortRoutes(RouteLeaf leaf)
+        internal void SortChildren(RouteLeaf leaf)
         {
             if (leaf.Children.Count == 0)
                 return;
+
+            SortRoutes(leaf.Children);
+
+            foreach (RouteLeaf child in leaf.Children)
+                SortChildren(child);
+        }
+
+        internal void SortRoutes(List<RouteLeaf> leaves)
+        {
+            if (leaves.Count < 2)
+                return;
             
-            leaf.Children.Sort((a, b) =>
+            leaves.Sort((a, b) =>
             {
                 if (string.IsNullOrEmpty(a.Path.Value))
                     return 1;
@@ -111,9 +122,6 @@ namespace Twino.Mvc.Routing
 
                 return 0;
             });
-
-            foreach (RouteLeaf child in leaf.Children)
-                SortRoutes(child);
         }
 
         /// <summary>

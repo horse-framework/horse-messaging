@@ -186,8 +186,9 @@ namespace Twino.Mvc
             }
 
             foreach (RouteLeaf root in leaves)
-                builder.SortRoutes(root);
+                builder.SortChildren(root);
 
+            builder.SortRoutes(leaves);
             foreach (RouteLeaf route in leaves)
                 Routes.Add(route);
         }
