@@ -17,13 +17,19 @@ namespace Playground
         public string Pass { get; set; }
     }
 
+    public class User
+    {
+        public string Name { get; set; }
+        public string Lastname { get; set; }
+    }
+
     [Route("a")]
     public class AController : TwinoController
     {
         [HttpPost("b")]
-        public async Task<IActionResult> B([FromForm] Login login)
+        public async Task<IActionResult> B([FromForm("logi.n")] Login login1, [FromForm("use.r")] User user1, [FromForm("ya.s")]int yas)
         {
-            return await StringAsync($"hello: {login.User} and {login.Pass}");
+            return await StringAsync($"hello: {login1.User} and {login1.Pass} {user1.Name} - {user1.Lastname}");
         }
 
         [HttpGet("c")]
