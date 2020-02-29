@@ -6,11 +6,11 @@
         <Product>Twino.Client.Connectors</Product>
         <Description>Connectors for twino WebSocket and TMQ protocols</Description>
         <PackageTags>twino,server,client,connector,websocket,tmq</PackageTags>
-        <AssemblyVersion>2.7.14</AssemblyVersion>
-        <FileVersion>2.7.14</FileVersion>
-        <PackageVersion>2.7.14</PackageVersion>
+        <AssemblyVersion>2.7.16</AssemblyVersion>
+        <FileVersion>2.7.16</FileVersion>
+        <PackageVersion>2.7.16</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <Authors>Mehmet Helvacıköylü</Authors>
+        <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
         <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
         <RepositoryUrl>https://github.com/mhelvacikoylu/twino</RepositoryUrl>

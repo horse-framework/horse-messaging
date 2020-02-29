@@ -1,32 +1,32 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>netcoreapp3.0</TargetFramework>
-        <Title>Twino.Client.WebSocket</Title>
-        <Product>Twino.Client.WebSocket</Product>
-        <Description>Twino WebSocket Client to connect all WebSocket servers</Description>
-        <PackageTags>twino,websocket,client</PackageTags>
-        <AssemblyVersion>2.7.14</AssemblyVersion>
-        <FileVersion>2.7.14</FileVersion>
-        <PackageVersion>2.7.14</PackageVersion>
-        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <Authors>Mehmet Helvacıköylü</Authors>
-        <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
-        <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
-        <RepositoryUrl>https://github.com/mhelvacikoylu/twino</RepositoryUrl>
-    </PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <Title>Twino.Client.WebSocket</Title>
+    <Product>Twino.Client.WebSocket</Product>
+    <Description>Twino WebSocket Client to connect all WebSocket servers</Description>
+    <PackageTags>twino,websocket,client</PackageTags>
+    <AssemblyVersion>2.7.16</AssemblyVersion>
+    <FileVersion>2.7.16</FileVersion>
+    <PackageVersion>2.7.16</PackageVersion>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
+    <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
+    <RepositoryUrl>https://github.com/mhelvacikoylu/twino</RepositoryUrl>
+  </PropertyGroup>
 
-    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-      <DocumentationFile>bin\Debug\Twino.Client.WebSocket.xml</DocumentationFile>
-    </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DocumentationFile>bin\Debug\Twino.Client.WebSocket.xml</DocumentationFile>
+  </PropertyGroup>
 
-    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-      <DocumentationFile>bin\Release\Twino.Client.WebSocket.xml</DocumentationFile>
-    </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DocumentationFile>bin\Release\Twino.Client.WebSocket.xml</DocumentationFile>
+  </PropertyGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\Twino.Client.Connectors\Twino.Client.Connectors.csproj" />
-        <ProjectReference Include="..\Twino.Protocols.WebSocket\Twino.Protocols.WebSocket.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Twino.Client.Connectors\Twino.Client.Connectors.csproj" />
+    <ProjectReference Include="..\Twino.Protocols.WebSocket\Twino.Protocols.WebSocket.csproj" />
+  </ItemGroup>
 
 </Project>

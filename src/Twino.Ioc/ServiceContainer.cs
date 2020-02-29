@@ -763,10 +763,10 @@ namespace Twino.Ioc
         /// </summary>
         public async Task<object> CreateInstance(Type type, IContainerScope scope = null)
         {
-            ConstructorInfo[] ctors = type.GetConstructors(BindingFlags.Public);
+            ConstructorInfo[] ctors = type.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
             if (ctors.Length == 0)
                 throw new InvalidOperationException("There is no accessible constructor found in " + type.FullName);
-            
+
             ConstructorInfo constructor = ctors[0];
             ParameterInfo[] parameters = constructor.GetParameters();
 

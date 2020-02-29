@@ -1,33 +1,33 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>netcoreapp3.0</TargetFramework>
-        <Title>Twino.MQ</Title>
-        <Product>Twino.MQ</Product>
-        <Description>Messaging Queue Server library with TMQ Protocol via Twino Server</Description>
-        <PackageTags>twino,server,tmq,messaging,queue,mq</PackageTags>
-        <AssemblyVersion>2.7.14</AssemblyVersion>
-        <FileVersion>2.7.14</FileVersion>
-        <PackageVersion>2.7.14</PackageVersion>
-        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <Authors>Mehmet Helvacıköylü</Authors>
-        <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
-        <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
-        <RepositoryUrl>https://github.com/mhelvacikoylu/twino</RepositoryUrl>
-    </PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <Title>Twino.MQ</Title>
+    <Product>Twino.MQ</Product>
+    <Description>Messaging Queue Server library with TMQ Protocol via Twino Server</Description>
+    <PackageTags>twino,server,tmq,messaging,queue,mq</PackageTags>
+    <AssemblyVersion>2.7.16</AssemblyVersion>
+    <FileVersion>2.7.16</FileVersion>
+    <PackageVersion>2.7.16</PackageVersion>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
+    <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
+    <RepositoryUrl>https://github.com/mhelvacikoylu/twino</RepositoryUrl>
+  </PropertyGroup>
 
-    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-      <DocumentationFile>bin\Release\Twino.MQ.xml</DocumentationFile>
-    </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DocumentationFile>bin\Release\Twino.MQ.xml</DocumentationFile>
+  </PropertyGroup>
 
-    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-      <DocumentationFile>bin\Debug\Twino.MQ.xml</DocumentationFile>
-    </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DocumentationFile>bin\Debug\Twino.MQ.xml</DocumentationFile>
+  </PropertyGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\Twino.Client.TMQ\Twino.Client.TMQ.csproj" />
-        <ProjectReference Include="..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
-        <ProjectReference Include="..\Twino.Server\Twino.Server.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Twino.Client.TMQ\Twino.Client.TMQ.csproj" />
+    <ProjectReference Include="..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
+    <ProjectReference Include="..\Twino.Server\Twino.Server.csproj" />
+  </ItemGroup>
 
 </Project>
