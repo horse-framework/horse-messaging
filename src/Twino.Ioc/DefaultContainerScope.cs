@@ -40,7 +40,7 @@ namespace Twino.Ioc
         public async Task<TService> Get<TService>(IServiceContainer services) where TService : class
         {
             object o = await Get(typeof(TService), services);
-            return (TService) o;
+            return (TService)o;
         }
 
         /// <summary>
@@ -64,25 +64,27 @@ namespace Twino.Ioc
                 _scopedServices = new Dictionary<Type, object>();
 
             //try to get from created instances
-            object instance;
-            bool found = _scopedServices.TryGetValue(descriptor.ServiceType, out instance);
+            bool found = _scopedServices.TryGetValue(descriptor.ServiceType, out object instance);
+
             if (found)
                 return instance;
 
             //we couldn't find any created instance. create new.
             instance = await services.CreateInstance(descriptor.ImplementationType, this);
 
-            if (instance != null)
-                _scopedServices.Add(descriptor.ServiceType, instance);
+            if (instance is null) return null;
 
             if (descriptor.AfterCreatedMethod != null)
                 descriptor.AfterCreatedMethod.DynamicInvoke(instance);
 
             if (descriptor.ProxyType != null)
             {
-                IServiceProxy p = (IServiceProxy) await services.CreateInstance(descriptor.ProxyType, this);
-                return p.Proxy(instance);
+                IServiceProxy p = (IServiceProxy)await services.CreateInstance(descriptor.ProxyType, this);
+                instance = p.Proxy(instance);
             }
+
+            if (instance != null)
+                _scopedServices.Add(descriptor.ServiceType, instance);
 
             return instance;
         }
@@ -101,7 +103,7 @@ namespace Twino.Ioc
                         _poolInstances[pool].Add(descriptor);
                 }
                 else
-                    _poolInstances.Add(pool, new List<PoolServiceDescriptor> {descriptor});
+                    _poolInstances.Add(pool, new List<PoolServiceDescriptor> { descriptor });
             }
         }
 
