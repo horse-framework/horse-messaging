@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Twino.Core
 {
@@ -112,7 +113,9 @@ namespace Twino.Core
             {
                 _thread.Abort();
             }
-            catch { }
+            catch
+            {
+            }
 
             _thread = null;
         }

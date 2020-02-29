@@ -41,6 +41,7 @@ namespace Twino.Client.Connectors
         public override void Run()
         {
             _running = true;
+            ConnectSafe();
 
             if (_timer != null)
                 return;
@@ -55,26 +56,32 @@ namespace Twino.Client.Connectors
                 }
 
                 if (NeedReconnect() && !_connecting)
-                {
-                    try
-                    {
-                        _connecting = true;
-                        Connect();
-                    }
-                    catch (Exception ex)
-                    {
-                        RaiseException(ex);
-                    }
-                    finally
-                    {
-                        _connecting = false;
-                    }
-                }
+                    ConnectSafe();
             }, Interval);
 
             _timer.Start(ThreadPriority.BelowNormal);
         }
 
+        /// <summary>
+        /// Connects without throwing exception, handles it and raises connector's exception event
+        /// </summary>
+        private void ConnectSafe()
+        {
+            try
+            {
+                _connecting = true;
+                Connect();
+            }
+            catch (Exception ex)
+            {
+                RaiseException(ex);
+            }
+            finally
+            {
+                _connecting = false;
+            }
+        }
+        
         /// <summary>
         /// Aborts the connector and disconnects from the server.
         /// </summary>

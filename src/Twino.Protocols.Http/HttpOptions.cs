@@ -12,7 +12,7 @@ namespace Twino.Protocols.Http
         /// <summary>
         /// Maximum keeping alive duration for each TCP connection
         /// </summary>
-        public int HttpConnectionTimeMax { get; set; } = 300;
+        public int HttpConnectionTimeMax { get; set; } = 0;
 
         /// <summary>
         /// Maximum request lengths (includes content)
