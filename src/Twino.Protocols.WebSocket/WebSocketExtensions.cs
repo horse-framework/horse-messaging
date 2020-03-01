@@ -66,7 +66,32 @@ namespace Twino.Protocols.WebSocket
                                                  WebSocketMessageRecievedHandler messageAction)
         {
             return UseWebSockets(server,
-                                 new MethodWebSocketConnectionHandler(connectedAction, messageAction),
+                                 new MethodWebSocketConnectionHandler(connectedAction, null, messageAction),
+                                 HttpOptions.CreateDefault());
+        }
+
+        /// <summary>
+        /// Uses WebSocket Protocol and accepts HTTP connections which comes with "Upgrade: websocket" header data
+        /// </summary>
+        public static ITwinoServer UseWebSockets(this ITwinoServer server,
+                                                 WebSocketConnectedHandler connectedAction,
+                                                 WebSocketReadyHandler readyAction,
+                                                 WebSocketMessageRecievedHandler messageAction)
+        {
+            return UseWebSockets(server,
+                                 new MethodWebSocketConnectionHandler(connectedAction, readyAction, messageAction),
+                                 HttpOptions.CreateDefault());
+        }
+
+        /// <summary>
+        /// Uses WebSocket Protocol and accepts HTTP connections which comes with "Upgrade: websocket" header data
+        /// </summary>
+        public static ITwinoServer UseWebSockets(this ITwinoServer server,
+                                                 WebSocketReadyHandler readyAction,
+                                                 WebSocketMessageRecievedHandler messageAction)
+        {
+            return UseWebSockets(server,
+                                 new MethodWebSocketConnectionHandler(null, readyAction, messageAction),
                                  HttpOptions.CreateDefault());
         }
     }

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using Twino.Client.WebSocket;
 using Twino.Client.WebSocket.Connectors;
@@ -17,7 +18,7 @@ namespace Test.Connector
         public AbsoluteConnectorTest()
         {
             _server = new TwinoServer(ServerOptions.CreateDefault());
-            _server.UseWebSockets(async (socket, data) => { await socket.SendAsync("Welcome"); },
+            _server.UseWebSockets(async (socket) => { await socket.SendAsync("Welcome"); },
                                   async (socket, message) =>
                                   {
                                       _receivedMessages++;
@@ -26,15 +27,15 @@ namespace Test.Connector
         }
 
         [Fact]
-        public void Connect()
+        public async Task Connect()
         {
             _server.Start(46431);
-            System.Threading.Thread.Sleep(250);
+            await Task.Delay(1250);
 
-            WsAbsoluteConnector connector = new WsAbsoluteConnector(TimeSpan.FromSeconds(1));
+            WsAbsoluteConnector connector = new WsAbsoluteConnector(TimeSpan.FromMilliseconds(500));
             connector.AddHost("ws://127.0.0.1:46431");
             connector.Run();
-            System.Threading.Thread.Sleep(1000);
+            await Task.Delay(1250);
 
             Assert.True(connector.IsConnected);
 

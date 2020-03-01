@@ -15,6 +15,11 @@ namespace Twino.Protocols.WebSocket
     public delegate Task WebSocketConnectedHandler(WsServerSocket socket, ConnectionData data);
 
     /// <summary>
+    /// Websocket handshake is completed and it's ready to send and receive messages
+    /// </summary>
+    public delegate Task WebSocketReadyHandler(WsServerSocket socket);
+
+    /// <summary>
     /// Twino WebSocket Server with WebSocketMessageRecievedHandler method implementation handler
     /// </summary>
     internal class MethodWebSocketConnectionHandler : IProtocolConnectionHandler<WsServerSocket, WebSocketMessage>
@@ -25,15 +30,17 @@ namespace Twino.Protocols.WebSocket
         private readonly WebSocketMessageRecievedHandler _messageHandler;
 
         private readonly WebSocketConnectedHandler _connectedHandler;
+        private readonly WebSocketReadyHandler _readyHandler;
 
         public MethodWebSocketConnectionHandler(WebSocketMessageRecievedHandler handler)
-            : this(null, handler)
+            : this(null, null, handler)
         {
         }
 
-        public MethodWebSocketConnectionHandler(WebSocketConnectedHandler connectedHandler, WebSocketMessageRecievedHandler messageHandler)
+        public MethodWebSocketConnectionHandler(WebSocketConnectedHandler connectedHandler, WebSocketReadyHandler readyHandler, WebSocketMessageRecievedHandler messageHandler)
         {
             _connectedHandler = connectedHandler;
+            _readyHandler = readyHandler;
             _messageHandler = messageHandler;
         }
 
@@ -55,7 +62,8 @@ namespace Twino.Protocols.WebSocket
         /// </summary>
         public async Task Ready(ITwinoServer server, WsServerSocket client)
         {
-            await Task.CompletedTask;
+            if (_readyHandler != null)
+                await _readyHandler(client);
         }
 
         /// <summary>
