@@ -664,13 +664,8 @@ namespace Twino.MQ.Queues
         /// </summary>
         internal async Task<bool> ApplyDecision(Decision decision, QueueMessage message, TmqMessage customAck = null)
         {
-            if (decision.SaveMessage && !message.IsSaved)
-            {
-                message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
-
-                if (message.IsSaved)
-                    Info.AddMessageSave();
-            }
+            if (decision.SaveMessage)
+                await SaveMessage(message);
 
             if (decision.SendAcknowledge == DeliveryAcknowledgeDecision.Always ||
                 decision.SendAcknowledge == DeliveryAcknowledgeDecision.IfSaved && message.IsSaved)
@@ -696,6 +691,22 @@ namespace Twino.MQ.Queues
             }
 
             return decision.Allow;
+        }
+
+        /// <summary>
+        /// Saves message
+        /// </summary>
+        public async Task<bool> SaveMessage(QueueMessage message)
+        {
+            if (message.IsSaved)
+                return false;
+            
+            message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
+
+            if (message.IsSaved)
+                Info.AddMessageSave();
+
+            return message.IsSaved;
         }
 
         #endregion

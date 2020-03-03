@@ -6,9 +6,9 @@
     <Product>Twino.Mvc</Product>
     <Description>MVC Library for Twino Http Server</Description>
     <PackageTags>twino,http,server,mvc</PackageTags>
-    <AssemblyVersion>2.8.0</AssemblyVersion>
-    <FileVersion>2.8.0</FileVersion>
-    <PackageVersion>2.8.0</PackageVersion>
+    <AssemblyVersion>2.8.1</AssemblyVersion>
+    <FileVersion>2.8.1</FileVersion>
+    <PackageVersion>2.8.1</PackageVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
     <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
