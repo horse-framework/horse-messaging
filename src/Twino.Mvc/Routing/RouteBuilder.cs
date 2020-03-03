@@ -73,14 +73,14 @@ namespace Twino.Mvc.Routing
                             if (i == path.Count - 1)
                             {
                                 leaf.Route = new Route
-                                             {
-                                                 ActionType = method,
-                                                 ControllerType = controllerType,
-                                                 Method = info.Method,
-                                                 Path = path.ToArray(),
-                                                 Parameters = BuildParameters(method),
-                                                 IsAsyncMethod = (AsyncStateMachineAttribute) method.GetCustomAttribute(typeof(AsyncStateMachineAttribute)) != null
-                                             };
+                                {
+                                    ActionType = method,
+                                    ControllerType = controllerType,
+                                    Method = info.Method,
+                                    Path = path.ToArray(),
+                                    Parameters = BuildParameters(method),
+                                    IsAsyncMethod = (AsyncStateMachineAttribute)method.GetCustomAttribute(typeof(AsyncStateMachineAttribute)) != null
+                                };
                             }
                         }
 
@@ -111,7 +111,7 @@ namespace Twino.Mvc.Routing
         {
             if (leaves.Count < 2)
                 return;
-            
+
             leaves.Sort((a, b) =>
             {
                 if (string.IsNullOrEmpty(a.Path.Value))
@@ -133,6 +133,9 @@ namespace Twino.Mvc.Routing
             {
                 if (typeof(AuthorizeAttribute).IsAssignableFrom(data.AttributeType))
                     route.HasControllerAuthorizeFilter = true;
+
+                if (typeof(AllowAnonymousAttribute).IsAssignableFrom(data.AttributeType))
+                    route.HasControllerAuthorizeFilter = false;
 
                 if (typeof(IBeforeControllerFilter).IsAssignableFrom(data.AttributeType))
                     route.HasControllerBeforeFilter = true;
@@ -157,6 +160,9 @@ namespace Twino.Mvc.Routing
             {
                 if (typeof(AuthorizeAttribute).IsAssignableFrom(data.AttributeType))
                     route.HasActionAuthorizeFilter = true;
+
+                if (typeof(AllowAnonymousAttribute).IsAssignableFrom(data.AttributeType))
+                    route.HasActionAuthorizeFilter = false;
 
                 if (typeof(IActionExecutingFilter).IsAssignableFrom(data.AttributeType))
                     route.HasActionExecutingFilter = true;
@@ -245,11 +251,11 @@ namespace Twino.Mvc.Routing
 
                 string pattern = attr.Pattern ?? "";
                 RouteInfo route = new RouteInfo
-                                  {
-                                      Method = attr.Method,
-                                      Pattern = pattern,
-                                      Path = pattern.Split('/', StringSplitOptions.RemoveEmptyEntries)
-                                  };
+                {
+                    Method = attr.Method,
+                    Pattern = pattern,
+                    Path = pattern.Split('/', StringSplitOptions.RemoveEmptyEntries)
+                };
 
                 routes.Add(route);
             }
@@ -267,10 +273,10 @@ namespace Twino.Mvc.Routing
             if (string.IsNullOrEmpty(fullpath))
             {
                 result.Add(new RoutePath
-                           {
-                               Type = RouteType.Text,
-                               Value = ""
-                           });
+                {
+                    Type = RouteType.Text,
+                    Value = ""
+                });
 
                 return result;
             }
@@ -339,7 +345,7 @@ namespace Twino.Mvc.Routing
                 if (attr != null)
                 {
                     if (attr.Source == ParameterSource.Body)
-                        from = ((FromBodyAttribute) attr).Type.ToString().ToLower();
+                        from = ((FromBodyAttribute)attr).Type.ToString().ToLower();
                     else
                         from = string.IsNullOrEmpty(attr.Name) ? parameter.Name : attr.Name;
                 }
@@ -347,15 +353,15 @@ namespace Twino.Mvc.Routing
                     from = parameter.Name;
 
                 ActionParameter item = new ActionParameter
-                                       {
-                                           ParameterType = parameter.ParameterType,
-                                           ParameterName = parameter.Name,
-                                           FromName = from,
-                                           Index = i,
-                                           Source = attr != null ? attr.Source : ParameterSource.None,
-                                           Nullable = Nullable.GetUnderlyingType(parameter.ParameterType) != null,
-                                           IsClass = parameter.ParameterType.IsClass && parameter.ParameterType != typeof(string)
-                                       };
+                {
+                    ParameterType = parameter.ParameterType,
+                    ParameterName = parameter.Name,
+                    FromName = from,
+                    Index = i,
+                    Source = attr != null ? attr.Source : ParameterSource.None,
+                    Nullable = Nullable.GetUnderlyingType(parameter.ParameterType) != null,
+                    IsClass = parameter.ParameterType.IsClass && parameter.ParameterType != typeof(string)
+                };
 
                 if (item.IsClass)
                 {
