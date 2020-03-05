@@ -17,52 +17,47 @@ namespace Twino.Mvc.Controllers
         /// </summary>
         public async Task<TwinoController> CreateInstance(TwinoMvc mvc, Type controllerType, HttpRequest request, HttpResponse response, IContainerScope scope)
         {
-            ConstructorInfo[] constructors = controllerType.GetConstructors();
+            ConstructorInfo[] constructors = controllerType.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
 
-            //some constructors may have not-registered parameters.
-            //these constructor must not break the operation.
-            //we need to find the right constructor (right means, ctor that we can provide all parameters from the service container)
-            foreach (ConstructorInfo constructor in constructors)
+            if (constructors.Length == 0)
+                throw new InvalidOperationException("There is no accessible constructor found in " + controllerType.FullName);
+            else if (constructors.Length > 1)
+                throw new InvalidOperationException($"{controllerType.FullName} must have only one accessible constructor.");
+
+            ConstructorInfo constructor = constructors[0];
+
+            ParameterInfo[] parameters = constructor.GetParameters();
+            object[] values = new object[parameters.Length];
+
+            //each parameter must be provided from the service container
+            for (int i = 0; i < parameters.Length; i++)
             {
-                ParameterInfo[] parameters = constructor.GetParameters();
-                object[] values = new object[parameters.Length];
-                bool skip = false;
+                ParameterInfo p = parameters[i];
+                Type type = p.ParameterType;
 
-                //each parameter must be provided from the service container
-                for (int i = 0; i < parameters.Length; i++)
+                object value = await mvc.Services.Get(type, scope);
+
+                if (typeof(IContainerScope).IsAssignableFrom(type))
+                    values[i] = scope;
+                else
                 {
-                    ParameterInfo p = parameters[i];
-                    Type type = p.ParameterType;
-
-                    object value = await mvc.Services.Get(type, scope);
-
-                    //if the parameter could not provide, we need to skip this constructor
-                    if (value == null)
-                    {
-                        skip = true;
-                        break;
-                    }
-
-                    values[i] = value;
+                    object v = await mvc.Services.Get(type, scope);
+                    values[i] = v;
                 }
-
-                if (skip)
-                    continue;
-
-                //if the application comes here, we are sure all parameters are created
-                //now we can create instance with these parameter values
-                TwinoController result = (TwinoController)Activator.CreateInstance(controllerType, values);
-
-                //set the controller properties
-                result.Request = request;
-                result.Response = response;
-                result.Server = mvc.Server;
-                result.CurrentScope = scope;
-
-                return result;
+                values[i] = value;
             }
 
-            return null;
+            //if the application comes here, we are sure all parameters are created
+            //now we can create instance with these parameter values
+            TwinoController result = (TwinoController)Activator.CreateInstance(controllerType, values);
+
+            //set the controller properties
+            result.Request = request;
+            result.Response = response;
+            result.Server = mvc.Server;
+            result.CurrentScope = scope;
+
+            return result;
         }
     }
 }

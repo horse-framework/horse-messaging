@@ -780,8 +780,13 @@ namespace Twino.Ioc
             for (int i = 0; i < parameters.Length; i++)
             {
                 ParameterInfo parameter = parameters[i];
-                object value = await Get(parameter.ParameterType, scope);
-                values[i] = value;
+                if (typeof(IContainerScope).IsAssignableFrom(parameter.ParameterType))
+                    values[i] = scope;
+                else
+                {
+                    object value = await Get(parameter.ParameterType, scope);
+                    values[i] = value;
+                }
             }
 
             //create with parameters found from the container

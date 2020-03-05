@@ -57,11 +57,18 @@ namespace Twino.Mvc.Middlewares
                 return (IMiddleware)Activator.CreateInstance(descriptor.MiddlewareType);
 
             object[] parameters = new object[descriptor.ConstructorParameters.Length];
+
             for (int i = 0; i < descriptor.ConstructorParameters.Length; i++)
             {
                 Type type = descriptor.ConstructorParameters[i];
-                object o = await _mvc.Services.Get(type, _scope);
-                parameters[i] = o;
+
+                if (typeof(IContainerScope).IsAssignableFrom(type))
+                    parameters[i] = _scope;
+                else
+                {
+                    object o = await _mvc.Services.Get(type, _scope);
+                    parameters[i] = o;
+                }
             }
 
             return (IMiddleware)Activator.CreateInstance(descriptor.MiddlewareType, parameters);
