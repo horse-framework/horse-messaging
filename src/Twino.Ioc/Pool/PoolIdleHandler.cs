@@ -48,6 +48,9 @@ namespace Twino.Ioc.Pool
                 if (descriptor.Locked)
                     continue;
 
+                if (descriptor.Instance == null)
+                    continue;
+
                 remove.Add(descriptor);
             }
 
