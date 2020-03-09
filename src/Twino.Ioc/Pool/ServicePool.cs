@@ -11,10 +11,12 @@ namespace Twino.Ioc.Pool
     /// Contains same service instances in the pool.
     /// Provides available instances to requesters and guarantees that only requester uses same instances at same time
     /// </summary>
-    public class ServicePool<TService, TImplementation> : IServicePool
+    public class ServicePool<TService, TImplementation> : IServicePool, IDisposable
         where TService : class
         where TImplementation : class, TService
     {
+        #region Properties
+
         /// <summary>
         /// Pool instance implementation type
         /// </summary>
@@ -23,7 +25,7 @@ namespace Twino.Ioc.Pool
         /// <summary>
         /// Active instances
         /// </summary>
-        protected readonly List<PoolServiceDescriptor<TService>> _descriptors = new List<PoolServiceDescriptor<TService>>();
+        internal List<PoolServiceDescriptor<TService>> Descriptors { get; } = new List<PoolServiceDescriptor<TService>>();
 
         /// <summary>
         /// Initializer function for new created instances in pool
@@ -39,6 +41,15 @@ namespace Twino.Ioc.Pool
         /// Services container of pool
         /// </summary>
         public IServiceContainer Container { get; }
+
+        /// <summary>
+        /// Idle handler for the pool
+        /// </summary>
+        private PoolIdleHandler<TService, TImplementation> _idleHandler;
+
+        #endregion
+
+        #region Init - Release
 
         /// <summary>
         /// Crates new service pool belong the container with options and after instance creation functions
@@ -61,6 +72,12 @@ namespace Twino.Ioc.Pool
 
             if (ofunc != null)
                 ofunc(Options);
+
+            if (Options.IdleTimeout > TimeSpan.Zero)
+            {
+                _idleHandler = new PoolIdleHandler<TService, TImplementation>(this);
+                _idleHandler.Start();
+            }
         }
 
         /// <summary>
@@ -70,8 +87,8 @@ namespace Twino.Ioc.Pool
         public void ReleaseInstance(object instance)
         {
             PoolServiceDescriptor descriptor;
-            lock (_descriptors)
-                descriptor = _descriptors.Find(x => x.Instance == instance);
+            lock (Descriptors)
+                descriptor = Descriptors.Find(x => x.Instance == instance);
 
             if (descriptor != null)
                 Release(descriptor);
@@ -84,6 +101,18 @@ namespace Twino.Ioc.Pool
         {
             descriptor.Locked = false;
         }
+        
+        /// <summary>
+        /// Disposes pool and releases all resources
+        /// </summary>
+        public void Dispose()
+        {
+            _idleHandler?.Dispose();
+        }
+
+        #endregion
+
+        #region Get
 
         /// <summary>
         /// Get an item from pool and locks it to prevent multiple usage at same time.
@@ -98,8 +127,8 @@ namespace Twino.Ioc.Pool
 
             //if there is no available instance and we have space in pool, create new
             int count;
-            lock (_descriptors)
-                count = _descriptors.Count;
+            lock (Descriptors)
+                count = Descriptors.Count;
 
             if (count < Options.PoolMaxSize)
                 return await CreateNew(scope, true);
@@ -154,21 +183,36 @@ namespace Twino.Ioc.Pool
         /// </summary>
         private PoolServiceDescriptor<TService> GetFromCreatedItem(IContainerScope scope)
         {
-            lock (_descriptors)
+            lock (Descriptors)
             {
                 if (Type == ImplementationType.Scoped)
                 {
-                    PoolServiceDescriptor<TService> scoped = _descriptors.FirstOrDefault(x => x.Scope == scope);
+                    PoolServiceDescriptor<TService> scoped = Descriptors.FirstOrDefault(x => x.Scope == scope);
+
+                    if (scoped != null)
+                    {
+                        if (Options.IdleTimeout > TimeSpan.Zero)
+                            scoped.IdleTimeout = DateTime.UtcNow + Options.IdleTimeout;
+                        else
+                            scoped.IdleTimeout = null;
+                    }
+
                     return scoped;
                 }
 
-                PoolServiceDescriptor<TService> transient = _descriptors.FirstOrDefault(x => !x.Locked || x.LockExpiration < DateTime.UtcNow);
+                PoolServiceDescriptor<TService> transient = Descriptors.FirstOrDefault(x => !x.Locked || x.LockExpiration < DateTime.UtcNow);
                 if (transient == null)
                     return null;
 
                 transient.Scope = scope;
                 transient.Locked = true;
                 transient.LockExpiration = DateTime.UtcNow.Add(Options.MaximumLockDuration);
+
+                if (Options.IdleTimeout > TimeSpan.Zero)
+                    transient.IdleTimeout = DateTime.UtcNow + Options.IdleTimeout;
+                else
+                    transient.IdleTimeout = null;
+
                 return transient;
             }
         }
@@ -182,28 +226,34 @@ namespace Twino.Ioc.Pool
             descriptor.Locked = locked;
             descriptor.Scope = scope;
             descriptor.LockExpiration = DateTime.UtcNow.Add(Options.MaximumLockDuration);
+            if (Options.IdleTimeout > TimeSpan.Zero)
+                descriptor.IdleTimeout = DateTime.UtcNow + Options.IdleTimeout;
+            else
+                descriptor.IdleTimeout = null;
 
             if (Type == ImplementationType.Scoped && scope != null)
             {
                 //we couldn't find any created instance. create new.
                 object instance = await Container.CreateInstance(typeof(TImplementation), scope);
                 scope.PutItem(typeof(TService), instance);
-                descriptor.Instance = (TService)instance;
+                descriptor.Instance = (TService) instance;
             }
             else
             {
                 object instance = await Container.CreateInstance(typeof(TImplementation), scope);
-                descriptor.Instance = (TService)instance;
+                descriptor.Instance = (TService) instance;
             }
 
             if (_func != null)
                 _func(descriptor.Instance);
 
-            lock (_descriptors)
-                _descriptors.Add(descriptor);
+            lock (Descriptors)
+                Descriptors.Add(descriptor);
 
             return descriptor;
         }
+
+        #endregion
     }
 
     /// <summary>
@@ -216,7 +266,6 @@ namespace Twino.Ioc.Pool
         where TImplementation : class, TService
         where TProxy : class, IServiceProxy
     {
-
         /// <summary>
         /// Crates new service pool belong the container with options and after instance creation functions
         /// </summary>
@@ -226,7 +275,8 @@ namespace Twino.Ioc.Pool
         /// <param name="func">After each instance is created, to do custom initialization, this method will be called.</param>
         public ServicePool(ImplementationType type, IServiceContainer container, Action<ServicePoolOptions> ofunc, Action<TService> func)
             : base(type, container, ofunc, func)
-        { }
+        {
+        }
 
         /// <summary>
         /// Creates new instance and adds to pool
@@ -238,28 +288,33 @@ namespace Twino.Ioc.Pool
             descriptor.Scope = scope;
             descriptor.LockExpiration = DateTime.UtcNow.Add(Options.MaximumLockDuration);
 
+            if (Options.IdleTimeout > TimeSpan.Zero)
+                descriptor.IdleTimeout = DateTime.UtcNow + Options.IdleTimeout;
+            else
+                descriptor.IdleTimeout = null;
+
             if (Type == ImplementationType.Scoped && scope != null)
             {
                 //we couldn't find any created instance. create new.
                 object instance = await Container.CreateInstance(typeof(TImplementation), scope);
-                IServiceProxy p = (IServiceProxy)await Container.CreateInstance(typeof(TProxy), scope);
+                IServiceProxy p = (IServiceProxy) await Container.CreateInstance(typeof(TProxy), scope);
                 object proxyObj = p.Proxy(instance);
                 scope.PutItem(typeof(TService), proxyObj);
-                descriptor.Instance = (TService)proxyObj;
+                descriptor.Instance = (TService) proxyObj;
             }
             else
             {
                 object instance = await Container.CreateInstance(typeof(TImplementation), scope);
-                IServiceProxy p = (IServiceProxy)await Container.CreateInstance(typeof(TProxy), scope);
+                IServiceProxy p = (IServiceProxy) await Container.CreateInstance(typeof(TProxy), scope);
                 object proxyObj = p.Proxy(instance);
-                descriptor.Instance = (TService)proxyObj;
+                descriptor.Instance = (TService) proxyObj;
             }
 
             if (_func != null)
                 _func(descriptor.Instance);
 
-            lock (_descriptors)
-                _descriptors.Add(descriptor);
+            lock (Descriptors)
+                Descriptors.Add(descriptor);
 
             return descriptor;
         }
