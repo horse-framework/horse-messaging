@@ -96,5 +96,15 @@ namespace Twino.Mvc.Auth.Jwt
             JwtClaimsPrincipalValidator validator = new JwtClaimsPrincipalValidator(Options);
             return validator.Get(request);
         }
+
+        /// <summary>
+        /// Reads token from token string and creates ClaimsPrincipals if the token is valid.
+        /// Token string must be in "Scheme xxx.." form such as "Bearer xxx"
+        /// </summary>
+        public ClaimsPrincipal Read(string token)
+        {
+            JwtClaimsPrincipalValidator validator = new JwtClaimsPrincipalValidator(Options);
+            return validator.Get(token);
+        }
     }
 }

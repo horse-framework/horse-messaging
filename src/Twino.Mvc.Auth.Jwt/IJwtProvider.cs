@@ -24,5 +24,11 @@ namespace Twino.Mvc.Auth.Jwt
         /// Reads token from Request and creates ClaimsPrincipals if the token is valid
         /// </summary>
         ClaimsPrincipal Read(HttpRequest request);
+        
+        /// <summary>
+        /// Reads token from token string and creates ClaimsPrincipals if the token is valid.
+        /// Token string must be in "Scheme xxx.." form such as "Bearer xxx"
+        /// </summary>
+        ClaimsPrincipal Read(string token);
     }
 }

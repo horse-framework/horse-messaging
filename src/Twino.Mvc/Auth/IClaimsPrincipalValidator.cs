@@ -14,5 +14,11 @@ namespace Twino.Mvc.Auth
         /// Reads the Request and creates ClaimsPrincipal data if user has valid token or another authentication info
         /// </summary>
         ClaimsPrincipal Get(HttpRequest request);
+        
+        /// <summary>
+        /// Reads the token string and creates ClaimsPrincipal data if user has valid token or another authentication info.
+        /// Token string must be in "Scheme xxx.." form such as "Bearer xxx"
+        /// </summary>
+        ClaimsPrincipal Get(string token);
     }
 }
