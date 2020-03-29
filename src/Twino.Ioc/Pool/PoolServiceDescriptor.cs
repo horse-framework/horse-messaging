@@ -12,7 +12,7 @@ namespace Twino.Ioc.Pool
         /// Service instance
         /// </summary>
         public TService Instance { get; internal set; }
-
+        
         /// <summary>
         /// Gets instance of the service
         /// </summary>
@@ -42,6 +42,13 @@ namespace Twino.Ioc.Pool
         /// Serviece instance locker scope
         /// </summary>
         public IContainerScope Scope { get; internal set; }
+
+        /// <summary>
+        /// Deadline for the instance.
+        /// If the instance is not used by the pool until, it will be destroyed.
+        /// If null, there is no timeout
+        /// </summary>
+        public DateTime? IdleTimeout { get; internal set; }
 
         /// <summary>
         /// Gets instance of the service
