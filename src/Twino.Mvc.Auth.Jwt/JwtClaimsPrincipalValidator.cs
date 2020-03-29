@@ -35,7 +35,16 @@ namespace Twino.Mvc.Auth.Jwt
                 return null;
 
             string schemeAndToken = request.Headers[HttpHeaders.AUTHORIZATION];
-            ClaimsPrincipal principal = GetToken(schemeAndToken, out _);
+            return Get(schemeAndToken);
+        }
+
+        /// <summary>
+        /// Reads the token string and creates ClaimsPrincipal data if user has valid token or another authentication info.
+        /// Token string must be in "Bearer xxx.." form
+        /// </summary>
+        public ClaimsPrincipal Get(string token)
+        {
+            ClaimsPrincipal principal = GetToken(token, out _);
             return principal;
         }
 
@@ -66,14 +75,14 @@ namespace Twino.Mvc.Auth.Jwt
 
             JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
             TokenValidationParameters validationParameters = new TokenValidationParameters
-            {
-                ValidateLifetime = Options.ValidateLifetime,
-                ValidateAudience = Options.ValidateAudience,
-                ValidateIssuer = Options.ValidateIssuer,
-                ValidIssuer = Options.Issuer,
-                ValidAudience = Options.Audience,
-                IssuerSigningKey = Options.SigningKey
-            };
+                                                             {
+                                                                 ValidateLifetime = Options.ValidateLifetime,
+                                                                 ValidateAudience = Options.ValidateAudience,
+                                                                 ValidateIssuer = Options.ValidateIssuer,
+                                                                 ValidIssuer = Options.Issuer,
+                                                                 ValidAudience = Options.Audience,
+                                                                 IssuerSigningKey = Options.SigningKey
+                                                             };
 
             ClaimsPrincipal principal = tokenHandler.ValidateToken(value, validationParameters, out validatedToken);
             return principal;
