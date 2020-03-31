@@ -74,6 +74,7 @@ namespace Twino.Mvc.Auth.Jwt
             }
 
             JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
+            tokenHandler.InboundClaimTypeMap.Clear();
             TokenValidationParameters validationParameters = new TokenValidationParameters
                                                              {
                                                                  ValidateLifetime = Options.ValidateLifetime,
