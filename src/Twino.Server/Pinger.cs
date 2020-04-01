@@ -151,8 +151,8 @@ namespace Twino.Server
                 }
                 else
                 {
-                    socket.Ping();
                     socket.PongRequired = true;
+                    socket.Ping();
                 }
             }
         }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Security.Claims;
 using Twino.Protocols.Http;
 
@@ -15,6 +16,10 @@ namespace Twino.Mvc.Auth.Jwt
         JwtToken Create(string userId, string username, IEnumerable<Claim> claims);
 
         /// <summary>
+        /// Creates new JSON Web Token for specified userId, userName and claim list with custom expiration date
+        /// </summary>
+        JwtToken Create(string userId, string username, DateTime expiration, IEnumerable<Claim> claims);
+        /// <summary>
         /// Reads string token and creates same token with new valid lifetime.
         /// If currentToken is not valid, returns null.
         /// </summary>
@@ -24,7 +29,7 @@ namespace Twino.Mvc.Auth.Jwt
         /// Reads token from Request and creates ClaimsPrincipals if the token is valid
         /// </summary>
         ClaimsPrincipal Read(HttpRequest request);
-        
+
         /// <summary>
         /// Reads token from token string and creates ClaimsPrincipals if the token is valid.
         /// Token string must be in "Scheme xxx.." form such as "Bearer xxx"

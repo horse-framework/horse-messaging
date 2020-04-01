@@ -27,7 +27,7 @@ namespace Twino.Mvc.Auth.Jwt
         }
 
         /// <summary>
-        /// Creates new JSON Web Token for specified userId, UserName and claim list
+        /// Creates new JSON Web Token for specified userId, userName and claim list
         /// </summary>
         public JwtToken Create(string userId, string username, IEnumerable<Claim> claims)
         {
@@ -42,10 +42,34 @@ namespace Twino.Mvc.Auth.Jwt
                     tokenClaims.Add(claim);
 
             //creates token
-            SigningCredentials credentials = new SigningCredentials(Options.SigningKey, SecurityAlgorithms.HmacSha256);
             DateTime expiration = DateTime.Now + Options.Lifetime;
+            return Create(tokenClaims, expiration);
+        }
 
-            var token = new JwtSecurityToken(Options.Issuer, Options.Audience, tokenClaims, expires: expiration, signingCredentials: credentials);
+        /// <summary>
+        /// Creates new JSON Web Token for specified userId, userName and claim list with custom expiration date
+        /// </summary>
+        public JwtToken Create(string userId, string username, DateTime expiration, IEnumerable<Claim> claims)
+        {
+            //creates claim list
+            List<Claim> tokenClaims = new List<Claim>();
+
+            tokenClaims.Add(new Claim(JwtRegisteredClaimNames.Jti, userId));
+            tokenClaims.Add(new Claim(JwtRegisteredClaimNames.Sub, username));
+
+            if (claims != null)
+                foreach (Claim claim in claims)
+                    tokenClaims.Add(claim);
+
+            //creates token
+            return Create(tokenClaims, expiration);
+        }
+
+        private JwtToken Create(List<Claim> claims, DateTime expiration)
+        {
+            SigningCredentials credentials = new SigningCredentials(Options.SigningKey, SecurityAlgorithms.HmacSha256);
+
+            var token = new JwtSecurityToken(Options.Issuer, Options.Audience, claims, expires: expiration, signingCredentials: credentials);
             string tokenString = new JwtSecurityTokenHandler().WriteToken(token);
 
             return new JwtToken
