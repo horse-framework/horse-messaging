@@ -142,7 +142,12 @@ namespace Twino.Server
                 }
 
                 if (socket.LastAliveDate + _interval > DateTime.UtcNow)
+                {
+                    if (socket.PongRequired)
+                        socket.PongRequired = false;
+
                     continue;
+                }
 
                 if (socket.PongRequired)
                 {
