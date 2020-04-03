@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core;
@@ -168,6 +169,20 @@ namespace Twino.Client.TMQ
                 _descriptors.Add(descriptor);
 
             return await descriptor.Source.Task;
+        }
+
+        /// <summary>
+        /// Cancels following response of the message
+        /// </summary>
+        public void UnfollowMessage(TmqMessage message)
+        {
+            lock (_descriptors)
+            {
+                int index = _descriptors.FindIndex(x => x.Message.MessageId == message.MessageId);
+                if (index < 0)
+                    return;
+                _descriptors.RemoveAt(index);
+            }
         }
     }
 }
