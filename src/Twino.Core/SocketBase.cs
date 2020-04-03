@@ -120,8 +120,6 @@ namespace Twino.Core
                 }
                 else
                     Stream.EndRead(ar);
-
-                KeepAlive();
             }
             catch
             {
@@ -156,7 +154,6 @@ namespace Twino.Core
                 if (IsSsl)
                     ReleaseSslLock();
 
-                KeepAlive();
                 return true;
             }
             catch
