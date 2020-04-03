@@ -19,21 +19,10 @@ namespace Twino.Mvc.Errors
         /// Writes a short 500 - Internal Server Error to the response.
         /// Hides exception information
         /// </summary>
-        public async Task Error(HttpRequest request, Exception ex)
+        public Task<IActionResult> Error(HttpRequest request, Exception ex)
         {
-            HtmlResult error = new HtmlResult(PredefinedResults.Statuses[HttpStatusCode.InternalServerError]);
-            await WriteResponse(request.Response, error);
-        }
-
-        /// <summary>
-        /// Writes IActionResult to the response
-        /// </summary>
-        private static async Task WriteResponse(HttpResponse response, IActionResult result)
-        {
-            response.StatusCode = result.Code;
-            response.ContentType = result.ContentType;
-            response.AdditionalHeaders = result.Headers;
-            await response.WriteAsync(result.Stream);
+            IActionResult error = new HtmlResult(PredefinedResults.Statuses[HttpStatusCode.InternalServerError]);
+            return Task.FromResult(error);
         }
     }
 }

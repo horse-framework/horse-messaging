@@ -110,10 +110,14 @@ namespace Twino.Mvc
                 if (Mvc.IsDevelopment)
                 {
                     IErrorHandler handler = new DevelopmentErrorHandler();
-                    await handler.Error(request, ex);
+                    IActionResult result = await handler.Error(request, ex);
+                    WriteResponse(request.Response, result);
                 }
                 else if (Mvc.ErrorHandler != null)
-                    await Mvc.ErrorHandler.Error(request, ex);
+                {
+                    IActionResult result = await Mvc.ErrorHandler.Error(request, ex);
+                    WriteResponse(request.Response, result);
+                }
                 else
                     WriteResponse(request.Response, StatusCodeResult.InternalServerError());
 

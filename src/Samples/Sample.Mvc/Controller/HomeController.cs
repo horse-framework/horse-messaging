@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Twino.Mvc;
 using Twino.Mvc.Controllers;
@@ -12,6 +13,7 @@ namespace Sample.Mvc.Controller
         [HttpGet("b")]
         public async Task<IActionResult> Get()
         {
+            throw new NotImplementedException();
             return await StringAsync("Welcome!");
         }
 
