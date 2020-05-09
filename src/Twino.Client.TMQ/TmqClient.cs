@@ -308,7 +308,11 @@ namespace Twino.Client.TMQ
         /// <returns></returns>
         private async Task SendInfoMessage(DnsInfo dns)
         {
-            if (Data?.Properties == null || Data.Properties.Count < 1 && string.IsNullOrEmpty(Data.Method) && string.IsNullOrEmpty(Data.Path))
+            if (Data?.Properties == null ||
+                Data.Properties.Count < 1 &&
+                string.IsNullOrEmpty(Data.Method) &&
+                string.IsNullOrEmpty(Data.Path) &&
+                string.IsNullOrEmpty(ClientId))
                 return;
 
             TmqMessage message = new TmqMessage();

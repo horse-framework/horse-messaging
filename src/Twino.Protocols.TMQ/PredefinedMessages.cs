@@ -10,16 +10,16 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// "TMQ/1.01" as bytes, protocol handshaking message
         /// </summary>
-        public static readonly byte[] PROTOCOL_BYTES = Encoding.ASCII.GetBytes("TMQ/1.01");
+        public static readonly byte[] PROTOCOL_BYTES = Encoding.ASCII.GetBytes("TMQP/2.0");
 
         /// <summary>
         /// PING message for TMQ "0x89, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00"
         /// </summary>
-        public static readonly byte[] PING = { 0x89, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+        public static readonly byte[] PING = { 0x89, 0x5F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
         /// <summary>
         /// PING message for TMQ "0x8A, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00"
         /// </summary>
-        public static readonly byte[] PONG = { 0x8A, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+        public static readonly byte[] PONG = { 0x8A, 0x5F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     }
 }

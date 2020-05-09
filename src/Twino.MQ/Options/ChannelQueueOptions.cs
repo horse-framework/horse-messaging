@@ -98,7 +98,7 @@ namespace Twino.MQ.Options
 
                 else if (pair.Value.Equals(TmqHeaders.MESSAGE_TIMEOUT, StringComparison.InvariantCultureIgnoreCase))
                     MessageTimeout = TimeSpan.FromMilliseconds(Convert.ToInt32(pair.Value));
-
+    
                 else if (pair.Value.Equals(TmqHeaders.MESSAGE_LIMIT, StringComparison.InvariantCultureIgnoreCase))
                     MessageLimit = Convert.ToInt32(pair.Value);
 
