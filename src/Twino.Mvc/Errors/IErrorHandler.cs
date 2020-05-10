@@ -14,6 +14,6 @@ namespace Twino.Mvc.Errors
         /// <summary>
         /// [async] When an uncatched error has occured in HTTP Request, this method will be called.
         /// </summary>
-        Task Error(HttpRequest request, Exception ex);
+        Task<IActionResult> Error(HttpRequest request, Exception ex);
     }
 }

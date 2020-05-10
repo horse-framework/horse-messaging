@@ -140,14 +140,14 @@ namespace Test.Mq
         /// Connects to TMQ Server and stays alive until PING time out (does not send PONG message)
         /// </summary>
         [Fact]
-        public void DisconnectDueToPingTimeout()
+        public async Task DisconnectDueToPingTimeout()
         {
             TestMqServer server = new TestMqServer();
             server.Initialize(42105);
             server.Start();
 
             TcpClient client = new TcpClient();
-            client.Connect("127.0.0.1", 42105);
+            await client.ConnectAsync("127.0.0.1", 42105);
 
             NetworkStream stream = client.GetStream();
             stream.Write(PredefinedMessages.PROTOCOL_BYTES);
@@ -157,8 +157,8 @@ namespace Test.Mq
             msg.SetStringContent("GET /\r\nName: Test-42105");
             msg.CalculateLengths();
             TmqWriter writer = new TmqWriter();
-            writer.Write(msg, stream).Wait();
-            Thread.Sleep(1000);
+            await writer.Write(msg, stream);
+            await Task.Delay(1000);
             Assert.Equal(1, server.ClientConnected);
 
             ThreadPool.UnsafeQueueUserWorkItem(async s =>
@@ -175,7 +175,7 @@ namespace Test.Mq
                 }
             }, stream, false);
 
-            Thread.Sleep(25000);
+            await Task.Delay(15000);
 
             Assert.False(client.Connected);
             Assert.Equal(1, server.ClientDisconnected);

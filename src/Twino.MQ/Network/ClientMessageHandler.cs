@@ -33,7 +33,7 @@ namespace Twino.MQ.Network
                 List<MqClient> receivers = _server.FindClientByName(message.Target.Substring(6));
                 if (receivers.Count > 0)
                 {
-                    if (message.FirstAcquirer)
+                    if (message.FirstAcquirer && receivers.Count > 1)
                     {
                         MqClient first = receivers.FirstOrDefault();
                         receivers.Clear();

@@ -703,7 +703,7 @@ namespace Twino.Client.TMQ
                 TmqMessage response = await task;
                 return response == null
                            ? TmqResponseCode.Unknown
-                           : (TmqResponseCode)response.ContentType;
+                           : (TmqResponseCode) response.ContentType;
             }
 
             return TmqResponseCode.Ok;
@@ -722,7 +722,12 @@ namespace Twino.Client.TMQ
 
             bool sent = await SendAsync(message);
             if (!waitAcknowledge || !sent)
+            {
+                if (waitAcknowledge)
+                    _follower.UnfollowMessage(message);
+
                 return sent;
+            }
 
             return await task;
         }
@@ -779,11 +784,16 @@ namespace Twino.Client.TMQ
             message.AcknowledgeRequired = false;
             message.SetMessageId(UniqueIdGenerator.Create());
 
+            Task<TmqMessage> task = _follower.FollowResponse(message);
+
             bool sent = await SendAsync(message);
             if (!sent)
+            {
+                _follower.UnfollowMessage(message);
                 return null;
+            }
 
-            return await _follower.FollowResponse(message);
+            return await task;
         }
 
         #endregion

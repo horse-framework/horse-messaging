@@ -2,14 +2,14 @@ using System.Collections.Generic;
 using System.Net;
 using System.Text;
 
-namespace Twino.Server.Http
+namespace Twino.Protocols.Http
 {
     /// <summary>
     /// Predefined default status code response content messages for twino server
     /// </summary>
     internal static class PredefinedResults
     {
-        private const string B = "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 1.1//EN\"><html><title>Not Found</title><body style=\"text-align:center;\"><div style=\"padding:30px;\"><h1>";
+        private const string B = "<html><title></title><body style=\"text-align:center;\"><div style=\"padding:30px;\"><h1>";
         private const string A = "</h1></div><hr /><span>twino</span></body></html>";
 
         internal static readonly Dictionary<HttpStatusCode, byte[]> Statuses

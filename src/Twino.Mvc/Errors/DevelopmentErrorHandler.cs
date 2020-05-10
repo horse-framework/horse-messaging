@@ -13,11 +13,10 @@ namespace Twino.Mvc.Errors
     /// </summary>
     public class DevelopmentErrorHandler : IErrorHandler
     {
-
         /// <summary>
         /// Writes all exception information to the response
         /// </summary>
-        public async Task Error(HttpRequest request, Exception ex)
+        public Task<IActionResult> Error(HttpRequest request, Exception ex)
         {
             StringBuilder builder = new StringBuilder();
             builder.Append("<html>");
@@ -37,19 +36,8 @@ namespace Twino.Mvc.Errors
             builder.Append("</body>");
             builder.Append("</html>");
 
-            HtmlResult error = new HtmlResult(builder.ToString().Replace("\n", "<br>"));
-            await WriteResponse(request.Response, error);
-        }
-
-        /// <summary>
-        /// Writes IActionResult to the response
-        /// </summary>
-        private static async Task WriteResponse(HttpResponse response, IActionResult result)
-        {
-            response.StatusCode = result.Code;
-            response.ContentType = result.ContentType;
-            response.AdditionalHeaders = result.Headers;
-            await response.WriteAsync(result.Stream);
+            IActionResult error = new HtmlResult(builder.ToString().Replace("\n", "<br>"));
+            return Task.FromResult(error);
         }
     }
 }

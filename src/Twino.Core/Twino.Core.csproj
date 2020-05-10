@@ -6,9 +6,9 @@
     <Product>Twino.Core</Product>
     <Description>Twino Core library for all twino servers, protocols and services</Description>
     <PackageTags>twino,server,core</PackageTags>
-    <AssemblyVersion>2.8.4</AssemblyVersion>
-    <FileVersion>2.8.4</FileVersion>
-    <PackageVersion>2.8.4</PackageVersion>
+    <AssemblyVersion>2.8.5</AssemblyVersion>
+    <FileVersion>2.8.5</FileVersion>
+    <PackageVersion>2.8.5</PackageVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
     <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
