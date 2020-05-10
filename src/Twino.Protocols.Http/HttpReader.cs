@@ -138,9 +138,6 @@ namespace Twino.Protocols.Http
                     start = 0;
                 }
 
-                if (readLength < 1)
-                    break;
-
                 //start = 0;
                 while (start < _stream.Length)
                 {
@@ -166,6 +163,10 @@ namespace Twino.Protocols.Http
                     else
                         start = ReadHeaderLine(request, _stream.GetBuffer(), start, (int)_stream.Length - start, out requiredMoreData);
 
+                    //if end of header network pack is CRLF, requiredMoreData should be true, because reading header is not completed.
+                    if (_readingHeaders && !requiredMoreData && start == _stream.Length)
+                        requiredMoreData = true;
+                    
                     if (requiredMoreData)
                         break;
 
@@ -268,7 +269,7 @@ namespace Twino.Protocols.Http
             if (endOfLine == 0)
             {
                 _readingHeaders = false;
-                return start + endOfLine + 2;
+                return start + 2;
             }
 
             //read header key
