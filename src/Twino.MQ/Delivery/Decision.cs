@@ -5,6 +5,26 @@ using Twino.MQ.Queues;
 namespace Twino.MQ.Delivery
 {
 
+    public enum PutBackDecision
+    {
+        /// <summary>
+        /// Message will not keep and put back to the queue
+        /// </summary>
+        No,
+        
+        /// <summary>
+        /// Message will be put back to the beginning of the queue.
+        /// It will be consumed at first.
+        /// </summary>
+        Start,
+        
+        /// <summary>
+        /// Message will be put back to the beginning of the queue.
+        /// It will be consumed at last.
+        /// </summary>
+        End
+    }
+
     /// <summary>
     /// When sending ack to producer is decided.
     /// An acknowledge message is sent to producer.
