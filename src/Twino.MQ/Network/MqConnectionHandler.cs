@@ -19,13 +19,9 @@ namespace Twino.MQ.Network
         /// </summary>
         private readonly MqServer _server;
 
-        /// <summary>
-        /// Default TMQ protocol message writer
-        /// </summary>
-        private static readonly TmqWriter _writer = new TmqWriter();
-
         private readonly INetworkMessageHandler _serverHandler;
-        private readonly INetworkMessageHandler _channelHandler;
+        private readonly INetworkMessageHandler _queueMessageHandler;
+        private readonly INetworkMessageHandler _pullRequestHandler;
         private readonly INetworkMessageHandler _clientHandler;
         private readonly INetworkMessageHandler _responseHandler;
         private readonly INetworkMessageHandler _acknowledgeHandler;
@@ -35,7 +31,8 @@ namespace Twino.MQ.Network
         {
             _server = server;
             _serverHandler = new ServerMessageHandler(server);
-            _channelHandler = new ChannelMessageHandler(server);
+            _queueMessageHandler = new QueueMessageHandler(server);
+            _pullRequestHandler = new PullRequestMessageHandler(server);
             _clientHandler = new ClientMessageHandler(server);
             _responseHandler = new ResponseMessageHandler(server);
             _acknowledgeHandler = new AcknowledgeMessageHandler(server);
@@ -102,9 +99,9 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Triggered when handshake is completed and the connection is ready to communicate 
         /// </summary>
-        public async Task Ready(ITwinoServer server, TmqServerSocket client)
+        public Task Ready(ITwinoServer server, TmqServerSocket client)
         {
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -112,7 +109,7 @@ namespace Twino.MQ.Network
         /// </summary>
         public async Task Disconnected(ITwinoServer server, TmqServerSocket client)
         {
-            MqClient mqClient = (MqClient)client;
+            MqClient mqClient = (MqClient) client;
             await _server.RemoveClient(mqClient);
             if (_server.ClientHandler != null)
                 await _server.ClientHandler.Disconnected(_server, mqClient);
@@ -125,9 +122,9 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Called when a new message received from the client
         /// </summary>
-        public async Task Received(ITwinoServer server, IConnectionInfo info, TmqServerSocket client, TmqMessage message)
+        public Task Received(ITwinoServer server, IConnectionInfo info, TmqServerSocket client, TmqMessage message)
         {
-            MqClient mc = (MqClient)client;
+            MqClient mc = (MqClient) client;
 
             //if client sends anonymous messages and server needs message id, generate new
             if (string.IsNullOrEmpty(message.MessageId))
@@ -149,57 +146,56 @@ namespace Twino.MQ.Network
             else if (message.Source != mc.UniqueId)
             {
                 client.Disconnect();
-                return;
+                return Task.CompletedTask;
             }
 
-            await RouteToHandler(mc, message, false);
+            return RouteToHandler(mc, message, false);
         }
 
         /// <summary>
         /// Routes message to it's type handler
         /// </summary>
-        internal async Task RouteToHandler(MqClient mc, TmqMessage message, bool fromNode)
+        internal Task RouteToHandler(MqClient mc, TmqMessage message, bool fromNode)
         {
             switch (message.Type)
             {
                 //client sends a queue message in a channel
                 case MessageType.QueueMessage:
                     if (!fromNode)
-                        await _instanceHandler.Handle(mc, message);
-                    await _channelHandler.Handle(mc, message);
-                    break;
+                        _ = _instanceHandler.Handle(mc, message);
+                    return _queueMessageHandler.Handle(mc, message);
+
+                //sends pull request to a queue
+                case MessageType.QueuePullRequest:
+                    return _pullRequestHandler.Handle(mc, message);
 
                 //clients sends a message to another client
                 case MessageType.DirectMessage:
                     if (!fromNode)
-                        await _instanceHandler.Handle(mc, message);
-                    await _clientHandler.Handle(mc, message);
-                    break;
+                        _ = _instanceHandler.Handle(mc, message);
+                    return _clientHandler.Handle(mc, message);
 
                 //client sends an acknowledge message of a message
                 case MessageType.Acknowledge:
                     if (!fromNode)
-                        await _instanceHandler.Handle(mc, message);
-                    await _acknowledgeHandler.Handle(mc, message);
-                    break;
+                        _ = _instanceHandler.Handle(mc, message);
+                    
+                    return _acknowledgeHandler.Handle(mc, message);
 
                 //client sends a response message for a message
                 case MessageType.Response:
                     if (!fromNode)
-                        await _instanceHandler.Handle(mc, message);
-                    await _responseHandler.Handle(mc, message);
-                    break;
+                        _ = _instanceHandler.Handle(mc, message);
+                    return _responseHandler.Handle(mc, message);
 
                 //client sends a message to the server
                 //this message may be join, header, info, some another server message
                 case MessageType.Server:
-                    await _serverHandler.Handle(mc, message);
-                    break;
+                    return _serverHandler.Handle(mc, message);
 
                 //if client sends a ping message, response with pong
                 case MessageType.Ping:
-                    await mc.SendAsync(PredefinedMessages.PONG);
-                    break;
+                    return mc.SendAsync(PredefinedMessages.PONG);
 
                 //client sends PONG message
                 case MessageType.Pong:
@@ -211,6 +207,8 @@ namespace Twino.MQ.Network
                     mc.Disconnect();
                     break;
             }
+
+            return Task.CompletedTask;
         }
 
         #endregion

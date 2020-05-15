@@ -89,37 +89,37 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Sends a message
         /// </summary>
-        public Task<TmqResponseCode> SendAsync(TmqMessage message)
+        public Task<TwinoResult> SendAsync(TmqMessage message)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
                 return client.SendAsync(message);
 
-            return Task.FromResult(TmqResponseCode.Failed);
+            return Task.FromResult(TwinoResult.Failed);
         }
 
         /// <summary>
         /// Pushes a message to the queue
         /// </summary>
-        public Task<TmqResponseCode> Push(string channel, ushort contentType, MemoryStream content, bool waitAcknowledge)
+        public Task<TwinoResult> Push(string channel, ushort contentType, MemoryStream content, bool waitAcknowledge)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
                 return client.Push(channel, contentType, content, waitAcknowledge);
 
-            return Task.FromResult(TmqResponseCode.Failed);
+            return Task.FromResult(TwinoResult.Failed);
         }
 
         /// <summary>
         /// Pushes a message to the queue
         /// </summary>
-        public Task<TmqResponseCode> PushJson(string channel, ushort contentType, object jsonObject, bool waitAcknowledge)
+        public Task<TwinoResult> PushJson(string channel, ushort contentType, object jsonObject, bool waitAcknowledge)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
                 return client.PushJson(channel, contentType, jsonObject, waitAcknowledge);
 
-            return Task.FromResult(TmqResponseCode.Failed);
+            return Task.FromResult(TwinoResult.Failed);
         }
     }
 }

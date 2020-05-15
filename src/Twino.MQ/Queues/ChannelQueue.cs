@@ -674,9 +674,11 @@ namespace Twino.MQ.Queues
                 await SaveMessage(message);
 
             if (decision.Acknowledge == DeliveryAcknowledgeDecision.Always ||
+                decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ||
                 decision.Acknowledge == DeliveryAcknowledgeDecision.IfSaved && message.IsSaved)
             {
-                TmqMessage acknowledge = customAck ?? message.Message.CreateAcknowledge();
+                TmqMessage acknowledge = customAck ?? message.Message.CreateAcknowledge(decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ? "none" : null);
+
                 if (message.Source != null && message.Source.IsConnected)
                 {
                     bool sent = await message.Source.SendAsync(acknowledge);

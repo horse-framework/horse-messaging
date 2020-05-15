@@ -29,8 +29,8 @@ namespace Test.Mq
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
 
-            TmqResponseCode created = await client.CreateQueue("ch-2", MessageA.ContentType, verifyResponse);
-            Assert.Equal(TmqResponseCode.Ok, created);
+            TwinoResult created = await client.CreateQueue("ch-2", MessageA.ContentType, verifyResponse);
+            Assert.Equal(TwinoResult.Ok, created);
             await Task.Delay(1000);
 
             Channel channel = server.Server.Channels.FirstOrDefault(x => x.Name == "ch-2");
@@ -52,13 +52,13 @@ namespace Test.Mq
             await client.ConnectAsync("tmq://localhost:41206");
             Assert.True(client.IsConnected);
 
-            TmqResponseCode created = await client.CreateQueue("ch-test", MessageA.ContentType, true, o =>
+            TwinoResult created = await client.CreateQueue("ch-test", MessageA.ContentType, true, o =>
             {
                 o.SendOnlyFirstAcquirer = true;
                 o.AcknowledgeTimeout = TimeSpan.FromSeconds(33);
                 o.Status = MessagingQueueStatus.Pull;
             });
-            Assert.Equal(TmqResponseCode.Ok, created);
+            Assert.Equal(TwinoResult.Ok, created);
 
             Channel channel = server.Server.FindChannel("ch-test");
             Assert.NotNull(channel);
@@ -92,13 +92,13 @@ namespace Test.Mq
             await client.ConnectAsync("tmq://localhost:41207");
             Assert.True(client.IsConnected);
 
-            TmqResponseCode updated = await client.SetQueueOptions("ch-route", MessageA.ContentType, o =>
+            TwinoResult updated = await client.SetQueueOptions("ch-route", MessageA.ContentType, o =>
             {
                 o.WaitForAcknowledge = true;
                 o.MessageTimeout = TimeSpan.FromSeconds(666);
                 o.SendOnlyFirstAcquirer = true;
             });
-            Assert.Equal(TmqResponseCode.Ok, updated);
+            Assert.Equal(TwinoResult.Ok, updated);
 
             Assert.True(queue.Options.WaitForAcknowledge);
             Assert.True(queue.Options.SendOnlyFirstAcquirer);
@@ -125,8 +125,8 @@ namespace Test.Mq
             await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            TmqResponseCode done = await client.RemoveQueue("ch-route", MessageA.ContentType, verifyResponse);
-            Assert.Equal(TmqResponseCode.Ok, done);
+            TwinoResult done = await client.RemoveQueue("ch-route", MessageA.ContentType, verifyResponse);
+            Assert.Equal(TwinoResult.Ok, done);
 
             if (!verifyResponse)
                 await Task.Delay(500);

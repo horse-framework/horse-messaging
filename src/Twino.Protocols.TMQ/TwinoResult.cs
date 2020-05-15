@@ -3,7 +3,7 @@ namespace Twino.Protocols.TMQ
     /// <summary>
     /// TmqClient and TmqAdminClient process result enum
     /// </summary>
-    public enum TmqResponseCode : ushort
+    public enum TwinoResult : ushort
     {
         /// <summary>
         /// Operation succeeded

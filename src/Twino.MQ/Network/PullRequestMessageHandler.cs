@@ -5,7 +5,7 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Network
 {
-    internal class ChannelMessageHandler : INetworkMessageHandler
+    public class PullRequestMessageHandler : INetworkMessageHandler
     {
         #region Fields
 
@@ -14,7 +14,7 @@ namespace Twino.MQ.Network
         /// </summary>
         private readonly MqServer _server;
 
-        public ChannelMessageHandler(MqServer server)
+        public PullRequestMessageHandler(MqServer server)
         {
             _server = server;
         }
@@ -33,7 +33,7 @@ namespace Twino.MQ.Network
             if (channel == null)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(message.CreateResponse(TmqResponseCode.NotFound));
+                    await client.SendAsync(message.CreateResponse(TwinoResult.NotFound));
                 return;
             }
 
@@ -46,19 +46,14 @@ namespace Twino.MQ.Network
             if (queue == null)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(message.CreateResponse(TmqResponseCode.NotFound));
+                    await client.SendAsync(message.CreateResponse(TwinoResult.NotFound));
+
                 return;
             }
 
-            //consumer is trying to pull from the queue
-            //in false cases, we won't send any response, cuz client is pending only queue messages, not response messages
-            if (message.Length == 0 && message.PendingResponse)
-                await HandlePullRequest(client, message, channel, queue);
-
-            //message have a content, this is the real message from producer to the queue
-            else
-                await HandlePush(client, message, queue);
+            await HandlePullRequest(client, message, channel, queue);
         }
+
 
         /// <summary>
         /// Handles pulling a message from a queue
@@ -69,7 +64,7 @@ namespace Twino.MQ.Network
             if (queue.Status != QueueStatus.Pull)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(message.CreateResponse(TmqResponseCode.BadRequest));
+                    await client.SendAsync(message.CreateResponse(TwinoResult.BadRequest));
                 return;
             }
 
@@ -78,7 +73,7 @@ namespace Twino.MQ.Network
             if (channelClient == null)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(message.CreateResponse(TmqResponseCode.Unauthorized));
+                    await client.SendAsync(message.CreateResponse(TwinoResult.Unauthorized));
                 return;
             }
 
@@ -89,41 +84,12 @@ namespace Twino.MQ.Network
                 if (!grant)
                 {
                     if (!string.IsNullOrEmpty(message.MessageId))
-                        await client.SendAsync(message.CreateResponse(TmqResponseCode.Unauthorized));
+                        await client.SendAsync(message.CreateResponse(TwinoResult.Unauthorized));
                     return;
                 }
             }
 
             await queue.State.Pull(channelClient, message);
-        }
-
-        /// <summary>
-        /// Handles pushing a message into a queue
-        /// </summary>
-        private async Task HandlePush(MqClient client, TmqMessage message, ChannelQueue queue)
-        {
-            //check authority
-            if (_server.Authorization != null)
-            {
-                bool grant = await _server.Authorization.CanMessageToQueue(client, queue, message);
-                if (!grant)
-                {
-                    if (!string.IsNullOrEmpty(message.MessageId))
-                        await client.SendAsync(message.CreateResponse(TmqResponseCode.Unauthorized));
-                    return;
-                }
-            }
-
-            //prepare the message
-            QueueMessage queueMessage = new QueueMessage(message);
-            queueMessage.Source = client;
-
-            //push the message
-            PushResult result = await queue.Push(queueMessage, client);
-            if (result == PushResult.StatusNotSupported)
-                await client.SendAsync(message.CreateResponse(TmqResponseCode.Unauthorized));
-            else if (result == PushResult.LimitExceeded)
-                await client.SendAsync(message.CreateResponse(TmqResponseCode.LimitExceeded));
         }
     }
 }

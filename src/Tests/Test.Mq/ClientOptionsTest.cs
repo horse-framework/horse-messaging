@@ -32,8 +32,8 @@ namespace Test.Mq
             await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            TmqResponseCode joined = await client.Join("ch-1", true);
-            Assert.Equal(TmqResponseCode.Ok, joined);
+            TwinoResult joined = await client.Join("ch-1", true);
+            Assert.Equal(TwinoResult.Ok, joined);
             await Task.Delay(250);
 
             TmqMessage received = null;
@@ -42,8 +42,8 @@ namespace Test.Mq
             MessageA a = new MessageA("A");
             string serialized = Newtonsoft.Json.JsonConvert.SerializeObject(a);
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(serialized));
-            TmqResponseCode sent = await client.Push("ch-1", MessageA.ContentType, ms, false);
-            Assert.Equal(TmqResponseCode.Ok, sent);
+            TwinoResult sent = await client.Push("ch-1", MessageA.ContentType, ms, false);
+            Assert.Equal(TwinoResult.Ok, sent);
 
             await Task.Delay(1000);
 
@@ -87,7 +87,7 @@ namespace Test.Mq
             client1.MessageReceived += (c, m) => responseCaught = true;
             client2.MessageReceived += async (c, m) =>
             {
-                TmqMessage rmsg = m.CreateResponse(TmqResponseCode.Ok);
+                TmqMessage rmsg = m.CreateResponse(TwinoResult.Ok);
                 rmsg.SetStringContent("Response!");
                 await ((TmqClient) c).SendAsync(rmsg);
             };

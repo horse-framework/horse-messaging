@@ -10,12 +10,12 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Operation response code
         /// </summary>
-        public TmqResponseCode ResponseCode { get; set; }
+        public TwinoResult ResponseCode { get; set; }
 
         /// <summary>
         /// True, if response code is Ok "200"
         /// </summary>
-        public bool Ok => ResponseCode == TmqResponseCode.Ok;
+        public bool Ok => ResponseCode == TwinoResult.Ok;
 
         /// <summary>
         /// Create new empty result object
@@ -27,7 +27,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Creates new result object from response code
         /// </summary>
-        public TmqResult(TmqResponseCode code)
+        public TmqResult(TwinoResult code)
         {
             ResponseCode = code;
         }
@@ -37,7 +37,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         public static TmqResult FromContentType(ushort code)
         {
-            return new TmqResult((TmqResponseCode)code);
+            return new TmqResult((TwinoResult)code);
         }
     }
 
@@ -45,7 +45,7 @@ namespace Twino.Client.TMQ
     public class TmqResult<TModel>
     {
         /// <inheritdoc cref="ResponseCode" />
-        public TmqResponseCode ResponseCode { get; set; }
+        public TwinoResult ResponseCode { get; set; }
 
         /// <summary>
         /// Response model
@@ -62,7 +62,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Creates new result object from response code
         /// </summary>
-        public TmqResult(TmqResponseCode code)
+        public TmqResult(TwinoResult code)
         {
             ResponseCode = code;
         }
@@ -70,7 +70,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Creates new result object from response code and model
         /// </summary>
-        public TmqResult(TmqResponseCode code, TModel model)
+        public TmqResult(TwinoResult code, TModel model)
         {
             ResponseCode = code;
             Model = model;
@@ -81,7 +81,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         public static TmqResult<TModel> FromContentType(ushort code)
         {
-            return new TmqResult<TModel>((TmqResponseCode)code);
+            return new TmqResult<TModel>((TwinoResult)code);
         }
     }
 }

@@ -83,7 +83,7 @@ namespace Twino.Client.TMQ
                 if (descriptor.Completed)
                     continue;
 
-                descriptor.Set(null);
+                descriptor.Set(false, null);
             }
         }
 
@@ -105,12 +105,12 @@ namespace Twino.Client.TMQ
             descriptor.Completed = true;
             if (!message.HasHeader || !message.Headers.Any(x => x.Key.Equals(TmqHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)))
             {
-                descriptor.Set(null);
+                descriptor.Set(true, null);
                 return;
             }
 
             var nackReason = message.Headers.FirstOrDefault(x => x.Key.Equals(TmqHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase));
-            descriptor.Set(nackReason.Value);
+            descriptor.Set(false, nackReason.Value);
         }
 
         /// <summary>
@@ -129,16 +129,16 @@ namespace Twino.Client.TMQ
                 return;
 
             descriptor.Completed = true;
-            descriptor.Set(message);
+            descriptor.Set(true, message);
         }
 
         /// <summary>
         /// Starts to follow message acknowledge
         /// </summary>
-        public async Task<TmqResponseCode> FollowAcknowledge(TmqMessage message)
+        public async Task<TwinoResult> FollowAcknowledge(TmqMessage message)
         {
             if (!message.PendingAcknowledge || string.IsNullOrEmpty(message.MessageId))
-                return TmqResponseCode.Failed;
+                return TwinoResult.Failed;
 
             DateTime expiration = DateTime.UtcNow + _client.AcknowledgeTimeout;
             AcknowledgeMessageDescriptor descriptor = new AcknowledgeMessageDescriptor(message, expiration);

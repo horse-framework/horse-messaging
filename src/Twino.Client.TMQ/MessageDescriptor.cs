@@ -33,7 +33,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sets message result
         /// </summary>
-        public abstract void Set(object value);
+        public abstract void Set(bool successful, object value);
     }
 
     /// <summary>
@@ -41,20 +41,17 @@ namespace Twino.Client.TMQ
     /// </summary>
     internal class AcknowledgeMessageDescriptor : MessageDescriptor
     {
-        public TaskCompletionSource<TmqResponseCode> Source { get; }
+        public TaskCompletionSource<TwinoResult> Source { get; }
 
         public AcknowledgeMessageDescriptor(TmqMessage message, DateTime expiration) : base(message, expiration)
         {
-            Source = new TaskCompletionSource<TmqResponseCode>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Source = new TaskCompletionSource<TwinoResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
         /// <inheritdoc />
-        public override void Set(object value)
+        public override void Set(bool successful, object value)
         {
-            if (value == null)
-                Source.SetResult(TmqResponseCode.Ok);
-            else
-                Source.SetResult(TmqResponseCode.Failed);
+            Source.SetResult(successful ? TwinoResult.Ok : TwinoResult.Failed);
         }
     }
 
@@ -71,9 +68,9 @@ namespace Twino.Client.TMQ
         }
 
         /// <inheritdoc />
-        public override void Set(object value)
+        public override void Set(bool successful, object value)
         {
-            if (value == null)
+            if (!successful || value == null)
                 Source.SetResult(default);
             else
                 Source.SetResult(value as TmqMessage);

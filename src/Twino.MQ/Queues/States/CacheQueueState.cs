@@ -22,7 +22,7 @@ namespace Twino.MQ.Queues.States
             QueueMessage message = _queue.FindNextMessage();
             if (message == null)
             {
-                await client.Client.SendAsync(request.CreateResponse(TmqResponseCode.NotFound));
+                await client.Client.SendAsync(request.CreateResponse(TwinoResult.NotFound));
                 return PullResult.Empty;
             }
 

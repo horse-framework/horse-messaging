@@ -233,9 +233,11 @@ namespace Twino.Protocols.TMQ
         {
             TmqMessage message = new TmqMessage();
 
+            message.SetMessageId(MessageId);
+            
+            message.HighPriority = Type == MessageType.DirectMessage;
             message.FirstAcquirer = FirstAcquirer;
             message.Type = MessageType.Acknowledge;
-            message.SetMessageId(MessageId);
             message.ContentType = ContentType;
 
             if (!string.IsNullOrEmpty(Source))
@@ -260,7 +262,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Create a response message of the message
         /// </summary>
-        public TmqMessage CreateResponse(TmqResponseCode status)
+        public TmqMessage CreateResponse(TwinoResult status)
         {
             TmqMessage message = new TmqMessage();
 

@@ -49,8 +49,8 @@ namespace Test.Mq
             message.SetTarget(client2.ClientId);
             message.SetStringContent("Hello, World!");
 
-            TmqResponseCode acknowledge = await client1.SendWithAcknowledge(message);
-            Assert.Equal(TmqResponseCode.Ok, acknowledge);
+            TwinoResult acknowledge = await client1.SendWithAcknowledge(message);
+            Assert.Equal(TwinoResult.Ok, acknowledge);
         }
 
         /// <summary>
@@ -91,8 +91,8 @@ namespace Test.Mq
             message.SetTarget(client2.ClientId);
             message.SetStringContent("Hello, World!");
 
-            TmqResponseCode acknowledge = await client1.SendWithAcknowledge(message);
-            Assert.Equal(TmqResponseCode.Ok, acknowledge);
+            TwinoResult acknowledge = await client1.SendWithAcknowledge(message);
+            Assert.Equal(TwinoResult.Ok, acknowledge);
         }
 
         /// <summary>
@@ -129,8 +129,8 @@ namespace Test.Mq
             message.SetTarget(client2.ClientId);
             message.SetStringContent("Hello, World!");
 
-            TmqResponseCode acknowledge = await client1.SendWithAcknowledge(message);
-            Assert.Equal(TmqResponseCode.Ok, acknowledge);
+            TwinoResult acknowledge = await client1.SendWithAcknowledge(message);
+            Assert.Equal(TwinoResult.Ok, acknowledge);
         }
 
         #endregion
@@ -165,8 +165,8 @@ namespace Test.Mq
 
             //push a message to the queue
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            TmqResponseCode sent = await client.Push(channel.Name, queue.Id, ms, true);
-            Assert.Equal(TmqResponseCode.Ok, sent);
+            TwinoResult sent = await client.Push(channel.Name, queue.Id, ms, true);
+            Assert.Equal(TwinoResult.Ok, sent);
         }
 
         /// <summary>
@@ -197,8 +197,8 @@ namespace Test.Mq
 
             //push a message to the queue
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            TmqResponseCode sent = await client.Push(channel.Name, queue.Id, ms, true);
-            Assert.Equal(TmqResponseCode.Ok, sent);
+            TwinoResult sent = await client.Push(channel.Name, queue.Id, ms, true);
+            Assert.Equal(TwinoResult.Ok, sent);
         }
 
         /// <summary>
@@ -229,8 +229,8 @@ namespace Test.Mq
 
             //push a message to the queue
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            TmqResponseCode sent = await client.Push(channel.Name, queue.Id, ms, true);
-            Assert.Equal(TmqResponseCode.Ok, sent);
+            TwinoResult sent = await client.Push(channel.Name, queue.Id, ms, true);
+            Assert.Equal(TwinoResult.Ok, sent);
         }
 
         #endregion

@@ -89,7 +89,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Removes a channel and all queues in it
         /// </summary>
-        public async Task<TmqResponseCode> RemoveChannel(string channel, bool verifyResponse)
+        public async Task<TwinoResult> RemoveChannel(string channel, bool verifyResponse)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -137,7 +137,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Removes a queue in a channel in server
         /// </summary>
-        public async Task<TmqResponseCode> RemoveQueue(string channel, ushort queueId, bool verifyResponse)
+        public async Task<TwinoResult> RemoveQueue(string channel, ushort queueId, bool verifyResponse)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -155,7 +155,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Updates queue options
         /// </summary>
-        public async Task<TmqResponseCode> SetQueueOptions(string channel, ushort queueId, Action<QueueOptions> optionsAction)
+        public async Task<TwinoResult> SetQueueOptions(string channel, ushort queueId, Action<QueueOptions> optionsAction)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
