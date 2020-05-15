@@ -122,8 +122,8 @@ namespace Twino.MQ.Options
                 string status = messageQueuing.Value<string>().ToLower();
                 switch (status)
                 {
-                    case "route":
-                        options.Status = QueueStatus.Route;
+                    case "broadcast":
+                        options.Status = QueueStatus.Broadcast;
                         break;
 
                     case "push":

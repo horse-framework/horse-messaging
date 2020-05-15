@@ -1,6 +1,5 @@
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
-using Twino.MQ.Helpers;
 using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
 
@@ -34,7 +33,7 @@ namespace Twino.MQ.Network
             if (channel == null)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                    await client.SendAsync(message.CreateResponse(TmqResponseCode.NotFound));
                 return;
             }
 
@@ -47,13 +46,13 @@ namespace Twino.MQ.Network
             if (queue == null)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                    await client.SendAsync(message.CreateResponse(TmqResponseCode.NotFound));
                 return;
             }
 
             //consumer is trying to pull from the queue
             //in false cases, we won't send any response, cuz client is pending only queue messages, not response messages
-            if (message.Length == 0 && message.ResponseRequired)
+            if (message.Length == 0 && message.PendingResponse)
                 await HandlePullRequest(client, message, channel, queue);
 
             //message have a content, this is the real message from producer to the queue
@@ -70,7 +69,7 @@ namespace Twino.MQ.Network
             if (queue.Status != QueueStatus.Pull)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.BadRequest));
+                    await client.SendAsync(message.CreateResponse(TmqResponseCode.BadRequest));
                 return;
             }
 
@@ -79,7 +78,7 @@ namespace Twino.MQ.Network
             if (channelClient == null)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                    await client.SendAsync(message.CreateResponse(TmqResponseCode.Unauthorized));
                 return;
             }
 
@@ -90,7 +89,7 @@ namespace Twino.MQ.Network
                 if (!grant)
                 {
                     if (!string.IsNullOrEmpty(message.MessageId))
-                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                        await client.SendAsync(message.CreateResponse(TmqResponseCode.Unauthorized));
                     return;
                 }
             }
@@ -110,7 +109,7 @@ namespace Twino.MQ.Network
                 if (!grant)
                 {
                     if (!string.IsNullOrEmpty(message.MessageId))
-                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                        await client.SendAsync(message.CreateResponse(TmqResponseCode.Unauthorized));
                     return;
                 }
             }
@@ -122,9 +121,9 @@ namespace Twino.MQ.Network
             //push the message
             PushResult result = await queue.Push(queueMessage, client);
             if (result == PushResult.StatusNotSupported)
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unacceptable));
+                await client.SendAsync(message.CreateResponse(TmqResponseCode.Unauthorized));
             else if (result == PushResult.LimitExceeded)
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.LimitExceeded));
+                await client.SendAsync(message.CreateResponse(TmqResponseCode.LimitExceeded));
         }
     }
 }

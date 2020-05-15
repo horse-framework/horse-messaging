@@ -116,7 +116,7 @@ namespace Twino.MQ.Helpers
         /// <summary>
         /// Creates new response message, with no content, of the message.
         /// </summary>
-        public static TmqMessage ResponseStatus(TmqMessage request, ushort status)
+        public static TmqMessage StatusResponse(TmqMessage request, ushort status)
         {
             TmqMessage response = new TmqMessage();
 
@@ -125,7 +125,7 @@ namespace Twino.MQ.Helpers
             response.ContentType = status;
             response.FirstAcquirer = true;
 
-            response.SetTarget(request.Type == MessageType.Channel
+            response.SetTarget(request.Type == MessageType.QueueMessage
                                    ? request.Target
                                    : request.Source);
 

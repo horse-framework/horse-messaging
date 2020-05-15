@@ -95,7 +95,7 @@ namespace Twino.Client.TMQ
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.RemoveChannel;
             message.SetTarget(channel);
-            message.ResponseRequired = verifyResponse;
+            message.PendingResponse = verifyResponse;
 
             if (verifyResponse)
                 message.SetMessageId(UniqueIdGenerator.Create());
@@ -143,7 +143,7 @@ namespace Twino.Client.TMQ
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.RemoveQueue;
             message.SetTarget(channel);
-            message.ResponseRequired = verifyResponse;
+            message.PendingResponse = verifyResponse;
             message.Content = new MemoryStream(BitConverter.GetBytes(queueId));
 
             if (verifyResponse)
@@ -161,7 +161,7 @@ namespace Twino.Client.TMQ
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.UpdateQueue;
             message.SetTarget(channel);
-            message.ResponseRequired = true;
+            message.PendingResponse = true;
             message.SetMessageId(UniqueIdGenerator.Create());
 
             QueueOptions options = new QueueOptions();

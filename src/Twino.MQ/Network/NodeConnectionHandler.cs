@@ -43,7 +43,7 @@ namespace Twino.MQ.Network
             MqClient foundClient = _server.Clients.Find(x => x.UniqueId == clientId);
             if (foundClient != null)
             {
-                await connection.Socket.SendAsync(await _writer.Create(MessageBuilder.Busy()));
+                await connection.Socket.SendAsync(TmqWriter.Create(MessageBuilder.Busy()));
                 return null;
             }
 

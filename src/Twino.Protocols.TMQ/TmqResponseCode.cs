@@ -1,20 +1,20 @@
-namespace Twino.Client.TMQ
+namespace Twino.Protocols.TMQ
 {
     /// <summary>
     /// TmqClient and TmqAdminClient process result enum
     /// </summary>
-    public enum TmqResponseCode
+    public enum TmqResponseCode : ushort
     {
-        /// <summary>
-        /// Unknown failed response
-        /// </summary>
-        Unknown = 0,
-
         /// <summary>
         /// Operation succeeded
         /// </summary>
-        Ok = 200,
+        Ok = 0,
 
+        /// <summary>
+        /// Unknown failed response
+        /// </summary>
+        Failed = 1,
+        
         /// <summary>
         /// Request is not recognized or verified by the server
         /// </summary>
@@ -46,11 +46,6 @@ namespace Twino.Client.TMQ
         LimitExceeded = 482,
 
         /// <summary>
-        /// Process failed
-        /// </summary>
-        Failed = 500,
-
-        /// <summary>
         /// Target is busy to complete the process
         /// </summary>
         Busy = 503,
@@ -60,4 +55,5 @@ namespace Twino.Client.TMQ
         /// </summary>
         SendError = 581
     }
+    
 }

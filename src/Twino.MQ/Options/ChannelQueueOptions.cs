@@ -48,7 +48,7 @@ namespace Twino.MQ.Options
         /// <summary>
         /// Default status for the queue
         /// </summary>
-        public QueueStatus Status { get; set; } = QueueStatus.Route;
+        public QueueStatus Status { get; set; } = QueueStatus.Broadcast;
 
         /// <summary>
         /// Maximum message limit of the queue
@@ -109,8 +109,8 @@ namespace Twino.MQ.Options
                 {
                     switch (pair.Value.ToLower())
                     {
-                        case "route":
-                            Status = QueueStatus.Route;
+                        case "broadcast":
+                            Status = QueueStatus.Broadcast;
                             break;
 
                         case "push":

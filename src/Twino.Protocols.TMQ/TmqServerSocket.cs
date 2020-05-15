@@ -10,11 +10,6 @@ namespace Twino.Protocols.TMQ
     public class TmqServerSocket : SocketBase
     {
         /// <summary>
-        /// WebSocketWriter singleton instance
-        /// </summary>
-        private static readonly TmqWriter _writer = new TmqWriter();
-
-        /// <summary>
         /// Server of the socket
         /// </summary>
         public ITwinoServer Server { get; }
@@ -99,20 +94,20 @@ namespace Twino.Protocols.TMQ
             if (UseUniqueMessageId && string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(_uniqueIdGenerator.Create());
 
-            byte[] data = _writer.Create(message).Result;
+            byte[] data = TmqWriter.Create(message);
             return Send(data);
         }
 
         /// <summary>
         /// Sends TMQ message to client
         /// </summary>
-        public async Task<bool> SendAsync(TmqMessage message)
+        public Task<bool> SendAsync(TmqMessage message)
         {
             if (UseUniqueMessageId && string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(_uniqueIdGenerator.Create());
 
-            byte[] data = await _writer.Create(message);
-            return await SendAsync(data);
+            byte[] data = TmqWriter.Create(message);
+            return SendAsync(data);
         }
     }
 }

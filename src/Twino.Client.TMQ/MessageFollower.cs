@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core;
@@ -97,25 +96,17 @@ namespace Twino.Client.TMQ
 
             MessageDescriptor descriptor;
             lock (_descriptors)
-                descriptor = _descriptors.Find(x => x.Message.AcknowledgeRequired && x.Message.MessageId == message.MessageId);
+                descriptor = _descriptors.Find(x => x.Message.PendingAcknowledge && x.Message.MessageId == message.MessageId);
 
             if (descriptor == null)
                 return;
 
-            if (message.Content != null && message.Length > 0)
-            {
-                string response = message.ToString();
-                if (response.Equals("FAILED", StringComparison.InvariantCultureIgnoreCase) ||
-                    response.Equals("TIMEOUT", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    descriptor.Completed = true;
-                    descriptor.Set(null);
-                    return;
-                }
-            }
-
             descriptor.Completed = true;
-            descriptor.Set(new object());
+            
+            if (message.ContentType == 0)
+                descriptor.Set(TmqResponseCode.Ok);
+            else
+                descriptor.Set((TmqResponseCode) message.ContentType);
         }
 
         /// <summary>
@@ -128,7 +119,7 @@ namespace Twino.Client.TMQ
 
             MessageDescriptor descriptor;
             lock (_descriptors)
-                descriptor = _descriptors.Find(x => x.Message.ResponseRequired && x.Message.MessageId == message.MessageId);
+                descriptor = _descriptors.Find(x => x.Message.PendingResponse && x.Message.MessageId == message.MessageId);
 
             if (descriptor == null)
                 return;
@@ -140,10 +131,10 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Starts to follow message acknowledge
         /// </summary>
-        public async Task<bool> FollowAcknowledge(TmqMessage message)
+        public async Task<TmqResponseCode> FollowAcknowledge(TmqMessage message)
         {
-            if (!message.AcknowledgeRequired || string.IsNullOrEmpty(message.MessageId))
-                return false;
+            if (!message.PendingAcknowledge || string.IsNullOrEmpty(message.MessageId))
+                return TmqResponseCode.Failed;
 
             DateTime expiration = DateTime.UtcNow + _client.AcknowledgeTimeout;
             AcknowledgeMessageDescriptor descriptor = new AcknowledgeMessageDescriptor(message, expiration);
@@ -159,7 +150,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         public async Task<TmqMessage> FollowResponse(TmqMessage message)
         {
-            if (!message.ResponseRequired || string.IsNullOrEmpty(message.MessageId))
+            if (!message.PendingResponse || string.IsNullOrEmpty(message.MessageId))
                 return default;
 
             DateTime expiration = DateTime.UtcNow + _client.ResponseTimeout;

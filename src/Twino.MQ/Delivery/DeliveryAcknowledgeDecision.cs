@@ -18,6 +18,11 @@ namespace Twino.MQ.Delivery
         /// <summary>
         /// Acknowledge message is sent only if message save is successful
         /// </summary>
-        IfSaved
+        IfSaved,
+        
+        /// <summary>
+        /// Acknowledge is sent as negative
+        /// </summary>
+        Negative,
     }
 }

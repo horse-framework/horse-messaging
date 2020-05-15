@@ -32,13 +32,13 @@ namespace Twino.MQ.Network
             if (_server.NodeServer.Connectors.Length == 0)
                 return;
 
-            byte[] mdata = await _writer.Create(message);
+            byte[] mdata = TmqWriter.Create(message);
             foreach (TmqStickyConnector connector in _server.NodeServer.Connectors)
             {
                 bool grant = _server.NodeServer.Authenticator == null || await _server.NodeServer.Authenticator.CanReceive(connector.GetClient(), message);
 
                 if (grant)
-                    connector.Send(mdata);
+                    _ = connector.SendAsync(mdata);
             }
         }
     }

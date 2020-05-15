@@ -4,20 +4,22 @@ using Twino.MQ.Queues;
 
 namespace Twino.MQ.Delivery
 {
-
+    /// <summary>
+    /// 
+    /// </summary>
     public enum PutBackDecision
     {
         /// <summary>
         /// Message will not keep and put back to the queue
         /// </summary>
         No,
-        
+
         /// <summary>
         /// Message will be put back to the beginning of the queue.
         /// It will be consumed at first.
         /// </summary>
         Start,
-        
+
         /// <summary>
         /// Message will be put back to the beginning of the queue.
         /// It will be consumed at last.
@@ -52,14 +54,14 @@ namespace Twino.MQ.Delivery
         /// If true, message will be kept in front of the queue.
         /// Settings this value always true may cause infinity same message send operation.
         /// </summary>
-        public readonly bool KeepMessage;
+        public readonly PutBackDecision PutBack;
 
         /// <summary>
         /// If true, server will send an acknowledge message to producer.
         /// Sometimes acknowledge is required after save operation instead of receiving ack from consumer.
         /// This can be true in similar cases.
         /// </summary>
-        public readonly DeliveryAcknowledgeDecision SendAcknowledge;
+        public readonly DeliveryAcknowledgeDecision Acknowledge;
 
         /// <summary>
         /// If acknowledge is decided, this method will be called after acknowledge sent or failed
@@ -73,32 +75,32 @@ namespace Twino.MQ.Delivery
         {
             Allow = allow;
             SaveMessage = save;
-            KeepMessage = false;
-            SendAcknowledge = DeliveryAcknowledgeDecision.None;
+            PutBack = PutBackDecision.No;
+            Acknowledge = DeliveryAcknowledgeDecision.None;
             AcknowledgeDelivery = null;
         }
 
         /// <summary>
         /// Creates new decision with full parameters
         /// </summary>
-        public Decision(bool allow, bool save, bool keep, DeliveryAcknowledgeDecision sendAcknowledge)
+        public Decision(bool allow, bool save, PutBackDecision putBack, DeliveryAcknowledgeDecision ack)
         {
             Allow = allow;
             SaveMessage = save;
-            KeepMessage = keep;
-            SendAcknowledge = sendAcknowledge;
+            PutBack = putBack;
+            Acknowledge = ack;
             AcknowledgeDelivery = null;
         }
 
         /// <summary>
         /// Creates new decision with full parameters
         /// </summary>
-        public Decision(bool allow, bool save, bool keep, DeliveryAcknowledgeDecision sendAcknowledge, QueueAcknowledgeDeliveryHandler acknowledgeDelivery)
+        public Decision(bool allow, bool save, PutBackDecision putBack, DeliveryAcknowledgeDecision ack, QueueAcknowledgeDeliveryHandler acknowledgeDelivery)
         {
             Allow = allow;
             SaveMessage = save;
-            KeepMessage = keep;
-            SendAcknowledge = sendAcknowledge;
+            PutBack = putBack;
+            Acknowledge = ack;
             AcknowledgeDelivery = acknowledgeDelivery;
         }
 

@@ -253,8 +253,8 @@ namespace Twino.MQ.Queues
                 {
                     switch (value)
                     {
-                        case "route":
-                            Status = QueueStatus.Route;
+                        case "broadcast":
+                            Status = QueueStatus.Broadcast;
                             break;
 
                         case "push":

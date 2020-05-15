@@ -60,6 +60,11 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// A response message, point to a message received before.
         /// </summary>
-        Response = 0x16
+        Response = 0x16,
+        
+        /// <summary>
+        /// Message is routed to a custom exchange in server
+        /// </summary>
+        Router = 0x17
     }
 }

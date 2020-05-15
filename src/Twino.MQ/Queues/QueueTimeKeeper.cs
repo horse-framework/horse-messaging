@@ -53,7 +53,7 @@ namespace Twino.MQ.Queues
         {
             try
             {
-                if (_queue.Options.Status != QueueStatus.Route && _queue.Options.MessageTimeout > TimeSpan.Zero)
+                if (_queue.Options.Status != QueueStatus.Broadcast && _queue.Options.MessageTimeout > TimeSpan.Zero)
                     await ProcessReceiveTimeup();
 
                 await ProcessDeliveries();

@@ -1,7 +1,10 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.VisualBasic;
 
 [assembly: InternalsVisibleTo("Twino.MQ.Data")]
 [assembly: InternalsVisibleTo("Twino.MQ.Server")]
@@ -26,6 +29,11 @@ namespace Twino.Protocols.TMQ
         public bool HighPriority { get; set; }
 
         /// <summary>
+        /// If true, message has header data
+        /// </summary>
+        public bool HasHeader { get; internal set; }
+
+        /// <summary>
         /// Message type
         /// </summary>
         public MessageType Type { get; set; }
@@ -34,13 +42,13 @@ namespace Twino.Protocols.TMQ
         /// True means, client is pending a response.
         /// Sending response is not mandatory but it SHOULD sent.
         /// </summary>
-        public bool ResponseRequired { get; set; }
+        public bool PendingResponse { get; set; }
 
         /// <summary>
         /// True means, client is pending a response.
         /// If acknowledge isn't sent, server will complete process as not acknowledged
         /// </summary>
-        public bool AcknowledgeRequired { get; set; }
+        public bool PendingAcknowledge { get; set; }
 
         /// <summary>
         /// Message TTL value. Default is 16
@@ -92,6 +100,16 @@ namespace Twino.Protocols.TMQ
         /// Message content stream
         /// </summary>
         public MemoryStream Content { get; set; }
+
+        /// <summary>
+        /// Message headers
+        /// </summary>
+        public IEnumerable<KeyValuePair<string, string>> Headers => HeadersList;
+        
+        /// <summary>
+        /// Message headers
+        /// </summary>
+        internal List<KeyValuePair<string,string>> HeadersList { get; set; }
 
         #endregion
 
@@ -161,7 +179,7 @@ namespace Twino.Protocols.TMQ
             MessageIdLength = string.IsNullOrEmpty(MessageId) ? 0 : Encoding.UTF8.GetByteCount(MessageId);
             SourceLength = string.IsNullOrEmpty(Source) ? 0 : Encoding.UTF8.GetByteCount(Source);
             TargetLength = string.IsNullOrEmpty(Target) ? 0 : Encoding.UTF8.GetByteCount(Target);
-            Length = Content != null ? (ulong)Content.Length : 0;
+            Length = Content != null ? (ulong) Content.Length : 0;
         }
 
         /// <summary>
@@ -184,7 +202,7 @@ namespace Twino.Protocols.TMQ
                 return;
 
             Content = new MemoryStream(Encoding.UTF8.GetBytes(content));
-            Length = Content != null ? (ulong)Content.Length : 0;
+            Length = Content != null ? (ulong) Content.Length : 0;
         }
 
         /// <summary>
@@ -194,7 +212,7 @@ namespace Twino.Protocols.TMQ
         {
             Content = new MemoryStream();
             await System.Text.Json.JsonSerializer.SerializeAsync(Content, value, value.GetType());
-            Length = Content != null ? (ulong)Content.Length : 0;
+            Length = Content != null ? (ulong) Content.Length : 0;
         }
 
         /// <summary>
@@ -212,16 +230,16 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Create an acknowledge message of the message
         /// </summary>
-        public TmqMessage CreateAcknowledge()
+        public TmqMessage CreateAcknowledge(TmqResponseCode status)
         {
             TmqMessage message = new TmqMessage();
 
             message.FirstAcquirer = FirstAcquirer;
-            message.HighPriority = Type == MessageType.Client;
+            message.HighPriority = Type == MessageType.DirectMessage;
             message.Type = MessageType.Acknowledge;
             message.SetMessageId(MessageId);
-            message.ContentType = ContentType;
-            message.SetTarget(Type == MessageType.Channel ? Target : Source);
+            message.ContentType = Convert.ToUInt16(status);
+            message.SetTarget(Type == MessageType.QueueMessage ? Target : Source);
 
             return message;
         }
@@ -229,15 +247,16 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Create a response message of the message
         /// </summary>
-        public TmqMessage CreateResponse()
+        public TmqMessage CreateResponse(TmqResponseCode status)
         {
             TmqMessage message = new TmqMessage();
 
             message.FirstAcquirer = FirstAcquirer;
             message.HighPriority = HighPriority;
             message.Type = MessageType.Response;
+            message.ContentType = Convert.ToUInt16(status);
             message.SetMessageId(MessageId);
-            message.SetTarget(Type == MessageType.Channel ? Target : Source);
+            message.SetTarget(Type == MessageType.QueueMessage ? Target : Source);
 
             return message;
         }

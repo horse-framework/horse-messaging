@@ -459,7 +459,7 @@ namespace Twino.MQ.Queues
 
             //prepare properties
             message.Message.FirstAcquirer = true;
-            message.Message.AcknowledgeRequired = Options.RequestAcknowledge;
+            message.Message.PendingAcknowledge = Options.RequestAcknowledge;
 
             //if message doesn't have message id and "UseMessageId" option is enabled, create new message id for the message
             if (Options.UseMessageId && string.IsNullOrEmpty(message.Message.MessageId))
@@ -506,8 +506,13 @@ namespace Twino.MQ.Queues
                     {
                         await ApplyDecision(decision, State.ProcessingMessage);
 
-                        if (decision.KeepMessage && !State.ProcessingMessage.IsInQueue)
-                            AddMessage(State.ProcessingMessage, false);
+                        if (!State.ProcessingMessage.IsInQueue)
+                        {
+                            if (decision.PutBack == PutBackDecision.Start)
+                                AddMessage(State.ProcessingMessage, false);
+                            else if (decision.PutBack == PutBackDecision.End)
+                                AddMessage(State.ProcessingMessage, true);
+                        }
                     }
                 }
                 catch //if developer does wrong operation, we should not stop
@@ -634,26 +639,26 @@ namespace Twino.MQ.Queues
         internal static Decision CreateFinalDecision(Decision final, Decision decision)
         {
             bool allow = false;
-            bool keep = false;
+            PutBackDecision putBack = PutBackDecision.No;
             bool save = false;
             DeliveryAcknowledgeDecision ack = DeliveryAcknowledgeDecision.None;
 
             if (decision.Allow)
                 allow = true;
 
-            if (decision.KeepMessage)
-                keep = true;
+            if (decision.PutBack != PutBackDecision.No)
+                putBack = decision.PutBack;
 
             if (decision.SaveMessage)
                 save = true;
 
-            if (decision.SendAcknowledge == DeliveryAcknowledgeDecision.Always)
+            if (decision.Acknowledge == DeliveryAcknowledgeDecision.Always)
                 ack = DeliveryAcknowledgeDecision.Always;
 
-            else if (decision.SendAcknowledge == DeliveryAcknowledgeDecision.IfSaved && final.SendAcknowledge == DeliveryAcknowledgeDecision.None)
+            else if (decision.Acknowledge == DeliveryAcknowledgeDecision.IfSaved && final.Acknowledge == DeliveryAcknowledgeDecision.None)
                 ack = DeliveryAcknowledgeDecision.IfSaved;
 
-            return new Decision(allow, save, keep, ack);
+            return new Decision(allow, save, putBack, ack);
         }
 
         /// <summary>
@@ -667,10 +672,10 @@ namespace Twino.MQ.Queues
             if (decision.SaveMessage)
                 await SaveMessage(message);
 
-            if (decision.SendAcknowledge == DeliveryAcknowledgeDecision.Always ||
-                decision.SendAcknowledge == DeliveryAcknowledgeDecision.IfSaved && message.IsSaved)
+            if (decision.Acknowledge == DeliveryAcknowledgeDecision.Always ||
+                decision.Acknowledge == DeliveryAcknowledgeDecision.IfSaved && message.IsSaved)
             {
-                TmqMessage acknowledge = customAck ?? message.Message.CreateAcknowledge();
+                TmqMessage acknowledge = customAck ?? message.Message.CreateAcknowledge(TmqResponseCode.Ok);
                 if (message.Source != null && message.Source.IsConnected)
                 {
                     bool sent = await message.Source.SendAsync(acknowledge);
@@ -681,8 +686,10 @@ namespace Twino.MQ.Queues
                     await decision.AcknowledgeDelivery(message, message.Source, false);
             }
 
-            if (decision.KeepMessage)
+            if (decision.PutBack == PutBackDecision.Start)
                 AddMessage(message, false);
+            else if (decision.PutBack == PutBackDecision.End)
+                AddMessage(message, true);
 
             else if (!decision.Allow)
             {
@@ -700,7 +707,7 @@ namespace Twino.MQ.Queues
         {
             if (message.IsSaved)
                 return false;
-            
+
             message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
 
             if (message.IsSaved)
@@ -719,8 +726,8 @@ namespace Twino.MQ.Queues
         internal async Task WaitForAcknowledge(QueueMessage message)
         {
             //if we will lock the queue until ack received, we must request ack
-            if (!message.Message.AcknowledgeRequired)
-                message.Message.AcknowledgeRequired = true;
+            if (!message.Message.PendingAcknowledge)
+                message.Message.PendingAcknowledge = true;
 
             if (_acknowledgeCallback == null)
                 return;

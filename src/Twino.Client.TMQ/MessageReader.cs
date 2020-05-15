@@ -102,8 +102,8 @@ namespace Twino.Client.TMQ
         /// </summary>
         private void ClientOnMessageReceived(ClientSocketBase<TmqMessage> client, TmqMessage message)
         {
-            //only channel messages accepted
-            if (message.Type != MessageType.Channel || string.IsNullOrEmpty(message.Target))
+            //only queue messages accepted
+            if (message.Type != MessageType.QueueMessage || string.IsNullOrEmpty(message.Target))
                 return;
 
             //find all subscriber actions

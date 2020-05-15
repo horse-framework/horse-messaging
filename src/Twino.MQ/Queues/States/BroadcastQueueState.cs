@@ -7,15 +7,14 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Queues.States
 {
-    internal class RouteQueueState : IQueueState
+    internal class BroadcastQueueState : IQueueState
     {
         public QueueMessage ProcessingMessage { get; private set; }
         public bool TriggerSupported => true;
 
-        private static readonly TmqWriter _writer = new TmqWriter();
         private readonly ChannelQueue _queue;
 
-        public RouteQueueState(ChannelQueue queue)
+        public BroadcastQueueState(ChannelQueue queue)
         {
             _queue = queue;
         }
@@ -64,9 +63,9 @@ namespace Twino.MQ.Queues.States
                 return PushResult.Success;
 
             //create prepared message data
-            byte[] messageData = await _writer.Create(message.Message);
+            byte[] messageData = TmqWriter.Create(message.Message);
 
-            Decision final = new Decision(false, false, false, DeliveryAcknowledgeDecision.None);
+            Decision final = new Decision(false, false, PutBackDecision.No, DeliveryAcknowledgeDecision.None);
             bool messageIsSent = false;
 
             //to all receivers
@@ -92,7 +91,7 @@ namespace Twino.MQ.Queues.States
                 delivery.FirstAcquirer = message.Message.FirstAcquirer;
 
                 //send the message
-                bool sent = client.Client.Send(messageData);
+                bool sent = await client.Client.SendAsync(messageData);
 
                 if (sent)
                 {
@@ -118,7 +117,7 @@ namespace Twino.MQ.Queues.States
                         break;
 
                     if (firstAcquirer && clients.Count > 1)
-                        messageData = await _writer.Create(message.Message);
+                        messageData = TmqWriter.Create(message.Message);
                 }
                 else
                 {
@@ -138,7 +137,7 @@ namespace Twino.MQ.Queues.States
             message.Decision = await _queue.DeliveryHandler.EndSend(_queue, message);
             await _queue.ApplyDecision(message.Decision, message);
 
-            if (message.Decision.Allow && !message.Decision.KeepMessage)
+            if (message.Decision.Allow && message.Decision.PutBack == PutBackDecision.No)
             {
                 _queue.Info.AddMessageRemove();
                 _ = _queue.DeliveryHandler.MessageRemoved(_queue, message);
@@ -155,62 +154,6 @@ namespace Twino.MQ.Queues.States
         public Task<QueueStatusAction> LeaveStatus(QueueStatus nextStatus)
         {
             return Task.FromResult(QueueStatusAction.Allow);
-        }
-
-        /// <summary>
-        /// Start to process all pending messages.
-        /// This method is called after a client is subscribed to the queue.
-        /// </summary>
-        private async Task ProcessPendingMessages(bool high)
-        {
-            while (true)
-            {
-                QueueMessage message;
-
-                if (high)
-                {
-                    lock (_queue.HighPriorityLinkedList)
-                    {
-                        if (_queue.HighPriorityLinkedList.Count == 0)
-                            return;
-
-                        message = _queue.HighPriorityLinkedList.First.Value;
-                        _queue.HighPriorityLinkedList.RemoveFirst();
-                        message.IsInQueue = false;
-                    }
-                }
-                else
-                {
-                    lock (_queue.RegularLinkedList)
-                    {
-                        if (_queue.RegularLinkedList.Count == 0)
-                            return;
-
-                        message = _queue.RegularLinkedList.First.Value;
-                        _queue.RegularLinkedList.RemoveFirst();
-                        message.IsInQueue = false;
-                    }
-                }
-
-                try
-                {
-                    PushResult pr = await ProcessMessage(message);
-                    if (pr == PushResult.Empty || pr == PushResult.NoConsumers)
-                        return;
-                }
-                catch (Exception ex)
-                {
-                    _queue.Info.AddError();
-                    try
-                    {
-                        Decision decision = await _queue.DeliveryHandler.ExceptionThrown(_queue, message, ex);
-                        await _queue.ApplyDecision(decision, message);
-                    }
-                    catch //if developer does wrong operation, we should not stop
-                    {
-                    }
-                }
-            }
         }
     }
 }

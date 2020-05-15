@@ -60,7 +60,7 @@ namespace Twino.MQ.Network
             MqClient foundClient = _server.FindClient(clientId);
             if (foundClient != null)
             {
-                await connection.Socket.SendAsync(await _writer.Create(MessageBuilder.Busy()));
+                await connection.Socket.SendAsync(TmqWriter.Create(MessageBuilder.Busy()));
                 return null;
             }
 
@@ -133,8 +133,8 @@ namespace Twino.MQ.Network
             if (string.IsNullOrEmpty(message.MessageId))
             {
                 //anonymous messages can't be responsed, do not wait response
-                if (message.ResponseRequired)
-                    message.ResponseRequired = false;
+                if (message.PendingResponse)
+                    message.PendingResponse = false;
 
                 //if server want to use message id anyway, generate new.
                 if (_server.Options.UseMessageId)
@@ -163,14 +163,14 @@ namespace Twino.MQ.Network
             switch (message.Type)
             {
                 //client sends a queue message in a channel
-                case MessageType.Channel:
+                case MessageType.QueueMessage:
                     if (!fromNode)
                         await _instanceHandler.Handle(mc, message);
                     await _channelHandler.Handle(mc, message);
                     break;
 
                 //clients sends a message to another client
-                case MessageType.Client:
+                case MessageType.DirectMessage:
                     if (!fromNode)
                         await _instanceHandler.Handle(mc, message);
                     await _clientHandler.Handle(mc, message);

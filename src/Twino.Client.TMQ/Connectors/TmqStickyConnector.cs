@@ -49,7 +49,7 @@ namespace Twino.Client.TMQ.Connectors
             base.ClientMessageReceived(client, payload);
 
             if (_reader != null)
-                _reader.Read((TmqClient)client, payload);
+                _reader.Read((TmqClient) client, payload);
         }
 
         /// <summary>
@@ -89,37 +89,37 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Sends a message
         /// </summary>
-        public async Task<bool> SendAsync(TmqMessage message)
+        public Task<TmqResponseCode> SendAsync(TmqMessage message)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
-                return await client.SendAsync(message);
+                return client.SendAsync(message);
 
-            return false;
+            return Task.FromResult(TmqResponseCode.Failed);
         }
 
         /// <summary>
         /// Pushes a message to the queue
         /// </summary>
-        public async Task<bool> Push(string channel, ushort contentType, MemoryStream content, bool waitAcknowledge)
+        public Task<TmqResponseCode> Push(string channel, ushort contentType, MemoryStream content, bool waitAcknowledge)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
-                return await client.Push(channel, contentType, content, waitAcknowledge);
+                return client.Push(channel, contentType, content, waitAcknowledge);
 
-            return false;
+            return Task.FromResult(TmqResponseCode.Failed);
         }
 
         /// <summary>
         /// Pushes a message to the queue
         /// </summary>
-        public async Task<bool> PushJson(string channel, ushort contentType, object jsonObject, bool waitAcknowledge)
+        public Task<TmqResponseCode> PushJson(string channel, ushort contentType, object jsonObject, bool waitAcknowledge)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
-                return await client.PushJson(channel, contentType, jsonObject, waitAcknowledge);
+                return client.PushJson(channel, contentType, jsonObject, waitAcknowledge);
 
-            return false;
+            return Task.FromResult(TmqResponseCode.Failed);
         }
     }
 }

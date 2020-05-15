@@ -37,10 +37,10 @@ namespace Twino.MQ.Queues
 
             foreach (T item in items)
             {
-                TmqMessage message = new TmqMessage(MessageType.Channel, _queue.Channel.Name);
+                TmqMessage message = new TmqMessage(MessageType.QueueMessage, _queue.Channel.Name);
                 message.FirstAcquirer = true;
                 message.HighPriority = highPriority;
-                message.AcknowledgeRequired = _queue.Options.RequestAcknowledge;
+                message.PendingAcknowledge = _queue.Options.RequestAcknowledge;
                 message.ContentType = _queue.Id;
 
                 if (_queue.Options.UseMessageId)
@@ -78,9 +78,9 @@ namespace Twino.MQ.Queues
 
             foreach (T item in items)
             {
-                TmqMessage message = new TmqMessage(MessageType.Channel, _queue.Channel.Name);
+                TmqMessage message = new TmqMessage(MessageType.QueueMessage, _queue.Channel.Name);
                 message.FirstAcquirer = true;
-                message.AcknowledgeRequired = _queue.Options.RequestAcknowledge;
+                message.PendingAcknowledge = _queue.Options.RequestAcknowledge;
                 message.ContentType = _queue.Id;
 
                 if (_queue.Options.UseMessageId)
@@ -118,10 +118,10 @@ namespace Twino.MQ.Queues
 
             foreach (string item in items)
             {
-                TmqMessage message = new TmqMessage(MessageType.Channel, _queue.Channel.Name);
+                TmqMessage message = new TmqMessage(MessageType.QueueMessage, _queue.Channel.Name);
                 message.FirstAcquirer = true;
                 message.HighPriority = highPriority;
-                message.AcknowledgeRequired = _queue.Options.RequestAcknowledge;
+                message.PendingAcknowledge = _queue.Options.RequestAcknowledge;
                 message.ContentType = _queue.Id;
 
                 if (_queue.Options.UseMessageId)
@@ -160,10 +160,10 @@ namespace Twino.MQ.Queues
 
             foreach (byte[] item in items)
             {
-                TmqMessage message = new TmqMessage(MessageType.Channel, _queue.Channel.Name);
+                TmqMessage message = new TmqMessage(MessageType.QueueMessage, _queue.Channel.Name);
                 message.FirstAcquirer = true;
                 message.HighPriority = highPriority;
-                message.AcknowledgeRequired = _queue.Options.RequestAcknowledge;
+                message.PendingAcknowledge = _queue.Options.RequestAcknowledge;
                 message.ContentType = _queue.Id;
 
                 if (_queue.Options.UseMessageId)

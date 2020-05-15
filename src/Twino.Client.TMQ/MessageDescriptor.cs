@@ -41,17 +41,20 @@ namespace Twino.Client.TMQ
     /// </summary>
     internal class AcknowledgeMessageDescriptor : MessageDescriptor
     {
-        public TaskCompletionSource<bool> Source { get; }
+        public TaskCompletionSource<TmqResponseCode> Source { get; }
 
         public AcknowledgeMessageDescriptor(TmqMessage message, DateTime expiration) : base(message, expiration)
         {
-            Source = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Source = new TaskCompletionSource<TmqResponseCode>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
         /// <inheritdoc />
         public override void Set(object value)
         {
-            Source.SetResult(value != null);
+            if (value == null)
+                Source.SetResult(TmqResponseCode.Failed);
+            else
+                Source.SetResult((TmqResponseCode) value);
         }
     }
 

@@ -1,7 +1,6 @@
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Delivery;
-using Twino.MQ.Helpers;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Queues.States
@@ -23,7 +22,7 @@ namespace Twino.MQ.Queues.States
             QueueMessage message = _queue.FindNextMessage();
             if (message == null)
             {
-                await client.Client.SendAsync(MessageBuilder.ResponseStatus(request, KnownContentTypes.NotFound));
+                await client.Client.SendAsync(request.CreateResponse(TmqResponseCode.NotFound));
                 return PullResult.Empty;
             }
 
@@ -75,7 +74,7 @@ namespace Twino.MQ.Queues.States
         public bool CanEnqueue(QueueMessage message)
         {
             //if we need acknowledge, we are sending this information to receivers that we require response
-            message.Message.AcknowledgeRequired = _queue.Options.RequestAcknowledge;
+            message.Message.PendingAcknowledge = _queue.Options.RequestAcknowledge;
             message.IsInQueue = true;
             message.Message.Type = MessageType.Response;
 

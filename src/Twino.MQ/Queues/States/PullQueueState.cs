@@ -2,7 +2,6 @@ using System;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Delivery;
-using Twino.MQ.Helpers;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Queues.States
@@ -49,7 +48,7 @@ namespace Twino.MQ.Queues.States
             //there is no pullable message
             if (message == null)
             {
-                await client.Client.SendAsync(MessageBuilder.ResponseStatus(request, KnownContentTypes.NotFound));
+                await client.Client.SendAsync(request.CreateResponse(TmqResponseCode.NotFound));
                 return PullResult.Empty;
             }
 
@@ -65,8 +64,13 @@ namespace Twino.MQ.Queues.States
                     Decision decision = await _queue.DeliveryHandler.ExceptionThrown(_queue, message, ex);
                     await _queue.ApplyDecision(decision, message);
 
-                    if (decision.KeepMessage && !message.IsInQueue)
-                        _queue.AddMessage(message, false);
+                    if (!message.IsInQueue)
+                    {
+                        if (decision.PutBack == PutBackDecision.Start)
+                            _queue.AddMessage(message, false);
+                        else if (decision.PutBack == PutBackDecision.End)
+                            _queue.AddMessage(message, true);
+                    }
                 }
                 catch //if developer does wrong operation, we should not stop
                 {
@@ -82,7 +86,7 @@ namespace Twino.MQ.Queues.States
         private async Task ProcessPull(ChannelClient requester, TmqMessage request, QueueMessage message)
         {
             //if we need acknowledge, we are sending this information to receivers that we require response
-            message.Message.AcknowledgeRequired = _queue.Options.RequestAcknowledge;
+            message.Message.PendingAcknowledge = _queue.Options.RequestAcknowledge;
 
             //if we need acknowledge from receiver, it has a deadline.
             DateTime? deadline = null;
@@ -101,7 +105,7 @@ namespace Twino.MQ.Queues.States
             bool skip = !message.Message.FirstAcquirer && _queue.Options.SendOnlyFirstAcquirer;
             if (skip)
             {
-                if (!message.Decision.KeepMessage)
+                if (message.Decision.PutBack == PutBackDecision.No)
                 {
                     _queue.Info.AddMessageRemove();
                     _ = _queue.DeliveryHandler.MessageRemoved(_queue, message);
@@ -124,9 +128,9 @@ namespace Twino.MQ.Queues.States
             message.Message.SetMessageId(request.MessageId);
             message.Message.Type = MessageType.Response;
 
-            bool sent = requester.Client.Send(message.Message);
+            bool sent = await requester.Client.SendAsync(message.Message);
             message.Message.SetMessageId(mid);
-            message.Message.Type = MessageType.Channel;
+            message.Message.Type = MessageType.QueueMessage;
 
             if (sent)
             {
@@ -153,7 +157,7 @@ namespace Twino.MQ.Queues.States
             message.Decision = await _queue.DeliveryHandler.EndSend(_queue, message);
             await _queue.ApplyDecision(message.Decision, message);
 
-            if (message.Decision.Allow && !message.Decision.KeepMessage)
+            if (message.Decision.Allow && message.Decision.PutBack == PutBackDecision.No)
             {
                 _queue.Info.AddMessageRemove();
                 _ = _queue.DeliveryHandler.MessageRemoved(_queue, message);
