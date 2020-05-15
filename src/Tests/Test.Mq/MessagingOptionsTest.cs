@@ -38,8 +38,8 @@ namespace Test.Mq
             Assert.NotNull(queue);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, false);
-            Assert.True(sent);
+            TmqResponseCode sent = await client.Push(channel.Name, queue.Id, ms, false);
+            Assert.Equal(TmqResponseCode.Ok, sent);
 
             await Task.Delay(1500);
             Assert.Empty(queue.HighPriorityMessages);
@@ -48,7 +48,7 @@ namespace Test.Mq
             bool received = false;
             client.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     received = true;
             };
 
@@ -87,13 +87,13 @@ namespace Test.Mq
             bool received = false;
             client.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     received = true;
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, false);
-            Assert.True(sent);
+            TmqResponseCode sent = await client.Push(channel.Name, queue.Id, ms, false);
+            Assert.Equal(TmqResponseCode.Ok, sent);
 
             await Task.Delay(1500);
             Assert.Empty(queue.HighPriorityMessages);
@@ -133,13 +133,13 @@ namespace Test.Mq
             bool received = false;
             client.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     received = true;
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, false);
-            Assert.True(sent);
+            TmqResponseCode sent = await client.Push(channel.Name, queue.Id, ms, false);
+            Assert.Equal(TmqResponseCode.Ok, sent);
 
             await Task.Delay(1500);
             Assert.Empty(queue.HighPriorityMessages);
@@ -171,13 +171,13 @@ namespace Test.Mq
             bool received = false;
             client.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     received = true;
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, false);
-            Assert.True(sent);
+            TmqResponseCode sent = await client.Push(channel.Name, queue.Id, ms, false);
+            Assert.Equal(TmqResponseCode.Ok, sent);
 
             await Task.Delay(1500);
             Assert.NotEmpty(queue.RegularMessages);
@@ -224,7 +224,7 @@ namespace Test.Mq
 
                 client.MessageReceived += (cx, m) =>
                 {
-                    if (m.Type == MessageType.Channel)
+                    if (m.Type == MessageType.QueueMessage)
                         received[no - 1] = true;
                 };
 
@@ -239,8 +239,8 @@ namespace Test.Mq
             await join(3);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client1.Push(channel.Name, queue.Id, ms, false);
-            Assert.True(sent);
+            TmqResponseCode sent = await client1.Push(channel.Name, queue.Id, ms, false);
+            Assert.Equal(TmqResponseCode.Ok, sent);
 
             await Task.Delay(1500);
 
@@ -281,7 +281,7 @@ namespace Test.Mq
 
                 client.MessageReceived += (cx, m) =>
                 {
-                    if (m.Type == MessageType.Channel)
+                    if (m.Type == MessageType.QueueMessage)
                         received[no - 1] = true;
                 };
 
@@ -293,8 +293,8 @@ namespace Test.Mq
             TmqClient client3 = await join(3);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client1.Push(channel.Name, queue.Id, ms, false);
-            Assert.True(sent);
+            TmqResponseCode sent = await client1.Push(channel.Name, queue.Id, ms, false);
+            Assert.Equal(TmqResponseCode.Ok, sent);
 
             await Task.Delay(1500);
 
@@ -340,8 +340,8 @@ namespace Test.Mq
             Assert.NotNull(queue);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
-            Assert.False(sent);
+            TmqResponseCode sent = await client.Push(channel.Name, queue.Id, ms, true);
+            Assert.NotEqual(TmqResponseCode.Ok, sent);
 
             Assert.Empty(queue.HighPriorityMessages);
             Assert.Empty(queue.RegularMessages);
@@ -349,7 +349,7 @@ namespace Test.Mq
             bool received = false;
             client.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     received = true;
             };
 
@@ -393,14 +393,14 @@ namespace Test.Mq
             bool received = false;
             client.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     received = true;
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
+            TmqResponseCode sent = await client.Push(channel.Name, queue.Id, ms, true);
 
-            Assert.True(sent);
+            Assert.Equal(TmqResponseCode.Ok, sent);
             Assert.Empty(queue.HighPriorityMessages);
             Assert.Empty(queue.RegularMessages);
             Assert.True(received);
@@ -445,21 +445,21 @@ namespace Test.Mq
             bool receive2 = false;
             client1.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     receive1 = true;
             };
             client2.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     receive2 = true;
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client1.Push(channel.Name, queue.Id, ms, true);
+            TmqResponseCode sent = await client1.Push(channel.Name, queue.Id, ms, true);
 
             await Task.Delay(250);
 
-            Assert.True(sent);
+            Assert.Equal(TmqResponseCode.Ok, sent);
             Assert.Empty(queue.HighPriorityMessages);
             Assert.Empty(queue.RegularMessages);
             Assert.True(receive1);
@@ -496,15 +496,15 @@ namespace Test.Mq
             await queue.SetStatus(QueueStatus.Push);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
+            TmqResponseCode sent = await client.Push(channel.Name, queue.Id, ms, true);
 
-            Assert.False(sent);
+            Assert.Equal(TmqResponseCode.Ok, sent);
             Assert.NotEmpty(queue.RegularMessages);
 
             bool received = false;
             client.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     received = true;
             };
 
@@ -549,14 +549,14 @@ namespace Test.Mq
             bool received = false;
             client.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     received = true;
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
+            TmqResponseCode sent = await client.Push(channel.Name, queue.Id, ms, true);
 
-            Assert.True(sent);
+            Assert.Equal(TmqResponseCode.Ok, sent);
             Assert.Empty(queue.HighPriorityMessages);
             Assert.Empty(queue.RegularMessages);
             Assert.True(received);
@@ -602,21 +602,21 @@ namespace Test.Mq
             bool receive2 = false;
             client1.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     receive1 = true;
             };
             client2.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     receive2 = true;
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client1.Push(channel.Name, queue.Id, ms, true);
+            TmqResponseCode sent = await client1.Push(channel.Name, queue.Id, ms, true);
 
             await Task.Delay(250);
 
-            Assert.True(sent);
+            Assert.Equal(TmqResponseCode.Ok, sent);
             Assert.Empty(queue.HighPriorityMessages);
             Assert.Empty(queue.RegularMessages);
             Assert.True(receive1);
@@ -661,7 +661,7 @@ namespace Test.Mq
             {
                 switch (m.Type)
                 {
-                    case MessageType.Channel:
+                    case MessageType.QueueMessage:
                         received = m;
                         break;
                     case MessageType.Acknowledge:
@@ -673,8 +673,8 @@ namespace Test.Mq
             await Task.Delay(500);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push("ch-1", MessageA.ContentType, ms, true);
-            Assert.True(sent);
+            TmqResponseCode sent = await client.Push("ch-1", MessageA.ContentType, ms, true);
+            Assert.Equal(TmqResponseCode.Ok, sent);
 
             await Task.Delay(1000);
 
@@ -710,8 +710,8 @@ namespace Test.Mq
             await client.ConnectAsync("tmq://localhost:42599");
             Assert.True(client.IsConnected);
 
-            bool ack = await client.Push("ch-route", MessageA.ContentType, "Hello", true);
-            Assert.True(ack);
+            TmqResponseCode ack = await client.Push("ch-route", MessageA.ContentType, "Hello", true);
+            Assert.Equal(TmqResponseCode.Ok, ack);
         }
     }
 }

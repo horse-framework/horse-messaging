@@ -388,7 +388,7 @@ namespace Twino.Client.TMQ
 
                 default:
                     if (message.PendingAcknowledge && AutoAcknowledge)
-                        await SendAsync(message.CreateAcknowledge(TmqResponseCode.Ok));
+                        await SendAsync(message.CreateAcknowledge());
 
                     SetOnMessageReceived(message);
                     break;
@@ -500,7 +500,7 @@ namespace Twino.Client.TMQ
             if (string.IsNullOrEmpty(message.MessageId))
                 throw new ArgumentNullException("Messages without unique id cannot be acknowledged");
 
-            return await WaitForAcknowledge(message, true);
+            return await SendAndWaitForAcknowledge(message, true);
         }
 
         /// <summary>
@@ -692,17 +692,22 @@ namespace Twino.Client.TMQ
         /// if verify requires, waits response and checkes status code of the response.
         /// returns true if Ok.
         /// </summary>
-        protected async Task<TmqResponseCode> WaitResponse(TmqMessage message, bool verifyResponse)
+        protected async Task<TmqResponseCode> WaitResponse(TmqMessage message, bool waitForResponse)
         {
             Task<TmqMessage> task = null;
-            if (verifyResponse)
+            if (waitForResponse)
                 task = _follower.FollowResponse(message);
 
             TmqResponseCode sent = await SendAsync(message);
             if (sent != TmqResponseCode.Ok)
-                return TmqResponseCode.SendError;
+            {
+                if (waitForResponse)
+                    _follower.UnfollowMessage(message);
 
-            if (verifyResponse)
+                return TmqResponseCode.SendError;
+            }
+
+            if (waitForResponse)
             {
                 TmqMessage response = await task;
                 return response == null
@@ -718,22 +723,25 @@ namespace Twino.Client.TMQ
         /// if acknowledge is pending, waits for acknowledge.
         /// returns true if received.
         /// </summary>
-        private async Task<TmqResponseCode> WaitForAcknowledge(TmqMessage message, bool waitAcknowledge)
+        private async Task<TmqResponseCode> SendAndWaitForAcknowledge(TmqMessage message, bool waitAcknowledge)
         {
             Task<TmqResponseCode> task = null;
             if (waitAcknowledge)
                 task = _follower.FollowAcknowledge(message);
 
             TmqResponseCode sent = await SendAsync(message);
-            if (!waitAcknowledge || sent != TmqResponseCode.Ok)
+            if (sent != TmqResponseCode.Ok)
             {
                 if (waitAcknowledge)
                     _follower.UnfollowMessage(message);
 
-                return TmqResponseCode.Failed;
+                return TmqResponseCode.SendError;
             }
 
-            return await task;
+            if (waitAcknowledge)
+                return await task;
+
+            return TmqResponseCode.Ok;
         }
 
         #endregion
@@ -820,7 +828,7 @@ namespace Twino.Client.TMQ
             if (waitAcknowledge)
                 message.SetMessageId(UniqueIdGenerator.Create());
 
-            return await WaitForAcknowledge(message, waitAcknowledge);
+            return await SendAndWaitForAcknowledge(message, waitAcknowledge);
         }
 
         /// <summary>
@@ -846,7 +854,7 @@ namespace Twino.Client.TMQ
             if (waitAcknowledge)
                 message.SetMessageId(UniqueIdGenerator.Create());
 
-            return await WaitForAcknowledge(message, waitAcknowledge);
+            return await SendAndWaitForAcknowledge(message, waitAcknowledge);
         }
 
         /// <summary>

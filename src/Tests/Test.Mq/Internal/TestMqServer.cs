@@ -62,7 +62,7 @@ namespace Test.Mq.Internal
             channel0.CreateQueue(MessageA.ContentType).Wait();
 
             Channel croute = Server.CreateChannel("ch-route");
-            croute.Options.Status = QueueStatus.Route;
+            croute.Options.Status = QueueStatus.Broadcast;
             croute.CreateQueue(MessageA.ContentType).Wait();
 
             Channel cpush = Server.CreateChannel("ch-push");

@@ -45,12 +45,12 @@ namespace Test.Mq
 
             TmqMessage message = new TmqMessage();
             message.HighPriority = true;
-            message.Type = MessageType.Client;
+            message.Type = MessageType.DirectMessage;
             message.SetTarget(client2.ClientId);
             message.SetStringContent("Hello, World!");
 
-            bool acknowledge = await client1.SendWithAcknowledge(message);
-            Assert.True(acknowledge);
+            TmqResponseCode acknowledge = await client1.SendWithAcknowledge(message);
+            Assert.Equal(TmqResponseCode.Ok, acknowledge);
         }
 
         /// <summary>
@@ -75,7 +75,7 @@ namespace Test.Mq
             client2.AutoAcknowledge = false;
             client2.MessageReceived += async (c, m) =>
             {
-                if (m.AcknowledgeRequired)
+                if (m.PendingAcknowledge)
                     await client2.SendAsync(m.CreateAcknowledge());
             };
 
@@ -87,12 +87,12 @@ namespace Test.Mq
 
             TmqMessage message = new TmqMessage();
             message.HighPriority = true;
-            message.Type = MessageType.Client;
+            message.Type = MessageType.DirectMessage;
             message.SetTarget(client2.ClientId);
             message.SetStringContent("Hello, World!");
 
-            bool acknowledge = await client1.SendWithAcknowledge(message);
-            Assert.True(acknowledge);
+            TmqResponseCode acknowledge = await client1.SendWithAcknowledge(message);
+            Assert.Equal(TmqResponseCode.Ok, acknowledge);
         }
 
         /// <summary>
@@ -125,12 +125,12 @@ namespace Test.Mq
 
             TmqMessage message = new TmqMessage();
             message.HighPriority = true;
-            message.Type = MessageType.Client;
+            message.Type = MessageType.DirectMessage;
             message.SetTarget(client2.ClientId);
             message.SetStringContent("Hello, World!");
 
-            bool acknowledge = await client1.SendWithAcknowledge(message);
-            Assert.False(acknowledge);
+            TmqResponseCode acknowledge = await client1.SendWithAcknowledge(message);
+            Assert.Equal(TmqResponseCode.Ok, acknowledge);
         }
 
         #endregion
@@ -165,8 +165,8 @@ namespace Test.Mq
 
             //push a message to the queue
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
-            Assert.True(sent);
+            TmqResponseCode sent = await client.Push(channel.Name, queue.Id, ms, true);
+            Assert.Equal(TmqResponseCode.Ok, sent);
         }
 
         /// <summary>
@@ -197,8 +197,8 @@ namespace Test.Mq
 
             //push a message to the queue
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
-            Assert.True(sent);
+            TmqResponseCode sent = await client.Push(channel.Name, queue.Id, ms, true);
+            Assert.Equal(TmqResponseCode.Ok, sent);
         }
 
         /// <summary>
@@ -229,8 +229,8 @@ namespace Test.Mq
 
             //push a message to the queue
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
-            Assert.False(sent);
+            TmqResponseCode sent = await client.Push(channel.Name, queue.Id, ms, true);
+            Assert.Equal(TmqResponseCode.Ok, sent);
         }
 
         #endregion

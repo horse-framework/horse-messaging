@@ -6,6 +6,7 @@ using Test.Mq.Internal;
 using Twino.Client.TMQ;
 using Twino.MQ;
 using Twino.MQ.Clients;
+using Twino.Protocols.TMQ;
 using Xunit;
 
 namespace Test.Mq

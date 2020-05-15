@@ -42,8 +42,8 @@ namespace Test.Mq
             MessageA a = new MessageA("A");
             string serialized = Newtonsoft.Json.JsonConvert.SerializeObject(a);
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(serialized));
-            bool sent = await client.Push("ch-1", MessageA.ContentType, ms, false);
-            Assert.True(sent);
+            TmqResponseCode sent = await client.Push("ch-1", MessageA.ContentType, ms, false);
+            Assert.Equal(TmqResponseCode.Ok, sent);
 
             await Task.Delay(1000);
 
@@ -87,13 +87,13 @@ namespace Test.Mq
             client1.MessageReceived += (c, m) => responseCaught = true;
             client2.MessageReceived += async (c, m) =>
             {
-                TmqMessage rmsg = m.CreateResponse();
+                TmqMessage rmsg = m.CreateResponse(TmqResponseCode.Ok);
                 rmsg.SetStringContent("Response!");
-                await ((TmqClient)c).SendAsync(rmsg);
+                await ((TmqClient) c).SendAsync(rmsg);
             };
 
-            TmqMessage msg = new TmqMessage(MessageType.Client, "client-2");
-            msg.ResponseRequired = true;
+            TmqMessage msg = new TmqMessage(MessageType.DirectMessage, "client-2");
+            msg.PendingResponse = true;
             msg.SetStringContent("Hello, World!");
 
             TmqMessage response = await client1.Request(msg);

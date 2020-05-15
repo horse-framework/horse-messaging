@@ -4,7 +4,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.VisualBasic;
 
 [assembly: InternalsVisibleTo("Twino.MQ.Data")]
 [assembly: InternalsVisibleTo("Twino.MQ.Server")]
@@ -230,7 +229,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Create an acknowledge message of the message
         /// </summary>
-        public TmqMessage CreateAcknowledge(TmqResponseCode status)
+        public TmqMessage CreateAcknowledge(TmqResponseCode status = TmqResponseCode.Ok)
         {
             TmqMessage message = new TmqMessage();
 

@@ -156,8 +156,7 @@ namespace Test.Mq
             msg.ContentType = KnownContentTypes.Hello;
             msg.SetStringContent("GET /\r\nName: Test-42105");
             msg.CalculateLengths();
-            TmqWriter writer = new TmqWriter();
-            await writer.Write(msg, stream);
+            TmqWriter.Write(msg, stream);
             await Task.Delay(1000);
             Assert.Equal(1, server.ClientConnected);
 

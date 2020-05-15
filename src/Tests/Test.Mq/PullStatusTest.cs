@@ -79,7 +79,7 @@ namespace Test.Mq
             await producer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            Task<bool> taskAck = producer.Push("ch-pull", MessageA.ContentType, "Hello, World!", true);
+            Task<TmqResponseCode> taskAck = producer.Push("ch-pull", MessageA.ContentType, "Hello, World!", true);
 
             await Task.Delay(500);
             Assert.False(taskAck.IsCompleted);

@@ -6,6 +6,7 @@ using Test.Mq.Models;
 using Twino.Client.TMQ;
 using Twino.MQ;
 using Twino.MQ.Queues;
+using Twino.Protocols.TMQ;
 using Xunit;
 
 namespace Test.Mq
@@ -26,7 +27,7 @@ namespace Test.Mq
             server.Start();
 
             TmqClient client = new TmqClient();
-            client.Connect("tmq://localhost:" + port);
+            await client.ConnectAsync("tmq://localhost:" + port);
 
             TmqResponseCode created = await client.CreateQueue("ch-2", MessageA.ContentType, verifyResponse);
             Assert.Equal(TmqResponseCode.Ok, created);

@@ -7,6 +7,7 @@ using Test.Mq.Models;
 using Twino.Client.TMQ;
 using Twino.MQ;
 using Twino.MQ.Queues;
+using Twino.Protocols.TMQ;
 using Xunit;
 
 namespace Test.Mq
@@ -103,8 +104,8 @@ namespace Test.Mq
             TmqResponseCode joined = await consumer.Join("ch-route", true);
             Assert.Equal(TmqResponseCode.Ok, joined);
 
-            bool ack = await producer.Push("ch-route", MessageA.ContentType, "Hello, World!", true);
-            Assert.Equal(queueAckIsActive, ack);
+            TmqResponseCode ack = await producer.Push("ch-route", MessageA.ContentType, "Hello, World!", true);
+            Assert.Equal(queueAckIsActive, ack == TmqResponseCode.Ok);
         }
     }
 }
