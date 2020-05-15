@@ -660,30 +660,29 @@ namespace Twino.Client.TMQ
         #region Acknowledge - Response
 
         /// <summary>
-        /// Sends acknowledge message for the message
-        /// </summary>
-        public Task<TmqResponseCode> Acknowledge(TmqMessage message)
-        {
-            return SendAcknowledge(message, TmqResponseCode.Ok);
-        }
-
-        /// <summary>
         /// Sends unacknowledge message for the message.
         /// </summary>
-        public Task<TmqResponseCode> NegativeAcknowledge(TmqMessage message)
-        {
-            return SendAcknowledge(message, TmqResponseCode.Failed);
-        }
-
-        /// <summary>
-        /// Sends unacknowledge message for the message.
-        /// </summary>
-        public async Task<TmqResponseCode> SendAcknowledge(TmqMessage message, TmqResponseCode status)
+        public async Task<TmqResponseCode> SendNegativeAck(TmqMessage message, string reason = null)
         {
             if (!message.PendingAcknowledge)
                 return TmqResponseCode.Failed;
 
-            TmqMessage ack = message.CreateAcknowledge(status);
+            if (string.IsNullOrEmpty(reason))
+                reason = TmqHeaders.NACK_REASON_NONE;
+
+            TmqMessage ack = message.CreateAcknowledge(reason);
+            return await SendAsync(ack);
+        }
+
+        /// <summary>
+        /// Sends unacknowledge message for the message.
+        /// </summary>
+        public async Task<TmqResponseCode> SendAck(TmqMessage message)
+        {
+            if (!message.PendingAcknowledge)
+                return TmqResponseCode.Failed;
+
+            TmqMessage ack = message.CreateAcknowledge(null);
             return await SendAsync(ack);
         }
 

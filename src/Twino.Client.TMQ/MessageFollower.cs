@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core;
@@ -102,11 +103,14 @@ namespace Twino.Client.TMQ
                 return;
 
             descriptor.Completed = true;
-            
-            if (message.ContentType == 0)
-                descriptor.Set(TmqResponseCode.Ok);
-            else
-                descriptor.Set((TmqResponseCode) message.ContentType);
+            if (!message.HasHeader || !message.Headers.Any(x => x.Key.Equals(TmqHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)))
+            {
+                descriptor.Set(null);
+                return;
+            }
+
+            var nackReason = message.Headers.FirstOrDefault(x => x.Key.Equals(TmqHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase));
+            descriptor.Set(nackReason.Value);
         }
 
         /// <summary>

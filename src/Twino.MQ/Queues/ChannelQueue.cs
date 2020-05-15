@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
@@ -675,7 +676,7 @@ namespace Twino.MQ.Queues
             if (decision.Acknowledge == DeliveryAcknowledgeDecision.Always ||
                 decision.Acknowledge == DeliveryAcknowledgeDecision.IfSaved && message.IsSaved)
             {
-                TmqMessage acknowledge = customAck ?? message.Message.CreateAcknowledge(TmqResponseCode.Ok);
+                TmqMessage acknowledge = customAck ?? message.Message.CreateAcknowledge();
                 if (message.Source != null && message.Source.IsConnected)
                 {
                     bool sent = await message.Source.SendAsync(acknowledge);
@@ -773,7 +774,8 @@ namespace Twino.MQ.Queues
                 }
             }
 
-            bool success = delivery.Message.Message.ContentType == (ushort) TmqResponseCode.Ok;
+            bool success = !(deliveryMessage.HasHeader &&
+                             deliveryMessage.Headers.Any(x => x.Key.Equals(TmqHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)));
 
             // ReSharper disable once ConditionIsAlwaysTrueOrFalse (it's possible, resharper doesn't work properly in here)
             if (delivery != null)

@@ -104,11 +104,11 @@ namespace Twino.Protocols.TMQ
         /// Message headers
         /// </summary>
         public IEnumerable<KeyValuePair<string, string>> Headers => HeadersList;
-        
+
         /// <summary>
         /// Message headers
         /// </summary>
-        internal List<KeyValuePair<string,string>> HeadersList { get; set; }
+        internal List<KeyValuePair<string, string>> HeadersList { get; set; }
 
         #endregion
 
@@ -229,16 +229,30 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Create an acknowledge message of the message
         /// </summary>
-        public TmqMessage CreateAcknowledge(TmqResponseCode status = TmqResponseCode.Ok)
+        public TmqMessage CreateAcknowledge(string negativeReason = null)
         {
             TmqMessage message = new TmqMessage();
 
             message.FirstAcquirer = FirstAcquirer;
-            message.HighPriority = Type == MessageType.DirectMessage;
             message.Type = MessageType.Acknowledge;
             message.SetMessageId(MessageId);
-            message.ContentType = Convert.ToUInt16(status);
-            message.SetTarget(Type == MessageType.QueueMessage ? Target : Source);
+            message.ContentType = ContentType;
+
+            if (!string.IsNullOrEmpty(Source))
+                message.SetSource(Source);
+
+            message.SetTarget(Target);
+
+            if (!string.IsNullOrEmpty(negativeReason))
+            {
+                if (!message.HasHeader)
+                    message.HasHeader = true;
+
+                if (message.HeadersList == null)
+                    message.HeadersList = new List<KeyValuePair<string, string>>();
+
+                message.HeadersList.Add(new KeyValuePair<string, string>(TmqHeaders.NEGATIVE_ACKNOWLEDGE_REASON, negativeReason));
+            }
 
             return message;
         }

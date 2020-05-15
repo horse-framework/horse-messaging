@@ -52,9 +52,9 @@ namespace Twino.Client.TMQ
         public override void Set(object value)
         {
             if (value == null)
-                Source.SetResult(TmqResponseCode.Failed);
+                Source.SetResult(TmqResponseCode.Ok);
             else
-                Source.SetResult((TmqResponseCode) value);
+                Source.SetResult(TmqResponseCode.Failed);
         }
     }
 

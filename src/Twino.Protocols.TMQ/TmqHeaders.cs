@@ -31,6 +31,21 @@ namespace Twino.Protocols.TMQ
         public const string CLIENT_ACCEPT = "Client-Accept";
 
         /// <summary>
+        /// "Nack-Reason"
+        /// </summary>
+        public const string NEGATIVE_ACKNOWLEDGE_REASON = "Nack-Reason";
+
+        /// <summary>
+        /// "none"
+        /// </summary>
+        public const string NACK_REASON_NONE = "none";
+        
+        /// <summary>
+        /// "timeout"
+        /// </summary>
+        public const string NACK_REASON_TIMEOUT = "timeout";
+
+        /// <summary>
         /// "Accepted"
         /// </summary>
         public const string VALUE_ACCEPTED = "Accepted";
