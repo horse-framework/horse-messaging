@@ -76,9 +76,9 @@ namespace Twino.MQ.Queues
         /// When a message is sent to x consumers, x ack should be received.
         /// If received ack messages less than x, this value will increase.
         /// </summary>
-        public long Unacknowledges => _unacknowledges;
+        public long NegativeAcknowledge => _negativeAcknowledge;
 
-        private long _unacknowledges;
+        private long _negativeAcknowledge;
 
         /// <summary>
         /// Removed message count
@@ -160,7 +160,7 @@ namespace Twino.MQ.Queues
             Volatile.Write(ref _deliveries, 0);
             Volatile.Write(ref _timedOutMessages, 0);
             Volatile.Write(ref _acknowledges, 0);
-            Volatile.Write(ref _unacknowledges, 0);
+            Volatile.Write(ref _negativeAcknowledge, 0);
             Volatile.Write(ref _messageRemoved, 0);
             Volatile.Write(ref _messageSaved, 0);
             Volatile.Write(ref _errorCount, 0);
@@ -220,9 +220,9 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Increases acknowledge timeout count
         /// </summary>
-        internal void AddUnacknowledge()
+        internal void AddNegativeAcknowledge()
         {
-            Interlocked.Increment(ref _unacknowledges);
+            Interlocked.Increment(ref _negativeAcknowledge);
         }
 
         /// <summary>

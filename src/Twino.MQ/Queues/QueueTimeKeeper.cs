@@ -175,7 +175,7 @@ namespace Twino.MQ.Queues
                         continue;
                     }
 
-                    _queue.Info.AddUnacknowledge();
+                    _queue.Info.AddNegativeAcknowledge();
                     Decision decision = await _queue.DeliveryHandler.AcknowledgeTimedOut(_queue, delivery);
 
                     if (delivery.Message != null)

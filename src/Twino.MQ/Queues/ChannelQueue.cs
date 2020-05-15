@@ -773,24 +773,20 @@ namespace Twino.MQ.Queues
                 }
             }
 
-            bool success = true;
-            if (deliveryMessage.Length > 0 && deliveryMessage.Content != null)
-            {
-                string msg = deliveryMessage.Content.ToString();
-                if (msg.Equals("FAILED", StringComparison.InvariantCultureIgnoreCase) || msg.Equals("TIMEOUT", StringComparison.InvariantCultureIgnoreCase))
-                    success = false;
-            }
+            bool success = delivery.Message.Message.ContentType == (ushort) TmqResponseCode.Ok;
 
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalse (it's possible, resharper doesn't work properly in here)
             if (delivery != null)
                 delivery.MarkAsAcknowledged(success);
 
             if (success)
                 Info.AddAcknowledge();
             else
-                Info.AddUnacknowledge();
+                Info.AddNegativeAcknowledge();
 
             Decision decision = await DeliveryHandler.AcknowledgeReceived(this, deliveryMessage, delivery, success);
 
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalse (it's possible, resharper doesn't work properly in here)
             if (delivery != null)
             {
                 if (Options.HideClientNames)
