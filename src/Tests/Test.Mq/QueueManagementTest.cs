@@ -46,17 +46,17 @@ namespace Test.Mq
         public async Task CreateWithProperties()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(41206);
+            server.Initialize(21206);
             server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:41206");
+            await client.ConnectAsync("tmq://localhost:21206");
             Assert.True(client.IsConnected);
 
             TwinoResult created = await client.CreateQueue("ch-test", MessageA.ContentType, true, o =>
             {
                 o.SendOnlyFirstAcquirer = true;
-                o.AcknowledgeTimeout = TimeSpan.FromSeconds(33);
+                o.AcknowledgeTimeout = 33000;
                 o.Status = MessagingQueueStatus.Pull;
             });
             Assert.Equal(TwinoResultCode.Ok, created.Code);
@@ -96,7 +96,7 @@ namespace Test.Mq
             TwinoResult updated = await client.Queues.SetOptions("ch-route", MessageA.ContentType, o =>
             {
                 o.WaitForAcknowledge = true;
-                o.MessageTimeout = TimeSpan.FromSeconds(666);
+                o.MessageTimeout = 666000;
                 o.SendOnlyFirstAcquirer = true;
             });
             Assert.Equal(TwinoResultCode.Ok, updated.Code);

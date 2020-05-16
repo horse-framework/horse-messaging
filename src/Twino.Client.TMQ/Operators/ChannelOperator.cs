@@ -67,8 +67,6 @@ namespace Twino.Client.TMQ.Operators
             message.AddHeader(TmqHeaders.CHANNEL_NAME, channel);
             message.SetMessageId(_client.UniqueIdGenerator.Create());
 
-            message.AddHeader(TmqHeaders.CLIENT_NAME, channel);
-
             if (optionsAction != null)
             {
                 ChannelOptions options = new ChannelOptions();
@@ -77,7 +75,7 @@ namespace Twino.Client.TMQ.Operators
                 await System.Text.Json.JsonSerializer.SerializeAsync(message.Content, options);
             }
 
-            return await _client.WaitResponse(message, true);
+            return await _client.WaitResponse(message, verifyResponse);
         }
 
         /// <summary>

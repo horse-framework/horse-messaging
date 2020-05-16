@@ -62,7 +62,7 @@ namespace Twino.Protocols.TMQ
         /// Reads and process required frame data of the message
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static async Task<bool> ReadFrame(TmqMessage message, byte[] bytes, Stream stream)
+        private async Task<bool> ReadFrame(TmqMessage message, byte[] bytes, Stream stream)
         {
             byte first = bytes[0];
             if (first >= 128)
@@ -136,6 +136,15 @@ namespace Twino.Protocols.TMQ
             else
                 message.Length = length;
 
+            if (message.MessageIdLength > 0)
+                message.MessageId = await ReadOctetSizeData(stream, message.MessageIdLength);
+
+            if (message.SourceLength > 0)
+                message.Source = await ReadOctetSizeData(stream, message.SourceLength);
+
+            if (message.TargetLength > 0)
+                message.Target = await ReadOctetSizeData(stream, message.TargetLength);
+
             return true;
         }
 
@@ -178,15 +187,6 @@ namespace Twino.Protocols.TMQ
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<bool> ReadContent(TmqMessage message, Stream stream)
         {
-            if (message.MessageIdLength > 0)
-                message.MessageId = await ReadOctetSizeData(stream, message.MessageIdLength);
-
-            if (message.SourceLength > 0)
-                message.Source = await ReadOctetSizeData(stream, message.SourceLength);
-
-            if (message.TargetLength > 0)
-                message.Target = await ReadOctetSizeData(stream, message.TargetLength);
-
             if (message.Length == 0)
                 return true;
 

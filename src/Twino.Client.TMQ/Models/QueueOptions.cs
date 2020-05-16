@@ -20,54 +20,17 @@ namespace Twino.Client.TMQ.Models
         [JsonPropertyName("RequestAcknowledge")]
         public bool? RequestAcknowledge { get; set; }
 
-        private TimeSpan? _acknowledgeTimeout;
-        private TimeSpan? _messageTimeout;
-
         /// <summary>
-        /// When acknowledge is required, maximum duration for waiting acknowledge message
-        /// </summary>
-        [JsonIgnore]
-        public TimeSpan? AcknowledgeTimeout
-        {
-            get => _acknowledgeTimeout;
-            set
-            {
-                _acknowledgeTimeout = value;
-                if (_acknowledgeTimeout == null)
-                    AcknowledgeTimeoutInt = null;
-                else
-                    AcknowledgeTimeoutInt = Convert.ToInt32(_acknowledgeTimeout.Value.TotalMilliseconds);
-            }
-        }
-
-        /// <summary>
-        /// Used for serializing timespan as integer value
+        /// Used for serializing timespan as integer value in milliseconds
         /// </summary>
         [JsonPropertyName("AcknowledgeTimeout")]
-        internal int? AcknowledgeTimeoutInt { get; set; }
+        public int? AcknowledgeTimeout { get; set; }
 
         /// <summary>
-        /// When message queuing is active, maximum time for a message wait
-        /// </summary>
-        [JsonIgnore]
-        public TimeSpan? MessageTimeout
-        {
-            get => _messageTimeout;
-            set
-            {
-                _messageTimeout = value;
-                if (_messageTimeout == null)
-                    MessageTimeoutInt = null;
-                else
-                    MessageTimeoutInt = Convert.ToInt32(_messageTimeout.Value.TotalMilliseconds);
-            }
-        }
-
-        /// <summary>
-        /// Used for serializing timespan as integer value
+        /// Used for serializing timespan as integer value in milliseconds
         /// </summary>
         [JsonPropertyName("MessageTimeout")]
-        internal int? MessageTimeoutInt { get; set; }
+        public int? MessageTimeout { get; set; }
 
         /// <summary>
         /// If true, server creates unique id for each message.

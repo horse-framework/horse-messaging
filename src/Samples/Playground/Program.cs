@@ -24,6 +24,18 @@ namespace Playground
     {
         static async Task Main(string[] args)
         {
+            TmqMessage msg = new TmqMessage(MessageType.QueueMessage);
+            msg.AddHeader("hello", "test");
+            msg.SetStringContent("Hello world!");
+            msg.SetSource("kiya");
+            msg.SetTarget("foo");
+
+            byte[] d = TmqWriter.Create(msg);
+            TmqReader reader = new TmqReader();
+            TmqMessage msg2 = await reader.Read(new MemoryStream(d));
+            Console.WriteLine(msg2.FindHeader("hello"));
+            return;
+            
             int queueCount = 1;
 
             DeliveryHandler[] handlers = new DeliveryHandler[queueCount];

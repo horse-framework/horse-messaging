@@ -156,7 +156,7 @@ namespace Test.Mq
             {
                 o.AllowMultipleQueues = false;
                 o.SendOnlyFirstAcquirer = true;
-                o.AcknowledgeTimeout = TimeSpan.FromSeconds(33);
+                o.AcknowledgeTimeout = 33000;
                 o.Status = MessagingQueueStatus.Pull;
             });
             Assert.Equal(TwinoResultCode.Ok, created.Code);

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Twino.Client.TMQ.Models;
 using Twino.Protocols.TMQ;
@@ -41,7 +43,7 @@ namespace Twino.Client.TMQ.Operators
                 optionsAction(options);
 
                 message.Content = new MemoryStream();
-                await System.Text.Json.JsonSerializer.SerializeAsync(message.Content, options);
+                await JsonSerializer.SerializeAsync(message.Content, options);
             }
 
             if (verifyResponse)
@@ -96,7 +98,6 @@ namespace Twino.Client.TMQ.Operators
             return await _client.WaitResponse(message, verifyResponse);
         }
 
-        //todo: check
         /// <summary>
         /// Updates queue options
         /// </summary>
@@ -109,9 +110,14 @@ namespace Twino.Client.TMQ.Operators
             message.PendingResponse = true;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
 
+            message.AddHeader(TmqHeaders.CHANNEL_NAME, channel);
+            message.AddHeader(TmqHeaders.QUEUE_ID, queueId);
+            
             QueueOptions options = new QueueOptions();
             optionsAction(options);
-            //todo: message.Content = new MemoryStream(Encoding.UTF8.GetBytes(options.Serialize(queueId)));
+            
+            message.Content = new MemoryStream();
+            await JsonSerializer.SerializeAsync(message.Content, options);
 
             return await _client.WaitResponse(message, true);
         }

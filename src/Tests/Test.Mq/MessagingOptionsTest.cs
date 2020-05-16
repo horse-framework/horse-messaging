@@ -258,7 +258,7 @@ namespace Test.Mq
         public async Task SendOnlyFirstLateClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42509);
+            server.Initialize(42549);
             server.Start();
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -276,7 +276,7 @@ namespace Test.Mq
             {
                 TmqClient client = new TmqClient();
                 client.ClientId = "client-" + no;
-                await client.ConnectAsync("tmq://localhost:42509");
+                await client.ConnectAsync("tmq://localhost:42549");
                 Assert.True(client.IsConnected);
 
                 client.MessageReceived += (cx, m) =>
