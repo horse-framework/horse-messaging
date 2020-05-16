@@ -234,16 +234,24 @@ namespace Twino.Protocols.TMQ
             TmqMessage message = new TmqMessage();
 
             message.SetMessageId(MessageId);
-            
-            message.HighPriority = Type == MessageType.DirectMessage;
             message.FirstAcquirer = FirstAcquirer;
             message.Type = MessageType.Acknowledge;
             message.ContentType = ContentType;
 
-            if (!string.IsNullOrEmpty(Source))
-                message.SetSource(Source);
+            if (Type == MessageType.DirectMessage)
+            {
+                message.HighPriority = true;
 
-            message.SetTarget(Target);
+                message.SetSource(Target);
+                message.SetTarget(Source);
+            }
+            else
+            {
+                message.HighPriority = false;
+                
+                //target will be channel name
+                message.SetTarget(Target);
+            }
 
             if (!string.IsNullOrEmpty(negativeReason))
             {

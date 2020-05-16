@@ -42,7 +42,7 @@ namespace Twino.MQ.Queues.States
 
             //change to response message, send, change back to channel message
             message.Message.SetMessageId(request.MessageId);
-            bool sent = client.Client.Send(message.Message);
+            bool sent = await client.Client.SendAsync(message.Message);
 
             if (sent)
             {

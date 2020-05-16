@@ -33,7 +33,7 @@ namespace Twino.MQ.Network
             _serverHandler = new ServerMessageHandler(server);
             _queueMessageHandler = new QueueMessageHandler(server);
             _pullRequestHandler = new PullRequestMessageHandler(server);
-            _clientHandler = new ClientMessageHandler(server);
+            _clientHandler = new DirectMessageHandler(server);
             _responseHandler = new ResponseMessageHandler(server);
             _acknowledgeHandler = new AcknowledgeMessageHandler(server);
             _instanceHandler = new NodeMessageHandler(server);

@@ -95,12 +95,12 @@ namespace Twino.MQ.Queues.States
                 delivery.FirstAcquirer = message.Message.FirstAcquirer;
 
                 //send the message
-                bool sent = client.Client.Send(messageData);
+                bool sent = await client.Client.SendAsync(messageData);
 
                 if (sent)
                 {
                     messageIsSent = true;
-
+                    
                     //adds the delivery to time keeper to check timing up
                     _queue.TimeKeeper.AddAcknowledgeCheck(delivery);
 

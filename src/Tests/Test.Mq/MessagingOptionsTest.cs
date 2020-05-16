@@ -495,6 +495,9 @@ namespace Test.Mq
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
             await queue.SetStatus(QueueStatus.Push);
 
+            //the option sending ack from server to producer (without waiting for consumer)
+            server.SendAcknowledgeFromMQ = true;
+            
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
             TwinoResult sent = await client.Push(channel.Name, queue.Id, ms, true);
 

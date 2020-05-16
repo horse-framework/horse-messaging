@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Twino.Client.TMQ.Internal;
 using Twino.Core;
 using Twino.Protocols.TMQ;
 

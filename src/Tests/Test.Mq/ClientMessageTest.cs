@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Test.Mq.Internal;
 using Twino.Client.TMQ;
@@ -58,6 +59,7 @@ namespace Test.Mq
             client1.ClientId = "client-1";
             client2.ClientId = "client-2";
             client2.AutoAcknowledge = true;
+            client1.AcknowledgeTimeout = TimeSpan.FromMinutes(14);
 
             await client1.ConnectAsync("tmq://localhost:42602");
             await client2.ConnectAsync("tmq://localhost:42602");

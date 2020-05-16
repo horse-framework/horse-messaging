@@ -199,7 +199,7 @@ namespace Twino.MQ.Queues
         /// </summary>
         public void AddAcknowledgeCheck(MessageDelivery delivery)
         {
-            if (!delivery.AcknowledgeDeadline.HasValue)
+            if (!delivery.Message.Message.PendingAcknowledge || !delivery.AcknowledgeDeadline.HasValue)
                 return;
 
             lock (_deliveries)

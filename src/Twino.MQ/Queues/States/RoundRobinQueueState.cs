@@ -83,7 +83,7 @@ namespace Twino.MQ.Queues.States
             delivery.FirstAcquirer = message.Message.FirstAcquirer;
 
             //send the message
-            bool sent = receiver.Client.Send(messageData);
+            bool sent = await receiver.Client.SendAsync(messageData);
 
             if (sent)
             {

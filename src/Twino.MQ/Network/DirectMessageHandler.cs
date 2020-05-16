@@ -6,7 +6,7 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Network
 {
-    internal class ClientMessageHandler : INetworkMessageHandler
+    internal class DirectMessageHandler : INetworkMessageHandler
     {
         #region Fields
 
@@ -15,7 +15,7 @@ namespace Twino.MQ.Network
         /// </summary>
         private readonly MqServer _server;
 
-        public ClientMessageHandler(MqServer server)
+        public DirectMessageHandler(MqServer server)
         {
             _server = server;
         }
