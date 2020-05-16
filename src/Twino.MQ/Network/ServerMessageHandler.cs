@@ -73,7 +73,7 @@ namespace Twino.MQ.Network
                 case KnownContentTypes.ChannelInformation:
                     return GetChannelInformation(client, message);
 
-                //get queue information list
+                //get channel consumers
                 case KnownContentTypes.ChannelConsumers:
                     return GetChannelConsumers(client, message);
 
@@ -105,7 +105,7 @@ namespace Twino.MQ.Network
                 case KnownContentTypes.InstanceList:
                     return GetInstanceList(client, message);
 
-                //get queue information list
+                //get client information list
                 case KnownContentTypes.ClientList:
                     return GetClients(client, message);
 
@@ -214,8 +214,7 @@ namespace Twino.MQ.Network
 
             if (!createForQueue && message.Length > 0 && message.Content != null && message.Content.Length > 0)
             {
-                NetworkOptionsBuilder builder = new NetworkOptionsBuilder();
-                builder.Load(message.ToString());
+                NetworkOptionsBuilder builder = await System.Text.Json.JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content);
 
                 ChannelOptions options = ChannelOptions.CloneFrom(_server.Options);
                 builder.ApplyToChannel(options);
@@ -301,12 +300,16 @@ namespace Twino.MQ.Network
                 return;
             }
 
+            string filter = message.FindHeader(TmqHeaders.CHANNEL_NAME);
+
             List<ChannelInformation> list = new List<ChannelInformation>();
             foreach (Channel channel in _server.Channels)
             {
                 if (channel == null)
                     continue;
 
+                if (filter != null && !Filter.CheckMatch(channel.Name, filter))
+                    continue;
 
                 bool grant = await _server.AdminAuthorization.CanReceiveChannelInfo(client, channel);
                 if (!grant)
@@ -453,23 +456,18 @@ namespace Twino.MQ.Network
         /// </summary>
         private async Task CreateQueue(MqClient client, TmqMessage message)
         {
-            ushort? contentType;
+            string queueId = message.FindHeader(TmqHeaders.QUEUE_ID);
+            if (string.IsNullOrEmpty(queueId))
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.Unacceptable));
+
+            ushort contentType = Convert.ToUInt16(queueId);
+
             NetworkOptionsBuilder builder = null;
-            if (message.Length == 2)
-            {
-                byte[] bytes = new byte[2];
-                await message.Content.ReadAsync(bytes);
-                contentType = BitConverter.ToUInt16(bytes);
-            }
-            else
-            {
-                builder = new NetworkOptionsBuilder();
-                builder.Load(message.ToString());
-                contentType = builder.Id;
-            }
+            if (message.Length > 0)
+                builder = await System.Text.Json.JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content);
 
             Channel channel = await CreateChannel(client, message, true);
-            ChannelQueue queue = channel.FindQueue(contentType.Value);
+            ChannelQueue queue = channel.FindQueue(contentType);
 
             //if queue exists, we can't create. return duplicate response.
             if (queue != null)
@@ -483,7 +481,7 @@ namespace Twino.MQ.Network
             //check authority if client can create queue
             if (_server.Authorization != null)
             {
-                bool grant = await _server.Authorization.CanCreateQueue(client, channel, contentType.Value, builder);
+                bool grant = await _server.Authorization.CanCreateQueue(client, channel, contentType, builder);
                 if (!grant)
                 {
                     if (message.PendingResponse)
@@ -507,7 +505,7 @@ namespace Twino.MQ.Network
                 }
             }
 
-            queue = await channel.CreateQueue(contentType.Value, options, delivery);
+            queue = await channel.CreateQueue(contentType, options, delivery);
 
             //if creation successful, sends response
             if (queue != null && message.PendingResponse)
@@ -565,6 +563,12 @@ namespace Twino.MQ.Network
         /// </summary>
         private async Task UpdateQueue(MqClient client, TmqMessage message)
         {
+            string queueId = message.FindHeader(TmqHeaders.QUEUE_ID);
+            if (string.IsNullOrEmpty(queueId))
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.Unacceptable));
+
+            ushort contentType = Convert.ToUInt16(queueId);
+            
             if (_server.AdminAuthorization == null)
             {
                 if (message.PendingResponse)
@@ -573,8 +577,7 @@ namespace Twino.MQ.Network
                 return;
             }
 
-            NetworkOptionsBuilder builder = new NetworkOptionsBuilder();
-            builder.Load(message.ToString());
+            NetworkOptionsBuilder builder = await System.Text.Json.JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content);
 
             Channel channel = _server.FindChannel(message.Target);
             if (channel == null)
@@ -585,7 +588,7 @@ namespace Twino.MQ.Network
                 return;
             }
 
-            ChannelQueue queue = channel.FindQueue(builder.Id);
+            ChannelQueue queue = channel.FindQueue(contentType);
             if (queue == null)
             {
                 if (message.PendingResponse)
@@ -652,8 +655,8 @@ namespace Twino.MQ.Network
                              Channel = channel.Name,
                              Id = queue.Id,
                              Status = queue.Status.ToString().ToLower(),
-                             InQueueHighPriorityMessages = queue.HighPriorityLinkedList.Count,
-                             InQueueRegularMessages = queue.RegularLinkedList.Count,
+                             PriorityMessages = queue.HighPriorityLinkedList.Count,
+                             Messages = queue.RegularLinkedList.Count,
                              OnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
                              RequestAcknowledge = channel.Options.RequestAcknowledge,
                              AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
@@ -663,8 +666,8 @@ namespace Twino.MQ.Network
                              ReceivedMessages = queue.Info.ReceivedMessages,
                              SentMessages = queue.Info.SentMessages,
                              Deliveries = queue.Info.Deliveries,
-                             Unacknowledges = queue.Info.NegativeAcknowledge,
-                             Acknowledges = queue.Info.Acknowledges,
+                             NegativeAcks = queue.Info.NegativeAcknowledge,
+                             Acks = queue.Info.Acknowledges,
                              TimeoutMessages = queue.Info.TimedOutMessages,
                              SavedMessages = queue.Info.MessageSaved,
                              RemovedMessages = queue.Info.MessageRemoved,
@@ -726,8 +729,8 @@ namespace Twino.MQ.Network
                                                Channel = channel.Name,
                                                Id = id,
                                                Status = queue.Status.ToString().ToLower(),
-                                               InQueueHighPriorityMessages = queue.HighPriorityLinkedList.Count,
-                                               InQueueRegularMessages = queue.RegularLinkedList.Count,
+                                               PriorityMessages = queue.HighPriorityLinkedList.Count,
+                                               Messages = queue.RegularLinkedList.Count,
                                                OnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
                                                RequestAcknowledge = channel.Options.RequestAcknowledge,
                                                AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
@@ -737,8 +740,8 @@ namespace Twino.MQ.Network
                                                ReceivedMessages = queue.Info.ReceivedMessages,
                                                SentMessages = queue.Info.SentMessages,
                                                Deliveries = queue.Info.Deliveries,
-                                               Unacknowledges = queue.Info.NegativeAcknowledge,
-                                               Acknowledges = queue.Info.Acknowledges,
+                                               NegativeAcks = queue.Info.NegativeAcknowledge,
+                                               Acks = queue.Info.Acknowledges,
                                                TimeoutMessages = queue.Info.TimedOutMessages,
                                                SavedMessages = queue.Info.MessageSaved,
                                                RemovedMessages = queue.Info.MessageRemoved,

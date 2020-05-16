@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Test.Mq.Internal;
 using Twino.Client.TMQ;
+using Twino.Client.TMQ.Models;
 using Twino.MQ;
 using Twino.MQ.Clients;
 using Twino.Protocols.TMQ;
@@ -130,7 +131,7 @@ namespace Test.Mq
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
 
-            TwinoResult created = await client.CreateChannel("new-channel", verifyResponse);
+            TwinoResult created = await client.Channels.Create("new-channel", verifyResponse);
             if (verifyResponse)
                 Assert.Equal(TwinoResultCode.Ok, created.Code);
             else
@@ -151,7 +152,7 @@ namespace Test.Mq
             await client.ConnectAsync("tmq://localhost:41206");
             Assert.True(client.IsConnected);
 
-            TwinoResult created = await client.CreateChannel("new-channel", o =>
+            TwinoResult created = await client.Channels.Create("new-channel", true, o =>
             {
                 o.AllowMultipleQueues = false;
                 o.SendOnlyFirstAcquirer = true;

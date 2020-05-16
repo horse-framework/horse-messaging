@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Test.Mq.Internal;
 using Test.Mq.Models;
 using Twino.Client.TMQ;
+using Twino.Client.TMQ.Models;
 using Twino.MQ;
 using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
@@ -88,11 +89,11 @@ namespace Test.Mq
             Assert.False(queue.Options.SendOnlyFirstAcquirer);
             Assert.Equal(TimeSpan.FromSeconds(12), queue.Options.MessageTimeout);
 
-            TmqAdminClient client = new TmqAdminClient();
+            TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:41207");
             Assert.True(client.IsConnected);
 
-            TwinoResult updated = await client.SetQueueOptions("ch-route", MessageA.ContentType, o =>
+            TwinoResult updated = await client.Queues.SetOptions("ch-route", MessageA.ContentType, o =>
             {
                 o.WaitForAcknowledge = true;
                 o.MessageTimeout = TimeSpan.FromSeconds(666);
@@ -121,11 +122,11 @@ namespace Test.Mq
             ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
             Assert.NotNull(queue);
 
-            TmqAdminClient client = new TmqAdminClient();
+            TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            TwinoResult done = await client.RemoveQueue("ch-route", MessageA.ContentType, verifyResponse);
+            TwinoResult done = await client.Queues.Delete("ch-route", MessageA.ContentType, verifyResponse);
             Assert.Equal(TwinoResultCode.Ok, done.Code);
 
             if (!verifyResponse)

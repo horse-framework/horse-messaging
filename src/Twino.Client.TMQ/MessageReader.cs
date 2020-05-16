@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Twino.Client.TMQ.Models;
 using Twino.Core;
 using Twino.Protocols.TMQ;
 

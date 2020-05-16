@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -224,6 +225,52 @@ namespace Twino.Protocols.TMQ
 
         #endregion
 
+        #region Header
+
+        /// <summary>
+        /// Adds new header key value pair
+        /// </summary>
+        public void AddHeader(string key, string value)
+        {
+            if (!HasHeader)
+                HasHeader = true;
+
+            if (HeadersList == null)
+                HeadersList = new List<KeyValuePair<string, string>>();
+
+            HeadersList.Add(new KeyValuePair<string, string>(key, value));
+        }
+
+        /// <summary>
+        /// Adds new header key value pair
+        /// </summary>
+        public void AddHeader(string key, ushort value)
+        {
+            AddHeader(key, value.ToString());
+        }
+
+        /// <summary>
+        /// Adds new header key value pair
+        /// </summary>
+        public void AddHeader(string key, int value)
+        {
+            AddHeader(key, value.ToString());
+        }
+
+        /// <summary>
+        /// Finds a header value by key
+        /// </summary>
+        public string FindHeader(string key)
+        {
+            if (!HasHeader || HeadersList == null || HeadersList.Count == 0)
+                return null;
+
+            KeyValuePair<string, string> pair = HeadersList.FirstOrDefault(x => x.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase));
+            return pair.Value;
+        }
+
+        #endregion
+
         #region Create
 
         /// <summary>
@@ -248,7 +295,7 @@ namespace Twino.Protocols.TMQ
             else
             {
                 message.HighPriority = false;
-                
+
                 //target will be channel name
                 message.SetTarget(Target);
             }

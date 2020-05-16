@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Twino.Protocols.TMQ.Models
 {
     /// <summary>
@@ -9,27 +11,32 @@ namespace Twino.Protocols.TMQ.Models
         /// Client's unique id
         /// If it's null or empty, server will create new unique id for the client.
         /// </summary>
+        [JsonPropertyName("Id")]
         public string Id { get; set; }
 
         /// <summary>
         /// Client name
         /// </summary>
+        [JsonPropertyName("Name")]
         public string Name { get; set; }
 
         /// <summary>
         /// Client type.
         /// If different type of clients join your server, you can categorize them with this type value
         /// </summary>
+        [JsonPropertyName("Type")]
         public string Type { get; set; }
 
         /// <summary>
         /// Total online duration of client in milliseconds
         /// </summary>
+        [JsonPropertyName("Online")]
         public long Online { get; set; }
 
         /// <summary>
         /// If true, client authenticated by server's IClientAuthenticator implementation
         /// </summary>
+        [JsonPropertyName("IsAuthenticated")]
         public bool IsAuthenticated { get; set; }
     }
 }

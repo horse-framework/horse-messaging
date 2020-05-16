@@ -1,6 +1,6 @@
 using System;
 
-namespace Twino.Client.TMQ
+namespace Twino.Client.TMQ.Models
 {
     /// <summary>
     /// Queue subscription meta data for message reader

@@ -1,6 +1,6 @@
 using Twino.Protocols.TMQ;
 
-namespace Twino.Client.TMQ
+namespace Twino.Client.TMQ.Models
 {
     /// <summary>
     /// 

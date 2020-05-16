@@ -251,7 +251,7 @@ namespace Twino.MQ
                                      IMessageDeliveryHandler deliveryHandler,
                                      ChannelOptions options)
         {
-            if (name.Contains(" ") || name.Contains("@") || name.Contains(";"))
+            if (name.Contains(" ") || name.Contains("*") || name.Contains("@") || name.Contains(";"))
                 throw new InvalidOperationException("Invalid channel name");
 
             if (Options.ChannelLimit > 0 && _channels.Count >= Options.ChannelLimit)

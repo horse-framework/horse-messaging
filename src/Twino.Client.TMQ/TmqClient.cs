@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -6,6 +7,9 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Twino.Client.TMQ.Internal;
+using Twino.Client.TMQ.Models;
+using Twino.Client.TMQ.Operators;
 using Twino.Core;
 using Twino.Protocols.TMQ;
 
@@ -86,6 +90,21 @@ namespace Twino.Client.TMQ
         /// </summary>
         private readonly MessageFollower _follower;
 
+        /// <summary>
+        /// TMQ Client Channel Management object
+        /// </summary>
+        public ChannelOperator Channels { get; }
+
+        /// <summary>
+        /// TMQ Client Queue Management object
+        /// </summary>
+        public QueueOperator Queues { get; }
+
+        /// <summary>
+        /// TMQ Client Connection Management object
+        /// </summary>
+        public ConnectionOperator Connections { get; }
+
         #endregion
 
         #region Constructors - Destructors
@@ -97,6 +116,11 @@ namespace Twino.Client.TMQ
         {
             Data.Method = "CONNECT";
             Data.Path = "/";
+
+            Channels = new ChannelOperator(this);
+            Queues = new QueueOperator(this);
+            Connections = new ConnectionOperator(this);
+
             _follower = new MessageFollower(this);
             _follower.Run();
         }
@@ -693,7 +717,7 @@ namespace Twino.Client.TMQ
         /// if verify requires, waits response and checkes status code of the response.
         /// returns true if Ok.
         /// </summary>
-        protected async Task<TwinoResult> WaitResponse(TmqMessage message, bool waitForResponse)
+        protected internal async Task<TwinoResult> WaitResponse(TmqMessage message, bool waitForResponse)
         {
             Task<TmqMessage> task = null;
             if (waitForResponse)
@@ -941,106 +965,30 @@ namespace Twino.Client.TMQ
 
         #endregion
 
-        #region Channel
+        #region Channel - Queue
 
         /// <summary>
         /// Joins to a channel
         /// </summary>
-        public async Task<TwinoResult> Join(string channel, bool verifyResponse)
+        public Task<TwinoResult> Join(string channel, bool verifyResponse)
         {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.Join;
-            message.SetTarget(channel);
-            message.PendingResponse = verifyResponse;
-
-            if (verifyResponse)
-                message.SetMessageId(UniqueIdGenerator.Create());
-
-            return await WaitResponse(message, verifyResponse);
+            return Channels.Join(channel, verifyResponse);
         }
 
         /// <summary>
         /// Leaves from a channel
         /// </summary>
-        public async Task<TwinoResult> Leave(string channel, bool verifyResponse)
+        public Task<TwinoResult> Leave(string channel, bool verifyResponse)
         {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.Leave;
-            message.SetTarget(channel);
-            message.PendingResponse = verifyResponse;
-
-            if (verifyResponse)
-                message.SetMessageId(UniqueIdGenerator.Create());
-
-            return await WaitResponse(message, verifyResponse);
+            return Channels.Leave(channel, verifyResponse);
         }
-
-        /// <summary>
-        /// Creates a new channel without any queue
-        /// </summary>
-        public async Task<TwinoResult> CreateChannel(string channel, bool verifyResponse)
-        {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.CreateChannel;
-            message.SetTarget(channel);
-            message.PendingResponse = verifyResponse;
-
-            if (verifyResponse)
-                message.SetMessageId(UniqueIdGenerator.Create());
-
-            return await WaitResponse(message, verifyResponse);
-        }
-
-        /// <summary>
-        /// Creates a new channel without any queue
-        /// </summary>
-        public async Task<TwinoResult> CreateChannel(string channel, Action<ChannelCreationOptions> optionsAction)
-        {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.CreateChannel;
-            message.SetTarget(channel);
-            message.PendingResponse = true;
-            message.SetMessageId(UniqueIdGenerator.Create());
-
-            ChannelCreationOptions options = new ChannelCreationOptions();
-            optionsAction(options);
-            message.Content = new MemoryStream(Encoding.UTF8.GetBytes(options.Serialize(0)));
-
-            return await WaitResponse(message, true);
-        }
-
-        #endregion
-
-        #region Queue
 
         /// <summary>
         /// Creates new queue in server
         /// </summary>
-        public async Task<TwinoResult> CreateQueue(string channel, ushort queueId, bool verifyResponse, Action<QueueOptions> optionsAction = null)
+        public Task<TwinoResult> CreateQueue(string channel, ushort queueId, bool verifyResponse, Action<QueueOptions> optionsAction = null)
         {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.CreateQueue;
-            message.SetTarget(channel);
-            message.PendingResponse = verifyResponse;
-
-            if (optionsAction == null)
-                message.Content = new MemoryStream(BitConverter.GetBytes(queueId));
-            else
-            {
-                QueueOptions options = new QueueOptions();
-                optionsAction(options);
-                message.Content = new MemoryStream(Encoding.UTF8.GetBytes(options.Serialize(queueId)));
-            }
-
-            if (verifyResponse)
-                message.SetMessageId(UniqueIdGenerator.Create());
-
-            return await WaitResponse(message, verifyResponse);
+            return Queues.Create(channel, queueId, verifyResponse, optionsAction);
         }
 
         #endregion
