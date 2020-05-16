@@ -19,7 +19,7 @@ namespace Twino.Client.TMQ.Internal
         /// <inheritdoc />
         public override void Set(bool successful, object value)
         {
-            Source.SetResult(successful ? TwinoResult.Ok : TwinoResult.Failed);
+            Source.SetResult(successful ? TwinoResult.Ok() : (TwinoResult) value);
         }
     }
 }

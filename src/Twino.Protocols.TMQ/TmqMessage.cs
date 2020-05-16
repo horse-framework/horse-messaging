@@ -270,7 +270,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Create a response message of the message
         /// </summary>
-        public TmqMessage CreateResponse(TwinoResult status)
+        public TmqMessage CreateResponse(TwinoResultCode status)
         {
             TmqMessage message = new TmqMessage();
 

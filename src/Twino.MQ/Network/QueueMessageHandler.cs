@@ -33,7 +33,7 @@ namespace Twino.MQ.Network
             if (channel == null)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(message.CreateResponse(TwinoResult.NotFound));
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
                 return;
             }
 
@@ -46,7 +46,7 @@ namespace Twino.MQ.Network
             if (queue == null)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(message.CreateResponse(TwinoResult.NotFound));
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
                 
                 return;
             }
@@ -66,7 +66,7 @@ namespace Twino.MQ.Network
                 if (!grant)
                 {
                     if (!string.IsNullOrEmpty(message.MessageId))
-                        await client.SendAsync(message.CreateResponse(TwinoResult.Unauthorized));
+                        await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
                     return;
                 }
             }
@@ -78,9 +78,9 @@ namespace Twino.MQ.Network
             //push the message
             PushResult result = await queue.Push(queueMessage, client);
             if (result == PushResult.StatusNotSupported)
-                await client.SendAsync(message.CreateResponse(TwinoResult.Unauthorized));
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
             else if (result == PushResult.LimitExceeded)
-                await client.SendAsync(message.CreateResponse(TwinoResult.LimitExceeded));
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.LimitExceeded));
         }
     }
 }

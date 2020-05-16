@@ -42,7 +42,7 @@ namespace Twino.MQ.Network
                     await ProcessMultipleReceiverClientMessage(client, receivers, message);
                 }
                 else if (message.PendingResponse)
-                    await client.SendAsync(message.CreateResponse(TwinoResult.NotFound));
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
             }
             else if (message.Target.StartsWith("@type:"))
             {
@@ -59,7 +59,7 @@ namespace Twino.MQ.Network
                     await ProcessMultipleReceiverClientMessage(client, receivers, message);
                 }
                 else if (message.PendingResponse)
-                    await client.SendAsync(message.CreateResponse(TwinoResult.NotFound));
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
             }
             else
                 await ProcessSingleReceiverClientMessage(client, message);
@@ -73,7 +73,7 @@ namespace Twino.MQ.Network
         {
             if (receivers.Count < 1)
             {
-                await sender.SendAsync(message.CreateResponse(TwinoResult.NotFound));
+                await sender.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
                 return;
             }
 
@@ -85,7 +85,7 @@ namespace Twino.MQ.Network
                     bool grant = await _server.Authorization.CanMessageToPeer(sender, message, receiver);
                     if (!grant)
                     {
-                        await sender.SendAsync(message.CreateResponse(TwinoResult.Unauthorized));
+                        await sender.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
                         return;
                     }
                 }
@@ -104,7 +104,7 @@ namespace Twino.MQ.Network
             MqClient other = _server.FindClient(message.Target);
             if (other == null)
             {
-                await client.SendAsync(message.CreateResponse(TwinoResult.NotFound));
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
                 return;
             }
 
@@ -114,7 +114,7 @@ namespace Twino.MQ.Network
                 bool grant = await _server.Authorization.CanMessageToPeer(client, message, other);
                 if (!grant)
                 {
-                    await client.SendAsync(message.CreateResponse(TwinoResult.Unauthorized));
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
                     return;
                 }
             }

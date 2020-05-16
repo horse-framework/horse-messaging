@@ -38,7 +38,7 @@ namespace Test.Mq
             message.SetStringContent("Hello, World!");
 
             TwinoResult sent = await client1.SendAsync(message);
-            Assert.Equal(TwinoResult.Ok, sent);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
             await Task.Delay(1000);
             Assert.True(received);
         }
@@ -74,7 +74,7 @@ namespace Test.Mq
             message.SetStringContent("Hello, World!");
 
             TwinoResult sent = await client1.SendWithAcknowledge(message);
-            Assert.Equal(TwinoResult.Ok, sent);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
             Assert.True(received);
         }
 
@@ -105,7 +105,7 @@ namespace Test.Mq
             {
                 if (m.Source == "client-1")
                 {
-                    TmqMessage rmsg = m.CreateResponse(TwinoResult.Ok);
+                    TmqMessage rmsg = m.CreateResponse(TwinoResultCode.Ok);
                     rmsg.SetStringContent("Hello, World Response!");
                     await ((TmqClient) c).SendAsync(rmsg);
                 }

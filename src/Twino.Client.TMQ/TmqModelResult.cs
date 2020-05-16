@@ -8,14 +8,14 @@ namespace Twino.Client.TMQ
     public class TmqResult
     {
         /// <summary>
-        /// Operation response code
+        /// Response message result
         /// </summary>
-        public TwinoResult ResponseCode { get; set; }
+        public TwinoResult Result { get; set; }
 
         /// <summary>
         /// True, if response code is Ok "200"
         /// </summary>
-        public bool Ok => ResponseCode == TwinoResult.Ok;
+        public bool Ok => Result.Code == TwinoResultCode.Ok;
 
         /// <summary>
         /// Create new empty result object
@@ -27,9 +27,9 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Creates new result object from response code
         /// </summary>
-        public TmqResult(TwinoResult code)
+        public TmqResult(TwinoResult result)
         {
-            ResponseCode = code;
+            Result = result;
         }
 
         /// <summary>
@@ -37,15 +37,17 @@ namespace Twino.Client.TMQ
         /// </summary>
         public static TmqResult FromContentType(ushort code)
         {
-            return new TmqResult((TwinoResult)code);
+            return new TmqResult(new TwinoResult((TwinoResultCode) code));
         }
     }
 
     /// <inheritdoc cref="TmqResult" />
-    public class TmqResult<TModel>
+    public class TmqModelResult<TModel>
     {
-        /// <inheritdoc cref="ResponseCode" />
-        public TwinoResult ResponseCode { get; set; }
+        /// <summary>
+        /// Response message result
+        /// </summary>
+        public TwinoResult Result { get; set; }
 
         /// <summary>
         /// Response model
@@ -55,33 +57,33 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Create new empty result object
         /// </summary>
-        public TmqResult()
+        public TmqModelResult()
         {
         }
 
         /// <summary>
         /// Creates new result object from response code
         /// </summary>
-        public TmqResult(TwinoResult code)
+        public TmqModelResult(TwinoResult result)
         {
-            ResponseCode = code;
+            Result = result;
         }
 
         /// <summary>
         /// Creates new result object from response code and model
         /// </summary>
-        public TmqResult(TwinoResult code, TModel model)
+        public TmqModelResult(TwinoResult result, TModel model)
         {
-            ResponseCode = code;
+            Result = result;
             Model = model;
         }
 
         /// <summary>
         /// Creates new result object from content type
         /// </summary>
-        public static TmqResult<TModel> FromContentType(ushort code)
+        public static TmqModelResult<TModel> FromContentType(ushort code)
         {
-            return new TmqResult<TModel>((TwinoResult)code);
+            return new TmqModelResult<TModel>(new TwinoResult((TwinoResultCode) code));
         }
     }
 }

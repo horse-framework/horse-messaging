@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Reflection.Metadata;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -485,7 +484,7 @@ namespace Twino.Client.TMQ
 
             byte[] data = TmqWriter.Create(message);
             bool sent = await SendAsync(data);
-            return sent ? TwinoResult.Ok : TwinoResult.Failed;
+            return sent ? TwinoResult.Ok() : TwinoResult.Failed();
         }
 
         /// <summary>
@@ -494,7 +493,7 @@ namespace Twino.Client.TMQ
         public async Task<TwinoResult> SendWithAcknowledge(TmqMessage message)
         {
             message.SetSource(_clientId);
-            
+
             message.PendingAcknowledge = true;
             message.PendingResponse = false;
 
@@ -557,7 +556,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a message, waits response and deserializes JSON response to T template type
         /// </summary>
-        public async Task<TmqResult<T>> SendAndGetJson<T>(TmqMessage message)
+        public async Task<TmqModelResult<T>> SendAndGetJson<T>(TmqMessage message)
         {
             message.PendingResponse = true;
 
@@ -566,15 +565,15 @@ namespace Twino.Client.TMQ
 
             Task<TmqMessage> task = _follower.FollowResponse(message);
             TwinoResult sent = await SendAsync(message);
-            if (sent != TwinoResult.Ok)
-                return new TmqResult<T>(TwinoResult.SendError);
+            if (sent.Code != TwinoResultCode.Ok)
+                return new TmqModelResult<T>(new TwinoResult(TwinoResultCode.SendError));
 
             TmqMessage response = await task;
             if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
-                return TmqResult<T>.FromContentType(message.ContentType);
+                return TmqModelResult<T>.FromContentType(message.ContentType);
 
             T model = await response.GetJsonContent<T>();
-            return new TmqResult<T>(TwinoResult.Ok, model);
+            return new TmqModelResult<T>(TwinoResult.Ok(), model);
         }
 
         #endregion
@@ -668,7 +667,7 @@ namespace Twino.Client.TMQ
         public async Task<TwinoResult> SendNegativeAck(TmqMessage message, string reason = null)
         {
             if (!message.PendingAcknowledge)
-                return TwinoResult.Failed;
+                return new TwinoResult(TwinoResultCode.Unacceptable);
 
             if (string.IsNullOrEmpty(reason))
                 reason = TmqHeaders.NACK_REASON_NONE;
@@ -683,9 +682,9 @@ namespace Twino.Client.TMQ
         public async Task<TwinoResult> SendAck(TmqMessage message)
         {
             if (!message.PendingAcknowledge)
-                return TwinoResult.Failed;
+                return new TwinoResult(TwinoResultCode.Unacceptable);
 
-            TmqMessage ack = message.CreateAcknowledge(null);
+            TmqMessage ack = message.CreateAcknowledge();
             return await SendAsync(ack);
         }
 
@@ -701,23 +700,23 @@ namespace Twino.Client.TMQ
                 task = _follower.FollowResponse(message);
 
             TwinoResult sent = await SendAsync(message);
-            if (sent != TwinoResult.Ok)
+            if (sent.Code != TwinoResultCode.Ok)
             {
                 if (waitForResponse)
                     _follower.UnfollowMessage(message);
 
-                return TwinoResult.SendError;
+                return new TwinoResult(TwinoResultCode.SendError);
             }
 
             if (waitForResponse)
             {
                 TmqMessage response = await task;
                 return response == null
-                           ? TwinoResult.Failed
-                           : (TwinoResult) response.ContentType;
+                           ? TwinoResult.Failed()
+                           : new TwinoResult((TwinoResultCode) response.ContentType);
             }
 
-            return TwinoResult.Ok;
+            return TwinoResult.Ok();
         }
 
         /// <summary>
@@ -732,18 +731,18 @@ namespace Twino.Client.TMQ
                 task = _follower.FollowAcknowledge(message);
 
             TwinoResult sent = await SendAsync(message);
-            if (sent != TwinoResult.Ok)
+            if (sent.Code != TwinoResultCode.Ok)
             {
                 if (waitAcknowledge)
                     _follower.UnfollowMessage(message);
 
-                return TwinoResult.SendError;
+                return new TwinoResult(TwinoResultCode.SendError);
             }
 
             if (waitAcknowledge)
                 return await task;
 
-            return TwinoResult.Ok;
+            return TwinoResult.Ok();
         }
 
         #endregion
@@ -801,7 +800,7 @@ namespace Twino.Client.TMQ
             Task<TmqMessage> task = _follower.FollowResponse(message);
 
             TwinoResult sent = await SendAsync(message);
-            if (sent != TwinoResult.Ok)
+            if (sent.Code != TwinoResultCode.Ok)
             {
                 _follower.UnfollowMessage(message);
                 return null;
@@ -918,7 +917,7 @@ namespace Twino.Client.TMQ
 
             Task<TmqMessage> task = _follower.FollowResponse(message);
             TwinoResult sent = await SendAsync(message);
-            if (sent != TwinoResult.Ok)
+            if (sent.Code != TwinoResultCode.Ok)
                 return null;
 
             TmqMessage response = await task;

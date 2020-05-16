@@ -30,7 +30,7 @@ namespace Test.Mq
             await client.ConnectAsync("tmq://localhost:" + port);
 
             TwinoResult created = await client.CreateQueue("ch-2", MessageA.ContentType, verifyResponse);
-            Assert.Equal(TwinoResult.Ok, created);
+            Assert.Equal(TwinoResultCode.Ok, created.Code);
             await Task.Delay(1000);
 
             Channel channel = server.Server.Channels.FirstOrDefault(x => x.Name == "ch-2");
@@ -58,7 +58,7 @@ namespace Test.Mq
                 o.AcknowledgeTimeout = TimeSpan.FromSeconds(33);
                 o.Status = MessagingQueueStatus.Pull;
             });
-            Assert.Equal(TwinoResult.Ok, created);
+            Assert.Equal(TwinoResultCode.Ok, created.Code);
 
             Channel channel = server.Server.FindChannel("ch-test");
             Assert.NotNull(channel);
@@ -98,7 +98,7 @@ namespace Test.Mq
                 o.MessageTimeout = TimeSpan.FromSeconds(666);
                 o.SendOnlyFirstAcquirer = true;
             });
-            Assert.Equal(TwinoResult.Ok, updated);
+            Assert.Equal(TwinoResultCode.Ok, updated.Code);
 
             Assert.True(queue.Options.WaitForAcknowledge);
             Assert.True(queue.Options.SendOnlyFirstAcquirer);
@@ -126,7 +126,7 @@ namespace Test.Mq
             Assert.True(client.IsConnected);
 
             TwinoResult done = await client.RemoveQueue("ch-route", MessageA.ContentType, verifyResponse);
-            Assert.Equal(TwinoResult.Ok, done);
+            Assert.Equal(TwinoResultCode.Ok, done.Code);
 
             if (!verifyResponse)
                 await Task.Delay(500);

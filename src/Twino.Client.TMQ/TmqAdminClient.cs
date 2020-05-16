@@ -19,7 +19,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Gets all instances connected to server
         /// </summary>
-        public async Task<TmqResult<List<InstanceInformation>>> GetInstances()
+        public async Task<TmqModelResult<List<InstanceInformation>>> GetInstances()
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -35,7 +35,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Gets all consumers of channel
         /// </summary>
-        public async Task<TmqResult<List<ClientInformation>>> GetConnectedClients()
+        public async Task<TmqModelResult<List<ClientInformation>>> GetConnectedClients()
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -51,7 +51,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Finds the channel and gets information if exists
         /// </summary>
-        public async Task<TmqResult<ChannelInformation>> GetChannelInfo(string name)
+        public async Task<TmqModelResult<ChannelInformation>> GetChannelInfo(string name)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -64,7 +64,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Gets all channels in server
         /// </summary>
-        public async Task<TmqResult<List<ChannelInformation>>> GetChannels()
+        public async Task<TmqModelResult<List<ChannelInformation>>> GetChannels()
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -76,7 +76,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Gets all consumers of channel
         /// </summary>
-        public async Task<TmqResult<List<ClientInformation>>> GetConsumers(string channel)
+        public async Task<TmqModelResult<List<ClientInformation>>> GetConsumers(string channel)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -110,7 +110,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Finds all queues in channel
         /// </summary>
-        public async Task<TmqResult<List<QueueInformation>>> GetQueues(string channel)
+        public async Task<TmqModelResult<List<QueueInformation>>> GetQueues(string channel)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -123,7 +123,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Finds the queue and gets information if exists
         /// </summary>
-        public async Task<TmqResult<QueueInformation>> GetQueueInfo(string channel, ushort id)
+        public async Task<TmqModelResult<QueueInformation>> GetQueueInfo(string channel, ushort id)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;

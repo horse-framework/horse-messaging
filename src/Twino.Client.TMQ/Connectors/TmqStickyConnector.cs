@@ -95,7 +95,7 @@ namespace Twino.Client.TMQ.Connectors
             if (client != null && client.IsConnected)
                 return client.SendAsync(message);
 
-            return Task.FromResult(TwinoResult.Failed);
+            return Task.FromResult(TwinoResult.Failed());
         }
 
         /// <summary>
@@ -107,7 +107,7 @@ namespace Twino.Client.TMQ.Connectors
             if (client != null && client.IsConnected)
                 return client.Push(channel, contentType, content, waitAcknowledge);
 
-            return Task.FromResult(TwinoResult.Failed);
+            return Task.FromResult(TwinoResult.Failed());
         }
 
         /// <summary>
@@ -119,7 +119,7 @@ namespace Twino.Client.TMQ.Connectors
             if (client != null && client.IsConnected)
                 return client.PushJson(channel, contentType, jsonObject, waitAcknowledge);
 
-            return Task.FromResult(TwinoResult.Failed);
+            return Task.FromResult(TwinoResult.Failed());
         }
     }
 }

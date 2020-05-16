@@ -33,7 +33,7 @@ namespace Twino.MQ.Network
             if (channel == null)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(message.CreateResponse(TwinoResult.NotFound));
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
                 return;
             }
 
@@ -46,7 +46,7 @@ namespace Twino.MQ.Network
             if (queue == null)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(message.CreateResponse(TwinoResult.NotFound));
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
 
                 return;
             }
@@ -64,7 +64,7 @@ namespace Twino.MQ.Network
             if (queue.Status != QueueStatus.Pull)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(message.CreateResponse(TwinoResult.BadRequest));
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.BadRequest));
                 return;
             }
 
@@ -73,7 +73,7 @@ namespace Twino.MQ.Network
             if (channelClient == null)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(message.CreateResponse(TwinoResult.Unauthorized));
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
                 return;
             }
 
@@ -84,7 +84,7 @@ namespace Twino.MQ.Network
                 if (!grant)
                 {
                     if (!string.IsNullOrEmpty(message.MessageId))
-                        await client.SendAsync(message.CreateResponse(TwinoResult.Unauthorized));
+                        await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
                     return;
                 }
             }

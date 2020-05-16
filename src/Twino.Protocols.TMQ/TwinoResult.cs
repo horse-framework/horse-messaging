@@ -1,59 +1,60 @@
 namespace Twino.Protocols.TMQ
 {
     /// <summary>
-    /// TmqClient and TmqAdminClient process result enum
+    /// Twino Messagign Queue Operation Result
     /// </summary>
-    public enum TwinoResult : ushort
+    public struct TwinoResult
     {
         /// <summary>
-        /// Operation succeeded
+        /// Result code
         /// </summary>
-        Ok = 0,
+        public TwinoResultCode Code;
 
         /// <summary>
-        /// Unknown failed response
+        /// Reason for unsuccessful results
         /// </summary>
-        Failed = 1,
+        public string Reason;
+
+        /// <summary>
+        /// Creates new result without reason
+        /// </summary>
+        public TwinoResult(TwinoResultCode code)
+        {
+            Code = code;
+            Reason = null;
+        }
+
+        /// <summary>
+        /// Creates new result with a reason.
+        /// </summary>
+        public TwinoResult(TwinoResultCode code, string reason)
+        {
+            Code = code;
+            Reason = reason;
+        }
+
+        /// <summary>
+        /// Creates sucessful result with no reason
+        /// </summary>
+        public static TwinoResult Ok()
+        {
+            return new TwinoResult(TwinoResultCode.Ok);
+        }
+
+        /// <summary>
+        /// Creates failed result with no reason
+        /// </summary>
+        public static TwinoResult Failed()
+        {
+            return new TwinoResult(TwinoResultCode.Failed);
+        }
         
         /// <summary>
-        /// Request is not recognized or verified by the server
+        /// Creates failed result with reason
         /// </summary>
-        BadRequest = 400,
-
-        /// <summary>
-        /// Access denied for the operation
-        /// </summary>
-        Unauthorized = 401,
-
-        /// <summary>
-        /// Target could not be found
-        /// </summary>
-        NotFound = 404,
-
-        /// <summary>
-        /// Request is not acceptable. Eg, queue status does not support the operation
-        /// </summary>
-        Unacceptable = 406,
-
-        /// <summary>
-        /// Requested data is already exists
-        /// </summary>
-        Duplicate = 481,
-
-        /// <summary>
-        /// Client, channel, consumer, queue or message limit is exceeded
-        /// </summary>
-        LimitExceeded = 482,
-
-        /// <summary>
-        /// Target is busy to complete the process
-        /// </summary>
-        Busy = 503,
-
-        /// <summary>
-        /// Message could not be sent to the server
-        /// </summary>
-        SendError = 581
+        public static TwinoResult Failed(string reason)
+        {
+            return new TwinoResult(TwinoResultCode.Failed, reason);
+        }
     }
-    
 }

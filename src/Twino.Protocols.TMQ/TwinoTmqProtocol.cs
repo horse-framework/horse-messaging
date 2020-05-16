@@ -113,7 +113,7 @@ namespace Twino.Protocols.TMQ
             //if user makes a mistake in ready method, we should not interrupt connection handling
             try
             {
-                await _handler.Ready(_server, (TmqServerSocket)handshakeResult.Socket);
+                await _handler.Ready(_server, (TmqServerSocket) handshakeResult.Socket);
             }
             catch (Exception e)
             {
@@ -135,22 +135,24 @@ namespace Twino.Protocols.TMQ
                 if (message.Ttl < 0)
                     continue;
 
-                await ProcessMessage(info, message, (TmqServerSocket)handshakeResult.Socket);
+                await ProcessMessage(info, message, (TmqServerSocket) handshakeResult.Socket);
             }
         }
 
-        private async Task ProcessMessage(IConnectionInfo info, TmqMessage message, TmqServerSocket socket)
+        private Task ProcessMessage(IConnectionInfo info, TmqMessage message, TmqServerSocket socket)
         {
             //if user makes a mistake in received method, we should not interrupt connection handling
             try
             {
                 socket.KeepAlive();
-                await _handler.Received(_server, info, socket, message);
+                return _handler.Received(_server, info, socket, message);
             }
             catch (Exception e)
             {
                 if (_server.Logger != null)
                     _server.Logger.LogException("Unhandled Exception", e);
+
+                return Task.CompletedTask;
             }
         }
 

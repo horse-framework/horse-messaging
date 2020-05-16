@@ -2,9 +2,13 @@
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Twino.Client.TMQ;
 using Twino.Core.Protocols;
+using Twino.MQ;
 using Twino.MQ.Data;
+using Twino.MQ.Queues;
 using Twino.Mvc;
 using Twino.Mvc.Controllers;
 using Twino.Mvc.Controllers.Parameters;
@@ -18,56 +22,75 @@ namespace Playground
 {
     class Program
     {
-        private static string _text =
-            "POST /api/auth/login HTTP/1.1\r\n" +
-            "Accept-Language: tr,en;q=0.9,en-GB;q=0.8,en-US;q=0.7\r\n"+
-            "Accept-Encoding: gzip, deflate, br\r\n" +
-            "Referer: http://localhost:4200/auth/login\r\n" +
-            "Sec-Fetch-Mode: cors\r\n" +
-            "Sec-Fetch-Dest: empty\r\n" +
-            "Sec-Fetch-Site: same-origin\r\n" +
-            "Origin: http://localhost:4200\r\n" +
-            "Content-Type: application/x-www-form-urlencoded;charset=UTF-8\r\n" +
-            "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36 Edg/81.0.416.68\r\n" +
-            "Accept: application/json, text/plain, */*\r\n" +
-            "Content-Length: 64\r\n" +
-            "Connection: close\r\n" +
-            "Host: localhost:4200\r\n\r\n" +
-            "form.EmailAddress=exxxxx@xxxxxxxxxx.com.xx&form.Password=123456";
-
         static async Task Main(string[] args)
         {
-            byte[] bytes = Encoding.UTF8.GetBytes(_text);
-            byte[] protocol = new byte[8];
-            Array.Copy(bytes, 0, protocol, 0, protocol.Length);
-            
-            HttpReader reader = new HttpReader(new HttpOptions());
-            reader.HandshakeResult = new ProtocolHandshakeResult
-                                     {
-                                         ReadAfter = true,
-                                         PreviouslyRead = protocol
-                                     };
-            MemoryStream ms = new MemoryStream();
-            ms.Write(bytes, 8, bytes.Length - 8);
-            ms.Write(bytes);
+            int queueCount = 1;
 
-            ms.Position = 0;
-            HttpMessage message = await reader.Read(ms);
-            Console.WriteLine(message.Request.Headers.Count);
-            Console.WriteLine(message.Request.Headers["Content-Length"]);
-            
-            return;
-            
-            TwinoServer _server = new TwinoServer();
-            _server = new TwinoServer(ServerOptions.CreateDefault());
-            _server.UseWebSockets(async (socket) => { await socket.SendAsync("Welcome"); },
-                                  async (socket, message) =>
-                                  {
-                                      Console.WriteLine("# " + message);
-                                      await socket.SendAsync(message);
-                                  });
-            _server.Start(46100);
-            _server.BlockWhileRunning();
+            DeliveryHandler[] handlers = new DeliveryHandler[queueCount];
+            for (int i = 0; i < queueCount; i++)
+            {
+                handlers[i] = new DeliveryHandler(i);
+                await handlers[i].Init();
+            }
+
+            TwinoServer server = new TwinoServer(ServerOptions.CreateDefault());
+            server.Options.Hosts[0].Port = 26223;
+
+            MqServer mq = new MqServer();
+            mq.SetDefaultDeliveryHandler(handlers[0]);
+
+            server.UseMqServer(mq);
+            for (int i = 0; i < queueCount; i++)
+            {
+                var channel = mq.CreateChannel("Test" + i);
+                var queue = await channel.CreateQueue(100, channel.Options, handlers[i]);
+                queue.Options.WaitForAcknowledge = false;
+                await queue.SetStatus(QueueStatus.Broadcast);
+            }
+
+            server.Start();
+
+            int seconds = 0;
+            Thread thread = new Thread(async () =>
+            {
+                while (true)
+                {
+                    long prev = 0;
+                    for (int i = 0; i < queueCount; i++)
+                        prev += handlers[i].Count;
+
+                    await Task.Delay(1000);
+
+                    long current = 0;
+                    for (int i = 0; i < queueCount; i++)
+                        current += handlers[i].Count;
+
+                    long diff = current - prev;
+                    seconds++;
+                    Console.WriteLine($"{diff} m/s \t {current} total \t {seconds} secs");
+                }
+            });
+            thread.Start();
+
+            for (int i = 0; i < queueCount; i++)
+                _ = RunProducer("Test" + i, 100);
+
+            await server.BlockWhileRunningAsync();
+        }
+
+        private static async Task RunProducer(string channel, ushort queue)
+        {
+            string x = new string('a', 1);
+            MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(x));
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://127.0.0.1:26223");
+
+            while (true)
+            {
+                ms.Position = 0;
+                await client.Push(channel, queue, ms, false);
+                //await Task.Delay(2);
+            }
         }
     }
 }

@@ -25,7 +25,7 @@ namespace Test.Mq
             await consumer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
             TwinoResult joined = await consumer.Join("ch-pull", true);
-            Assert.Equal(TwinoResult.Ok, joined);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             TmqClient producer = new TmqClient();
             await producer.ConnectAsync("tmq://localhost:" + port);
@@ -72,7 +72,7 @@ namespace Test.Mq
             bool msgReceived = false;
             consumer.MessageReceived += (c, m) => msgReceived = true;
             TwinoResult joined = await consumer.Join("ch-pull", true);
-            Assert.Equal(TwinoResult.Ok, joined);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             TmqClient producer = new TmqClient();
             producer.AcknowledgeTimeout = TimeSpan.FromSeconds(15);

@@ -50,7 +50,7 @@ namespace Test.Mq
             message.SetStringContent("Hello, World!");
 
             TwinoResult acknowledge = await client1.SendWithAcknowledge(message);
-            Assert.Equal(TwinoResult.Ok, acknowledge);
+            Assert.Equal(TwinoResultCode.Ok, acknowledge.Code);
         }
 
         /// <summary>
@@ -92,7 +92,7 @@ namespace Test.Mq
             message.SetStringContent("Hello, World!");
 
             TwinoResult acknowledge = await client1.SendWithAcknowledge(message);
-            Assert.Equal(TwinoResult.Ok, acknowledge);
+            Assert.Equal(TwinoResultCode.Ok, acknowledge.Code);
         }
 
         /// <summary>
@@ -130,7 +130,7 @@ namespace Test.Mq
             message.SetStringContent("Hello, World!");
 
             TwinoResult acknowledge = await client1.SendWithAcknowledge(message);
-            Assert.NotEqual(TwinoResult.Ok, acknowledge);
+            Assert.NotEqual(TwinoResultCode.Ok, acknowledge.Code);
         }
 
         #endregion
@@ -166,7 +166,7 @@ namespace Test.Mq
             //push a message to the queue
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
             TwinoResult sent = await client.Push(channel.Name, queue.Id, ms, true);
-            Assert.Equal(TwinoResult.Ok, sent);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
         }
 
         /// <summary>
@@ -198,7 +198,7 @@ namespace Test.Mq
             //push a message to the queue
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
             TwinoResult sent = await client.Push(channel.Name, queue.Id, ms, true);
-            Assert.Equal(TwinoResult.Ok, sent);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
         }
 
         /// <summary>
@@ -230,7 +230,7 @@ namespace Test.Mq
             //push a message to the queue
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
             TwinoResult sent = await client.Push(channel.Name, queue.Id, ms, true);
-            Assert.NotEqual(TwinoResult.Ok, sent);
+            Assert.NotEqual(TwinoResultCode.Ok, sent.Code);
         }
 
         #endregion

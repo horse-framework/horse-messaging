@@ -32,7 +32,7 @@ namespace Test.Mq
             reader.Attach(client);
 
             TwinoResult joined = await client.Join("ch-1", true);
-            Assert.Equal(TwinoResult.Ok, joined);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(1000);
 
             MessageA m = new MessageA("Msg-A");
@@ -40,7 +40,7 @@ namespace Test.Mq
             await System.Text.Json.JsonSerializer.SerializeAsync(ms, m);
 
             TwinoResult sent = await client.Push("ch-1", MessageA.ContentType, ms, false);
-            Assert.Equal(TwinoResult.Ok, sent);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(500);
             Assert.True(received);
@@ -61,9 +61,9 @@ namespace Test.Mq
             Assert.True(client.IsConnected);
 
             TwinoResult joined = await client.Join("ch-1", true);
-            Assert.Equal(TwinoResult.Ok, joined);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
             joined = await client.Join("ch-0", true);
-            Assert.Equal(TwinoResult.Ok, joined);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             await Task.Delay(250);
 
@@ -77,9 +77,9 @@ namespace Test.Mq
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(new MessageA("Ax"))));
 
             TwinoResult sent = await client.Push("ch-1", MessageA.ContentType, ms, false);
-            Assert.Equal(TwinoResult.Ok, sent);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
             sent = await client.Push("ch-0", MessageA.ContentType, ms, false);
-            Assert.Equal(TwinoResult.Ok, sent);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1000);
             Assert.True(ch0);
@@ -101,7 +101,7 @@ namespace Test.Mq
             Assert.True(client.IsConnected);
 
             TwinoResult joined = await client.Join("ch-1", true);
-            Assert.Equal(TwinoResult.Ok, joined);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             await Task.Delay(250);
 
@@ -116,9 +116,9 @@ namespace Test.Mq
             MemoryStream cstream = new MemoryStream(Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(new MessageC("Cx", "x"))));
 
             TwinoResult sent = await client.Push("ch-1", MessageA.ContentType, astream, false);
-            Assert.Equal(TwinoResult.Ok, sent);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
             sent = await client.Push("ch-1", MessageC.ContentType, cstream, false);
-            Assert.Equal(TwinoResult.Ok, sent);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1000);
             Assert.True(ma);
@@ -156,7 +156,7 @@ namespace Test.Mq
             reader.Attach(client);
 
             TwinoResult joined = await client.Join("ch-1", true);
-            Assert.Equal(TwinoResult.Ok, joined);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(1000);
 
             MessageA m = new MessageA("Msg-A");
@@ -164,7 +164,7 @@ namespace Test.Mq
             await System.Text.Json.JsonSerializer.SerializeAsync(ms, m);
 
             TwinoResult sent = await client.Push("ch-1", MessageA.ContentType, ms, false);
-            Assert.Equal(TwinoResult.Ok, sent);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1500);
             Assert.True(client.IsConnected);

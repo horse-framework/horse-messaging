@@ -24,10 +24,10 @@ namespace Test.Mq
             server.Start();
 
             TmqClient client = new TmqClient();
-            client.Connect("tmq://localhost:41201");
+            await client.ConnectAsync("tmq://localhost:41201");
 
             TwinoResult joined = await client.Join("ch-1", false);
-            Assert.Equal(TwinoResult.Ok, joined);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(1000);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -48,10 +48,10 @@ namespace Test.Mq
             server.Start();
 
             TmqClient client = new TmqClient();
-            client.Connect("tmq://localhost:41202");
+            await client.ConnectAsync("tmq://localhost:41202");
 
             TwinoResult joined = await client.Join("ch-1", true);
-            Assert.Equal(TwinoResult.Ok, joined);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
@@ -71,13 +71,13 @@ namespace Test.Mq
             server.Start();
 
             TmqClient client = new TmqClient();
-            client.Connect("tmq://localhost:41203");
+            await client.ConnectAsync("tmq://localhost:41203");
 
             TwinoResult joined = await client.Join("ch-1", true);
-            Assert.Equal(TwinoResult.Ok, joined);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             TwinoResult left = await client.Leave("ch-1", false);
-            Assert.Equal(TwinoResult.Ok, left);
+            Assert.Equal(TwinoResultCode.Ok, left.Code);
             await Task.Delay(1000);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -98,13 +98,13 @@ namespace Test.Mq
             server.Start();
 
             TmqClient client = new TmqClient();
-            client.Connect("tmq://localhost:41204");
+            await client.ConnectAsync("tmq://localhost:41204");
 
             TwinoResult joined = await client.Join("ch-1", true);
-            Assert.Equal(TwinoResult.Ok, joined);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             TwinoResult left = await client.Leave("ch-1", true);
-            Assert.Equal(TwinoResult.Ok, left);
+            Assert.Equal(TwinoResultCode.Ok, left.Code);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
@@ -128,15 +128,15 @@ namespace Test.Mq
             server.Start();
 
             TmqClient client = new TmqClient();
-            client.Connect("tmq://localhost:" + port);
+            await client.ConnectAsync("tmq://localhost:" + port);
 
             TwinoResult created = await client.CreateChannel("new-channel", verifyResponse);
             if (verifyResponse)
-                Assert.Equal(TwinoResult.Ok, created);
+                Assert.Equal(TwinoResultCode.Ok, created.Code);
             else
             {
                 await Task.Delay(1000);
-                Assert.Equal(TwinoResult.Ok, created);
+                Assert.Equal(TwinoResultCode.Ok, created.Code);
             }
         }
 
@@ -158,7 +158,7 @@ namespace Test.Mq
                 o.AcknowledgeTimeout = TimeSpan.FromSeconds(33);
                 o.Status = MessagingQueueStatus.Pull;
             });
-            Assert.Equal(TwinoResult.Ok, created);
+            Assert.Equal(TwinoResultCode.Ok, created.Code);
 
             Channel found = server.Server.FindChannel("new-channel");
             Assert.NotNull(found);
