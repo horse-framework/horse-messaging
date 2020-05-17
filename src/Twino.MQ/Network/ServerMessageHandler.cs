@@ -282,9 +282,14 @@ namespace Twino.MQ.Network
             {
                 if (message.PendingResponse)
                     await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
+
+                return;
             }
-            else
-                await _server.RemoveChannel(channel);
+
+            await _server.RemoveChannel(channel);
+            
+            if (message.PendingResponse)
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
         }
 
         /// <summary>
@@ -568,7 +573,7 @@ namespace Twino.MQ.Network
                 await client.SendAsync(message.CreateResponse(TwinoResultCode.Unacceptable));
 
             ushort contentType = Convert.ToUInt16(queueId);
-            
+
             if (_server.AdminAuthorization == null)
             {
                 if (message.PendingResponse)

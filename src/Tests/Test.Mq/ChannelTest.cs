@@ -114,7 +114,6 @@ namespace Test.Mq
             Assert.Empty(clients);
         }
 
-
         /// <summary>
         /// Client sends a queue creation message
         /// </summary>
@@ -139,6 +138,33 @@ namespace Test.Mq
                 await Task.Delay(1000);
                 Assert.Equal(TwinoResultCode.Ok, created.Code);
             }
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task Delete(bool verifyResponse)
+        {
+            int port = verifyResponse ? 35965 : 35964;
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start();
+
+            server.Server.CreateChannel("new-channel");
+
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:" + port);
+
+            TwinoResult deleted = await client.Channels.Delete("new-channel", verifyResponse);
+            if (verifyResponse)
+                Assert.Equal(TwinoResultCode.Ok, deleted.Code);
+            else
+            {
+                await Task.Delay(1000);
+                Assert.Equal(TwinoResultCode.Ok, deleted.Code);
+            }
+
+            Assert.Null(server.Server.FindChannel("new-channel"));
         }
 
         [Fact]
@@ -166,5 +192,25 @@ namespace Test.Mq
             Assert.False(found.Options.AllowMultipleQueues);
             Assert.True(found.Options.SendOnlyFirstAcquirer);
         }
+        
+        [Theory]
+        [InlineData(null)]
+        [InlineData("ch-pull")]
+        [InlineData("*h-pu*")]
+        public async Task FindChannels(string filter)
+        {
+            int port = 35941 + new Random().Next(20);
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start();
+
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:" + port);
+
+            var channels = await client.Channels.List(filter);
+            Assert.Equal(TwinoResultCode.Ok, channels.Result.Code);
+            Assert.NotEmpty(channels.Model);
+        }
+
     }
 }
