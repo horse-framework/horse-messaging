@@ -287,7 +287,7 @@ namespace Twino.MQ.Network
             }
 
             await _server.RemoveChannel(channel);
-            
+
             if (message.PendingResponse)
                 await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
         }
@@ -857,7 +857,18 @@ namespace Twino.MQ.Network
 
             List<ClientInformation> list = new List<ClientInformation>();
 
+            string filter = null;
+            if (!string.IsNullOrEmpty(message.Target))
+                filter = message.Target;
+
             foreach (MqClient mc in _server.Clients)
+            {
+                if (!string.IsNullOrEmpty(filter))
+                {
+                    if (string.IsNullOrEmpty(mc.Type) || !Filter.CheckMatch(mc.Type, filter))
+                        continue;
+                }
+
                 list.Add(new ClientInformation
                          {
                              Id = mc.UniqueId,
@@ -866,6 +877,7 @@ namespace Twino.MQ.Network
                              IsAuthenticated = mc.IsAuthenticated,
                              Online = mc.ConnectedDate.LifetimeMilliseconds(),
                          });
+            }
 
             TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.ClientList;

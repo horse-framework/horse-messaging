@@ -33,12 +33,13 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Gets all consumers of channel
         /// </summary>
-        public Task<TmqModelResult<List<ClientInformation>>> GetConnectedClients()
+        public Task<TmqModelResult<List<ClientInformation>>> GetConnectedClients(string typeFilter = null)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.ClientList;
-
+            message.SetTarget(typeFilter);
+            
             return _client.SendAndGetJson<List<ClientInformation>>(message);
         }
     }
