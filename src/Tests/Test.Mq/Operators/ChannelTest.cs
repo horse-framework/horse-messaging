@@ -10,9 +10,9 @@ using Twino.MQ.Clients;
 using Twino.Protocols.TMQ;
 using Xunit;
 
-namespace Test.Mq
+namespace Test.Mq.Operators
 {
-    public class ServerMessageTest
+    public class ChannelOperatorTest
     {
         /// <summary>
         /// Client sends a channel join message to server

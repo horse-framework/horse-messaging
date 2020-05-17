@@ -10,9 +10,9 @@ using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
 using Xunit;
 
-namespace Test.Mq
+namespace Test.Mq.Operators
 {
-    public class QueueManagementTest
+    public class QueueOperatorTest
     {
         /// <summary>
         /// Client sends a queue creation message
@@ -109,7 +109,7 @@ namespace Test.Mq
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public async Task Remove(bool verifyResponse)
+        public async Task Delete(bool verifyResponse)
         {
             int port = 41208 + Convert.ToInt32(verifyResponse);
             TestMqServer server = new TestMqServer();
@@ -134,6 +134,24 @@ namespace Test.Mq
 
             queue = channel.FindQueue(MessageA.ContentType);
             Assert.Null(queue);
+        }
+
+        [Fact]
+        public async Task GetQueueInfo()
+        {
+            int port = 41281;
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start();
+
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:" + port);
+
+            var queue = await client.Queues.GetInfo("ch-push", MessageA.ContentType);
+            Assert.Equal(TwinoResultCode.Ok, queue.Result.Code);
+            Assert.NotNull(queue.Model);
+            Assert.Equal("ch-push", queue.Model.Channel);
+            Assert.Equal(MessageA.ContentType, queue.Model.Id);
         }
     }
 }
