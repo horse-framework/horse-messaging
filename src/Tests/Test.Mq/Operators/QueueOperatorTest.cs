@@ -153,5 +153,24 @@ namespace Test.Mq.Operators
             Assert.Equal("ch-push", queue.Model.Channel);
             Assert.Equal(MessageA.ContentType, queue.Model.Id);
         }
+
+        [Fact]
+        public async Task GetQueueList()
+        {
+            int port = 41282;
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start();
+
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:" + port);
+
+            var result = await client.Queues.List("ch-push");
+            Assert.Equal(TwinoResultCode.Ok, result.Result.Code);
+            Assert.NotNull(result.Model);
+            var queue = result.Model.FirstOrDefault();
+            Assert.NotNull(queue);
+            Assert.Equal(MessageA.ContentType,queue.Id);
+        }
     }
 }
