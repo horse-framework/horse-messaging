@@ -192,7 +192,7 @@ namespace Test.Mq
             Assert.False(found.Options.AllowMultipleQueues);
             Assert.True(found.Options.SendOnlyFirstAcquirer);
         }
-        
+
         [Theory]
         [InlineData(null)]
         [InlineData("ch-pull")]
@@ -212,5 +212,21 @@ namespace Test.Mq
             Assert.NotEmpty(channels.Model);
         }
 
+        [Fact]
+        public async Task GetChannelInfo()
+        {
+            int port = 35959;
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start();
+
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:" + port);
+
+            var channels = await client.Channels.GetInfo("ch-push");
+            Assert.Equal(TwinoResultCode.Ok, channels.Result.Code);
+            Assert.NotNull(channels.Model);
+            Assert.Equal("ch-push", channels.Model.Name);
+        }
     }
 }
