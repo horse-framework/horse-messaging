@@ -5,7 +5,7 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Network
 {
-    public class PullRequestMessageHandler : INetworkMessageHandler
+    internal class PullRequestMessageHandler : INetworkMessageHandler
     {
         #region Fields
 

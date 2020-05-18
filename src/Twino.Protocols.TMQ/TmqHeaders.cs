@@ -56,6 +56,11 @@ namespace Twino.Protocols.TMQ
         public const string CHANNEL_NAME = "Channel-Name";
         
         /// <summary>
+        /// "CC"
+        /// </summary>
+        public const string CC = "CC";
+
+        /// <summary>
         /// "Queue-Id"
         /// </summary>
         public const string QUEUE_ID = "Queue-Id";

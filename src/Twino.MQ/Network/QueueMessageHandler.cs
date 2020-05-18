@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Queues;
@@ -21,23 +24,24 @@ namespace Twino.MQ.Network
 
         #endregion
 
-        public async Task Handle(MqClient client, TmqMessage message)
+        private async Task<ChannelQueue> FindQueue(MqClient client, string channelName, ushort contentType, TmqMessage message)
         {
             //find channel and queue
-            Channel channel = _server.FindChannel(message.Target);
+            Channel channel = _server.FindChannel(channelName);
 
             //if auto creation active, try to create channel
             if (channel == null && _server.Options.AutoChannelCreation)
-                channel = _server.FindOrCreateChannel(message.Target);
+                channel = _server.FindOrCreateChannel(channelName);
 
             if (channel == null)
             {
-                if (!string.IsNullOrEmpty(message.MessageId))
+                if (client != null && message != null && !string.IsNullOrEmpty(message.MessageId))
                     await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
-                return;
+
+                return null;
             }
 
-            ChannelQueue queue = channel.FindQueue(message.ContentType);
+            ChannelQueue queue = channel.FindQueue(contentType);
 
             //if auto creation active, try to create queue
             if (queue == null && _server.Options.AutoQueueCreation)
@@ -45,19 +49,40 @@ namespace Twino.MQ.Network
 
             if (queue == null)
             {
-                if (!string.IsNullOrEmpty(message.MessageId))
+                if (client != null && message != null && !string.IsNullOrEmpty(message.MessageId))
                     await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
-                
-                return;
+
+                return null;
             }
 
-            await HandlePush(client, message, queue);
+            return queue;
+        }
+
+        public async Task Handle(MqClient client, TmqMessage message)
+        {
+            ChannelQueue queue = await FindQueue(client, message.Target, message.ContentType, message);
+            if (queue == null)
+                return;
+
+            TmqMessage clone = null;
+            List<string> ccList = null;
+            if (message.HasHeader)
+            {
+                clone = message.Clone(false, true, _server.MessageIdGenerator.Create());
+                ccList = new List<string>(message.Headers.Where(x => x.Key.Equals(TmqHeaders.CC, StringComparison.InvariantCultureIgnoreCase)).Select(x => x.Value));
+            }
+
+            await HandlePush(client, message, queue, true);
+
+            //if there are cc headers, we will push the message to other queues
+            if (clone != null)
+                await PushOtherChannels(client, clone, ccList);
         }
 
         /// <summary>
         /// Handles pushing a message into a queue
         /// </summary>
-        private async Task HandlePush(MqClient client, TmqMessage message, ChannelQueue queue)
+        private async Task HandlePush(MqClient client, TmqMessage message, ChannelQueue queue, bool answerSender)
         {
             //check authority
             if (_server.Authorization != null)
@@ -65,7 +90,7 @@ namespace Twino.MQ.Network
                 bool grant = await _server.Authorization.CanMessageToQueue(client, queue, message);
                 if (!grant)
                 {
-                    if (!string.IsNullOrEmpty(message.MessageId))
+                    if (answerSender && !string.IsNullOrEmpty(message.MessageId))
                         await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
                     return;
                 }
@@ -78,9 +103,47 @@ namespace Twino.MQ.Network
             //push the message
             PushResult result = await queue.Push(queueMessage, client);
             if (result == PushResult.StatusNotSupported)
-                await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
+            {
+                if (answerSender)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
+            }
             else if (result == PushResult.LimitExceeded)
-                await client.SendAsync(message.CreateResponse(TwinoResultCode.LimitExceeded));
+            {
+                if (answerSender)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.LimitExceeded));
+            }
+        }
+
+        /// <summary>
+        /// Pushes clones of the message to cc channel queues
+        /// </summary>
+        private async Task PushOtherChannels(MqClient client, TmqMessage clone, List<string> ccList)
+        {
+            for (int i = 0; i < ccList.Count; i++)
+            {
+                string cc = ccList[i];
+
+                string[] split = cc.Split(';');
+                if (split.Length < 2)
+                    continue;
+
+                ushort contentType = Convert.ToUInt16(split[0].Trim());
+                string channel = split[1].Trim();
+                string messageId = split.Length > 2 ? split[2].Trim() : null;
+
+                ChannelQueue queue = await FindQueue(null, channel, contentType, null);
+                if (queue == null)
+                    continue;
+
+                TmqMessage msg = clone;
+                if (i < ccList.Count - 1)
+                    clone = clone.Clone(false, true, _server.MessageIdGenerator.Create());
+
+                if (!string.IsNullOrEmpty(messageId))
+                    msg.SetMessageId(messageId);
+
+                _ = HandlePush(client, msg, queue, false);
+            }
         }
     }
 }

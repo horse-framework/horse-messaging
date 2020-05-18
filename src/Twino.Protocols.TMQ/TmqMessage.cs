@@ -223,6 +223,40 @@ namespace Twino.Protocols.TMQ
             return await System.Text.Json.JsonSerializer.DeserializeAsync<TModel>(Content);
         }
 
+        /// <summary>
+        /// Clones the message
+        /// </summary>
+        public TmqMessage Clone(bool cloneHeaders, bool cloneContent, string cloneId)
+        {
+            TmqMessage clone = new TmqMessage(Type, Target);
+
+            if (!string.IsNullOrEmpty(cloneId))
+                clone.SetMessageId(cloneId);
+            
+            clone.SetSource(Source);
+
+            clone.FirstAcquirer = FirstAcquirer;
+            clone.HighPriority = HighPriority;
+            clone.PendingAcknowledge = PendingAcknowledge;
+            clone.PendingResponse = PendingResponse;
+            clone.ContentType = ContentType;
+
+            if (cloneHeaders && HasHeader)
+            {
+                clone.HasHeader = true;
+                clone.HeadersList = new List<KeyValuePair<string, string>>(HeadersList);
+            }
+
+            if (cloneContent && Content != null && Content.Length > 0)
+            {
+                Content.Position = 0;
+                Content.WriteTo(clone.Content);
+                clone.Length = Convert.ToUInt64(clone.Content.Length);
+            }
+
+            return clone;
+        }
+
         #endregion
 
         #region Header
