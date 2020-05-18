@@ -210,11 +210,11 @@ namespace Twino.Client.TMQ
                 else
                     Stream = Client.GetStream();
 
-                Stream.Write(PredefinedMessages.PROTOCOL_BYTES);
+                Stream.Write(PredefinedMessages.PROTOCOL_BYTES_V2);
                 SendInfoMessage(host).Wait();
 
                 //Reads the protocol response
-                byte[] buffer = new byte[PredefinedMessages.PROTOCOL_BYTES.Length];
+                byte[] buffer = new byte[PredefinedMessages.PROTOCOL_BYTES_V2.Length];
                 int len = Stream.Read(buffer, 0, buffer.Length);
 
                 CheckProtocolResponse(buffer, len);
@@ -264,11 +264,11 @@ namespace Twino.Client.TMQ
                 else
                     Stream = Client.GetStream();
 
-                await Stream.WriteAsync(PredefinedMessages.PROTOCOL_BYTES);
+                await Stream.WriteAsync(PredefinedMessages.PROTOCOL_BYTES_V2);
                 await SendInfoMessage(host);
 
                 //Reads the protocol response
-                byte[] buffer = new byte[PredefinedMessages.PROTOCOL_BYTES.Length];
+                byte[] buffer = new byte[PredefinedMessages.PROTOCOL_BYTES_V2.Length];
                 int len = await Stream.ReadAsync(buffer, 0, buffer.Length);
 
                 CheckProtocolResponse(buffer, len);
@@ -288,11 +288,11 @@ namespace Twino.Client.TMQ
         /// </summary>
         private static void CheckProtocolResponse(byte[] buffer, int length)
         {
-            if (length < PredefinedMessages.PROTOCOL_BYTES.Length)
+            if (length < PredefinedMessages.PROTOCOL_BYTES_V2.Length)
                 throw new InvalidOperationException("Unexpected server response");
 
-            for (int i = 0; i < PredefinedMessages.PROTOCOL_BYTES.Length; i++)
-                if (PredefinedMessages.PROTOCOL_BYTES[i] != buffer[i])
+            for (int i = 0; i < PredefinedMessages.PROTOCOL_BYTES_V2.Length; i++)
+                if (PredefinedMessages.PROTOCOL_BYTES_V2[i] != buffer[i])
                     throw new NotSupportedException("Unsupported TMQ Protocol version. Server supports: " + Encoding.UTF8.GetString(buffer));
         }
 

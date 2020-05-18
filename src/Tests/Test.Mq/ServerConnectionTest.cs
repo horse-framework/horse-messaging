@@ -150,7 +150,7 @@ namespace Test.Mq
             await client.ConnectAsync("127.0.0.1", 42105);
 
             NetworkStream stream = client.GetStream();
-            stream.Write(PredefinedMessages.PROTOCOL_BYTES);
+            stream.Write(PredefinedMessages.PROTOCOL_BYTES_V2);
             TmqMessage msg = new TmqMessage();
             msg.Type = MessageType.Server;
             msg.ContentType = KnownContentTypes.Hello;

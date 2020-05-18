@@ -44,7 +44,8 @@ namespace Twino.Protocols.TMQ
             if (data.Length < 8)
                 return await Task.FromResult(result);
 
-            result.Accepted = CheckProtocol(data);
+            ProtocolVersion version = CheckProtocol(data);
+            result.Accepted = version != ProtocolVersion.Unknown;
             if (!result.Accepted)
                 return result;
 
@@ -52,7 +53,7 @@ namespace Twino.Protocols.TMQ
             TmqMessage message = await reader.Read(info.GetStream());
 
             //sends protocol message
-            await info.GetStream().WriteAsync(PredefinedMessages.PROTOCOL_BYTES);
+            await info.GetStream().WriteAsync(version == ProtocolVersion.Version1 ? PredefinedMessages.PROTOCOL_BYTES_V1 : PredefinedMessages.PROTOCOL_BYTES_V2);
 
             bool alive = await ProcessFirstMessage(message, info, result);
             if (!alive)
@@ -159,10 +160,18 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Checks data if TMQ protocol data
         /// </summary>
-        private static bool CheckProtocol(byte[] data)
+        private static ProtocolVersion CheckProtocol(byte[] data)
         {
             ReadOnlySpan<byte> span = data;
-            return span.StartsWith(PredefinedMessages.PROTOCOL_BYTES);
+            bool v2 = span.StartsWith(PredefinedMessages.PROTOCOL_BYTES_V2);
+            if (v2)
+                return ProtocolVersion.Version2;
+
+            bool v1 = span.StartsWith(PredefinedMessages.PROTOCOL_BYTES_V1);
+            if (v1)
+                return ProtocolVersion.Version1;
+
+            return ProtocolVersion.Unknown;
         }
     }
 }

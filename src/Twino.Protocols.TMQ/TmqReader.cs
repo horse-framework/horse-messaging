@@ -92,7 +92,7 @@ namespace Twino.Protocols.TMQ
                 second -= 64;
             }
 
-            if (second >= 32)
+            if (second >= 32 && message.Type != MessageType.Ping && message.Type != MessageType.Pong)
             {
                 message.HasHeader = true;
                 message.HeadersList = new List<KeyValuePair<string, string>>();
