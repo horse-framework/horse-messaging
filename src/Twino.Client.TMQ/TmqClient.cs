@@ -64,6 +64,11 @@ namespace Twino.Client.TMQ
         public TimeSpan ResponseTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
         /// <summary>
+        /// Maximum time for waiting next message of a pull request 
+        /// </summary>
+        public TimeSpan PullTimeout { get; set; } = TimeSpan.FromSeconds(15);
+
+        /// <summary>
         /// Unique client id
         /// </summary>
         private string _clientId;
@@ -105,6 +110,9 @@ namespace Twino.Client.TMQ
         /// </summary>
         public ConnectionOperator Connections { get; }
 
+        private readonly Dictionary<string, PullContainer> _pullContainers;
+        private Timer _pullContainerTimeoutHandler;
+
         #endregion
 
         #region Constructors - Destructors
@@ -114,6 +122,8 @@ namespace Twino.Client.TMQ
         /// </summary>
         public TmqClient()
         {
+            _pullContainers = new Dictionary<string, PullContainer>();
+
             Data.Method = "CONNECT";
             Data.Path = "/";
 
@@ -123,6 +133,8 @@ namespace Twino.Client.TMQ
 
             _follower = new MessageFollower(this);
             _follower.Run();
+
+            _pullContainerTimeoutHandler = new Timer(HandleTimeoutPulls, null, 1000, 1000);
         }
 
         /// <summary>
@@ -131,6 +143,40 @@ namespace Twino.Client.TMQ
         public void Dispose()
         {
             _follower?.Dispose();
+            _pullContainerTimeoutHandler?.Dispose();
+        }
+
+        /// <summary>
+        /// Handles timed out pull requests and removed them
+        /// </summary>
+        private void HandleTimeoutPulls(object state)
+        {
+            try
+            {
+                if (_pullContainers.Count > 0)
+                {
+                    List<PullContainer> timedouts = new List<PullContainer>();
+                    lock (_pullContainers)
+                    {
+                        foreach (PullContainer container in _pullContainers.Values)
+                        {
+                            if (container.Status == PullProcess.Receiving && container.LastReceived + PullTimeout < DateTime.UtcNow)
+                                timedouts.Add(container);
+                        }
+                    }
+
+                    foreach (PullContainer container in timedouts)
+                    {
+                        lock (_pullContainers)
+                            _pullContainers.Remove(container.RequestId);
+
+                        container.Complete(null);
+                    }
+                }
+            }
+            catch
+            {
+            }
         }
 
         #endregion
@@ -410,12 +456,65 @@ namespace Twino.Client.TMQ
                         SetOnMessageReceived(message);
                     break;
 
-                default:
+                case MessageType.Event:
+                    //todo: event
+                    break;
+
+                case MessageType.QueueMessage:
+
+                    if (message.PendingAcknowledge && AutoAcknowledge)
+                        await SendAsync(message.CreateAcknowledge());
+
+                    //if message is response for pull request, process pull container
+                    if (_pullContainers.Count > 0 && message.HasHeader)
+                    {
+                        string requestId = message.FindHeader(TmqHeaders.REQUEST_ID);
+                        if (!string.IsNullOrEmpty(requestId))
+                        {
+                            PullContainer container;
+                            lock (_pullContainers)
+                                _pullContainers.TryGetValue(requestId, out container);
+
+                            if (container != null)
+                            {
+                                ProcessPull(requestId, message, container);
+                                break;
+                            }
+                        }
+                    }
+
+                    SetOnMessageReceived(message);
+                    break;
+
+
+                case MessageType.DirectMessage:
                     if (message.PendingAcknowledge && AutoAcknowledge)
                         await SendAsync(message.CreateAcknowledge());
 
                     SetOnMessageReceived(message);
                     break;
+            }
+        }
+
+        /// <summary>
+        /// Processes pull message
+        /// </summary>
+        private void ProcessPull(string requestId, TmqMessage message, PullContainer container)
+        {
+            if (message.Length > 0)
+            {
+                _ = container.AddMessage(message);
+                return;
+            }
+
+            string noContent = message.FindHeader(TmqHeaders.NO_CONTENT);
+
+            if (!string.IsNullOrEmpty(noContent))
+            {
+                lock (_pullContainers)
+                    _pullContainers.Remove(requestId);
+
+                container.Complete(noContent);
             }
         }
 
@@ -930,37 +1029,42 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Request a message from Pull queue
         /// </summary>
-        public async Task<TmqMessage> Pull(string channel, ushort queueId)
+        public async Task<PullContainer> Pull(PullRequest request, Func<int, TmqMessage, Task> actionForEachMessage = null)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.QueuePullRequest;
-            message.PendingResponse = true;
-            message.ContentType = queueId;
-            message.SetTarget(channel);
+            message.ContentType = request.QueueId;
+            message.SetTarget(request.Channel);
             message.SetMessageId(UniqueIdGenerator.Create());
+            message.AddHeader(TmqHeaders.COUNT, request.Count);
 
-            Task<TmqMessage> task = _follower.FollowResponse(message);
+            if (request.ClearAfter == ClearDecision.AllMessages)
+                message.AddHeader(TmqHeaders.CLEAR, "all");
+            else if (request.ClearAfter == ClearDecision.PriorityMessages)
+                message.AddHeader(TmqHeaders.CLEAR, "High-Priority");
+            else if (request.ClearAfter == ClearDecision.Messages)
+                message.AddHeader(TmqHeaders.CLEAR, "Default-Priority");
+
+            if (request.GetQueueMessageCounts)
+                message.AddHeader(TmqHeaders.INFO, "yes");
+
+            if (request.Order == MessageOrder.LIFO)
+                message.AddHeader(TmqHeaders.ORDER, TmqHeaders.LIFO);
+
+            PullContainer container = new PullContainer(message.MessageId, request.Count, actionForEachMessage);
+            lock (_pullContainers)
+                _pullContainers.Add(message.MessageId, container);
+
             TwinoResult sent = await SendAsync(message);
             if (sent.Code != TwinoResultCode.Ok)
-                return null;
+            {
+                lock (_pullContainers)
+                    _pullContainers.Remove(message.MessageId);
 
-            TmqMessage response = await task;
-            if (response.Content == null || response.Length == 0 || response.Content.Length == 0)
-                return null;
+                container.Complete("Error");
+            }
 
-            return response;
-        }
-
-        /// <summary>
-        /// Request a message from Pull queue
-        /// </summary>
-        public async Task<TModel> PullJson<TModel>(string channel, ushort queueId)
-        {
-            TmqMessage response = await Pull(channel, queueId);
-            if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
-                return default;
-
-            return await response.GetJsonContent<TModel>();
+            return await container.GetAwaitableTask();
         }
 
         #endregion
