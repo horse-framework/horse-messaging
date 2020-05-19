@@ -14,13 +14,15 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Writes a TMQ message to stream
         /// </summary>
-        public static void Write(TmqMessage value, Stream stream)
+        public static void Write(TmqMessage value, Stream stream, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
-            using MemoryStream ms = new MemoryStream();
-            WriteFrame(ms, value);
+            bool hasAdditionalHeader = additionalHeaders != null && additionalHeaders.Count > 0;
 
-            if (value.HasHeader)
-                WriteFrame(ms, value);
+            using MemoryStream ms = new MemoryStream();
+            WriteFrame(ms, value, hasAdditionalHeader);
+
+            if (value.HasHeader || hasAdditionalHeader)
+                WriteHeader(ms, value, additionalHeaders);
 
             if (value.Length > 0)
                 WriteContent(ms, value);
@@ -31,13 +33,14 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Creates byte array of TMQ message
         /// </summary>
-        public static byte[] Create(TmqMessage value)
+        public static byte[] Create(TmqMessage value, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
+            bool hasAdditionalHeader = additionalHeaders != null && additionalHeaders.Count > 0;
             using MemoryStream ms = new MemoryStream();
-            WriteFrame(ms, value);
+            WriteFrame(ms, value, hasAdditionalHeader);
 
-            if (value.HasHeader)
-                WriteHeader(ms, value);
+            if (value.HasHeader || hasAdditionalHeader)
+                WriteHeader(ms, value, additionalHeaders);
 
             if (value.Length > 0)
                 WriteContent(ms, value);
@@ -51,7 +54,7 @@ namespace Twino.Protocols.TMQ
         public static byte[] CreateFrame(TmqMessage value)
         {
             using MemoryStream ms = new MemoryStream();
-            WriteFrame(ms, value);
+            WriteFrame(ms, value, false);
             return ms.ToArray();
         }
 
@@ -69,7 +72,7 @@ namespace Twino.Protocols.TMQ
         /// Writes frame to stream
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteFrame(MemoryStream ms, TmqMessage message)
+        private static void WriteFrame(MemoryStream ms, TmqMessage message, bool hasAdditionalHeaders)
         {
             byte first = (byte) message.Type;
             if (message.FirstAcquirer)
@@ -87,7 +90,7 @@ namespace Twino.Protocols.TMQ
             if (message.PendingAcknowledge)
                 second += 64;
 
-            if (message.HasHeader)
+            if (message.HasHeader || hasAdditionalHeaders)
                 second += 32;
 
             ms.WriteByte(first);
@@ -143,7 +146,7 @@ namespace Twino.Protocols.TMQ
         /// Writes header length and content to stream
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteHeader(MemoryStream ms, TmqMessage message)
+        private static void WriteHeader(MemoryStream ms, TmqMessage message, IList<KeyValuePair<string, string>> additionalHeaders)
         {
             if (!message.HasHeader)
                 return;
@@ -152,6 +155,10 @@ namespace Twino.Protocols.TMQ
 
             foreach (KeyValuePair<string, string> pair in message.Headers)
                 headerStream.Write(Encoding.UTF8.GetBytes(pair.Key + ":" + pair.Value + "\r\n"));
+
+            if (additionalHeaders != null)
+                foreach (KeyValuePair<string, string> pair in additionalHeaders)
+                    headerStream.Write(Encoding.UTF8.GetBytes(pair.Key + ":" + pair.Value + "\r\n"));
 
             ms.Write(BitConverter.GetBytes((ushort) headerStream.Length));
             headerStream.Position = 0;

@@ -1,5 +1,5 @@
 using System;
-using System.Globalization;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -446,14 +446,14 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a TMQ message
         /// </summary>
-        public bool Send(TmqMessage message)
+        public bool Send(TmqMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
             message.SetSource(_clientId);
 
             if (string.IsNullOrEmpty(message.MessageId) && UseUniqueMessageId)
                 message.SetMessageId(UniqueIdGenerator.Create());
 
-            byte[] data = TmqWriter.Create(message);
+            byte[] data = TmqWriter.Create(message, additionalHeaders);
             return Send(data);
         }
 
@@ -499,14 +499,14 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a TMQ message
         /// </summary>
-        public async Task<TwinoResult> SendAsync(TmqMessage message)
+        public async Task<TwinoResult> SendAsync(TmqMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
             message.SetSource(_clientId);
 
             if (string.IsNullOrEmpty(message.MessageId) && UseUniqueMessageId)
                 message.SetMessageId(UniqueIdGenerator.Create());
 
-            byte[] data = TmqWriter.Create(message);
+            byte[] data = TmqWriter.Create(message, additionalHeaders);
             bool sent = await SendAsync(data);
             return sent ? TwinoResult.Ok() : TwinoResult.Failed();
         }

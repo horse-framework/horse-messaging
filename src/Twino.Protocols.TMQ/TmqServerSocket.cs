@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Twino.Core;
 
@@ -89,24 +91,24 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Sends TMQ message to client
         /// </summary>
-        public bool Send(TmqMessage message)
+        public bool Send(TmqMessage message, IList<KeyValuePair<string,string>> additionalHeaders = null)
         {
             if (UseUniqueMessageId && string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(_uniqueIdGenerator.Create());
 
-            byte[] data = TmqWriter.Create(message);
+            byte[] data = TmqWriter.Create(message, additionalHeaders);
             return Send(data);
         }
 
         /// <summary>
         /// Sends TMQ message to client
         /// </summary>
-        public Task<bool> SendAsync(TmqMessage message)
+        public Task<bool> SendAsync(TmqMessage message, IList<KeyValuePair<string,string>> additionalHeaders = null)
         {
             if (UseUniqueMessageId && string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(_uniqueIdGenerator.Create());
 
-            byte[] data = TmqWriter.Create(message);
+            byte[] data = TmqWriter.Create(message, additionalHeaders);
             return SendAsync(data);
         }
     }
