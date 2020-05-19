@@ -18,6 +18,11 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Queue status does not support pulling messages 
         /// </summary>
-        StatusNotSupported
+        StatusNotSupported,
+        
+        /// <summary>
+        /// Pull request is unacceptable
+        /// </summary>
+        Unacceptable
     }
 }

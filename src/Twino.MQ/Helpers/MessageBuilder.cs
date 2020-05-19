@@ -37,23 +37,19 @@ namespace Twino.MQ.Helpers
 
             return builder;
         }
-
+        
         /// <summary>
-        /// Add new key/value pair into the message
+        /// Creates new Pull Request response message with no content
         /// </summary>
-        public void Add(string key, string value)
+        internal static TmqMessage CreateNoContentPullResponse(TmqMessage request, string reason)
         {
-            _content.Append(key + ": " + value + "\r\n");
-        }
-
-        /// <summary>
-        /// Finishes the message preparation and returns
-        /// </summary>
-        public TmqMessage Get()
-        {
-            _message.Content = new MemoryStream(Encoding.UTF8.GetBytes(_content.ToString()));
-            _message.CalculateLengths();
-            return _message;
+            TmqMessage msg = new TmqMessage(MessageType.QueueMessage);
+            msg.SetMessageId(request.MessageId);
+            msg.SetTarget(request.Target);
+            msg.ContentType = request.ContentType;
+            msg.AddHeader(TmqHeaders.REQUEST_ID, request.MessageId);
+            msg.AddHeader(TmqHeaders.NO_CONTENT, reason);
+            return msg;
         }
 
         #region Status Code Messages
