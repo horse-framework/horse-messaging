@@ -226,13 +226,13 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Clones the message
         /// </summary>
-        public TmqMessage Clone(bool cloneHeaders, bool cloneContent, string cloneId)
+        public TmqMessage Clone(bool cloneHeaders, bool cloneContent, string cloneId, List<KeyValuePair<string, string>> additionalHeaders = null)
         {
             TmqMessage clone = new TmqMessage(Type, Target);
 
             if (!string.IsNullOrEmpty(cloneId))
                 clone.SetMessageId(cloneId);
-            
+
             clone.SetSource(Source);
 
             clone.FirstAcquirer = FirstAcquirer;
@@ -245,6 +245,17 @@ namespace Twino.Protocols.TMQ
             {
                 clone.HasHeader = true;
                 clone.HeadersList = new List<KeyValuePair<string, string>>(HeadersList);
+            }
+
+            if (additionalHeaders != null && additionalHeaders.Count > 0)
+            {
+                if (!clone.HasHeader)
+                {
+                    clone.HasHeader = true;
+                    clone.HeadersList = new List<KeyValuePair<string, string>>(additionalHeaders);
+                }
+                else
+                    clone.HeadersList.AddRange(additionalHeaders);
             }
 
             if (cloneContent && Content != null && Content.Length > 0)

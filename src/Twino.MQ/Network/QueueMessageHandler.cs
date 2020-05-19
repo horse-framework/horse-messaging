@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Queues;
@@ -64,19 +65,24 @@ namespace Twino.MQ.Network
             if (queue == null)
                 return;
 
+            //if there is at least one cc header
+            //we need to create a clone of the message
+            //clone does not have cc headers but others
             TmqMessage clone = null;
             List<string> ccList = null;
+            List<KeyValuePair<string, string>> additionalHeaders = null;
             if (message.HasHeader)
             {
-                clone = message.Clone(false, true, _server.MessageIdGenerator.Create());
+                additionalHeaders = message.Headers.Where(x => !x.Key.Equals(TmqHeaders.CC, StringComparison.InvariantCultureIgnoreCase)).ToList();
                 ccList = new List<string>(message.Headers.Where(x => x.Key.Equals(TmqHeaders.CC, StringComparison.InvariantCultureIgnoreCase)).Select(x => x.Value));
+                clone = message.Clone(false, true, _server.MessageIdGenerator.Create(), additionalHeaders);
             }
 
             await HandlePush(client, message, queue, true);
 
             //if there are cc headers, we will push the message to other queues
             if (clone != null)
-                await PushOtherChannels(client, clone, ccList);
+                await PushOtherChannels(client, clone, ccList, additionalHeaders);
         }
 
         /// <summary>
@@ -117,7 +123,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Pushes clones of the message to cc channel queues
         /// </summary>
-        private async Task PushOtherChannels(MqClient client, TmqMessage clone, List<string> ccList)
+        private async Task PushOtherChannels(MqClient client, TmqMessage clone, List<string> ccList, List<KeyValuePair<string, string>> additionalHeaders)
         {
             for (int i = 0; i < ccList.Count; i++)
             {
@@ -137,7 +143,7 @@ namespace Twino.MQ.Network
 
                 TmqMessage msg = clone;
                 if (i < ccList.Count - 1)
-                    clone = clone.Clone(false, true, _server.MessageIdGenerator.Create());
+                    clone = clone.Clone(false, true, _server.MessageIdGenerator.Create(), additionalHeaders);
 
                 if (!string.IsNullOrEmpty(messageId))
                     msg.SetMessageId(messageId);
