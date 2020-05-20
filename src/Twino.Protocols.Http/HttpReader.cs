@@ -117,6 +117,9 @@ namespace Twino.Protocols.Http
                 if (readLength < 1)
                     return null;
 
+                if (!_readingHeaders && ContentLength == 0 && request.ContentLength > 0)
+                    requiredMoreData = true;
+
                 if (requiredMoreData)
                 {
                     await _stream.WriteAsync(_buffer, 0, readLength);
