@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Metadata.Ecma335;
 using System.Security.Claims;
 using System.Text;
 using System.Threading;
@@ -193,7 +192,7 @@ namespace Twino.Mvc
                                           {
                                               Controller = controller,
                                               Action = match.Route.ActionType,
-                                              Parameters = FillParameters(request, match)
+                                              Parameters = await FillParameters(request, match)
                                           };
 
             if (!CheckActionAuthority(match, context, response, descriptor))
@@ -217,6 +216,7 @@ namespace Twino.Mvc
             if (match.Route.IsAsyncMethod)
             {
                 Task<IActionResult> task = (Task<IActionResult>) match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray());
+                // ReSharper disable once PossibleNullReferenceException
                 await task;
                 await CompleteActionExecution(match, context, response, controller, descriptor, task.Result);
             }
@@ -284,7 +284,7 @@ namespace Twino.Mvc
         /// <summary>
         /// Creates parameter list and sets values for the specified request to the specified route.
         /// </summary>
-        internal static List<ParameterValue> FillParameters(HttpRequest request, RouteMatch route)
+        internal static async Task<List<ParameterValue>> FillParameters(HttpRequest request, RouteMatch route)
         {
             List<ParameterValue> values = new List<ParameterValue>();
             foreach (ActionParameter ap in route.Route.Parameters)
@@ -306,12 +306,12 @@ namespace Twino.Mvc
 
                     case ParameterSource.Body:
                     {
-                        string content = Encoding.UTF8.GetString(request.ContentStream.ToArray());
                         if (ap.FromName == "json")
-                            paramValue.Value = Newtonsoft.Json.JsonConvert.DeserializeObject(content, ap.ParameterType);
+                            paramValue.Value = await System.Text.Json.JsonSerializer.DeserializeAsync(request.ContentStream, ap.ParameterType);
                         else if (ap.FromName == "xml")
                         {
-                            using MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(content));
+                            string content = Encoding.UTF8.GetString(request.ContentStream.ToArray());
+                            await using MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(content));
                             XmlSerializer serializer = new XmlSerializer(ap.ParameterType);
                             paramValue.Value = serializer.Deserialize(ms);
                         }

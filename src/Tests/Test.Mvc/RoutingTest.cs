@@ -34,11 +34,11 @@ namespace Test.Mvc
 
             TwinoController controller = await mvc.ControllerFactory.CreateInstance(mvc, match.Route.ControllerType, request, response, mvc.Services.CreateScope());
 
-            var parameters = MvcConnectionHandler.FillParameters(request, match).Select(x => x.Value).ToArray();
-            Task<IActionResult> task = (Task<IActionResult>)match.Route.ActionType.Invoke(controller, parameters);
+            var parameters = (await MvcConnectionHandler.FillParameters(request, match)).Select(x => x.Value).ToArray();
+            Task<IActionResult> task = (Task<IActionResult>) match.Route.ActionType.Invoke(controller, parameters);
 
             IActionResult result = task.Result;
-            string url = Encoding.UTF8.GetString(((MemoryStream)result.Stream).ToArray());
+            string url = Encoding.UTF8.GetString(((MemoryStream) result.Stream).ToArray());
             url.Should().Be(aResult);
         }
     }

@@ -13,7 +13,7 @@ namespace Sample.Mvc.Controller
         [HttpGet("b")]
         public Task<IActionResult> Get()
         {
-            return StringAsync("Welcome!");
+            throw new NotImplementedException();
         }
 
         [HttpGet("c")]
