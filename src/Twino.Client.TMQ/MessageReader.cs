@@ -17,10 +17,12 @@ namespace Twino.Client.TMQ
     /// </summary>
     public class MessageReader
     {
+        #region Fields
+
         /// <summary>
         /// All message subscriptions
         /// </summary>
-        private readonly List<QueueSubscription> _subscriptions = new List<QueueSubscription>(16);
+        private readonly List<ReadSubscription> _subscriptions = new List<ReadSubscription>(16);
 
         /// <summary>
         /// Attached TMQ clients
@@ -37,6 +39,10 @@ namespace Twino.Client.TMQ
         /// </summary>
         public event ReaderExceptionThrownHandler OnException;
 
+        #endregion
+
+        #region Create
+
         /// <summary>
         /// Creates new message reader with converter action
         /// </summary>
@@ -52,6 +58,10 @@ namespace Twino.Client.TMQ
         {
             return new MessageReader((msg, type) => System.Text.Json.JsonSerializer.Deserialize(msg.ToString(), type));
         }
+
+        #endregion
+
+        #region Attach - Detach
 
         /// <summary>
         /// Attach the client to the message reader and starts to read messages
@@ -89,6 +99,10 @@ namespace Twino.Client.TMQ
             }
         }
 
+        #endregion
+
+        #region Read
+
         /// <summary>
         /// Reads the received model, if there is subscription to the model, trigger the actions.
         /// Use this method when you can't attach the client easily or directly. (ex: use for connections)
@@ -103,15 +117,26 @@ namespace Twino.Client.TMQ
         /// </summary>
         private void ClientOnMessageReceived(ClientSocketBase<TmqMessage> client, TmqMessage message)
         {
-            //only queue messages accepted
-            if (message.Type != MessageType.QueueMessage || string.IsNullOrEmpty(message.Target))
+            ReadSource source;
+
+            if (message.Type == MessageType.QueueMessage)
+            {
+                if (string.IsNullOrEmpty(message.Target))
+                    return;
+
+                source = ReadSource.Queue;
+            }
+            else if (message.Type == MessageType.DirectMessage)
+                source = ReadSource.Direct;
+            else
                 return;
 
             //find all subscriber actions
-            List<QueueSubscription> subs;
+            List<ReadSubscription> subs;
             lock (_subscriptions)
             {
-                subs = _subscriptions.Where(x => x.QueueId == message.ContentType &&
+                subs = _subscriptions.Where(x => x.Source == source &&
+                                                 x.ContentType == message.ContentType &&
                                                  x.Channel.Equals(message.Target, StringComparison.InvariantCultureIgnoreCase))
                                      .ToList();
             }
@@ -124,7 +149,7 @@ namespace Twino.Client.TMQ
             object model = _func(message, type);
 
             //call all subscriber methods if they have same type
-            foreach (QueueSubscription sub in subs)
+            foreach (ReadSubscription sub in subs)
             {
                 if (sub.MessageType == type)
                 {
@@ -143,18 +168,23 @@ namespace Twino.Client.TMQ
             }
         }
 
+        #endregion
+
+        #region Subscriptions
+
         /// <summary>
         /// Subscribe to messages in a queue in a channel
         /// </summary>
         public void On<T>(string channel, ushort queueId, Action<T> action)
         {
-            QueueSubscription subscription = new QueueSubscription
-            {
-                Channel = channel,
-                QueueId = queueId,
-                MessageType = typeof(T),
-                Action = action
-            };
+            ReadSubscription subscription = new ReadSubscription
+                                            {
+                                                Source = ReadSource.Queue,
+                                                Channel = channel,
+                                                ContentType = queueId,
+                                                MessageType = typeof(T),
+                                                Action = action
+                                            };
 
             lock (_subscriptions)
                 _subscriptions.Add(subscription);
@@ -165,14 +195,50 @@ namespace Twino.Client.TMQ
         /// </summary>
         public void On<T>(string channel, ushort queueId, Action<T, TmqMessage> action)
         {
-            QueueSubscription subscription = new QueueSubscription
-            {
-                Channel = channel,
-                QueueId = queueId,
-                MessageType = typeof(T),
-                Action = action,
-                TmqMessageParameter = true
-            };
+            ReadSubscription subscription = new ReadSubscription
+                                            {
+                                                Source = ReadSource.Queue,
+                                                Channel = channel,
+                                                ContentType = queueId,
+                                                MessageType = typeof(T),
+                                                Action = action,
+                                                TmqMessageParameter = true
+                                            };
+
+            lock (_subscriptions)
+                _subscriptions.Add(subscription);
+        }
+
+        /// <summary>
+        /// Subscribe to direct messages with a content type
+        /// </summary>
+        public void OnDirect<T>(ushort contentType, Action<T> action)
+        {
+            ReadSubscription subscription = new ReadSubscription
+                                            {
+                                                Source = ReadSource.Direct,
+                                                ContentType = contentType,
+                                                MessageType = typeof(T),
+                                                Action = action
+                                            };
+
+            lock (_subscriptions)
+                _subscriptions.Add(subscription);
+        }
+
+        /// <summary>
+        /// Subscribe to direct messages with a content type
+        /// </summary>
+        public void OnDirect<T>(ushort contentType, Action<T, TmqMessage> action)
+        {
+            ReadSubscription subscription = new ReadSubscription
+                                            {
+                                                Source = ReadSource.Direct,
+                                                ContentType = contentType,
+                                                MessageType = typeof(T),
+                                                Action = action,
+                                                TmqMessageParameter = true
+                                            };
 
             lock (_subscriptions)
                 _subscriptions.Add(subscription);
@@ -181,14 +247,25 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Unsubscribe from messages in a queue in a channel 
         /// </summary>
-        public void Off(string channel, ushort content)
+        public void Off(string channel, ushort queueId)
         {
             lock (_subscriptions)
-                _subscriptions.RemoveAll(x => x.QueueId == content && x.Channel.Equals(channel, StringComparison.InvariantCultureIgnoreCase));
+                _subscriptions.RemoveAll(x => x.Source == ReadSource.Queue &&
+                                              x.ContentType == queueId
+                                              && x.Channel.Equals(channel, StringComparison.InvariantCultureIgnoreCase));
         }
 
         /// <summary>
-        /// Clear all subscriptions for the channel
+        /// Unsubscribe from direct messages with a content type 
+        /// </summary>
+        public void Off(ushort contentType)
+        {
+            lock (_subscriptions)
+                _subscriptions.RemoveAll(x => x.Source == ReadSource.Direct && x.ContentType == contentType);
+        }
+
+        /// <summary>
+        /// Clear all subscriptions for the channels and direct messages
         /// </summary>
         public void Clear(string channel)
         {
@@ -204,5 +281,7 @@ namespace Twino.Client.TMQ
             lock (_subscriptions)
                 _subscriptions.Clear();
         }
+
+        #endregion
     }
 }

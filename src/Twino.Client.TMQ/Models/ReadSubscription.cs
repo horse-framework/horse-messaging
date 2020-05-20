@@ -3,10 +3,30 @@ using System;
 namespace Twino.Client.TMQ.Models
 {
     /// <summary>
+    /// Read subscription source
+    /// </summary>
+    public enum ReadSource
+    {
+        /// <summary>
+        /// Message source is queue, it's getting consumed
+        /// </summary>
+        Queue,
+        
+        /// <summary>
+        /// Message source is another client, sending message directly
+        /// </summary>
+        Direct
+    }
+    /// <summary>
     /// Queue subscription meta data for message reader
     /// </summary>
-    internal class QueueSubscription
+    internal class ReadSubscription
     {
+        /// <summary>
+        /// Describes where the message comes from
+        /// </summary>
+        public ReadSource Source { get; set; }
+        
         /// <summary>
         /// Subscribed channel
         /// </summary>
@@ -15,7 +35,7 @@ namespace Twino.Client.TMQ.Models
         /// <summary>
         /// Subscribed content type
         /// </summary>
-        public ushort QueueId { get; set; }
+        public ushort ContentType { get; set; }
 
         /// <summary>
         /// Message type in the queue
