@@ -6,9 +6,9 @@
     <Product>Twino.Protocols.TMQ</Product>
     <Description>Twino Messaging Queue (TMQ) Protocol library and server extension for Twino Server</Description>
     <PackageTags>twino,tcp,server,http,messaging,queue,tmq,mq,protocol</PackageTags>
-    <AssemblyVersion>2.8.6</AssemblyVersion>
-    <FileVersion>2.8.6</FileVersion>
-    <PackageVersion>2.8.6</PackageVersion>
+    <AssemblyVersion>3.0.0</AssemblyVersion>
+    <FileVersion>3.0.0</FileVersion>
+    <PackageVersion>3.0.0</PackageVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
     <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>

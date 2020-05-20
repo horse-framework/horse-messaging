@@ -6,9 +6,9 @@
     <Product>Twino.Protocols.WebSocket</Product>
     <Description>WebSocket Protocol library and server extension for Twino Server</Description>
     <PackageTags>twino,tcp,server,http,websocket,protocol,ws</PackageTags>
-    <AssemblyVersion>2.8.6</AssemblyVersion>
-    <FileVersion>2.8.6</FileVersion>
-    <PackageVersion>2.8.6</PackageVersion>
+    <AssemblyVersion>3.0.0</AssemblyVersion>
+    <FileVersion>3.0.0</FileVersion>
+    <PackageVersion>3.0.0</PackageVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
     <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
