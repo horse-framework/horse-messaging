@@ -84,7 +84,7 @@ namespace Playground
         static async Task Main(string[] args)
         {
 
-            for (int i = 40; i < 500; i++)
+            for (int i = 40; i < 700; i++)
             for (int j = 30; j < 2000; j++)
                 await Test(i, j, false);
 
