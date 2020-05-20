@@ -658,6 +658,7 @@ namespace Twino.MQ.Network
                 list.Add(new QueueInformation
                          {
                              Channel = channel.Name,
+                             TagName = queue.TagName,
                              Id = queue.Id,
                              Status = queue.Status.ToString().ToLower(),
                              PriorityMessages = queue.HighPriorityLinkedList.Count,
@@ -732,6 +733,7 @@ namespace Twino.MQ.Network
             QueueInformation information = new QueueInformation
                                            {
                                                Channel = channel.Name,
+                                               TagName = queue.TagName,
                                                Id = id,
                                                Status = queue.Status.ToString().ToLower(),
                                                PriorityMessages = queue.HighPriorityLinkedList.Count,

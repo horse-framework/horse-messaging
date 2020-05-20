@@ -232,6 +232,7 @@ namespace Twino.MQ.Options
             options.ClientLimit = other.ClientLimit;
             options.QueueLimit = other.QueueLimit;
             options.DestroyWhenEmpty = other.DestroyWhenEmpty;
+            options.TagName = other.TagName;
 
             return options;
         }
@@ -249,6 +250,7 @@ namespace Twino.MQ.Options
             options.SendOnlyFirstAcquirer = other.SendOnlyFirstAcquirer;
             options.MessageLimit = other.MessageLimit;
             options.MessageSizeLimit = other.MessageSizeLimit;
+            options.TagName = other.TagName;
 
             return options;
         }

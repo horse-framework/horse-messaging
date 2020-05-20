@@ -40,6 +40,15 @@ namespace Twino.MQ.Queues
         public ushort Id { get; }
 
         /// <summary>
+        /// Tag name for the queue
+        /// </summary>
+        public string TagName
+        {
+            get => Options.TagName;
+            set => Options.TagName = value;
+        }
+
+        /// <summary>
         /// Queue options.
         /// If null, channel default options will be used
         /// </summary>
@@ -208,16 +217,12 @@ namespace Twino.MQ.Queues
         public QueueMessage FindNextMessage()
         {
             if (HighPriorityLinkedList.Count > 0)
-            {
                 lock (HighPriorityLinkedList)
-                    return HighPriorityLinkedList.First.Value;
-            }
+                    return HighPriorityLinkedList.First?.Value;
 
             if (RegularLinkedList.Count > 0)
-            {
                 lock (RegularLinkedList)
-                    return RegularLinkedList.First.Value;
-            }
+                    return RegularLinkedList.First?.Value;
 
             return null;
         }
@@ -512,7 +517,7 @@ namespace Twino.MQ.Queues
                             if (decision.PutBack == PutBackDecision.Start)
                                 AddMessage(State.ProcessingMessage, false);
                             else if (decision.PutBack == PutBackDecision.End)
-                                AddMessage(State.ProcessingMessage, true);
+                                AddMessage(State.ProcessingMessage);
                         }
                     }
                 }
@@ -590,7 +595,10 @@ namespace Twino.MQ.Queues
                         if (HighPriorityLinkedList.Count == 0)
                             return;
 
-                        message = HighPriorityLinkedList.First.Value;
+                        message = HighPriorityLinkedList.First?.Value;
+                        if (message == null)
+                            return;
+
                         HighPriorityLinkedList.RemoveFirst();
                         message.IsInQueue = false;
                     }
@@ -602,7 +610,10 @@ namespace Twino.MQ.Queues
                         if (RegularLinkedList.Count == 0)
                             return;
 
-                        message = RegularLinkedList.First.Value;
+                        message = RegularLinkedList.First?.Value;
+                        if (message == null)
+                            return;
+
                         RegularLinkedList.RemoveFirst();
                         message.IsInQueue = false;
                     }
@@ -678,7 +689,7 @@ namespace Twino.MQ.Queues
                 decision.Acknowledge == DeliveryAcknowledgeDecision.IfSaved && message.IsSaved)
             {
                 TmqMessage acknowledge = customAck ?? message.Message.CreateAcknowledge(decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ? "none" : null);
-                
+
                 if (message.Source != null && message.Source.IsConnected)
                 {
                     bool sent = await message.Source.SendAsync(acknowledge);
@@ -692,7 +703,7 @@ namespace Twino.MQ.Queues
             if (decision.PutBack == PutBackDecision.Start)
                 AddMessage(message, false);
             else if (decision.PutBack == PutBackDecision.End)
-                AddMessage(message, true);
+                AddMessage(message);
 
             else if (!decision.Allow)
             {
@@ -742,7 +753,7 @@ namespace Twino.MQ.Queues
             await _ackSync.WaitAsync();
             try
             {
-                bool received = await _acknowledgeCallback.Task;
+                await _acknowledgeCallback.Task;
                 _acknowledgeCallback = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             }
             finally

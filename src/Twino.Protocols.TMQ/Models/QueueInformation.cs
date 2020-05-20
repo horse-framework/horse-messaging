@@ -1,4 +1,3 @@
-using Newtonsoft.Json;
 using System.Text.Json.Serialization;
 
 namespace Twino.Protocols.TMQ.Models
@@ -13,6 +12,12 @@ namespace Twino.Protocols.TMQ.Models
         /// </summary>
         [JsonPropertyName("Channel")]
         public string Channel { get; set; }
+
+        /// <summary>
+        /// Queue tag name
+        /// </summary>
+        [JsonPropertyName("TagName")]
+        public string TagName { get; set; }
 
         /// <summary>
         /// Queue id

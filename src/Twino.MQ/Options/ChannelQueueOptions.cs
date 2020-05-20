@@ -11,6 +11,11 @@ namespace Twino.MQ.Options
     public class ChannelQueueOptions
     {
         /// <summary>
+        /// Queue tag name
+        /// </summary>
+        public string TagName { get; set; }
+
+        /// <summary>
         /// If true, messages will send to only first acquirers
         /// </summary>
         public bool SendOnlyFirstAcquirer { get; set; }
@@ -79,6 +84,7 @@ namespace Twino.MQ.Options
             return new ChannelQueueOptions
                    {
                        Status = options.Status,
+                       TagName = options.TagName,
                        AcknowledgeTimeout = options.AcknowledgeTimeout,
                        MessageTimeout = options.MessageTimeout,
                        RequestAcknowledge = options.RequestAcknowledge,
