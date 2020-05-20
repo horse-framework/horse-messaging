@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Metadata.Ecma335;
 using System.Security.Claims;
 using System.Text;
 using System.Threading;
@@ -50,33 +51,33 @@ namespace Twino.Mvc
         /// <summary>
         /// HTTP Protocol does not support piped connections
         /// </summary>
-        public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
+        public Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
-            return await Task.FromResult((SocketBase) null);
+            return Task.FromResult((SocketBase) null);
         }
 
         /// <summary>
         /// Triggered when handshake is completed and the connection is ready to communicate 
         /// </summary>
-        public async Task Ready(ITwinoServer server, SocketBase client)
+        public Task Ready(ITwinoServer server, SocketBase client)
         {
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
 
         /// <summary>
         /// HTTP Protocol does not support piped connections
         /// </summary>
-        public async Task Disconnected(ITwinoServer server, SocketBase client)
+        public Task Disconnected(ITwinoServer server, SocketBase client)
         {
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
 
         /// <summary>
         /// Triggered when an HTTP request is received
         /// </summary>
-        public async Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, HttpMessage message)
+        public Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, HttpMessage message)
         {
-            await RequestAsync(server, message.Request, message.Response);
+            return RequestAsync(server, message.Request, message.Response);
         }
 
         #endregion
@@ -416,31 +417,31 @@ namespace Twino.Mvc
         /// <summary>
         /// Executes before controller filters. Returns true, if execution can resume.
         /// </summary>
-        private async Task<bool> ExecuteBeforeControllerFilters(RouteMatch match, FilterContext context, HttpResponse response)
+        private Task<bool> ExecuteBeforeControllerFilters(RouteMatch match, FilterContext context, HttpResponse response)
         {
             if (!match.Route.HasControllerBeforeFilter)
-                return true;
+                return Task.FromResult(true);
 
             //find controller filters
             IBeforeControllerFilter[] filters = (IBeforeControllerFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IBeforeControllerFilter), true);
 
             //call BeforeCreated methods of controller attributes
-            return await CallFilters(response, context, filters, async filter => await filter.OnBefore(context));
+            return CallFilters(response, context, filters, async filter => await filter.OnBefore(context));
         }
 
         /// <summary>
         /// Executes after controller filters. Returns true, if execution can resume.
         /// </summary>
-        private async Task<bool> ExecuteAfterControllerFilters(RouteMatch match, FilterContext context, HttpResponse response, IController controller)
+        private Task<bool> ExecuteAfterControllerFilters(RouteMatch match, FilterContext context, HttpResponse response, IController controller)
         {
             if (!match.Route.HasControllerAfterFilter)
-                return true;
+                return Task.FromResult(true);
 
             //find controller filters
             IAfterControllerFilter[] filters = (IAfterControllerFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IAfterControllerFilter), true);
 
             //call AfterCreated methods of controller attributes
-            return await CallFilters(response, context, filters, async filter => await filter.OnAfter(controller, context));
+            return CallFilters(response, context, filters, async filter => await filter.OnAfter(controller, context));
         }
 
         /// <summary>

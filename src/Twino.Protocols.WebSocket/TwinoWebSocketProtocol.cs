@@ -43,9 +43,9 @@ namespace Twino.Protocols.WebSocket
         /// <param name="info">Connection information</param>
         /// <param name="data">Data is first 8 bytes of the first received message from the client</param>
         /// <returns></returns>
-        public async Task<ProtocolHandshakeResult> Handshake(IConnectionInfo info, byte[] data)
+        public Task<ProtocolHandshakeResult> Handshake(IConnectionInfo info, byte[] data)
         {
-            return await Task.FromResult(new ProtocolHandshakeResult());
+            return Task.FromResult(new ProtocolHandshakeResult());
         }
 
         /// <summary>
@@ -94,7 +94,7 @@ namespace Twino.Protocols.WebSocket
             //if user makes a mistake in ready method, we should not interrupt connection handling
             try
             {
-                await _handler.Ready(_server, (WsServerSocket)handshakeResult.Socket);
+                await _handler.Ready(_server, (WsServerSocket) handshakeResult.Socket);
             }
             catch (Exception e)
             {
@@ -121,19 +121,19 @@ namespace Twino.Protocols.WebSocket
         /// <summary>
         /// Creates websocket response protocol message
         /// </summary>
-        private static async Task<byte[]> CreateWebSocketHandshakeResponse(string websocketKey)
+        private static Task<byte[]> CreateWebSocketHandshakeResponse(string websocketKey)
         {
-            await using MemoryStream ms = new MemoryStream();
-            await ms.WriteAsync(PredefinedMessages.WEBSOCKET_101_SWITCHING_PROTOCOLS_CRLF);
-            await ms.WriteAsync(PredefinedMessages.SERVER_CRLF);
-            await ms.WriteAsync(PredefinedMessages.CONNECTION_UPGRADE_CRLF);
-            await ms.WriteAsync(PredefinedMessages.UPGRADE_WEBSOCKET_CRLF);
-            await ms.WriteAsync(PredefinedMessages.SEC_WEB_SOCKET_COLON);
+            using MemoryStream ms = new MemoryStream();
+            ms.Write(PredefinedMessages.WEBSOCKET_101_SWITCHING_PROTOCOLS_CRLF);
+            ms.Write(PredefinedMessages.SERVER_CRLF);
+            ms.Write(PredefinedMessages.CONNECTION_UPGRADE_CRLF);
+            ms.Write(PredefinedMessages.UPGRADE_WEBSOCKET_CRLF);
+            ms.Write(PredefinedMessages.SEC_WEB_SOCKET_COLON);
 
-            ReadOnlyMemory<byte> memory = Encoding.UTF8.GetBytes(CreateWebSocketGuid(websocketKey) + "\r\n\r\n");
-            await ms.WriteAsync(memory);
+            byte[] memory = Encoding.UTF8.GetBytes(CreateWebSocketGuid(websocketKey) + "\r\n\r\n");
+            ms.Write(memory);
 
-            return ms.ToArray();
+            return Task.FromResult(ms.ToArray());
         }
 
         /// <summary>
@@ -157,7 +157,7 @@ namespace Twino.Protocols.WebSocket
                     //if user makes a mistake in received method, we should not interrupt connection handling
                     try
                     {
-                        await _handler.Received(_server, info, (WsServerSocket)socket, message);
+                        await _handler.Received(_server, info, (WsServerSocket) socket, message);
                     }
                     catch (Exception e)
                     {

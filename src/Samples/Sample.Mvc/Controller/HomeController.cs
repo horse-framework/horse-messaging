@@ -11,9 +11,14 @@ namespace Sample.Mvc.Controller
     public class HomeController : TwinoController
     {
         [HttpGet("b")]
-        public async Task<IActionResult> Get()
+        public Task<IActionResult> Get()
         {
-            throw new NotImplementedException();
+            return StringAsync("Welcome!");
+        }
+
+        [HttpGet("c")]
+        public async Task<IActionResult> GetC()
+        {
             return await StringAsync("Welcome!");
         }
 

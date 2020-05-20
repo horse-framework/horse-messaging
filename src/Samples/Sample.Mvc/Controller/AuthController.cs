@@ -40,14 +40,14 @@ namespace Sample.Mvc.Controller
         }
 
         [HttpPost("post")]
-        public async Task<IActionResult> Post([FromForm] LoginModel model)
+        public Task<IActionResult> Post([FromForm] LoginModel model)
         {
-            return await JsonAsync(new
-            {
-                Ok = true,
-                Code = 200,
-                Message = "Success: " + model.Username
-            });
+            return JsonAsync(new
+                             {
+                                 Ok = true,
+                                 Code = 200,
+                                 Message = "Success: " + model.Username
+                             });
         }
     }
 }
