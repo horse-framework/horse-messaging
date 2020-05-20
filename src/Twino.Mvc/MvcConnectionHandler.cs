@@ -284,7 +284,7 @@ namespace Twino.Mvc
         /// <summary>
         /// Creates parameter list and sets values for the specified request to the specified route.
         /// </summary>
-        internal static async Task<List<ParameterValue>> FillParameters(HttpRequest request, RouteMatch route)
+        internal async Task<List<ParameterValue>> FillParameters(HttpRequest request, RouteMatch route)
         {
             List<ParameterValue> values = new List<ParameterValue>();
             foreach (ActionParameter ap in route.Route.Parameters)
@@ -307,7 +307,7 @@ namespace Twino.Mvc
                     case ParameterSource.Body:
                     {
                         if (ap.FromName == "json")
-                            paramValue.Value = await System.Text.Json.JsonSerializer.DeserializeAsync(request.ContentStream, ap.ParameterType);
+                            paramValue.Value = await System.Text.Json.JsonSerializer.DeserializeAsync(request.ContentStream, ap.ParameterType, Mvc.JsonOptions);
                         else if (ap.FromName == "xml")
                         {
                             string content = Encoding.UTF8.GetString(request.ContentStream.ToArray());
