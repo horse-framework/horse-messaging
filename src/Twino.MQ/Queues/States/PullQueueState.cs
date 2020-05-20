@@ -270,14 +270,7 @@ namespace Twino.MQ.Queues.States
             MessageDelivery delivery = new MessageDelivery(message, requester, deadline);
             delivery.FirstAcquirer = message.Message.FirstAcquirer;
 
-            //change to response message, send, change back to channel message
-            string mid = message.Message.MessageId;
-            message.Message.SetMessageId(request.MessageId);
-            message.Message.Type = MessageType.Response;
-
             bool sent = await requester.Client.SendAsync(message.Message, headers);
-            message.Message.SetMessageId(mid);
-            message.Message.Type = MessageType.QueueMessage;
 
             if (sent)
             {

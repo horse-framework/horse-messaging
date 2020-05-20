@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Test.Mq.Internal;
 using Test.Mq.Models;
 using Twino.Client.TMQ;
+using Twino.Client.TMQ.Models;
 using Twino.MQ;
 using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
@@ -40,11 +41,21 @@ namespace Test.Mq
             Assert.NotNull(queue);
             Assert.Single(queue.RegularMessages);
 
-            TmqMessage pull1 = await consumer.Pull("ch-pull", MessageA.ContentType);
-            Assert.NotNull(pull1);
+            PullRequest request = new PullRequest();
+            request.Channel = "ch-pull";
+            request.QueueId = MessageA.ContentType;
+            request.Count = 1;
+            request.ClearAfter = ClearDecision.None;
+            request.GetQueueMessageCounts = false;
+            request.Order = MessageOrder.FIFO;
 
-            TmqMessage pull2 = await consumer.Pull("ch-pull", MessageA.ContentType);
-            Assert.Null(pull2);
+            PullContainer container1 = await consumer.Pull(request);
+            Assert.Equal(PullProcess.Completed, container1.Status);
+            Assert.NotEmpty(container1.ReceivedMessages);
+
+            PullContainer container2 = await consumer.Pull(request);
+            Assert.Equal(PullProcess.Empty, container2.Status);
+            Assert.Empty(container2.ReceivedMessages);
         }
 
         [Fact]
@@ -61,7 +72,7 @@ namespace Test.Mq
             Assert.NotNull(queue);
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
-
+            
             TmqClient consumer = new TmqClient();
             consumer.AutoAcknowledge = true;
             consumer.ClientId = "consumer";
@@ -86,8 +97,12 @@ namespace Test.Mq
             Assert.False(msgReceived);
             Assert.Single(queue.RegularMessages);
 
-            TmqMessage pull = await consumer.Pull("ch-pull", MessageA.ContentType);
-            Assert.NotNull(pull);
+            consumer.PullTimeout = TimeSpan.FromDays(1);
+
+            PullContainer pull = await consumer.Pull(PullRequest.Single("ch-pull", MessageA.ContentType));
+            Assert.Equal(PullProcess.Completed, pull.Status);
+            Assert.Equal(1, pull.ReceivedCount);
+            Assert.NotEmpty(pull.ReceivedMessages);
         }
     }
 }

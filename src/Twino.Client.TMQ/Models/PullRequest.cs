@@ -56,5 +56,21 @@ namespace Twino.Client.TMQ.Models
         /// Consuming order
         /// </summary>
         public MessageOrder Order { get; set; }
+
+        /// <summary>
+        /// Creates request for pulling single message with default options
+        /// </summary>
+        public static PullRequest Single(string channel, ushort queue)
+        {
+            return new PullRequest
+                   {
+                       Channel = channel,
+                       QueueId = queue,
+                       Count = 1,
+                       Order = MessageOrder.Default,
+                       ClearAfter = ClearDecision.None,
+                       GetQueueMessageCounts = false
+                   };
+        }
     }
 }

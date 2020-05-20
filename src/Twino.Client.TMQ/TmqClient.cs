@@ -503,7 +503,7 @@ namespace Twino.Client.TMQ
         {
             if (message.Length > 0)
             {
-                _ = container.AddMessage(message);
+                container.AddMessage(message);
                 return;
             }
 

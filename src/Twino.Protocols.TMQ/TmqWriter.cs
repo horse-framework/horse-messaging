@@ -148,13 +148,11 @@ namespace Twino.Protocols.TMQ
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void WriteHeader(MemoryStream ms, TmqMessage message, IList<KeyValuePair<string, string>> additionalHeaders)
         {
-            if (!message.HasHeader)
-                return;
-
             using MemoryStream headerStream = new MemoryStream();
 
-            foreach (KeyValuePair<string, string> pair in message.Headers)
-                headerStream.Write(Encoding.UTF8.GetBytes(pair.Key + ":" + pair.Value + "\r\n"));
+            if (message.HeadersList != null)
+                foreach (KeyValuePair<string, string> pair in message.HeadersList)
+                    headerStream.Write(Encoding.UTF8.GetBytes(pair.Key + ":" + pair.Value + "\r\n"));
 
             if (additionalHeaders != null)
                 foreach (KeyValuePair<string, string> pair in additionalHeaders)

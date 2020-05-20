@@ -57,7 +57,7 @@ namespace Twino.Client.TMQ.Models
             LastReceived = DateTime.UtcNow;
         }
 
-        internal Task AddMessage(TmqMessage message)
+        internal void AddMessage(TmqMessage message)
         {
             LastReceived = DateTime.UtcNow;
 
@@ -68,9 +68,7 @@ namespace Twino.Client.TMQ.Models
             }
 
             if (_cycleAction != null)
-                return _cycleAction(ReceivedCount, message);
-
-            return Task.CompletedTask;
+                _ = _cycleAction(ReceivedCount, message);
         }
 
         internal void Complete(string noContentReason)
