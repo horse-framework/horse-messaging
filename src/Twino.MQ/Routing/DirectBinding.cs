@@ -65,10 +65,35 @@ namespace Twino.MQ.Routing
             return atLeastOneSent;
         }
 
+        /// <summary>
+        /// Gets client from cache or reload
+        /// </summary>
         private MqClient[] GetClients()
         {
-            //todo: manage cache
-            throw new NotImplementedException();
+            //using cache to prevent performance hurt thousands of message per second situations
+            //receivers are reloded in every second while messages are receiving
+            if (DateTime.UtcNow - _clientListUpdateTime > TimeSpan.FromMilliseconds(1000))
+            {
+                if (Target.StartsWith("@type:", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    var list = Router.Server.FindClientByType(Target.Substring(6));
+                    _clients = list == null ? new MqClient[0] : list.ToArray();
+                }
+                else if (Target.StartsWith("@name:", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    var list = Router.Server.FindClientByName(Target.Substring(6));
+                    _clients = list == null ? new MqClient[0] : list.ToArray();
+                }
+                else
+                {
+                    MqClient client = Router.Server.FindClient(Target);
+                    _clients = client == null ? new MqClient[0] : new[] {client};
+                }
+
+                _clientListUpdateTime = DateTime.UtcNow;
+            }
+
+            return _clients;
         }
     }
 }
