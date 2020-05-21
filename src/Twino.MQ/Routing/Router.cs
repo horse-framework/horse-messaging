@@ -1,5 +1,3 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -17,11 +15,16 @@ namespace Twino.MQ.Routing
         #region Properties
 
         /// <summary>
+        /// The server that router is defined
+        /// </summary>
+        public MqServer Server { get; }
+
+        /// <summary>
         /// Route name.
         /// Must be unique.
         /// Can't include " ", "*" or ";"
         /// </summary>
-        public string Name { get; set; }
+        public string Name { get; }
 
         /// <summary>
         /// If true, messages are routed to bindings.
@@ -32,7 +35,7 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Route method. Defines how messages will be routed.
         /// </summary>
-        public RouteMethod Method { get; set; }
+        public RouteMethod Method { get; }
 
         /// <summary>
         /// Bindings for the router
@@ -47,6 +50,17 @@ namespace Twino.MQ.Routing
 
         #endregion
 
+        /// <summary>
+        /// Creates new router on the server
+        /// </summary>
+        public Router(MqServer server, string name, RouteMethod method)
+        {
+            Server = server;
+            IsEnabled = true;
+            Name = name;
+            Method = method;
+        }
+
         #region Add - Remove
 
         /// <summary>
@@ -60,7 +74,8 @@ namespace Twino.MQ.Routing
             List<Binding> list = Bindings.ToList();
             list.Add(binding);
 
-            Bindings = list.ToArray();
+            binding.Router = this;
+            Bindings = list.OrderByDescending(x => x.Priority).ToArray();
             return true;
         }
 
@@ -78,7 +93,9 @@ namespace Twino.MQ.Routing
                 return;
 
             list.Remove(binding);
-            Bindings = list.ToArray();
+
+            binding.Router = null;
+            Bindings = list.OrderByDescending(x => x.Priority).ToArray();
         }
 
         /// <summary>
@@ -94,7 +111,7 @@ namespace Twino.MQ.Routing
                 return;
 
             list.Remove(binding);
-            Bindings = list.ToArray();
+            Bindings = list.OrderByDescending(x => x.Priority).ToArray();
         }
 
         #endregion

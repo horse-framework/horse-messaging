@@ -39,9 +39,36 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Sends the message to binding receivers
         /// </summary>
-        public override Task<bool> Send(MqClient sender, TmqMessage message)
+        public override async Task<bool> Send(MqClient sender, TmqMessage message)
         {
-            throw new System.NotImplementedException();
+            MqClient[] clients = GetClients();
+            if (clients.Length == 0)
+                return false;
+
+            message.PendingAcknowledge = false;
+            message.PendingResponse = false;
+            message.ContentType = ContentType;
+
+            if (Interaction == BindingInteraction.Acknowledge)
+                message.PendingAcknowledge = true;
+            else if (Interaction == BindingInteraction.Response)
+                message.PendingResponse = true;
+
+            bool atLeastOneSent = false;
+            foreach (MqClient client in clients)
+            {
+                bool sent = await client.SendAsync(message);
+                if (sent && !atLeastOneSent)
+                    atLeastOneSent = true;
+            }
+
+            return atLeastOneSent;
+        }
+
+        private MqClient[] GetClients()
+        {
+            //todo: manage cache
+            throw new NotImplementedException();
         }
     }
 }

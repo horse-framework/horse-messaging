@@ -29,9 +29,48 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Sends the message to binding receivers
         /// </summary>
-        public override Task<bool> Send(MqClient sender, TmqMessage message)
+        public override async Task<bool> Send(MqClient sender, TmqMessage message)
         {
-            throw new System.NotImplementedException();
+            ChannelQueue queue = GetQueue();
+            if (queue == null)
+                return false;
+
+            TmqMessage msg = message.Clone(true, true, message.MessageId);
+            msg.ContentType = ContentType;
+            msg.PendingAcknowledge = false;
+            msg.PendingResponse = false;
+            
+            if (Interaction == BindingInteraction.Acknowledge)
+                msg.PendingAcknowledge = true;
+            else if (Interaction == BindingInteraction.Response)
+                msg.PendingResponse = true;
+
+            QueueMessage queueMessage = new QueueMessage(msg);
+
+            PushResult result = await _targetQueue.Push(queueMessage, sender);
+            return result == PushResult.Success;
+        }
+
+        /// <summary>
+        /// Gets queue.
+        /// If it's not cached, finds and caches it before returns.
+        /// </summary>
+        /// <returns></returns>
+        private ChannelQueue GetQueue()
+        {
+            if (_targetQueue != null)
+                return _targetQueue;
+
+            Channel channel = Router.Server.FindChannel(Target);
+            if (channel == null)
+                return null;
+
+            ChannelQueue queue = channel.FindQueue(ContentType);
+            if (queue == null)
+                return null;
+
+            _targetQueue = queue;
+            return _targetQueue;
         }
     }
 }

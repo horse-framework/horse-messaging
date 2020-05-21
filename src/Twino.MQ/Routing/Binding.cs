@@ -37,6 +37,11 @@ namespace Twino.MQ.Routing
         public BindingInteraction Interaction { get; }
 
         /// <summary>
+        /// Parent Router object of the binding
+        /// </summary>
+        internal Router Router { get; set; }
+
+        /// <summary>
         /// Creates new binding
         /// </summary>
         protected Binding(string name, string target, ushort contentType, int priority, BindingInteraction interaction)
