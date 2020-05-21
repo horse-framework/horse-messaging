@@ -12,12 +12,12 @@ namespace Twino.Client.TMQ.Connectors
     /// </summary>
     public class TmqStickyConnector : StickyConnector<TmqClient, TmqMessage>
     {
-        private MessageReader _reader;
+        private MessageConsumer _consumer;
 
         /// <summary>
         /// Default TMQ Message reader for connector
         /// </summary>
-        public MessageReader Reader => _reader;
+        public MessageConsumer Consumer => _consumer;
 
         /// <summary>
         /// Creates new sticky connector for TMQ protocol clients
@@ -32,7 +32,7 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public void InitJsonReader()
         {
-            _reader = MessageReader.JsonReader();
+            _consumer = MessageConsumer.JsonReader();
         }
 
         /// <summary>
@@ -40,7 +40,7 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public void InitReader(Func<TmqMessage, Type, object> serailizationAction)
         {
-            _reader = new MessageReader(serailizationAction);
+            _consumer = new MessageConsumer(serailizationAction);
         }
 
         /// <inheritdoc />
@@ -48,8 +48,8 @@ namespace Twino.Client.TMQ.Connectors
         {
             base.ClientMessageReceived(client, payload);
 
-            if (_reader != null)
-                _reader.Read((TmqClient) client, payload);
+            if (_consumer != null)
+                _consumer.Read((TmqClient) client, payload);
         }
 
         /// <summary>
@@ -57,10 +57,10 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public void On<T>(string channel, ushort content, Action<T> action)
         {
-            if (_reader == null)
+            if (_consumer == null)
                 throw new NullReferenceException("Reader is null. Please init reader first with InitReader methods");
 
-            _reader.On(channel, content, action);
+            _consumer.On(channel, content, action);
         }
 
         /// <summary>
@@ -68,10 +68,10 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public void Off(string channel, ushort content)
         {
-            if (_reader == null)
+            if (_consumer == null)
                 throw new NullReferenceException("Reader is null. Please init reader first with InitReader methods");
 
-            _reader.Off(channel, content);
+            _consumer.Off(channel, content);
         }
 
         /// <summary>
