@@ -37,7 +37,7 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Bindings for the router
         /// </summary>
-        public Binding[] Bindings { get; private set; }
+        public Binding[] Bindings { get; private set; } = new Binding[0];
 
         /// <summary>
         /// Used for round robin routing.
@@ -52,9 +52,16 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Adds new binding to router
         /// </summary>
-        public void AddBinding(Binding binding)
+        public bool AddBinding(Binding binding)
         {
-            throw new NotImplementedException();
+            if (Bindings.Any(x => x.Name.Equals(binding.Name)))
+                return false;
+
+            List<Binding> list = Bindings.ToList();
+            list.Add(binding);
+
+            Bindings = list.ToArray();
+            return true;
         }
 
         /// <summary>
@@ -62,7 +69,16 @@ namespace Twino.MQ.Routing
         /// </summary>
         public void RemoveBinding(string bindingName)
         {
-            throw new NotImplementedException();
+            if (!Bindings.Any(x => x.Name.Equals(bindingName)))
+                return;
+
+            List<Binding> list = Bindings.ToList();
+            Binding binding = list.FirstOrDefault(x => x.Name == bindingName);
+            if (binding == null)
+                return;
+
+            list.Remove(binding);
+            Bindings = list.ToArray();
         }
 
         /// <summary>
@@ -70,7 +86,15 @@ namespace Twino.MQ.Routing
         /// </summary>
         public void RemoveBinding(Binding binding)
         {
-            throw new NotImplementedException();
+            if (!Bindings.Contains(binding))
+                return;
+
+            List<Binding> list = Bindings.ToList();
+            if (binding == null)
+                return;
+
+            list.Remove(binding);
+            Bindings = list.ToArray();
         }
 
         #endregion
@@ -80,9 +104,84 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Pushes a message to router
         /// </summary>
-        public async Task Push(MqClient sender, TmqMessage message)
+        public Task<bool> Push(MqClient sender, TmqMessage message)
         {
-            throw new NotImplementedException();
+            if (!IsEnabled || Bindings.Length == 0)
+                return Task.FromResult(false);
+
+            switch (Method)
+            {
+                case RouteMethod.Distribute:
+                    return Distribute(sender, message);
+
+                case RouteMethod.OnlyFirst:
+                    return OnlyFirst(sender, message);
+
+                case RouteMethod.RoundRobin:
+                    return RoundRobin(sender, message);
+
+                default:
+                    return Task.FromResult(false);
+            }
+        }
+
+        /// <summary>
+        /// Sends the message to only first binding
+        /// </summary>
+        private async Task<bool> OnlyFirst(MqClient sender, TmqMessage message)
+        {
+            int index = 0;
+            bool sent;
+
+            do
+            {
+                if (index >= Bindings.Length)
+                    return false;
+
+                Binding binding = Bindings[index];
+                sent = await binding.Send(sender, message);
+                index++;
+            }
+            while (!sent);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Distributes the message to all bindings
+        /// </summary>
+        private async Task<bool> Distribute(MqClient sender, TmqMessage message)
+        {
+            bool atLeastOneSent = false;
+
+            foreach (Binding binding in Bindings)
+            {
+                bool sent = await binding.Send(sender, message);
+                if (!atLeastOneSent && sent)
+                    atLeastOneSent = true;
+            }
+
+            return atLeastOneSent;
+        }
+
+        /// <summary>
+        /// Sends the message to only one binding within round robin algorithm
+        /// </summary>
+        private async Task<bool> RoundRobin(MqClient sender, TmqMessage message)
+        {
+            for (int i = 0; i < Bindings.Length; i++)
+            {
+                _lastRoutedIndex++;
+                if (_lastRoutedIndex >= Bindings.Length)
+                    _lastRoutedIndex = 0;
+
+                Binding binding = Bindings[_lastRoutedIndex];
+                bool sent = await binding.Send(sender, message);
+                if (sent)
+                    return true;
+            }
+
+            return false;
         }
 
         #endregion
