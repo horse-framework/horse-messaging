@@ -139,6 +139,16 @@ namespace Twino.Protocols.TMQ
             SetTarget(target);
         }
 
+        /// <summary>
+        /// Creates new TMQ Protocol message with specified type and target
+        /// </summary>
+        public TmqMessage(MessageType type, string target, ushort contentType)
+        {
+            Type = type;
+            ContentType = contentType;
+            SetTarget(target);
+        }
+
         #endregion
 
         #region Methods

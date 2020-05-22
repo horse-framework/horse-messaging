@@ -877,11 +877,8 @@ namespace Twino.Client.TMQ
         /// </summary>
         public async Task<TmqMessage> RequestJson(string target, ushort contentType, object model)
         {
-            TmqMessage message = new TmqMessage(MessageType.DirectMessage);
-            message.SetTarget(target);
-            message.ContentType = contentType;
+            TmqMessage message = new TmqMessage(MessageType.DirectMessage, target, contentType);
             await message.SetJsonContent(model);
-
             return await Request(message);
         }
 
@@ -890,11 +887,8 @@ namespace Twino.Client.TMQ
         /// </summary>
         public async Task<TmqMessage> Request(string target, ushort contentType, MemoryStream content)
         {
-            TmqMessage message = new TmqMessage(MessageType.DirectMessage);
-            message.SetTarget(target);
+            TmqMessage message = new TmqMessage(MessageType.DirectMessage, target, contentType);
             message.Content = content;
-            message.ContentType = contentType;
-
             return await Request(message);
         }
 
@@ -903,11 +897,8 @@ namespace Twino.Client.TMQ
         /// </summary>
         public async Task<TmqMessage> Request(string target, ushort contentType, string content)
         {
-            TmqMessage message = new TmqMessage(MessageType.DirectMessage);
-            message.SetTarget(target);
-            message.ContentType = contentType;
+            TmqMessage message = new TmqMessage(MessageType.DirectMessage, target, contentType);
             message.SetStringContent(content);
-
             return await Request(message);
         }
 
@@ -934,6 +925,35 @@ namespace Twino.Client.TMQ
 
         #endregion
 
+        #region Router
+
+        /// <summary>
+        /// Publishes a JSON object to a router
+        /// </summary>
+        public async Task<TwinoResult> PublishJson<TModel>(string routerName, TModel model, bool waitForAcknowledge = false, ushort contentType = 0)
+        {
+            TmqMessage message = new TmqMessage(MessageType.Router, routerName, contentType);
+            message.SetMessageId(UniqueIdGenerator.Create());
+
+            message.Content = new MemoryStream();
+            await System.Text.Json.JsonSerializer.SerializeAsync(message.Content, model);
+
+            return await SendAndWaitForAcknowledge(message, waitForAcknowledge);
+        }
+
+        /// <summary>
+        /// Sends a request to router.
+        /// Waits response from at least one binding.
+        /// </summary>
+        public async Task<TmqMessage> PublishRequestJson<TModel>(string routerName, ushort contentType, TModel model)
+        {
+            TmqMessage message = new TmqMessage(MessageType.Router, routerName, contentType);
+            await message.SetJsonContent(model);
+            return await Request(message);
+        }
+
+        #endregion
+
         #region Push
 
         /// <summary>
@@ -941,10 +961,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         public async Task<TwinoResult> PushJson(string channel, ushort queueId, object jsonObject, bool waitAcknowledge)
         {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.QueueMessage;
-            message.ContentType = queueId;
-            message.SetTarget(channel);
+            TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
             message.Content = new MemoryStream();
             message.PendingAcknowledge = waitAcknowledge;
             await System.Text.Json.JsonSerializer.SerializeAsync(message.Content, jsonObject, jsonObject.GetType());
@@ -968,10 +985,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         public async Task<TwinoResult> Push(string channel, ushort queueId, MemoryStream content, bool waitAcknowledge)
         {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.QueueMessage;
-            message.ContentType = queueId;
-            message.SetTarget(channel);
+            TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
             message.Content = content;
             message.PendingAcknowledge = waitAcknowledge;
 
@@ -987,10 +1001,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         public bool PushJsonSync(string channel, ushort queueId, object jsonObject)
         {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.QueueMessage;
-            message.ContentType = queueId;
-            message.SetTarget(channel);
+            TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
             message.PendingAcknowledge = false;
             byte[] data = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(jsonObject, jsonObject.GetType());
             message.Content = new MemoryStream(data);
@@ -1008,10 +1019,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         public bool PushSync(string channel, ushort queueId, byte[] data)
         {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.QueueMessage;
-            message.ContentType = queueId;
-            message.SetTarget(channel);
+            TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
             message.PendingAcknowledge = false;
             message.Content = new MemoryStream(data);
             message.Content.Position = 0;
@@ -1031,10 +1039,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         public async Task<PullContainer> Pull(PullRequest request, Func<int, TmqMessage, Task> actionForEachMessage = null)
         {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.QueuePullRequest;
-            message.ContentType = request.QueueId;
-            message.SetTarget(request.Channel);
+            TmqMessage message = new TmqMessage(MessageType.QueuePullRequest, request.Channel, request.QueueId);
             message.SetMessageId(UniqueIdGenerator.Create());
             message.AddHeader(TmqHeaders.COUNT, request.Count);
 

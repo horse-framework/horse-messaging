@@ -37,11 +37,15 @@ namespace Twino.MQ.Routing
             if (queue == null)
                 return false;
 
-            TmqMessage msg = message.Clone(true, true, message.MessageId);
+            string messageId = Interaction == BindingInteraction.None
+                                   ? Router.Server.MessageIdGenerator.Create()
+                                   : message.MessageId;
+
+            TmqMessage msg = message.Clone(true, true, messageId);
             msg.ContentType = ContentType;
             msg.PendingAcknowledge = false;
             msg.PendingResponse = false;
-            
+
             if (Interaction == BindingInteraction.Acknowledge)
                 msg.PendingAcknowledge = true;
             else if (Interaction == BindingInteraction.Response)
