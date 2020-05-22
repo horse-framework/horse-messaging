@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Queues;
@@ -13,6 +14,7 @@ namespace Twino.MQ.Routing
     public class QueueBinding : Binding
     {
         private ChannelQueue _targetQueue;
+        private DateTime _queueUpdateTime;
 
         /// <summary>
         /// Creates new direct binding.
@@ -58,7 +60,7 @@ namespace Twino.MQ.Routing
         /// <returns></returns>
         private ChannelQueue GetQueue()
         {
-            if (_targetQueue != null)
+            if (_targetQueue != null && DateTime.UtcNow - _queueUpdateTime < TimeSpan.FromMinutes(1))
                 return _targetQueue;
 
             Channel channel = Router.Server.FindChannel(Target);
@@ -69,6 +71,7 @@ namespace Twino.MQ.Routing
             if (queue == null)
                 return null;
 
+            _queueUpdateTime = DateTime.UtcNow;
             _targetQueue = queue;
             return _targetQueue;
         }

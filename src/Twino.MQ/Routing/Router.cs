@@ -10,7 +10,7 @@ namespace Twino.MQ.Routing
     /// Twino MQ Router object.
     /// A router, routes messages to its' bindings
     /// </summary>
-    public class Router
+    public class Router : IRouter
     {
         #region Properties
 
