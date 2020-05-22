@@ -14,7 +14,7 @@ namespace Twino.MQ
         /// </summary>
         public static TwinoServer UseMqServer(this TwinoServer server, MqServer mqServer)
         {
-            MqConnectionHandler handler = new MqConnectionHandler(mqServer);
+            NetworkMessageHandler handler = new NetworkMessageHandler(mqServer);
             mqServer.Server = server;
 
             mqServer.NodeServer.ConnectionHandler = new NodeConnectionHandler(mqServer.NodeServer, handler);

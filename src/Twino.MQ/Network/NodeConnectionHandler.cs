@@ -18,12 +18,12 @@ namespace Twino.MQ.Network
         private static readonly TmqWriter _writer = new TmqWriter();
 
         private readonly NodeServer _server;
-        private readonly MqConnectionHandler _connectionHandler;
+        private readonly NetworkMessageHandler _connectionHandler;
 
         /// <summary>
         /// 
         /// </summary>
-        internal NodeConnectionHandler(NodeServer server, MqConnectionHandler connectionHandler)
+        internal NodeConnectionHandler(NodeServer server, NetworkMessageHandler connectionHandler)
         {
             _server = server;
             _connectionHandler = connectionHandler;

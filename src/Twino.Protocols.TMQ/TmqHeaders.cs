@@ -41,6 +41,11 @@ namespace Twino.Protocols.TMQ
         public const string NACK_REASON_NONE = "none";
 
         /// <summary>
+        /// "no-consumers"
+        /// </summary>
+        public const string NACK_REASON_NO_CONSUMERS = "no-consumers";
+
+        /// <summary>
         /// "timeout"
         /// </summary>
         public const string NACK_REASON_TIMEOUT = "timeout";

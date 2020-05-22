@@ -7,6 +7,7 @@ using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
 using Twino.MQ.Queues;
+using Twino.MQ.Routing;
 using Twino.MQ.Security;
 using Twino.Protocols.TMQ;
 using Twino.Server;
@@ -38,6 +39,13 @@ namespace Twino.MQ
         /// All connected clients in the server
         /// </summary>
         public IEnumerable<MqClient> Clients => _clients.GetAsClone();
+
+        private readonly SafeList<IRouter> _routers;
+
+        /// <summary>
+        /// All channels of the server
+        /// </summary>
+        public IEnumerable<IRouter> Routers => _routers.GetAsClone();
 
         /// <summary>
         /// Underlying Twino Server
@@ -137,6 +145,7 @@ namespace Twino.MQ
             Authenticator = authenticator;
             Authorization = authorization;
 
+            _routers = new SafeList<IRouter>(256);
             _channels = new SafeList<Channel>(256);
             _clients = new SafeList<MqClient>(2048);
 
@@ -251,7 +260,7 @@ namespace Twino.MQ
                                      IMessageDeliveryHandler deliveryHandler,
                                      ChannelOptions options)
         {
-            if (name.Contains(" ") || name.Contains("*") || name.Contains("@") || name.Contains(";"))
+            if (!Filter.CheckNameEligibility(name))
                 throw new InvalidOperationException("Invalid channel name");
 
             if (Options.ChannelLimit > 0 && _channels.Count >= Options.ChannelLimit)
@@ -373,6 +382,58 @@ namespace Twino.MQ
         public int GetOnlineClients()
         {
             return _clients.Count;
+        }
+
+        #endregion
+
+        #region Router Actions
+
+        /// <summary>
+        /// Creates new Router and adds it to server routers.
+        /// Throws exception if name is not eligible
+        /// </summary>
+        public IRouter AddRouter(string name, RouteMethod method)
+        {
+            if (!Filter.CheckNameEligibility(name))
+                throw new InvalidOperationException("Invalid router name");
+
+            if (_routers.Find(x => x.Name == name) != null)
+                throw new DuplicateNameException();
+
+            Router router = new Router(this, name, method);
+            _routers.Add(router);
+            return router;
+        }
+
+        /// <summary>
+        /// Adds new router to server server routers
+        /// Throws exception if name is not eligible
+        /// </summary>
+        public void AddRouter(IRouter router)
+        {
+            if (!Filter.CheckNameEligibility(router.Name))
+                throw new InvalidOperationException("Invalid router name");
+
+            if (_routers.Find(x => x.Name == router.Name) != null)
+                throw new DuplicateNameException();
+
+            _routers.Add(router);
+        }
+
+        /// <summary>
+        /// Removes the router from server routers
+        /// </summary>
+        public void RemoveRouter(IRouter router)
+        {
+            _routers.Remove(router);
+        }
+
+        /// <summary>
+        /// Finds router by it's name
+        /// </summary>
+        public IRouter FindRouter(string name)
+        {
+            return _routers.Find(x => x.Name == name);
         }
 
         #endregion

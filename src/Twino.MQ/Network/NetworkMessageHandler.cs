@@ -10,7 +10,7 @@ namespace Twino.MQ.Network
     /// <summary>
     /// Message queue server handler
     /// </summary>
-    internal class MqConnectionHandler : IProtocolConnectionHandler<TmqServerSocket, TmqMessage>
+    internal class NetworkMessageHandler : IProtocolConnectionHandler<TmqServerSocket, TmqMessage>
     {
         #region Fields
 
@@ -21,17 +21,19 @@ namespace Twino.MQ.Network
 
         private readonly INetworkMessageHandler _serverHandler;
         private readonly INetworkMessageHandler _queueMessageHandler;
+        private readonly INetworkMessageHandler _routerMessageHandler;
         private readonly INetworkMessageHandler _pullRequestHandler;
         private readonly INetworkMessageHandler _clientHandler;
         private readonly INetworkMessageHandler _responseHandler;
         private readonly INetworkMessageHandler _acknowledgeHandler;
         private readonly INetworkMessageHandler _instanceHandler;
 
-        public MqConnectionHandler(MqServer server)
+        public NetworkMessageHandler(MqServer server)
         {
             _server = server;
             _serverHandler = new ServerMessageHandler(server);
             _queueMessageHandler = new QueueMessageHandler(server);
+            _routerMessageHandler = new RouterMessageHandler(server);
             _pullRequestHandler = new PullRequestMessageHandler(server);
             _clientHandler = new DirectMessageHandler(server);
             _responseHandler = new ResponseMessageHandler(server);
@@ -165,6 +167,11 @@ namespace Twino.MQ.Network
                         _ = _instanceHandler.Handle(mc, message);
                     return _queueMessageHandler.Handle(mc, message);
 
+                case MessageType.Router:
+                    if (!fromNode)
+                        _ = _instanceHandler.Handle(mc, message);
+                    return _routerMessageHandler.Handle(mc, message);
+
                 //sends pull request to a queue
                 case MessageType.QueuePullRequest:
                     return _pullRequestHandler.Handle(mc, message);
@@ -179,7 +186,7 @@ namespace Twino.MQ.Network
                 case MessageType.Acknowledge:
                     if (!fromNode)
                         _ = _instanceHandler.Handle(mc, message);
-                    
+
                     return _acknowledgeHandler.Handle(mc, message);
 
                 //client sends a response message for a message

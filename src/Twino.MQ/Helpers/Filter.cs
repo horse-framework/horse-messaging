@@ -20,5 +20,16 @@ namespace Twino.MQ.Helpers
 
             return value.Equals(filter, StringComparison.InvariantCultureIgnoreCase);
         }
+
+        /// <summary>
+        /// Checks channel, router or client name if it's eligible
+        /// </summary>
+        public static bool CheckNameEligibility(string name)
+        {
+            if (name.Contains('@') || name.Contains(' ') || name.Contains(';') || name.Contains('*'))
+                return false;
+
+            return true;
+        }
     }
 }
