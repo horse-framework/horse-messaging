@@ -10,7 +10,7 @@ using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
 using Xunit;
 
-namespace Test.Mq
+namespace Test.Mq.Statuses
 {
     public class PushStatusTest
     {
@@ -112,6 +112,12 @@ namespace Test.Mq
 
             TwinoResult ack = await producer.Push("ch-push", MessageA.ContentType, "Hello, World!", true);
             Assert.Equal(queueAckIsActive, ack.Code == TwinoResultCode.Ok);
+        }
+
+        [Fact]
+        public async Task PushWithCC()
+        {
+            throw new NotImplementedException();
         }
     }
 }

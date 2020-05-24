@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Test.Mq
 {
-    public class MessageReaderTest
+    public class MessageConsumerTest
     {
         /// <summary>
         /// Clients subscribes to a queue and reads message with message reader
@@ -169,6 +169,16 @@ namespace Test.Mq
             await Task.Delay(1500);
             Assert.True(client.IsConnected);
             Assert.True(thrown);
+        }
+
+
+        /// <summary>
+        /// Uses OnDirect and OffDirect methods
+        /// </summary>
+        [Fact]
+        public async Task ConsumeDirectMessages()
+        {
+            throw new NotImplementedException();
         }
     }
 }

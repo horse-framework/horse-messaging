@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Test.Mq.Internal;
@@ -170,7 +171,16 @@ namespace Test.Mq.Operators
             Assert.NotNull(result.Model);
             var queue = result.Model.FirstOrDefault();
             Assert.NotNull(queue);
-            Assert.Equal(MessageA.ContentType,queue.Id);
+            Assert.Equal(MessageA.ContentType, queue.Id);
+        }
+
+        [Theory]
+        [InlineData(true, true)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        public async Task ClearMessages(bool priorityMessages, bool messages)
+        {
+            throw new NotImplementedException();
         }
     }
 }

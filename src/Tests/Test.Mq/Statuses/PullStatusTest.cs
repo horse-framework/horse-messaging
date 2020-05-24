@@ -9,7 +9,7 @@ using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
 using Xunit;
 
-namespace Test.Mq
+namespace Test.Mq.Statuses
 {
     public class PullStatusTest
     {
@@ -72,7 +72,7 @@ namespace Test.Mq
             Assert.NotNull(queue);
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
-            
+
             TmqClient consumer = new TmqClient();
             consumer.AutoAcknowledge = true;
             consumer.ClientId = "consumer";
@@ -103,6 +103,33 @@ namespace Test.Mq
             Assert.Equal(PullProcess.Completed, pull.Status);
             Assert.Equal(1, pull.ReceivedCount);
             Assert.NotEmpty(pull.ReceivedMessages);
+        }
+
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task PullOrder(bool fifo)
+        {
+            throw new NotImplementedException();
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(3)]
+        [InlineData(10)]
+        public async Task PullCount(int count)
+        {
+            throw new NotImplementedException();
+        }
+
+        [Theory]
+        [InlineData(true, true)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        public async Task PullClearAfter(bool priorityMessages, bool messages)
+        {
+            throw new NotImplementedException();
         }
     }
 }

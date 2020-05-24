@@ -10,9 +10,9 @@ using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
 using Xunit;
 
-namespace Test.Mq
+namespace Test.Mq.Statuses
 {
-    public class RouteStatusTest
+    public class BroadcastStatusTest
     {
         [Theory]
         [InlineData(1)]
