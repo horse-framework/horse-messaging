@@ -55,7 +55,7 @@ namespace Twino.MQ
         /// <summary>
         /// Node server for distribitued systems
         /// </summary>
-        public NodeServer NodeServer { get; }
+        public InstanceManager InstanceManager { get; }
 
         /// <summary>
         /// Client authenticator implementation.
@@ -149,9 +149,9 @@ namespace Twino.MQ
             _channels = new SafeList<Channel>(256);
             _clients = new SafeList<MqClient>(2048);
 
-            NodeServer = new NodeServer(this);
+            InstanceManager = new InstanceManager(this);
 
-            NodeServer.Initialize();
+            InstanceManager.Initialize();
         }
 
         #endregion

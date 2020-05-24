@@ -794,7 +794,7 @@ namespace Twino.MQ.Network
             List<InstanceInformation> list = new List<InstanceInformation>();
 
             //slave instances
-            List<MqClient> slaves = _server.NodeServer.Clients.GetAsClone();
+            List<MqClient> slaves = _server.InstanceManager.Clients.GetAsClone();
             foreach (MqClient slave in slaves)
             {
                 list.Add(new InstanceInformation
@@ -809,7 +809,7 @@ namespace Twino.MQ.Network
             }
 
             //master instances
-            foreach (TmqStickyConnector connector in _server.NodeServer.Connectors)
+            foreach (TmqStickyConnector connector in _server.InstanceManager.Connectors)
             {
                 NodeOptions options = connector.Tag as NodeOptions;
                 TmqClient c = connector.GetClient();

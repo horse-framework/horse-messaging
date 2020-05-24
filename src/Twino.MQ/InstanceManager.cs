@@ -9,14 +9,16 @@ using Twino.MQ.Helpers;
 using Twino.MQ.Network;
 using Twino.MQ.Options;
 using Twino.MQ.Security;
+using Twino.Protocols.TMQ;
 using Twino.Server;
 
 namespace Twino.MQ
 {
     /// <summary>
-    /// 
+    /// Instance manager, manages clustered Twino MQ Servers.
+    /// Accepts slave nodes and connects to master nodes.
     /// </summary>
-    public class NodeServer
+    public class InstanceManager
     {
         #region Properties
 
@@ -56,7 +58,7 @@ namespace Twino.MQ
         /// <summary>
         /// 
         /// </summary>
-        public NodeServer(MqServer server)
+        public InstanceManager(MqServer server)
         {
             Server = server;
         }
@@ -151,11 +153,11 @@ namespace Twino.MQ
                 return;
 
             _nodeServer = new TwinoServer(new ServerOptions
-            {
-                Hosts = new List<HostOptions> { Server.Options.NodeHost },
-                PingInterval = 15,
-                RequestTimeout = 15
-            });
+                                          {
+                                              Hosts = new List<HostOptions> {Server.Options.NodeHost},
+                                              PingInterval = 15,
+                                              RequestTimeout = 15
+                                          });
 
             _nodeServer.Start();
         }
@@ -173,5 +175,15 @@ namespace Twino.MQ
         }
 
         #endregion
+
+
+        /// <summary>
+        /// Sends a message to connected master nodes
+        /// </summary>
+        public void SendMessageToNodes(TmqMessage message)
+        {
+            foreach (TmqStickyConnector connector in Connectors)
+                _ = connector.SendAsync(message);
+        }
     }
 }

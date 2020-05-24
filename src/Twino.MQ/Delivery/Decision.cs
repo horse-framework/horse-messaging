@@ -37,7 +37,7 @@ namespace Twino.MQ.Delivery
     /// <summary>
     /// Decision description for each step in message delivery
     /// </summary>
-    public struct Decision
+    public readonly struct Decision
     {
         /// <summary>
         /// If true, operation will continue

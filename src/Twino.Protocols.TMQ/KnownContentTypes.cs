@@ -130,5 +130,10 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public const ushort ClientList = 631;
 
+        /// <summary>
+        /// "641" Node instance sends a decision to other nodes
+        /// </summary>
+        public const ushort DecisionOverNode = 641;
+
     }
 }

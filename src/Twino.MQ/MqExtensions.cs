@@ -17,11 +17,11 @@ namespace Twino.MQ
             NetworkMessageHandler handler = new NetworkMessageHandler(mqServer);
             mqServer.Server = server;
 
-            mqServer.NodeServer.ConnectionHandler = new NodeConnectionHandler(mqServer.NodeServer, handler);
+            mqServer.InstanceManager.ConnectionHandler = new NodeConnectionHandler(mqServer.InstanceManager, handler);
             server.UseTmq(handler);
 
-            if (mqServer.NodeServer != null)
-                mqServer.NodeServer.SubscribeStartStop(server);
+            if (mqServer.InstanceManager != null)
+                mqServer.InstanceManager.SubscribeStartStop(server);
 
             return server;
         }

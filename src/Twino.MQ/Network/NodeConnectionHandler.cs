@@ -1,8 +1,11 @@
+using System;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Core.Protocols;
 using Twino.MQ.Clients;
+using Twino.MQ.Delivery;
 using Twino.MQ.Helpers;
+using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Network
@@ -17,13 +20,13 @@ namespace Twino.MQ.Network
         /// </summary>
         private static readonly TmqWriter _writer = new TmqWriter();
 
-        private readonly NodeServer _server;
+        private readonly InstanceManager _server;
         private readonly NetworkMessageHandler _connectionHandler;
 
         /// <summary>
         /// 
         /// </summary>
-        internal NodeConnectionHandler(NodeServer server, NetworkMessageHandler connectionHandler)
+        internal NodeConnectionHandler(InstanceManager server, NetworkMessageHandler connectionHandler)
         {
             _server = server;
             _connectionHandler = connectionHandler;
@@ -73,28 +76,55 @@ namespace Twino.MQ.Network
         /// <summary>
         /// 
         /// </summary>
-        public async Task Ready(ITwinoServer server, TmqServerSocket client)
+        public Task Ready(ITwinoServer server, TmqServerSocket client)
         {
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
 
         /// <summary>
         /// 
         /// </summary>
-        public async Task Received(ITwinoServer server, IConnectionInfo info, TmqServerSocket client, TmqMessage message)
+        public Task Received(ITwinoServer server, IConnectionInfo info, TmqServerSocket client, TmqMessage message)
         {
-            MqClient mc = (MqClient)client;
-            await _connectionHandler.RouteToHandler(mc, message, true);
+            MqClient mc = (MqClient) client;
+            if (message.Type == MessageType.Server)
+            {
+                if (message.ContentType == KnownContentTypes.DecisionOverNode)
+                    return DecisionOverNode(message);
+            }
+
+            return _connectionHandler.RouteToHandler(mc, message, true);
         }
 
         /// <summary>
         /// 
         /// </summary>
-        public async Task Disconnected(ITwinoServer server, TmqServerSocket client)
+        public Task Disconnected(ITwinoServer server, TmqServerSocket client)
         {
-            MqClient node = (MqClient)client;
+            MqClient node = (MqClient) client;
             _server.Clients.Remove(node);
-            await Task.CompletedTask;
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Reads decision and applies it
+        /// </summary>
+        private async Task DecisionOverNode(TmqMessage message)
+        {
+            DecisionOverNode model = await message.GetJsonContent<DecisionOverNode>();
+            if (model == null)
+                return;
+
+            Channel channel = _server.Server.FindChannel(model.Channel);
+            if (channel == null)
+                return;
+
+            ChannelQueue queue = channel.FindQueue(model.Queue);
+            if (queue == null)
+                return;
+
+            Decision decision = new Decision(model.Allow, model.SaveMessage, model.PutBack, model.Acknowledge);
+            _ = queue.ApplyDecisionOverNode(model.MessageId, decision);
         }
     }
 }

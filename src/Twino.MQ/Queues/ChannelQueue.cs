@@ -730,6 +730,64 @@ namespace Twino.MQ.Queues
             return message.IsSaved;
         }
 
+        /// <summary>
+        /// Sends decision to all connected master nodes
+        /// </summary>
+        public async Task SendDecisionToNodes(QueueMessage queueMessage, Decision decision)
+        {
+            TmqMessage msg = new TmqMessage(MessageType.Server, null, 10);
+            DecisionOverNode model = new DecisionOverNode
+                                     {
+                                         Channel = Channel.Name,
+                                         Queue = Id,
+                                         MessageId = queueMessage.Message.MessageId,
+                                         Acknowledge = decision.Acknowledge,
+                                         Allow = decision.Allow,
+                                         PutBack = decision.PutBack,
+                                         SaveMessage = decision.SaveMessage
+                                     };
+
+            await msg.SetJsonContent(model);
+            Channel.Server.InstanceManager.SendMessageToNodes(msg);
+        }
+
+        /// <summary>
+        /// Applies decision over node to the queue
+        /// </summary>
+        internal async Task ApplyDecisionOverNode(string messageId, Decision decision)
+        {
+            QueueMessage message = null;
+            await RunInListSync(() =>
+            {
+                //pull from prefential messages
+                if (HighPriorityLinkedList.Count > 0)
+                {
+                    message = HighPriorityLinkedList.FirstOrDefault(x => x.Message.MessageId == messageId);
+                    if (message != null)
+                    {
+                        message.IsInQueue = false;
+                        HighPriorityLinkedList.Remove(message);
+                    }
+                }
+
+                //if there is no prefential message, pull from standard messages
+                if (message == null && RegularLinkedList.Count > 0)
+                {
+                    message = RegularLinkedList.FirstOrDefault(x => x.Message.MessageId == messageId);
+                    if (message != null)
+                    {
+                        message.IsInQueue = false;
+                        RegularLinkedList.Remove(message);
+                    }
+                }
+            });
+
+            if (message == null)
+                return;
+
+            await ApplyDecision(decision, message);
+        }
+
         #endregion
 
         #region Acknowledge
