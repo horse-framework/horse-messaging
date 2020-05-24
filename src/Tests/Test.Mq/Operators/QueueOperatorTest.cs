@@ -174,6 +174,9 @@ namespace Test.Mq.Operators
             Assert.Equal(MessageA.ContentType, queue.Id);
         }
 
+        /// <summary>
+        /// Clears messages in queue
+        /// </summary>
         [Theory]
         [InlineData(true, true)]
         [InlineData(true, false)]

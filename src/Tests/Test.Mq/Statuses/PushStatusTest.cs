@@ -114,6 +114,9 @@ namespace Test.Mq.Statuses
             Assert.Equal(queueAckIsActive, ack.Code == TwinoResultCode.Ok);
         }
 
+        /// <summary>
+        /// Pushes message to multiple channels with CC header
+        /// </summary>
         [Fact]
         public async Task PushWithCC()
         {

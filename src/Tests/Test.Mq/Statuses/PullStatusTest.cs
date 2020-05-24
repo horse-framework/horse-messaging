@@ -105,7 +105,9 @@ namespace Test.Mq.Statuses
             Assert.NotEmpty(pull.ReceivedMessages);
         }
 
-
+        /// <summary>
+        /// Pull messages in FIFO and LIFO order
+        /// </summary>
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
@@ -114,6 +116,9 @@ namespace Test.Mq.Statuses
             throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Pull multiple messages in a request
+        /// </summary>
         [Theory]
         [InlineData(1)]
         [InlineData(3)]
@@ -123,11 +128,15 @@ namespace Test.Mq.Statuses
             throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Clear messages after pull operation is completed
+        /// </summary>
         [Theory]
-        [InlineData(true, true)]
-        [InlineData(true, false)]
-        [InlineData(false, true)]
-        public async Task PullClearAfter(bool priorityMessages, bool messages)
+        [InlineData(3, true, true)]
+        [InlineData(3, true, false)]
+        [InlineData(3, false, true)]
+        [InlineData(10, true, true)]
+        public async Task PullClearAfter(int count, bool priorityMessages, bool messages)
         {
             throw new NotImplementedException();
         }
