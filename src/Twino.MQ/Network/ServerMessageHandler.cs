@@ -93,6 +93,10 @@ namespace Twino.MQ.Network
                 case KnownContentTypes.UpdateQueue:
                     return UpdateQueue(client, message);
 
+                //clear messages in queue
+                case KnownContentTypes.ClearMessages:
+                    return ClearMessages(client, message);
+
                 //get queue information list
                 case KnownContentTypes.QueueList:
                     return GetQueueList(client, message);
@@ -614,6 +618,69 @@ namespace Twino.MQ.Network
             builder.ApplyToQueue(queue.Options);
             if (builder.Status.HasValue)
                 await queue.SetStatus(builder.Status.Value);
+
+            //if creation successful, sends response
+            if (message.PendingResponse)
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
+        }
+
+        /// <summary>
+        /// Clears messages in a queue
+        /// </summary>
+        private async Task ClearMessages(MqClient client, TmqMessage message)
+        {
+            string queueId = message.FindHeader(TmqHeaders.QUEUE_ID);
+            if (string.IsNullOrEmpty(queueId))
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.Unacceptable));
+
+            ushort contentType = Convert.ToUInt16(queueId);
+
+            if (_server.AdminAuthorization == null)
+            {
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
+
+                return;
+            }
+
+            Channel channel = _server.FindChannel(message.Target);
+            if (channel == null)
+            {
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
+
+                return;
+            }
+
+            ChannelQueue queue = channel.FindQueue(contentType);
+            if (queue == null)
+            {
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
+
+                return;
+            }
+
+            string prio = message.FindHeader(TmqHeaders.PRIORITY_MESSAGES);
+            string msgs = message.FindHeader(TmqHeaders.MESSAGES);
+            bool clearPrio = !string.IsNullOrEmpty(prio) && prio.Equals("yes", StringComparison.InvariantCultureIgnoreCase);
+            bool clearMsgs = !string.IsNullOrEmpty(msgs) && msgs.Equals("yes", StringComparison.InvariantCultureIgnoreCase);
+
+            bool grant = await _server.AdminAuthorization.CanClearQueueMessages(client, queue, clearPrio, clearMsgs);
+            if (!grant)
+            {
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
+
+                return;
+            }
+
+            if (clearPrio && clearMsgs)
+                queue.ClearAllMessages();
+            else if (clearPrio)
+                queue.ClearHighPriorityMessages();
+            else if (clearMsgs)
+                queue.ClearRegularMessages();
 
             //if creation successful, sends response
             if (message.PendingResponse)

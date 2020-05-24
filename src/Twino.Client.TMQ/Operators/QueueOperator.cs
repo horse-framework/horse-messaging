@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Twino.Client.TMQ.Models;
@@ -83,7 +82,9 @@ namespace Twino.Client.TMQ.Operators
 
         //todo: check
         /// <summary>
-        /// Deletes a queue in a channel in server
+        /// Deletes a queue in a channel in server.
+        /// Required administration permission.
+        /// If server has no implementation for administration authorization, request is not allowed.
         /// </summary>
         public async Task<TwinoResult> Delete(string channel, ushort queueId, bool verifyResponse)
         {
@@ -112,14 +113,43 @@ namespace Twino.Client.TMQ.Operators
 
             message.AddHeader(TmqHeaders.CHANNEL_NAME, channel);
             message.AddHeader(TmqHeaders.QUEUE_ID, queueId);
-            
+
             QueueOptions options = new QueueOptions();
             optionsAction(options);
-            
+
             message.Content = new MemoryStream();
             await JsonSerializer.SerializeAsync(message.Content, options);
 
             return await _client.WaitResponse(message, true);
+        }
+
+        /// <summary>
+        /// Clears messages in a queue.
+        /// Required administration permission.
+        /// If server has no implementation for administration authorization, request is not allowed.
+        /// </summary>
+        public Task<TwinoResult> SetOptions(string channel, ushort queueId, bool clearPriorityMessages, bool clearMessages)
+        {
+            if (!clearPriorityMessages && !clearMessages)
+                return Task.FromResult(TwinoResult.Failed());
+
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ContentType = KnownContentTypes.ClearMessages;
+            message.SetTarget(channel);
+            message.PendingResponse = true;
+            message.SetMessageId(_client.UniqueIdGenerator.Create());
+
+            message.AddHeader(TmqHeaders.CHANNEL_NAME, channel);
+            message.AddHeader(TmqHeaders.QUEUE_ID, queueId);
+
+            if (clearPriorityMessages)
+                message.AddHeader(TmqHeaders.PRIORITY_MESSAGES, "yes");
+
+            if (clearMessages)
+                message.AddHeader(TmqHeaders.MESSAGES, "yes");
+
+            return _client.WaitResponse(message, true);
         }
     }
 }
