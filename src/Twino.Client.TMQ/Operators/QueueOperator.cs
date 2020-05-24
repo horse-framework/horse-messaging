@@ -128,7 +128,7 @@ namespace Twino.Client.TMQ.Operators
         /// Required administration permission.
         /// If server has no implementation for administration authorization, request is not allowed.
         /// </summary>
-        public Task<TwinoResult> SetOptions(string channel, ushort queueId, bool clearPriorityMessages, bool clearMessages)
+        public Task<TwinoResult> ClearMessages(string channel, ushort queueId, bool clearPriorityMessages, bool clearMessages)
         {
             if (!clearPriorityMessages && !clearMessages)
                 return Task.FromResult(TwinoResult.Failed());
