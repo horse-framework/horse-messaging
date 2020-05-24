@@ -182,19 +182,19 @@ namespace Twino.MQ.Queues.States
             await _queue.RunInListSync(() =>
             {
                 //pull from prefential messages
-                if (_queue.HighPriorityLinkedList.Count > 0)
+                if (_queue.PriorityMessagesList.Count > 0)
                 {
                     if (fifo)
                     {
                         // ReSharper disable once PossibleNullReferenceException
-                        message = _queue.HighPriorityLinkedList.First.Value;
-                        _queue.HighPriorityLinkedList.RemoveFirst();
+                        message = _queue.PriorityMessagesList.First.Value;
+                        _queue.PriorityMessagesList.RemoveFirst();
                     }
                     else
                     {
                         // ReSharper disable once PossibleNullReferenceException
-                        message = _queue.HighPriorityLinkedList.Last.Value;
-                        _queue.HighPriorityLinkedList.RemoveLast();
+                        message = _queue.PriorityMessagesList.Last.Value;
+                        _queue.PriorityMessagesList.RemoveLast();
                     }
 
                     if (message != null)
@@ -202,19 +202,19 @@ namespace Twino.MQ.Queues.States
                 }
 
                 //if there is no prefential message, pull from standard messages
-                if (message == null && _queue.RegularLinkedList.Count > 0)
+                if (message == null && _queue.MessagesList.Count > 0)
                 {
                     if (fifo)
                     {
                         // ReSharper disable once PossibleNullReferenceException
-                        message = _queue.RegularLinkedList.First.Value;
-                        _queue.RegularLinkedList.RemoveFirst();
+                        message = _queue.MessagesList.First.Value;
+                        _queue.MessagesList.RemoveFirst();
                     }
                     else
                     {
                         // ReSharper disable once PossibleNullReferenceException
-                        message = _queue.RegularLinkedList.Last.Value;
-                        _queue.RegularLinkedList.RemoveLast();
+                        message = _queue.MessagesList.Last.Value;
+                        _queue.MessagesList.RemoveLast();
                     }
 
                     if (message != null)

@@ -42,7 +42,7 @@ namespace Test.Mq
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1500);
-            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.PriorityMessages);
             Assert.Empty(queue.RegularMessages);
 
             bool received = false;
@@ -96,7 +96,7 @@ namespace Test.Mq
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1500);
-            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.PriorityMessages);
             Assert.Empty(queue.RegularMessages);
             Assert.True(received);
         }
@@ -142,7 +142,7 @@ namespace Test.Mq
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1500);
-            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.PriorityMessages);
             Assert.Empty(queue.RegularMessages);
             Assert.True(received);
         }
@@ -244,7 +244,7 @@ namespace Test.Mq
 
             await Task.Delay(1500);
 
-            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.PriorityMessages);
             Assert.Empty(queue.RegularMessages);
             int c = received.Count(x => x);
             Assert.Equal(1, c);
@@ -306,7 +306,7 @@ namespace Test.Mq
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(250);
 
-            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.PriorityMessages);
             Assert.Empty(queue.RegularMessages);
             int c = received.Count(x => x);
             Assert.Equal(1, c);
@@ -343,7 +343,7 @@ namespace Test.Mq
             TwinoResult sent = await client.Push(channel.Name, queue.Id, ms, true);
             Assert.NotEqual(TwinoResultCode.Ok, sent.Code);
 
-            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.PriorityMessages);
             Assert.Empty(queue.RegularMessages);
 
             bool received = false;
@@ -401,7 +401,7 @@ namespace Test.Mq
             TwinoResult sent = await client.Push(channel.Name, queue.Id, ms, true);
 
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
-            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.PriorityMessages);
             Assert.Empty(queue.RegularMessages);
             Assert.True(received);
         }
@@ -460,7 +460,7 @@ namespace Test.Mq
             await Task.Delay(250);
 
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
-            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.PriorityMessages);
             Assert.Empty(queue.RegularMessages);
             Assert.True(receive1);
             Assert.True(receive2);
@@ -560,7 +560,7 @@ namespace Test.Mq
             TwinoResult sent = await client.Push(channel.Name, queue.Id, ms, true);
 
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
-            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.PriorityMessages);
             Assert.Empty(queue.RegularMessages);
             Assert.True(received);
         }
@@ -620,7 +620,7 @@ namespace Test.Mq
             await Task.Delay(250);
 
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
-            Assert.Empty(queue.HighPriorityMessages);
+            Assert.Empty(queue.PriorityMessages);
             Assert.Empty(queue.RegularMessages);
             Assert.True(receive1);
             Assert.True(receive2);

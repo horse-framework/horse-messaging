@@ -95,8 +95,8 @@ namespace Twino.MQ.Queues
         private async Task ProcessReceiveTimeup()
         {
             List<QueueMessage> temp = new List<QueueMessage>();
-            lock (_queue.HighPriorityLinkedList)
-                ProcessReceiveTimeupOnList(_queue.HighPriorityLinkedList, temp);
+            lock (_queue.PriorityMessagesList)
+                ProcessReceiveTimeupOnList(_queue.PriorityMessagesList, temp);
 
             foreach (QueueMessage message in temp)
             {
@@ -106,8 +106,8 @@ namespace Twino.MQ.Queues
             }
 
             temp.Clear();
-            lock (_queue.RegularLinkedList)
-                ProcessReceiveTimeupOnList(_queue.RegularLinkedList, temp);
+            lock (_queue.MessagesList)
+                ProcessReceiveTimeupOnList(_queue.MessagesList, temp);
 
             foreach (QueueMessage message in temp)
             {

@@ -65,7 +65,7 @@ namespace Test.Mq
             filler.FillString(items, false, false);
 
             await Task.Delay(500);
-            Assert.NotEmpty(queue.HighPriorityMessages);
+            Assert.NotEmpty(queue.PriorityMessages);
             Assert.NotEmpty(queue.RegularMessages);
         }
 
@@ -91,7 +91,7 @@ namespace Test.Mq
             filler.FillData(items, false, false);
 
             await Task.Delay(500);
-            Assert.NotEmpty(queue.HighPriorityMessages);
+            Assert.NotEmpty(queue.PriorityMessages);
             Assert.NotEmpty(queue.RegularMessages);
         }
     }
