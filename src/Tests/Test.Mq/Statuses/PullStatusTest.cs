@@ -163,7 +163,31 @@ namespace Test.Mq.Statuses
         [InlineData(10)]
         public async Task PullCount(int count)
         {
-            throw new NotImplementedException();
+            int port = 47421 + count;
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start();
+
+            var channel = server.Server.FindChannel("ch-pull");
+            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            for (int i = 0; i < 25; i++)
+                queue.AddStringMessageWithId("Hello, World");
+
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:" + port);
+            TwinoResult joined = await client.Join("ch-pull", true);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
+
+            PullRequest request = new PullRequest
+                                  {
+                                      Channel = "ch-pull",
+                                      QueueId = MessageA.ContentType,
+                                      Count = count
+                                  };
+
+            PullContainer container = await client.Pull(request);
+            Assert.Equal(count, container.ReceivedCount);
+            Assert.Equal(PullProcess.Completed, container.Status);
         }
 
         /// <summary>
