@@ -183,7 +183,31 @@ namespace Test.Mq.Operators
         [InlineData(false, true)]
         public async Task ClearMessages(bool priorityMessages, bool messages)
         {
-            throw new NotImplementedException();
+            int port = 41282 + Convert.ToInt32(priorityMessages) + (Convert.ToInt32(messages) * 3);
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start();
+
+            var channel = server.Server.FindChannel("ch-push");
+            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            queue.AddStringMessageWithId("Hello, World", false, false);
+            queue.AddStringMessageWithId("Hello, World", false, true);
+
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:" + port);
+
+            var result = await client.Queues.ClearMessages("ch-push", MessageA.ContentType, priorityMessages, messages);
+            Assert.Equal(TwinoResultCode.Ok, result.Code);
+
+            if (priorityMessages)
+                Assert.Empty(queue.PriorityMessages);
+            else
+                Assert.NotEmpty(queue.PriorityMessages);
+
+            if (messages)
+                Assert.Empty(queue.Messages);
+            else
+                Assert.NotEmpty(queue.Messages);
         }
     }
 }

@@ -12,6 +12,9 @@ using Xunit;
 
 namespace Test.Mq.Statuses
 {
+    /// <summary>
+    /// Ports 47200 - 47220
+    /// </summary>
     public class PushStatusTest
     {
         [Theory]
@@ -67,7 +70,7 @@ namespace Test.Mq.Statuses
             ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
             Assert.NotNull(channel);
             Assert.NotNull(queue);
-            Assert.Single(queue.RegularMessages);
+            Assert.Single(queue.Messages);
 
             bool msgReceived = false;
             TmqClient consumer = new TmqClient();
@@ -120,7 +123,46 @@ namespace Test.Mq.Statuses
         [Fact]
         public async Task PushWithCC()
         {
-            throw new NotImplementedException();
+            int port = 47204;
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start(300, 300);
+
+            TmqClient producer = new TmqClient();
+            await producer.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(producer.IsConnected);
+
+            TmqClient consumer1 = new TmqClient();
+            consumer1.ClientId = "consumer-1";
+            await consumer1.ConnectAsync("tmq://localhost:" + port);
+
+            TmqClient consumer2 = new TmqClient();
+            consumer2.ClientId = "consumer-2";
+            await consumer2.ConnectAsync("tmq://localhost:" + port);
+
+            Assert.True(consumer1.IsConnected);
+            Assert.True(consumer2.IsConnected);
+
+            int consumer1Msgs = 0;
+            int consumer2Msgs = 0;
+            consumer1.MessageReceived += (c, m) => consumer1Msgs++;
+            consumer2.MessageReceived += (c, m) => consumer2Msgs++;
+
+            TwinoResult joined1 = await consumer1.Join("ch-push", true);
+            Assert.Equal(TwinoResultCode.Ok, joined1.Code);
+
+            TwinoResult joined2 = await consumer2.Join("ch-push-cc", true);
+            Assert.Equal(TwinoResultCode.Ok, joined2.Code);
+
+            TmqMessage msg = new TmqMessage(MessageType.QueueMessage, "ch-push", MessageA.ContentType);
+            msg.AddHeader(TmqHeaders.CC, "ch-push-cc");
+            msg.SetStringContent("Hello, World!");
+
+            await producer.SendAsync(msg);
+            await Task.Delay(1500);
+
+            Assert.Equal(1, consumer1Msgs);
+            Assert.Equal(1, consumer2Msgs);
         }
     }
 }

@@ -39,7 +39,7 @@ namespace Test.Mq.Statuses
             ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
             Assert.NotNull(channel);
             Assert.NotNull(queue);
-            Assert.Single(queue.RegularMessages);
+            Assert.Single(queue.Messages);
 
             PullRequest request = new PullRequest();
             request.Channel = "ch-pull";
@@ -95,7 +95,7 @@ namespace Test.Mq.Statuses
             await Task.Delay(500);
             Assert.False(taskAck.IsCompleted);
             Assert.False(msgReceived);
-            Assert.Single(queue.RegularMessages);
+            Assert.Single(queue.Messages);
 
             consumer.PullTimeout = TimeSpan.FromDays(1);
 

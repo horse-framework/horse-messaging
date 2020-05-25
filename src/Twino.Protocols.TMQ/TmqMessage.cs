@@ -271,6 +271,7 @@ namespace Twino.Protocols.TMQ
             if (cloneContent && Content != null && Content.Length > 0)
             {
                 Content.Position = 0;
+                clone.Content = new MemoryStream();
                 Content.WriteTo(clone.Content);
                 clone.Length = Convert.ToUInt64(clone.Content.Length);
             }

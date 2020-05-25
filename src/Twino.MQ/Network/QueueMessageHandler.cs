@@ -130,11 +130,11 @@ namespace Twino.MQ.Network
                 string cc = ccList[i];
 
                 string[] split = cc.Split(';');
-                if (split.Length < 2)
+                if (split.Length < 1)
                     continue;
 
-                ushort contentType = Convert.ToUInt16(split[0].Trim());
-                string channel = split[1].Trim();
+                string channel = split[0].Trim();
+                ushort contentType = split.Length > 1 ? Convert.ToUInt16(split[1].Trim()) : clone.ContentType;
                 string messageId = split.Length > 2 ? split[2].Trim() : null;
 
                 ChannelQueue queue = await FindQueue(null, channel, contentType, null);

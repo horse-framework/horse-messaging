@@ -39,8 +39,8 @@ namespace Test.Mq
             await fillerPushA.FillJson(items, false, false);
 
             await Task.Delay(500);
-            Assert.NotEmpty(routeA.RegularMessages);
-            Assert.NotEmpty(pushA.RegularMessages);
+            Assert.NotEmpty(routeA.Messages);
+            Assert.NotEmpty(pushA.Messages);
         }
 
         [Fact]
@@ -66,7 +66,7 @@ namespace Test.Mq
 
             await Task.Delay(500);
             Assert.NotEmpty(queue.PriorityMessages);
-            Assert.NotEmpty(queue.RegularMessages);
+            Assert.NotEmpty(queue.Messages);
         }
 
         [Fact]
@@ -92,7 +92,7 @@ namespace Test.Mq
 
             await Task.Delay(500);
             Assert.NotEmpty(queue.PriorityMessages);
-            Assert.NotEmpty(queue.RegularMessages);
+            Assert.NotEmpty(queue.Messages);
         }
     }
 }

@@ -73,7 +73,7 @@ namespace Test.Mq.Statuses
             ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
             Assert.NotNull(channel);
             Assert.NotNull(queue);
-            Assert.Single(queue.RegularMessages);
+            Assert.Single(queue.Messages);
 
             bool msgReceived = false;
             TmqClient consumer = new TmqClient();

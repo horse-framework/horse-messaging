@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
@@ -78,7 +80,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Standard priority queue message
         /// </summary>
-        public IEnumerable<QueueMessage> RegularMessages => MessagesList;
+        public IEnumerable<QueueMessage> Messages => MessagesList;
 
         /// <summary>
         /// Standard priority queue message
@@ -327,6 +329,63 @@ namespace Twino.MQ.Queues
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Adds new string message into the queue without Message Id and headers
+        /// </summary>
+        public void AddStringMessage(string messageContent)
+        {
+            AddStringMessage(null, messageContent);
+        }
+
+        /// <summary>
+        /// Adds new string message into the queue with Message Id and returns the Id
+        /// </summary>
+        public string AddStringMessageWithId(string messageContent,
+                                             bool firstAcquirer = false,
+                                             bool priority = false,
+                                             IEnumerable<KeyValuePair<string, string>> headers = null)
+
+        {
+            string messageId = Channel.Server.MessageIdGenerator.Create();
+            AddStringMessage(messageId, messageContent, firstAcquirer, priority, headers);
+            return messageId;
+        }
+
+        /// <summary>
+        /// Adds new string message into the queue
+        /// </summary>
+        public void AddStringMessage(string messageId,
+                                     string messageContent,
+                                     bool firstAcquirer = false,
+                                     bool priority = false,
+                                     IEnumerable<KeyValuePair<string, string>> headers = null)
+        {
+            AddBinaryMessage(messageId, Encoding.UTF8.GetBytes(messageContent), firstAcquirer, priority, headers);
+        }
+
+        /// <summary>
+        /// Adds new binary message into the queue
+        /// </summary>
+        public void AddBinaryMessage(string messageId,
+                                     byte[] messageContent,
+                                     bool firstAcquirer = false,
+                                     bool priority = false,
+                                     IEnumerable<KeyValuePair<string, string>> headers = null)
+        {
+            TmqMessage message = new TmqMessage(MessageType.QueueMessage, Channel.Name, Id);
+            message.SetMessageId(messageId);
+            message.Content = new MemoryStream(messageContent);
+            message.FirstAcquirer = firstAcquirer;
+            message.HighPriority = priority;
+
+            if (headers != null)
+                foreach (KeyValuePair<string, string> header in headers)
+                    message.AddHeader(header.Key, header.Value);
+
+            QueueMessage queueMessage = new QueueMessage(message);
+            AddMessage(queueMessage);
         }
 
         /// <summary>

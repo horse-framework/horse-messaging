@@ -65,9 +65,13 @@ namespace Test.Mq.Internal
             croute.Options.Status = QueueStatus.Broadcast;
             croute.CreateQueue(MessageA.ContentType).Wait();
 
-            Channel cpush = Server.CreateChannel("ch-push");
-            cpush.Options.Status = QueueStatus.Push;
-            cpush.CreateQueue(MessageA.ContentType).Wait();
+            Channel cpush1 = Server.CreateChannel("ch-push");
+            cpush1.Options.Status = QueueStatus.Push;
+            cpush1.CreateQueue(MessageA.ContentType).Wait();
+            
+            Channel cpush2 = Server.CreateChannel("ch-push-cc");
+            cpush2.Options.Status = QueueStatus.Push;
+            cpush2.CreateQueue(MessageA.ContentType).Wait();
 
             Channel cpull = Server.CreateChannel("ch-pull");
             cpull.Options.Status = QueueStatus.Pull;
