@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Test.Mq.Internal;
 using Test.Mq.Models;
@@ -14,6 +15,7 @@ namespace Test.Mq
     {
         /// <summary>
         /// Clients subscribes to a queue and reads message with message reader
+        /// 42800 - 42810
         /// </summary>
         [Fact]
         public async Task ClientReadsMessageFromQueue()
@@ -171,14 +173,39 @@ namespace Test.Mq
             Assert.True(thrown);
         }
 
-
         /// <summary>
         /// Uses OnDirect and OffDirect methods
         /// </summary>
         [Fact]
         public async Task ConsumeDirectMessages()
         {
-            throw new NotImplementedException();
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42806);
+            server.Start();
+
+            TmqClient client1 = new TmqClient();
+            client1.ClientId = "client-1";
+            client1.AutoAcknowledge = true;
+
+            await client1.ConnectAsync("tmq://localhost:42806");
+            Assert.True(client1.IsConnected);
+
+            TmqClient client2 = new TmqClient();
+            client2.ClientId = "client-2";
+            await client2.ConnectAsync("tmq://localhost:42806");
+            Assert.True(client2.IsConnected);
+
+            bool received = false;
+            MessageConsumer consumer = MessageConsumer.JsonReader();
+            consumer.OnDirect<MessageA>(MessageA.ContentType, a => received = true);
+            consumer.Attach(client1);
+
+            MessageA m = new MessageA("Msg-A");
+            var sent = await client2.SendJsonAsync(MessageType.DirectMessage, "client-1", MessageA.ContentType, m, true);
+
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
+            await Task.Delay(100);
+            Assert.True(received);
         }
     }
 }

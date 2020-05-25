@@ -631,11 +631,9 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a json object message
         /// </summary>
-        public async Task<TwinoResult> SendJsonAsync(string target, ushort contentType, object model, bool waitAcknowledge)
+        public async Task<TwinoResult> SendJsonAsync(MessageType type, string target, ushort contentType, object model, bool waitAcknowledge)
         {
-            TmqMessage msg = new TmqMessage();
-            msg.SetTarget(target);
-            msg.ContentType = contentType;
+            TmqMessage msg = new TmqMessage(type, target, contentType);
             await msg.SetJsonContent(model);
 
             if (waitAcknowledge)
@@ -647,11 +645,9 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a string message
         /// </summary>
-        public async Task<TwinoResult> SendAsync(string target, ushort contentType, string message, bool waitAcknowledge)
+        public async Task<TwinoResult> SendAsync(MessageType type, string target, ushort contentType, string message, bool waitAcknowledge)
         {
-            TmqMessage msg = new TmqMessage();
-            msg.SetTarget(target);
-            msg.ContentType = contentType;
+            TmqMessage msg = new TmqMessage(type, target, contentType);
             msg.SetStringContent(message);
 
             if (waitAcknowledge)

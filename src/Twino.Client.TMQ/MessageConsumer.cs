@@ -135,10 +135,14 @@ namespace Twino.Client.TMQ
             List<ReadSubscription> subs;
             lock (_subscriptions)
             {
-                subs = _subscriptions.Where(x => x.Source == source &&
-                                                 x.ContentType == message.ContentType &&
-                                                 x.Channel.Equals(message.Target, StringComparison.InvariantCultureIgnoreCase))
-                                     .ToList();
+                if (source == ReadSource.Direct)
+                    subs = _subscriptions.Where(x => x.Source == ReadSource.Direct && x.ContentType == message.ContentType)
+                                         .ToList();
+                else
+                    subs = _subscriptions.Where(x => x.Source == ReadSource.Queue &&
+                                                     x.ContentType == message.ContentType &&
+                                                     x.Channel.Equals(message.Target, StringComparison.InvariantCultureIgnoreCase))
+                                         .ToList();
             }
 
             if (subs.Count == 0)
