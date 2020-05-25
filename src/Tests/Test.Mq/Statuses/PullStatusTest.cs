@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Test.Mq.Internal;
 using Test.Mq.Models;
@@ -132,13 +133,55 @@ namespace Test.Mq.Statuses
         /// Clear messages after pull operation is completed
         /// </summary>
         [Theory]
-        [InlineData(3, true, true)]
+        [InlineData(2, true, true)]
         [InlineData(3, true, false)]
-        [InlineData(3, false, true)]
-        [InlineData(10, true, true)]
+        [InlineData(4, false, true)]
         public async Task PullClearAfter(int count, bool priorityMessages, bool messages)
         {
-            throw new NotImplementedException();
+            int port = 47489 + count;
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start();
+
+            var channel = server.Server.FindChannel("ch-pull");
+            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            for (int i = 0; i < 5; i++)
+            {
+                queue.AddStringMessageWithId("Hello, World");
+                queue.AddStringMessageWithId("Hello, World", false, true);
+            }
+
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:" + port);
+            TwinoResult joined = await client.Join("ch-pull", true);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
+
+            ClearDecision clearDecision = ClearDecision.None;
+            if (priorityMessages && messages)
+                clearDecision = ClearDecision.AllMessages;
+            else if (priorityMessages)
+                clearDecision = ClearDecision.PriorityMessages;
+            else if (messages)
+                clearDecision = ClearDecision.Messages;
+
+            PullRequest request = new PullRequest
+                                  {
+                                      Channel = "ch-pull",
+                                      QueueId = MessageA.ContentType,
+                                      Count = count,
+                                      ClearAfter = clearDecision
+                                  };
+
+            PullContainer container = await client.Pull(request);
+            Assert.Equal(count, container.ReceivedCount);
+
+            Assert.Equal(PullProcess.Completed, container.Status);
+
+            if (priorityMessages)
+                Assert.Empty(queue.PriorityMessages);
+
+            if (messages)
+                Assert.Empty(queue.Messages);
         }
     }
 }
