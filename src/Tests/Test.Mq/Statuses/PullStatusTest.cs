@@ -110,11 +110,48 @@ namespace Test.Mq.Statuses
         /// Pull messages in FIFO and LIFO order
         /// </summary>
         [Theory]
+        [InlineData(null)]
         [InlineData(true)]
         [InlineData(false)]
-        public async Task PullOrder(bool fifo)
+        public async Task PullOrder(bool? fifo)
         {
-            throw new NotImplementedException();
+            int port = 47413;
+            if (fifo.HasValue)
+                port += fifo.Value ? 1 : 2;
+            
+            TestMqServer server = new TestMqServer();
+            server.Initialize(port);
+            server.Start();
+
+            var channel = server.Server.FindChannel("ch-pull");
+            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            queue.AddStringMessageWithId("First Message");
+            queue.AddStringMessageWithId("Second Message");
+
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:" + port);
+            TwinoResult joined = await client.Join("ch-pull", true);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
+
+            PullRequest request = new PullRequest
+                                  {
+                                      Channel = "ch-pull",
+                                      QueueId = MessageA.ContentType,
+                                      Count = 1,
+                                      Order = !fifo.HasValue || fifo.Value ? MessageOrder.FIFO : MessageOrder.LIFO
+                                  };
+
+            PullContainer container = await client.Pull(request);
+            Assert.Equal(PullProcess.Completed, container.Status);
+
+            TmqMessage msg = container.ReceivedMessages.FirstOrDefault();
+            Assert.NotNull(msg);
+
+            string content = msg.GetStringContent();
+            if (fifo.HasValue && !fifo.Value)
+                Assert.Equal("Second Message", content);
+            else
+                Assert.Equal("First Message", content);
         }
 
         /// <summary>

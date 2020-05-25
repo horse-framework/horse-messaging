@@ -234,6 +234,18 @@ namespace Twino.Protocols.TMQ
         }
 
         /// <summary>
+        /// Reads message content as string
+        /// </summary>
+        /// <returns></returns>
+        public string GetStringContent()
+        {
+            if (Content == null || Length == 0)
+                return null;
+
+            return Encoding.UTF8.GetString(Content.ToArray());
+        }
+
+        /// <summary>
         /// Clones the message
         /// </summary>
         public TmqMessage Clone(bool cloneHeaders, bool cloneContent, string cloneId, List<KeyValuePair<string, string>> additionalHeaders = null)
