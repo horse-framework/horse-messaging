@@ -42,6 +42,9 @@ namespace Twino.MQ.Routing
                                    : message.MessageId;
 
             TmqMessage msg = message.Clone(true, true, messageId);
+
+            msg.Type = MessageType.QueueMessage;
+            msg.SetTarget(Target);
             msg.ContentType = ContentType;
             msg.PendingAcknowledge = false;
             msg.PendingResponse = false;

@@ -198,7 +198,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Returns pending high priority messages count
         /// </summary>
-        public int HighPriorityMessageCount()
+        public int PriorityMessageCount()
         {
             return PriorityMessagesList.Count;
         }
@@ -206,7 +206,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Returns pending regular messages count
         /// </summary>
-        public int RegularMessageCount()
+        public int MessageCount()
         {
             return MessagesList.Count;
         }

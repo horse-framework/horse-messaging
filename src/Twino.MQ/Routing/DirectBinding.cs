@@ -45,9 +45,11 @@ namespace Twino.MQ.Routing
             if (clients.Length == 0)
                 return false;
 
+            message.Type = MessageType.DirectMessage;
+            message.SetTarget(Target);
+            message.ContentType = ContentType;
             message.PendingAcknowledge = false;
             message.PendingResponse = false;
-            message.ContentType = ContentType;
 
             if (Interaction == BindingInteraction.Acknowledge)
                 message.PendingAcknowledge = true;

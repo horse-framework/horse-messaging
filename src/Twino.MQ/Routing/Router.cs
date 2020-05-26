@@ -121,10 +121,13 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Pushes a message to router
         /// </summary>
-        public Task<bool> Push(MqClient sender, TmqMessage message)
+        public Task<RouterPublishResult> Publish(MqClient sender, TmqMessage message)
         {
-            if (!IsEnabled || Bindings.Length == 0)
-                return Task.FromResult(false);
+            if (!IsEnabled)
+                return Task.FromResult(RouterPublishResult.Disabled);
+
+            if (Bindings.Length == 0)
+                return Task.FromResult(RouterPublishResult.NoBindings);
 
             switch (Method)
             {
@@ -138,53 +141,66 @@ namespace Twino.MQ.Routing
                     return RoundRobin(sender, message);
 
                 default:
-                    return Task.FromResult(false);
+                    return Task.FromResult(RouterPublishResult.Disabled);
             }
         }
 
         /// <summary>
         /// Sends the message to only first binding
         /// </summary>
-        private async Task<bool> OnlyFirst(MqClient sender, TmqMessage message)
+        private async Task<RouterPublishResult> OnlyFirst(MqClient sender, TmqMessage message)
         {
             int index = 0;
             bool sent;
+            RouterPublishResult result = RouterPublishResult.NoReceivers;
 
             do
             {
                 if (index >= Bindings.Length)
-                    return false;
+                    return RouterPublishResult.NoReceivers;
 
                 Binding binding = Bindings[index];
                 sent = await binding.Send(sender, message);
+
+                if (sent)
+                    result = binding.Interaction != BindingInteraction.None
+                                 ? RouterPublishResult.OkAndWillBeRespond
+                                 : RouterPublishResult.OkWillNotRespond;
+
                 index++;
             }
             while (!sent);
 
-            return true;
+            return result;
         }
 
         /// <summary>
         /// Distributes the message to all bindings
         /// </summary>
-        private async Task<bool> Distribute(MqClient sender, TmqMessage message)
+        private async Task<RouterPublishResult> Distribute(MqClient sender, TmqMessage message)
         {
-            bool atLeastOneSent = false;
+            RouterPublishResult result = RouterPublishResult.NoReceivers;
 
             foreach (Binding binding in Bindings)
             {
                 bool sent = await binding.Send(sender, message);
-                if (!atLeastOneSent && sent)
-                    atLeastOneSent = true;
+                if (sent)
+                {
+                    if (binding.Interaction != BindingInteraction.None)
+                        result = RouterPublishResult.OkAndWillBeRespond;
+                    
+                    else if (result == RouterPublishResult.NoReceivers)
+                        result = RouterPublishResult.OkWillNotRespond;
+                }
             }
 
-            return atLeastOneSent;
+            return result;
         }
 
         /// <summary>
         /// Sends the message to only one binding within round robin algorithm
         /// </summary>
-        private async Task<bool> RoundRobin(MqClient sender, TmqMessage message)
+        private async Task<RouterPublishResult> RoundRobin(MqClient sender, TmqMessage message)
         {
             for (int i = 0; i < Bindings.Length; i++)
             {
@@ -195,10 +211,12 @@ namespace Twino.MQ.Routing
                 Binding binding = Bindings[_lastRoutedIndex];
                 bool sent = await binding.Send(sender, message);
                 if (sent)
-                    return true;
+                    return binding.Interaction != BindingInteraction.None
+                               ? RouterPublishResult.OkAndWillBeRespond
+                               : RouterPublishResult.OkWillNotRespond;
             }
 
-            return false;
+            return RouterPublishResult.NoReceivers;
         }
 
         #endregion

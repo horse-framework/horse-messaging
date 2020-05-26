@@ -29,29 +29,33 @@ namespace Twino.MQ.Network
             IRouter router = _server.FindRouter(message.Target);
             if (router == null)
             {
-                await SendNegativeResponse(client, message, pendingAck, pendingResponse);
+                await SendResponse(RouterPublishResult.Disabled, client, message, pendingAck, pendingResponse);
                 return;
             }
 
-            bool done = await router.Push(client, message);
-            if (!done)
-                await SendNegativeResponse(client, message, pendingAck, pendingResponse);
+            RouterPublishResult result = await router.Publish(client, message);
+            await SendResponse(result, client, message, pendingAck, pendingResponse);
         }
 
         /// <summary>
         /// Sends negative ack or failed response if client is pending ack or response
         /// </summary>
-        private static Task SendNegativeResponse(MqClient client, TmqMessage message, bool pendingAck, bool pendingResponse)
+        private static Task SendResponse(RouterPublishResult result, MqClient client, TmqMessage message, bool pendingAck, bool pendingResponse)
         {
+            if (result == RouterPublishResult.OkAndWillBeRespond)
+                return Task.CompletedTask;
+
+            bool positive = result == RouterPublishResult.OkWillNotRespond;
+            
             if (pendingAck)
             {
-                TmqMessage nack = message.CreateAcknowledge(TmqHeaders.NACK_REASON_NO_CONSUMERS);
-                return client.SendAsync(nack);
+                TmqMessage ack = positive ? message.CreateAcknowledge() : message.CreateAcknowledge(TmqHeaders.NACK_REASON_NO_CONSUMERS);
+                return client.SendAsync(ack);
             }
 
             if (pendingResponse)
             {
-                TmqMessage response = message.CreateResponse(TwinoResultCode.NotFound);
+                TmqMessage response = positive ? message.CreateResponse(TwinoResultCode.Ok) : message.CreateResponse(TwinoResultCode.NotFound);
                 return client.SendAsync(response);
             }
 

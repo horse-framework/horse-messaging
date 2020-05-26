@@ -223,8 +223,8 @@ namespace Twino.MQ.Queues.States
 
                 if (getInfo)
                 {
-                    prioMessageCount = _queue.HighPriorityMessageCount();
-                    messageCount = _queue.RegularMessageCount();
+                    prioMessageCount = _queue.PriorityMessageCount();
+                    messageCount = _queue.MessageCount();
                 }
 
                 if (clear == ClearDecision.All)
