@@ -12,6 +12,9 @@ using Xunit;
 
 namespace Test.Mq
 {
+    /// <summary>
+    /// Ports 42300 - 42310
+    /// </summary>
     public class AcknowledgeTest
     {
         #region Client - Client
@@ -102,7 +105,7 @@ namespace Test.Mq
         public async Task FromClientToClientTimeout()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42393);
+            server.Initialize(42307);
             server.Start(15, 15);
 
             server.Server.Server.Options.PingInterval = 300;

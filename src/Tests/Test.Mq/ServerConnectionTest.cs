@@ -12,6 +12,9 @@ using Xunit;
 
 namespace Test.Mq
 {
+    /// <summary>
+    /// Ports 42100 - 42199
+    /// </summary>
     public class ServerConnectionTest
     {
         /// <summary>

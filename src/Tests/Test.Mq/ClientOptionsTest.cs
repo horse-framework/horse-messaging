@@ -9,6 +9,9 @@ using Xunit;
 
 namespace Test.Mq
 {
+    /// <summary>
+    /// Ports 42620 - 42630
+    /// </summary>
     public class ClientOptionsTest
     {
         /// <summary>
@@ -19,7 +22,7 @@ namespace Test.Mq
         [InlineData(false)]
         public async Task UseUniqueMessageId(bool enabled)
         {
-            int port = enabled ? 42701 : 42702;
+            int port = enabled ? 42621 : 42622;
             TestMqServer server = new TestMqServer();
             server.Initialize(port);
             server.Server.Options.UseMessageId = enabled;
@@ -65,7 +68,7 @@ namespace Test.Mq
         [InlineData(false)]
         public async Task CatchResponseMessages(bool enabled)
         {
-            int port = enabled ? 42711 : 42712;
+            int port = enabled ? 42624 : 42625;
             TestMqServer server = new TestMqServer();
             server.Initialize(port);
             server.Start();

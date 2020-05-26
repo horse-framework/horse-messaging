@@ -11,6 +11,9 @@ using Xunit;
 
 namespace Test.Mq
 {
+    /// <summary>
+    /// Ports 42800 - 42810
+    /// </summary>
     public class MessageConsumerTest
     {
         /// <summary>

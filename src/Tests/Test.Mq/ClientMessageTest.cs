@@ -7,6 +7,9 @@ using Xunit;
 
 namespace Test.Mq
 {
+    /// <summary>
+    /// Ports 42600 - 42610
+    /// </summary>
     public class ClientMessageTest
     {
         /// <summary>
