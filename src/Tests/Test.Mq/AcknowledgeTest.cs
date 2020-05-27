@@ -120,8 +120,8 @@ namespace Test.Mq
             client1.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
             client2.AutoAcknowledge = false;
 
-            await client1.ConnectAsync("tmq://localhost:42393");
-            await client2.ConnectAsync("tmq://localhost:42393");
+            await client1.ConnectAsync("tmq://localhost:42307");
+            await client2.ConnectAsync("tmq://localhost:42307");
 
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
