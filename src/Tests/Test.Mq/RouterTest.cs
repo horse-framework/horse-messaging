@@ -24,7 +24,51 @@ namespace Test.Mq
             server.Initialize(port);
             server.Start(300, 300);
 
-            throw new NotImplementedException();
+            Router router = new Router(server.Server, "router", RouteMethod.Distribute);
+            router.AddBinding(new QueueBinding("qbind-1", "ch-push", MessageA.ContentType, 5, BindingInteraction.None));
+            router.AddBinding(new QueueBinding("qbind-2", "ch-push-cc", MessageA.ContentType, 10, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-1", "client-1", MessageA.ContentType, 20, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-2", "client-2", MessageA.ContentType, 0, BindingInteraction.None));
+            server.Server.AddRouter(router);
+
+            TmqClient producer = new TmqClient();
+            await producer.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(producer.IsConnected);
+
+            TmqClient client1 = new TmqClient();
+            client1.ClientId = "client-1";
+            await client1.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(client1.IsConnected);
+
+            TmqClient client2 = new TmqClient();
+            client2.ClientId = "client-2";
+            await client2.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(client2.IsConnected);
+
+            int client1Received = 0;
+            int client2Received = 0;
+            client1.MessageReceived += (c, m) => client1Received++;
+            client2.MessageReceived += (c, m) => client2Received++;
+
+            for (int i = 0; i < 4; i++)
+            {
+                TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
+                Assert.Equal(TwinoResultCode.Ok, result.Code);
+            }
+
+            await Task.Delay(500);
+
+            Channel channel1 = server.Server.FindChannel("ch-push");
+            Channel channel2 = server.Server.FindChannel("ch-push-cc");
+
+            ChannelQueue queue1 = channel1.FindQueue(MessageA.ContentType);
+            ChannelQueue queue2 = channel2.FindQueue(MessageA.ContentType);
+
+            Assert.Equal(4, queue1.MessageCount());
+            Assert.Equal(4, queue2.MessageCount());
+
+            Assert.Equal(4, client2Received);
+            Assert.Equal(4, client1Received);
         }
 
         [Fact]
@@ -35,7 +79,51 @@ namespace Test.Mq
             server.Initialize(port);
             server.Start(300, 300);
 
-            throw new NotImplementedException();
+            Router router = new Router(server.Server, "router", RouteMethod.RoundRobin);
+            router.AddBinding(new QueueBinding("qbind-1", "ch-push", MessageA.ContentType, 5, BindingInteraction.None));
+            router.AddBinding(new QueueBinding("qbind-2", "ch-push-cc", MessageA.ContentType, 10, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-1", "client-1", MessageA.ContentType, 20, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-2", "client-2", MessageA.ContentType, 0, BindingInteraction.None));
+            server.Server.AddRouter(router);
+
+            TmqClient producer = new TmqClient();
+            await producer.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(producer.IsConnected);
+
+            TmqClient client1 = new TmqClient();
+            client1.ClientId = "client-1";
+            await client1.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(client1.IsConnected);
+
+            TmqClient client2 = new TmqClient();
+            client2.ClientId = "client-2";
+            await client2.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(client2.IsConnected);
+
+            int client1Received = 0;
+            int client2Received = 0;
+            client1.MessageReceived += (c, m) => client1Received++;
+            client2.MessageReceived += (c, m) => client2Received++;
+
+            for (int i = 0; i < 5; i++)
+            {
+                TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
+                Assert.Equal(TwinoResultCode.Ok, result.Code);
+            }
+
+            await Task.Delay(500);
+
+            Channel channel1 = server.Server.FindChannel("ch-push");
+            Channel channel2 = server.Server.FindChannel("ch-push-cc");
+
+            ChannelQueue queue1 = channel1.FindQueue(MessageA.ContentType);
+            ChannelQueue queue2 = channel2.FindQueue(MessageA.ContentType);
+
+            Assert.Equal(1, queue1.MessageCount());
+            Assert.Equal(1, queue2.MessageCount());
+
+            Assert.Equal(1, client2Received);
+            Assert.Equal(2, client1Received);
         }
 
         [Fact]
@@ -46,7 +134,51 @@ namespace Test.Mq
             server.Initialize(port);
             server.Start(300, 300);
 
-            throw new NotImplementedException();
+            Router router = new Router(server.Server, "router", RouteMethod.OnlyFirst);
+            router.AddBinding(new QueueBinding("qbind-1", "ch-push", MessageA.ContentType, 5, BindingInteraction.None));
+            router.AddBinding(new QueueBinding("qbind-2", "ch-push-cc", MessageA.ContentType, 10, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-1", "client-1", MessageA.ContentType, 2, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-2", "client-2", MessageA.ContentType, 8, BindingInteraction.None));
+            server.Server.AddRouter(router);
+
+            TmqClient producer = new TmqClient();
+            await producer.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(producer.IsConnected);
+
+            TmqClient client1 = new TmqClient();
+            client1.ClientId = "client-1";
+            await client1.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(client1.IsConnected);
+
+            TmqClient client2 = new TmqClient();
+            client2.ClientId = "client-2";
+            await client2.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(client2.IsConnected);
+
+            int client1Received = 0;
+            int client2Received = 0;
+            client1.MessageReceived += (c, m) => client1Received++;
+            client2.MessageReceived += (c, m) => client2Received++;
+
+            for (int i = 0; i < 4; i++)
+            {
+                TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
+                Assert.Equal(TwinoResultCode.Ok, result.Code);
+            }
+
+            await Task.Delay(500);
+
+            Channel channel1 = server.Server.FindChannel("ch-push");
+            Channel channel2 = server.Server.FindChannel("ch-push-cc");
+
+            ChannelQueue queue1 = channel1.FindQueue(MessageA.ContentType);
+            ChannelQueue queue2 = channel2.FindQueue(MessageA.ContentType);
+
+            Assert.Equal(0, queue1.MessageCount());
+            Assert.Equal(4, queue2.MessageCount());
+
+            Assert.Equal(0, client1Received);
+            Assert.Equal(0, client2Received);
         }
 
         [Fact]
