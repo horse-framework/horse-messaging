@@ -66,7 +66,7 @@ namespace Test.Mq
             await producer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            TwinoResult result = await producer.Publish("router", "Hello, World!", true, MessageA.ContentType);
+            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
             Assert.Equal(TwinoResultCode.Ok, result.Code);
 
             Channel channel1 = server.Server.FindChannel("ch-push");
@@ -111,7 +111,7 @@ namespace Test.Mq
             client1.MessageReceived += (c, m) => client1Received = true;
             client2.MessageReceived += (c, m) => client2Received = true;
 
-            TwinoResult result = await producer.Publish("router", "Hello, World!", true, MessageA.ContentType);
+            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
             Assert.Equal(TwinoResultCode.Ok, result.Code);
             await Task.Delay(500);
 
@@ -136,7 +136,7 @@ namespace Test.Mq
             await producer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            TwinoResult result = await producer.Publish("router", "Hello, World!", true, MessageA.ContentType);
+            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
             Assert.Equal(TwinoResultCode.Failed, result.Code);
         }
 
@@ -164,7 +164,7 @@ namespace Test.Mq
             client1.MessageReceived += (c, m) => client1Received = true;
             Assert.True(client1.IsConnected);
 
-            TwinoResult result = await producer.Publish("router", "Hello, World!", true, MessageA.ContentType);
+            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
             Assert.Equal(TwinoResultCode.Ok, result.Code);
             await Task.Delay(500);
 
@@ -209,7 +209,7 @@ namespace Test.Mq
             client1.MessageReceived += (c, m) => client1Received = true;
             client2.MessageReceived += (c, m) => client2Received = true;
 
-            TwinoResult result = await producer.Publish("router", "Hello, World!", true, MessageA.ContentType);
+            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
             Assert.Equal(TwinoResultCode.Ok, result.Code);
             await Task.Delay(500);
 
@@ -253,10 +253,10 @@ namespace Test.Mq
 
             Channel channel1 = server.Server.FindChannel("ch-push");
             ChannelQueue queue1 = channel1.FindQueue(MessageA.ContentType);
-            
-            TwinoResult result = await producer.Publish("router", "Hello, World!", true, MessageA.ContentType);
+
+            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
             Assert.Equal(TwinoResultCode.Ok, result.Code);
-            
+
             await Task.Delay(500);
             Assert.Equal(1, queue1.MessageCount());
             Assert.True(client1Received);
@@ -279,7 +279,6 @@ namespace Test.Mq
             await producer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            bool client1Received = false;
             TmqClient client1 = new TmqClient();
             client1.ClientId = "client-1";
             await client1.ConnectAsync("tmq://localhost:" + port);
@@ -293,13 +292,11 @@ namespace Test.Mq
 
             Channel channel1 = server.Server.FindChannel("ch-push");
             ChannelQueue queue1 = channel1.FindQueue(MessageA.ContentType);
-            
-            TwinoResult result = await producer.Publish("router", "Hello, World!", true, MessageA.ContentType);
-            Assert.Equal(TwinoResultCode.Ok, result.Code);
-            
-            await Task.Delay(500);
+
+            TmqMessage message = await producer.Routers.PublishRequest("router", MessageA.ContentType, "Hello, World!");
+            Assert.NotNull(message);
+            Assert.Equal("Response", message.GetStringContent());
             Assert.Equal(1, queue1.MessageCount());
-            Assert.True(client1Received);
         }
     }
 }

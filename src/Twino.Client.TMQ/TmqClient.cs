@@ -110,6 +110,11 @@ namespace Twino.Client.TMQ
         /// </summary>
         public ConnectionOperator Connections { get; }
 
+        /// <summary>
+        /// TMQ Client Router Management object
+        /// </summary>
+        public RouterOperator Routers { get; }
+
         private readonly Dictionary<string, PullContainer> _pullContainers;
         private Timer _pullContainerTimeoutHandler;
 
@@ -130,6 +135,7 @@ namespace Twino.Client.TMQ
             Channels = new ChannelOperator(this);
             Queues = new QueueOperator(this);
             Connections = new ConnectionOperator(this);
+            Routers = new RouterOperator(this);
 
             _follower = new MessageFollower(this);
             _follower.Run();
@@ -843,7 +849,7 @@ namespace Twino.Client.TMQ
         /// if acknowledge is pending, waits for acknowledge.
         /// returns true if received.
         /// </summary>
-        private async Task<TwinoResult> SendAndWaitForAcknowledge(TmqMessage message, bool waitAcknowledge)
+        internal async Task<TwinoResult> SendAndWaitForAcknowledge(TmqMessage message, bool waitAcknowledge)
         {
             Task<TwinoResult> task = null;
             if (waitAcknowledge)
@@ -917,63 +923,6 @@ namespace Twino.Client.TMQ
             }
 
             return await task;
-        }
-
-        #endregion
-
-        #region Router
-
-        /// <summary>
-        /// Publishes a string message to a router
-        /// </summary>
-        public async Task<TwinoResult> Publish(string routerName, string message, bool waitForAcknowledge = false, ushort contentType = 0)
-        {
-            TmqMessage msg = new TmqMessage(MessageType.Router, routerName, contentType);
-            msg.PendingAcknowledge = waitForAcknowledge;
-            msg.SetMessageId(UniqueIdGenerator.Create());
-            msg.Content = new MemoryStream(Encoding.UTF8.GetBytes(message));
-
-            return await SendAndWaitForAcknowledge(msg, waitForAcknowledge);
-        }
-
-        /// <summary>
-        /// Publishes a byte array data to a router
-        /// </summary>
-        public async Task<TwinoResult> Publish(string routerName, byte[] data, bool waitForAcknowledge = false, ushort contentType = 0)
-        {
-            TmqMessage msg = new TmqMessage(MessageType.Router, routerName, contentType);
-            msg.PendingAcknowledge = waitForAcknowledge;
-            msg.SetMessageId(UniqueIdGenerator.Create());
-            msg.Content = new MemoryStream(data);
-
-            return await SendAndWaitForAcknowledge(msg, waitForAcknowledge);
-        }
-
-        /// <summary>
-        /// Publishes a JSON object to a router
-        /// </summary>
-        public async Task<TwinoResult> PublishJson<TModel>(string routerName, TModel model, bool waitForAcknowledge = false, ushort contentType = 0)
-        {
-            TmqMessage message = new TmqMessage(MessageType.Router, routerName, contentType);
-            message.PendingAcknowledge = waitForAcknowledge;
-            message.SetMessageId(UniqueIdGenerator.Create());
-
-            message.Content = new MemoryStream();
-            await System.Text.Json.JsonSerializer.SerializeAsync(message.Content, model);
-
-            return await SendAndWaitForAcknowledge(message, waitForAcknowledge);
-        }
-
-        /// <summary>
-        /// Sends a request to router.
-        /// Waits response from at least one binding.
-        /// </summary>
-        public async Task<TmqMessage> PublishRequestJson<TModel>(string routerName, ushort contentType, TModel model)
-        {
-            TmqMessage message = new TmqMessage(MessageType.Router, routerName, contentType);
-            message.PendingResponse = true;
-            await message.SetJsonContent(model);
-            return await Request(message);
         }
 
         #endregion
