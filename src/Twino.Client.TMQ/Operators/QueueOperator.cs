@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Twino.Client.TMQ.Models;
 using Twino.Protocols.TMQ;
 using Twino.Protocols.TMQ.Models;
+using Twino.Protocols.TMQ.Models.Events;
 
 namespace Twino.Client.TMQ.Operators
 {
@@ -21,6 +22,7 @@ namespace Twino.Client.TMQ.Operators
             _client = client;
         }
 
+        #region Actions
 
         /// <summary>
         /// Creates new queue in server
@@ -51,7 +53,6 @@ namespace Twino.Client.TMQ.Operators
             return await _client.WaitResponse(message, verifyResponse);
         }
 
-        //todo: check
         /// <summary>
         /// Finds all queues in channel
         /// </summary>
@@ -65,7 +66,6 @@ namespace Twino.Client.TMQ.Operators
             return await _client.SendAndGetJson<List<QueueInformation>>(message);
         }
 
-        //todo: check
         /// <summary>
         /// Finds the queue and gets information if exists
         /// </summary>
@@ -80,7 +80,6 @@ namespace Twino.Client.TMQ.Operators
             return await _client.SendAndGetJson<QueueInformation>(message);
         }
 
-        //todo: check
         /// <summary>
         /// Deletes a queue in a channel in server.
         /// Required administration permission.
@@ -151,5 +150,75 @@ namespace Twino.Client.TMQ.Operators
 
             return _client.WaitResponse(message, true);
         }
+
+        #endregion
+
+        #region Events
+
+        /// <summary> 
+        /// Triggers the action when a message is produced to a queue in a channel
+        /// </summary>
+        public async Task<bool> OnMessageProduced(string channel, ushort queue, Action<MessageEvent> action)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Unsubscribes from all message produced events in a queue in a channel 
+        /// </summary>
+        public async Task<bool> OffMessageProduced(string channel, ushort queue)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Triggers the action when a queue is created in a channel
+        /// </summary>
+        public async Task<bool> OnCreated(string channel, Action<QueueEvent> action)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Unsubscribes from all queue created events in a channel 
+        /// </summary>
+        public async Task<bool> OffCreated(string channel)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Triggers the action when a queue is updated in a channel
+        /// </summary>
+        public async Task<bool> OnUpdated(string channel, Action<QueueEvent> action)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Unsubscribes from all queue updated events in a channel 
+        /// </summary>
+        public async Task<bool> OffUpdated(string channel)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Triggers the action when a queue is deleted in a channel
+        /// </summary>
+        public async Task<bool> OnDeleted(string channel, Action<QueueEvent> action)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Unsubscribes from all queue deleted events in a channel 
+        /// </summary>
+        public async Task<bool> OffDeleted(string channel)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
     }
 }

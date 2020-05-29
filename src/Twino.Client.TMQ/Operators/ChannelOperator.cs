@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Twino.Client.TMQ.Models;
 using Twino.Protocols.TMQ;
 using Twino.Protocols.TMQ.Models;
+using Twino.Protocols.TMQ.Models.Events;
 
 namespace Twino.Client.TMQ.Operators
 {
@@ -19,6 +20,8 @@ namespace Twino.Client.TMQ.Operators
         {
             _client = client;
         }
+
+        #region Join - Leave
 
         /// <summary>
         /// Joins to a channel
@@ -54,6 +57,10 @@ namespace Twino.Client.TMQ.Operators
             return await _client.WaitResponse(message, verifyResponse);
         }
 
+        #endregion
+
+        #region Create - Delete
+
         /// <summary>
         /// Creates a new channel without any queue
         /// </summary>
@@ -77,6 +84,27 @@ namespace Twino.Client.TMQ.Operators
 
             return await _client.WaitResponse(message, verifyResponse);
         }
+
+        /// <summary>
+        /// Deletes a channel and all queues in it
+        /// </summary>
+        public async Task<TwinoResult> Delete(string channel, bool verifyResponse)
+        {
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ContentType = KnownContentTypes.RemoveChannel;
+            message.SetTarget(channel);
+            message.PendingResponse = verifyResponse;
+            message.SetMessageId(_client.UniqueIdGenerator.Create());
+
+            message.AddHeader(TmqHeaders.CHANNEL_NAME, channel);
+
+            return await _client.WaitResponse(message, verifyResponse);
+        }
+
+        #endregion
+
+        #region Get
 
         /// <summary>
         /// Finds the channel and gets information if exists
@@ -127,21 +155,82 @@ namespace Twino.Client.TMQ.Operators
             return await _client.SendAndGetJson<List<ClientInformation>>(message);
         }
 
-        /// <summary>
-        /// Deletes a channel and all queues in it
-        /// </summary>
-        public async Task<TwinoResult> Delete(string channel, bool verifyResponse)
+        #endregion
+
+        #region Subscription Events
+
+        public async Task<bool> OnClientJoined(string channelName, Action<SubscriptionEvent> action)
         {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.RemoveChannel;
-            message.SetTarget(channel);
-            message.PendingResponse = verifyResponse;
-            message.SetMessageId(_client.UniqueIdGenerator.Create());
-
-            message.AddHeader(TmqHeaders.CHANNEL_NAME, channel);
-
-            return await _client.WaitResponse(message, verifyResponse);
+            throw new NotImplementedException();
         }
+
+        public async Task<bool> OffClientJoined(string channelName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<bool> OnClientLeft(string channelName, Action<SubscriptionEvent> action)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<bool> OffClientLeft(string channelName)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+        #region Channel Events
+
+        /// <summary> 
+        /// Triggers the action when a client is created in the server
+        /// </summary>
+        public async Task<bool> OnCreated(Action<ChannelEvent> action)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Unsubscribes from all channel created events
+        /// </summary>
+        public async Task<bool> OffCreated()
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary> 
+        /// Triggers the action when a client is updated in the server
+        /// </summary>
+        public async Task<bool> OnUpdated(Action<ChannelEvent> action)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Unsubscribes from all channel updated events
+        /// </summary>
+        public async Task<bool> OffUpdated()
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary> 
+        /// Triggers the action when a client is deleted in the server
+        /// </summary>
+        public async Task<bool> OnDeleted(Action<ChannelEvent> action)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Unsubscribes from all channel deleted events
+        /// </summary>
+        public async Task<bool> OffDeleted()
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
     }
 }
