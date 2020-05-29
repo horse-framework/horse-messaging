@@ -8,7 +8,7 @@ namespace Twino.MQ.Events
     /// <summary>
     /// Manages event subscribers and triggering actions
     /// </summary>
-    internal class EventManager
+    public class EventManager
     {
         private readonly List<MqClient> _subscribers = new List<MqClient>();
 
@@ -32,7 +32,7 @@ namespace Twino.MQ.Events
         /// Target is the channel name of the event.
         /// Content Type is the Queue Id of the event.
         /// </summary>
-        public EventManager(string name, string target, ushort contentType)
+        protected EventManager(string name, string target, ushort contentType)
         {
             Name = name;
             Target = target;
@@ -72,7 +72,7 @@ namespace Twino.MQ.Events
         /// <summary>
         /// Triggers event and sends message to subscribers
         /// </summary>
-        public async Task Trigger(object model)
+        protected async Task Trigger(object model)
         {
             if (_subscribers.Count == 0)
                 return;
