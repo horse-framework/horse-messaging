@@ -1068,9 +1068,9 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Creates new queue in server
         /// </summary>
-        public Task<TwinoResult> CreateQueue(string channel, ushort queueId, bool verifyResponse, Action<QueueOptions> optionsAction = null)
+        public Task<TwinoResult> CreateQueue(string channel, ushort queueId, Action<QueueOptions> optionsAction = null)
         {
-            return Queues.Create(channel, queueId, verifyResponse, optionsAction);
+            return Queues.Create(channel, queueId, optionsAction);
         }
 
         #endregion

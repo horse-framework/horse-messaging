@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Test.Mq.Internal;
@@ -18,12 +17,10 @@ namespace Test.Mq.Operators
         /// <summary>
         /// Client sends a queue creation message
         /// </summary>
-        [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task Create(bool verifyResponse)
+        [Fact]
+        public async Task Create()
         {
-            int port = verifyResponse ? 40905 : 40904;
+            int port = 40905;
             TestMqServer server = new TestMqServer();
             server.Initialize(port);
             server.Start();
@@ -31,9 +28,8 @@ namespace Test.Mq.Operators
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
 
-            TwinoResult created = await client.CreateQueue("ch-2", MessageA.ContentType, verifyResponse);
+            TwinoResult created = await client.CreateQueue("ch-2", MessageA.ContentType);
             Assert.Equal(TwinoResultCode.Ok, created.Code);
-            await Task.Delay(1000);
 
             Channel channel = server.Server.Channels.FirstOrDefault(x => x.Name == "ch-2");
             Assert.NotNull(channel);
@@ -54,7 +50,7 @@ namespace Test.Mq.Operators
             await client.ConnectAsync("tmq://localhost:21206");
             Assert.True(client.IsConnected);
 
-            TwinoResult created = await client.CreateQueue("ch-test", MessageA.ContentType, true, o =>
+            TwinoResult created = await client.CreateQueue("ch-test", MessageA.ContentType, o =>
             {
                 o.SendOnlyFirstAcquirer = true;
                 o.AcknowledgeTimeout = 33000;
@@ -107,12 +103,10 @@ namespace Test.Mq.Operators
             Assert.Equal(TimeSpan.FromSeconds(666), queue.Options.MessageTimeout);
         }
 
-        [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task Delete(bool verifyResponse)
+        [Fact]
+        public async Task Delete()
         {
-            int port = 41208 + Convert.ToInt32(verifyResponse);
+            int port = 41208;
             TestMqServer server = new TestMqServer();
             server.Initialize(port);
             server.Start();
@@ -127,11 +121,8 @@ namespace Test.Mq.Operators
             await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            TwinoResult done = await client.Queues.Delete("ch-route", MessageA.ContentType, verifyResponse);
+            TwinoResult done = await client.Queues.Remove("ch-route", MessageA.ContentType);
             Assert.Equal(TwinoResultCode.Ok, done.Code);
-
-            if (!verifyResponse)
-                await Task.Delay(500);
 
             queue = channel.FindQueue(MessageA.ContentType);
             Assert.Null(queue);

@@ -27,13 +27,13 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Creates new queue in server
         /// </summary>
-        public async Task<TwinoResult> Create(string channel, ushort queueId, bool verifyResponse, Action<QueueOptions> optionsAction = null)
+        public async Task<TwinoResult> Create(string channel, ushort queueId, Action<QueueOptions> optionsAction = null)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.CreateQueue;
             message.SetTarget(channel);
-            message.PendingResponse = verifyResponse;
+            message.PendingResponse = true;
 
             message.AddHeader(TmqHeaders.CHANNEL_NAME, channel);
             message.AddHeader(TmqHeaders.QUEUE_ID, queueId);
@@ -47,10 +47,9 @@ namespace Twino.Client.TMQ.Operators
                 await JsonSerializer.SerializeAsync(message.Content, options);
             }
 
-            if (verifyResponse)
-                message.SetMessageId(_client.UniqueIdGenerator.Create());
-
-            return await _client.WaitResponse(message, verifyResponse);
+            message.SetMessageId(_client.UniqueIdGenerator.Create());
+            
+            return await _client.WaitResponse(message, true);
         }
 
         /// <summary>
@@ -81,21 +80,21 @@ namespace Twino.Client.TMQ.Operators
         }
 
         /// <summary>
-        /// Deletes a queue in a channel in server.
+        /// Removes a queue in a channel in server.
         /// Required administration permission.
         /// If server has no implementation for administration authorization, request is not allowed.
         /// </summary>
-        public async Task<TwinoResult> Delete(string channel, ushort queueId, bool verifyResponse)
+        public async Task<TwinoResult> Remove(string channel, ushort queueId)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.RemoveQueue;
             message.SetTarget(channel);
-            message.PendingResponse = verifyResponse;
+            message.PendingResponse = true;
             message.Content = new MemoryStream(BitConverter.GetBytes(queueId));
             message.SetMessageId(_client.UniqueIdGenerator.Create());
 
-            return await _client.WaitResponse(message, verifyResponse);
+            return await _client.WaitResponse(message, true);
         }
 
         /// <summary>
@@ -204,17 +203,17 @@ namespace Twino.Client.TMQ.Operators
         }
 
         /// <summary>
-        /// Triggers the action when a queue is deleted in a channel
+        /// Triggers the action when a queue is removed in a channel
         /// </summary>
-        public async Task<bool> OnDeleted(string channel, Action<QueueEvent> action)
+        public async Task<bool> OnRemoved(string channel, Action<QueueEvent> action)
         {
             throw new NotImplementedException();
         }
 
         /// <summary>
-        /// Unsubscribes from all queue deleted events in a channel 
+        /// Unsubscribes from all queue removed events in a channel 
         /// </summary>
-        public async Task<bool> OffDeleted(string channel)
+        public async Task<bool> OffRemoved(string channel)
         {
             throw new NotImplementedException();
         }

@@ -27,6 +27,7 @@ namespace Twino.MQ.Network
         private readonly INetworkMessageHandler _responseHandler;
         private readonly INetworkMessageHandler _acknowledgeHandler;
         private readonly INetworkMessageHandler _instanceHandler;
+        private readonly INetworkMessageHandler _eventHandler;
 
         public NetworkMessageHandler(MqServer server)
         {
@@ -39,6 +40,7 @@ namespace Twino.MQ.Network
             _responseHandler = new ResponseMessageHandler(server);
             _acknowledgeHandler = new AcknowledgeMessageHandler(server);
             _instanceHandler = new NodeMessageHandler(server);
+            _eventHandler = new EventMessageHandler(server);
         }
 
         #endregion
@@ -199,6 +201,10 @@ namespace Twino.MQ.Network
                 //this message may be join, header, info, some another server message
                 case MessageType.Server:
                     return _serverHandler.Handle(mc, message);
+                
+                //event subscription or unsubscription request received
+                case MessageType.Event:
+                    return _eventHandler.Handle(mc, message);
 
                 //if client sends a ping message, response with pong
                 case MessageType.Ping:

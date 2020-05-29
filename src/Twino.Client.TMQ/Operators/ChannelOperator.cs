@@ -64,13 +64,13 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Creates a new channel without any queue
         /// </summary>
-        public async Task<TwinoResult> Create(string channel, bool verifyResponse, Action<ChannelOptions> optionsAction = null)
+        public async Task<TwinoResult> Create(string channel, Action<ChannelOptions> optionsAction = null)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.CreateChannel;
             message.SetTarget(channel);
-            message.PendingResponse = verifyResponse;
+            message.PendingResponse = true;
             message.AddHeader(TmqHeaders.CHANNEL_NAME, channel);
             message.SetMessageId(_client.UniqueIdGenerator.Create());
 
@@ -82,24 +82,24 @@ namespace Twino.Client.TMQ.Operators
                 await System.Text.Json.JsonSerializer.SerializeAsync(message.Content, options);
             }
 
-            return await _client.WaitResponse(message, verifyResponse);
+            return await _client.WaitResponse(message, true);
         }
 
         /// <summary>
-        /// Deletes a channel and all queues in it
+        /// Removes a channel and all queues in it
         /// </summary>
-        public async Task<TwinoResult> Delete(string channel, bool verifyResponse)
+        public async Task<TwinoResult> Remove(string channel)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.RemoveChannel;
             message.SetTarget(channel);
-            message.PendingResponse = verifyResponse;
+            message.PendingResponse = true;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
 
             message.AddHeader(TmqHeaders.CHANNEL_NAME, channel);
 
-            return await _client.WaitResponse(message, verifyResponse);
+            return await _client.WaitResponse(message, true);
         }
 
         #endregion
@@ -216,17 +216,17 @@ namespace Twino.Client.TMQ.Operators
         }
 
         /// <summary> 
-        /// Triggers the action when a client is deleted in the server
+        /// Triggers the action when a client is removed in the server
         /// </summary>
-        public async Task<bool> OnDeleted(Action<ChannelEvent> action)
+        public async Task<bool> OnRemoved(Action<ChannelEvent> action)
         {
             throw new NotImplementedException();
         }
 
         /// <summary>
-        /// Unsubscribes from all channel deleted events
+        /// Unsubscribes from all channel removed events
         /// </summary>
-        public async Task<bool> OffDeleted()
+        public async Task<bool> OffRemoved()
         {
             throw new NotImplementedException();
         }

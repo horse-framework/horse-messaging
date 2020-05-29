@@ -117,12 +117,10 @@ namespace Test.Mq.Operators
         /// <summary>
         /// Client sends a queue creation message
         /// </summary>
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task Create(bool verifyResponse)
+        [Fact]
+        public async Task Create()
         {
-            int port = verifyResponse ? 35905 : 35904;
+            int port = 35905;
             TestMqServer server = new TestMqServer();
             server.Initialize(port);
             server.Start();
@@ -130,22 +128,14 @@ namespace Test.Mq.Operators
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
 
-            TwinoResult created = await client.Channels.Create("new-channel", verifyResponse);
-            if (verifyResponse)
-                Assert.Equal(TwinoResultCode.Ok, created.Code);
-            else
-            {
-                await Task.Delay(1000);
-                Assert.Equal(TwinoResultCode.Ok, created.Code);
-            }
+            TwinoResult created = await client.Channels.Create("new-channel");
+            Assert.Equal(TwinoResultCode.Ok, created.Code);
         }
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task Delete(bool verifyResponse)
+        [Fact]
+        public async Task Delete()
         {
-            int port = verifyResponse ? 35965 : 35964;
+            int port = 35965;
             TestMqServer server = new TestMqServer();
             server.Initialize(port);
             server.Start();
@@ -155,14 +145,8 @@ namespace Test.Mq.Operators
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
 
-            TwinoResult deleted = await client.Channels.Delete("new-channel", verifyResponse);
-            if (verifyResponse)
-                Assert.Equal(TwinoResultCode.Ok, deleted.Code);
-            else
-            {
-                await Task.Delay(1000);
-                Assert.Equal(TwinoResultCode.Ok, deleted.Code);
-            }
+            TwinoResult deleted = await client.Channels.Remove("new-channel");
+            Assert.Equal(TwinoResultCode.Ok, deleted.Code);
 
             Assert.Null(server.Server.FindChannel("new-channel"));
         }
@@ -178,7 +162,7 @@ namespace Test.Mq.Operators
             await client.ConnectAsync("tmq://localhost:41206");
             Assert.True(client.IsConnected);
 
-            TwinoResult created = await client.Channels.Create("new-channel", true, o =>
+            TwinoResult created = await client.Channels.Create("new-channel", o =>
             {
                 o.AllowMultipleQueues = false;
                 o.SendOnlyFirstAcquirer = true;
