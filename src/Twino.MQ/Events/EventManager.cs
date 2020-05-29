@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
@@ -8,7 +9,7 @@ namespace Twino.MQ.Events
     /// <summary>
     /// Manages event subscribers and triggering actions
     /// </summary>
-    public class EventManager
+    public class EventManager : IDisposable
     {
         private readonly List<MqClient> _subscribers = new List<MqClient>();
 
@@ -67,6 +68,14 @@ namespace Twino.MQ.Events
         {
             lock (_subscribers)
                 _subscribers.Clear();
+        }
+
+        /// <summary>
+        /// Clears all subscriptions
+        /// </summary>
+        public void Dispose()
+        {
+            ClearSubsscriptions();
         }
 
         /// <summary>

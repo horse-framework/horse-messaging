@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Delivery;
+using Twino.MQ.Events;
 using Twino.MQ.Options;
 using Twino.MQ.Queues.States;
 using Twino.Protocols.TMQ;
@@ -55,6 +56,11 @@ namespace Twino.MQ.Queues
         /// If null, channel default options will be used
         /// </summary>
         public ChannelQueueOptions Options { get; }
+
+        /// <summary>
+        /// Triggered when a message is produced 
+        /// </summary>
+        public MessageEventManager OnMessageProduced { get; }
 
         /// <summary>
         /// Queue messaging handler.
@@ -145,6 +151,7 @@ namespace Twino.MQ.Queues
             Status = options.Status;
             DeliveryHandler = deliveryHandler;
             State = QueueStateFactory.Create(this, options.Status);
+            OnMessageProduced = new MessageEventManager(EventNames.MessageProduced, this);
 
             TimeKeeper = new QueueTimeKeeper(this);
             TimeKeeper.Run();
@@ -165,6 +172,7 @@ namespace Twino.MQ.Queues
         public async Task Destroy()
         {
             await TimeKeeper.Destroy();
+            OnMessageProduced.Dispose();
 
             lock (PriorityMessagesList)
                 PriorityMessagesList.Clear();
@@ -548,6 +556,9 @@ namespace Twino.MQ.Queues
                 bool allow = await ApplyDecision(decision, message);
                 if (!allow)
                     return PushResult.Success;
+
+                //trigger message produced event
+                _ = OnMessageProduced.Trigger(message);
 
                 if (State.CanEnqueue(message))
                 {

@@ -619,6 +619,8 @@ namespace Twino.MQ.Network
             if (builder.Status.HasValue)
                 await queue.SetStatus(builder.Status.Value);
 
+            _ = channel.OnQueueUpdated.Trigger(queue);
+
             //if creation successful, sends response
             if (message.PendingResponse)
                 await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
