@@ -104,7 +104,7 @@ namespace Twino.Client.TMQ.Connectors
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
-                return client.Push(channel, contentType, content, waitAcknowledge);
+                return client.Queues.Push(channel, contentType, content, waitAcknowledge);
 
             return Task.FromResult(TwinoResult.Failed());
         }
@@ -116,7 +116,7 @@ namespace Twino.Client.TMQ.Connectors
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
-                return client.PushJson(channel, contentType, jsonObject, waitAcknowledge);
+                return client.Queues.PushJson(channel, contentType, jsonObject, waitAcknowledge);
 
             return Task.FromResult(TwinoResult.Failed());
         }

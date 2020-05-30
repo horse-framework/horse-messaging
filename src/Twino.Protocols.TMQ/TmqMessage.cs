@@ -234,6 +234,15 @@ namespace Twino.Protocols.TMQ
         }
 
         /// <summary>
+        /// Reads content and deserializes to from json string
+        /// </summary>
+        public object GetJsonContent(Type type)
+        {
+            string json = GetStringContent();
+            return System.Text.Json.JsonSerializer.Deserialize(json, type);
+        }
+
+        /// <summary>
         /// Reads message content as string
         /// </summary>
         /// <returns></returns>

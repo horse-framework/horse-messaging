@@ -115,6 +115,11 @@ namespace Twino.Client.TMQ
         /// </summary>
         public RouterOperator Routers { get; }
 
+        /// <summary>
+        /// Event manage of the client
+        /// </summary>
+        internal EventManager Events { get; }
+
         #endregion
 
         #region Constructors - Destructors
@@ -131,6 +136,8 @@ namespace Twino.Client.TMQ
             Queues = new QueueOperator(this);
             Connections = new ConnectionOperator(this);
             Routers = new RouterOperator(this);
+
+            Events = new EventManager();
 
             _follower = new MessageFollower(this);
             _follower.Run();
@@ -883,6 +890,25 @@ namespace Twino.Client.TMQ
             }
 
             return await task;
+        }
+
+        #endregion
+
+        #region Events
+
+        internal async Task<bool> EventSubscription(string eventName, bool subscribe, string channelName, ushort? queueId)
+        {
+            ushort ct = subscribe ? (ushort)1 : (ushort)0;
+            TmqMessage message = new TmqMessage(MessageType.Event, eventName, ct);
+
+            if (!string.IsNullOrEmpty(channelName))
+                message.AddHeader(TmqHeaders.CHANNEL_NAME, channelName);
+
+            if (queueId.HasValue)
+                message.AddHeader(TmqHeaders.QUEUE_ID, queueId.Value.ToString());
+
+            TwinoResult result = await SendAndWaitForAcknowledge(message, true);
+            return result.Code == TwinoResultCode.Ok;
         }
 
         #endregion

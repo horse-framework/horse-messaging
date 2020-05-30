@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Twino.Client.TMQ.Internal;
 using Twino.Client.TMQ.Models;
 using Twino.Protocols.TMQ;
 using Twino.Protocols.TMQ.Models;
@@ -159,24 +160,52 @@ namespace Twino.Client.TMQ.Operators
 
         #region Subscription Events
 
+        /// <summary>
+        /// Triggers the action when a client is joined to the channel
+        /// </summary>
         public async Task<bool> OnClientJoined(string channelName, Action<SubscriptionEvent> action)
         {
-            throw new NotImplementedException();
+            bool ok = await _client.EventSubscription(EventNames.ClientJoined, true, channelName, null);
+            if (ok)
+                _client.Events.Add(EventNames.ClientJoined, channelName, 0, action, typeof(SubscriptionEvent));
+
+            return ok;
         }
 
+        /// <summary>
+        /// Unsubscribes from all client join events in the channel
+        /// </summary>
         public async Task<bool> OffClientJoined(string channelName)
         {
-            throw new NotImplementedException();
+            bool ok = await _client.EventSubscription(EventNames.ClientJoined, false, channelName, null);
+            if (ok)
+                _client.Events.Remove(EventNames.ClientJoined, channelName, 0);
+
+            return ok;
         }
 
+        /// <summary>
+        /// Triggers the action when a client is left from the channel
+        /// </summary>
         public async Task<bool> OnClientLeft(string channelName, Action<SubscriptionEvent> action)
         {
-            throw new NotImplementedException();
+            bool ok = await _client.EventSubscription(EventNames.ClientLeft, true, channelName, null);
+            if (ok)
+                _client.Events.Add(EventNames.ClientLeft, channelName, 0, action, typeof(SubscriptionEvent));
+
+            return ok;
         }
 
+        /// <summary>
+        /// Unsubscribes from all client leave events in the channel
+        /// </summary>
         public async Task<bool> OffClientLeft(string channelName)
         {
-            throw new NotImplementedException();
+            bool ok = await _client.EventSubscription(EventNames.ClientLeft, false, channelName, null);
+            if (ok)
+                _client.Events.Remove(EventNames.ClientLeft, channelName, 0);
+
+            return ok;
         }
 
         #endregion
@@ -188,7 +217,11 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OnCreated(Action<ChannelEvent> action)
         {
-            throw new NotImplementedException();
+            bool ok = await _client.EventSubscription(EventNames.ChannelCreated, true, null, null);
+            if (ok)
+                _client.Events.Add(EventNames.ChannelCreated, null, 0, action, typeof(ChannelEvent));
+
+            return ok;
         }
 
         /// <summary>
@@ -196,23 +229,11 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OffCreated()
         {
-            throw new NotImplementedException();
-        }
+            bool ok = await _client.EventSubscription(EventNames.ChannelCreated, false, null, null);
+            if (ok)
+                _client.Events.Remove(EventNames.ChannelCreated, null, 0);
 
-        /// <summary> 
-        /// Triggers the action when a client is updated in the server
-        /// </summary>
-        public async Task<bool> OnUpdated(Action<ChannelEvent> action)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Unsubscribes from all channel updated events
-        /// </summary>
-        public async Task<bool> OffUpdated()
-        {
-            throw new NotImplementedException();
+            return ok;
         }
 
         /// <summary> 
@@ -220,7 +241,11 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OnRemoved(Action<ChannelEvent> action)
         {
-            throw new NotImplementedException();
+            bool ok = await _client.EventSubscription(EventNames.ChannelRemoved, true, null, null);
+            if (ok)
+                _client.Events.Add(EventNames.ChannelRemoved, null, 0, action, typeof(ChannelEvent));
+
+            return ok;
         }
 
         /// <summary>
@@ -228,7 +253,11 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OffRemoved()
         {
-            throw new NotImplementedException();
+            bool ok = await _client.EventSubscription(EventNames.ChannelRemoved, false, null, null);
+            if (ok)
+                _client.Events.Remove(EventNames.ChannelRemoved, null, 0);
+
+            return ok;
         }
 
         #endregion

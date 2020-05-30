@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Twino.Client.TMQ.Internal;
 using Twino.Client.TMQ.Models;
 using Twino.Protocols.TMQ;
 using Twino.Protocols.TMQ.Models;
@@ -18,7 +19,7 @@ namespace Twino.Client.TMQ.Operators
     public class QueueOperator : IDisposable
     {
         private readonly TmqClient _client;
-        
+
         internal Dictionary<string, PullContainer> PullContainers { get; }
         private Timer _pullContainerTimeoutHandler;
 
@@ -61,7 +62,7 @@ namespace Twino.Client.TMQ.Operators
             {
             }
         }
-        
+
         /// <summary>
         /// Releases all resources
         /// </summary>
@@ -96,7 +97,7 @@ namespace Twino.Client.TMQ.Operators
             }
 
             message.SetMessageId(_client.UniqueIdGenerator.Create());
-            
+
             return await _client.WaitResponse(message, true);
         }
 
@@ -202,7 +203,6 @@ namespace Twino.Client.TMQ.Operators
 
         #region Push - Pull
 
-        
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
@@ -316,7 +316,7 @@ namespace Twino.Client.TMQ.Operators
         }
 
         #endregion
-        
+
         #region Events
 
         /// <summary> 
@@ -324,7 +324,11 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OnMessageProduced(string channel, ushort queue, Action<MessageEvent> action)
         {
-            throw new NotImplementedException();
+            bool ok = await _client.EventSubscription(EventNames.MessageProduced, true, channel, queue);
+            if (ok)
+                _client.Events.Add(EventNames.MessageProduced, channel, queue, action, typeof(MessageEvent));
+
+            return ok;
         }
 
         /// <summary>
@@ -332,7 +336,11 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OffMessageProduced(string channel, ushort queue)
         {
-            throw new NotImplementedException();
+            bool ok = await _client.EventSubscription(EventNames.MessageProduced, false, channel, queue);
+            if (ok)
+                _client.Events.Remove(EventNames.MessageProduced, channel, queue);
+
+            return ok;
         }
 
         /// <summary>
@@ -340,7 +348,11 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OnCreated(string channel, Action<QueueEvent> action)
         {
-            throw new NotImplementedException();
+            bool ok = await _client.EventSubscription(EventNames.QueueCreated, true, channel, null);
+            if (ok)
+                _client.Events.Add(EventNames.QueueCreated, channel, 0, action, typeof(QueueEvent));
+
+            return ok;
         }
 
         /// <summary>
@@ -348,7 +360,11 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OffCreated(string channel)
         {
-            throw new NotImplementedException();
+            bool ok = await _client.EventSubscription(EventNames.QueueCreated, false, channel, null);
+            if (ok)
+                _client.Events.Remove(EventNames.QueueCreated, channel, 0);
+
+            return ok;
         }
 
         /// <summary>
@@ -356,7 +372,11 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OnUpdated(string channel, Action<QueueEvent> action)
         {
-            throw new NotImplementedException();
+            bool ok = await _client.EventSubscription(EventNames.QueueUpdated, true, channel, null);
+            if (ok)
+                _client.Events.Add(EventNames.QueueUpdated, channel, 0, action, typeof(QueueEvent));
+
+            return ok;
         }
 
         /// <summary>
@@ -364,7 +384,11 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OffUpdated(string channel)
         {
-            throw new NotImplementedException();
+            bool ok = await _client.EventSubscription(EventNames.QueueUpdated, false, channel, null);
+            if (ok)
+                _client.Events.Remove(EventNames.QueueUpdated, channel, 0);
+
+            return ok;
         }
 
         /// <summary>
@@ -372,7 +396,11 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OnRemoved(string channel, Action<QueueEvent> action)
         {
-            throw new NotImplementedException();
+            bool ok = await _client.EventSubscription(EventNames.QueueRemoved, true, channel, null);
+            if (ok)
+                _client.Events.Add(EventNames.QueueRemoved, channel, 0, action, typeof(QueueEvent));
+
+            return ok;
         }
 
         /// <summary>
@@ -380,7 +408,11 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OffRemoved(string channel)
         {
-            throw new NotImplementedException();
+            bool ok = await _client.EventSubscription(EventNames.QueueRemoved, false, channel, null);
+            if (ok)
+                _client.Events.Remove(EventNames.QueueRemoved, channel, 0);
+
+            return ok;
         }
 
         #endregion
