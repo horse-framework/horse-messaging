@@ -41,11 +41,6 @@ namespace Twino.MQ.Events
         public const string ChannelCreated = "ChannelCreated";
 
         /// <summary>
-        /// When options of a channel is changed.
-        /// </summary>
-        public const string ChannelUpdated = "ChannelUpdated";
-
-        /// <summary>
         /// When a channel and it’s queues are removed.
         /// </summary>
         public const string ChannelRemoved = "ChannelRemoved";

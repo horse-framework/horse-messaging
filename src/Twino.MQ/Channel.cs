@@ -404,7 +404,7 @@ namespace Twino.MQ
             if (Options.DestroyWhenEmpty && _clients.Count == 0)
                 await CheckAutoDestroy();
 
-            _ = OnClientJoined.Trigger(client);
+            _ = OnClientLeft.Trigger(client);
         }
 
         /// <summary>
@@ -420,7 +420,7 @@ namespace Twino.MQ
             if (Options.DestroyWhenEmpty && _clients.Count == 0)
                 await CheckAutoDestroy();
 
-            _ = OnClientJoined.Trigger(client);
+            _ = OnClientLeft.Trigger(client);
         }
 
         /// <summary>
@@ -441,7 +441,7 @@ namespace Twino.MQ
             if (Options.DestroyWhenEmpty && _clients.Count == 0)
                 await CheckAutoDestroy();
 
-            _ = OnClientJoined.Trigger(cc);
+            _ = OnClientLeft.Trigger(cc);
 
             return true;
         }

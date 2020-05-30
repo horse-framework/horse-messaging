@@ -4,6 +4,7 @@ using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
+using Twino.MQ.Events;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
 using Twino.MQ.Queues;
@@ -124,6 +125,40 @@ namespace Twino.MQ
 
         #endregion
 
+        #region Events
+
+        /// <summary>
+        /// Triggered when a client is connected 
+        /// </summary>
+        public ClientEventManager OnClientConnected { get; set; }
+
+        /// <summary>
+        /// Triggered when a client is disconnected 
+        /// </summary>
+        public ClientEventManager OnClientDisconnected { get; set; }
+
+        /// <summary>
+        /// Triggered when a channel is created 
+        /// </summary>
+        public ChannelEventManager OnChannelCreated { get; set; }
+
+        /// <summary>
+        /// Triggered when a channel is removed 
+        /// </summary>
+        public ChannelEventManager OnChannelRemoved { get; set; }
+
+        /// <summary>
+        /// Triggered when a node is connected
+        /// </summary>
+        public NodeEventManager OnNodeConnected { get; set; }
+
+        /// <summary>
+        /// Triggered when a node is disconnected 
+        /// </summary>
+        public NodeEventManager OnNodeDisconnected { get; set; }
+
+        #endregion
+
         #region Constructors - Init
 
         /// <summary>
@@ -152,6 +187,13 @@ namespace Twino.MQ
             InstanceManager = new InstanceManager(this);
 
             InstanceManager.Initialize();
+
+            OnClientConnected = new ClientEventManager(EventNames.ClientConnected, this);
+            OnClientDisconnected = new ClientEventManager(EventNames.ClientDisconnected, this);
+            OnChannelCreated = new ChannelEventManager(EventNames.ChannelCreated, this);
+            OnChannelRemoved = new ChannelEventManager(EventNames.ChannelRemoved, this);
+            OnNodeConnected = new NodeEventManager(EventNames.NodeConnected, this);
+            OnNodeDisconnected = new NodeEventManager(EventNames.NodeDisconnected, this);
         }
 
         #endregion
@@ -276,6 +318,8 @@ namespace Twino.MQ
             if (eventHandler != null)
                 _ = eventHandler.OnChannelCreated(channel);
 
+            _ = OnChannelCreated.Trigger(channel);
+
             return channel;
         }
 
@@ -329,6 +373,8 @@ namespace Twino.MQ
                 await channel.EventHandler.OnChannelRemoved(channel);
 
             await channel.Destroy();
+
+            _ = OnChannelRemoved.Trigger(channel);
         }
 
         #endregion
@@ -341,6 +387,7 @@ namespace Twino.MQ
         internal void AddClient(MqClient client)
         {
             _clients.Add(client);
+            _ = OnClientConnected.Trigger(client);
         }
 
         /// <summary>
@@ -350,6 +397,7 @@ namespace Twino.MQ
         {
             _clients.Remove(client);
             await client.LeaveFromAllChannels();
+            _ = OnClientDisconnected.Trigger(client);
         }
 
         /// <summary>
