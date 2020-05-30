@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.Protocols.TMQ;
@@ -29,6 +30,11 @@ namespace Twino.MQ.Events
         public ushort ContentType { get; }
 
         /// <summary>
+        /// Cleanup timer for disconnected subscribers
+        /// </summary>
+        private Timer _cleanup;
+
+        /// <summary>
         /// Name is definition of the event.
         /// Target is the channel name of the event.
         /// Content Type is the Queue Id of the event.
@@ -38,6 +44,26 @@ namespace Twino.MQ.Events
             Name = name;
             Target = target;
             ContentType = contentType;
+            _cleanup = new Timer(s => CheckCleanup(), null, 60000, 60000);
+        }
+
+        /// <summary>
+        /// Checks disconnected clients and removes them from susbcribers list
+        /// </summary>
+        private void CheckCleanup()
+        {
+            List<MqClient> removing = new List<MqClient>();
+            lock (_subscribers)
+            {
+                foreach (MqClient s in _subscribers)
+                {
+                    if (!s.IsConnected)
+                        removing.Add(s);
+                }
+
+                foreach (MqClient r in removing)
+                    _subscribers.Remove(r);
+            }
         }
 
         /// <summary>
@@ -57,6 +83,9 @@ namespace Twino.MQ.Events
         /// </summary>
         public void Unsubscribe(MqClient client)
         {
+            if (_subscribers.Count == 0)
+                return;
+
             lock (_subscribers)
                 _subscribers.Remove(client);
         }
@@ -76,6 +105,8 @@ namespace Twino.MQ.Events
         public void Dispose()
         {
             ClearSubsscriptions();
+            _cleanup.Dispose();
+            _cleanup = null;
         }
 
         /// <summary>

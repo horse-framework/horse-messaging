@@ -1,22 +1,35 @@
-using System;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
+using Twino.Protocols.TMQ.Models.Events;
 
 namespace Twino.MQ.Events
 {
     /// <summary>
-    /// Manages channel - client relational events
+    /// Manages client join and leave events
     /// </summary>
     public class SubscriptionEventManager : EventManager
     {
+        /// <summary>
+        /// Creates new client event manager
+        /// </summary>
         public SubscriptionEventManager(string eventName, Channel channel)
             : base(eventName, channel.Name, 0)
         {
         }
 
-        public async Task Trigger(ChannelClient client)
+        /// <summary>
+        /// Triggers client joined or left channel events
+        /// </summary>
+        public Task Trigger(ChannelClient client, string node = null)
         {
-            throw new NotImplementedException();
+            return base.Trigger(new SubscriptionEvent
+                                {
+                                    Channel = client.Channel.Name,
+                                    ClientId = client.Client.UniqueId,
+                                    ClientName = client.Client.Name,
+                                    ClientType = client.Client.Type,
+                                    Node = node
+                                });
         }
     }
 }

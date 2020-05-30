@@ -27,12 +27,6 @@ namespace Twino.Protocols.TMQ.Models.Events
         public int ClientLimit { get; set; }
 
         /// <summary>
-        /// Active queues in the channel
-        /// </summary>
-        [JsonPropertyName("Queues")]
-        public ushort[] Queues { get; set; }
-
-        /// <summary>
         /// If event is raised in different node instance, the name of the instance.
         /// If null, event is raised in same instance.
         /// </summary>
