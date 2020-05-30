@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.Client.TMQ.Models;
 using Twino.Protocols.TMQ;
@@ -13,13 +15,59 @@ namespace Twino.Client.TMQ.Operators
     /// <summary>
     /// Queue manager object for tmq client
     /// </summary>
-    public class QueueOperator
+    public class QueueOperator : IDisposable
     {
         private readonly TmqClient _client;
+        
+        internal Dictionary<string, PullContainer> PullContainers { get; }
+        private Timer _pullContainerTimeoutHandler;
 
         internal QueueOperator(TmqClient client)
         {
             _client = client;
+            PullContainers = new Dictionary<string, PullContainer>();
+            _pullContainerTimeoutHandler = new Timer(HandleTimeoutPulls, null, 1000, 1000);
+        }
+
+        /// <summary>
+        /// Handles timed out pull requests and removed them
+        /// </summary>
+        private void HandleTimeoutPulls(object state)
+        {
+            try
+            {
+                if (PullContainers.Count > 0)
+                {
+                    List<PullContainer> timedouts = new List<PullContainer>();
+                    lock (PullContainers)
+                    {
+                        foreach (PullContainer container in PullContainers.Values)
+                        {
+                            if (container.Status == PullProcess.Receiving && container.LastReceived + _client.PullTimeout < DateTime.UtcNow)
+                                timedouts.Add(container);
+                        }
+                    }
+
+                    foreach (PullContainer container in timedouts)
+                    {
+                        lock (PullContainers)
+                            PullContainers.Remove(container.RequestId);
+
+                        container.Complete(null);
+                    }
+                }
+            }
+            catch
+            {
+            }
+        }
+        
+        /// <summary>
+        /// Releases all resources
+        /// </summary>
+        public void Dispose()
+        {
+            _pullContainerTimeoutHandler?.Dispose();
         }
 
         #region Actions
@@ -152,6 +200,123 @@ namespace Twino.Client.TMQ.Operators
 
         #endregion
 
+        #region Push - Pull
+
+        
+        /// <summary>
+        /// Pushes a message to a queue
+        /// </summary>
+        public async Task<TwinoResult> PushJson(string channel, ushort queueId, object jsonObject, bool waitAcknowledge)
+        {
+            TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
+            message.Content = new MemoryStream();
+            message.PendingAcknowledge = waitAcknowledge;
+            await JsonSerializer.SerializeAsync(message.Content, jsonObject, jsonObject.GetType());
+
+            if (waitAcknowledge)
+                message.SetMessageId(_client.UniqueIdGenerator.Create());
+
+            return await _client.SendAndWaitForAcknowledge(message, waitAcknowledge);
+        }
+
+        /// <summary>
+        /// Pushes a message to a queue
+        /// </summary>
+        public async Task<TwinoResult> Push(string channel, ushort queueId, string content, bool waitAcknowledge)
+        {
+            return await Push(channel, queueId, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge);
+        }
+
+        /// <summary>
+        /// Pushes a message to a queue
+        /// </summary>
+        public async Task<TwinoResult> Push(string channel, ushort queueId, MemoryStream content, bool waitAcknowledge)
+        {
+            TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
+            message.Content = content;
+            message.PendingAcknowledge = waitAcknowledge;
+
+            if (waitAcknowledge)
+                message.SetMessageId(_client.UniqueIdGenerator.Create());
+
+            return await _client.SendAndWaitForAcknowledge(message, waitAcknowledge);
+        }
+
+        /// <summary>
+        /// Pushes a message to a queue and does not wait for acknowledge.
+        /// Uses legacy callback method instead of async
+        /// </summary>
+        public bool PushJsonSync(string channel, ushort queueId, object jsonObject)
+        {
+            TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
+            message.PendingAcknowledge = false;
+            byte[] data = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(jsonObject, jsonObject.GetType());
+            message.Content = new MemoryStream(data);
+            message.Content.Position = 0;
+
+            if (_client.UseUniqueMessageId)
+                message.SetMessageId(_client.UniqueIdGenerator.Create());
+
+            return _client.Send(message);
+        }
+
+        /// <summary>
+        /// Pushes a message to a queue and does not wait for acknowledge.
+        /// Uses legacy callback method instead of async
+        /// </summary>
+        public bool PushSync(string channel, ushort queueId, byte[] data)
+        {
+            TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
+            message.PendingAcknowledge = false;
+            message.Content = new MemoryStream(data);
+            message.Content.Position = 0;
+
+            if (_client.UseUniqueMessageId)
+                message.SetMessageId(_client.UniqueIdGenerator.Create());
+
+            return _client.Send(message);
+        }
+
+        /// <summary>
+        /// Request a message from Pull queue
+        /// </summary>
+        public async Task<PullContainer> Pull(PullRequest request, Func<int, TmqMessage, Task> actionForEachMessage = null)
+        {
+            TmqMessage message = new TmqMessage(MessageType.QueuePullRequest, request.Channel, request.QueueId);
+            message.SetMessageId(_client.UniqueIdGenerator.Create());
+            message.AddHeader(TmqHeaders.COUNT, request.Count);
+
+            if (request.ClearAfter == ClearDecision.AllMessages)
+                message.AddHeader(TmqHeaders.CLEAR, "all");
+            else if (request.ClearAfter == ClearDecision.PriorityMessages)
+                message.AddHeader(TmqHeaders.CLEAR, "High-Priority");
+            else if (request.ClearAfter == ClearDecision.Messages)
+                message.AddHeader(TmqHeaders.CLEAR, "Default-Priority");
+
+            if (request.GetQueueMessageCounts)
+                message.AddHeader(TmqHeaders.INFO, "yes");
+
+            if (request.Order == MessageOrder.LIFO)
+                message.AddHeader(TmqHeaders.ORDER, TmqHeaders.LIFO);
+
+            PullContainer container = new PullContainer(message.MessageId, request.Count, actionForEachMessage);
+            lock (PullContainers)
+                PullContainers.Add(message.MessageId, container);
+
+            TwinoResult sent = await _client.SendAsync(message);
+            if (sent.Code != TwinoResultCode.Ok)
+            {
+                lock (PullContainers)
+                    PullContainers.Remove(message.MessageId);
+
+                container.Complete("Error");
+            }
+
+            return await container.GetAwaitableTask();
+        }
+
+        #endregion
+        
         #region Events
 
         /// <summary> 

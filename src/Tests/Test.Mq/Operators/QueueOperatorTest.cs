@@ -28,7 +28,7 @@ namespace Test.Mq.Operators
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
 
-            TwinoResult created = await client.CreateQueue("ch-2", MessageA.ContentType);
+            TwinoResult created = await client.Queues.Create("ch-2", MessageA.ContentType);
             Assert.Equal(TwinoResultCode.Ok, created.Code);
 
             Channel channel = server.Server.Channels.FirstOrDefault(x => x.Name == "ch-2");
@@ -50,7 +50,7 @@ namespace Test.Mq.Operators
             await client.ConnectAsync("tmq://localhost:21206");
             Assert.True(client.IsConnected);
 
-            TwinoResult created = await client.CreateQueue("ch-test", MessageA.ContentType, o =>
+            TwinoResult created = await client.Queues.Create("ch-test", MessageA.ContentType, o =>
             {
                 o.SendOnlyFirstAcquirer = true;
                 o.AcknowledgeTimeout = 33000;

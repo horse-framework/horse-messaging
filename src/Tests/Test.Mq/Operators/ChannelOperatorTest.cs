@@ -27,7 +27,7 @@ namespace Test.Mq.Operators
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:41201");
 
-            TwinoResult joined = await client.Join("ch-1", false);
+            TwinoResult joined = await client.Channels.Join("ch-1", false);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(1000);
 
@@ -51,7 +51,7 @@ namespace Test.Mq.Operators
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:41202");
 
-            TwinoResult joined = await client.Join("ch-1", true);
+            TwinoResult joined = await client.Channels.Join("ch-1", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -74,10 +74,10 @@ namespace Test.Mq.Operators
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:41203");
 
-            TwinoResult joined = await client.Join("ch-1", true);
+            TwinoResult joined = await client.Channels.Join("ch-1", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
-            TwinoResult left = await client.Leave("ch-1", false);
+            TwinoResult left = await client.Channels.Leave("ch-1", false);
             Assert.Equal(TwinoResultCode.Ok, left.Code);
             await Task.Delay(1000);
 
@@ -101,10 +101,10 @@ namespace Test.Mq.Operators
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:41204");
 
-            TwinoResult joined = await client.Join("ch-1", true);
+            TwinoResult joined = await client.Channels.Join("ch-1", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
-            TwinoResult left = await client.Leave("ch-1", true);
+            TwinoResult left = await client.Channels.Leave("ch-1", true);
             Assert.Equal(TwinoResultCode.Ok, left.Code);
 
             Channel channel = server.Server.Channels.FirstOrDefault();

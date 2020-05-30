@@ -26,14 +26,14 @@ namespace Test.Mq.Statuses
             consumer.ClientId = "consumer";
             await consumer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
-            TwinoResult joined = await consumer.Join("ch-pull", true);
+            TwinoResult joined = await consumer.Channels.Join("ch-pull", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             TmqClient producer = new TmqClient();
             await producer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            await producer.Push("ch-pull", MessageA.ContentType, "Hello, World!", false);
+            await producer.Queues.Push("ch-pull", MessageA.ContentType, "Hello, World!", false);
             await Task.Delay(700);
 
             Channel channel = server.Server.FindChannel("ch-pull");
@@ -50,11 +50,11 @@ namespace Test.Mq.Statuses
             request.GetQueueMessageCounts = false;
             request.Order = MessageOrder.FIFO;
 
-            PullContainer container1 = await consumer.Pull(request);
+            PullContainer container1 = await consumer.Queues.Pull(request);
             Assert.Equal(PullProcess.Completed, container1.Status);
             Assert.NotEmpty(container1.ReceivedMessages);
 
-            PullContainer container2 = await consumer.Pull(request);
+            PullContainer container2 = await consumer.Queues.Pull(request);
             Assert.Equal(PullProcess.Empty, container2.Status);
             Assert.Empty(container2.ReceivedMessages);
         }
@@ -83,7 +83,7 @@ namespace Test.Mq.Statuses
 
             bool msgReceived = false;
             consumer.MessageReceived += (c, m) => msgReceived = true;
-            TwinoResult joined = await consumer.Join("ch-pull", true);
+            TwinoResult joined = await consumer.Channels.Join("ch-pull", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             TmqClient producer = new TmqClient();
@@ -91,7 +91,7 @@ namespace Test.Mq.Statuses
             await producer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            Task<TwinoResult> taskAck = producer.Push("ch-pull", MessageA.ContentType, "Hello, World!", true);
+            Task<TwinoResult> taskAck = producer.Queues.Push("ch-pull", MessageA.ContentType, "Hello, World!", true);
 
             await Task.Delay(500);
             Assert.False(taskAck.IsCompleted);
@@ -100,7 +100,7 @@ namespace Test.Mq.Statuses
 
             consumer.PullTimeout = TimeSpan.FromDays(1);
 
-            PullContainer pull = await consumer.Pull(PullRequest.Single("ch-pull", MessageA.ContentType));
+            PullContainer pull = await consumer.Queues.Pull(PullRequest.Single("ch-pull", MessageA.ContentType));
             Assert.Equal(PullProcess.Completed, pull.Status);
             Assert.Equal(1, pull.ReceivedCount);
             Assert.NotEmpty(pull.ReceivedMessages);
@@ -130,7 +130,7 @@ namespace Test.Mq.Statuses
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
-            TwinoResult joined = await client.Join("ch-pull", true);
+            TwinoResult joined = await client.Channels.Join("ch-pull", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             PullRequest request = new PullRequest
@@ -141,7 +141,7 @@ namespace Test.Mq.Statuses
                                       Order = !fifo.HasValue || fifo.Value ? MessageOrder.FIFO : MessageOrder.LIFO
                                   };
 
-            PullContainer container = await client.Pull(request);
+            PullContainer container = await client.Queues.Pull(request);
             Assert.Equal(PullProcess.Completed, container.Status);
 
             TmqMessage msg = container.ReceivedMessages.FirstOrDefault();
@@ -175,7 +175,7 @@ namespace Test.Mq.Statuses
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
-            TwinoResult joined = await client.Join("ch-pull", true);
+            TwinoResult joined = await client.Channels.Join("ch-pull", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             PullRequest request = new PullRequest
@@ -185,7 +185,7 @@ namespace Test.Mq.Statuses
                                       Count = count
                                   };
 
-            PullContainer container = await client.Pull(request);
+            PullContainer container = await client.Queues.Pull(request);
             Assert.Equal(count, container.ReceivedCount);
             Assert.Equal(PullProcess.Completed, container.Status);
         }
@@ -214,7 +214,7 @@ namespace Test.Mq.Statuses
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
-            TwinoResult joined = await client.Join("ch-pull", true);
+            TwinoResult joined = await client.Channels.Join("ch-pull", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             ClearDecision clearDecision = ClearDecision.None;
@@ -233,7 +233,7 @@ namespace Test.Mq.Statuses
                                       ClearAfter = clearDecision
                                   };
 
-            PullContainer container = await client.Pull(request);
+            PullContainer container = await client.Queues.Pull(request);
             Assert.Equal(count, container.ReceivedCount);
 
             Assert.Equal(PullProcess.Completed, container.Status);

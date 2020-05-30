@@ -35,7 +35,7 @@ namespace Test.Mq
             await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            TwinoResult joined = await client.Join("ch-1", true);
+            TwinoResult joined = await client.Channels.Join("ch-1", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(250);
 
@@ -45,7 +45,7 @@ namespace Test.Mq
             MessageA a = new MessageA("A");
             string serialized = Newtonsoft.Json.JsonConvert.SerializeObject(a);
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(serialized));
-            TwinoResult sent = await client.Push("ch-1", MessageA.ContentType, ms, false);
+            TwinoResult sent = await client.Queues.Push("ch-1", MessageA.ContentType, ms, false);
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1000);

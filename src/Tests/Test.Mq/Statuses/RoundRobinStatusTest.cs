@@ -40,13 +40,13 @@ namespace Test.Mq.Statuses
                 await consumer.ConnectAsync("tmq://localhost:" + port);
                 Assert.True(consumer.IsConnected);
                 consumer.MessageReceived += (c, m) => Interlocked.Increment(ref msgReceived);
-                TwinoResult joined = await consumer.Join("ch-round", true);
+                TwinoResult joined = await consumer.Channels.Join("ch-round", true);
                 Assert.Equal(TwinoResultCode.Ok, joined.Code);
             }
 
             for (int i = 0; i < 50; i++)
             {
-                await producer.Push("ch-round", MessageA.ContentType, "Hello, World!", false);
+                await producer.Queues.Push("ch-round", MessageA.ContentType, "Hello, World!", false);
                 msgSent++;
             }
 
@@ -66,7 +66,7 @@ namespace Test.Mq.Statuses
             await producer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            await producer.Push("ch-round", MessageA.ContentType, "Hello, World!", false);
+            await producer.Queues.Push("ch-round", MessageA.ContentType, "Hello, World!", false);
             await Task.Delay(700);
 
             Channel channel = server.Server.FindChannel("ch-round");
@@ -81,7 +81,7 @@ namespace Test.Mq.Statuses
             await consumer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
             consumer.MessageReceived += (c, m) => msgReceived = true;
-            TwinoResult joined = await consumer.Join("ch-round", true);
+            TwinoResult joined = await consumer.Channels.Join("ch-round", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             await Task.Delay(800);
@@ -114,10 +114,10 @@ namespace Test.Mq.Statuses
             consumer.ClientId = "consumer";
             await consumer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
-            TwinoResult joined = await consumer.Join("ch-round", true);
+            TwinoResult joined = await consumer.Channels.Join("ch-round", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
-            TwinoResult ack = await producer.Push("ch-round", MessageA.ContentType, "Hello, World!", true);
+            TwinoResult ack = await producer.Queues.Push("ch-round", MessageA.ContentType, "Hello, World!", true);
             Assert.Equal(queueAckIsActive, ack.Code == TwinoResultCode.Ok);
         }
     }

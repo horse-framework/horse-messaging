@@ -115,9 +115,6 @@ namespace Twino.Client.TMQ
         /// </summary>
         public RouterOperator Routers { get; }
 
-        private readonly Dictionary<string, PullContainer> _pullContainers;
-        private Timer _pullContainerTimeoutHandler;
-
         #endregion
 
         #region Constructors - Destructors
@@ -127,8 +124,6 @@ namespace Twino.Client.TMQ
         /// </summary>
         public TmqClient()
         {
-            _pullContainers = new Dictionary<string, PullContainer>();
-
             Data.Method = "CONNECT";
             Data.Path = "/";
 
@@ -139,8 +134,6 @@ namespace Twino.Client.TMQ
 
             _follower = new MessageFollower(this);
             _follower.Run();
-
-            _pullContainerTimeoutHandler = new Timer(HandleTimeoutPulls, null, 1000, 1000);
         }
 
         /// <summary>
@@ -149,40 +142,7 @@ namespace Twino.Client.TMQ
         public void Dispose()
         {
             _follower?.Dispose();
-            _pullContainerTimeoutHandler?.Dispose();
-        }
-
-        /// <summary>
-        /// Handles timed out pull requests and removed them
-        /// </summary>
-        private void HandleTimeoutPulls(object state)
-        {
-            try
-            {
-                if (_pullContainers.Count > 0)
-                {
-                    List<PullContainer> timedouts = new List<PullContainer>();
-                    lock (_pullContainers)
-                    {
-                        foreach (PullContainer container in _pullContainers.Values)
-                        {
-                            if (container.Status == PullProcess.Receiving && container.LastReceived + PullTimeout < DateTime.UtcNow)
-                                timedouts.Add(container);
-                        }
-                    }
-
-                    foreach (PullContainer container in timedouts)
-                    {
-                        lock (_pullContainers)
-                            _pullContainers.Remove(container.RequestId);
-
-                        container.Complete(null);
-                    }
-                }
-            }
-            catch
-            {
-            }
+            Queues.Dispose();
         }
 
         #endregion
@@ -472,14 +432,14 @@ namespace Twino.Client.TMQ
                         await SendAsync(message.CreateAcknowledge());
 
                     //if message is response for pull request, process pull container
-                    if (_pullContainers.Count > 0 && message.HasHeader)
+                    if (Queues.PullContainers.Count > 0 && message.HasHeader)
                     {
                         string requestId = message.FindHeader(TmqHeaders.REQUEST_ID);
                         if (!string.IsNullOrEmpty(requestId))
                         {
                             PullContainer container;
-                            lock (_pullContainers)
-                                _pullContainers.TryGetValue(requestId, out container);
+                            lock (Queues.PullContainers)
+                                Queues.PullContainers.TryGetValue(requestId, out container);
 
                             if (container != null)
                             {
@@ -517,8 +477,8 @@ namespace Twino.Client.TMQ
 
             if (!string.IsNullOrEmpty(noContent))
             {
-                lock (_pullContainers)
-                    _pullContainers.Remove(requestId);
+                lock (Queues.PullContainers)
+                    Queues.PullContainers.Remove(requestId);
 
                 container.Complete(noContent);
             }
@@ -927,131 +887,68 @@ namespace Twino.Client.TMQ
 
         #endregion
 
-        #region Push
+        #region Obsolete
 
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public async Task<TwinoResult> PushJson(string channel, ushort queueId, object jsonObject, bool waitAcknowledge)
+        [Obsolete("This method is moved into Queues property. Use Queues.PushJson instead of this")]
+        public Task<TwinoResult> PushJson(string channel, ushort queueId, object jsonObject, bool waitAcknowledge)
         {
-            TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
-            message.Content = new MemoryStream();
-            message.PendingAcknowledge = waitAcknowledge;
-            await System.Text.Json.JsonSerializer.SerializeAsync(message.Content, jsonObject, jsonObject.GetType());
-
-            if (waitAcknowledge)
-                message.SetMessageId(UniqueIdGenerator.Create());
-
-            return await SendAndWaitForAcknowledge(message, waitAcknowledge);
+            return Queues.PushJson(channel, queueId, jsonObject, waitAcknowledge);
         }
 
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public async Task<TwinoResult> Push(string channel, ushort queueId, string content, bool waitAcknowledge)
+        [Obsolete("This method is moved into Queues property. Use Queues.Push instead of this")]
+        public Task<TwinoResult> Push(string channel, ushort queueId, string content, bool waitAcknowledge)
         {
-            return await Push(channel, queueId, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge);
+            return Queues.Push(channel, queueId, content, waitAcknowledge);
         }
 
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public async Task<TwinoResult> Push(string channel, ushort queueId, MemoryStream content, bool waitAcknowledge)
+        [Obsolete("This method is moved into Queues property. Use Queues.Push instead of this")]
+        public Task<TwinoResult> Push(string channel, ushort queueId, MemoryStream content, bool waitAcknowledge)
         {
-            TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
-            message.Content = content;
-            message.PendingAcknowledge = waitAcknowledge;
-
-            if (waitAcknowledge)
-                message.SetMessageId(UniqueIdGenerator.Create());
-
-            return await SendAndWaitForAcknowledge(message, waitAcknowledge);
+            return Queues.Push(channel, queueId, content, waitAcknowledge);
         }
 
         /// <summary>
         /// Pushes a message to a queue and does not wait for acknowledge.
         /// Uses legacy callback method instead of async
         /// </summary>
+        [Obsolete("This method is moved into Queues property. Use Queues.PushJsonSync instead of this")]
         public bool PushJsonSync(string channel, ushort queueId, object jsonObject)
         {
-            TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
-            message.PendingAcknowledge = false;
-            byte[] data = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(jsonObject, jsonObject.GetType());
-            message.Content = new MemoryStream(data);
-            message.Content.Position = 0;
-
-            if (UseUniqueMessageId)
-                message.SetMessageId(UniqueIdGenerator.Create());
-
-            return Send(message);
+            return Queues.PushJsonSync(channel, queueId, jsonObject);
         }
 
         /// <summary>
         /// Pushes a message to a queue and does not wait for acknowledge.
         /// Uses legacy callback method instead of async
         /// </summary>
+        [Obsolete("This method is moved into Queues property. Use Queues.PushSync instead of this")]
         public bool PushSync(string channel, ushort queueId, byte[] data)
         {
-            TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
-            message.PendingAcknowledge = false;
-            message.Content = new MemoryStream(data);
-            message.Content.Position = 0;
-
-            if (UseUniqueMessageId)
-                message.SetMessageId(UniqueIdGenerator.Create());
-
-            return Send(message);
+            return Queues.PushSync(channel, queueId, data);
         }
-
-        #endregion
-
-        #region Pull
 
         /// <summary>
         /// Request a message from Pull queue
         /// </summary>
-        public async Task<PullContainer> Pull(PullRequest request, Func<int, TmqMessage, Task> actionForEachMessage = null)
+        [Obsolete("This method is moved into Queues property. Use Queues.Pull instead of this")]
+        public Task<PullContainer> Pull(PullRequest request, Func<int, TmqMessage, Task> actionForEachMessage = null)
         {
-            TmqMessage message = new TmqMessage(MessageType.QueuePullRequest, request.Channel, request.QueueId);
-            message.SetMessageId(UniqueIdGenerator.Create());
-            message.AddHeader(TmqHeaders.COUNT, request.Count);
-
-            if (request.ClearAfter == ClearDecision.AllMessages)
-                message.AddHeader(TmqHeaders.CLEAR, "all");
-            else if (request.ClearAfter == ClearDecision.PriorityMessages)
-                message.AddHeader(TmqHeaders.CLEAR, "High-Priority");
-            else if (request.ClearAfter == ClearDecision.Messages)
-                message.AddHeader(TmqHeaders.CLEAR, "Default-Priority");
-
-            if (request.GetQueueMessageCounts)
-                message.AddHeader(TmqHeaders.INFO, "yes");
-
-            if (request.Order == MessageOrder.LIFO)
-                message.AddHeader(TmqHeaders.ORDER, TmqHeaders.LIFO);
-
-            PullContainer container = new PullContainer(message.MessageId, request.Count, actionForEachMessage);
-            lock (_pullContainers)
-                _pullContainers.Add(message.MessageId, container);
-
-            TwinoResult sent = await SendAsync(message);
-            if (sent.Code != TwinoResultCode.Ok)
-            {
-                lock (_pullContainers)
-                    _pullContainers.Remove(message.MessageId);
-
-                container.Complete("Error");
-            }
-
-            return await container.GetAwaitableTask();
+            return Queues.Pull(request, actionForEachMessage);
         }
-
-        #endregion
-
-        #region Channel - Queue
 
         /// <summary>
         /// Joins to a channel
         /// </summary>
+        [Obsolete("This method is moved into Channels property. Use Channels.Join instead of this")]
         public Task<TwinoResult> Join(string channel, bool verifyResponse)
         {
             return Channels.Join(channel, verifyResponse);
@@ -1060,6 +957,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Leaves from a channel
         /// </summary>
+        [Obsolete("This method is moved into Channels property. Use Channels.Leave instead of this")]
         public Task<TwinoResult> Leave(string channel, bool verifyResponse)
         {
             return Channels.Leave(channel, verifyResponse);
@@ -1068,6 +966,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Creates new queue in server
         /// </summary>
+        [Obsolete("This method is moved into Queues property. Use Queues.Create instead of this")]
         public Task<TwinoResult> CreateQueue(string channel, ushort queueId, Action<QueueOptions> optionsAction = null)
         {
             return Queues.Create(channel, queueId, optionsAction);

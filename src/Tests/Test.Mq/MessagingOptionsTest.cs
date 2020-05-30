@@ -41,7 +41,7 @@ namespace Test.Mq
             Assert.NotNull(queue);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            TwinoResult sent = await client.Push(channel.Name, queue.Id, ms, false);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, false);
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1500);
@@ -55,7 +55,7 @@ namespace Test.Mq
                     received = true;
             };
 
-            TwinoResult joined = await client.Join(channel.Name, true);
+            TwinoResult joined = await client.Channels.Join(channel.Name, true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(1500);
 
@@ -83,7 +83,7 @@ namespace Test.Mq
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
-            TwinoResult joined = await client.Join(channel.Name, true);
+            TwinoResult joined = await client.Channels.Join(channel.Name, true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(250);
 
@@ -95,7 +95,7 @@ namespace Test.Mq
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            TwinoResult sent = await client.Push(channel.Name, queue.Id, ms, false);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, false);
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1500);
@@ -129,7 +129,7 @@ namespace Test.Mq
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
-            TwinoResult joined = await client.Join(channel.Name, true);
+            TwinoResult joined = await client.Channels.Join(channel.Name, true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(250);
 
@@ -141,7 +141,7 @@ namespace Test.Mq
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            TwinoResult sent = await client.Push(channel.Name, queue.Id, ms, false);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, false);
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1500);
@@ -179,14 +179,14 @@ namespace Test.Mq
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            TwinoResult sent = await client.Push(channel.Name, queue.Id, ms, false);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, false);
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1500);
             Assert.NotEmpty(queue.Messages);
             Assert.False(received);
 
-            TwinoResult joined = await client.Join(channel.Name, true);
+            TwinoResult joined = await client.Channels.Join(channel.Name, true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(1500);
 
@@ -231,7 +231,7 @@ namespace Test.Mq
                         received[no - 1] = true;
                 };
 
-                TwinoResult joined = await client.Join(channel.Name, true);
+                TwinoResult joined = await client.Channels.Join(channel.Name, true);
                 Assert.Equal(TwinoResultCode.Ok, joined.Code);
                 await Task.Delay(250);
                 return client;
@@ -242,7 +242,7 @@ namespace Test.Mq
             await join(3);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            TwinoResult sent = await client1.Push(channel.Name, queue.Id, ms, false);
+            TwinoResult sent = await client1.Queues.Push(channel.Name, queue.Id, ms, false);
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1500);
@@ -296,16 +296,16 @@ namespace Test.Mq
             TmqClient client3 = await join(3);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            TwinoResult sent = await client1.Push(channel.Name, queue.Id, ms, false);
+            TwinoResult sent = await client1.Queues.Push(channel.Name, queue.Id, ms, false);
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1500);
 
-            TwinoResult joined = await client1.Join(channel.Name, true);
+            TwinoResult joined = await client1.Channels.Join(channel.Name, true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
-            joined = await client2.Join(channel.Name, true);
+            joined = await client2.Channels.Join(channel.Name, true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
-            joined = await client3.Join(channel.Name, true);
+            joined = await client3.Channels.Join(channel.Name, true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(250);
 
@@ -343,7 +343,7 @@ namespace Test.Mq
             Assert.NotNull(queue);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            TwinoResult sent = await client.Push(channel.Name, queue.Id, ms, true);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, true);
             Assert.NotEqual(TwinoResultCode.Ok, sent.Code);
 
             Assert.Empty(queue.PriorityMessages);
@@ -356,7 +356,7 @@ namespace Test.Mq
                     received = true;
             };
 
-            TwinoResult joined = await client.Join(channel.Name, true);
+            TwinoResult joined = await client.Channels.Join(channel.Name, true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(1500);
 
@@ -389,7 +389,7 @@ namespace Test.Mq
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
-            TwinoResult joined = await client.Join(channel.Name, true);
+            TwinoResult joined = await client.Channels.Join(channel.Name, true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(250);
 
@@ -401,7 +401,7 @@ namespace Test.Mq
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            TwinoResult sent = await client.Push(channel.Name, queue.Id, ms, true);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, true);
 
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
             Assert.Empty(queue.PriorityMessages);
@@ -438,8 +438,8 @@ namespace Test.Mq
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
-            TwinoResult joined1 = await client1.Join(channel.Name, true);
-            TwinoResult joined2 = await client2.Join(channel.Name, true);
+            TwinoResult joined1 = await client1.Channels.Join(channel.Name, true);
+            TwinoResult joined2 = await client2.Channels.Join(channel.Name, true);
             Assert.Equal(TwinoResultCode.Ok, joined1.Code);
             Assert.Equal(TwinoResultCode.Ok, joined2.Code);
             await Task.Delay(250);
@@ -458,7 +458,7 @@ namespace Test.Mq
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            TwinoResult sent = await client1.Push(channel.Name, queue.Id, ms, true);
+            TwinoResult sent = await client1.Queues.Push(channel.Name, queue.Id, ms, true);
 
             await Task.Delay(250);
 
@@ -502,7 +502,7 @@ namespace Test.Mq
             server.SendAcknowledgeFromMQ = true;
             
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            TwinoResult sent = await client.Push(channel.Name, queue.Id, ms, true);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, true);
 
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
             Assert.NotEmpty(queue.Messages);
@@ -514,7 +514,7 @@ namespace Test.Mq
                     received = true;
             };
 
-            TwinoResult joined = await client.Join(channel.Name, true);
+            TwinoResult joined = await client.Channels.Join(channel.Name, true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(1500);
 
@@ -548,7 +548,7 @@ namespace Test.Mq
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
-            TwinoResult joined = await client.Join(channel.Name, true);
+            TwinoResult joined = await client.Channels.Join(channel.Name, true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(250);
 
@@ -560,7 +560,7 @@ namespace Test.Mq
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            TwinoResult sent = await client.Push(channel.Name, queue.Id, ms, true);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, true);
 
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
             Assert.Empty(queue.PriorityMessages);
@@ -598,8 +598,8 @@ namespace Test.Mq
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
-            TwinoResult joined1 = await client1.Join(channel.Name, true);
-            TwinoResult joined2 = await client2.Join(channel.Name, true);
+            TwinoResult joined1 = await client1.Channels.Join(channel.Name, true);
+            TwinoResult joined2 = await client2.Channels.Join(channel.Name, true);
             Assert.Equal(TwinoResultCode.Ok, joined1.Code);
             Assert.Equal(TwinoResultCode.Ok, joined2.Code);
             await Task.Delay(250);
@@ -618,7 +618,7 @@ namespace Test.Mq
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            TwinoResult sent = await client1.Push(channel.Name, queue.Id, ms, true);
+            TwinoResult sent = await client1.Queues.Push(channel.Name, queue.Id, ms, true);
 
             await Task.Delay(250);
 
@@ -658,7 +658,7 @@ namespace Test.Mq
             client.CatchAcknowledgeMessages = true;
             Assert.True(client.IsConnected);
 
-            TwinoResult joined = await client.Join("ch-1", true);
+            TwinoResult joined = await client.Channels.Join("ch-1", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             TmqMessage received = null;
@@ -679,7 +679,7 @@ namespace Test.Mq
             await Task.Delay(500);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            TwinoResult sent = await client.Push("ch-1", MessageA.ContentType, ms, true);
+            TwinoResult sent = await client.Queues.Push("ch-1", MessageA.ContentType, ms, true);
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1000);
@@ -716,7 +716,7 @@ namespace Test.Mq
             await client.ConnectAsync("tmq://localhost:42514");
             Assert.True(client.IsConnected);
 
-            TwinoResult ack = await client.Push("ch-route", MessageA.ContentType, "Hello", true);
+            TwinoResult ack = await client.Queues.Push("ch-route", MessageA.ContentType, "Hello", true);
             Assert.Equal(TwinoResultCode.Ok, ack.Code);
         }
     }

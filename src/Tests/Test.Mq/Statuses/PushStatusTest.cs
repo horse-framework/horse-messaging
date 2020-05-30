@@ -42,11 +42,11 @@ namespace Test.Mq.Statuses
                 await consumer.ConnectAsync("tmq://localhost:" + port);
                 Assert.True(consumer.IsConnected);
                 consumer.MessageReceived += (c, m) => Interlocked.Increment(ref msgReceived);
-                TwinoResult joined = await consumer.Join("ch-push", true);
+                TwinoResult joined = await consumer.Channels.Join("ch-push", true);
                 Assert.Equal(TwinoResultCode.Ok, joined.Code);
             }
 
-            await producer.Push("ch-push", MessageA.ContentType, "Hello, World!", false);
+            await producer.Queues.Push("ch-push", MessageA.ContentType, "Hello, World!", false);
             await Task.Delay(1500);
             Assert.Equal(onlineConsumerCount, msgReceived);
         }
@@ -63,7 +63,7 @@ namespace Test.Mq.Statuses
             await producer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            await producer.Push("ch-push", MessageA.ContentType, "Hello, World!", false);
+            await producer.Queues.Push("ch-push", MessageA.ContentType, "Hello, World!", false);
             await Task.Delay(700);
 
             Channel channel = server.Server.FindChannel("ch-push");
@@ -78,7 +78,7 @@ namespace Test.Mq.Statuses
             await consumer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
             consumer.MessageReceived += (c, m) => msgReceived = true;
-            TwinoResult joined = await consumer.Join("ch-push", true);
+            TwinoResult joined = await consumer.Channels.Join("ch-push", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             await Task.Delay(800);
@@ -110,10 +110,10 @@ namespace Test.Mq.Statuses
             consumer.ClientId = "consumer";
             await consumer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
-            TwinoResult joined = await consumer.Join("ch-push", true);
+            TwinoResult joined = await consumer.Channels.Join("ch-push", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
-            TwinoResult ack = await producer.Push("ch-push", MessageA.ContentType, "Hello, World!", true);
+            TwinoResult ack = await producer.Queues.Push("ch-push", MessageA.ContentType, "Hello, World!", true);
             Assert.Equal(queueAckIsActive, ack.Code == TwinoResultCode.Ok);
         }
 
@@ -148,10 +148,10 @@ namespace Test.Mq.Statuses
             consumer1.MessageReceived += (c, m) => consumer1Msgs++;
             consumer2.MessageReceived += (c, m) => consumer2Msgs++;
 
-            TwinoResult joined1 = await consumer1.Join("ch-push", true);
+            TwinoResult joined1 = await consumer1.Channels.Join("ch-push", true);
             Assert.Equal(TwinoResultCode.Ok, joined1.Code);
 
-            TwinoResult joined2 = await consumer2.Join("ch-push-cc", true);
+            TwinoResult joined2 = await consumer2.Channels.Join("ch-push-cc", true);
             Assert.Equal(TwinoResultCode.Ok, joined2.Code);
 
             TmqMessage msg = new TmqMessage(MessageType.QueueMessage, "ch-push", MessageA.ContentType);
