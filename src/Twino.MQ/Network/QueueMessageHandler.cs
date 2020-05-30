@@ -59,7 +59,7 @@ namespace Twino.MQ.Network
             return queue;
         }
 
-        public async Task Handle(MqClient client, TmqMessage message)
+        public async Task Handle(MqClient client, TmqMessage message, bool fromNode)
         {
             ChannelQueue queue = await FindQueue(client, message.Target, message.ContentType, message);
             if (queue == null)

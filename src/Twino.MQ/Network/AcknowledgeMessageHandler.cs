@@ -21,7 +21,7 @@ namespace Twino.MQ.Network
 
         #endregion
 
-        public Task Handle(MqClient client, TmqMessage message)
+        public Task Handle(MqClient client, TmqMessage message, bool fromNode)
         {
             //priority has no role in ack message.
             //we are using priority for helping receiver type recognization for better performance

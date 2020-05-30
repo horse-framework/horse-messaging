@@ -33,7 +33,7 @@ namespace Twino.MQ.Network
 
         #region Handle
 
-        public Task Handle(MqClient client, TmqMessage message)
+        public Task Handle(MqClient client, TmqMessage message, bool fromNode)
         {
             try
             {

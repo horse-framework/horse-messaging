@@ -29,7 +29,7 @@ namespace Twino.MQ.Network
             await client.SendAsync(response);
         }
 
-        public Task Handle(MqClient client, TmqMessage message)
+        public Task Handle(MqClient client, TmqMessage message, bool fromNode)
         {
             string eventName = message.Target;
             string channelName = message.FindHeader(TmqHeaders.CHANNEL_NAME);

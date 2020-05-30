@@ -166,45 +166,44 @@ namespace Twino.MQ.Network
                 //client sends a queue message in a channel
                 case MessageType.QueueMessage:
                     if (!fromNode)
-                        _ = _instanceHandler.Handle(mc, message);
-                    return _queueMessageHandler.Handle(mc, message);
+                        _ = _instanceHandler.Handle(mc, message, false);
+                    return _queueMessageHandler.Handle(mc, message, fromNode);
 
                 case MessageType.Router:
                     if (!fromNode)
-                        _ = _instanceHandler.Handle(mc, message);
-                    return _routerMessageHandler.Handle(mc, message);
+                        _ = _instanceHandler.Handle(mc, message, false);
+                    return _routerMessageHandler.Handle(mc, message, fromNode);
 
                 //sends pull request to a queue
                 case MessageType.QueuePullRequest:
-                    return _pullRequestHandler.Handle(mc, message);
+                    return _pullRequestHandler.Handle(mc, message, fromNode);
 
                 //clients sends a message to another client
                 case MessageType.DirectMessage:
                     if (!fromNode)
-                        _ = _instanceHandler.Handle(mc, message);
-                    return _clientHandler.Handle(mc, message);
+                        _ = _instanceHandler.Handle(mc, message, false);
+                    return _clientHandler.Handle(mc, message, fromNode);
 
                 //client sends an acknowledge message of a message
                 case MessageType.Acknowledge:
                     if (!fromNode)
-                        _ = _instanceHandler.Handle(mc, message);
-
-                    return _acknowledgeHandler.Handle(mc, message);
+                        _ = _instanceHandler.Handle(mc, message, false);
+                    return _acknowledgeHandler.Handle(mc, message, fromNode);
 
                 //client sends a response message for a message
                 case MessageType.Response:
                     if (!fromNode)
-                        _ = _instanceHandler.Handle(mc, message);
-                    return _responseHandler.Handle(mc, message);
+                        _ = _instanceHandler.Handle(mc, message, false);
+                    return _responseHandler.Handle(mc, message, fromNode);
 
                 //client sends a message to the server
                 //this message may be join, header, info, some another server message
                 case MessageType.Server:
-                    return _serverHandler.Handle(mc, message);
-                
+                    return _serverHandler.Handle(mc, message, fromNode);
+
                 //event subscription or unsubscription request received
                 case MessageType.Event:
-                    return _eventHandler.Handle(mc, message);
+                    return _eventHandler.Handle(mc, message, fromNode);
 
                 //if client sends a ping message, response with pong
                 case MessageType.Ping:

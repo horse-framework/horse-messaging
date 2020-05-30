@@ -22,7 +22,7 @@ namespace Twino.MQ.Network
 
         #endregion
 
-        public async Task Handle(MqClient client, TmqMessage message)
+        public async Task Handle(MqClient client, TmqMessage message, bool fromNode)
         {
             //find channel and queue
             Channel channel = _server.FindChannel(message.Target);

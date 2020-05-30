@@ -21,7 +21,7 @@ namespace Twino.MQ.Network
 
         #endregion
 
-        public async Task Handle(MqClient client, TmqMessage message)
+        public async Task Handle(MqClient client, TmqMessage message, bool fromNode)
         {
             bool pendingAck = message.PendingAcknowledge;
             bool pendingResponse = message.PendingResponse;
