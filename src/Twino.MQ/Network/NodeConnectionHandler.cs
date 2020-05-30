@@ -65,8 +65,6 @@ namespace Twino.MQ.Network
 
             await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
 
-            _ = _server.Server.OnNodeConnected.Trigger(client);
-
             return client;
         }
 
@@ -100,7 +98,6 @@ namespace Twino.MQ.Network
         {
             MqClient node = (MqClient) client;
             _server.Clients.Remove(node);
-            _ = _server.Server.OnNodeDisconnected.Trigger((MqClient) client);
 
             return Task.CompletedTask;
         }

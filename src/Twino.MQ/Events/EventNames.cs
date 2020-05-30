@@ -26,16 +26,6 @@ namespace Twino.MQ.Events
         public const string ClientLeft = "ClientLeft";
 
         /// <summary>
-        /// When a node instance is connected.
-        /// </summary>
-        public const string NodeConnected = "NodeConnected";
-
-        /// <summary>
-        /// When a node instance is disconnected.
-        /// </summary>
-        public const string NodeDisconnected = "NodeDisconnected";
-
-        /// <summary>
         /// When a channel is created.
         /// </summary>
         public const string ChannelCreated = "ChannelCreated";

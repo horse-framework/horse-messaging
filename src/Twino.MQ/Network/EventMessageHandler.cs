@@ -111,22 +111,6 @@ namespace Twino.MQ.Network
 
                     return SendResponse(client, message, true);
 
-                case EventNames.NodeConnected:
-                    if (subscribe)
-                        _server.OnNodeConnected.Subscribe(client);
-                    else
-                        _server.OnNodeConnected.Unsubscribe(client);
-
-                    return SendResponse(client, message, true);
-
-                case EventNames.NodeDisconnected:
-                    if (subscribe)
-                        _server.OnNodeDisconnected.Subscribe(client);
-                    else
-                        _server.OnNodeDisconnected.Unsubscribe(client);
-
-                    return SendResponse(client, message, true);
-
                 #endregion
 
                 #region Channel Events

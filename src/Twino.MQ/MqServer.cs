@@ -147,16 +147,6 @@ namespace Twino.MQ
         /// </summary>
         public ChannelEventManager OnChannelRemoved { get; set; }
 
-        /// <summary>
-        /// Triggered when a node is connected
-        /// </summary>
-        public NodeEventManager OnNodeConnected { get; set; }
-
-        /// <summary>
-        /// Triggered when a node is disconnected 
-        /// </summary>
-        public NodeEventManager OnNodeDisconnected { get; set; }
-
         #endregion
 
         #region Constructors - Init
@@ -192,8 +182,6 @@ namespace Twino.MQ
             OnClientDisconnected = new ClientEventManager(EventNames.ClientDisconnected, this);
             OnChannelCreated = new ChannelEventManager(EventNames.ChannelCreated, this);
             OnChannelRemoved = new ChannelEventManager(EventNames.ChannelRemoved, this);
-            OnNodeConnected = new NodeEventManager(EventNames.NodeConnected, this);
-            OnNodeDisconnected = new NodeEventManager(EventNames.NodeDisconnected, this);
         }
 
         #endregion

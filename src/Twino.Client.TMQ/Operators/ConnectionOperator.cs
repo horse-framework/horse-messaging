@@ -101,57 +101,5 @@ namespace Twino.Client.TMQ.Operators
         }
 
         #endregion
-
-        #region Node Events
-
-        /// <summary>
-        /// Triggers the action when a node is connected to the server
-        /// </summary>
-        public async Task<bool> OnNodeConnected(Action<NodeEvent> action)
-        {
-            bool ok = await _client.EventSubscription(EventNames.NodeConnected, true, null, null);
-            if (ok)
-                _client.Events.Add(EventNames.NodeConnected, null, 0, action, typeof(NodeEvent));
-
-            return ok;
-        }
-
-        /// <summary>
-        /// Unsubscribes from all node connected events
-        /// </summary>
-        public async Task<bool> OffNodeConnected()
-        {
-            bool ok = await _client.EventSubscription(EventNames.NodeConnected, false, null, null);
-            if (ok)
-                _client.Events.Remove(EventNames.NodeConnected, null, 0);
-
-            return ok;
-        }
-
-        /// <summary>
-        /// Triggers the action when a node is disconnected from the server
-        /// </summary>
-        public async Task<bool> OnNodeDisconnected(Action<NodeEvent> action)
-        {
-            bool ok = await _client.EventSubscription(EventNames.NodeDisconnected, true, null, null);
-            if (ok)
-                _client.Events.Add(EventNames.NodeDisconnected, null, 0, action, typeof(NodeEvent));
-
-            return ok;
-        }
-
-        /// <summary>
-        /// Unsubscribes from all node disconnected events
-        /// </summary>
-        public async Task<bool> OffNodeDisconnected()
-        {
-            bool ok = await _client.EventSubscription(EventNames.NodeDisconnected, false, null, null);
-            if (ok)
-                _client.Events.Remove(EventNames.NodeDisconnected, null, 0);
-
-            return ok;
-        }
-
-        #endregion
     }
 }
