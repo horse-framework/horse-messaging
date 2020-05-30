@@ -23,9 +23,10 @@ namespace Twino.MQ.Network
 
         #endregion
 
-        private async Task SendResponse(MqClient client, TmqMessage message, bool successful)
+        private static async Task SendResponse(MqClient client, TmqMessage message, bool successful)
         {
-            throw new NotImplementedException();
+            TmqMessage response = message.CreateResponse(successful ? TwinoResultCode.Ok : TwinoResultCode.Failed);
+            await client.SendAsync(response);
         }
 
         public Task Handle(MqClient client, TmqMessage message)

@@ -15,11 +15,6 @@ namespace Twino.MQ.Network
     /// </summary>
     internal class NodeConnectionHandler : IProtocolConnectionHandler<TmqServerSocket, TmqMessage>
     {
-        /// <summary>
-        /// Default TMQ protocol message writer
-        /// </summary>
-        private static readonly TmqWriter _writer = new TmqWriter();
-
         private readonly InstanceManager _server;
         private readonly NetworkMessageHandler _connectionHandler;
 
@@ -65,10 +60,12 @@ namespace Twino.MQ.Network
                     return null;
             }
 
-            client.RemoteHost = client.Info.Client.Client.RemoteEndPoint.ToString().Split(':')[0];
+            client.RemoteHost = client.Info.Client.Client.RemoteEndPoint.ToString()?.Split(':')[0];
             _server.Clients.Add(client);
 
             await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
+
+            _ = _server.Server.OnNodeConnected.Trigger(client);
 
             return client;
         }
@@ -103,6 +100,8 @@ namespace Twino.MQ.Network
         {
             MqClient node = (MqClient) client;
             _server.Clients.Remove(node);
+            _ = _server.Server.OnNodeDisconnected.Trigger((MqClient) client);
+
             return Task.CompletedTask;
         }
 
