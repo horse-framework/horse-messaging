@@ -25,7 +25,9 @@ namespace Twino.MQ.Network
 
         private static async Task SendResponse(MqClient client, TmqMessage message, bool successful)
         {
-            TmqMessage response = message.CreateResponse(successful ? TwinoResultCode.Ok : TwinoResultCode.Failed);
+            ushort contentType = successful ? (ushort) TwinoResultCode.Ok : (ushort) TwinoResultCode.Failed;
+            TmqMessage response = new TmqMessage(MessageType.Response, client.UniqueId, contentType);
+            response.SetMessageId(message.MessageId);
             await client.SendAsync(response);
         }
 

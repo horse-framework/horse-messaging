@@ -366,6 +366,8 @@ namespace Twino.Client.TMQ
 
             string first = Data.Method + " " + Data.Path + "\r\n";
             await message.Content.WriteAsync(Encoding.UTF8.GetBytes(first));
+
+            Data.Properties.Clear();
             Data.Properties.Add(TmqHeaders.CLIENT_ID, ClientId);
 
             foreach (var prop in Data.Properties)
@@ -430,7 +432,7 @@ namespace Twino.Client.TMQ
                     break;
 
                 case MessageType.Event:
-                    //todo: event
+                    _ = Events.TriggerEvents(message);
                     break;
 
                 case MessageType.QueueMessage:
@@ -898,8 +900,10 @@ namespace Twino.Client.TMQ
 
         internal async Task<bool> EventSubscription(string eventName, bool subscribe, string channelName, ushort? queueId)
         {
-            ushort ct = subscribe ? (ushort)1 : (ushort)0;
+            ushort ct = subscribe ? (ushort) 1 : (ushort) 0;
             TmqMessage message = new TmqMessage(MessageType.Event, eventName, ct);
+            message.SetMessageId(UniqueIdGenerator.Create());
+            message.PendingResponse = true;
 
             if (!string.IsNullOrEmpty(channelName))
                 message.AddHeader(TmqHeaders.CHANNEL_NAME, channelName);
@@ -907,8 +911,21 @@ namespace Twino.Client.TMQ
             if (queueId.HasValue)
                 message.AddHeader(TmqHeaders.QUEUE_ID, queueId.Value.ToString());
 
-            TwinoResult result = await SendAndWaitForAcknowledge(message, true);
-            return result.Code == TwinoResultCode.Ok;
+            Task<TmqMessage> task = _follower.FollowResponse(message);
+
+            TwinoResult sent = await SendAsync(message);
+            if (sent.Code != TwinoResultCode.Ok)
+            {
+                _follower.UnfollowMessage(message);
+                return false;
+            }
+
+            TmqMessage response = await task;
+            if (response == null)
+                return false;
+
+            TwinoResultCode code = (TwinoResultCode) response.ContentType;
+            return code == TwinoResultCode.Ok;
         }
 
         #endregion
