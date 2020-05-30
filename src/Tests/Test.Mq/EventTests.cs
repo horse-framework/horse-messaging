@@ -48,9 +48,42 @@ namespace Test.Mq
             Assert.False(received);
         }
 
+        [Fact]
         public async Task ClientDisconnected()
         {
-            throw new NotImplementedException();
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42252);
+            server.Start(3000, 3000);
+            
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:42252");
+            Assert.True(client.IsConnected);
+            bool received = false;
+            bool subscribed = await client.Connections.OnClientDisconnected(c =>
+            {
+                if (c.Id == "client-2")
+                    received = true;
+            });
+            Assert.True(subscribed);
+            
+            TmqClient client2 = new TmqClient();
+            client2.ClientId = "client-2";
+            await client2.ConnectAsync("tmq://localhost:42252");
+            Assert.True(client2.IsConnected);
+            client2.Disconnect();
+            await Task.Delay(500);
+            Assert.True(received);
+            received = false;
+
+            bool unsubscribed = await client.Connections.OffClientDisconnected();
+            Assert.True(unsubscribed);
+            
+            await client2.ConnectAsync("tmq://localhost:42252");
+            Assert.True(client2.IsConnected);
+            client2.Disconnect();
+            await Task.Delay(500);
+            
+            Assert.False(received);
         }
 
         public async Task ClientJoined()
