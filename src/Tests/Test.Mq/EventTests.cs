@@ -42,6 +42,8 @@ namespace Test.Mq
             bool unsubscribed = await client.Connections.OffClientConnected();
             Assert.True(unsubscribed);
             client2.Disconnect();
+            client2 = new TmqClient();
+            client2.ClientId = "client-2";
             await client2.ConnectAsync("tmq://localhost:42251");
             Assert.True(client2.IsConnected);
             await Task.Delay(500);

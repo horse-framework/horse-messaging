@@ -367,8 +367,10 @@ namespace Twino.Client.TMQ
             string first = Data.Method + " " + Data.Path + "\r\n";
             await message.Content.WriteAsync(Encoding.UTF8.GetBytes(first));
 
-            Data.Properties.Clear();
-            Data.Properties.Add(TmqHeaders.CLIENT_ID, ClientId);
+            if (Data.Properties.ContainsKey(TmqHeaders.CLIENT_ID))
+                Data.Properties[TmqHeaders.CLIENT_ID] = ClientId;
+            else
+                Data.Properties.Add(TmqHeaders.CLIENT_ID, ClientId);
 
             foreach (var prop in Data.Properties)
             {
