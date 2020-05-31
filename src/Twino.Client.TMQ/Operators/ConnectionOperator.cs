@@ -26,13 +26,13 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Gets all instances connected to server
         /// </summary>
-        public Task<TmqModelResult<List<InstanceInformation>>> GetInstances()
+        public Task<TmqModelResult<List<NodeInformation>>> GetInstances()
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.InstanceList;
 
-            return _client.SendAndGetJson<List<InstanceInformation>>(message);
+            return _client.SendAndGetJson<List<NodeInformation>>(message);
         }
 
         /// <summary>

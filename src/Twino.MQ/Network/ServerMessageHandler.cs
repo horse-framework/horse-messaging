@@ -860,13 +860,13 @@ namespace Twino.MQ.Network
                 return;
             }
 
-            List<InstanceInformation> list = new List<InstanceInformation>();
+            List<NodeInformation> list = new List<NodeInformation>();
 
             //slave instances
-            List<MqClient> slaves = _server.InstanceManager.Clients.GetAsClone();
+            List<MqClient> slaves = _server.NodeManager.Clients.GetAsClone();
             foreach (MqClient slave in slaves)
             {
-                list.Add(new InstanceInformation
+                list.Add(new NodeInformation
                          {
                              IsSlave = true,
                              Host = slave.RemoteHost,
@@ -878,12 +878,12 @@ namespace Twino.MQ.Network
             }
 
             //master instances
-            foreach (TmqStickyConnector connector in _server.InstanceManager.Connectors)
+            foreach (TmqStickyConnector connector in _server.NodeManager.Connectors)
             {
                 NodeOptions options = connector.Tag as NodeOptions;
                 TmqClient c = connector.GetClient();
 
-                list.Add(new InstanceInformation
+                list.Add(new NodeInformation
                          {
                              IsSlave = false,
                              Host = options?.Host,

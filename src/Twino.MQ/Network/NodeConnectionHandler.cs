@@ -15,13 +15,13 @@ namespace Twino.MQ.Network
     /// </summary>
     internal class NodeConnectionHandler : IProtocolConnectionHandler<TmqServerSocket, TmqMessage>
     {
-        private readonly InstanceManager _server;
+        private readonly NodeManager _server;
         private readonly NetworkMessageHandler _connectionHandler;
 
         /// <summary>
         /// 
         /// </summary>
-        internal NodeConnectionHandler(InstanceManager server, NetworkMessageHandler connectionHandler)
+        internal NodeConnectionHandler(NodeManager server, NetworkMessageHandler connectionHandler)
         {
             _server = server;
             _connectionHandler = connectionHandler;

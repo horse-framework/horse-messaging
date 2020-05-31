@@ -29,13 +29,13 @@ namespace Twino.MQ.Network
         public async Task Handle(MqClient client, TmqMessage message, bool fromNode)
         {
             //if server is not set or there is no connected server
-            if (_server.InstanceManager.Connectors.Length == 0)
+            if (_server.NodeManager.Connectors.Length == 0)
                 return;
 
             byte[] mdata = TmqWriter.Create(message);
-            foreach (TmqStickyConnector connector in _server.InstanceManager.Connectors)
+            foreach (TmqStickyConnector connector in _server.NodeManager.Connectors)
             {
-                bool grant = _server.InstanceManager.Authenticator == null || await _server.InstanceManager.Authenticator.CanReceive(connector.GetClient(), message);
+                bool grant = _server.NodeManager.Authenticator == null || await _server.NodeManager.Authenticator.CanReceive(connector.GetClient(), message);
 
                 if (grant)
                     _ = connector.SendAsync(mdata);

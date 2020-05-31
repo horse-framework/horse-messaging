@@ -818,7 +818,7 @@ namespace Twino.MQ.Queues
                                      };
 
             await msg.SetJsonContent(model);
-            Channel.Server.InstanceManager.SendMessageToNodes(msg);
+            Channel.Server.NodeManager.SendMessageToNodes(msg);
         }
 
         /// <summary>
