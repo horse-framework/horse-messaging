@@ -263,19 +263,83 @@ namespace Test.Mq
             Assert.False(received);
         }
 
+        [Fact]
         public async Task QueueUpdated()
         {
-            throw new NotImplementedException();
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42258);
+            server.Start(3000, 3000);
+
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:42258");
+            Assert.True(client.IsConnected);
+            bool received = false;
+            bool subscribed = await client.Queues.OnUpdated("ch-pull", c =>
+            {
+                Assert.Equal("ch-pull", c.Channel);
+                Assert.Equal(1001, c.Id);
+                received = true;
+            });
+            Assert.True(subscribed);
+
+            var result = await client.Queues.SetOptions("ch-pull", 1001, opt =>
+            {
+                opt.MessageLimit = 666;
+            });
+            Assert.Equal(TwinoResultCode.Ok, result.Code);
+            await Task.Delay(500);
+            Assert.True(received);
         }
 
+        [Fact]
         public async Task QueueRemoved()
         {
-            throw new NotImplementedException();
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42259);
+            server.Start(3000, 3000);
+
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:42259");
+            Assert.True(client.IsConnected);
+            bool received = false;
+            bool subscribed = await client.Queues.OnRemoved("ch-pull", c =>
+            {
+                Assert.Equal("ch-pull", c.Channel);
+                Assert.Equal(1001, c.Id);
+                received = true;
+            });
+            Assert.True(subscribed);
+
+            var result = await client.Queues.Remove("ch-pull", 1001);
+            Assert.Equal(TwinoResultCode.Ok, result.Code);
+            await Task.Delay(500);
+            Assert.True(received);
         }
 
+        [Fact]
         public async Task MessageProduced()
         {
-            throw new NotImplementedException();
+            TestMqServer server = new TestMqServer();
+            server.Initialize(42260);
+            server.Start(3000, 3000);
+            server.SendAcknowledgeFromMQ = true;
+            
+            TmqClient client = new TmqClient();
+            await client.ConnectAsync("tmq://localhost:42260");
+            Assert.True(client.IsConnected);
+            bool received = false;
+            bool subscribed = await client.Queues.OnMessageProduced("ch-pull", 1001, c =>
+            {
+                Assert.Equal("ch-pull", c.Channel);
+                Assert.Equal(1001, c.Queue);
+                received = true;
+            });
+            Assert.True(subscribed);
+
+            var result = await client.Queues.Push("ch-pull", 1001, "Hello, World!", true);
+            Assert.Equal(TwinoResultCode.Ok, result.Code);
+            await Task.Delay(500);
+            Assert.True(received);
         }
     }
 }
