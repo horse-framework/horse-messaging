@@ -18,7 +18,7 @@ namespace Twino.MQ
     /// Instance manager, manages clustered Twino MQ Servers.
     /// Accepts slave nodes and connects to master nodes.
     /// </summary>
-    public class InstanceManager
+    public class NodeManager
     {
         #region Properties
 
@@ -58,7 +58,7 @@ namespace Twino.MQ
         /// <summary>
         /// 
         /// </summary>
-        public InstanceManager(MqServer server)
+        public NodeManager(MqServer server)
         {
             Server = server;
         }
