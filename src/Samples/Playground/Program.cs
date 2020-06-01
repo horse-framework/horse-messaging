@@ -8,8 +8,12 @@ using Test.Mq.Models;
 using Twino.Client.TMQ;
 using Twino.Core.Protocols;
 using Twino.MQ;
+using Twino.MQ.Clients;
 using Twino.MQ.Data;
+using Twino.MQ.Delivery;
+using Twino.MQ.Handlers;
 using Twino.MQ.Options;
+using Twino.MQ.Queues;
 using Twino.Mvc;
 using Twino.Mvc.Controllers;
 using Twino.Mvc.Controllers.Parameters;
@@ -25,9 +29,26 @@ namespace Playground
     {
         static async Task Main(string[] args)
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize(84);
-            server.Start(10000, 10000);
+            MqServerOptions mqOptions = new MqServerOptions();
+            mqOptions.AllowMultipleQueues = true;
+            mqOptions.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
+            mqOptions.MessageTimeout = TimeSpan.FromSeconds(12);
+
+            MqServer Server = new MqServer(mqOptions);
+            Server.SetDefaultDeliveryHandler(new JustAllowDeliveryHandler());
+
+            var ch = Server.CreateChannel("ch-1");
+            await ch.CreateQueue(101);
+            
+            ServerOptions serverOptions = ServerOptions.CreateDefault();
+            serverOptions.Hosts[0].Port = 88;
+            serverOptions.PingInterval = 60;
+            serverOptions.RequestTimeout = 60;
+
+            TwinoServer server = new TwinoServer(serverOptions);
+            server.UseMqServer(Server);
+            server.Start();
+
             /*
             TwinoServer _server = new TwinoServer();
             _server = new TwinoServer(ServerOptions.CreateDefault());
@@ -38,7 +59,7 @@ namespace Playground
                                       await socket.SendAsync(message);
                                   });
             _server.Start(46100);*/
-            server.Server.Server.BlockWhileRunning();
+            server.BlockWhileRunning();
         }
     }
 }
