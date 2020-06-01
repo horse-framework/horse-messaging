@@ -68,6 +68,7 @@ You can see [Twino Messaging Queue Documentation](https://github.com/mhelvacikoy
 * Tag names are added to queues.
 * Clear messages in a queue over network by client is added. It also has authorization implementation in IAdminAuthorization.
 * AddMessage methods are added to queues. In server side, you can manually add message and trigger queue push operation.
+* Decisions can be applied on connected node instances too with SendDecisionToNodes method.
 
 #### HTTP and MVC Changes
 * Unnecessary Task state machines are removed from HTTP, MVC and WebSocket libraries. Performance is improved about 3%.
