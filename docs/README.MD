@@ -10,10 +10,10 @@ You can see [Twino Messaging Queue Documentation](https://github.com/mhelvacikoy
 * New message type is added for routers: Router.
 * Routers can redirect messages to multiple queues and clients.
 * Each router has a name and type. There are 3 type of routers:
-  -	Distribute: Sends a message to all bindings
-  -	Only First: Sends the message to only first binding if it's available.
-  -	Round Robin: Sends messages to bindings in a load balance.
-    	
+-	Distribute: Sends a message to all bindings
+-	Only First: Sends the message to only first binding if it's available.
+-	Round Robin: Sends messages to bindings in a load balance.
+
 * Twino MQ Server uses Routers with IRouter interface. You can implement your custom routers too.
 * Routers can be enabled or disabled in runtime.
 * Routers uses bindings with base Binding type. You can implement your custom binding too.
@@ -43,16 +43,16 @@ You can see [Twino Messaging Queue Documentation](https://github.com/mhelvacikoy
 * Events are public by default. You can manage authority with IClientAuthorization implementation. A new method is added to the interface.
 * In TmqClient object, events are added into the operators. You can subscribe to an event such as client.Channels.OnCreated(...);
 * There are many events:
-  -	Client Connected: Triggered when a client connects to the server.
-  -	Client Disconnected: Triggered when a client disconnected from the server.
-  -	Client Joined: Triggered when a client joins to a channel.
-  -	Client Left: Triggered when a client leaves from a channel.
-  -	Channel Created: Triggered when a channel is created.
-  -	Channel Removed: Triggered when a channel is removed.
-  -	Queue Created: Triggered when a queue is created.
-  -	Queue Updated: Triggered when a queue is updated.
-  -	Queue Removed: Triggered when a queue is removed.
-  -	Message Produced: Triggered when a message is produced into a queue.
+-	Client Connected: Triggered when a client connects to the server.
+-	Client Disconnected: Triggered when a client disconnected from the server.
+-	Client Joined: Triggered when a client joins to a channel.
+-	Client Left: Triggered when a client leaves from a channel.
+-	Channel Created: Triggered when a channel is created.
+-	Channel Removed: Triggered when a channel is removed.
+-	Queue Created: Triggered when a queue is created.
+-	Queue Updated: Triggered when a queue is updated.
+-	Queue Removed: Triggered when a queue is removed.
+-	Message Produced: Triggered when a message is produced into a queue.
 
 #### Other Changes
 * Route status name is changed to Broadcast.
@@ -73,4 +73,4 @@ You can see [Twino Messaging Queue Documentation](https://github.com/mhelvacikoy
 #### HTTP and MVC Changes
 * Minor performance improvement: unnecessary Task state machines are removed from HTTP, MVC and WebSocket libraries
 * MVC now supports Task<IActionResult> return types without async keyword.
-* MVC now uses System.Text.Json as default. Serialization options property is added to TwinoMvc object.  
+* MVC now uses System.Text.Json as default. Serialization options property is added to TwinoMvc object.
