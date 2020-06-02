@@ -71,6 +71,6 @@ You can see [Twino Messaging Queue Documentation](https://github.com/mhelvacikoy
 * Decisions can be applied on connected node instances too with SendDecisionToNodes method.
 
 #### HTTP and MVC Changes
-* Unnecessary Task state machines are removed from HTTP, MVC and WebSocket libraries. Performance is improved about 3%.
-* MVC now supports Task return types without async keyword.
+* Minor performance improvement: unnecessary Task state machines are removed from HTTP, MVC and WebSocket libraries
+* MVC now supports Task<IActionResult> return types without async keyword.
 * MVC now uses System.Text.Json as default. Serialization options property is added to TwinoMvc object.  
