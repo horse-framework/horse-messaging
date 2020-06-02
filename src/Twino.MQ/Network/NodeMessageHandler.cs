@@ -26,19 +26,19 @@ namespace Twino.MQ.Network
 
         #endregion
 
-        public async Task Handle(MqClient client, TmqMessage message)
+        public async Task Handle(MqClient client, TmqMessage message, bool fromNode)
         {
             //if server is not set or there is no connected server
-            if (_server.NodeServer.Connectors.Length == 0)
+            if (_server.NodeManager.Connectors.Length == 0)
                 return;
 
-            byte[] mdata = await _writer.Create(message);
-            foreach (TmqStickyConnector connector in _server.NodeServer.Connectors)
+            byte[] mdata = TmqWriter.Create(message);
+            foreach (TmqStickyConnector connector in _server.NodeManager.Connectors)
             {
-                bool grant = _server.NodeServer.Authenticator == null || await _server.NodeServer.Authenticator.CanReceive(connector.GetClient(), message);
+                bool grant = _server.NodeManager.Authenticator == null || await _server.NodeManager.Authenticator.CanReceive(connector.GetClient(), message);
 
                 if (grant)
-                    connector.Send(mdata);
+                    _ = connector.SendAsync(mdata);
             }
         }
     }

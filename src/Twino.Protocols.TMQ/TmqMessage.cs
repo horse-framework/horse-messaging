@@ -1,4 +1,7 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -26,6 +29,11 @@ namespace Twino.Protocols.TMQ
         public bool HighPriority { get; set; }
 
         /// <summary>
+        /// If true, message has header data
+        /// </summary>
+        public bool HasHeader { get; internal set; }
+
+        /// <summary>
         /// Message type
         /// </summary>
         public MessageType Type { get; set; }
@@ -34,13 +42,13 @@ namespace Twino.Protocols.TMQ
         /// True means, client is pending a response.
         /// Sending response is not mandatory but it SHOULD sent.
         /// </summary>
-        public bool ResponseRequired { get; set; }
+        public bool PendingResponse { get; set; }
 
         /// <summary>
         /// True means, client is pending a response.
         /// If acknowledge isn't sent, server will complete process as not acknowledged
         /// </summary>
-        public bool AcknowledgeRequired { get; set; }
+        public bool PendingAcknowledge { get; set; }
 
         /// <summary>
         /// Message TTL value. Default is 16
@@ -93,6 +101,16 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public MemoryStream Content { get; set; }
 
+        /// <summary>
+        /// Message headers
+        /// </summary>
+        public IEnumerable<KeyValuePair<string, string>> Headers => HeadersList;
+
+        /// <summary>
+        /// Message headers
+        /// </summary>
+        internal List<KeyValuePair<string, string>> HeadersList { get; set; }
+
         #endregion
 
         #region Constructors
@@ -118,6 +136,16 @@ namespace Twino.Protocols.TMQ
         public TmqMessage(MessageType type, string target)
         {
             Type = type;
+            SetTarget(target);
+        }
+
+        /// <summary>
+        /// Creates new TMQ Protocol message with specified type and target
+        /// </summary>
+        public TmqMessage(MessageType type, string target, ushort contentType)
+        {
+            Type = type;
+            ContentType = contentType;
             SetTarget(target);
         }
 
@@ -161,7 +189,7 @@ namespace Twino.Protocols.TMQ
             MessageIdLength = string.IsNullOrEmpty(MessageId) ? 0 : Encoding.UTF8.GetByteCount(MessageId);
             SourceLength = string.IsNullOrEmpty(Source) ? 0 : Encoding.UTF8.GetByteCount(Source);
             TargetLength = string.IsNullOrEmpty(Target) ? 0 : Encoding.UTF8.GetByteCount(Target);
-            Length = Content != null ? (ulong)Content.Length : 0;
+            Length = Content != null ? (ulong) Content.Length : 0;
         }
 
         /// <summary>
@@ -184,7 +212,7 @@ namespace Twino.Protocols.TMQ
                 return;
 
             Content = new MemoryStream(Encoding.UTF8.GetBytes(content));
-            Length = Content != null ? (ulong)Content.Length : 0;
+            Length = Content != null ? (ulong) Content.Length : 0;
         }
 
         /// <summary>
@@ -194,7 +222,7 @@ namespace Twino.Protocols.TMQ
         {
             Content = new MemoryStream();
             await System.Text.Json.JsonSerializer.SerializeAsync(Content, value, value.GetType());
-            Length = Content != null ? (ulong)Content.Length : 0;
+            Length = Content != null ? (ulong) Content.Length : 0;
         }
 
         /// <summary>
@@ -205,6 +233,119 @@ namespace Twino.Protocols.TMQ
             return await System.Text.Json.JsonSerializer.DeserializeAsync<TModel>(Content);
         }
 
+        /// <summary>
+        /// Reads content and deserializes to from json string
+        /// </summary>
+        public object GetJsonContent(Type type)
+        {
+            string json = GetStringContent();
+            return System.Text.Json.JsonSerializer.Deserialize(json, type);
+        }
+
+        /// <summary>
+        /// Reads message content as string
+        /// </summary>
+        /// <returns></returns>
+        public string GetStringContent()
+        {
+            if (Content == null || Length == 0)
+                return null;
+
+            return Encoding.UTF8.GetString(Content.ToArray());
+        }
+
+        /// <summary>
+        /// Clones the message
+        /// </summary>
+        public TmqMessage Clone(bool cloneHeaders, bool cloneContent, string cloneId, List<KeyValuePair<string, string>> additionalHeaders = null)
+        {
+            TmqMessage clone = new TmqMessage(Type, Target);
+
+            if (!string.IsNullOrEmpty(cloneId))
+                clone.SetMessageId(cloneId);
+
+            clone.SetSource(Source);
+
+            clone.FirstAcquirer = FirstAcquirer;
+            clone.HighPriority = HighPriority;
+            clone.PendingAcknowledge = PendingAcknowledge;
+            clone.PendingResponse = PendingResponse;
+            clone.ContentType = ContentType;
+
+            if (cloneHeaders && HasHeader)
+            {
+                clone.HasHeader = true;
+                clone.HeadersList = new List<KeyValuePair<string, string>>(HeadersList);
+            }
+
+            if (additionalHeaders != null && additionalHeaders.Count > 0)
+            {
+                if (!clone.HasHeader)
+                {
+                    clone.HasHeader = true;
+                    clone.HeadersList = new List<KeyValuePair<string, string>>(additionalHeaders);
+                }
+                else
+                    clone.HeadersList.AddRange(additionalHeaders);
+            }
+
+            if (cloneContent && Content != null && Content.Length > 0)
+            {
+                Content.Position = 0;
+                clone.Content = new MemoryStream();
+                Content.WriteTo(clone.Content);
+                clone.Length = Convert.ToUInt64(clone.Content.Length);
+            }
+
+            return clone;
+        }
+
+        #endregion
+
+        #region Header
+
+        /// <summary>
+        /// Adds new header key value pair
+        /// </summary>
+        public void AddHeader(string key, string value)
+        {
+            if (!HasHeader)
+                HasHeader = true;
+
+            if (HeadersList == null)
+                HeadersList = new List<KeyValuePair<string, string>>();
+
+            HeadersList.Add(new KeyValuePair<string, string>(key, value));
+        }
+
+        /// <summary>
+        /// Adds new header key value pair
+        /// </summary>
+        public void AddHeader(string key, ushort value)
+        {
+            AddHeader(key, value.ToString());
+        }
+
+        /// <summary>
+        /// Adds new header key value pair
+        /// </summary>
+        public void AddHeader(string key, int value)
+        {
+            AddHeader(key, value.ToString());
+        }
+
+        /// <summary>
+        /// Finds a header value by key
+        /// </summary>
+        public string FindHeader(string key)
+        {
+            if (!HasHeader || HeadersList == null || HeadersList.Count == 0)
+                return null;
+
+            KeyValuePair<string, string> pair = HeadersList.FirstOrDefault(x => x.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase));
+            return pair.Value;
+        }
+
         #endregion
 
         #region Create
@@ -212,16 +353,40 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Create an acknowledge message of the message
         /// </summary>
-        public TmqMessage CreateAcknowledge()
+        public TmqMessage CreateAcknowledge(string negativeReason = null)
         {
             TmqMessage message = new TmqMessage();
 
-            message.FirstAcquirer = FirstAcquirer;
-            message.HighPriority = Type == MessageType.Client;
-            message.Type = MessageType.Acknowledge;
             message.SetMessageId(MessageId);
+            message.FirstAcquirer = FirstAcquirer;
+            message.Type = MessageType.Acknowledge;
             message.ContentType = ContentType;
-            message.SetTarget(Type == MessageType.Channel ? Target : Source);
+
+            if (Type == MessageType.DirectMessage)
+            {
+                message.HighPriority = true;
+
+                message.SetSource(Target);
+                message.SetTarget(Source);
+            }
+            else
+            {
+                message.HighPriority = false;
+
+                //target will be channel name
+                message.SetTarget(Target);
+            }
+
+            if (!string.IsNullOrEmpty(negativeReason))
+            {
+                if (!message.HasHeader)
+                    message.HasHeader = true;
+
+                if (message.HeadersList == null)
+                    message.HeadersList = new List<KeyValuePair<string, string>>();
+
+                message.HeadersList.Add(new KeyValuePair<string, string>(TmqHeaders.NEGATIVE_ACKNOWLEDGE_REASON, negativeReason));
+            }
 
             return message;
         }
@@ -229,15 +394,16 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Create a response message of the message
         /// </summary>
-        public TmqMessage CreateResponse()
+        public TmqMessage CreateResponse(TwinoResultCode status)
         {
             TmqMessage message = new TmqMessage();
 
             message.FirstAcquirer = FirstAcquirer;
             message.HighPriority = HighPriority;
             message.Type = MessageType.Response;
+            message.ContentType = Convert.ToUInt16(status);
             message.SetMessageId(MessageId);
-            message.SetTarget(Type == MessageType.Channel ? Target : Source);
+            message.SetTarget(Type == MessageType.QueueMessage ? Target : Source);
 
             return message;
         }

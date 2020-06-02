@@ -98,7 +98,7 @@ namespace Twino.Protocols.Http
         /// <param name="info">Connection information</param>
         /// <param name="data">Data is first 8 bytes of the first received message from the client</param>
         /// <returns></returns>
-        public async Task<ProtocolHandshakeResult> Handshake(IConnectionInfo info, byte[] data)
+        public Task<ProtocolHandshakeResult> Handshake(IConnectionInfo info, byte[] data)
         {
             ProtocolHandshakeResult result = new ProtocolHandshakeResult();
             result.Accepted = CheckProtocol(data);
@@ -106,7 +106,7 @@ namespace Twino.Protocols.Http
                 result.ReadAfter = true;
 
             info.State = ConnectionStates.Http;
-            return await Task.FromResult(result);
+            return Task.FromResult(result);
         }
 
         /// <summary>
@@ -149,7 +149,8 @@ namespace Twino.Protocols.Http
 
                 if (status == HandleStatus.ReadAgain)
                     reader.Reset();
-            } while (status == HandleStatus.ReadAgain);
+            }
+            while (status == HandleStatus.ReadAgain);
 
             if (status == HandleStatus.Close)
                 info.Close();

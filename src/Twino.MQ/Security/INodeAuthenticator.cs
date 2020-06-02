@@ -14,7 +14,7 @@ namespace Twino.MQ.Security
         /// Checks if the node can connect to the server
         /// It should return true if allowed.
         /// </summary>
-        Task<bool> Authenticate(NodeServer server, MqClient client);
+        Task<bool> Authenticate(NodeManager server, MqClient client);
 
         /// <summary>
         /// Checks if the messsage should be sent to the node

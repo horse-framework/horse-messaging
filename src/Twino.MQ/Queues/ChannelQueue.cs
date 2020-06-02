@@ -1,9 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Delivery;
+using Twino.MQ.Events;
 using Twino.MQ.Options;
 using Twino.MQ.Queues.States;
 using Twino.Protocols.TMQ;
@@ -39,10 +43,24 @@ namespace Twino.MQ.Queues
         public ushort Id { get; }
 
         /// <summary>
+        /// Tag name for the queue
+        /// </summary>
+        public string TagName
+        {
+            get => Options.TagName;
+            set => Options.TagName = value;
+        }
+
+        /// <summary>
         /// Queue options.
         /// If null, channel default options will be used
         /// </summary>
         public ChannelQueueOptions Options { get; }
+
+        /// <summary>
+        /// Triggered when a message is produced 
+        /// </summary>
+        public MessageEventManager OnMessageProduced { get; }
 
         /// <summary>
         /// Queue messaging handler.
@@ -58,22 +76,22 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// High priority message list
         /// </summary>
-        public IEnumerable<QueueMessage> HighPriorityMessages => HighPriorityLinkedList;
+        public IEnumerable<QueueMessage> PriorityMessages => PriorityMessagesList;
 
         /// <summary>
         /// High priority message list
         /// </summary>
-        internal readonly LinkedList<QueueMessage> HighPriorityLinkedList = new LinkedList<QueueMessage>();
+        internal readonly LinkedList<QueueMessage> PriorityMessagesList = new LinkedList<QueueMessage>();
 
         /// <summary>
         /// Standard priority queue message
         /// </summary>
-        public IEnumerable<QueueMessage> RegularMessages => RegularLinkedList;
+        public IEnumerable<QueueMessage> Messages => MessagesList;
 
         /// <summary>
         /// Standard priority queue message
         /// </summary>
-        internal readonly LinkedList<QueueMessage> RegularLinkedList = new LinkedList<QueueMessage>();
+        internal readonly LinkedList<QueueMessage> MessagesList = new LinkedList<QueueMessage>();
 
         /// <summary>
         /// Time keeper for the queue.
@@ -133,6 +151,7 @@ namespace Twino.MQ.Queues
             Status = options.Status;
             DeliveryHandler = deliveryHandler;
             State = QueueStateFactory.Create(this, options.Status);
+            OnMessageProduced = new MessageEventManager(EventNames.MessageProduced, this);
 
             TimeKeeper = new QueueTimeKeeper(this);
             TimeKeeper.Run();
@@ -153,12 +172,13 @@ namespace Twino.MQ.Queues
         public async Task Destroy()
         {
             await TimeKeeper.Destroy();
+            OnMessageProduced.Dispose();
 
-            lock (HighPriorityLinkedList)
-                HighPriorityLinkedList.Clear();
+            lock (PriorityMessagesList)
+                PriorityMessagesList.Clear();
 
-            lock (RegularLinkedList)
-                RegularLinkedList.Clear();
+            lock (MessagesList)
+                MessagesList.Clear();
 
             if (_ackSync != null)
             {
@@ -186,17 +206,17 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Returns pending high priority messages count
         /// </summary>
-        public int HighPriorityMessageCount()
+        public int PriorityMessageCount()
         {
-            return HighPriorityLinkedList.Count;
+            return PriorityMessagesList.Count;
         }
 
         /// <summary>
         /// Returns pending regular messages count
         /// </summary>
-        public int RegularMessageCount()
+        public int MessageCount()
         {
-            return RegularLinkedList.Count;
+            return MessagesList.Count;
         }
 
         /// <summary>
@@ -206,17 +226,13 @@ namespace Twino.MQ.Queues
         /// </summary>
         public QueueMessage FindNextMessage()
         {
-            if (HighPriorityLinkedList.Count > 0)
-            {
-                lock (HighPriorityLinkedList)
-                    return HighPriorityLinkedList.First.Value;
-            }
+            if (PriorityMessagesList.Count > 0)
+                lock (PriorityMessagesList)
+                    return PriorityMessagesList.First?.Value;
 
-            if (RegularLinkedList.Count > 0)
-            {
-                lock (RegularLinkedList)
-                    return RegularLinkedList.First.Value;
-            }
+            if (MessagesList.Count > 0)
+                lock (MessagesList)
+                    return MessagesList.First?.Value;
 
             return null;
         }
@@ -226,8 +242,8 @@ namespace Twino.MQ.Queues
         /// </summary>
         public void ClearRegularMessages()
         {
-            lock (RegularLinkedList)
-                RegularLinkedList.Clear();
+            lock (MessagesList)
+                MessagesList.Clear();
         }
 
         /// <summary>
@@ -235,8 +251,8 @@ namespace Twino.MQ.Queues
         /// </summary>
         public void ClearHighPriorityMessages()
         {
-            lock (HighPriorityLinkedList)
-                HighPriorityLinkedList.Clear();
+            lock (PriorityMessagesList)
+                PriorityMessagesList.Clear();
         }
 
         /// <summary>
@@ -267,20 +283,20 @@ namespace Twino.MQ.Queues
                 if (highPriority)
                 {
                     if (putBack)
-                        HighPriorityLinkedList.AddLast(message);
+                        PriorityMessagesList.AddLast(message);
                     else
-                        HighPriorityLinkedList.AddFirst(message);
+                        PriorityMessagesList.AddFirst(message);
 
-                    Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
+                    Info.UpdateHighPriorityMessageCount(PriorityMessagesList.Count);
                 }
                 else
                 {
                     if (putBack)
-                        RegularLinkedList.AddLast(message);
+                        MessagesList.AddLast(message);
                     else
-                        RegularLinkedList.AddFirst(message);
+                        MessagesList.AddFirst(message);
 
-                    Info.UpdateRegularMessageCount(RegularLinkedList.Count);
+                    Info.UpdateRegularMessageCount(MessagesList.Count);
                 }
             }
             finally
@@ -305,9 +321,9 @@ namespace Twino.MQ.Queues
             try
             {
                 if (message.Message.HighPriority)
-                    HighPriorityLinkedList.Remove(message);
+                    PriorityMessagesList.Remove(message);
                 else
-                    RegularLinkedList.Remove(message);
+                    MessagesList.Remove(message);
             }
             finally
             {
@@ -324,6 +340,63 @@ namespace Twino.MQ.Queues
         }
 
         /// <summary>
+        /// Adds new string message into the queue without Message Id and headers
+        /// </summary>
+        public void AddStringMessage(string messageContent)
+        {
+            AddStringMessage(null, messageContent);
+        }
+
+        /// <summary>
+        /// Adds new string message into the queue with Message Id and returns the Id
+        /// </summary>
+        public string AddStringMessageWithId(string messageContent,
+                                             bool firstAcquirer = false,
+                                             bool priority = false,
+                                             IEnumerable<KeyValuePair<string, string>> headers = null)
+
+        {
+            string messageId = Channel.Server.MessageIdGenerator.Create();
+            AddStringMessage(messageId, messageContent, firstAcquirer, priority, headers);
+            return messageId;
+        }
+
+        /// <summary>
+        /// Adds new string message into the queue
+        /// </summary>
+        public void AddStringMessage(string messageId,
+                                     string messageContent,
+                                     bool firstAcquirer = false,
+                                     bool priority = false,
+                                     IEnumerable<KeyValuePair<string, string>> headers = null)
+        {
+            AddBinaryMessage(messageId, Encoding.UTF8.GetBytes(messageContent), firstAcquirer, priority, headers);
+        }
+
+        /// <summary>
+        /// Adds new binary message into the queue
+        /// </summary>
+        public void AddBinaryMessage(string messageId,
+                                     byte[] messageContent,
+                                     bool firstAcquirer = false,
+                                     bool priority = false,
+                                     IEnumerable<KeyValuePair<string, string>> headers = null)
+        {
+            TmqMessage message = new TmqMessage(MessageType.QueueMessage, Channel.Name, Id);
+            message.SetMessageId(messageId);
+            message.Content = new MemoryStream(messageContent);
+            message.FirstAcquirer = firstAcquirer;
+            message.HighPriority = priority;
+
+            if (headers != null)
+                foreach (KeyValuePair<string, string> header in headers)
+                    message.AddHeader(header.Key, header.Value);
+
+            QueueMessage queueMessage = new QueueMessage(message);
+            AddMessage(queueMessage);
+        }
+
+        /// <summary>
         /// Adds message into the queue
         /// </summary>
         internal void AddMessage(QueueMessage message, bool toEnd = true)
@@ -333,7 +406,7 @@ namespace Twino.MQ.Queues
 
             if (message.Message.HighPriority)
             {
-                lock (HighPriorityLinkedList)
+                lock (PriorityMessagesList)
                 {
                     //re-check when locked.
                     //it's checked before lock, because we dont wanna lock anything in non-concurrent already queued situations
@@ -341,18 +414,18 @@ namespace Twino.MQ.Queues
                         return;
 
                     if (toEnd)
-                        HighPriorityLinkedList.AddLast(message);
+                        PriorityMessagesList.AddLast(message);
                     else
-                        HighPriorityLinkedList.AddFirst(message);
+                        PriorityMessagesList.AddFirst(message);
 
                     message.IsInQueue = true;
                 }
 
-                Info.UpdateHighPriorityMessageCount(HighPriorityLinkedList.Count);
+                Info.UpdateHighPriorityMessageCount(PriorityMessagesList.Count);
             }
             else
             {
-                lock (RegularLinkedList)
+                lock (MessagesList)
                 {
                     //re-check when locked
                     //it's checked before lock, because we dont wanna lock anything in non-concurrent already queued situations
@@ -360,14 +433,14 @@ namespace Twino.MQ.Queues
                         return;
 
                     if (toEnd)
-                        RegularLinkedList.AddLast(message);
+                        MessagesList.AddLast(message);
                     else
-                        RegularLinkedList.AddFirst(message);
+                        MessagesList.AddFirst(message);
 
                     message.IsInQueue = true;
                 }
 
-                Info.UpdateRegularMessageCount(RegularLinkedList.Count);
+                Info.UpdateRegularMessageCount(MessagesList.Count);
             }
         }
 
@@ -376,7 +449,7 @@ namespace Twino.MQ.Queues
         /// </summary>
         public bool IsEmpty()
         {
-            return HighPriorityLinkedList.Count == 0 && RegularLinkedList.Count == 0;
+            return PriorityMessagesList.Count == 0 && MessagesList.Count == 0;
         }
 
         #endregion
@@ -451,7 +524,7 @@ namespace Twino.MQ.Queues
             if (Status == QueueStatus.Stopped)
                 return PushResult.StatusNotSupported;
 
-            if (Options.MessageLimit > 0 && HighPriorityLinkedList.Count + RegularLinkedList.Count >= Options.MessageLimit)
+            if (Options.MessageLimit > 0 && PriorityMessagesList.Count + MessagesList.Count >= Options.MessageLimit)
                 return PushResult.LimitExceeded;
 
             if (Options.MessageSizeLimit > 0 && message.Message.Length > Options.MessageSizeLimit)
@@ -459,7 +532,7 @@ namespace Twino.MQ.Queues
 
             //prepare properties
             message.Message.FirstAcquirer = true;
-            message.Message.AcknowledgeRequired = Options.RequestAcknowledge;
+            message.Message.PendingAcknowledge = Options.RequestAcknowledge;
 
             //if message doesn't have message id and "UseMessageId" option is enabled, create new message id for the message
             if (Options.UseMessageId && string.IsNullOrEmpty(message.Message.MessageId))
@@ -484,6 +557,9 @@ namespace Twino.MQ.Queues
                 if (!allow)
                     return PushResult.Success;
 
+                //trigger message produced event
+                _ = OnMessageProduced.Trigger(message);
+
                 if (State.CanEnqueue(message))
                 {
                     await RunInListSync(() => AddMessage(message));
@@ -506,8 +582,13 @@ namespace Twino.MQ.Queues
                     {
                         await ApplyDecision(decision, State.ProcessingMessage);
 
-                        if (decision.KeepMessage && !State.ProcessingMessage.IsInQueue)
-                            AddMessage(State.ProcessingMessage, false);
+                        if (!State.ProcessingMessage.IsInQueue)
+                        {
+                            if (decision.PutBack == PutBackDecision.Start)
+                                AddMessage(State.ProcessingMessage, false);
+                            else if (decision.PutBack == PutBackDecision.End)
+                                AddMessage(State.ProcessingMessage);
+                        }
                     }
                 }
                 catch //if developer does wrong operation, we should not stop
@@ -553,10 +634,10 @@ namespace Twino.MQ.Queues
 
                 _triggering = true;
 
-                if (HighPriorityLinkedList.Count > 0)
+                if (PriorityMessagesList.Count > 0)
                     await ProcessPendingMessages(true);
 
-                if (RegularLinkedList.Count > 0)
+                if (MessagesList.Count > 0)
                     await ProcessPendingMessages(false);
             }
             finally
@@ -579,25 +660,31 @@ namespace Twino.MQ.Queues
 
                 if (high)
                 {
-                    lock (HighPriorityLinkedList)
+                    lock (PriorityMessagesList)
                     {
-                        if (HighPriorityLinkedList.Count == 0)
+                        if (PriorityMessagesList.Count == 0)
                             return;
 
-                        message = HighPriorityLinkedList.First.Value;
-                        HighPriorityLinkedList.RemoveFirst();
+                        message = PriorityMessagesList.First?.Value;
+                        if (message == null)
+                            return;
+
+                        PriorityMessagesList.RemoveFirst();
                         message.IsInQueue = false;
                     }
                 }
                 else
                 {
-                    lock (RegularLinkedList)
+                    lock (MessagesList)
                     {
-                        if (RegularLinkedList.Count == 0)
+                        if (MessagesList.Count == 0)
                             return;
 
-                        message = RegularLinkedList.First.Value;
-                        RegularLinkedList.RemoveFirst();
+                        message = MessagesList.First?.Value;
+                        if (message == null)
+                            return;
+
+                        MessagesList.RemoveFirst();
                         message.IsInQueue = false;
                     }
                 }
@@ -634,26 +721,26 @@ namespace Twino.MQ.Queues
         internal static Decision CreateFinalDecision(Decision final, Decision decision)
         {
             bool allow = false;
-            bool keep = false;
+            PutBackDecision putBack = PutBackDecision.No;
             bool save = false;
             DeliveryAcknowledgeDecision ack = DeliveryAcknowledgeDecision.None;
 
             if (decision.Allow)
                 allow = true;
 
-            if (decision.KeepMessage)
-                keep = true;
+            if (decision.PutBack != PutBackDecision.No)
+                putBack = decision.PutBack;
 
             if (decision.SaveMessage)
                 save = true;
 
-            if (decision.SendAcknowledge == DeliveryAcknowledgeDecision.Always)
+            if (decision.Acknowledge == DeliveryAcknowledgeDecision.Always)
                 ack = DeliveryAcknowledgeDecision.Always;
 
-            else if (decision.SendAcknowledge == DeliveryAcknowledgeDecision.IfSaved && final.SendAcknowledge == DeliveryAcknowledgeDecision.None)
+            else if (decision.Acknowledge == DeliveryAcknowledgeDecision.IfSaved && final.Acknowledge == DeliveryAcknowledgeDecision.None)
                 ack = DeliveryAcknowledgeDecision.IfSaved;
 
-            return new Decision(allow, save, keep, ack);
+            return new Decision(allow, save, putBack, ack);
         }
 
         /// <summary>
@@ -667,10 +754,12 @@ namespace Twino.MQ.Queues
             if (decision.SaveMessage)
                 await SaveMessage(message);
 
-            if (decision.SendAcknowledge == DeliveryAcknowledgeDecision.Always ||
-                decision.SendAcknowledge == DeliveryAcknowledgeDecision.IfSaved && message.IsSaved)
+            if (decision.Acknowledge == DeliveryAcknowledgeDecision.Always ||
+                decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ||
+                decision.Acknowledge == DeliveryAcknowledgeDecision.IfSaved && message.IsSaved)
             {
-                TmqMessage acknowledge = customAck ?? message.Message.CreateAcknowledge();
+                TmqMessage acknowledge = customAck ?? message.Message.CreateAcknowledge(decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ? "none" : null);
+
                 if (message.Source != null && message.Source.IsConnected)
                 {
                     bool sent = await message.Source.SendAsync(acknowledge);
@@ -681,8 +770,10 @@ namespace Twino.MQ.Queues
                     await decision.AcknowledgeDelivery(message, message.Source, false);
             }
 
-            if (decision.KeepMessage)
+            if (decision.PutBack == PutBackDecision.Start)
                 AddMessage(message, false);
+            else if (decision.PutBack == PutBackDecision.End)
+                AddMessage(message);
 
             else if (!decision.Allow)
             {
@@ -700,13 +791,71 @@ namespace Twino.MQ.Queues
         {
             if (message.IsSaved)
                 return false;
-            
+
             message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
 
             if (message.IsSaved)
                 Info.AddMessageSave();
 
             return message.IsSaved;
+        }
+
+        /// <summary>
+        /// Sends decision to all connected master nodes
+        /// </summary>
+        public async Task SendDecisionToNodes(QueueMessage queueMessage, Decision decision)
+        {
+            TmqMessage msg = new TmqMessage(MessageType.Server, null, 10);
+            DecisionOverNode model = new DecisionOverNode
+                                     {
+                                         Channel = Channel.Name,
+                                         Queue = Id,
+                                         MessageId = queueMessage.Message.MessageId,
+                                         Acknowledge = decision.Acknowledge,
+                                         Allow = decision.Allow,
+                                         PutBack = decision.PutBack,
+                                         SaveMessage = decision.SaveMessage
+                                     };
+
+            await msg.SetJsonContent(model);
+            Channel.Server.NodeManager.SendMessageToNodes(msg);
+        }
+
+        /// <summary>
+        /// Applies decision over node to the queue
+        /// </summary>
+        internal async Task ApplyDecisionOverNode(string messageId, Decision decision)
+        {
+            QueueMessage message = null;
+            await RunInListSync(() =>
+            {
+                //pull from prefential messages
+                if (PriorityMessagesList.Count > 0)
+                {
+                    message = PriorityMessagesList.FirstOrDefault(x => x.Message.MessageId == messageId);
+                    if (message != null)
+                    {
+                        message.IsInQueue = false;
+                        PriorityMessagesList.Remove(message);
+                    }
+                }
+
+                //if there is no prefential message, pull from standard messages
+                if (message == null && MessagesList.Count > 0)
+                {
+                    message = MessagesList.FirstOrDefault(x => x.Message.MessageId == messageId);
+                    if (message != null)
+                    {
+                        message.IsInQueue = false;
+                        MessagesList.Remove(message);
+                    }
+                }
+            });
+
+            if (message == null)
+                return;
+
+            await ApplyDecision(decision, message);
         }
 
         #endregion
@@ -719,8 +868,8 @@ namespace Twino.MQ.Queues
         internal async Task WaitForAcknowledge(QueueMessage message)
         {
             //if we will lock the queue until ack received, we must request ack
-            if (!message.Message.AcknowledgeRequired)
-                message.Message.AcknowledgeRequired = true;
+            if (!message.Message.PendingAcknowledge)
+                message.Message.PendingAcknowledge = true;
 
             if (_acknowledgeCallback == null)
                 return;
@@ -732,7 +881,7 @@ namespace Twino.MQ.Queues
             await _ackSync.WaitAsync();
             try
             {
-                bool received = await _acknowledgeCallback.Task;
+                await _acknowledgeCallback.Task;
                 _acknowledgeCallback = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             }
             finally
@@ -766,24 +915,21 @@ namespace Twino.MQ.Queues
                 }
             }
 
-            bool success = true;
-            if (deliveryMessage.Length > 0 && deliveryMessage.Content != null)
-            {
-                string msg = deliveryMessage.Content.ToString();
-                if (msg.Equals("FAILED", StringComparison.InvariantCultureIgnoreCase) || msg.Equals("TIMEOUT", StringComparison.InvariantCultureIgnoreCase))
-                    success = false;
-            }
+            bool success = !(deliveryMessage.HasHeader &&
+                             deliveryMessage.Headers.Any(x => x.Key.Equals(TmqHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)));
 
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalse (it's possible, resharper doesn't work properly in here)
             if (delivery != null)
                 delivery.MarkAsAcknowledged(success);
 
             if (success)
                 Info.AddAcknowledge();
             else
-                Info.AddUnacknowledge();
+                Info.AddNegativeAcknowledge();
 
             Decision decision = await DeliveryHandler.AcknowledgeReceived(this, deliveryMessage, delivery, success);
 
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalse (it's possible, resharper doesn't work properly in here)
             if (delivery != null)
             {
                 if (Options.HideClientNames)

@@ -12,6 +12,9 @@ using Xunit;
 
 namespace Test.Mq
 {
+    /// <summary>
+    /// Ports 42300 - 42310
+    /// </summary>
     public class AcknowledgeTest
     {
         #region Client - Client
@@ -45,12 +48,12 @@ namespace Test.Mq
 
             TmqMessage message = new TmqMessage();
             message.HighPriority = true;
-            message.Type = MessageType.Client;
+            message.Type = MessageType.DirectMessage;
             message.SetTarget(client2.ClientId);
             message.SetStringContent("Hello, World!");
 
-            bool acknowledge = await client1.SendWithAcknowledge(message);
-            Assert.True(acknowledge);
+            TwinoResult acknowledge = await client1.SendWithAcknowledge(message);
+            Assert.Equal(TwinoResultCode.Ok, acknowledge.Code);
         }
 
         /// <summary>
@@ -75,7 +78,7 @@ namespace Test.Mq
             client2.AutoAcknowledge = false;
             client2.MessageReceived += async (c, m) =>
             {
-                if (m.AcknowledgeRequired)
+                if (m.PendingAcknowledge)
                     await client2.SendAsync(m.CreateAcknowledge());
             };
 
@@ -87,12 +90,12 @@ namespace Test.Mq
 
             TmqMessage message = new TmqMessage();
             message.HighPriority = true;
-            message.Type = MessageType.Client;
+            message.Type = MessageType.DirectMessage;
             message.SetTarget(client2.ClientId);
             message.SetStringContent("Hello, World!");
 
-            bool acknowledge = await client1.SendWithAcknowledge(message);
-            Assert.True(acknowledge);
+            TwinoResult acknowledge = await client1.SendWithAcknowledge(message);
+            Assert.Equal(TwinoResultCode.Ok, acknowledge.Code);
         }
 
         /// <summary>
@@ -102,7 +105,7 @@ namespace Test.Mq
         public async Task FromClientToClientTimeout()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42393);
+            server.Initialize(42307);
             server.Start(15, 15);
 
             server.Server.Server.Options.PingInterval = 300;
@@ -117,20 +120,20 @@ namespace Test.Mq
             client1.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
             client2.AutoAcknowledge = false;
 
-            await client1.ConnectAsync("tmq://localhost:42393");
-            await client2.ConnectAsync("tmq://localhost:42393");
+            await client1.ConnectAsync("tmq://localhost:42307");
+            await client2.ConnectAsync("tmq://localhost:42307");
 
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
 
             TmqMessage message = new TmqMessage();
             message.HighPriority = true;
-            message.Type = MessageType.Client;
+            message.Type = MessageType.DirectMessage;
             message.SetTarget(client2.ClientId);
             message.SetStringContent("Hello, World!");
 
-            bool acknowledge = await client1.SendWithAcknowledge(message);
-            Assert.False(acknowledge);
+            TwinoResult acknowledge = await client1.SendWithAcknowledge(message);
+            Assert.NotEqual(TwinoResultCode.Ok, acknowledge.Code);
         }
 
         #endregion
@@ -160,13 +163,13 @@ namespace Test.Mq
             queue.Options.RequestAcknowledge = true;
 
             //subscribe
-            await client.Join(channel.Name, true);
+            await client.Channels.Join(channel.Name, true);
             await Task.Delay(250);
 
             //push a message to the queue
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
-            Assert.True(sent);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, true);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
         }
 
         /// <summary>
@@ -193,12 +196,12 @@ namespace Test.Mq
             queue.Options.RequestAcknowledge = true;
 
             //subscribe
-            await client.Join(channel.Name, true);
+            await client.Channels.Join(channel.Name, true);
 
             //push a message to the queue
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
-            Assert.True(sent);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, true);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
         }
 
         /// <summary>
@@ -225,12 +228,12 @@ namespace Test.Mq
             queue.Options.RequestAcknowledge = true;
 
             //subscribe
-            await client.Join(channel.Name, true);
+            await client.Channels.Join(channel.Name, true);
 
             //push a message to the queue
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
-            Assert.False(sent);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, true);
+            Assert.NotEqual(TwinoResultCode.Ok, sent.Code);
         }
 
         #endregion

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -34,12 +35,18 @@ namespace Twino.Protocols.TMQ
                 return null;
 
             TmqMessage message = new TmqMessage();
-            done = await ProcessRequiredFrame(message, bytes, stream);
+            done = await ReadFrame(message, bytes, stream);
             if (!done)
                 return null;
 
             if (DecreaseTTL)
                 message.Ttl--;
+
+            if (message.HasHeader)
+                done = await ReadHeader(message, stream);
+
+            if (!done)
+                return null;
 
             bool success = await ReadContent(message, stream);
             if (!success)
@@ -52,40 +59,47 @@ namespace Twino.Protocols.TMQ
         }
 
         /// <summary>
-        /// Process required frame data of message
+        /// Reads and process required frame data of the message
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static async Task<bool> ProcessRequiredFrame(TmqMessage message, byte[] bytes, Stream stream)
+        private async Task<bool> ReadFrame(TmqMessage message, byte[] bytes, Stream stream)
         {
-            byte type = bytes[0];
-            if (type >= 128)
+            byte first = bytes[0];
+            if (first >= 128)
             {
                 message.FirstAcquirer = true;
-                type -= 128;
+                first -= 128;
             }
 
-            if (type >= 64)
+            if (first >= 64)
             {
                 message.HighPriority = true;
-                type -= 64;
+                first -= 64;
             }
 
-            message.Type = (MessageType)type;
+            message.Type = (MessageType) first;
 
-            byte ttl = bytes[1];
-            if (ttl >= 128)
+            byte second = bytes[1];
+            if (second >= 128)
             {
-                message.ResponseRequired = true;
-                ttl -= 128;
+                message.PendingResponse = true;
+                second -= 128;
             }
 
-            if (ttl >= 64)
+            if (second >= 64)
             {
-                message.AcknowledgeRequired = true;
-                ttl -= 64;
+                message.PendingAcknowledge = true;
+                second -= 64;
             }
 
-            message.Ttl = ttl;
+            if (second >= 32 && message.Type != MessageType.Ping && message.Type != MessageType.Pong)
+            {
+                message.HasHeader = true;
+                message.HeadersList = new List<KeyValuePair<string, string>>();
+                second -= 32;
+            }
+
+            message.Ttl = second;
 
             message.MessageIdLength = bytes[2];
             message.SourceLength = bytes[3];
@@ -122,15 +136,6 @@ namespace Twino.Protocols.TMQ
             else
                 message.Length = length;
 
-            return true;
-        }
-
-        /// <summary>
-        /// Reads message content
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<bool> ReadContent(TmqMessage message, Stream stream)
-        {
             if (message.MessageIdLength > 0)
                 message.MessageId = await ReadOctetSizeData(stream, message.MessageIdLength);
 
@@ -140,6 +145,48 @@ namespace Twino.Protocols.TMQ
             if (message.TargetLength > 0)
                 message.Target = await ReadOctetSizeData(stream, message.TargetLength);
 
+            return true;
+        }
+
+        /// <summary>
+        /// Reads and process header data of the message
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static async Task<bool> ReadHeader(TmqMessage message, Stream stream)
+        {
+            byte[] size = new byte[2];
+            bool read = await ReadCertainBytes(stream, size, 0, size.Length);
+            if (!read)
+                return false;
+
+            int headerLength = BitConverter.ToUInt16(size);
+            byte[] data = new byte[headerLength];
+
+            read = await ReadCertainBytes(stream, data, 0, data.Length);
+            if (!read)
+                return false;
+
+            string[] headers = Encoding.UTF8.GetString(data).Split(new[] {"\r\n"}, StringSplitOptions.RemoveEmptyEntries);
+            foreach (string header in headers)
+            {
+                int i = header.IndexOf(':');
+                if (i < 1)
+                    continue;
+
+                string key = header.Substring(0, i);
+                string value = header.Substring(i + 1);
+                message.HeadersList.Add(new KeyValuePair<string, string>(key, value));
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Reads message content
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private async Task<bool> ReadContent(TmqMessage message, Stream stream)
+        {
             if (message.Length == 0)
                 return true;
 
@@ -147,15 +194,15 @@ namespace Twino.Protocols.TMQ
                 message.Content = new MemoryStream();
 
             ulong left = message.Length;
-            ulong blen = (ulong)_buffer.Length;
+            ulong blen = (ulong) _buffer.Length;
             do
             {
-                int rcount = (int)(left > blen ? blen : left);
+                int rcount = (int) (left > blen ? blen : left);
                 int read = await stream.ReadAsync(_buffer, 0, rcount);
                 if (read == 0)
                     return false;
 
-                left -= (uint)read;
+                left -= (uint) read;
                 await message.Content.WriteAsync(_buffer, 0, read);
             }
             while (left > 0);

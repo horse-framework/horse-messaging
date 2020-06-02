@@ -9,9 +9,9 @@ namespace Twino.MQ.Queues
         /// Queue messaging is in running state.
         /// Messages are not queued, producers push the message and if there are available consumers, message is sent to them.
         /// Otherwise, message is deleted.
-        /// If you need to keep messages and transmit only live messages, Route is good status to consume less resource.
+        /// If you need to keep messages and transmit only live messages, Broadcast is good status to consume less resource.
         /// </summary>
-        Route,
+        Broadcast,
 
         /// <summary>
         /// Queue messaging is in running state.

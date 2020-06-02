@@ -111,6 +111,11 @@ namespace Twino.Protocols.TMQ
         public const ushort UpdateQueue = 612;
 
         /// <summary>
+        /// "613" Clears messages in queue
+        /// </summary>
+        public const ushort ClearMessages = 613;
+
+        /// <summary>
         /// "615" Gets queue information
         /// </summary>
         public const ushort QueueInformation = 615;
@@ -129,6 +134,11 @@ namespace Twino.Protocols.TMQ
         /// "631" Gets all connected clients
         /// </summary>
         public const ushort ClientList = 631;
+
+        /// <summary>
+        /// "641" Node instance sends a decision to other nodes
+        /// </summary>
+        public const ushort DecisionOverNode = 641;
 
     }
 }

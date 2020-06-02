@@ -1,4 +1,3 @@
-using Newtonsoft.Json;
 using System.Text.Json.Serialization;
 
 namespace Twino.Protocols.TMQ.Models
@@ -11,178 +10,159 @@ namespace Twino.Protocols.TMQ.Models
         /// <summary>
         /// Queue channel name
         /// </summary>
-        [JsonProperty("channel")]
-        [JsonPropertyName("channel")]
+        [JsonPropertyName("Channel")]
         public string Channel { get; set; }
+
+        /// <summary>
+        /// Queue tag name
+        /// </summary>
+        [JsonPropertyName("TagName")]
+        public string TagName { get; set; }
 
         /// <summary>
         /// Queue id
         /// </summary>
-        [JsonProperty("id")]
-        [JsonPropertyName("id")]
+        [JsonPropertyName("Id")]
         public ushort Id { get; set; }
 
         /// <summary>
         /// Pending high priority messages in the queue
         /// </summary>
-        [JsonProperty("highPrioMsgs")]
-        [JsonPropertyName("highPrioMsgs")]
-        public int InQueueHighPriorityMessages { get; set; }
+        [JsonPropertyName("PriorityMessages")]
+        public int PriorityMessages { get; set; }
 
         /// <summary>
         /// Pending regular messages in the queue
         /// </summary>
-        [JsonProperty("regularMsgs")]
-        [JsonPropertyName("regularMsgs")]
-        public int InQueueRegularMessages { get; set; }
+        [JsonPropertyName("Messages")]
+        public int Messages { get; set; }
 
         /// <summary>
         /// Queue current status
         /// </summary>
-        [JsonProperty("status")]
-        [JsonPropertyName("status")]
+        [JsonPropertyName("Status")]
         public string Status { get; set; }
 
         /// <summary>
         /// If true, messages will send to only first acquirers
         /// </summary>
-        [JsonProperty("onlyFirstAcquirer")]
-        [JsonPropertyName("onlyFirstAcquirer")]
+        [JsonPropertyName("OnlyFirstAcquirer")]
         public bool OnlyFirstAcquirer { get; set; }
 
         /// <summary>
         /// If true, messages will request acknowledge from receivers
         /// </summary>
-        [JsonProperty("requestAck")]
-        [JsonPropertyName("requestAck")]
+        [JsonPropertyName("RequestAcknowledge")]
         public bool RequestAcknowledge { get; set; }
 
         /// <summary>
         /// When acknowledge is required, maximum duration for waiting acknowledge message
         /// </summary>
-        [JsonProperty("ackTimeout")]
-        [JsonPropertyName("ackTimeout")]
+        [JsonPropertyName("AcknowledgeTimeout")]
         public int AcknowledgeTimeout { get; set; }
 
         /// <summary>
         /// When message queuing is active, maximum time for a message wait
         /// </summary>
-        [JsonProperty("msgTimeout")]
-        [JsonPropertyName("msgTimeout")]
+        [JsonPropertyName("MessageTimeout")]
         public int MessageTimeout { get; set; }
 
         /// <summary>
         /// If true, server creates unique id for each message.
         /// </summary>
-        [JsonProperty("useMsgId")]
-        [JsonPropertyName("useMsgId")]
+        [JsonPropertyName("UseMessageId")]
         public bool UseMessageId { get; set; } = true;
 
         /// <summary>
         /// If true, queue does not send next message to receivers until acknowledge message received
         /// </summary>
-        [JsonProperty("waitForAck")]
-        [JsonPropertyName("waitForAck")]
+        [JsonPropertyName("WaitForAcknowledge")]
         public bool WaitForAcknowledge { get; set; }
 
         /// <summary>
         /// If true, server doesn't send client name to receivers in queueus.
         /// </summary>
-        [JsonProperty("hideClientNames")]
-        [JsonPropertyName("hideClientNames")]
+        [JsonPropertyName("HideClientNames")]
         public bool HideClientNames { get; set; }
 
         /// <summary>
         /// Total messages received from producers
         /// </summary>
-        [JsonProperty("receivedMsgs")]
-        [JsonPropertyName("receivedMsgs")]
+        [JsonPropertyName("ReceivedMessages")]
         public long ReceivedMessages { get; set; }
 
         /// <summary>
         /// Total messages sent to consumers
         /// </summary>
-        [JsonProperty("sentMsgs")]
-        [JsonPropertyName("sentMsgs")]
+        [JsonPropertyName("SentMessages")]
         public long SentMessages { get; set; }
 
         /// <summary>
         /// Total message send operation each message to each consumer
         /// </summary>
-        [JsonProperty("deliveries")]
-        [JsonPropertyName("deliveries")]
+        [JsonPropertyName("Deliveries")]
         public long Deliveries { get; set; }
 
         /// <summary>
         /// Total unacknowledged messages
         /// </summary>
-        [JsonProperty("unacks")]
-        [JsonPropertyName("unacks")]
-        public long Unacknowledges { get; set; }
+        [JsonPropertyName("NegativeAcks")]
+        public long NegativeAcks { get; set; }
 
         /// <summary>
         /// Total acknowledged messages
         /// </summary>
-        [JsonProperty("acks")]
-        [JsonPropertyName("acks")]
-        public long Acknowledges { get; set; }
+        [JsonPropertyName("Acks")]
+        public long Acks { get; set; }
 
         /// <summary>
         /// Total timed out messages
         /// </summary>
-        [JsonProperty("timeoutMsgs")]
-        [JsonPropertyName("timeoutMsgs")]
+        [JsonPropertyName("TimeoutMessages")]
         public long TimeoutMessages { get; set; }
 
         /// <summary>
         /// Total saved messages
         /// </summary>
-        [JsonProperty("savedMsgs")]
-        [JsonPropertyName("savedMsgs")]
+        [JsonPropertyName("SavedMessages")]
         public long SavedMessages { get; set; }
 
         /// <summary>
         /// Total removed messages
         /// </summary>
-        [JsonProperty("removedMsgs")]
-        [JsonPropertyName("removedMsgs")]
+        [JsonPropertyName("RemovedMessages")]
         public long RemovedMessages { get; set; }
 
         /// <summary>
         /// Total error count
         /// </summary>
-        [JsonProperty("errors")]
-        [JsonPropertyName("errors")]
+        [JsonPropertyName("Errors")]
         public long Errors { get; set; }
 
         /// <summary>
         /// Last message receive date in UNIX milliseconds
         /// </summary>
-        [JsonProperty("lastMsgReceived")]
-        [JsonPropertyName("lastMsgReceived")]
+        [JsonPropertyName("LastMessageReceived")]
         public long LastMessageReceived { get; set; }
 
         /// <summary>
         /// Last message send date in UNIX milliseconds
         /// </summary>
-        [JsonProperty("lastMsgSent")]
-        [JsonPropertyName("lastMsgSent")]
+        [JsonPropertyName("LastMessageSent")]
         public long LastMessageSent { get; set; }
 
         /// <summary>
         /// Maximum message limit of the queue
         /// Zero is unlimited
         /// </summary>
-        [JsonProperty("messageLimit")]
-        [JsonPropertyName("messageLimit")]
+        [JsonPropertyName("MessageLimit")]
         public int MessageLimit { get; set; }
 
         /// <summary>
         /// Maximum message size limit
         /// Zero is unlimited
         /// </summary>
-        [JsonProperty("messageSize")]
-        [JsonPropertyName("messageSize")]
+        [JsonPropertyName("MessageSizeLimit")]
         public ulong MessageSizeLimit { get; set; }
     }
 }

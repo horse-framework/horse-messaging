@@ -33,101 +33,92 @@ namespace Twino.MQ.Network
 
         #region Handle
 
-        public async Task Handle(MqClient client, TmqMessage message)
+        public Task Handle(MqClient client, TmqMessage message, bool fromNode)
         {
             try
             {
-                await HandleUnsafe(client, message);
+                return HandleUnsafe(client, message);
             }
             catch (OperationCanceledException)
             {
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.LimitExceeded));
+                return client.SendAsync(message.CreateResponse(TwinoResultCode.LimitExceeded));
             }
             catch (DuplicateNameException)
             {
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Duplicate));
+                return client.SendAsync(message.CreateResponse(TwinoResultCode.Duplicate));
             }
         }
 
-        private async Task HandleUnsafe(MqClient client, TmqMessage message)
+        private Task HandleUnsafe(MqClient client, TmqMessage message)
         {
             switch (message.ContentType)
             {
                 //join to a channel
                 case KnownContentTypes.Join:
-                    await JoinChannel(client, message);
-                    break;
+                    return JoinChannel(client, message);
 
                 //leave from a channel
                 case KnownContentTypes.Leave:
-                    await LeaveChannel(client, message);
-                    break;
+                    return LeaveChannel(client, message);
 
                 //create only channel
                 case KnownContentTypes.CreateChannel:
-                    await CreateChannel(client, message, false);
-                    break;
+                    return CreateChannel(client, message, false);
 
                 //get channel information list
                 case KnownContentTypes.ChannelList:
-                    await GetChannelList(client, message);
-                    break;
+                    return GetChannelList(client, message);
 
                 //get channel information
                 case KnownContentTypes.ChannelInformation:
-                    await GetChannelInformation(client, message);
-                    break;
+                    return GetChannelInformation(client, message);
 
-                //get queue information list
+                //get channel consumers
                 case KnownContentTypes.ChannelConsumers:
-                    await GetChannelConsumers(client, message);
-                    break;
+                    return GetChannelConsumers(client, message);
 
                 //remove channel and queues in it
                 case KnownContentTypes.RemoveChannel:
-                    await RemoveChannel(client, message);
-                    break;
+                    return RemoveChannel(client, message);
 
                 //creates new queue
                 case KnownContentTypes.CreateQueue:
-                    await CreateQueue(client, message);
-                    break;
+                    return CreateQueue(client, message);
 
                 //remove only queue
                 case KnownContentTypes.RemoveQueue:
-                    await RemoveQueue(client, message);
-                    break;
+                    return RemoveQueue(client, message);
 
                 //update queue
                 case KnownContentTypes.UpdateQueue:
-                    await UpdateQueue(client, message);
-                    break;
+                    return UpdateQueue(client, message);
+
+                //clear messages in queue
+                case KnownContentTypes.ClearMessages:
+                    return ClearMessages(client, message);
 
                 //get queue information list
                 case KnownContentTypes.QueueList:
-                    await GetQueueList(client, message);
-                    break;
+                    return GetQueueList(client, message);
 
                 //get queue information
                 case KnownContentTypes.QueueInformation:
-                    await GetQueueInformation(client, message);
-                    break;
+                    return GetQueueInformation(client, message);
 
                 //get queue information
                 case KnownContentTypes.InstanceList:
-                    await GetInstanceList(client, message);
-                    break;
+                    return GetInstanceList(client, message);
 
-                //get queue information list
+                //get client information list
                 case KnownContentTypes.ClientList:
-                    await GetClients(client, message);
-                    break;
+                    return GetClients(client, message);
 
                 //for not-defines content types, use user-defined message handler
                 default:
                     if (_server.ServerMessageHandler != null)
-                        await _server.ServerMessageHandler.Received(client, message);
-                    break;
+                        return _server.ServerMessageHandler.Received(client, message);
+
+                    return Task.CompletedTask;
             }
         }
 
@@ -148,8 +139,8 @@ namespace Twino.MQ.Network
 
             if (channel == null)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
 
                 return;
             }
@@ -157,27 +148,27 @@ namespace Twino.MQ.Network
             ChannelClient found = channel.FindClient(client.UniqueId);
             if (found != null)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Ok));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
 
                 return;
             }
 
             ClientJoinResult result = await channel.AddClient(client);
-            if (message.ResponseRequired)
+            if (message.PendingResponse)
             {
                 switch (result)
                 {
                     case ClientJoinResult.Success:
-                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Ok));
+                        await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
                         break;
 
                     case ClientJoinResult.Unauthorized:
-                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                        await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
                         break;
 
                     case ClientJoinResult.Full:
-                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.LimitExceeded));
+                        await client.SendAsync(message.CreateResponse(TwinoResultCode.LimitExceeded));
                         break;
                 }
             }
@@ -191,16 +182,16 @@ namespace Twino.MQ.Network
             Channel channel = _server.FindChannel(message.Target);
             if (channel == null)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
 
                 return;
             }
 
             bool success = await channel.RemoveClient(client);
 
-            if (message.ResponseRequired)
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, success ? KnownContentTypes.Ok : KnownContentTypes.NotFound));
+            if (message.PendingResponse)
+                await client.SendAsync(message.CreateResponse(success ? TwinoResultCode.Ok : TwinoResultCode.NotFound));
         }
 
         /// <summary>
@@ -218,8 +209,8 @@ namespace Twino.MQ.Network
                 bool grant = await _server.Authorization.CanCreateChannel(client, _server, message.Target);
                 if (!grant)
                 {
-                    if (message.ResponseRequired)
-                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                    if (message.PendingResponse)
+                        await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                     return null;
                 }
@@ -227,8 +218,7 @@ namespace Twino.MQ.Network
 
             if (!createForQueue && message.Length > 0 && message.Content != null && message.Content.Length > 0)
             {
-                NetworkOptionsBuilder builder = new NetworkOptionsBuilder();
-                builder.Load(message.ToString());
+                NetworkOptionsBuilder builder = await System.Text.Json.JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content);
 
                 ChannelOptions options = ChannelOptions.CloneFrom(_server.Options);
                 builder.ApplyToChannel(options);
@@ -259,14 +249,14 @@ namespace Twino.MQ.Network
 
                 Channel ch = _server.CreateChannel(message.Target, authenticator, eventHandler, deliveryHandler, options);
 
-                if (ch != null && message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Ok));
+                if (ch != null && message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
             }
 
             Channel c = _server.CreateChannel(message.Target);
 
-            if (!createForQueue && c != null && message.ResponseRequired)
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Ok));
+            if (!createForQueue && c != null && message.PendingResponse)
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
 
             return c;
         }
@@ -278,28 +268,32 @@ namespace Twino.MQ.Network
         {
             if (_server.AdminAuthorization == null)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
+
                 return;
             }
 
             Channel channel = _server.FindChannel(message.Target);
             if (channel == null)
             {
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
                 return;
             }
 
             bool grant = await _server.AdminAuthorization.CanRemoveChannel(client, _server, channel);
             if (!grant)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                 return;
             }
 
             await _server.RemoveChannel(channel);
+
+            if (message.PendingResponse)
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
         }
 
         /// <summary>
@@ -309,11 +303,13 @@ namespace Twino.MQ.Network
         {
             if (_server.AdminAuthorization == null)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                 return;
             }
+
+            string filter = message.FindHeader(TmqHeaders.CHANNEL_NAME);
 
             List<ChannelInformation> list = new List<ChannelInformation>();
             foreach (Channel channel in _server.Channels)
@@ -321,31 +317,33 @@ namespace Twino.MQ.Network
                 if (channel == null)
                     continue;
 
+                if (filter != null && !Filter.CheckMatch(channel.Name, filter))
+                    continue;
 
                 bool grant = await _server.AdminAuthorization.CanReceiveChannelInfo(client, channel);
                 if (!grant)
                     continue;
 
                 list.Add(new ChannelInformation
-                {
-                    Name = channel.Name,
-                    Queues = channel.QueuesClone.Select(x => x.Id).ToArray(),
-                    AllowMultipleQueues = channel.Options.AllowMultipleQueues,
-                    AllowedQueues = channel.Options.AllowedQueues,
-                    OnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
-                    RequestAcknowledge = channel.Options.RequestAcknowledge,
-                    AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
-                    MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
-                    WaitForAcknowledge = channel.Options.WaitForAcknowledge,
-                    HideClientNames = channel.Options.HideClientNames,
-                    QueueLimit = channel.Options.QueueLimit,
-                    ClientLimit = channel.Options.ClientLimit,
-                    DestroyWhenEmpty = channel.Options.DestroyWhenEmpty,
-                    ActiveClients = channel.ClientsCount()
-                });
+                         {
+                             Name = channel.Name,
+                             Queues = channel.QueuesClone.Select(x => x.Id).ToArray(),
+                             AllowMultipleQueues = channel.Options.AllowMultipleQueues,
+                             AllowedQueues = channel.Options.AllowedQueues,
+                             OnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
+                             RequestAcknowledge = channel.Options.RequestAcknowledge,
+                             AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
+                             MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
+                             WaitForAcknowledge = channel.Options.WaitForAcknowledge,
+                             HideClientNames = channel.Options.HideClientNames,
+                             QueueLimit = channel.Options.QueueLimit,
+                             ClientLimit = channel.Options.ClientLimit,
+                             DestroyWhenEmpty = channel.Options.DestroyWhenEmpty,
+                             ActiveClients = channel.ClientsCount()
+                         });
             }
 
-            TmqMessage response = message.CreateResponse();
+            TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.ChannelList;
             await response.SetJsonContent(list);
             await client.SendAsync(response);
@@ -358,8 +356,8 @@ namespace Twino.MQ.Network
         {
             if (_server.AdminAuthorization == null)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                 return;
             }
@@ -367,38 +365,38 @@ namespace Twino.MQ.Network
             Channel channel = _server.FindChannel(message.Target);
             if (channel == null)
             {
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
                 return;
             }
 
             bool grant = await _server.AdminAuthorization.CanReceiveChannelInfo(client, channel);
             if (!grant)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                 return;
             }
 
             ChannelInformation information = new ChannelInformation
-            {
-                Name = channel.Name,
-                Queues = channel.QueuesClone.Select(x => x.Id).ToArray(),
-                AllowMultipleQueues = channel.Options.AllowMultipleQueues,
-                AllowedQueues = channel.Options.AllowedQueues,
-                OnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
-                RequestAcknowledge = channel.Options.RequestAcknowledge,
-                AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
-                MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
-                WaitForAcknowledge = channel.Options.WaitForAcknowledge,
-                HideClientNames = channel.Options.HideClientNames,
-                QueueLimit = channel.Options.QueueLimit,
-                ClientLimit = channel.Options.ClientLimit,
-                DestroyWhenEmpty = channel.Options.DestroyWhenEmpty,
-                ActiveClients = channel.ClientsCount()
-            };
+                                             {
+                                                 Name = channel.Name,
+                                                 Queues = channel.QueuesClone.Select(x => x.Id).ToArray(),
+                                                 AllowMultipleQueues = channel.Options.AllowMultipleQueues,
+                                                 AllowedQueues = channel.Options.AllowedQueues,
+                                                 OnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
+                                                 RequestAcknowledge = channel.Options.RequestAcknowledge,
+                                                 AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
+                                                 MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
+                                                 WaitForAcknowledge = channel.Options.WaitForAcknowledge,
+                                                 HideClientNames = channel.Options.HideClientNames,
+                                                 QueueLimit = channel.Options.QueueLimit,
+                                                 ClientLimit = channel.Options.ClientLimit,
+                                                 DestroyWhenEmpty = channel.Options.DestroyWhenEmpty,
+                                                 ActiveClients = channel.ClientsCount()
+                                             };
 
-            TmqMessage response = message.CreateResponse();
+            TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.ChannelInformation;
             await response.SetJsonContent(information);
             await client.SendAsync(response);
@@ -411,8 +409,8 @@ namespace Twino.MQ.Network
         {
             if (_server.AdminAuthorization == null)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                 return;
             }
@@ -425,8 +423,8 @@ namespace Twino.MQ.Network
 
             if (channel == null)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
 
                 return;
             }
@@ -434,8 +432,8 @@ namespace Twino.MQ.Network
             bool grant = await _server.AdminAuthorization.CanReceiveChannelConsumers(client, channel);
             if (!grant)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                 return;
             }
@@ -444,15 +442,15 @@ namespace Twino.MQ.Network
 
             foreach (ChannelClient cc in channel.ClientsClone)
                 list.Add(new ClientInformation
-                {
-                    Id = cc.Client.UniqueId,
-                    Name = cc.Client.Name,
-                    Type = cc.Client.Type,
-                    IsAuthenticated = cc.Client.IsAuthenticated,
-                    Online = cc.JoinDate.LifetimeMilliseconds(),
-                });
+                         {
+                             Id = cc.Client.UniqueId,
+                             Name = cc.Client.Name,
+                             Type = cc.Client.Type,
+                             IsAuthenticated = cc.Client.IsAuthenticated,
+                             Online = cc.JoinDate.LifetimeMilliseconds(),
+                         });
 
-            TmqMessage response = message.CreateResponse();
+            TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.ChannelConsumers;
             await response.SetJsonContent(list);
             await client.SendAsync(response);
@@ -467,29 +465,24 @@ namespace Twino.MQ.Network
         /// </summary>
         private async Task CreateQueue(MqClient client, TmqMessage message)
         {
-            ushort? contentType;
+            string queueId = message.FindHeader(TmqHeaders.QUEUE_ID);
+            if (string.IsNullOrEmpty(queueId))
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.Unacceptable));
+
+            ushort contentType = Convert.ToUInt16(queueId);
+
             NetworkOptionsBuilder builder = null;
-            if (message.Length == 2)
-            {
-                byte[] bytes = new byte[2];
-                await message.Content.ReadAsync(bytes);
-                contentType = BitConverter.ToUInt16(bytes);
-            }
-            else
-            {
-                builder = new NetworkOptionsBuilder();
-                builder.Load(message.ToString());
-                contentType = builder.Id;
-            }
+            if (message.Length > 0)
+                builder = await System.Text.Json.JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content);
 
             Channel channel = await CreateChannel(client, message, true);
-            ChannelQueue queue = channel.FindQueue(contentType.Value);
+            ChannelQueue queue = channel.FindQueue(contentType);
 
             //if queue exists, we can't create. return duplicate response.
             if (queue != null)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Duplicate));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Duplicate));
 
                 return;
             }
@@ -497,11 +490,11 @@ namespace Twino.MQ.Network
             //check authority if client can create queue
             if (_server.Authorization != null)
             {
-                bool grant = await _server.Authorization.CanCreateQueue(client, channel, contentType.Value, builder);
+                bool grant = await _server.Authorization.CanCreateQueue(client, channel, contentType, builder);
                 if (!grant)
                 {
-                    if (message.ResponseRequired)
-                        await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                    if (message.PendingResponse)
+                        await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                     return;
                 }
@@ -521,11 +514,11 @@ namespace Twino.MQ.Network
                 }
             }
 
-            queue = await channel.CreateQueue(contentType.Value, options, delivery);
+            queue = await channel.CreateQueue(contentType, options, delivery);
 
             //if creation successful, sends response
-            if (queue != null && message.ResponseRequired)
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Ok));
+            if (queue != null && message.PendingResponse)
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
         }
 
         /// <summary>
@@ -535,8 +528,8 @@ namespace Twino.MQ.Network
         {
             if (_server.AdminAuthorization == null)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                 return;
             }
@@ -544,7 +537,7 @@ namespace Twino.MQ.Network
             Channel channel = _server.FindChannel(message.Target);
             if (channel == null)
             {
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
                 return;
             }
 
@@ -555,23 +548,23 @@ namespace Twino.MQ.Network
             ChannelQueue queue = channel.FindQueue(contentType);
             if (queue == null)
             {
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
                 return;
             }
 
             bool grant = await _server.AdminAuthorization.CanRemoveQueue(client, queue);
             if (!grant)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                 return;
             }
 
             await channel.RemoveQueue(queue);
 
-            if (message.ResponseRequired)
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Ok));
+            if (message.PendingResponse)
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
         }
 
         /// <summary>
@@ -579,31 +572,36 @@ namespace Twino.MQ.Network
         /// </summary>
         private async Task UpdateQueue(MqClient client, TmqMessage message)
         {
+            string queueId = message.FindHeader(TmqHeaders.QUEUE_ID);
+            if (string.IsNullOrEmpty(queueId))
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.Unacceptable));
+
+            ushort contentType = Convert.ToUInt16(queueId);
+
             if (_server.AdminAuthorization == null)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                 return;
             }
 
-            NetworkOptionsBuilder builder = new NetworkOptionsBuilder();
-            builder.Load(message.ToString());
+            NetworkOptionsBuilder builder = await System.Text.Json.JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content);
 
             Channel channel = _server.FindChannel(message.Target);
             if (channel == null)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
 
                 return;
             }
 
-            ChannelQueue queue = channel.FindQueue(builder.Id);
+            ChannelQueue queue = channel.FindQueue(contentType);
             if (queue == null)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
 
                 return;
             }
@@ -611,8 +609,8 @@ namespace Twino.MQ.Network
             bool grant = await _server.AdminAuthorization.CanUpdateQueueOptions(client, channel, queue, builder);
             if (!grant)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                 return;
             }
@@ -621,9 +619,74 @@ namespace Twino.MQ.Network
             if (builder.Status.HasValue)
                 await queue.SetStatus(builder.Status.Value);
 
+            _ = channel.OnQueueUpdated.Trigger(queue);
+
             //if creation successful, sends response
-            if (message.ResponseRequired)
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Ok));
+            if (message.PendingResponse)
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
+        }
+
+        /// <summary>
+        /// Clears messages in a queue
+        /// </summary>
+        private async Task ClearMessages(MqClient client, TmqMessage message)
+        {
+            string queueId = message.FindHeader(TmqHeaders.QUEUE_ID);
+            if (string.IsNullOrEmpty(queueId))
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.Unacceptable));
+
+            ushort contentType = Convert.ToUInt16(queueId);
+
+            if (_server.AdminAuthorization == null)
+            {
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
+
+                return;
+            }
+
+            Channel channel = _server.FindChannel(message.Target);
+            if (channel == null)
+            {
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
+
+                return;
+            }
+
+            ChannelQueue queue = channel.FindQueue(contentType);
+            if (queue == null)
+            {
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
+
+                return;
+            }
+
+            string prio = message.FindHeader(TmqHeaders.PRIORITY_MESSAGES);
+            string msgs = message.FindHeader(TmqHeaders.MESSAGES);
+            bool clearPrio = !string.IsNullOrEmpty(prio) && prio.Equals("yes", StringComparison.InvariantCultureIgnoreCase);
+            bool clearMsgs = !string.IsNullOrEmpty(msgs) && msgs.Equals("yes", StringComparison.InvariantCultureIgnoreCase);
+
+            bool grant = await _server.AdminAuthorization.CanClearQueueMessages(client, queue, clearPrio, clearMsgs);
+            if (!grant)
+            {
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
+
+                return;
+            }
+
+            if (clearPrio && clearMsgs)
+                queue.ClearAllMessages();
+            else if (clearPrio)
+                queue.ClearHighPriorityMessages();
+            else if (clearMsgs)
+                queue.ClearRegularMessages();
+
+            //if creation successful, sends response
+            if (message.PendingResponse)
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
         }
 
         /// <summary>
@@ -633,8 +696,8 @@ namespace Twino.MQ.Network
         {
             if (_server.AdminAuthorization == null)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                 return;
             }
@@ -642,15 +705,15 @@ namespace Twino.MQ.Network
             Channel channel = _server.FindChannel(message.Target);
             if (channel == null)
             {
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
                 return;
             }
 
             bool grant = await _server.AdminAuthorization.CanReceiveChannelQueues(client, channel);
             if (!grant)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                 return;
             }
@@ -662,35 +725,36 @@ namespace Twino.MQ.Network
                     continue;
 
                 list.Add(new QueueInformation
-                {
-                    Channel = channel.Name,
-                    Id = queue.Id,
-                    Status = queue.Status.ToString().ToLower(),
-                    InQueueHighPriorityMessages = queue.HighPriorityLinkedList.Count,
-                    InQueueRegularMessages = queue.RegularLinkedList.Count,
-                    OnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
-                    RequestAcknowledge = channel.Options.RequestAcknowledge,
-                    AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
-                    MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
-                    WaitForAcknowledge = channel.Options.WaitForAcknowledge,
-                    HideClientNames = channel.Options.HideClientNames,
-                    ReceivedMessages = queue.Info.ReceivedMessages,
-                    SentMessages = queue.Info.SentMessages,
-                    Deliveries = queue.Info.Deliveries,
-                    Unacknowledges = queue.Info.Unacknowledges,
-                    Acknowledges = queue.Info.Acknowledges,
-                    TimeoutMessages = queue.Info.TimedOutMessages,
-                    SavedMessages = queue.Info.MessageSaved,
-                    RemovedMessages = queue.Info.MessageRemoved,
-                    Errors = queue.Info.ErrorCount,
-                    LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
-                    LastMessageSent = queue.Info.GetLastMessageSendUnix(),
-                    MessageLimit = queue.Options.MessageLimit,
-                    MessageSizeLimit = queue.Options.MessageSizeLimit
-                });
+                         {
+                             Channel = channel.Name,
+                             TagName = queue.TagName,
+                             Id = queue.Id,
+                             Status = queue.Status.ToString().ToLower(),
+                             PriorityMessages = queue.PriorityMessagesList.Count,
+                             Messages = queue.MessagesList.Count,
+                             OnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
+                             RequestAcknowledge = channel.Options.RequestAcknowledge,
+                             AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
+                             MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
+                             WaitForAcknowledge = channel.Options.WaitForAcknowledge,
+                             HideClientNames = channel.Options.HideClientNames,
+                             ReceivedMessages = queue.Info.ReceivedMessages,
+                             SentMessages = queue.Info.SentMessages,
+                             Deliveries = queue.Info.Deliveries,
+                             NegativeAcks = queue.Info.NegativeAcknowledge,
+                             Acks = queue.Info.Acknowledges,
+                             TimeoutMessages = queue.Info.TimedOutMessages,
+                             SavedMessages = queue.Info.MessageSaved,
+                             RemovedMessages = queue.Info.MessageRemoved,
+                             Errors = queue.Info.ErrorCount,
+                             LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
+                             LastMessageSent = queue.Info.GetLastMessageSendUnix(),
+                             MessageLimit = queue.Options.MessageLimit,
+                             MessageSizeLimit = queue.Options.MessageSizeLimit
+                         });
             }
 
-            TmqMessage response = message.CreateResponse();
+            TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.QueueList;
             await response.SetJsonContent(list);
             await client.SendAsync(response);
@@ -703,8 +767,8 @@ namespace Twino.MQ.Network
         {
             if (_server.AdminAuthorization == null)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                 return;
             }
@@ -712,15 +776,15 @@ namespace Twino.MQ.Network
             Channel channel = _server.FindChannel(message.Target);
             if (channel == null)
             {
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
                 return;
             }
 
             bool grant = await _server.AdminAuthorization.CanReceiveChannelQueues(client, channel);
             if (!grant)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                 return;
             }
@@ -731,39 +795,40 @@ namespace Twino.MQ.Network
             ChannelQueue queue = channel.FindQueue(id);
             if (queue == null)
             {
-                await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.NotFound));
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
                 return;
             }
 
             QueueInformation information = new QueueInformation
-            {
-                Channel = channel.Name,
-                Id = id,
-                Status = queue.Status.ToString().ToLower(),
-                InQueueHighPriorityMessages = queue.HighPriorityLinkedList.Count,
-                InQueueRegularMessages = queue.RegularLinkedList.Count,
-                OnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
-                RequestAcknowledge = channel.Options.RequestAcknowledge,
-                AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
-                MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
-                WaitForAcknowledge = channel.Options.WaitForAcknowledge,
-                HideClientNames = channel.Options.HideClientNames,
-                ReceivedMessages = queue.Info.ReceivedMessages,
-                SentMessages = queue.Info.SentMessages,
-                Deliveries = queue.Info.Deliveries,
-                Unacknowledges = queue.Info.Unacknowledges,
-                Acknowledges = queue.Info.Acknowledges,
-                TimeoutMessages = queue.Info.TimedOutMessages,
-                SavedMessages = queue.Info.MessageSaved,
-                RemovedMessages = queue.Info.MessageRemoved,
-                Errors = queue.Info.ErrorCount,
-                LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
-                LastMessageSent = queue.Info.GetLastMessageSendUnix(),
-                MessageLimit = queue.Options.MessageLimit,
-                MessageSizeLimit = queue.Options.MessageSizeLimit
-            };
+                                           {
+                                               Channel = channel.Name,
+                                               TagName = queue.TagName,
+                                               Id = id,
+                                               Status = queue.Status.ToString().ToLower(),
+                                               PriorityMessages = queue.PriorityMessagesList.Count,
+                                               Messages = queue.MessagesList.Count,
+                                               OnlyFirstAcquirer = channel.Options.SendOnlyFirstAcquirer,
+                                               RequestAcknowledge = channel.Options.RequestAcknowledge,
+                                               AcknowledgeTimeout = Convert.ToInt32(channel.Options.AcknowledgeTimeout.TotalMilliseconds),
+                                               MessageTimeout = Convert.ToInt32(channel.Options.MessageTimeout.TotalMilliseconds),
+                                               WaitForAcknowledge = channel.Options.WaitForAcknowledge,
+                                               HideClientNames = channel.Options.HideClientNames,
+                                               ReceivedMessages = queue.Info.ReceivedMessages,
+                                               SentMessages = queue.Info.SentMessages,
+                                               Deliveries = queue.Info.Deliveries,
+                                               NegativeAcks = queue.Info.NegativeAcknowledge,
+                                               Acks = queue.Info.Acknowledges,
+                                               TimeoutMessages = queue.Info.TimedOutMessages,
+                                               SavedMessages = queue.Info.MessageSaved,
+                                               RemovedMessages = queue.Info.MessageRemoved,
+                                               Errors = queue.Info.ErrorCount,
+                                               LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
+                                               LastMessageSent = queue.Info.GetLastMessageSendUnix(),
+                                               MessageLimit = queue.Options.MessageLimit,
+                                               MessageSizeLimit = queue.Options.MessageSizeLimit
+                                           };
 
-            TmqMessage response = message.CreateResponse();
+            TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.QueueInformation;
             await response.SetJsonContent(information);
             await client.SendAsync(response);
@@ -780,8 +845,8 @@ namespace Twino.MQ.Network
         {
             if (_server.AdminAuthorization == null)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                 return;
             }
@@ -789,47 +854,47 @@ namespace Twino.MQ.Network
             bool grant = await _server.AdminAuthorization.CanManageInstances(client, message);
             if (!grant)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                 return;
             }
 
-            List<InstanceInformation> list = new List<InstanceInformation>();
+            List<NodeInformation> list = new List<NodeInformation>();
 
             //slave instances
-            List<MqClient> slaves = _server.NodeServer.Clients.GetAsClone();
+            List<MqClient> slaves = _server.NodeManager.Clients.GetAsClone();
             foreach (MqClient slave in slaves)
             {
-                list.Add(new InstanceInformation
-                {
-                    IsSlave = true,
-                    Host = slave.RemoteHost,
-                    IsConnected = slave.IsConnected,
-                    Id = slave.UniqueId,
-                    Name = slave.Name,
-                    Lifetime = slave.ConnectedDate.LifetimeMilliseconds()
-                });
+                list.Add(new NodeInformation
+                         {
+                             IsSlave = true,
+                             Host = slave.RemoteHost,
+                             IsConnected = slave.IsConnected,
+                             Id = slave.UniqueId,
+                             Name = slave.Name,
+                             Lifetime = slave.ConnectedDate.LifetimeMilliseconds()
+                         });
             }
 
             //master instances
-            foreach (TmqStickyConnector connector in _server.NodeServer.Connectors)
+            foreach (TmqStickyConnector connector in _server.NodeManager.Connectors)
             {
                 NodeOptions options = connector.Tag as NodeOptions;
                 TmqClient c = connector.GetClient();
 
-                list.Add(new InstanceInformation
-                {
-                    IsSlave = false,
-                    Host = options?.Host,
-                    IsConnected = connector.IsConnected,
-                    Id = c.ClientId,
-                    Name = options?.Name,
-                    Lifetime = Convert.ToInt64(connector.Lifetime.TotalMilliseconds)
-                });
+                list.Add(new NodeInformation
+                         {
+                             IsSlave = false,
+                             Host = options?.Host,
+                             IsConnected = connector.IsConnected,
+                             Id = c.ClientId,
+                             Name = options?.Name,
+                             Lifetime = Convert.ToInt64(connector.Lifetime.TotalMilliseconds)
+                         });
             }
 
-            TmqMessage response = message.CreateResponse();
+            TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.InstanceList;
             await response.SetJsonContent(list);
             await client.SendAsync(response);
@@ -846,8 +911,8 @@ namespace Twino.MQ.Network
         {
             if (_server.AdminAuthorization == null)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                 return;
             }
@@ -855,25 +920,37 @@ namespace Twino.MQ.Network
             bool grant = await _server.AdminAuthorization.CanReceiveClients(client);
             if (!grant)
             {
-                if (message.ResponseRequired)
-                    await client.SendAsync(MessageBuilder.ResponseStatus(message, KnownContentTypes.Unauthorized));
+                if (message.PendingResponse)
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
 
                 return;
             }
 
             List<ClientInformation> list = new List<ClientInformation>();
 
-            foreach (MqClient mc in _server.Clients)
-                list.Add(new ClientInformation
-                {
-                    Id = mc.UniqueId,
-                    Name = mc.Name,
-                    Type = mc.Type,
-                    IsAuthenticated = mc.IsAuthenticated,
-                    Online = mc.ConnectedDate.LifetimeMilliseconds(),
-                });
+            string filter = null;
+            if (!string.IsNullOrEmpty(message.Target))
+                filter = message.Target;
 
-            TmqMessage response = message.CreateResponse();
+            foreach (MqClient mc in _server.Clients)
+            {
+                if (!string.IsNullOrEmpty(filter))
+                {
+                    if (string.IsNullOrEmpty(mc.Type) || !Filter.CheckMatch(mc.Type, filter))
+                        continue;
+                }
+
+                list.Add(new ClientInformation
+                         {
+                             Id = mc.UniqueId,
+                             Name = mc.Name,
+                             Type = mc.Type,
+                             IsAuthenticated = mc.IsAuthenticated,
+                             Online = mc.ConnectedDate.LifetimeMilliseconds(),
+                         });
+            }
+
+            TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.ClientList;
             await response.SetJsonContent(list);
             await client.SendAsync(response);

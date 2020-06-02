@@ -1,4 +1,5 @@
 using System;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 
 namespace Twino.Protocols.WebSocket
@@ -26,32 +27,31 @@ namespace Twino.Protocols.WebSocket
         /// <summary>
         /// "HTTP/1.1 " as bytes
         /// </summary>
-        public static readonly ReadOnlyMemory<byte> HTTP_VERSION = Encoding.ASCII.GetBytes("HTTP/1.1 ");
-
+        public static readonly byte[] HTTP_VERSION = Encoding.ASCII.GetBytes("HTTP/1.1 ");
         /// <summary>
         /// "Server: twino\r\n" as bytes
         /// </summary>
-        public static readonly ReadOnlyMemory<byte> SERVER_CRLF = Encoding.ASCII.GetBytes("Server: twino\r\n");
+        public static readonly byte[] SERVER_CRLF = Encoding.ASCII.GetBytes("Server: twino\r\n");
 
         /// <summary>
         /// "Connection: Upgrade\r\n" as bytes
         /// </summary>
-        public static readonly ReadOnlyMemory<byte> CONNECTION_UPGRADE_CRLF = Encoding.ASCII.GetBytes("Connection: Upgrade\r\n");
+        public static readonly byte[] CONNECTION_UPGRADE_CRLF = Encoding.ASCII.GetBytes("Connection: Upgrade\r\n");
 
         /// <summary>
         /// "HTTP/1.1 101 Switching Protocols\r\n" as bytes
         /// </summary>
-        public static ReadOnlyMemory<byte> WEBSOCKET_101_SWITCHING_PROTOCOLS_CRLF = Encoding.ASCII.GetBytes("HTTP/1.1 101 Switching Protocols\r\n");
+        public static readonly byte[] WEBSOCKET_101_SWITCHING_PROTOCOLS_CRLF = Encoding.ASCII.GetBytes("HTTP/1.1 101 Switching Protocols\r\n");
 
         /// <summary>
         /// "Upgrade: websocket\r\n" as bytes
         /// </summary>
-        public static ReadOnlyMemory<byte> UPGRADE_WEBSOCKET_CRLF = Encoding.ASCII.GetBytes("Upgrade: websocket\r\n");
+        public static readonly byte[] UPGRADE_WEBSOCKET_CRLF = Encoding.ASCII.GetBytes("Upgrade: websocket\r\n");
 
         /// <summary>
         /// "Sec-WebSocket-Accept: " as bytes
         /// </summary>
-        public static ReadOnlyMemory<byte> SEC_WEB_SOCKET_COLON = Encoding.ASCII.GetBytes("Sec-WebSocket-Accept: ");
+        public static readonly byte[] SEC_WEB_SOCKET_COLON = Encoding.ASCII.GetBytes("Sec-WebSocket-Accept: ");
 
         /// <summary>
         /// "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"

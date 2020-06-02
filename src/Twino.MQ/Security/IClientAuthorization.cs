@@ -34,5 +34,10 @@ namespace Twino.MQ.Security
         /// Returns true, if client can pull a message from the queue
         /// </summary>
         Task<bool> CanPullFromQueue(ChannelClient client, ChannelQueue queue);
+        
+        /// <summary>
+        /// Returns true, if client can subscribe to the event
+        /// </summary>
+        bool CanSubscribeEvent(MqClient client, string eventName, string channelName, ushort queueId);
     }
 }

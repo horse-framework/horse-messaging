@@ -1,29 +1,18 @@
 # What's Twino?
 
-**Twino** is an extensible .NET Core TCP Server provides multiple protocols on same host.<br>
-**Twino** is a complete Messaging Queue server library.<br>
-**Twino** is a WebSocket server with advanced client management.<br>
-**Twino** is an HTTP server with MVC Architecture.<br>
-**Twino** is an IOC Library with service pools and scopes.<br>
-**Twino** is a WebSocket Client.<br>
+**Twino** is a .NET Core Framework that connects applications. Twino connection goal is providing solution for all communication methods. Twino offers the following libarries for this purpose:
 
-## Why Twino?
+* Twino Messaging Queue Server allows queuing such as Push, Pull, Cache, Broadcast and more
+* Each client that connected to Twino Server can send messages, requests and responses each other.
+* Clients can subscribe events and gets information when another client is connected or does something.
+* Twino supports HTTP Server and MVC Architecture similar to ASP.NET MVC
+* Twino supports WebSocket Server.
+* Twino has an IOC Library with service pools and scopes
 
-In a single application with single framework, you can have TCP Server, HTTP Server, WebSocket Server, Messaging Queue Server and with many extra features such as IOC, Authentication, Clients, Connectors etc.
 
-- High performance (in many cases, nearly as fast as kestrel)
-- Twino MQ is not a executable messaging queue server. It's a framework and you can create your own MQ server with a few interface implementations.
-- MQ Protocol supports various message types. It's not just a queue server, it supports peer to peer messaging, request responsing and more.
-- Twino has high scalable advanced websocket server with amazing client management.
-- Multiple protocols can be used on same project, same port, same host.
-- Twino.Mvc has nearly all features ASP.NET MVC has, and you write nearly same code.
-- Twino has sweet client connectors for WebSocket and TMQ protocols.
+See **[All Twino NuGet Packages](https://www.nuget.org/packages?q=twino)**
 
-**Read [All Features](https://github.com/mhelvacikoylu/twino/blob/v2/docs/Features.MD) to see all features of twino libraries.**
-
-See **[All Twino NuGet Packages](https://github.com/mhelvacikoylu/twino/blob/v2/docs/Packages.MD)**
-
-**Go to [Documentation Home Page](https://github.com/mhelvacikoylu/twino/tree/v2/docs)**
+**Go to [Documentation Home Page](https://github.com/mhelvacikoylu/twino/tree/v3/docs)**
 
 ### Basic WebSocket Server Example
 

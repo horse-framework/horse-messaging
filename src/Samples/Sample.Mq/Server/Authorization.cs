@@ -58,29 +58,34 @@ namespace Sample.Mq.Server
             return await Task.FromResult(true);
         }
 
-        public async Task<bool> CanManageInstances(MqClient client, TmqMessage request)
+        public bool CanSubscribeEvent(MqClient client, string eventName, string channelName, ushort queueId)
         {
-            return await Task.FromResult(true);
+            return true;
         }
 
-        public async Task<bool> CanReceiveClients(MqClient client)
+        public Task<bool> CanManageInstances(MqClient client, TmqMessage request)
         {
-            return await Task.FromResult(true);
+            return Task.FromResult(true);
         }
 
-        public async Task<bool> CanReceiveChannelInfo(MqClient client, Channel channel)
+        public Task<bool> CanReceiveClients(MqClient client)
         {
-            return await Task.FromResult(true);
+            return Task.FromResult(true);
         }
 
-        public async Task<bool> CanReceiveChannelConsumers(MqClient client, Channel channel)
+        public Task<bool> CanReceiveChannelInfo(MqClient client, Channel channel)
         {
-            return await Task.FromResult(true);
+            return Task.FromResult(true);
         }
 
-        public async Task<bool> CanReceiveChannelQueues(MqClient client, Channel channel)
+        public Task<bool> CanReceiveChannelConsumers(MqClient client, Channel channel)
         {
-            return await Task.FromResult(true);
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> CanReceiveChannelQueues(MqClient client, Channel channel)
+        {
+            return Task.FromResult(true);
         }
     }
 }

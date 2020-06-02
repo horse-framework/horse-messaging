@@ -41,7 +41,7 @@ namespace Sample.Mq
                 {
                     TmqClient client = _connector.GetClient();
 
-                    TmqMessage message = new TmqMessage(MessageType.Client, "producer-id");
+                    TmqMessage message = new TmqMessage(MessageType.DirectMessage, "producer-id");
                     message.ContentType = ModelTypes.ConsumerRequest;
 
                     ConsumerRequest request = new ConsumerRequest();
@@ -62,15 +62,15 @@ namespace Sample.Mq
             TmqClient tc = (TmqClient)client;
             tc.AutoAcknowledge = true;
 
-            tc.Join("AckChannel", false);
-            tc.Join("BasicChannel", false);
+            tc.Channels.Join("AckChannel", false);
+            tc.Channels.Join("BasicChannel", false);
         }
 
         private void MessageReceived(ClientSocketBase<TmqMessage> client, TmqMessage message)
         {
             switch (message.Type)
             {
-                case MessageType.Channel:
+                case MessageType.QueueMessage:
                     if (message.ContentType == ModelTypes.ProducerEvent)
                     {
                         ProducerEvent e = message.GetJsonContent<ProducerEvent>().Result;

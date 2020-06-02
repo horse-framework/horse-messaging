@@ -34,12 +34,12 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// A message to a channel
         /// </summary>
-        Channel = 0x11,
+        QueueMessage = 0x11,
 
         /// <summary>
-        /// A message to an other client
+        /// Direct message, by Id, @type or @name
         /// </summary>
-        Client = 0x12,
+        DirectMessage = 0x12,
 
         /// <summary>
         /// A acknowledge message, points to a message received before.
@@ -52,8 +52,19 @@ namespace Twino.Protocols.TMQ
         Response = 0x14,
 
         /// <summary>
-        /// A redirection message, message is same but has a new target 
+        /// Used for requesting to pull messages from the queue
         /// </summary>
-        Redirect = 0x15
+        QueuePullRequest = 0x15,
+
+        /// <summary>
+        /// Notifies events if it's from server to client.
+        /// Subscribes or ubsubscribes events if it's from client to server. 
+        /// </summary>
+        Event = 0x16,
+
+        /// <summary>
+        /// Message is routed to a custom exchange in server
+        /// </summary>
+        Router = 0x17
     }
 }

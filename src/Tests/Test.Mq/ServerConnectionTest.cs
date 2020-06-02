@@ -12,6 +12,9 @@ using Xunit;
 
 namespace Test.Mq
 {
+    /// <summary>
+    /// Ports 42100 - 42199
+    /// </summary>
     public class ServerConnectionTest
     {
         /// <summary>
@@ -150,14 +153,13 @@ namespace Test.Mq
             await client.ConnectAsync("127.0.0.1", 42105);
 
             NetworkStream stream = client.GetStream();
-            stream.Write(PredefinedMessages.PROTOCOL_BYTES);
+            stream.Write(PredefinedMessages.PROTOCOL_BYTES_V2);
             TmqMessage msg = new TmqMessage();
             msg.Type = MessageType.Server;
             msg.ContentType = KnownContentTypes.Hello;
             msg.SetStringContent("GET /\r\nName: Test-42105");
             msg.CalculateLengths();
-            TmqWriter writer = new TmqWriter();
-            await writer.Write(msg, stream);
+            TmqWriter.Write(msg, stream);
             await Task.Delay(1000);
             Assert.Equal(1, server.ClientConnected);
 

@@ -26,6 +26,11 @@ namespace Twino.MQ.Security
         Task<bool> CanRemoveQueue(MqClient client, ChannelQueue queue);
 
         /// <summary>
+        /// Returns true, if client can clear messages in a queue
+        /// </summary>
+        Task<bool> CanClearQueueMessages(MqClient client, ChannelQueue queue, bool priorityMessages, bool messages);
+
+        /// <summary>
         /// Returns true, if client can manage instances
         /// </summary>
         Task<bool> CanManageInstances(MqClient client, TmqMessage request);

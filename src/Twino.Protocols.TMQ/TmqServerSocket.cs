@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Twino.Core;
 
@@ -9,11 +11,6 @@ namespace Twino.Protocols.TMQ
     /// </summary>
     public class TmqServerSocket : SocketBase
     {
-        /// <summary>
-        /// WebSocketWriter singleton instance
-        /// </summary>
-        private static readonly TmqWriter _writer = new TmqWriter();
-
         /// <summary>
         /// Server of the socket
         /// </summary>
@@ -94,25 +91,25 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Sends TMQ message to client
         /// </summary>
-        public bool Send(TmqMessage message)
+        public bool Send(TmqMessage message, IList<KeyValuePair<string,string>> additionalHeaders = null)
         {
             if (UseUniqueMessageId && string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(_uniqueIdGenerator.Create());
 
-            byte[] data = _writer.Create(message).Result;
+            byte[] data = TmqWriter.Create(message, additionalHeaders);
             return Send(data);
         }
 
         /// <summary>
         /// Sends TMQ message to client
         /// </summary>
-        public async Task<bool> SendAsync(TmqMessage message)
+        public Task<bool> SendAsync(TmqMessage message, IList<KeyValuePair<string,string>> additionalHeaders = null)
         {
             if (UseUniqueMessageId && string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(_uniqueIdGenerator.Create());
 
-            byte[] data = await _writer.Create(message);
-            return await SendAsync(data);
+            byte[] data = TmqWriter.Create(message, additionalHeaders);
+            return SendAsync(data);
         }
     }
 }

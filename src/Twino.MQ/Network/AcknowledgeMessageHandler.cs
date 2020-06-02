@@ -21,7 +21,7 @@ namespace Twino.MQ.Network
 
         #endregion
 
-        public async Task Handle(MqClient client, TmqMessage message)
+        public Task Handle(MqClient client, TmqMessage message, bool fromNode)
         {
             //priority has no role in ack message.
             //we are using priority for helping receiver type recognization for better performance
@@ -30,10 +30,7 @@ namespace Twino.MQ.Network
                 //target should be client
                 MqClient target = _server.FindClient(message.Target);
                 if (target != null)
-                {
-                    await target.SendAsync(message);
-                    return;
-                }
+                    return target.SendAsync(message);
             }
 
             //find channel and queue
@@ -46,17 +43,17 @@ namespace Twino.MQ.Network
                     //target should be client
                     MqClient target = _server.FindClient(message.Target);
                     if (target != null)
-                        await target.SendAsync(message);
+                        return target.SendAsync(message);
                 }
 
-                return;
+                return Task.CompletedTask;
             }
 
             ChannelQueue queue = channel.FindQueue(message.ContentType);
             if (queue == null)
-                return;
+                return Task.CompletedTask;
 
-            await queue.AcknowledgeDelivered(client, message);
+            return queue.AcknowledgeDelivered(client, message);
         }
     }
 }

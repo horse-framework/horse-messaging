@@ -20,11 +20,6 @@ namespace Twino.MQ.Data
         private readonly TmqReader _reader = new TmqReader();
 
         /// <summary>
-        /// Default TMQ Protocol writer
-        /// </summary>
-        private readonly TmqWriter _writer = new TmqWriter();
-
-        /// <summary>
         /// Creates new data message serializer
         /// </summary>
         public DataMessageSerializer()
@@ -62,7 +57,7 @@ namespace Twino.MQ.Data
         internal DataType ReadType(Stream stream)
         {
             int b = stream.ReadByte();
-            return (DataType)b;
+            return (DataType) b;
         }
 
         /// <summary>
@@ -137,7 +132,7 @@ namespace Twino.MQ.Data
             message.Content.Position = 0;
 
             await using MemoryStream ms = new MemoryStream();
-            await _writer.Write(message, ms);
+            TmqWriter.Write(message, ms);
             ms.Position = 0;
 
             await WriteContent(Convert.ToInt32(ms.Length), ms, stream);
@@ -148,7 +143,7 @@ namespace Twino.MQ.Data
         /// </summary>
         public async Task WriteDelete(Stream stream, TmqMessage message)
         {
-            stream.WriteByte((byte)DataType.Delete);
+            stream.WriteByte((byte) DataType.Delete);
             stream.WriteByte(Convert.ToByte(message.MessageIdLength));
             await stream.WriteAsync(Encoding.UTF8.GetBytes(message.MessageId));
         }
@@ -168,7 +163,7 @@ namespace Twino.MQ.Data
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteType(Stream stream, DataType type)
         {
-            stream.WriteByte((byte)type);
+            stream.WriteByte((byte) type);
         }
 
         /// <summary>

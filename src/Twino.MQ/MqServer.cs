@@ -4,9 +4,11 @@ using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
+using Twino.MQ.Events;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
 using Twino.MQ.Queues;
+using Twino.MQ.Routing;
 using Twino.MQ.Security;
 using Twino.Protocols.TMQ;
 using Twino.Server;
@@ -39,6 +41,13 @@ namespace Twino.MQ
         /// </summary>
         public IEnumerable<MqClient> Clients => _clients.GetAsClone();
 
+        private readonly SafeList<IRouter> _routers;
+
+        /// <summary>
+        /// All channels of the server
+        /// </summary>
+        public IEnumerable<IRouter> Routers => _routers.GetAsClone();
+
         /// <summary>
         /// Underlying Twino Server
         /// </summary>
@@ -47,7 +56,7 @@ namespace Twino.MQ
         /// <summary>
         /// Node server for distribitued systems
         /// </summary>
-        public NodeServer NodeServer { get; }
+        public NodeManager NodeManager { get; }
 
         /// <summary>
         /// Client authenticator implementation.
@@ -116,6 +125,30 @@ namespace Twino.MQ
 
         #endregion
 
+        #region Events
+
+        /// <summary>
+        /// Triggered when a client is connected 
+        /// </summary>
+        public ClientEventManager OnClientConnected { get; set; }
+
+        /// <summary>
+        /// Triggered when a client is disconnected 
+        /// </summary>
+        public ClientEventManager OnClientDisconnected { get; set; }
+
+        /// <summary>
+        /// Triggered when a channel is created 
+        /// </summary>
+        public ChannelEventManager OnChannelCreated { get; set; }
+
+        /// <summary>
+        /// Triggered when a channel is removed 
+        /// </summary>
+        public ChannelEventManager OnChannelRemoved { get; set; }
+
+        #endregion
+
         #region Constructors - Init
 
         /// <summary>
@@ -137,12 +170,18 @@ namespace Twino.MQ
             Authenticator = authenticator;
             Authorization = authorization;
 
+            _routers = new SafeList<IRouter>(256);
             _channels = new SafeList<Channel>(256);
             _clients = new SafeList<MqClient>(2048);
 
-            NodeServer = new NodeServer(this);
+            NodeManager = new NodeManager(this);
 
-            NodeServer.Initialize();
+            NodeManager.Initialize();
+
+            OnClientConnected = new ClientEventManager(EventNames.ClientConnected, this);
+            OnClientDisconnected = new ClientEventManager(EventNames.ClientDisconnected, this);
+            OnChannelCreated = new ChannelEventManager(EventNames.ChannelCreated, this);
+            OnChannelRemoved = new ChannelEventManager(EventNames.ChannelRemoved, this);
         }
 
         #endregion
@@ -251,6 +290,9 @@ namespace Twino.MQ
                                      IMessageDeliveryHandler deliveryHandler,
                                      ChannelOptions options)
         {
+            if (!Filter.CheckNameEligibility(name))
+                throw new InvalidOperationException("Invalid channel name");
+
             if (Options.ChannelLimit > 0 && _channels.Count >= Options.ChannelLimit)
                 throw new OperationCanceledException("Channel limit is exceeded for the server");
 
@@ -263,6 +305,8 @@ namespace Twino.MQ
 
             if (eventHandler != null)
                 _ = eventHandler.OnChannelCreated(channel);
+
+            _ = OnChannelCreated.Trigger(channel);
 
             return channel;
         }
@@ -317,6 +361,8 @@ namespace Twino.MQ
                 await channel.EventHandler.OnChannelRemoved(channel);
 
             await channel.Destroy();
+
+            _ = OnChannelRemoved.Trigger(channel);
         }
 
         #endregion
@@ -329,6 +375,7 @@ namespace Twino.MQ
         internal void AddClient(MqClient client)
         {
             _clients.Add(client);
+            _ = OnClientConnected.Trigger(client);
         }
 
         /// <summary>
@@ -338,6 +385,7 @@ namespace Twino.MQ
         {
             _clients.Remove(client);
             await client.LeaveFromAllChannels();
+            _ = OnClientDisconnected.Trigger(client);
         }
 
         /// <summary>
@@ -370,6 +418,58 @@ namespace Twino.MQ
         public int GetOnlineClients()
         {
             return _clients.Count;
+        }
+
+        #endregion
+
+        #region Router Actions
+
+        /// <summary>
+        /// Creates new Router and adds it to server routers.
+        /// Throws exception if name is not eligible
+        /// </summary>
+        public IRouter AddRouter(string name, RouteMethod method)
+        {
+            if (!Filter.CheckNameEligibility(name))
+                throw new InvalidOperationException("Invalid router name");
+
+            if (_routers.Find(x => x.Name == name) != null)
+                throw new DuplicateNameException();
+
+            Router router = new Router(this, name, method);
+            _routers.Add(router);
+            return router;
+        }
+
+        /// <summary>
+        /// Adds new router to server server routers
+        /// Throws exception if name is not eligible
+        /// </summary>
+        public void AddRouter(IRouter router)
+        {
+            if (!Filter.CheckNameEligibility(router.Name))
+                throw new InvalidOperationException("Invalid router name");
+
+            if (_routers.Find(x => x.Name == router.Name) != null)
+                throw new DuplicateNameException();
+
+            _routers.Add(router);
+        }
+
+        /// <summary>
+        /// Removes the router from server routers
+        /// </summary>
+        public void RemoveRouter(IRouter router)
+        {
+            _routers.Remove(router);
+        }
+
+        /// <summary>
+        /// Finds router by it's name
+        /// </summary>
+        public IRouter FindRouter(string name)
+        {
+            return _routers.Find(x => x.Name == name);
         }
 
         #endregion

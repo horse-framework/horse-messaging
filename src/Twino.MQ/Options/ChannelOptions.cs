@@ -41,6 +41,7 @@ namespace Twino.MQ.Options
             return new ChannelOptions
             {
                 Status = options.Status,
+                TagName = options.TagName,
                 AcknowledgeTimeout = options.AcknowledgeTimeout,
                 AllowedQueues = options.AllowedQueues,
                 MessageTimeout = options.MessageTimeout,

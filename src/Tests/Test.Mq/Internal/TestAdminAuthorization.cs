@@ -24,6 +24,11 @@ namespace Test.Mq.Internal
             return Task.FromResult(true);
         }
 
+        public Task<bool> CanClearQueueMessages(MqClient client, ChannelQueue queue, bool priorityMessages, bool messages)
+        {
+            return Task.FromResult(true);
+        }
+
         public Task<bool> CanManageInstances(MqClient client, TmqMessage request)
         {
             return Task.FromResult(true);

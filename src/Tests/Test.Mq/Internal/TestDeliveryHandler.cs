@@ -22,7 +22,7 @@ namespace Test.Mq.Internal
             _server.OnReceived++;
 
             if (_server.SendAcknowledgeFromMQ)
-                return await Task.FromResult(new Decision(true, false, false, DeliveryAcknowledgeDecision.Always));
+                return await Task.FromResult(new Decision(true, false, PutBackDecision.No, DeliveryAcknowledgeDecision.Always));
 
             return await Task.FromResult(new Decision(true, false));
         }
@@ -59,7 +59,7 @@ namespace Test.Mq.Internal
         public async Task<Decision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
             _server.OnAcknowledge++;
-            return await Task.FromResult(new Decision(true, false, false, DeliveryAcknowledgeDecision.Always));
+            return await Task.FromResult(new Decision(true, false, PutBackDecision.No, DeliveryAcknowledgeDecision.Always));
         }
 
         public async Task<Decision> MessageTimedOut(ChannelQueue queue, QueueMessage message)

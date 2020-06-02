@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Twino.Core;
 using Twino.Ioc;
 using Twino.Mvc.Auth;
@@ -93,6 +94,11 @@ namespace Twino.Mvc
         /// Mvc application builder
         /// </summary>
         internal MvcAppBuilder AppBuilder { get; private set; }
+        
+        /// <summary>
+        /// Model deserializer options for action parameters
+        /// </summary>
+        public JsonSerializerOptions JsonOptions { get; set; }
 
         #endregion
 

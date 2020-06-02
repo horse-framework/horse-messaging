@@ -53,7 +53,7 @@ namespace Twino.MQ.Queues
         {
             try
             {
-                if (_queue.Options.Status != QueueStatus.Route && _queue.Options.MessageTimeout > TimeSpan.Zero)
+                if (_queue.Options.Status != QueueStatus.Broadcast && _queue.Options.MessageTimeout > TimeSpan.Zero)
                     await ProcessReceiveTimeup();
 
                 await ProcessDeliveries();
@@ -95,8 +95,8 @@ namespace Twino.MQ.Queues
         private async Task ProcessReceiveTimeup()
         {
             List<QueueMessage> temp = new List<QueueMessage>();
-            lock (_queue.HighPriorityLinkedList)
-                ProcessReceiveTimeupOnList(_queue.HighPriorityLinkedList, temp);
+            lock (_queue.PriorityMessagesList)
+                ProcessReceiveTimeupOnList(_queue.PriorityMessagesList, temp);
 
             foreach (QueueMessage message in temp)
             {
@@ -106,8 +106,8 @@ namespace Twino.MQ.Queues
             }
 
             temp.Clear();
-            lock (_queue.RegularLinkedList)
-                ProcessReceiveTimeupOnList(_queue.RegularLinkedList, temp);
+            lock (_queue.MessagesList)
+                ProcessReceiveTimeupOnList(_queue.MessagesList, temp);
 
             foreach (QueueMessage message in temp)
             {
@@ -175,7 +175,7 @@ namespace Twino.MQ.Queues
                         continue;
                     }
 
-                    _queue.Info.AddUnacknowledge();
+                    _queue.Info.AddNegativeAcknowledge();
                     Decision decision = await _queue.DeliveryHandler.AcknowledgeTimedOut(_queue, delivery);
 
                     if (delivery.Message != null)
@@ -199,7 +199,7 @@ namespace Twino.MQ.Queues
         /// </summary>
         public void AddAcknowledgeCheck(MessageDelivery delivery)
         {
-            if (!delivery.AcknowledgeDeadline.HasValue)
+            if (!delivery.Message.Message.PendingAcknowledge || !delivery.AcknowledgeDeadline.HasValue)
                 return;
 
             lock (_deliveries)

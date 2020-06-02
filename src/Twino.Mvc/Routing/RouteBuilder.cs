@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Twino.Mvc.Auth;
 using Twino.Mvc.Controllers;
 using Twino.Mvc.Controllers.Parameters;
@@ -72,6 +73,13 @@ namespace Twino.Mvc.Routing
 
                             if (i == path.Count - 1)
                             {
+                                bool isAsync = (AsyncStateMachineAttribute) method.GetCustomAttribute(typeof(AsyncStateMachineAttribute)) != null;
+                                if (!isAsync && method.ReturnType.IsGenericType)
+                                {
+                                    if (typeof(Task).IsAssignableFrom(method.ReturnType.GetGenericTypeDefinition()))
+                                        isAsync = true;
+                                }
+                                
                                 leaf.Route = new Route
                                 {
                                     ActionType = method,
@@ -79,7 +87,7 @@ namespace Twino.Mvc.Routing
                                     Method = info.Method,
                                     Path = path.ToArray(),
                                     Parameters = BuildParameters(method),
-                                    IsAsyncMethod = (AsyncStateMachineAttribute)method.GetCustomAttribute(typeof(AsyncStateMachineAttribute)) != null
+                                    IsAsyncMethod = isAsync
                                 };
                             }
                         }

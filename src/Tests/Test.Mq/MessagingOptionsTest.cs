@@ -13,6 +13,9 @@ using Xunit;
 
 namespace Test.Mq
 {
+    /// <summary>
+    /// Ports 42500 - 42520
+    /// </summary>
     public class MessagingOptionsTest
     {
         #region Route Messaging
@@ -38,25 +41,25 @@ namespace Test.Mq
             Assert.NotNull(queue);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, false);
-            Assert.True(sent);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, false);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1500);
-            Assert.Empty(queue.HighPriorityMessages);
-            Assert.Empty(queue.RegularMessages);
+            Assert.Empty(queue.PriorityMessages);
+            Assert.Empty(queue.Messages);
 
             bool received = false;
             client.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     received = true;
             };
 
-            TmqResponseCode joined = await client.Join(channel.Name, true);
-            Assert.Equal(TmqResponseCode.Ok, joined);
+            TwinoResult joined = await client.Channels.Join(channel.Name, true);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(1500);
 
-            Assert.Empty(queue.RegularMessages);
+            Assert.Empty(queue.Messages);
             Assert.False(received);
         }
 
@@ -80,24 +83,24 @@ namespace Test.Mq
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
-            TmqResponseCode joined = await client.Join(channel.Name, true);
-            Assert.Equal(TmqResponseCode.Ok, joined);
+            TwinoResult joined = await client.Channels.Join(channel.Name, true);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(250);
 
             bool received = false;
             client.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     received = true;
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, false);
-            Assert.True(sent);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, false);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1500);
-            Assert.Empty(queue.HighPriorityMessages);
-            Assert.Empty(queue.RegularMessages);
+            Assert.Empty(queue.PriorityMessages);
+            Assert.Empty(queue.Messages);
             Assert.True(received);
         }
 
@@ -112,12 +115,12 @@ namespace Test.Mq
         public async Task PushToClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42505);
+            server.Initialize(42502);
             server.Server.Options.Status = QueueStatus.Push;
             server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42505");
+            await client.ConnectAsync("tmq://localhost:42502");
             Assert.True(client.IsConnected);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -126,24 +129,24 @@ namespace Test.Mq
             ChannelQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
-            TmqResponseCode joined = await client.Join(channel.Name, true);
-            Assert.Equal(TmqResponseCode.Ok, joined);
+            TwinoResult joined = await client.Channels.Join(channel.Name, true);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(250);
 
             bool received = false;
             client.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     received = true;
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, false);
-            Assert.True(sent);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, false);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1500);
-            Assert.Empty(queue.HighPriorityMessages);
-            Assert.Empty(queue.RegularMessages);
+            Assert.Empty(queue.PriorityMessages);
+            Assert.Empty(queue.Messages);
             Assert.True(received);
         }
 
@@ -154,11 +157,11 @@ namespace Test.Mq
         public async Task PushToLateClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42506);
+            server.Initialize(42503);
             server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42506");
+            await client.ConnectAsync("tmq://localhost:42503");
             Assert.True(client.IsConnected);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -171,23 +174,23 @@ namespace Test.Mq
             bool received = false;
             client.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     received = true;
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, false);
-            Assert.True(sent);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, false);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1500);
-            Assert.NotEmpty(queue.RegularMessages);
+            Assert.NotEmpty(queue.Messages);
             Assert.False(received);
 
-            TmqResponseCode joined = await client.Join(channel.Name, true);
-            Assert.Equal(TmqResponseCode.Ok, joined);
+            TwinoResult joined = await client.Channels.Join(channel.Name, true);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(1500);
 
-            Assert.Empty(queue.RegularMessages);
+            Assert.Empty(queue.Messages);
             Assert.True(received);
         }
 
@@ -202,7 +205,7 @@ namespace Test.Mq
         public async Task SendOnlyFirstMultipleClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42508);
+            server.Initialize(42504);
             server.Start();
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -219,17 +222,17 @@ namespace Test.Mq
             {
                 TmqClient client = new TmqClient();
                 client.ClientId = "client-" + no;
-                await client.ConnectAsync("tmq://localhost:42508");
+                await client.ConnectAsync("tmq://localhost:42504");
                 Assert.True(client.IsConnected);
 
                 client.MessageReceived += (cx, m) =>
                 {
-                    if (m.Type == MessageType.Channel)
+                    if (m.Type == MessageType.QueueMessage)
                         received[no - 1] = true;
                 };
 
-                TmqResponseCode joined = await client.Join(channel.Name, true);
-                Assert.Equal(TmqResponseCode.Ok, joined);
+                TwinoResult joined = await client.Channels.Join(channel.Name, true);
+                Assert.Equal(TwinoResultCode.Ok, joined.Code);
                 await Task.Delay(250);
                 return client;
             }
@@ -239,13 +242,13 @@ namespace Test.Mq
             await join(3);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client1.Push(channel.Name, queue.Id, ms, false);
-            Assert.True(sent);
+            TwinoResult sent = await client1.Queues.Push(channel.Name, queue.Id, ms, false);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1500);
 
-            Assert.Empty(queue.HighPriorityMessages);
-            Assert.Empty(queue.RegularMessages);
+            Assert.Empty(queue.PriorityMessages);
+            Assert.Empty(queue.Messages);
             int c = received.Count(x => x);
             Assert.Equal(1, c);
         }
@@ -258,7 +261,7 @@ namespace Test.Mq
         public async Task SendOnlyFirstLateClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42509);
+            server.Initialize(42505);
             server.Start();
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -276,12 +279,12 @@ namespace Test.Mq
             {
                 TmqClient client = new TmqClient();
                 client.ClientId = "client-" + no;
-                await client.ConnectAsync("tmq://localhost:42509");
+                await client.ConnectAsync("tmq://localhost:42505");
                 Assert.True(client.IsConnected);
 
                 client.MessageReceived += (cx, m) =>
                 {
-                    if (m.Type == MessageType.Channel)
+                    if (m.Type == MessageType.QueueMessage)
                         received[no - 1] = true;
                 };
 
@@ -293,21 +296,21 @@ namespace Test.Mq
             TmqClient client3 = await join(3);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client1.Push(channel.Name, queue.Id, ms, false);
-            Assert.True(sent);
+            TwinoResult sent = await client1.Queues.Push(channel.Name, queue.Id, ms, false);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1500);
 
-            TmqResponseCode joined = await client1.Join(channel.Name, true);
-            Assert.Equal(TmqResponseCode.Ok, joined);
-            joined = await client2.Join(channel.Name, true);
-            Assert.Equal(TmqResponseCode.Ok, joined);
-            joined = await client3.Join(channel.Name, true);
-            Assert.Equal(TmqResponseCode.Ok, joined);
+            TwinoResult joined = await client1.Channels.Join(channel.Name, true);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
+            joined = await client2.Channels.Join(channel.Name, true);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
+            joined = await client3.Channels.Join(channel.Name, true);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(250);
 
-            Assert.Empty(queue.HighPriorityMessages);
-            Assert.Empty(queue.RegularMessages);
+            Assert.Empty(queue.PriorityMessages);
+            Assert.Empty(queue.Messages);
             int c = received.Count(x => x);
             Assert.Equal(1, c);
         }
@@ -324,13 +327,13 @@ namespace Test.Mq
         public async Task NonQueueWaitAcknowledgeNoClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42511);
+            server.Initialize(42506);
             server.Start();
             server.Server.Options.RequestAcknowledge = true;
             server.Server.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42511");
+            await client.ConnectAsync("tmq://localhost:42506");
             Assert.True(client.IsConnected);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -340,24 +343,24 @@ namespace Test.Mq
             Assert.NotNull(queue);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
-            Assert.False(sent);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, true);
+            Assert.NotEqual(TwinoResultCode.Ok, sent.Code);
 
-            Assert.Empty(queue.HighPriorityMessages);
-            Assert.Empty(queue.RegularMessages);
+            Assert.Empty(queue.PriorityMessages);
+            Assert.Empty(queue.Messages);
 
             bool received = false;
             client.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     received = true;
             };
 
-            TmqResponseCode joined = await client.Join(channel.Name, true);
-            Assert.Equal(TmqResponseCode.Ok, joined);
+            TwinoResult joined = await client.Channels.Join(channel.Name, true);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(1500);
 
-            Assert.Empty(queue.RegularMessages);
+            Assert.Empty(queue.Messages);
             Assert.False(received);
         }
 
@@ -369,11 +372,11 @@ namespace Test.Mq
         public async Task NonQueueWaitAcknowledgeOneClient()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42512);
+            server.Initialize(42507);
             server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42512");
+            await client.ConnectAsync("tmq://localhost:42507");
             client.AutoAcknowledge = true;
             Assert.True(client.IsConnected);
 
@@ -386,23 +389,23 @@ namespace Test.Mq
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
-            TmqResponseCode joined = await client.Join(channel.Name, true);
-            Assert.Equal(TmqResponseCode.Ok, joined);
+            TwinoResult joined = await client.Channels.Join(channel.Name, true);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(250);
 
             bool received = false;
             client.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     received = true;
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, true);
 
-            Assert.True(sent);
-            Assert.Empty(queue.HighPriorityMessages);
-            Assert.Empty(queue.RegularMessages);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
+            Assert.Empty(queue.PriorityMessages);
+            Assert.Empty(queue.Messages);
             Assert.True(received);
         }
 
@@ -414,15 +417,15 @@ namespace Test.Mq
         public async Task NonQueueWaitAcknowledgeMultipleClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42514);
+            server.Initialize(42508);
             server.Start();
 
             TmqClient client1 = new TmqClient();
             TmqClient client2 = new TmqClient();
             client1.AutoAcknowledge = true;
             client2.AutoAcknowledge = true;
-            await client1.ConnectAsync("tmq://localhost:42514");
-            await client2.ConnectAsync("tmq://localhost:42514");
+            await client1.ConnectAsync("tmq://localhost:42508");
+            await client2.ConnectAsync("tmq://localhost:42508");
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
 
@@ -435,33 +438,33 @@ namespace Test.Mq
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
-            TmqResponseCode joined1 = await client1.Join(channel.Name, true);
-            TmqResponseCode joined2 = await client2.Join(channel.Name, true);
-            Assert.Equal(TmqResponseCode.Ok, joined1);
-            Assert.Equal(TmqResponseCode.Ok, joined2);
+            TwinoResult joined1 = await client1.Channels.Join(channel.Name, true);
+            TwinoResult joined2 = await client2.Channels.Join(channel.Name, true);
+            Assert.Equal(TwinoResultCode.Ok, joined1.Code);
+            Assert.Equal(TwinoResultCode.Ok, joined2.Code);
             await Task.Delay(250);
 
             bool receive1 = false;
             bool receive2 = false;
             client1.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     receive1 = true;
             };
             client2.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     receive2 = true;
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client1.Push(channel.Name, queue.Id, ms, true);
+            TwinoResult sent = await client1.Queues.Push(channel.Name, queue.Id, ms, true);
 
             await Task.Delay(250);
 
-            Assert.True(sent);
-            Assert.Empty(queue.HighPriorityMessages);
-            Assert.Empty(queue.RegularMessages);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
+            Assert.Empty(queue.PriorityMessages);
+            Assert.Empty(queue.Messages);
             Assert.True(receive1);
             Assert.True(receive2);
         }
@@ -478,11 +481,11 @@ namespace Test.Mq
         public async Task QueueWaitAcknowledgeNoClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42521);
+            server.Initialize(42509);
             server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42521");
+            await client.ConnectAsync("tmq://localhost:42509");
             Assert.True(client.IsConnected);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -495,24 +498,27 @@ namespace Test.Mq
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
             await queue.SetStatus(QueueStatus.Push);
 
+            //the option sending ack from server to producer (without waiting for consumer)
+            server.SendAcknowledgeFromMQ = true;
+            
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, true);
 
-            Assert.False(sent);
-            Assert.NotEmpty(queue.RegularMessages);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
+            Assert.NotEmpty(queue.Messages);
 
             bool received = false;
             client.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     received = true;
             };
 
-            TmqResponseCode joined = await client.Join(channel.Name, true);
-            Assert.Equal(TmqResponseCode.Ok, joined);
+            TwinoResult joined = await client.Channels.Join(channel.Name, true);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(1500);
 
-            Assert.Empty(queue.RegularMessages);
+            Assert.Empty(queue.Messages);
             Assert.True(received);
         }
 
@@ -524,11 +530,11 @@ namespace Test.Mq
         public async Task QueueWaitAcknowledgeOneClient()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(40582);
+            server.Initialize(42510);
             server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:40582");
+            await client.ConnectAsync("tmq://localhost:42510");
             client.AutoAcknowledge = true;
             Assert.True(client.IsConnected);
 
@@ -542,23 +548,23 @@ namespace Test.Mq
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
-            TmqResponseCode joined = await client.Join(channel.Name, true);
-            Assert.Equal(TmqResponseCode.Ok, joined);
+            TwinoResult joined = await client.Channels.Join(channel.Name, true);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(250);
 
             bool received = false;
             client.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     received = true;
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push(channel.Name, queue.Id, ms, true);
+            TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, true);
 
-            Assert.True(sent);
-            Assert.Empty(queue.HighPriorityMessages);
-            Assert.Empty(queue.RegularMessages);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
+            Assert.Empty(queue.PriorityMessages);
+            Assert.Empty(queue.Messages);
             Assert.True(received);
         }
 
@@ -570,15 +576,15 @@ namespace Test.Mq
         public async Task QueueWaitAcknowledgeMultipleClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42594);
+            server.Initialize(42511);
             server.Start();
 
             TmqClient client1 = new TmqClient();
             TmqClient client2 = new TmqClient();
             client1.AutoAcknowledge = true;
             client2.AutoAcknowledge = true;
-            await client1.ConnectAsync("tmq://localhost:42594");
-            await client2.ConnectAsync("tmq://localhost:42594");
+            await client1.ConnectAsync("tmq://localhost:42511");
+            await client2.ConnectAsync("tmq://localhost:42511");
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
 
@@ -592,33 +598,33 @@ namespace Test.Mq
             queue.Options.RequestAcknowledge = true;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(6);
 
-            TmqResponseCode joined1 = await client1.Join(channel.Name, true);
-            TmqResponseCode joined2 = await client2.Join(channel.Name, true);
-            Assert.Equal(TmqResponseCode.Ok, joined1);
-            Assert.Equal(TmqResponseCode.Ok, joined2);
+            TwinoResult joined1 = await client1.Channels.Join(channel.Name, true);
+            TwinoResult joined2 = await client2.Channels.Join(channel.Name, true);
+            Assert.Equal(TwinoResultCode.Ok, joined1.Code);
+            Assert.Equal(TwinoResultCode.Ok, joined2.Code);
             await Task.Delay(250);
 
             bool receive1 = false;
             bool receive2 = false;
             client1.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     receive1 = true;
             };
             client2.MessageReceived += (c, m) =>
             {
-                if (m.Type == MessageType.Channel)
+                if (m.Type == MessageType.QueueMessage)
                     receive2 = true;
             };
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client1.Push(channel.Name, queue.Id, ms, true);
+            TwinoResult sent = await client1.Queues.Push(channel.Name, queue.Id, ms, true);
 
             await Task.Delay(250);
 
-            Assert.True(sent);
-            Assert.Empty(queue.HighPriorityMessages);
-            Assert.Empty(queue.RegularMessages);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
+            Assert.Empty(queue.PriorityMessages);
+            Assert.Empty(queue.Messages);
             Assert.True(receive1);
             Assert.True(receive2);
         }
@@ -632,7 +638,7 @@ namespace Test.Mq
         [InlineData(false)]
         public async Task HideNamesInChannel(bool enabled)
         {
-            int port = enabled ? 42531 : 42532;
+            int port = enabled ? 42512 : 42513;
             TestMqServer server = new TestMqServer();
             server.Initialize(port);
             server.Start(300);
@@ -652,8 +658,8 @@ namespace Test.Mq
             client.CatchAcknowledgeMessages = true;
             Assert.True(client.IsConnected);
 
-            TmqResponseCode joined = await client.Join("ch-1", true);
-            Assert.Equal(TmqResponseCode.Ok, joined);
+            TwinoResult joined = await client.Channels.Join("ch-1", true);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             TmqMessage received = null;
             TmqMessage ack = null;
@@ -661,7 +667,7 @@ namespace Test.Mq
             {
                 switch (m.Type)
                 {
-                    case MessageType.Channel:
+                    case MessageType.QueueMessage:
                         received = m;
                         break;
                     case MessageType.Acknowledge:
@@ -673,8 +679,8 @@ namespace Test.Mq
             await Task.Delay(500);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
-            bool sent = await client.Push("ch-1", MessageA.ContentType, ms, true);
-            Assert.True(sent);
+            TwinoResult sent = await client.Queues.Push("ch-1", MessageA.ContentType, ms, true);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1000);
 
@@ -702,16 +708,16 @@ namespace Test.Mq
         public async Task SendAcknowledgeFromServerToProducer()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42599);
+            server.Initialize(42514);
             server.Start();
             server.SendAcknowledgeFromMQ = true;
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42599");
+            await client.ConnectAsync("tmq://localhost:42514");
             Assert.True(client.IsConnected);
 
-            bool ack = await client.Push("ch-route", MessageA.ContentType, "Hello", true);
-            Assert.True(ack);
+            TwinoResult ack = await client.Queues.Push("ch-route", MessageA.ContentType, "Hello", true);
+            Assert.Equal(TwinoResultCode.Ok, ack.Code);
         }
     }
 }

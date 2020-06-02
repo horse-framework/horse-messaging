@@ -33,11 +33,11 @@ namespace Twino.MQ.Queues.States
 
         public Task<QueueStatusAction> EnterStatus(QueueStatus previousStatus)
         {
-            lock (_queue.HighPriorityLinkedList)
-                _queue.HighPriorityLinkedList.Clear();
+            lock (_queue.PriorityMessagesList)
+                _queue.PriorityMessagesList.Clear();
 
-            lock (_queue.RegularLinkedList)
-                _queue.RegularLinkedList.Clear();
+            lock (_queue.MessagesList)
+                _queue.MessagesList.Clear();
 
             _queue.TimeKeeper.Reset();
 

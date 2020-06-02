@@ -67,9 +67,9 @@ namespace Twino.MQ.Queues.States
                 return PushResult.Success;
 
             //create prepared message data
-            byte[] messageData = await _writer.Create(message.Message);
+            byte[] messageData = TmqWriter.Create(message.Message);
 
-            Decision final = new Decision(false, false, false, DeliveryAcknowledgeDecision.None);
+            Decision final = new Decision(false, false, PutBackDecision.No, DeliveryAcknowledgeDecision.None);
             bool messageIsSent = false;
 
             //to all receivers
@@ -95,12 +95,12 @@ namespace Twino.MQ.Queues.States
                 delivery.FirstAcquirer = message.Message.FirstAcquirer;
 
                 //send the message
-                bool sent = client.Client.Send(messageData);
+                bool sent = await client.Client.SendAsync(messageData);
 
                 if (sent)
                 {
                     messageIsSent = true;
-
+                    
                     //adds the delivery to time keeper to check timing up
                     _queue.TimeKeeper.AddAcknowledgeCheck(delivery);
 
@@ -121,7 +121,7 @@ namespace Twino.MQ.Queues.States
                         break;
 
                     if (firstAcquirer && clients.Count > 1)
-                        messageData = await _writer.Create(message.Message);
+                        messageData = TmqWriter.Create(message.Message);
                 }
                 else
                 {
@@ -141,7 +141,7 @@ namespace Twino.MQ.Queues.States
             message.Decision = await _queue.DeliveryHandler.EndSend(_queue, message);
             await _queue.ApplyDecision(message.Decision, message);
 
-            if (message.Decision.Allow && !message.Decision.KeepMessage)
+            if (message.Decision.Allow && message.Decision.PutBack == PutBackDecision.No)
             {
                 _queue.Info.AddMessageRemove();
                 _ = _queue.DeliveryHandler.MessageRemoved(_queue, message);

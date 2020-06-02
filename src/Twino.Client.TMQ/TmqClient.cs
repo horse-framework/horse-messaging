@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -6,6 +7,9 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Twino.Client.TMQ.Internal;
+using Twino.Client.TMQ.Models;
+using Twino.Client.TMQ.Operators;
 using Twino.Core;
 using Twino.Protocols.TMQ;
 
@@ -19,11 +23,6 @@ namespace Twino.Client.TMQ
     public class TmqClient : ClientSocketBase<TmqMessage>, IDisposable
     {
         #region Properties
-
-        /// <summary>
-        /// TMQ Procotol message writer
-        /// </summary>
-        private static readonly TmqWriter _writer = new TmqWriter();
 
         /// <summary>
         /// Unique Id generator for sending messages
@@ -65,6 +64,11 @@ namespace Twino.Client.TMQ
         public TimeSpan ResponseTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
         /// <summary>
+        /// Maximum time for waiting next message of a pull request 
+        /// </summary>
+        public TimeSpan PullTimeout { get; set; } = TimeSpan.FromSeconds(15);
+
+        /// <summary>
         /// Unique client id
         /// </summary>
         private string _clientId;
@@ -91,6 +95,31 @@ namespace Twino.Client.TMQ
         /// </summary>
         private readonly MessageFollower _follower;
 
+        /// <summary>
+        /// TMQ Client Channel Management object
+        /// </summary>
+        public ChannelOperator Channels { get; }
+
+        /// <summary>
+        /// TMQ Client Queue Management object
+        /// </summary>
+        public QueueOperator Queues { get; }
+
+        /// <summary>
+        /// TMQ Client Connection Management object
+        /// </summary>
+        public ConnectionOperator Connections { get; }
+
+        /// <summary>
+        /// TMQ Client Router Management object
+        /// </summary>
+        public RouterOperator Routers { get; }
+
+        /// <summary>
+        /// Event manage of the client
+        /// </summary>
+        internal EventManager Events { get; }
+
         #endregion
 
         #region Constructors - Destructors
@@ -102,6 +131,14 @@ namespace Twino.Client.TMQ
         {
             Data.Method = "CONNECT";
             Data.Path = "/";
+
+            Channels = new ChannelOperator(this);
+            Queues = new QueueOperator(this);
+            Connections = new ConnectionOperator(this);
+            Routers = new RouterOperator(this);
+
+            Events = new EventManager();
+
             _follower = new MessageFollower(this);
             _follower.Run();
         }
@@ -112,6 +149,7 @@ namespace Twino.Client.TMQ
         public void Dispose()
         {
             _follower?.Dispose();
+            Queues.Dispose();
         }
 
         #endregion
@@ -191,11 +229,11 @@ namespace Twino.Client.TMQ
                 else
                     Stream = Client.GetStream();
 
-                Stream.Write(PredefinedMessages.PROTOCOL_BYTES);
+                Stream.Write(PredefinedMessages.PROTOCOL_BYTES_V2);
                 SendInfoMessage(host).Wait();
 
                 //Reads the protocol response
-                byte[] buffer = new byte[PredefinedMessages.PROTOCOL_BYTES.Length];
+                byte[] buffer = new byte[PredefinedMessages.PROTOCOL_BYTES_V2.Length];
                 int len = Stream.Read(buffer, 0, buffer.Length);
 
                 CheckProtocolResponse(buffer, len);
@@ -245,11 +283,11 @@ namespace Twino.Client.TMQ
                 else
                     Stream = Client.GetStream();
 
-                await Stream.WriteAsync(PredefinedMessages.PROTOCOL_BYTES);
+                await Stream.WriteAsync(PredefinedMessages.PROTOCOL_BYTES_V2);
                 await SendInfoMessage(host);
 
                 //Reads the protocol response
-                byte[] buffer = new byte[PredefinedMessages.PROTOCOL_BYTES.Length];
+                byte[] buffer = new byte[PredefinedMessages.PROTOCOL_BYTES_V2.Length];
                 int len = await Stream.ReadAsync(buffer, 0, buffer.Length);
 
                 CheckProtocolResponse(buffer, len);
@@ -267,13 +305,13 @@ namespace Twino.Client.TMQ
         /// Checks protocol response message from server.
         /// If protocols are not matched, an exception is thrown 
         /// </summary>
-        private static void CheckProtocolResponse(byte[] buffer, int len)
+        private static void CheckProtocolResponse(byte[] buffer, int length)
         {
-            if (len < PredefinedMessages.PROTOCOL_BYTES.Length)
+            if (length < PredefinedMessages.PROTOCOL_BYTES_V2.Length)
                 throw new InvalidOperationException("Unexpected server response");
 
-            for (int i = 0; i < PredefinedMessages.PROTOCOL_BYTES.Length; i++)
-                if (PredefinedMessages.PROTOCOL_BYTES[i] != buffer[i])
+            for (int i = 0; i < PredefinedMessages.PROTOCOL_BYTES_V2.Length; i++)
+                if (PredefinedMessages.PROTOCOL_BYTES_V2[i] != buffer[i])
                     throw new NotSupportedException("Unsupported TMQ Protocol version. Server supports: " + Encoding.UTF8.GetString(buffer));
         }
 
@@ -308,7 +346,11 @@ namespace Twino.Client.TMQ
         /// <returns></returns>
         private async Task SendInfoMessage(DnsInfo dns)
         {
-            if (Data?.Properties == null || Data.Properties.Count < 1 && string.IsNullOrEmpty(Data.Method) && string.IsNullOrEmpty(Data.Path))
+            if (Data?.Properties == null ||
+                Data.Properties.Count < 1 &&
+                string.IsNullOrEmpty(Data.Method) &&
+                string.IsNullOrEmpty(Data.Path) &&
+                string.IsNullOrEmpty(ClientId))
                 return;
 
             TmqMessage message = new TmqMessage();
@@ -324,7 +366,11 @@ namespace Twino.Client.TMQ
 
             string first = Data.Method + " " + Data.Path + "\r\n";
             await message.Content.WriteAsync(Encoding.UTF8.GetBytes(first));
-            Data.Properties.Add(TmqHeaders.CLIENT_ID, ClientId);
+
+            if (Data.Properties.ContainsKey(TmqHeaders.CLIENT_ID))
+                Data.Properties[TmqHeaders.CLIENT_ID] = ClientId;
+            else
+                Data.Properties.Add(TmqHeaders.CLIENT_ID, ClientId);
 
             foreach (var prop in Data.Properties)
             {
@@ -387,12 +433,65 @@ namespace Twino.Client.TMQ
                         SetOnMessageReceived(message);
                     break;
 
-                default:
-                    if (message.AcknowledgeRequired && AutoAcknowledge)
+                case MessageType.Event:
+                    _ = Events.TriggerEvents(message);
+                    break;
+
+                case MessageType.QueueMessage:
+
+                    if (message.PendingAcknowledge && AutoAcknowledge)
+                        await SendAsync(message.CreateAcknowledge());
+
+                    //if message is response for pull request, process pull container
+                    if (Queues.PullContainers.Count > 0 && message.HasHeader)
+                    {
+                        string requestId = message.FindHeader(TmqHeaders.REQUEST_ID);
+                        if (!string.IsNullOrEmpty(requestId))
+                        {
+                            PullContainer container;
+                            lock (Queues.PullContainers)
+                                Queues.PullContainers.TryGetValue(requestId, out container);
+
+                            if (container != null)
+                            {
+                                ProcessPull(requestId, message, container);
+                                break;
+                            }
+                        }
+                    }
+
+                    SetOnMessageReceived(message);
+                    break;
+
+
+                case MessageType.DirectMessage:
+                    if (message.PendingAcknowledge && AutoAcknowledge)
                         await SendAsync(message.CreateAcknowledge());
 
                     SetOnMessageReceived(message);
                     break;
+            }
+        }
+
+        /// <summary>
+        /// Processes pull message
+        /// </summary>
+        private void ProcessPull(string requestId, TmqMessage message, PullContainer container)
+        {
+            if (message.Length > 0)
+            {
+                container.AddMessage(message);
+                return;
+            }
+
+            string noContent = message.FindHeader(TmqHeaders.NO_CONTENT);
+
+            if (!string.IsNullOrEmpty(noContent))
+            {
+                lock (Queues.PullContainers)
+                    Queues.PullContainers.Remove(requestId);
+
+                container.Complete(noContent);
             }
         }
 
@@ -423,14 +522,14 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a TMQ message
         /// </summary>
-        public bool Send(TmqMessage message)
+        public bool Send(TmqMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
             message.SetSource(_clientId);
 
             if (string.IsNullOrEmpty(message.MessageId) && UseUniqueMessageId)
                 message.SetMessageId(UniqueIdGenerator.Create());
 
-            byte[] data = _writer.Create(message).Result;
+            byte[] data = TmqWriter.Create(message, additionalHeaders);
             return Send(data);
         }
 
@@ -476,41 +575,42 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a TMQ message
         /// </summary>
-        public async Task<bool> SendAsync(TmqMessage message)
+        public async Task<TwinoResult> SendAsync(TmqMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
             message.SetSource(_clientId);
 
             if (string.IsNullOrEmpty(message.MessageId) && UseUniqueMessageId)
                 message.SetMessageId(UniqueIdGenerator.Create());
 
-            byte[] data = await _writer.Create(message);
-            return await SendAsync(data);
+            byte[] data = TmqWriter.Create(message, additionalHeaders);
+            bool sent = await SendAsync(data);
+            return sent ? TwinoResult.Ok() : TwinoResult.Failed();
         }
 
         /// <summary>
         /// Sends a TMQ message and waits for acknowledge
         /// </summary>
-        public async Task<bool> SendWithAcknowledge(TmqMessage message)
+        public async Task<TwinoResult> SendWithAcknowledge(TmqMessage message)
         {
             message.SetSource(_clientId);
-            message.AcknowledgeRequired = true;
-            message.ResponseRequired = false;
+
+            message.PendingAcknowledge = true;
+            message.PendingResponse = false;
+
             message.SetMessageId(UniqueIdGenerator.Create());
 
             if (string.IsNullOrEmpty(message.MessageId))
                 throw new ArgumentNullException("Messages without unique id cannot be acknowledged");
 
-            return await WaitForAcknowledge(message, true);
+            return await SendAndWaitForAcknowledge(message, true);
         }
 
         /// <summary>
         /// Sends a json object message
         /// </summary>
-        public async Task<bool> SendJsonAsync(string target, ushort contentType, object model, bool waitAcknowledge)
+        public async Task<TwinoResult> SendJsonAsync(MessageType type, string target, ushort contentType, object model, bool waitAcknowledge)
         {
-            TmqMessage msg = new TmqMessage();
-            msg.SetTarget(target);
-            msg.ContentType = contentType;
+            TmqMessage msg = new TmqMessage(type, target, contentType);
             await msg.SetJsonContent(model);
 
             if (waitAcknowledge)
@@ -522,11 +622,9 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a string message
         /// </summary>
-        public async Task<bool> SendAsync(string target, ushort contentType, string message, bool waitAcknowledge)
+        public async Task<TwinoResult> SendAsync(MessageType type, string target, ushort contentType, string message, bool waitAcknowledge)
         {
-            TmqMessage msg = new TmqMessage();
-            msg.SetTarget(target);
-            msg.ContentType = contentType;
+            TmqMessage msg = new TmqMessage(type, target, contentType);
             msg.SetStringContent(message);
 
             if (waitAcknowledge)
@@ -538,7 +636,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a memory stream message
         /// </summary>
-        public async Task<bool> SendAsync(string target, ushort contentType, MemoryStream content, bool waitAcknowledge)
+        public async Task<TwinoResult> SendAsync(string target, ushort contentType, MemoryStream content, bool waitAcknowledge)
         {
             TmqMessage message = new TmqMessage();
             message.SetTarget(target);
@@ -554,24 +652,24 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a message, waits response and deserializes JSON response to T template type
         /// </summary>
-        public async Task<TmqResult<T>> SendAndGetJson<T>(TmqMessage message)
+        public async Task<TmqModelResult<T>> SendAndGetJson<T>(TmqMessage message)
         {
-            message.ResponseRequired = true;
+            message.PendingResponse = true;
 
             if (string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(UniqueIdGenerator.Create());
 
             Task<TmqMessage> task = _follower.FollowResponse(message);
-            bool sent = await SendAsync(message);
-            if (!sent)
-                return new TmqResult<T>(TmqResponseCode.SendError);
+            TwinoResult sent = await SendAsync(message);
+            if (sent.Code != TwinoResultCode.Ok)
+                return new TmqModelResult<T>(new TwinoResult(TwinoResultCode.SendError));
 
             TmqMessage response = await task;
             if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
-                return TmqResult<T>.FromContentType(message.ContentType);
+                return TmqModelResult<T>.FromContentType(message.ContentType);
 
             T model = await response.GetJsonContent<T>();
-            return new TmqResult<T>(TmqResponseCode.Ok, model);
+            return new TmqModelResult<T>(TwinoResult.Ok(), model);
         }
 
         #endregion
@@ -581,7 +679,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a JSON message by receiver name
         /// </summary>
-        public async Task<bool> SendJsonByNameAsync<T>(string name, ushort contentType, T model, bool toOnlyFirstReceiver, bool waitAcknowledge)
+        public async Task<TwinoResult> SendJsonByNameAsync<T>(string name, ushort contentType, T model, bool toOnlyFirstReceiver, bool waitAcknowledge)
         {
             return await SendJsonToFullAsync("@name:" + name, contentType, model, toOnlyFirstReceiver, waitAcknowledge);
         }
@@ -589,7 +687,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a JSON message by receiver type
         /// </summary>
-        public async Task<bool> SendJsonByTypeAsync<T>(string type, ushort contentType, T model, bool toOnlyFirstReceiver, bool waitAcknowledge)
+        public async Task<TwinoResult> SendJsonByTypeAsync<T>(string type, ushort contentType, T model, bool toOnlyFirstReceiver, bool waitAcknowledge)
         {
             return await SendJsonToFullAsync("@type:" + type, contentType, model, toOnlyFirstReceiver, waitAcknowledge);
         }
@@ -597,10 +695,11 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a JSON message by full name
         /// </summary>
-        private async Task<bool> SendJsonToFullAsync<T>(string fullname, ushort contentType, T model, bool toOnlyFirstReceiver, bool waitAcknowledge)
+        private async Task<TwinoResult> SendJsonToFullAsync<T>(string fullname, ushort contentType, T model, bool toOnlyFirstReceiver, bool waitAcknowledge)
         {
             TmqMessage message = new TmqMessage();
             message.SetTarget(fullname);
+            message.Type = MessageType.DirectMessage;
             message.FirstAcquirer = toOnlyFirstReceiver;
             message.ContentType = contentType;
             await message.SetJsonContent(model);
@@ -614,7 +713,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a memory stream message by receiver name
         /// </summary>
-        public async Task<bool> SendByNameAsync(string name, ushort contentType, MemoryStream content, bool toOnlyFirstReceiver, bool waitAcknowledge)
+        public async Task<TwinoResult> SendByNameAsync(string name, ushort contentType, MemoryStream content, bool toOnlyFirstReceiver, bool waitAcknowledge)
         {
             TmqMessage message = new TmqMessage();
             message.SetTarget("@name:" + name);
@@ -631,7 +730,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a memory stream message by receiver type
         /// </summary>
-        public async Task<bool> SendByTypeAsync(string type, ushort contentType, MemoryStream content, bool toOnlyFirstReceiver, bool waitAcknowledge)
+        public async Task<TwinoResult> SendByTypeAsync(string type, ushort contentType, MemoryStream content, bool toOnlyFirstReceiver, bool waitAcknowledge)
         {
             return await SendByFullAsync("@type:" + type, contentType, content, toOnlyFirstReceiver, waitAcknowledge);
         }
@@ -639,13 +738,14 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a memory stream message by full name
         /// </summary>
-        private async Task<bool> SendByFullAsync(string fullname, ushort contentType, MemoryStream content, bool toOnlyFirstReceiver, bool waitAcknowledge)
+        private async Task<TwinoResult> SendByFullAsync(string fullname, ushort contentType, MemoryStream content, bool toOnlyFirstReceiver, bool waitAcknowledge)
         {
             TmqMessage message = new TmqMessage();
             message.SetTarget(fullname);
             message.FirstAcquirer = toOnlyFirstReceiver;
             message.ContentType = contentType;
             message.Content = content;
+            message.Type = MessageType.DirectMessage;
 
             if (waitAcknowledge)
                 return await SendWithAcknowledge(message);
@@ -658,28 +758,29 @@ namespace Twino.Client.TMQ
         #region Acknowledge - Response
 
         /// <summary>
-        /// Sends acknowledge message for the message
+        /// Sends unacknowledge message for the message.
         /// </summary>
-        public async Task<bool> Acknowledge(TmqMessage message)
+        public async Task<TwinoResult> SendNegativeAck(TmqMessage message, string reason = null)
         {
-            if (!message.AcknowledgeRequired)
-                return false;
+            if (!message.PendingAcknowledge)
+                return new TwinoResult(TwinoResultCode.Unacceptable);
 
-            TmqMessage ack = message.CreateAcknowledge();
+            if (string.IsNullOrEmpty(reason))
+                reason = TmqHeaders.NACK_REASON_NONE;
+
+            TmqMessage ack = message.CreateAcknowledge(reason);
             return await SendAsync(ack);
         }
 
         /// <summary>
         /// Sends unacknowledge message for the message.
         /// </summary>
-        public async Task<bool> SendUnacknowledge(TmqMessage message)
+        public async Task<TwinoResult> SendAck(TmqMessage message)
         {
-            if (!message.AcknowledgeRequired)
-                return false;
+            if (!message.PendingAcknowledge)
+                return new TwinoResult(TwinoResultCode.Unacceptable);
 
             TmqMessage ack = message.CreateAcknowledge();
-            ack.SetStringContent("FAILED");
-
             return await SendAsync(ack);
         }
 
@@ -688,25 +789,30 @@ namespace Twino.Client.TMQ
         /// if verify requires, waits response and checkes status code of the response.
         /// returns true if Ok.
         /// </summary>
-        protected async Task<TmqResponseCode> WaitResponse(TmqMessage message, bool verifyResponse)
+        protected internal async Task<TwinoResult> WaitResponse(TmqMessage message, bool waitForResponse)
         {
             Task<TmqMessage> task = null;
-            if (verifyResponse)
+            if (waitForResponse)
                 task = _follower.FollowResponse(message);
 
-            bool sent = await SendAsync(message);
-            if (!sent)
-                return TmqResponseCode.SendError;
+            TwinoResult sent = await SendAsync(message);
+            if (sent.Code != TwinoResultCode.Ok)
+            {
+                if (waitForResponse)
+                    _follower.UnfollowMessage(message);
 
-            if (verifyResponse)
+                return new TwinoResult(TwinoResultCode.SendError);
+            }
+
+            if (waitForResponse)
             {
                 TmqMessage response = await task;
                 return response == null
-                           ? TmqResponseCode.Unknown
-                           : (TmqResponseCode) response.ContentType;
+                           ? TwinoResult.Failed()
+                           : new TwinoResult((TwinoResultCode) response.ContentType);
             }
 
-            return TmqResponseCode.Ok;
+            return TwinoResult.Ok();
         }
 
         /// <summary>
@@ -714,22 +820,25 @@ namespace Twino.Client.TMQ
         /// if acknowledge is pending, waits for acknowledge.
         /// returns true if received.
         /// </summary>
-        private async Task<bool> WaitForAcknowledge(TmqMessage message, bool waitAcknowledge)
+        internal async Task<TwinoResult> SendAndWaitForAcknowledge(TmqMessage message, bool waitAcknowledge)
         {
-            Task<bool> task = null;
+            Task<TwinoResult> task = null;
             if (waitAcknowledge)
                 task = _follower.FollowAcknowledge(message);
 
-            bool sent = await SendAsync(message);
-            if (!waitAcknowledge || !sent)
+            TwinoResult sent = await SendAsync(message);
+            if (sent.Code != TwinoResultCode.Ok)
             {
                 if (waitAcknowledge)
                     _follower.UnfollowMessage(message);
 
-                return sent;
+                return new TwinoResult(TwinoResultCode.SendError);
             }
 
-            return await task;
+            if (waitAcknowledge)
+                return await task;
+
+            return TwinoResult.Ok();
         }
 
         #endregion
@@ -741,11 +850,8 @@ namespace Twino.Client.TMQ
         /// </summary>
         public async Task<TmqMessage> RequestJson(string target, ushort contentType, object model)
         {
-            TmqMessage message = new TmqMessage(MessageType.Client);
-            message.SetTarget(target);
-            message.ContentType = contentType;
+            TmqMessage message = new TmqMessage(MessageType.DirectMessage, target, contentType);
             await message.SetJsonContent(model);
-
             return await Request(message);
         }
 
@@ -754,11 +860,8 @@ namespace Twino.Client.TMQ
         /// </summary>
         public async Task<TmqMessage> Request(string target, ushort contentType, MemoryStream content)
         {
-            TmqMessage message = new TmqMessage(MessageType.Client);
-            message.SetTarget(target);
+            TmqMessage message = new TmqMessage(MessageType.DirectMessage, target, contentType);
             message.Content = content;
-            message.ContentType = contentType;
-
             return await Request(message);
         }
 
@@ -767,11 +870,8 @@ namespace Twino.Client.TMQ
         /// </summary>
         public async Task<TmqMessage> Request(string target, ushort contentType, string content)
         {
-            TmqMessage message = new TmqMessage(MessageType.Client);
-            message.SetTarget(target);
-            message.ContentType = contentType;
+            TmqMessage message = new TmqMessage(MessageType.DirectMessage, target, contentType);
             message.SetStringContent(content);
-
             return await Request(message);
         }
 
@@ -780,14 +880,14 @@ namespace Twino.Client.TMQ
         /// </summary>
         public async Task<TmqMessage> Request(TmqMessage message)
         {
-            message.ResponseRequired = true;
-            message.AcknowledgeRequired = false;
+            message.PendingResponse = true;
+            message.PendingAcknowledge = false;
             message.SetMessageId(UniqueIdGenerator.Create());
 
             Task<TmqMessage> task = _follower.FollowResponse(message);
 
-            bool sent = await SendAsync(message);
-            if (!sent)
+            TwinoResult sent = await SendAsync(message);
+            if (sent.Code != TwinoResultCode.Ok)
             {
                 _follower.UnfollowMessage(message);
                 return null;
@@ -798,236 +898,123 @@ namespace Twino.Client.TMQ
 
         #endregion
 
-        #region Push
+        #region Events
 
-        /// <summary>
-        /// Pushes a message to a queue
-        /// </summary>
-        public async Task<bool> PushJson(string channel, ushort queueId, object jsonObject, bool waitAcknowledge)
+        internal async Task<bool> EventSubscription(string eventName, bool subscribe, string channelName, ushort? queueId)
         {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Channel;
-            message.ContentType = queueId;
-            message.SetTarget(channel);
-            message.Content = new MemoryStream();
-            message.AcknowledgeRequired = waitAcknowledge;
-            await System.Text.Json.JsonSerializer.SerializeAsync(message.Content, jsonObject, jsonObject.GetType());
-
-            if (waitAcknowledge)
-                message.SetMessageId(UniqueIdGenerator.Create());
-
-            return await WaitForAcknowledge(message, waitAcknowledge);
-        }
-
-        /// <summary>
-        /// Pushes a message to a queue
-        /// </summary>
-        public async Task<bool> Push(string channel, ushort queueId, string content, bool waitAcknowledge)
-        {
-            return await Push(channel, queueId, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge);
-        }
-
-        /// <summary>
-        /// Pushes a message to a queue
-        /// </summary>
-        public async Task<bool> Push(string channel, ushort queueId, MemoryStream content, bool waitAcknowledge)
-        {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Channel;
-            message.ContentType = queueId;
-            message.SetTarget(channel);
-            message.Content = content;
-            message.AcknowledgeRequired = waitAcknowledge;
-
-            if (waitAcknowledge)
-                message.SetMessageId(UniqueIdGenerator.Create());
-
-            return await WaitForAcknowledge(message, waitAcknowledge);
-        }
-
-        /// <summary>
-        /// Pushes a message to a queue and does not wait for acknowledge.
-        /// Uses legacy callback method instead of async
-        /// </summary>
-        public bool PushJsonSync(string channel, ushort queueId, object jsonObject)
-        {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Channel;
-            message.ContentType = queueId;
-            message.SetTarget(channel);
-            message.AcknowledgeRequired = false;
-            byte[] data = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(jsonObject, jsonObject.GetType());
-            message.Content = new MemoryStream(data);
-            message.Content.Position = 0;
-
-            if (UseUniqueMessageId)
-                message.SetMessageId(UniqueIdGenerator.Create());
-
-            return Send(message);
-        }
-
-        /// <summary>
-        /// Pushes a message to a queue and does not wait for acknowledge.
-        /// Uses legacy callback method instead of async
-        /// </summary>
-        public bool PushSync(string channel, ushort queueId, byte[] data)
-        {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Channel;
-            message.ContentType = queueId;
-            message.SetTarget(channel);
-            message.AcknowledgeRequired = false;
-            message.Content = new MemoryStream(data);
-            message.Content.Position = 0;
-
-            if (UseUniqueMessageId)
-                message.SetMessageId(UniqueIdGenerator.Create());
-
-            return Send(message);
-        }
-
-        #endregion
-
-        #region Pull
-
-        /// <summary>
-        /// Request a message from Pull queue
-        /// </summary>
-        public async Task<TmqMessage> Pull(string channel, ushort queueId)
-        {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Channel;
-            message.ResponseRequired = true;
-            message.ContentType = queueId;
-            message.SetTarget(channel);
+            ushort ct = subscribe ? (ushort) 1 : (ushort) 0;
+            TmqMessage message = new TmqMessage(MessageType.Event, eventName, ct);
             message.SetMessageId(UniqueIdGenerator.Create());
+            message.PendingResponse = true;
+
+            if (!string.IsNullOrEmpty(channelName))
+                message.AddHeader(TmqHeaders.CHANNEL_NAME, channelName);
+
+            if (queueId.HasValue)
+                message.AddHeader(TmqHeaders.QUEUE_ID, queueId.Value.ToString());
 
             Task<TmqMessage> task = _follower.FollowResponse(message);
-            bool sent = await SendAsync(message);
-            if (!sent)
-                return null;
+
+            TwinoResult sent = await SendAsync(message);
+            if (sent.Code != TwinoResultCode.Ok)
+            {
+                _follower.UnfollowMessage(message);
+                return false;
+            }
 
             TmqMessage response = await task;
-            if (response.Content == null || response.Length == 0 || response.Content.Length == 0)
-                return null;
+            if (response == null)
+                return false;
 
-            return response;
+            TwinoResultCode code = (TwinoResultCode) response.ContentType;
+            return code == TwinoResultCode.Ok;
+        }
+
+        #endregion
+
+        #region Obsolete
+
+        /// <summary>
+        /// Pushes a message to a queue
+        /// </summary>
+        [Obsolete("This method is moved into Queues property. Use Queues.PushJson instead of this")]
+        public Task<TwinoResult> PushJson(string channel, ushort queueId, object jsonObject, bool waitAcknowledge)
+        {
+            return Queues.PushJson(channel, queueId, jsonObject, waitAcknowledge);
+        }
+
+        /// <summary>
+        /// Pushes a message to a queue
+        /// </summary>
+        [Obsolete("This method is moved into Queues property. Use Queues.Push instead of this")]
+        public Task<TwinoResult> Push(string channel, ushort queueId, string content, bool waitAcknowledge)
+        {
+            return Queues.Push(channel, queueId, content, waitAcknowledge);
+        }
+
+        /// <summary>
+        /// Pushes a message to a queue
+        /// </summary>
+        [Obsolete("This method is moved into Queues property. Use Queues.Push instead of this")]
+        public Task<TwinoResult> Push(string channel, ushort queueId, MemoryStream content, bool waitAcknowledge)
+        {
+            return Queues.Push(channel, queueId, content, waitAcknowledge);
+        }
+
+        /// <summary>
+        /// Pushes a message to a queue and does not wait for acknowledge.
+        /// Uses legacy callback method instead of async
+        /// </summary>
+        [Obsolete("This method is moved into Queues property. Use Queues.PushJsonSync instead of this")]
+        public bool PushJsonSync(string channel, ushort queueId, object jsonObject)
+        {
+            return Queues.PushJsonSync(channel, queueId, jsonObject);
+        }
+
+        /// <summary>
+        /// Pushes a message to a queue and does not wait for acknowledge.
+        /// Uses legacy callback method instead of async
+        /// </summary>
+        [Obsolete("This method is moved into Queues property. Use Queues.PushSync instead of this")]
+        public bool PushSync(string channel, ushort queueId, byte[] data)
+        {
+            return Queues.PushSync(channel, queueId, data);
         }
 
         /// <summary>
         /// Request a message from Pull queue
         /// </summary>
-        public async Task<TModel> PullJson<TModel>(string channel, ushort queueId)
+        [Obsolete("This method is moved into Queues property. Use Queues.Pull instead of this")]
+        public Task<PullContainer> Pull(PullRequest request, Func<int, TmqMessage, Task> actionForEachMessage = null)
         {
-            TmqMessage response = await Pull(channel, queueId);
-            if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
-                return default;
-
-            return await response.GetJsonContent<TModel>();
+            return Queues.Pull(request, actionForEachMessage);
         }
-
-        #endregion
-
-        #region Channel
 
         /// <summary>
         /// Joins to a channel
         /// </summary>
-        public async Task<TmqResponseCode> Join(string channel, bool verifyResponse)
+        [Obsolete("This method is moved into Channels property. Use Channels.Join instead of this")]
+        public Task<TwinoResult> Join(string channel, bool verifyResponse)
         {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.Join;
-            message.SetTarget(channel);
-            message.ResponseRequired = verifyResponse;
-
-            if (verifyResponse)
-                message.SetMessageId(UniqueIdGenerator.Create());
-
-            return await WaitResponse(message, verifyResponse);
+            return Channels.Join(channel, verifyResponse);
         }
 
         /// <summary>
         /// Leaves from a channel
         /// </summary>
-        public async Task<TmqResponseCode> Leave(string channel, bool verifyResponse)
+        [Obsolete("This method is moved into Channels property. Use Channels.Leave instead of this")]
+        public Task<TwinoResult> Leave(string channel, bool verifyResponse)
         {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.Leave;
-            message.SetTarget(channel);
-            message.ResponseRequired = verifyResponse;
-
-            if (verifyResponse)
-                message.SetMessageId(UniqueIdGenerator.Create());
-
-            return await WaitResponse(message, verifyResponse);
+            return Channels.Leave(channel, verifyResponse);
         }
-
-        /// <summary>
-        /// Creates a new channel without any queue
-        /// </summary>
-        public async Task<TmqResponseCode> CreateChannel(string channel, bool verifyResponse)
-        {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.CreateChannel;
-            message.SetTarget(channel);
-            message.ResponseRequired = verifyResponse;
-
-            if (verifyResponse)
-                message.SetMessageId(UniqueIdGenerator.Create());
-
-            return await WaitResponse(message, verifyResponse);
-        }
-
-        /// <summary>
-        /// Creates a new channel without any queue
-        /// </summary>
-        public async Task<TmqResponseCode> CreateChannel(string channel, Action<ChannelCreationOptions> optionsAction)
-        {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.CreateChannel;
-            message.SetTarget(channel);
-            message.ResponseRequired = true;
-            message.SetMessageId(UniqueIdGenerator.Create());
-
-            ChannelCreationOptions options = new ChannelCreationOptions();
-            optionsAction(options);
-            message.Content = new MemoryStream(Encoding.UTF8.GetBytes(options.Serialize(0)));
-
-            return await WaitResponse(message, true);
-        }
-
-        #endregion
-
-        #region Queue
 
         /// <summary>
         /// Creates new queue in server
         /// </summary>
-        public async Task<TmqResponseCode> CreateQueue(string channel, ushort queueId, bool verifyResponse, Action<QueueOptions> optionsAction = null)
+        [Obsolete("This method is moved into Queues property. Use Queues.Create instead of this")]
+        public Task<TwinoResult> CreateQueue(string channel, ushort queueId, Action<QueueOptions> optionsAction = null)
         {
-            TmqMessage message = new TmqMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.CreateQueue;
-            message.SetTarget(channel);
-            message.ResponseRequired = verifyResponse;
-
-            if (optionsAction == null)
-                message.Content = new MemoryStream(BitConverter.GetBytes(queueId));
-            else
-            {
-                QueueOptions options = new QueueOptions();
-                optionsAction(options);
-                message.Content = new MemoryStream(Encoding.UTF8.GetBytes(options.Serialize(queueId)));
-            }
-
-            if (verifyResponse)
-                message.SetMessageId(UniqueIdGenerator.Create());
-
-            return await WaitResponse(message, verifyResponse);
+            return Queues.Create(channel, queueId, optionsAction);
         }
 
         #endregion

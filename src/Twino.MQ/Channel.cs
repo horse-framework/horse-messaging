@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
+using Twino.MQ.Events;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
 using Twino.MQ.Queues;
@@ -113,6 +114,31 @@ namespace Twino.MQ
         /// </summary>
         public object Payload { get; set; }
 
+        /// <summary>
+        /// Triggered when a queue is created 
+        /// </summary>
+        public QueueEventManager OnQueueCreated { get; }
+
+        /// <summary>
+        /// Triggered when a queue is updated 
+        /// </summary>
+        public QueueEventManager OnQueueUpdated { get; }
+
+        /// <summary>
+        /// Triggered when a queue is removed 
+        /// </summary>
+        public QueueEventManager OnQueueRemoved { get; }
+
+        /// <summary>
+        /// Triggered when a client is joined 
+        /// </summary>
+        public SubscriptionEventManager OnClientJoined { get; }
+
+        /// <summary>
+        /// Triggered when a client is left 
+        /// </summary>
+        public SubscriptionEventManager OnClientLeft { get; }
+
         #endregion
 
         #region Constructors
@@ -134,6 +160,12 @@ namespace Twino.MQ
 
             _queues = new SafeList<ChannelQueue>(8);
             _clients = new SafeList<ChannelClient>(256);
+
+            OnQueueCreated = new QueueEventManager(EventNames.QueueCreated, this);
+            OnQueueUpdated = new QueueEventManager(EventNames.QueueUpdated, this);
+            OnQueueRemoved = new QueueEventManager(EventNames.QueueRemoved, this);
+            OnClientJoined = new SubscriptionEventManager(EventNames.ClientJoined, this);
+            OnClientLeft = new SubscriptionEventManager(EventNames.ClientLeft, this);
         }
 
         /// <summary>
@@ -148,6 +180,12 @@ namespace Twino.MQ
 
             foreach (ChannelQueue queue in queues)
                 await queue.Destroy();
+
+            OnQueueCreated.Dispose();
+            OnQueueUpdated.Dispose();
+            OnQueueRemoved.Dispose();
+            OnClientJoined.Dispose();
+            OnClientLeft.Dispose();
         }
 
         /// <summary>
@@ -257,6 +295,7 @@ namespace Twino.MQ
             if (EventHandler != null)
                 await EventHandler.OnQueueCreated(queue, this);
 
+            _ = OnQueueCreated.Trigger(queue);
             return queue;
         }
 
@@ -303,6 +342,7 @@ namespace Twino.MQ
             if (EventHandler != null)
                 await EventHandler.OnQueueRemoved(queue, this);
 
+            _ = OnQueueRemoved.Trigger(queue);
             await queue.Destroy();
         }
 
@@ -345,6 +385,8 @@ namespace Twino.MQ
             foreach (ChannelQueue queue in list)
                 _ = queue.Trigger();
 
+            _ = OnClientJoined.Trigger(cc);
+
             return ClientJoinResult.Success;
         }
 
@@ -361,6 +403,8 @@ namespace Twino.MQ
 
             if (Options.DestroyWhenEmpty && _clients.Count == 0)
                 await CheckAutoDestroy();
+
+            _ = OnClientLeft.Trigger(client);
         }
 
         /// <summary>
@@ -375,6 +419,8 @@ namespace Twino.MQ
 
             if (Options.DestroyWhenEmpty && _clients.Count == 0)
                 await CheckAutoDestroy();
+
+            _ = OnClientLeft.Trigger(client);
         }
 
         /// <summary>
@@ -394,6 +440,8 @@ namespace Twino.MQ
 
             if (Options.DestroyWhenEmpty && _clients.Count == 0)
                 await CheckAutoDestroy();
+
+            _ = OnClientLeft.Trigger(cc);
 
             return true;
         }

@@ -20,7 +20,7 @@ namespace Twino.MQ.Network
 
         #endregion
 
-        public async Task Handle(MqClient sender, TmqMessage message)
+        public async Task Handle(MqClient sender, TmqMessage message, bool fromNode)
         {
             //server does not care response messages
             //if receiver could be found, message is sent to it's receiver

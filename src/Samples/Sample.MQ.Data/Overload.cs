@@ -142,7 +142,7 @@ namespace Sample.MQ.Data
 
         private TmqMessage CreateMessage()
         {
-            TmqMessage msg = new TmqMessage(MessageType.Channel, "channel");
+            TmqMessage msg = new TmqMessage(MessageType.QueueMessage, "channel");
             msg.SetMessageId(_generator.Create());
             msg.SetStringContent("Hello, World!");
             return msg;

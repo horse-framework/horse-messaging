@@ -6,6 +6,7 @@ using Twino.Extensions.Http;
 using Twino.Mvc;
 using Twino.Mvc.Auth;
 using Twino.Mvc.Auth.Jwt;
+using Twino.Mvc.Errors;
 using Twino.Mvc.Middlewares;
 using Twino.Mvc.Results;
 using Twino.Protocols.Http;
@@ -26,6 +27,15 @@ namespace Sample.Mvc
         {
             Console.WriteLine("tmid");
             await Task.CompletedTask;
+        }
+    }
+
+    public class MvcErrorHandler : IErrorHandler
+    {
+        public Task<IActionResult> Error(HttpRequest request, Exception ex)
+        {
+            IActionResult result = new JsonResult(new {error = true}, HttpStatusCode.InternalServerError);
+            return Task.FromResult(result);
         }
     }
 
@@ -58,7 +68,9 @@ namespace Sample.Mvc
                 twino.Policies.Add(Policy.Custom("Custom", (d, c) => true));
                 twino.Services.AddHttpClient();
 
-                twino.StatusCodeResults.Add(HttpStatusCode.Unauthorized, new JsonResult(new { Message = "Access denied" }));
+                twino.StatusCodeResults.Add(HttpStatusCode.Unauthorized, new JsonResult(new {Message = "Access denied"}));
+
+                mvc.ErrorHandler = new MvcErrorHandler();
             });
 
             CorsMiddleware cors = new CorsMiddleware();

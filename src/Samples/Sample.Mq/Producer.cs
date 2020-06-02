@@ -62,13 +62,13 @@ namespace Sample.Mq
             if (_firstConnection)
             {
                 _firstConnection = false;
-                tmq.CreateQueue("BasicChannel", ModelTypes.ProducerEvent, false).Wait();
+                tmq.Queues.Create("BasicChannel", ModelTypes.ProducerEvent).Wait();
             }
         }
 
         private void MessageReceived(ClientSocketBase<TmqMessage> client, TmqMessage message)
         {
-            if (message.Type == MessageType.Client && message.ContentType == ModelTypes.ConsumerRequest)
+            if (message.Type == MessageType.DirectMessage && message.ContentType == ModelTypes.ConsumerRequest)
             {
                 ConsumerRequest request = message.GetJsonContent<ConsumerRequest>().Result;
                 Console.WriteLine($"Consumer request received: {request.Guid}");
@@ -77,7 +77,7 @@ namespace Sample.Mq
                 model.RequestGuid = request.Guid;
                 model.ResponseGuid = Guid.NewGuid().ToString();
 
-                TmqMessage response = message.CreateResponse();
+                TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
                 response.ContentType = ModelTypes.ProducerResponse;
                 response.SetJsonContent(model);
                 TmqClient tmq = (TmqClient)client;

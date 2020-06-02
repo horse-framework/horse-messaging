@@ -9,6 +9,9 @@ using Xunit;
 
 namespace Test.Mq
 {
+    /// <summary>
+    /// Ports 42700 - 42710
+    /// </summary>
     public class QueueFillTest
     {
         [Fact]
@@ -19,7 +22,7 @@ namespace Test.Mq
                 items.Add(new MessageA("No #" + i));
 
             TestMqServer server = new TestMqServer();
-            server.Initialize(47701);
+            server.Initialize(42701);
             server.Start(300, 300);
 
             Channel route = server.Server.FindChannel("ch-route");
@@ -39,8 +42,8 @@ namespace Test.Mq
             await fillerPushA.FillJson(items, false, false);
 
             await Task.Delay(500);
-            Assert.NotEmpty(routeA.RegularMessages);
-            Assert.NotEmpty(pushA.RegularMessages);
+            Assert.NotEmpty(routeA.Messages);
+            Assert.NotEmpty(pushA.Messages);
         }
 
         [Fact]
@@ -51,7 +54,7 @@ namespace Test.Mq
                 items.Add("No #" + i);
 
             TestMqServer server = new TestMqServer();
-            server.Initialize(39702);
+            server.Initialize(42702);
             server.Start(300, 300);
 
             Channel channel = server.Server.FindChannel("ch-push");
@@ -65,8 +68,8 @@ namespace Test.Mq
             filler.FillString(items, false, false);
 
             await Task.Delay(500);
-            Assert.NotEmpty(queue.HighPriorityMessages);
-            Assert.NotEmpty(queue.RegularMessages);
+            Assert.NotEmpty(queue.PriorityMessages);
+            Assert.NotEmpty(queue.Messages);
         }
 
         [Fact]
@@ -77,7 +80,7 @@ namespace Test.Mq
                 items.Add(Encoding.UTF8.GetBytes("No #" + i));
 
             TestMqServer server = new TestMqServer();
-            server.Initialize(40702);
+            server.Initialize(42703);
             server.Start(300, 300);
 
             Channel channel = server.Server.FindChannel("ch-push");
@@ -91,8 +94,8 @@ namespace Test.Mq
             filler.FillData(items, false, false);
 
             await Task.Delay(500);
-            Assert.NotEmpty(queue.HighPriorityMessages);
-            Assert.NotEmpty(queue.RegularMessages);
+            Assert.NotEmpty(queue.PriorityMessages);
+            Assert.NotEmpty(queue.Messages);
         }
     }
 }

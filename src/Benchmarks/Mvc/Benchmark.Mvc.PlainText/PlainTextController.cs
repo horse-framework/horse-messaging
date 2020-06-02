@@ -9,9 +9,9 @@ namespace Benchmark.Mvc.PlainText
     public class PlainTextController : TwinoController
     {
         [HttpGet]
-        public async Task<IActionResult> Get()
+        public Task<IActionResult> Get()
         {
-            return await StringAsync("Hello, World!");
+            return StringAsync("Hello, World!");
         }
     }
 }

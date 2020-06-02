@@ -11,6 +11,11 @@ namespace Twino.MQ.Options
     public class ChannelQueueOptions
     {
         /// <summary>
+        /// Queue tag name
+        /// </summary>
+        public string TagName { get; set; }
+
+        /// <summary>
         /// If true, messages will send to only first acquirers
         /// </summary>
         public bool SendOnlyFirstAcquirer { get; set; }
@@ -48,7 +53,7 @@ namespace Twino.MQ.Options
         /// <summary>
         /// Default status for the queue
         /// </summary>
-        public QueueStatus Status { get; set; } = QueueStatus.Route;
+        public QueueStatus Status { get; set; } = QueueStatus.Broadcast;
 
         /// <summary>
         /// Maximum message limit of the queue
@@ -72,96 +77,24 @@ namespace Twino.MQ.Options
         }
 
         /// <summary>
-        /// Fills value from properties
-        /// </summary>
-        internal void FillFromProperties(Dictionary<string, string> properties)
-        {
-            foreach (KeyValuePair<string, string> pair in properties)
-            {
-                if (pair.Value.Equals(TmqHeaders.ONLY_FIRST_ACQUIRER, StringComparison.InvariantCultureIgnoreCase))
-                    SendOnlyFirstAcquirer = pair.Value.Equals("true", StringComparison.InvariantCultureIgnoreCase) || pair.Value == "1";
-
-                else if (pair.Value.Equals(TmqHeaders.REQUEST_ACKNOWLEDGE, StringComparison.InvariantCultureIgnoreCase))
-                    RequestAcknowledge = pair.Value.Equals("true", StringComparison.InvariantCultureIgnoreCase) || pair.Value == "1";
-
-                else if (pair.Value.Equals(TmqHeaders.USE_MESSAGE_ID, StringComparison.InvariantCultureIgnoreCase))
-                    UseMessageId = pair.Value.Equals("true", StringComparison.InvariantCultureIgnoreCase) || pair.Value == "1";
-
-                else if (pair.Value.Equals(TmqHeaders.WAIT_FOR_ACKNOWLEDGE, StringComparison.InvariantCultureIgnoreCase))
-                    WaitForAcknowledge = pair.Value.Equals("true", StringComparison.InvariantCultureIgnoreCase) || pair.Value == "1";
-
-                else if (pair.Value.Equals(TmqHeaders.HIDE_CLIENT_NAMES, StringComparison.InvariantCultureIgnoreCase))
-                    HideClientNames = pair.Value.Equals("true", StringComparison.InvariantCultureIgnoreCase) || pair.Value == "1";
-
-                else if (pair.Value.Equals(TmqHeaders.ACKNOWLEDGE_TIMEOUT, StringComparison.InvariantCultureIgnoreCase))
-                    AcknowledgeTimeout = TimeSpan.FromMilliseconds(Convert.ToInt32(pair.Value));
-
-                else if (pair.Value.Equals(TmqHeaders.MESSAGE_TIMEOUT, StringComparison.InvariantCultureIgnoreCase))
-                    MessageTimeout = TimeSpan.FromMilliseconds(Convert.ToInt32(pair.Value));
-
-                else if (pair.Value.Equals(TmqHeaders.MESSAGE_LIMIT, StringComparison.InvariantCultureIgnoreCase))
-                    MessageLimit = Convert.ToInt32(pair.Value);
-
-                else if (pair.Value.Equals(TmqHeaders.MESSAGE_SIZE_LIMIT, StringComparison.InvariantCultureIgnoreCase))
-                    MessageSizeLimit = Convert.ToUInt64(pair.Value);
-
-                else if (pair.Value.Equals(TmqHeaders.QUEUE_STATUS, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    switch (pair.Value.ToLower())
-                    {
-                        case "route":
-                            Status = QueueStatus.Route;
-                            break;
-
-                        case "push":
-                            Status = QueueStatus.Push;
-                            break;
-
-                        case "pull":
-                            Status = QueueStatus.Pull;
-                            break;
-
-                        case "rr":
-                        case "round":
-                        case "robin":
-                        case "roundrobin":
-                        case "round-robin":
-                            Status = QueueStatus.RoundRobin;
-                            break;
-
-                        case "pause":
-                        case "paused":
-                            Status = QueueStatus.Paused;
-                            break;
-
-                        case "stop":
-                        case "stoped":
-                        case "stopped":
-                            Status = QueueStatus.Stopped;
-                            break;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
         /// Clones channel queue options from another options
         /// </summary>
         internal static ChannelQueueOptions CloneFrom(ChannelQueueOptions options)
         {
             return new ChannelQueueOptions
-            {
-                Status = options.Status,
-                AcknowledgeTimeout = options.AcknowledgeTimeout,
-                MessageTimeout = options.MessageTimeout,
-                RequestAcknowledge = options.RequestAcknowledge,
-                HideClientNames = options.HideClientNames,
-                UseMessageId = options.UseMessageId,
-                WaitForAcknowledge = options.WaitForAcknowledge,
-                SendOnlyFirstAcquirer = options.SendOnlyFirstAcquirer,
-                MessageLimit = options.MessageLimit,
-                MessageSizeLimit = options.MessageSizeLimit
-            };
+                   {
+                       Status = options.Status,
+                       TagName = options.TagName,
+                       AcknowledgeTimeout = options.AcknowledgeTimeout,
+                       MessageTimeout = options.MessageTimeout,
+                       RequestAcknowledge = options.RequestAcknowledge,
+                       HideClientNames = options.HideClientNames,
+                       UseMessageId = options.UseMessageId,
+                       WaitForAcknowledge = options.WaitForAcknowledge,
+                       SendOnlyFirstAcquirer = options.SendOnlyFirstAcquirer,
+                       MessageLimit = options.MessageLimit,
+                       MessageSizeLimit = options.MessageSizeLimit
+                   };
         }
     }
 }

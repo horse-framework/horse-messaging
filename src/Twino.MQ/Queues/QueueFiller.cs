@@ -31,16 +31,16 @@ namespace Twino.MQ.Queues
             if (_queue.Status == QueueStatus.Stopped)
                 return PushResult.StatusNotSupported;
 
-            int max = _queue.HighPriorityLinkedList.Count + _queue.RegularLinkedList.Count + items.Count();
+            int max = _queue.PriorityMessagesList.Count + _queue.MessagesList.Count + items.Count();
             if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
                 return PushResult.LimitExceeded;
 
             foreach (T item in items)
             {
-                TmqMessage message = new TmqMessage(MessageType.Channel, _queue.Channel.Name);
+                TmqMessage message = new TmqMessage(MessageType.QueueMessage, _queue.Channel.Name);
                 message.FirstAcquirer = true;
                 message.HighPriority = highPriority;
-                message.AcknowledgeRequired = _queue.Options.RequestAcknowledge;
+                message.PendingAcknowledge = _queue.Options.RequestAcknowledge;
                 message.ContentType = _queue.Id;
 
                 if (_queue.Options.UseMessageId)
@@ -51,15 +51,15 @@ namespace Twino.MQ.Queues
                 QueueMessage qm = new QueueMessage(message, createAsSaved);
 
                 if (highPriority)
-                    lock (_queue.HighPriorityLinkedList)
-                        _queue.HighPriorityLinkedList.AddLast(qm);
+                    lock (_queue.PriorityMessagesList)
+                        _queue.PriorityMessagesList.AddLast(qm);
                 else
-                    lock (_queue.RegularLinkedList)
-                        _queue.RegularLinkedList.AddLast(qm);
+                    lock (_queue.MessagesList)
+                        _queue.MessagesList.AddLast(qm);
             }
 
-            _queue.Info.UpdateHighPriorityMessageCount(_queue.HighPriorityLinkedList.Count);
-            _queue.Info.UpdateRegularMessageCount(_queue.RegularLinkedList.Count);
+            _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
+            _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
             return PushResult.Success;
         }
 
@@ -72,15 +72,15 @@ namespace Twino.MQ.Queues
             if (_queue.Status == QueueStatus.Stopped)
                 return PushResult.StatusNotSupported;
 
-            int max = _queue.HighPriorityLinkedList.Count + _queue.RegularLinkedList.Count + items.Count();
+            int max = _queue.PriorityMessagesList.Count + _queue.MessagesList.Count + items.Count();
             if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
                 return PushResult.LimitExceeded;
 
             foreach (T item in items)
             {
-                TmqMessage message = new TmqMessage(MessageType.Channel, _queue.Channel.Name);
+                TmqMessage message = new TmqMessage(MessageType.QueueMessage, _queue.Channel.Name);
                 message.FirstAcquirer = true;
-                message.AcknowledgeRequired = _queue.Options.RequestAcknowledge;
+                message.PendingAcknowledge = _queue.Options.RequestAcknowledge;
                 message.ContentType = _queue.Id;
 
                 if (_queue.Options.UseMessageId)
@@ -92,15 +92,15 @@ namespace Twino.MQ.Queues
                 QueueMessage qm = new QueueMessage(message, createAsSaved);
 
                 if (message.HighPriority)
-                    lock (_queue.HighPriorityLinkedList)
-                        _queue.HighPriorityLinkedList.AddLast(qm);
+                    lock (_queue.PriorityMessagesList)
+                        _queue.PriorityMessagesList.AddLast(qm);
                 else
-                    lock (_queue.RegularLinkedList)
-                        _queue.RegularLinkedList.AddLast(qm);
+                    lock (_queue.MessagesList)
+                        _queue.MessagesList.AddLast(qm);
             }
 
-            _queue.Info.UpdateHighPriorityMessageCount(_queue.HighPriorityLinkedList.Count);
-            _queue.Info.UpdateRegularMessageCount(_queue.RegularLinkedList.Count);
+            _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
+            _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
             return PushResult.Success;
         }
 
@@ -112,16 +112,16 @@ namespace Twino.MQ.Queues
             if (_queue.Status == QueueStatus.Stopped)
                 return PushResult.StatusNotSupported;
 
-            int max = _queue.HighPriorityLinkedList.Count + _queue.RegularLinkedList.Count + items.Count();
+            int max = _queue.PriorityMessagesList.Count + _queue.MessagesList.Count + items.Count();
             if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
                 return PushResult.LimitExceeded;
 
             foreach (string item in items)
             {
-                TmqMessage message = new TmqMessage(MessageType.Channel, _queue.Channel.Name);
+                TmqMessage message = new TmqMessage(MessageType.QueueMessage, _queue.Channel.Name);
                 message.FirstAcquirer = true;
                 message.HighPriority = highPriority;
-                message.AcknowledgeRequired = _queue.Options.RequestAcknowledge;
+                message.PendingAcknowledge = _queue.Options.RequestAcknowledge;
                 message.ContentType = _queue.Id;
 
                 if (_queue.Options.UseMessageId)
@@ -134,15 +134,15 @@ namespace Twino.MQ.Queues
                 QueueMessage qm = new QueueMessage(message, createAsSaved);
 
                 if (highPriority)
-                    lock (_queue.HighPriorityLinkedList)
-                        _queue.HighPriorityLinkedList.AddLast(qm);
+                    lock (_queue.PriorityMessagesList)
+                        _queue.PriorityMessagesList.AddLast(qm);
                 else
-                    lock (_queue.RegularLinkedList)
-                        _queue.RegularLinkedList.AddLast(qm);
+                    lock (_queue.MessagesList)
+                        _queue.MessagesList.AddLast(qm);
             }
 
-            _queue.Info.UpdateHighPriorityMessageCount(_queue.HighPriorityLinkedList.Count);
-            _queue.Info.UpdateRegularMessageCount(_queue.RegularLinkedList.Count);
+            _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
+            _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
             return PushResult.Success;
         }
 
@@ -154,16 +154,16 @@ namespace Twino.MQ.Queues
             if (_queue.Status == QueueStatus.Stopped)
                 return PushResult.StatusNotSupported;
 
-            int max = _queue.HighPriorityLinkedList.Count + _queue.RegularLinkedList.Count + items.Count();
+            int max = _queue.PriorityMessagesList.Count + _queue.MessagesList.Count + items.Count();
             if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
                 return PushResult.LimitExceeded;
 
             foreach (byte[] item in items)
             {
-                TmqMessage message = new TmqMessage(MessageType.Channel, _queue.Channel.Name);
+                TmqMessage message = new TmqMessage(MessageType.QueueMessage, _queue.Channel.Name);
                 message.FirstAcquirer = true;
                 message.HighPriority = highPriority;
-                message.AcknowledgeRequired = _queue.Options.RequestAcknowledge;
+                message.PendingAcknowledge = _queue.Options.RequestAcknowledge;
                 message.ContentType = _queue.Id;
 
                 if (_queue.Options.UseMessageId)
@@ -176,15 +176,15 @@ namespace Twino.MQ.Queues
                 QueueMessage qm = new QueueMessage(message, createAsSaved);
 
                 if (highPriority)
-                    lock (_queue.HighPriorityLinkedList)
-                        _queue.HighPriorityLinkedList.AddLast(qm);
+                    lock (_queue.PriorityMessagesList)
+                        _queue.PriorityMessagesList.AddLast(qm);
                 else
-                    lock (_queue.RegularLinkedList)
-                        _queue.RegularLinkedList.AddLast(qm);
+                    lock (_queue.MessagesList)
+                        _queue.MessagesList.AddLast(qm);
             }
 
-            _queue.Info.UpdateHighPriorityMessageCount(_queue.HighPriorityLinkedList.Count);
-            _queue.Info.UpdateRegularMessageCount(_queue.RegularLinkedList.Count);
+            _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
+            _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
             return PushResult.Success;
         }
 
@@ -196,7 +196,7 @@ namespace Twino.MQ.Queues
             if (_queue.Status == QueueStatus.Stopped)
                 return PushResult.StatusNotSupported;
 
-            int max = _queue.HighPriorityLinkedList.Count + _queue.RegularLinkedList.Count + messages.Count();
+            int max = _queue.PriorityMessagesList.Count + _queue.MessagesList.Count + messages.Count();
             if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
                 return PushResult.LimitExceeded;
 
@@ -213,15 +213,15 @@ namespace Twino.MQ.Queues
                 QueueMessage qm = new QueueMessage(message, isSaved);
 
                 if (message.HighPriority)
-                    lock (_queue.HighPriorityLinkedList)
-                        _queue.HighPriorityLinkedList.AddLast(qm);
+                    lock (_queue.PriorityMessagesList)
+                        _queue.PriorityMessagesList.AddLast(qm);
                 else
-                    lock (_queue.RegularLinkedList)
-                        _queue.RegularLinkedList.AddLast(qm);
+                    lock (_queue.MessagesList)
+                        _queue.MessagesList.AddLast(qm);
             }
 
-            _queue.Info.UpdateHighPriorityMessageCount(_queue.HighPriorityLinkedList.Count);
-            _queue.Info.UpdateRegularMessageCount(_queue.RegularLinkedList.Count);
+            _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
+            _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
             return PushResult.Success;
         }
     }

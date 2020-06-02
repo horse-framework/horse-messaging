@@ -14,14 +14,14 @@ namespace Twino.MQ
         /// </summary>
         public static TwinoServer UseMqServer(this TwinoServer server, MqServer mqServer)
         {
-            MqConnectionHandler handler = new MqConnectionHandler(mqServer);
+            NetworkMessageHandler handler = new NetworkMessageHandler(mqServer);
             mqServer.Server = server;
 
-            mqServer.NodeServer.ConnectionHandler = new NodeConnectionHandler(mqServer.NodeServer, handler);
+            mqServer.NodeManager.ConnectionHandler = new NodeConnectionHandler(mqServer.NodeManager, handler);
             server.UseTmq(handler);
 
-            if (mqServer.NodeServer != null)
-                mqServer.NodeServer.SubscribeStartStop(server);
+            if (mqServer.NodeManager != null)
+                mqServer.NodeManager.SubscribeStartStop(server);
 
             return server;
         }

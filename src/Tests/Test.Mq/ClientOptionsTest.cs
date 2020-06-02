@@ -9,6 +9,9 @@ using Xunit;
 
 namespace Test.Mq
 {
+    /// <summary>
+    /// Ports 42620 - 42630
+    /// </summary>
     public class ClientOptionsTest
     {
         /// <summary>
@@ -19,7 +22,7 @@ namespace Test.Mq
         [InlineData(false)]
         public async Task UseUniqueMessageId(bool enabled)
         {
-            int port = enabled ? 42701 : 42702;
+            int port = enabled ? 42621 : 42622;
             TestMqServer server = new TestMqServer();
             server.Initialize(port);
             server.Server.Options.UseMessageId = enabled;
@@ -32,8 +35,8 @@ namespace Test.Mq
             await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            TmqResponseCode joined = await client.Join("ch-1", true);
-            Assert.Equal(TmqResponseCode.Ok, joined);
+            TwinoResult joined = await client.Channels.Join("ch-1", true);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(250);
 
             TmqMessage received = null;
@@ -42,8 +45,8 @@ namespace Test.Mq
             MessageA a = new MessageA("A");
             string serialized = Newtonsoft.Json.JsonConvert.SerializeObject(a);
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(serialized));
-            bool sent = await client.Push("ch-1", MessageA.ContentType, ms, false);
-            Assert.True(sent);
+            TwinoResult sent = await client.Queues.Push("ch-1", MessageA.ContentType, ms, false);
+            Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1000);
 
@@ -65,7 +68,7 @@ namespace Test.Mq
         [InlineData(false)]
         public async Task CatchResponseMessages(bool enabled)
         {
-            int port = enabled ? 42711 : 42712;
+            int port = enabled ? 42624 : 42625;
             TestMqServer server = new TestMqServer();
             server.Initialize(port);
             server.Start();
@@ -87,13 +90,13 @@ namespace Test.Mq
             client1.MessageReceived += (c, m) => responseCaught = true;
             client2.MessageReceived += async (c, m) =>
             {
-                TmqMessage rmsg = m.CreateResponse();
+                TmqMessage rmsg = m.CreateResponse(TwinoResultCode.Ok);
                 rmsg.SetStringContent("Response!");
-                await ((TmqClient)c).SendAsync(rmsg);
+                await ((TmqClient) c).SendAsync(rmsg);
             };
 
-            TmqMessage msg = new TmqMessage(MessageType.Client, "client-2");
-            msg.ResponseRequired = true;
+            TmqMessage msg = new TmqMessage(MessageType.DirectMessage, "client-2");
+            msg.PendingResponse = true;
             msg.SetStringContent("Hello, World!");
 
             TmqMessage response = await client1.Request(msg);

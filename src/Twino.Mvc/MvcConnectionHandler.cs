@@ -50,33 +50,33 @@ namespace Twino.Mvc
         /// <summary>
         /// HTTP Protocol does not support piped connections
         /// </summary>
-        public async Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
+        public Task<SocketBase> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
-            return await Task.FromResult((SocketBase) null);
+            return Task.FromResult((SocketBase) null);
         }
 
         /// <summary>
         /// Triggered when handshake is completed and the connection is ready to communicate 
         /// </summary>
-        public async Task Ready(ITwinoServer server, SocketBase client)
+        public Task Ready(ITwinoServer server, SocketBase client)
         {
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
 
         /// <summary>
         /// HTTP Protocol does not support piped connections
         /// </summary>
-        public async Task Disconnected(ITwinoServer server, SocketBase client)
+        public Task Disconnected(ITwinoServer server, SocketBase client)
         {
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
 
         /// <summary>
         /// Triggered when an HTTP request is received
         /// </summary>
-        public async Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, HttpMessage message)
+        public Task Received(ITwinoServer server, IConnectionInfo info, SocketBase client, HttpMessage message)
         {
-            await RequestAsync(server, message.Request, message.Response);
+            return RequestAsync(server, message.Request, message.Response);
         }
 
         #endregion
@@ -192,7 +192,7 @@ namespace Twino.Mvc
                                           {
                                               Controller = controller,
                                               Action = match.Route.ActionType,
-                                              Parameters = FillParameters(request, match)
+                                              Parameters = await FillParameters(request, match)
                                           };
 
             if (!CheckActionAuthority(match, context, response, descriptor))
@@ -216,6 +216,7 @@ namespace Twino.Mvc
             if (match.Route.IsAsyncMethod)
             {
                 Task<IActionResult> task = (Task<IActionResult>) match.Route.ActionType.Invoke(controller, descriptor.Parameters.Select(x => x.Value).ToArray());
+                // ReSharper disable once PossibleNullReferenceException
                 await task;
                 await CompleteActionExecution(match, context, response, controller, descriptor, task.Result);
             }
@@ -283,7 +284,7 @@ namespace Twino.Mvc
         /// <summary>
         /// Creates parameter list and sets values for the specified request to the specified route.
         /// </summary>
-        internal static List<ParameterValue> FillParameters(HttpRequest request, RouteMatch route)
+        internal async Task<List<ParameterValue>> FillParameters(HttpRequest request, RouteMatch route)
         {
             List<ParameterValue> values = new List<ParameterValue>();
             foreach (ActionParameter ap in route.Route.Parameters)
@@ -305,12 +306,12 @@ namespace Twino.Mvc
 
                     case ParameterSource.Body:
                     {
-                        string content = Encoding.UTF8.GetString(request.ContentStream.ToArray());
                         if (ap.FromName == "json")
-                            paramValue.Value = Newtonsoft.Json.JsonConvert.DeserializeObject(content, ap.ParameterType);
+                            paramValue.Value = await System.Text.Json.JsonSerializer.DeserializeAsync(request.ContentStream, ap.ParameterType, Mvc.JsonOptions);
                         else if (ap.FromName == "xml")
                         {
-                            using MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(content));
+                            string content = Encoding.UTF8.GetString(request.ContentStream.ToArray());
+                            await using MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(content));
                             XmlSerializer serializer = new XmlSerializer(ap.ParameterType);
                             paramValue.Value = serializer.Deserialize(ms);
                         }
@@ -416,31 +417,31 @@ namespace Twino.Mvc
         /// <summary>
         /// Executes before controller filters. Returns true, if execution can resume.
         /// </summary>
-        private async Task<bool> ExecuteBeforeControllerFilters(RouteMatch match, FilterContext context, HttpResponse response)
+        private Task<bool> ExecuteBeforeControllerFilters(RouteMatch match, FilterContext context, HttpResponse response)
         {
             if (!match.Route.HasControllerBeforeFilter)
-                return true;
+                return Task.FromResult(true);
 
             //find controller filters
             IBeforeControllerFilter[] filters = (IBeforeControllerFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IBeforeControllerFilter), true);
 
             //call BeforeCreated methods of controller attributes
-            return await CallFilters(response, context, filters, async filter => await filter.OnBefore(context));
+            return CallFilters(response, context, filters, async filter => await filter.OnBefore(context));
         }
 
         /// <summary>
         /// Executes after controller filters. Returns true, if execution can resume.
         /// </summary>
-        private async Task<bool> ExecuteAfterControllerFilters(RouteMatch match, FilterContext context, HttpResponse response, IController controller)
+        private Task<bool> ExecuteAfterControllerFilters(RouteMatch match, FilterContext context, HttpResponse response, IController controller)
         {
             if (!match.Route.HasControllerAfterFilter)
-                return true;
+                return Task.FromResult(true);
 
             //find controller filters
             IAfterControllerFilter[] filters = (IAfterControllerFilter[]) match.Route.ControllerType.GetCustomAttributes(typeof(IAfterControllerFilter), true);
 
             //call AfterCreated methods of controller attributes
-            return await CallFilters(response, context, filters, async filter => await filter.OnAfter(controller, context));
+            return CallFilters(response, context, filters, async filter => await filter.OnAfter(controller, context));
         }
 
         /// <summary>

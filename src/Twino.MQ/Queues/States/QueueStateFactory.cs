@@ -6,8 +6,8 @@ namespace Twino.MQ.Queues.States
         {
             switch (status)
             {
-                case QueueStatus.Route:
-                    return new RouteQueueState(queue);
+                case QueueStatus.Broadcast:
+                    return new BroadcastQueueState(queue);
 
                 case QueueStatus.Push:
                     return new PushQueueState(queue);

@@ -52,7 +52,7 @@ namespace Twino.MQ.Handlers
         public async Task<Decision> ReceivedFromProducer(ChannelQueue queue, QueueMessage message, MqClient sender)
         {
             if (_when == AcknowledgeWhen.AfterReceived)
-                return await Task.FromResult(new Decision(true, false, false, DeliveryAcknowledgeDecision.Always));
+                return await Task.FromResult(new Decision(true, false, PutBackDecision.No, DeliveryAcknowledgeDecision.Always));
 
             return await Task.FromResult(new Decision(true, false));
         }
@@ -96,7 +96,7 @@ namespace Twino.MQ.Handlers
         public async Task<Decision> EndSend(ChannelQueue queue, QueueMessage message)
         {
             if (_when == AcknowledgeWhen.AfterSent)
-                return await Task.FromResult(new Decision(true, false, false, DeliveryAcknowledgeDecision.Always));
+                return await Task.FromResult(new Decision(true, false, PutBackDecision.No, DeliveryAcknowledgeDecision.Always));
 
             return await Task.FromResult(new Decision(true, false));
         }
@@ -108,7 +108,7 @@ namespace Twino.MQ.Handlers
         public async Task<Decision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
             if (_when == AcknowledgeWhen.AfterAcknowledge)
-                return await Task.FromResult(new Decision(true, false, false, DeliveryAcknowledgeDecision.Always));
+                return await Task.FromResult(new Decision(true, false, PutBackDecision.No, DeliveryAcknowledgeDecision.Always));
 
             return await Task.FromResult(new Decision(true, false));
         }

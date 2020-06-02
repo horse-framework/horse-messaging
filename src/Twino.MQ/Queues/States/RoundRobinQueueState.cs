@@ -71,7 +71,7 @@ namespace Twino.MQ.Queues.States
                 return PushResult.Success;
 
             //create prepared message data
-            byte[] messageData = await _writer.Create(message.Message);
+            byte[] messageData = TmqWriter.Create(message.Message);
 
             //call before send and check decision
             message.Decision = await _queue.DeliveryHandler.CanConsumerReceive(_queue, message, receiver.Client);
@@ -83,7 +83,7 @@ namespace Twino.MQ.Queues.States
             delivery.FirstAcquirer = message.Message.FirstAcquirer;
 
             //send the message
-            bool sent = receiver.Client.Send(messageData);
+            bool sent = await receiver.Client.SendAsync(messageData);
 
             if (sent)
             {
@@ -107,7 +107,7 @@ namespace Twino.MQ.Queues.States
             message.Decision = await _queue.DeliveryHandler.EndSend(_queue, message);
             await _queue.ApplyDecision(message.Decision, message);
 
-            if (message.Decision.Allow && !message.Decision.KeepMessage)
+            if (message.Decision.Allow && message.Decision.PutBack == PutBackDecision.No)
             {
                 _queue.Info.AddMessageRemove();
                 _ = _queue.DeliveryHandler.MessageRemoved(_queue, message);
