@@ -306,14 +306,15 @@ namespace Twino.Mvc
 
                     case ParameterSource.Body:
                     {
+                        string content = Encoding.UTF8.GetString(request.ContentStream.ToArray());
                         if (ap.FromName == "json")
                         {
-                            request.ContentStream.Position = 0;
-                            paramValue.Value = await System.Text.Json.JsonSerializer.DeserializeAsync(request.ContentStream, ap.ParameterType, Mvc.JsonOptions);
+                            paramValue.Value = Mvc.JsonOptions!=null 
+                                                   ? Newtonsoft.Json.JsonConvert.DeserializeObject(content, ap.ParameterType, Mvc.JsonOptions)
+                                                   : Newtonsoft.Json.JsonConvert.DeserializeObject(content, ap.ParameterType);
                         }
                         else if (ap.FromName == "xml")
                         {
-                            string content = Encoding.UTF8.GetString(request.ContentStream.ToArray());
                             await using MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(content));
                             XmlSerializer serializer = new XmlSerializer(ap.ParameterType);
                             paramValue.Value = serializer.Deserialize(ms);
