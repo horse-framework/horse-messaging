@@ -40,7 +40,7 @@ namespace Sample.Mvc.Controller
         }
 
         [HttpPost("post")]
-        public Task<IActionResult> Post([FromForm] LoginModel model)
+        public Task<IActionResult> Post([FromBody] LoginModel model)
         {
             return JsonAsync(new
                              {
