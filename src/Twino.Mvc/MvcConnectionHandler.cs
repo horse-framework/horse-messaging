@@ -307,7 +307,10 @@ namespace Twino.Mvc
                     case ParameterSource.Body:
                     {
                         if (ap.FromName == "json")
+                        {
+                            request.ContentStream.Position = 0;
                             paramValue.Value = await System.Text.Json.JsonSerializer.DeserializeAsync(request.ContentStream, ap.ParameterType, Mvc.JsonOptions);
+                        }
                         else if (ap.FromName == "xml")
                         {
                             string content = Encoding.UTF8.GetString(request.ContentStream.ToArray());
