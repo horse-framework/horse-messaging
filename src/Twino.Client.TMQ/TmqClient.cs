@@ -876,6 +876,15 @@ namespace Twino.Client.TMQ
         }
 
         /// <summary>
+        /// Sends a request to without body
+        /// </summary>
+        public async Task<TmqMessage> Request(string target, ushort contentType)
+        {
+            TmqMessage message = new TmqMessage(MessageType.DirectMessage, target, contentType);
+            return await Request(message);
+        }
+
+        /// <summary>
         /// Sends the message and waits for response
         /// </summary>
         public async Task<TmqMessage> Request(TmqMessage message)
