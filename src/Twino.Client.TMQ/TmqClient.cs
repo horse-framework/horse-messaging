@@ -672,6 +672,37 @@ namespace Twino.Client.TMQ
             return new TmqModelResult<T>(TwinoResult.Ok(), model);
         }
 
+        /// <summary>
+        /// Sends a response message to the request
+        /// </summary>
+        public async Task<TwinoResult> SendResponseAsync<TModel>(TmqMessage requestMessage, TModel responseModel)
+        {
+            TmqMessage response = requestMessage.CreateResponse(TwinoResultCode.Ok);
+            await response.SetJsonContent(responseModel);
+            return await SendAsync(response);
+        }
+
+        /// <summary>
+        /// Sends a response message to the request
+        /// </summary>
+        public async Task<TwinoResult> SendResponseAsync(TmqMessage requestMessage, string responseContent)
+        {
+            TmqMessage response = requestMessage.CreateResponse(TwinoResultCode.Ok);
+            response.SetStringContent(responseContent);
+            return await SendAsync(response);
+        }
+
+        /// <summary>
+        /// Sends a response message to the request
+        /// </summary>
+        public async Task<TwinoResult> SendResponseAsync(TmqMessage requestMessage, Stream content)
+        {
+            TmqMessage response = requestMessage.CreateResponse(TwinoResultCode.Ok);
+            response.Content = new MemoryStream();
+            await content.CopyToAsync(response.Content);
+            return await SendAsync(response);
+        }
+
         #endregion
 
         #region Send By
