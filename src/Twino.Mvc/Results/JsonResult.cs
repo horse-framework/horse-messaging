@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Twino.Core;
 
 namespace Twino.Mvc.Results
@@ -34,6 +35,12 @@ namespace Twino.Mvc.Results
         public Dictionary<string, string> Headers { get; }
 
         /// <summary>
+        /// JSON Serialization options.
+        /// If null, system default is used.
+        /// </summary>
+        public JsonSerializationOptions Options { get; set; }
+
+        /// <summary>
         /// Creates new empty JSON result
         /// </summary>
         public JsonResult(HttpStatusCode code = HttpStatusCode.OK)
@@ -59,8 +66,22 @@ namespace Twino.Mvc.Results
         /// </summary>
         public async Task SetAsync(object model)
         {
-            Stream = new MemoryStream();
-            await System.Text.Json.JsonSerializer.SerializeAsync(Stream, model, model.GetType());
+            if (Options == null)
+                Options = new JsonSerializationOptions();
+            
+            if (Options.UseNewtonsoft)
+            {
+                string serialized = Options.NewtonsoftOptions != null
+                                        ? JsonConvert.SerializeObject(model)
+                                        : JsonConvert.SerializeObject(model, Options.NewtonsoftOptions);
+
+                Stream = new MemoryStream(Encoding.UTF8.GetBytes(serialized));
+            }
+            else
+            {
+                Stream = new MemoryStream();
+                await System.Text.Json.JsonSerializer.SerializeAsync(Stream, model, model.GetType(), Options.SystemTextOptions);
+            }
         }
 
         /// <summary>
@@ -68,8 +89,22 @@ namespace Twino.Mvc.Results
         /// </summary>
         public void Set(object model)
         {
-            string serialized = System.Text.Json.JsonSerializer.Serialize(model, model.GetType());
-            Stream = new MemoryStream(Encoding.UTF8.GetBytes(serialized));
+            if (Options == null)
+                Options = new JsonSerializationOptions();
+            
+            if (Options.UseNewtonsoft)
+            {
+                string serialized = Options.NewtonsoftOptions != null
+                                        ? JsonConvert.SerializeObject(model)
+                                        : JsonConvert.SerializeObject(model, Options.NewtonsoftOptions);
+
+                Stream = new MemoryStream(Encoding.UTF8.GetBytes(serialized));
+            }
+            else
+            {
+                string serialized = System.Text.Json.JsonSerializer.Serialize(model, model.GetType(), Options.SystemTextOptions);
+                Stream = new MemoryStream(Encoding.UTF8.GetBytes(serialized));
+            }
         }
     }
 }

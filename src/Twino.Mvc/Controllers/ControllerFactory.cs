@@ -21,7 +21,8 @@ namespace Twino.Mvc.Controllers
 
             if (constructors.Length == 0)
                 throw new InvalidOperationException("There is no accessible constructor found in " + controllerType.FullName);
-            else if (constructors.Length > 1)
+
+            if (constructors.Length > 1)
                 throw new InvalidOperationException($"{controllerType.FullName} must have only one accessible constructor.");
 
             ConstructorInfo constructor = constructors[0];
@@ -44,18 +45,22 @@ namespace Twino.Mvc.Controllers
                     object v = await mvc.Services.Get(type, scope);
                     values[i] = v;
                 }
+
                 values[i] = value;
             }
 
             //if the application comes here, we are sure all parameters are created
             //now we can create instance with these parameter values
-            TwinoController result = (TwinoController)Activator.CreateInstance(controllerType, values);
+            TwinoController result = (TwinoController) Activator.CreateInstance(controllerType, values);
+            if (result == null)
+                throw new InvalidOperationException($"Can't resolve {controllerType.FullName} controller type.");
 
             //set the controller properties
             result.Request = request;
             result.Response = response;
             result.Server = mvc.Server;
             result.CurrentScope = scope;
+            result.Mvc = mvc;
 
             return result;
         }
