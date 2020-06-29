@@ -9,9 +9,10 @@ namespace Twino.Mvc
     public class JsonSerializationOptions
     {
         /// <summary>
-        /// If true, newtonsoft library is used
+        /// If true, newtonsoft library is used.
+        /// Default is true.
         /// </summary>
-        public bool UseNewtonsoft { get; set; }
+        public bool UseNewtonsoft { get; set; } = true;
 
         /// <summary>
         /// System Text Options
