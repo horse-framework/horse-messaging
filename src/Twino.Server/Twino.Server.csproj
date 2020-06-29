@@ -6,9 +6,9 @@
         <Product>Twino.Server</Product>
         <Description>Twino TCP Socket Server</Description>
         <PackageTags>twino,tcp,socket,server,http,websocket,tmq,mq</PackageTags>
-        <AssemblyVersion>3.1.0</AssemblyVersion>
-        <FileVersion>3.1.0</FileVersion>
-        <PackageVersion>3.1.0</PackageVersion>
+        <AssemblyVersion>3.1.1</AssemblyVersion>
+        <FileVersion>3.1.1</FileVersion>
+        <PackageVersion>3.1.1</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>

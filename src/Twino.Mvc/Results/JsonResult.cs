@@ -66,6 +66,9 @@ namespace Twino.Mvc.Results
         /// </summary>
         public async Task SetAsync(object model)
         {
+            if (Options == null)
+                Options = new JsonSerializationOptions();
+            
             if (Options.UseNewtonsoft)
             {
                 string serialized = Options.NewtonsoftOptions != null
@@ -86,6 +89,9 @@ namespace Twino.Mvc.Results
         /// </summary>
         public void Set(object model)
         {
+            if (Options == null)
+                Options = new JsonSerializationOptions();
+            
             if (Options.UseNewtonsoft)
             {
                 string serialized = Options.NewtonsoftOptions != null
