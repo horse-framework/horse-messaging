@@ -309,9 +309,14 @@ namespace Twino.Mvc
                         string content = Encoding.UTF8.GetString(request.ContentStream.ToArray());
                         if (ap.FromName == "json")
                         {
-                            paramValue.Value = Mvc.JsonOptions!=null 
-                                                   ? Newtonsoft.Json.JsonConvert.DeserializeObject(content, ap.ParameterType, Mvc.JsonOptions)
-                                                   : Newtonsoft.Json.JsonConvert.DeserializeObject(content, ap.ParameterType);
+                            if (Mvc.JsonInputOptions.UseNewtonsoft)
+                            {
+                                paramValue.Value = Mvc.JsonInputOptions.NewtonsoftOptions != null
+                                                       ? Newtonsoft.Json.JsonConvert.DeserializeObject(content, ap.ParameterType, Mvc.JsonInputOptions.NewtonsoftOptions)
+                                                       : Newtonsoft.Json.JsonConvert.DeserializeObject(content, ap.ParameterType);
+                            }
+                            else
+                                paramValue.Value = System.Text.Json.JsonSerializer.Deserialize(content, ap.ParameterType, Mvc.JsonInputOptions.SystemTextOptions);
                         }
                         else if (ap.FromName == "xml")
                         {

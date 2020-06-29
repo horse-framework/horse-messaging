@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Newtonsoft.Json;
 using Twino.Core;
 using Twino.Ioc;
 using Twino.Mvc.Auth;
@@ -14,7 +13,7 @@ using Twino.Mvc.Middlewares;
 using Twino.Mvc.Results;
 using Twino.Mvc.Routing;
 
-[assembly:InternalsVisibleTo("Test.Mvc")]
+[assembly: InternalsVisibleTo("Test.Mvc")]
 
 namespace Twino.Mvc
 {
@@ -94,11 +93,18 @@ namespace Twino.Mvc
         /// Mvc application builder
         /// </summary>
         internal MvcAppBuilder AppBuilder { get; private set; }
-        
+
         /// <summary>
-        /// Model deserializer options for action parameters
+        /// Default JSON serialization options for input models.
+        /// Used for deserializing action method parameters
         /// </summary>
-        public JsonSerializerSettings JsonOptions { get; set; }
+        public JsonSerializationOptions JsonInputOptions { get; } = new JsonSerializationOptions();
+
+        /// <summary>
+        /// Default JSON serialization options for output models.
+        /// Used for serializing action method return values
+        /// </summary>
+        public JsonSerializationOptions JsonOutputOptions { get; } = new JsonSerializationOptions();
 
         #endregion
 

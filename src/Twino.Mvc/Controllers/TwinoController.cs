@@ -34,6 +34,11 @@ namespace Twino.Mvc.Controllers
         public ITwinoServer Server { get; internal set; }
 
         /// <summary>
+        /// Twino MVC Object of the controller
+        /// </summary>
+        public TwinoMvc Mvc { get; internal set; }
+
+        /// <summary>
         /// Get Claims for user associated for executing request
         /// </summary>
         public ClaimsPrincipal User { get; internal set; }
@@ -50,9 +55,10 @@ namespace Twino.Mvc.Controllers
         /// <summary>
         /// Creates new JSON result from the object. Status code will be set to 200.
         /// </summary>
-        protected IActionResult Json(object obj)
+        protected IActionResult Json(object obj, JsonSerializationOptions options = null)
         {
             JsonResult json = new JsonResult();
+            json.Options = options ?? Mvc.JsonOutputOptions;
             json.Set(obj);
             return json;
         }
@@ -60,9 +66,10 @@ namespace Twino.Mvc.Controllers
         /// <summary>
         /// Creates new JSON result from the object. Status code will be set to 200.
         /// </summary>
-        protected async Task<IActionResult> JsonAsync(object obj, HttpStatusCode statusCode = HttpStatusCode.OK)
+        protected async Task<IActionResult> JsonAsync(object obj, HttpStatusCode statusCode = HttpStatusCode.OK, JsonSerializationOptions options = null)
         {
             JsonResult json = new JsonResult(statusCode);
+            json.Options = options ?? Mvc.JsonOutputOptions;
             await json.SetAsync(obj);
             return json;
         }
@@ -125,7 +132,7 @@ namespace Twino.Mvc.Controllers
 
         #endregion
 
-        #region Status Code - Json
+        #region Status Code
 
         /// <summary>
         /// Returns JSON result with 200 HTTP status code
