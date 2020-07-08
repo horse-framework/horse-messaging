@@ -12,6 +12,15 @@ namespace Twino.Extensions.Data
     {
         #region Add Context
 
+        private static void AddContextOptions<TContext>(IServiceContainer services, DbContextOptions<TContext> options)
+            where TContext : DbContext
+        {
+            if (!services.Contains<DbContextOptions>())
+                services.AddSingleton<DbContextOptions>(options);
+
+            services.AddSingleton(options);
+        }
+
         /// <summary>
         /// Adds database context as scoped
         /// </summary>
@@ -22,7 +31,7 @@ namespace Twino.Extensions.Data
             DbContextOptionsBuilder<TContext> builder = new DbContextOptionsBuilder<TContext>();
             contextOptions(builder);
 
-            services.AddSingleton(builder.Options);
+            AddContextOptions(services, builder.Options);
             services.AddScoped<TContext, TContext>();
 
             return services;
@@ -38,7 +47,7 @@ namespace Twino.Extensions.Data
             DbContextOptionsBuilder<TContext> builder = new DbContextOptionsBuilder<TContext>();
             contextOptions(builder);
 
-            services.AddSingleton(builder.Options);
+            AddContextOptions(services, builder.Options);
             services.AddTransient<TContext, TContext>();
 
             return services;
@@ -58,7 +67,7 @@ namespace Twino.Extensions.Data
             DbContextOptionsBuilder<TContext> builder = new DbContextOptionsBuilder<TContext>();
             contextOptions(builder);
 
-            services.AddSingleton(builder.Options);
+            AddContextOptions(services, builder.Options);
             services.AddScopedPool<TContext, TContext>();
 
             return services;
@@ -76,7 +85,7 @@ namespace Twino.Extensions.Data
             DbContextOptionsBuilder<TContext> builder = new DbContextOptionsBuilder<TContext>();
             contextOptions(builder);
 
-            services.AddSingleton(builder.Options);
+            AddContextOptions(services, builder.Options);
             services.AddScopedPool<TContext, TContext>(poolOptions);
 
             return services;
@@ -96,7 +105,7 @@ namespace Twino.Extensions.Data
             DbContextOptionsBuilder<TContext> builder = new DbContextOptionsBuilder<TContext>();
             contextOptions(builder);
 
-            services.AddSingleton(builder.Options);
+            AddContextOptions(services, builder.Options);
             services.AddScopedPool<TContext, TContext>(poolOptions, afterInstanceCreated);
 
             return services;
@@ -116,7 +125,7 @@ namespace Twino.Extensions.Data
             DbContextOptionsBuilder<TContext> builder = new DbContextOptionsBuilder<TContext>();
             contextOptions(builder);
 
-            services.AddSingleton(builder.Options);
+            AddContextOptions(services, builder.Options);
             services.AddTransientPool<TContext, TContext>();
 
             return services;
@@ -134,7 +143,7 @@ namespace Twino.Extensions.Data
             DbContextOptionsBuilder<TContext> builder = new DbContextOptionsBuilder<TContext>();
             contextOptions(builder);
 
-            services.AddSingleton(builder.Options);
+            AddContextOptions(services, builder.Options);
             services.AddTransientPool<TContext, TContext>(poolOptions);
 
             return services;
@@ -154,7 +163,7 @@ namespace Twino.Extensions.Data
             DbContextOptionsBuilder<TContext> builder = new DbContextOptionsBuilder<TContext>();
             contextOptions(builder);
 
-            services.AddSingleton(builder.Options);
+            AddContextOptions(services, builder.Options);
             services.AddTransientPool<TContext, TContext>(poolOptions, afterInstanceCreated);
 
             return services;
