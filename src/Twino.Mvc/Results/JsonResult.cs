@@ -72,8 +72,8 @@ namespace Twino.Mvc.Results
             if (Options.UseNewtonsoft)
             {
                 string serialized = Options.NewtonsoftOptions != null
-                                        ? JsonConvert.SerializeObject(model)
-                                        : JsonConvert.SerializeObject(model, Options.NewtonsoftOptions);
+                                        ? JsonConvert.SerializeObject(model, Options.NewtonsoftOptions)
+                                        : JsonConvert.SerializeObject(model);
 
                 Stream = new MemoryStream(Encoding.UTF8.GetBytes(serialized));
             }
@@ -95,8 +95,8 @@ namespace Twino.Mvc.Results
             if (Options.UseNewtonsoft)
             {
                 string serialized = Options.NewtonsoftOptions != null
-                                        ? JsonConvert.SerializeObject(model)
-                                        : JsonConvert.SerializeObject(model, Options.NewtonsoftOptions);
+                                        ? JsonConvert.SerializeObject(model, Options.NewtonsoftOptions)
+                                        : JsonConvert.SerializeObject(model);
 
                 Stream = new MemoryStream(Encoding.UTF8.GetBytes(serialized));
             }
