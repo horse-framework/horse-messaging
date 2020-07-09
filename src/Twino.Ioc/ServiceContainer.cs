@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Twino.Ioc.Pool;
 
 namespace Twino.Ioc
@@ -15,7 +17,7 @@ namespace Twino.Ioc
         /// <summary>
         /// Service descriptor items
         /// </summary>
-        private Dictionary<Type, ServiceDescriptor> Items { get; set; }
+        private readonly Dictionary<Type, ServiceDescriptor> _items;
 
         #region Init - Dispose
 
@@ -24,7 +26,7 @@ namespace Twino.Ioc
         /// </summary>
         public ServiceContainer()
         {
-            Items = new Dictionary<Type, ServiceDescriptor>();
+            _items = new Dictionary<Type, ServiceDescriptor>();
         }
 
         /// <summary>
@@ -102,7 +104,7 @@ namespace Twino.Ioc
         /// </summary>
         public void AddTransient(Type serviceType, Type implementationType, Type proxyType, Delegate afterCreated)
         {
-            if (Items.ContainsKey(serviceType))
+            if (_items.ContainsKey(serviceType))
                 throw new InvalidOperationException($"Specified service type is already added into service container: {serviceType.Name}");
 
             ServiceDescriptor descriptor = new ServiceDescriptor
@@ -116,7 +118,7 @@ namespace Twino.Ioc
                                                AfterCreatedMethod = afterCreated
                                            };
 
-            Items.Add(serviceType, descriptor);
+            _items.Add(serviceType, descriptor);
         }
 
         #endregion
@@ -186,7 +188,7 @@ namespace Twino.Ioc
         /// </summary>
         public void AddScoped(Type serviceType, Type implementationType, Type proxyType, Delegate afterCreated)
         {
-            if (Items.ContainsKey(serviceType))
+            if (_items.ContainsKey(serviceType))
                 throw new InvalidOperationException("Specified service type is already added into service container");
 
             ServiceDescriptor descriptor = new ServiceDescriptor
@@ -200,7 +202,7 @@ namespace Twino.Ioc
                                                AfterCreatedMethod = afterCreated
                                            };
 
-            Items.Add(serviceType, descriptor);
+            _items.Add(serviceType, descriptor);
         }
 
         #endregion
@@ -286,7 +288,7 @@ namespace Twino.Ioc
                                                Implementation = ImplementationType.Singleton
                                            };
 
-            Items.Add(serviceType, descriptor);
+            _items.Add(serviceType, descriptor);
         }
 
         /// <summary>
@@ -305,7 +307,7 @@ namespace Twino.Ioc
                                                Implementation = ImplementationType.Singleton
                                            };
 
-            Items.Add(serviceType, descriptor);
+            _items.Add(serviceType, descriptor);
         }
 
         /// <summary>
@@ -323,7 +325,7 @@ namespace Twino.Ioc
                                                AfterCreatedMethod = afterCreated
                                            };
 
-            Items.Add(serviceType, descriptor);
+            _items.Add(serviceType, descriptor);
         }
 
         /// <summary>
@@ -343,7 +345,7 @@ namespace Twino.Ioc
                                                AfterCreatedMethod = afterCreated
                                            };
 
-            Items.Add(serviceType, descriptor);
+            _items.Add(serviceType, descriptor);
         }
 
         /// <summary>
@@ -361,7 +363,7 @@ namespace Twino.Ioc
                                                Implementation = ImplementationType.Singleton
                                            };
 
-            Items.Add(serviceType, descriptor);
+            _items.Add(serviceType, descriptor);
         }
 
         #endregion
@@ -580,7 +582,7 @@ namespace Twino.Ioc
                                                Implementation = ImplementationType.Singleton
                                            };
 
-            Items.Add(typeof(TService), descriptor);
+            _items.Add(typeof(TService), descriptor);
         }
 
         /// <summary>
@@ -605,7 +607,7 @@ namespace Twino.Ioc
                                                Implementation = ImplementationType.Singleton
                                            };
 
-            Items.Add(typeof(TService), descriptor);
+            _items.Add(typeof(TService), descriptor);
         }
 
         #endregion
@@ -694,7 +696,11 @@ namespace Twino.Ioc
             {
                 //create new instance
                 case ImplementationType.Transient:
-                    object transient = await CreateInstance(descriptor.ImplementationType, scope);
+                    object transient;
+                    if (descriptor.ImplementationFactory != null)
+                        transient = descriptor.ImplementationFactory(this);
+                    else
+                        transient = await CreateInstance(descriptor.ImplementationType, scope);
 
                     if (descriptor.AfterCreatedMethod != null)
                         descriptor.AfterCreatedMethod.DynamicInvoke(transient);
@@ -720,7 +726,11 @@ namespace Twino.Ioc
                         return descriptor.Instance;
 
                     //create instance for first time and set Instance property of descriptor to prevent re-create for next times
-                    object instance = await CreateInstance(descriptor.ImplementationType, scope);
+                    object instance;
+                    if (descriptor.ImplementationFactory != null)
+                        instance = descriptor.ImplementationFactory(this);
+                    else
+                        instance = await CreateInstance(descriptor.ImplementationType, scope);
 
                     if (descriptor.AfterCreatedMethod != null)
                         descriptor.AfterCreatedMethod.DynamicInvoke(instance);
@@ -757,12 +767,12 @@ namespace Twino.Ioc
             ServiceDescriptor descriptor;
 
             //finds by service type
-            if (Items.ContainsKey(serviceType))
-                descriptor = Items[serviceType];
+            if (_items.ContainsKey(serviceType))
+                descriptor = _items[serviceType];
 
             //if could not find by service type, tries to find by implementation type
             else
-                descriptor = Items.Values.FirstOrDefault(x => x.ImplementationType == serviceType);
+                descriptor = _items.Values.FirstOrDefault(x => x.ImplementationType == serviceType);
 
             return descriptor;
         }
@@ -822,6 +832,15 @@ namespace Twino.Ioc
             return new DefaultContainerScope();
         }
 
+        /// <summary>
+        /// Gets the service from the container.
+        /// This method is added for Microsost Extensions implementation.
+        /// </summary>
+        public object GetService(Type serviceType)
+        {
+            return Get(serviceType);
+        }
+
         #endregion
 
         #region Remove
@@ -840,8 +859,8 @@ namespace Twino.Ioc
         /// </summary>
         public void Remove(Type type)
         {
-            if (Items.ContainsKey(type))
-                Items.Remove(type);
+            if (_items.ContainsKey(type))
+                _items.Remove(type);
         }
 
         #endregion
@@ -853,7 +872,7 @@ namespace Twino.Ioc
         /// </summary>
         public bool Contains(Type serviceType)
         {
-            return Items.ContainsKey(serviceType);
+            return _items.ContainsKey(serviceType);
         }
 
         /// <summary>
@@ -862,6 +881,168 @@ namespace Twino.Ioc
         public bool Contains<T>()
         {
             return Contains(typeof(T));
+        }
+
+        private ServiceDescriptor MapServiceDescriptor(Microsoft.Extensions.DependencyInjection.ServiceDescriptor item)
+        {
+            if (item == null)
+                throw new NullReferenceException("Service descriptor is null");
+
+            ImplementationType impl;
+            switch (item.Lifetime)
+            {
+                case ServiceLifetime.Scoped:
+                    impl = ImplementationType.Scoped;
+                    break;
+                case ServiceLifetime.Singleton:
+                    impl = ImplementationType.Singleton;
+                    break;
+
+                default:
+                    impl = ImplementationType.Transient;
+                    break;
+            }
+
+            ServiceDescriptor descriptor = new ServiceDescriptor
+                                           {
+                                               ImplementationType = item.ImplementationType,
+                                               Instance = item.ImplementationInstance,
+                                               ServiceType = item.ServiceType,
+                                               Implementation = impl,
+                                               MicrosoftServiceDescriptor = item,
+                                               ImplementationFactory = item.ImplementationFactory
+                                           };
+
+            return descriptor;
+        }
+
+        private Microsoft.Extensions.DependencyInjection.ServiceDescriptor MapToExtensionDescriptor(ServiceDescriptor descriptor)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+        #region Microsoft Extensions Implementation
+
+        /// <summary>
+        /// Services count of container
+        /// </summary>
+        public int Count => _items.Count;
+
+        /// <summary>
+        /// Container read only status. Always false.
+        /// </summary>
+        public bool IsReadOnly => false;
+
+        /// <summary>
+        /// Returns all service descriptors in container
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerator<Microsoft.Extensions.DependencyInjection.ServiceDescriptor> GetEnumerator()
+        {
+            foreach (ServiceDescriptor descriptor in _items.Values)
+            {
+                if (descriptor.MicrosoftServiceDescriptor != null)
+                    yield return descriptor.MicrosoftServiceDescriptor;
+
+                yield return MapToExtensionDescriptor(descriptor);
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
+        /// <summary>
+        /// Adds new Microsoft Extension service to service container
+        /// </summary>
+        public void Add(Microsoft.Extensions.DependencyInjection.ServiceDescriptor item)
+        {
+            ServiceDescriptor descriptor = MapServiceDescriptor(item);
+            if (descriptor != null)
+                _items.Add(descriptor.ServiceType, descriptor);
+        }
+
+        /// <summary>
+        /// Inserts new Microsoft Extension service to service container
+        /// </summary>
+        public void Insert(int index, Microsoft.Extensions.DependencyInjection.ServiceDescriptor item)
+        {
+            Add(item);
+        }
+
+        /// <summary>
+        /// Removes all services from container
+        /// </summary>
+        public void Clear()
+        {
+            _items.Clear();
+        }
+
+        /// <summary>
+        /// Returns true is service is registered 
+        /// </summary>
+        public bool Contains(Microsoft.Extensions.DependencyInjection.ServiceDescriptor item)
+        {
+            return _items.Values.Any(x => x.MicrosoftServiceDescriptor == item);
+        }
+
+        /// <summary>
+        /// Removes a service implementation
+        /// </summary>
+        public bool Remove(Microsoft.Extensions.DependencyInjection.ServiceDescriptor item)
+        {
+            var kv = _items.FirstOrDefault(x => x.Value.MicrosoftServiceDescriptor == item);
+            if (kv.Value != null)
+            {
+                _items.Remove(kv.Key);
+                return true;
+            }
+
+            return false;
+        }
+
+        #endregion
+
+        #region Not Implemented
+
+        /// <summary>
+        /// Method is added to IServiceContainer implementation of Microsoft Extensions.
+        /// throws NotImplementedException
+        /// </summary>
+        public void CopyTo(Microsoft.Extensions.DependencyInjection.ServiceDescriptor[] array, int arrayIndex)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Method is added to IServiceContainer implementation of Microsoft Extensions.
+        /// throws NotImplementedException
+        /// </summary>
+        public int IndexOf(Microsoft.Extensions.DependencyInjection.ServiceDescriptor item)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Method is added to IServiceContainer implementation of Microsoft Extensions.
+        /// throws NotImplementedException
+        /// </summary>
+        public void RemoveAt(int index)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Method is added to IServiceContainer implementation of Microsoft Extensions.
+        /// throws NotImplementedException
+        /// </summary>
+        public Microsoft.Extensions.DependencyInjection.ServiceDescriptor this[int index]
+        {
+            get => throw new NotImplementedException();
+            set => throw new NotImplementedException();
         }
 
         #endregion

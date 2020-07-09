@@ -40,7 +40,7 @@ namespace Twino.Ioc
         public async Task<TService> Get<TService>(IServiceContainer services) where TService : class
         {
             object o = await Get(typeof(TService), services);
-            return (TService)o;
+            return (TService) o;
         }
 
         /// <summary>
@@ -70,7 +70,10 @@ namespace Twino.Ioc
                 return instance;
 
             //we couldn't find any created instance. create new.
-            instance = await services.CreateInstance(descriptor.ImplementationType, this);
+            if (descriptor.ImplementationFactory != null)
+                instance = descriptor.ImplementationFactory(services);
+            else
+                instance = await services.CreateInstance(descriptor.ImplementationType, this);
 
             if (instance is null) return null;
 
@@ -79,7 +82,7 @@ namespace Twino.Ioc
 
             if (descriptor.ProxyType != null)
             {
-                IServiceProxy p = (IServiceProxy)await services.CreateInstance(descriptor.ProxyType, this);
+                IServiceProxy p = (IServiceProxy) await services.CreateInstance(descriptor.ProxyType, this);
                 instance = p.Proxy(instance);
             }
 
@@ -103,7 +106,7 @@ namespace Twino.Ioc
                         _poolInstances[pool].Add(descriptor);
                 }
                 else
-                    _poolInstances.Add(pool, new List<PoolServiceDescriptor> { descriptor });
+                    _poolInstances.Add(pool, new List<PoolServiceDescriptor> {descriptor});
             }
         }
 

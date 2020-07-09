@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Twino.Ioc.Pool;
 
 namespace Twino.Ioc
@@ -7,7 +8,7 @@ namespace Twino.Ioc
     /// <summary>
     /// Service container implementation for Dependency Inversion
     /// </summary>
-    public interface IServiceContainer
+    public interface IServiceContainer : IServiceCollection, IServiceProvider
     {
         #region Add Transient
 

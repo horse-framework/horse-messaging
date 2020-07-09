@@ -63,6 +63,11 @@ namespace Twino.Ioc
         public ImplementationType Implementation { get; set; }
 
         /// <summary>
+        /// If not null, called for creating instance of the object
+        /// </summary>
+        public Func<IServiceProvider, object> ImplementationFactory { get; set; }
+
+        /// <summary>
         /// If true, implementation is pool. Instance is type of IServicePool with generic TService template
         /// </summary>
         public bool IsPool { get; set; }
@@ -71,6 +76,10 @@ namespace Twino.Ioc
         /// This method is called after instance is created
         /// </summary>
         public Delegate AfterCreatedMethod { get; set; }
-    }
 
+        /// <summary>
+        /// Reference descriptor for Microsoft Extensions implementation
+        /// </summary>
+        internal Microsoft.Extensions.DependencyInjection.ServiceDescriptor MicrosoftServiceDescriptor { get; set; }
+    }
 }
