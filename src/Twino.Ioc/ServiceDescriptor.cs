@@ -1,4 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using Twino.Ioc.Exceptions;
 
 namespace Twino.Ioc
 {
@@ -34,13 +38,13 @@ namespace Twino.Ioc
         /// End-user will ask the implementation type with this type.
         /// Usually this is interface type
         /// </summary>
-        public Type ServiceType { get; set; }
+        public Type ServiceType { get; }
 
         /// <summary>
         /// Real object type.
         /// Usually end-user doesn't know this type.
         /// </summary>
-        public Type ImplementationType { get; set; }
+        public Type ImplementationType { get; }
 
         /// <summary>
         /// If the descriptor type is Singleton, this object keeps the singleton object.
@@ -78,8 +82,34 @@ namespace Twino.Ioc
         public Delegate AfterCreatedMethod { get; set; }
 
         /// <summary>
+        /// Usable contructors of implementation type
+        /// </summary>
+        internal ConstructorInfo[] Constructors { get; }
+
+        /// <summary>
         /// Reference descriptor for Microsoft Extensions implementation
         /// </summary>
         internal Microsoft.Extensions.DependencyInjection.ServiceDescriptor MicrosoftServiceDescriptor { get; set; }
+
+        /// <summary>
+        /// Creates new service descriptor object
+        /// </summary>
+        public ServiceDescriptor(Type serviceType, Type implementationType) : this(serviceType, implementationType, false)
+        {
+        }
+
+        /// <summary>
+        /// Creates new service descriptor object
+        /// </summary>
+        internal ServiceDescriptor(Type serviceType, Type implementationType, bool findPossibleConstructor)
+        {
+            ServiceType = serviceType;
+            ImplementationType = implementationType;
+
+            if (findPossibleConstructor)
+                Constructors = implementationType.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+            else
+                Constructors = Helpers.FindUsableConstructors(implementationType);
+        }
     }
 }

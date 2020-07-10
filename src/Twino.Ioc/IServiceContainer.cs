@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Twino.Ioc.Pool;
@@ -396,7 +397,7 @@ namespace Twino.Ioc
         /// <summary>
         /// Creates new instance of type
         /// </summary>
-        Task<object> CreateInstance(Type type, IContainerScope scope = null);
+        Task<object> CreateInstance(Type type, ConstructorInfo[] usableConstructors, IContainerScope scope = null);
 
         /// <summary>
         /// Creates new scope belong this container.
@@ -405,5 +406,11 @@ namespace Twino.Ioc
         IContainerScope CreateScope();
 
         #endregion
+        
+        /// <summary>
+        /// Checks all registered services.
+        /// Throws exception if there are missing registrations or circular references
+        /// </summary>
+        public void CheckServices();
     }
 }

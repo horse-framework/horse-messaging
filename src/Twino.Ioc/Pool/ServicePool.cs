@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -47,6 +48,11 @@ namespace Twino.Ioc.Pool
         /// </summary>
         private PoolIdleHandler<TService, TImplementation> _idleHandler;
 
+        /// <summary>
+        /// Usable constructors of implementation type
+        /// </summary>
+        protected ConstructorInfo[] ImplementationTypeConstructors { get; set; }
+
         #endregion
 
         #region Init - Release
@@ -78,6 +84,8 @@ namespace Twino.Ioc.Pool
                 _idleHandler = new PoolIdleHandler<TService, TImplementation>(this);
                 _idleHandler.Start();
             }
+
+            ImplementationTypeConstructors = Helpers.FindUsableConstructors(typeof(TImplementation));
         }
 
         /// <summary>
@@ -101,7 +109,7 @@ namespace Twino.Ioc.Pool
         {
             descriptor.Locked = false;
         }
-        
+
         /// <summary>
         /// Disposes pool and releases all resources
         /// </summary>
@@ -234,13 +242,13 @@ namespace Twino.Ioc.Pool
             if (Type == ImplementationType.Scoped && scope != null)
             {
                 //we couldn't find any created instance. create new.
-                object instance = await Container.CreateInstance(typeof(TImplementation), scope);
+                object instance = await Container.CreateInstance(typeof(TImplementation), ImplementationTypeConstructors, scope);
                 scope.PutItem(typeof(TService), instance);
                 descriptor.Instance = (TService) instance;
             }
             else
             {
-                object instance = await Container.CreateInstance(typeof(TImplementation), scope);
+                object instance = await Container.CreateInstance(typeof(TImplementation), ImplementationTypeConstructors, scope);
                 descriptor.Instance = (TService) instance;
             }
 
@@ -296,16 +304,16 @@ namespace Twino.Ioc.Pool
             if (Type == ImplementationType.Scoped && scope != null)
             {
                 //we couldn't find any created instance. create new.
-                object instance = await Container.CreateInstance(typeof(TImplementation), scope);
-                IServiceProxy p = (IServiceProxy) await Container.CreateInstance(typeof(TProxy), scope);
+                object instance = await Container.CreateInstance(typeof(TImplementation), ImplementationTypeConstructors, scope);
+                IServiceProxy p = (IServiceProxy) await Container.CreateInstance(typeof(TProxy), null, scope);
                 object proxyObj = p.Proxy(instance);
                 scope.PutItem(typeof(TService), proxyObj);
                 descriptor.Instance = (TService) proxyObj;
             }
             else
             {
-                object instance = await Container.CreateInstance(typeof(TImplementation), scope);
-                IServiceProxy p = (IServiceProxy) await Container.CreateInstance(typeof(TProxy), scope);
+                object instance = await Container.CreateInstance(typeof(TImplementation), ImplementationTypeConstructors, scope);
+                IServiceProxy p = (IServiceProxy) await Container.CreateInstance(typeof(TProxy), null, scope);
                 object proxyObj = p.Proxy(instance);
                 descriptor.Instance = (TService) proxyObj;
             }

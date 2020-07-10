@@ -73,7 +73,7 @@ namespace Twino.Ioc
             if (descriptor.ImplementationFactory != null)
                 instance = descriptor.ImplementationFactory(services);
             else
-                instance = await services.CreateInstance(descriptor.ImplementationType, this);
+                instance = await services.CreateInstance(descriptor.ImplementationType, descriptor.Constructors, this);
 
             if (instance is null) return null;
 
@@ -82,7 +82,7 @@ namespace Twino.Ioc
 
             if (descriptor.ProxyType != null)
             {
-                IServiceProxy p = (IServiceProxy) await services.CreateInstance(descriptor.ProxyType, this);
+                IServiceProxy p = (IServiceProxy) await services.CreateInstance(descriptor.ProxyType, null, this);
                 instance = p.Proxy(instance);
             }
 
