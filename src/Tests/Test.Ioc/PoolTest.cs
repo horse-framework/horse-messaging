@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Test.Ioc.Services;
 using Twino.Ioc;
+using Twino.Ioc.Exceptions;
 using Xunit;
 
 namespace Test.Ioc
@@ -45,7 +46,7 @@ namespace Test.Ioc
             ISingleService s1 = await services.Get<ISingleService>(scope);
             Assert.Equal(single.Foo, s1.Foo);
 
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<ISingleService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<ISingleService>());
 
             IContainerScope scope2 = services.CreateScope();
             ISingleService s3 = await services.Get<ISingleService>(scope2);

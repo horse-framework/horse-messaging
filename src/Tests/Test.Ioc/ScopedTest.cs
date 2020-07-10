@@ -1,6 +1,7 @@
 using System;
 using Test.Ioc.Services;
 using Twino.Ioc;
+using Twino.Ioc.Exceptions;
 using Xunit;
 
 namespace Test.Ioc
@@ -22,7 +23,7 @@ namespace Test.Ioc
             Assert.Equal(s1.Foo, s2.Foo);
 
             //scopeless should throw error
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<ISingleService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<ISingleService>());
 
             //another scope should not equal
             IContainerScope scope2 = services.CreateScope();
@@ -38,6 +39,8 @@ namespace Test.Ioc
             services.AddScoped<IParentService, ParentService>();
             services.AddScoped<IFirstChildService, FirstChildService>();
             services.AddScoped<ISecondChildService, SecondChildService>();
+
+            services.CheckServices();
 
             IContainerScope scope = services.CreateScope();
 
@@ -60,9 +63,9 @@ namespace Test.Ioc
             Assert.Equal(parent.Second.Foo, second.Foo);
 
             //scopeless should throw error
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<IParentService>());
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<IFirstChildService>());
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<ISecondChildService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<IParentService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<IFirstChildService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<ISecondChildService>());
 
             //another scope should not equal
             IContainerScope scope2 = services.CreateScope();
@@ -115,7 +118,7 @@ namespace Test.Ioc
             Assert.Equal(nest.Parent.Second.Foo, second.Foo);
 
             //scopeless should throw error
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<INestParentService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<INestParentService>());
 
             //another scope should not equal
             IContainerScope scope2 = services.CreateScope();

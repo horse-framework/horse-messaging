@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Test.Ioc.Services;
 using Twino.Ioc;
+using Twino.Ioc.Exceptions;
 using Xunit;
 
 namespace Test.Ioc
@@ -142,9 +143,9 @@ namespace Test.Ioc
             services.AddScoped<IFirstChildService, FirstChildService>();
             services.AddScoped<ISecondChildService, SecondChildService>();
 
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<IParentService>());
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<IFirstChildService>());
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<ISecondChildService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<IParentService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<IFirstChildService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<ISecondChildService>());
 
             IContainerScope scope = services.CreateScope();
             IParentService parent = await services.Get<IParentService>(scope);
@@ -172,9 +173,9 @@ namespace Test.Ioc
             services.AddScoped<IFirstChildService, FirstChildService>();
             services.AddScoped<ISecondChildService, SecondChildService>();
 
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<IParentService>());
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<IFirstChildService>());
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<ISecondChildService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<IParentService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<IFirstChildService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<ISecondChildService>());
 
             IContainerScope scope = services.CreateScope();
             IParentService parent = await services.Get<IParentService>(scope);
@@ -226,11 +227,11 @@ namespace Test.Ioc
             Assert.Equal(parent.First.Foo, p.First.Foo);
             Assert.Equal(parent.Second.Foo, p.Second.Foo);
 
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<IFirstChildService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<IFirstChildService>());
             IFirstChildService f2 = await services.Get<IFirstChildService>(scope);
             Assert.Equal(parent.First.Foo, f2.Foo);
 
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<ISecondChildService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<ISecondChildService>());
             ISecondChildService s2 = await services.Get<ISecondChildService>(scope);
             Assert.Equal(parent.Second.Foo, s2.Foo);
         }
@@ -254,11 +255,11 @@ namespace Test.Ioc
             Assert.Equal(parent.First.Foo, p.First.Foo);
             Assert.Equal(parent.Second.Foo, p.Second.Foo);
 
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<IFirstChildService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<IFirstChildService>());
             IFirstChildService f2 = await services.Get<IFirstChildService>(scope);
             Assert.Equal(parent.First.Foo, f2.Foo);
 
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<ISecondChildService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<ISecondChildService>());
             ISecondChildService s2 = await services.Get<ISecondChildService>(scope);
             Assert.Equal(parent.Second.Foo, s2.Foo);
 
@@ -415,8 +416,8 @@ namespace Test.Ioc
 
             IContainerScope scope = services.CreateScope();
 
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<IParentService>());
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<ISecondChildService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<IParentService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<ISecondChildService>());
 
             IParentService parent = await services.Get<IParentService>(scope);
             parent.Foo = "parent";
@@ -453,8 +454,8 @@ namespace Test.Ioc
 
             IContainerScope scope = services.CreateScope();
 
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<IParentService>());
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<ISecondChildService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<IParentService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<ISecondChildService>());
 
             IParentService parent = await services.Get<IParentService>(scope);
             parent.Foo = "parent";
@@ -492,8 +493,8 @@ namespace Test.Ioc
 
             IContainerScope scope = services.CreateScope();
 
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<IParentService>());
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<ISecondChildService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<IParentService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<ISecondChildService>());
 
             IParentService parent = await services.Get<IParentService>(scope);
             parent.Foo = "parent";
@@ -532,8 +533,8 @@ namespace Test.Ioc
 
             IContainerScope scope = services.CreateScope();
 
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<IParentService>());
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<ISecondChildService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<IParentService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => await services.Get<ISecondChildService>());
 
             IParentService parent = await services.Get<IParentService>(scope);
             parent.Foo = "parent";
@@ -570,8 +571,10 @@ namespace Test.Ioc
 
             IContainerScope scope = services.CreateScope();
 
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<IParentService>());
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await services.Get<ISecondChildService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => 
+                                                         await services.Get<IParentService>());
+            await Assert.ThrowsAsync<ScopeException>(async () => 
+                                                         await services.Get<ISecondChildService>());
 
             IParentService parent = await services.Get<IParentService>(scope);
             parent.Foo = "parent";
