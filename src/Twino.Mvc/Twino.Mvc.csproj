@@ -26,10 +26,10 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
+    <PackageReference Include="Twino.Ioc" Version="3.1.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Twino.Ioc\Twino.Ioc.csproj" />
     <ProjectReference Include="..\Twino.Protocols.Http\Twino.Protocols.Http.csproj" />
   </ItemGroup>
 
