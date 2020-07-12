@@ -7,10 +7,13 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Twino.Server" Version="3.1.2" />
+    </ItemGroup>
+    
+    <ItemGroup>
       <ProjectReference Include="..\..\Twino.Client.TMQ\Twino.Client.TMQ.csproj" />
       <ProjectReference Include="..\..\Twino.Client.WebSocket\Twino.Client.WebSocket.csproj" />
       <ProjectReference Include="..\..\Twino.Mvc\Twino.Mvc.csproj" />
-      <ProjectReference Include="..\..\Twino.Server\Twino.Server.csproj" />
     </ItemGroup>
 
 </Project>

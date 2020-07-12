@@ -25,9 +25,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Twino.Server" Version="3.1.2" />
+  </ItemGroup>
+  
+  <ItemGroup>
     <ProjectReference Include="..\Twino.Client.TMQ\Twino.Client.TMQ.csproj" />
     <ProjectReference Include="..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
-    <ProjectReference Include="..\Twino.Server\Twino.Server.csproj" />
   </ItemGroup>
 
 </Project>

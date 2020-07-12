@@ -25,9 +25,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Twino.Core\Twino.Core.csproj" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
+    <PackageReference Include="Twino.Core" Version="3.1.2" />
+    <PackageReference Include="Twino.Server" Version="3.1.2" />
+  </ItemGroup>
+  
+  <ItemGroup>
     <ProjectReference Include="..\Twino.Protocols.WebSocket\Twino.Protocols.WebSocket.csproj" />
-    <ProjectReference Include="..\Twino.Server\Twino.Server.csproj" />
   </ItemGroup>
 
 </Project>

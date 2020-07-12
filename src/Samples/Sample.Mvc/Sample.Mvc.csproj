@@ -7,11 +7,14 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Twino.Server" Version="3.1.2" />
+    </ItemGroup>
+    
+    <ItemGroup>
         <ProjectReference Include="..\..\Twino.Extensions.Data\Twino.Extensions.Data.csproj" />
         <ProjectReference Include="..\..\Twino.Extensions.Http\Twino.Extensions.Http.csproj" />
         <ProjectReference Include="..\..\Twino.Mvc.Auth.Jwt\Twino.Mvc.Auth.Jwt.csproj" />
         <ProjectReference Include="..\..\Twino.Mvc\Twino.Mvc.csproj" />
-        <ProjectReference Include="..\..\Twino.Server\Twino.Server.csproj" />
     </ItemGroup>
 
     <ItemGroup>
