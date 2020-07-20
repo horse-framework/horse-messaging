@@ -63,7 +63,7 @@ namespace Twino.Client.TMQ.Operators
         /// Sends a string request to router.
         /// Waits response from at least one binding.
         /// </summary>
-        public async Task<TmqMessage> PublishRequest(string routerName, ushort contentType, string message)
+        public async Task<TmqMessage> PublishRequest(string routerName, string message, ushort contentType = 0)
         {
             TmqMessage msg = new TmqMessage(MessageType.Router, routerName, contentType);
             msg.PendingResponse = true;
@@ -75,7 +75,7 @@ namespace Twino.Client.TMQ.Operators
         /// Sends a request to router.
         /// Waits response from at least one binding.
         /// </summary>
-        public async Task<TmqMessage> PublishRequestJson<TModel>(string routerName, ushort contentType, TModel model)
+        public async Task<TmqMessage> PublishRequestJson<TModel>(string routerName, TModel model, ushort contentType = 0)
         {
             TmqMessage message = new TmqMessage(MessageType.Router, routerName, contentType);
             message.PendingResponse = true;
