@@ -11,9 +11,9 @@
         <PackageVersion>3.2.0</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
-        <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
-        <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
-        <RepositoryUrl>https://github.com/mhelvacikoylu/twino</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/twino-framework/twino-mq</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/twino-framework/twino-mq/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/twino-framework/twino-mq</RepositoryUrl>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
