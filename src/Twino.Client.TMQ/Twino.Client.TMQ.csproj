@@ -6,14 +6,14 @@
         <Product>Twino.Client.TMQ</Product>
         <Description>Twino Messaging Queue Client to connect all TMQ Servers</Description>
         <PackageTags>twino,tmq,client,mq,messaging,queue</PackageTags>
-        <AssemblyVersion>3.1.2</AssemblyVersion>
-        <FileVersion>3.1.2</FileVersion>
-        <PackageVersion>3.1.2</PackageVersion>
+        <AssemblyVersion>3.2.0</AssemblyVersion>
+        <FileVersion>3.2.0</FileVersion>
+        <PackageVersion>3.2.0</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
-        <PackageProjectUrl>https://github.com/mhelvacikoylu/twino</PackageProjectUrl>
-        <PackageLicenseUrl>https://github.com/mhelvacikoylu/twino/blob/master/LICENSE</PackageLicenseUrl>
-        <RepositoryUrl>https://github.com/mhelvacikoylu/twino</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/twino-framework/twino-mq</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/twino-framework/twino-mq/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/twino-framework/twino-mq</RepositoryUrl>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -25,7 +25,10 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Twino.Client.Connectors\Twino.Client.Connectors.csproj" />
+        <PackageReference Include="Twino.Client.Connectors" Version="3.1.2" />
+    </ItemGroup>
+    
+    <ItemGroup>
         <ProjectReference Include="..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
     </ItemGroup>
 

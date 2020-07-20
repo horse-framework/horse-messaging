@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.Protocols.TMQ;
@@ -12,15 +13,28 @@ namespace Twino.MQ.Routing
     /// </summary>
     public class DirectBinding : Binding
     {
-        /// <summary>
-        /// If direct binding is defined by client type or name, there might be multiple receivers.
-        /// If True, only one receiver receives the message.
-        /// If False, all receivers receive the message.
-        /// </summary>
-        public bool OnlyOneReceiver { get; set; }
-
         private DateTime _clientListUpdateTime;
         private MqClient[] _clients;
+        private volatile int _roundRobinIndex = -1;
+
+        /// <summary>
+        /// Direct binding routing method
+        /// </summary>
+        public RouteMethod RouteMethod { get; set; }
+
+        /// <summary>
+        /// Creates new direct binding.
+        /// Name is the name of the binding.
+        /// Target should be client id.
+        /// If you want to target clients by name, target should be @name:client_name.
+        /// Same usage available for client type @type:type_name.
+        /// Priority for router binding.
+        /// </summary>
+        public DirectBinding(string name, string target, int priority, BindingInteraction interaction,
+                             RouteMethod routeMethod = RouteMethod.Distribute)
+            : this(name, target, null, priority, interaction, routeMethod)
+        {
+        }
 
         /// <summary>
         /// Creates new direct binding.
@@ -31,9 +45,11 @@ namespace Twino.MQ.Routing
         /// Content type the value how receiver will see the content type.
         /// Priority for router binding.
         /// </summary>
-        public DirectBinding(string name, string target, ushort contentType, int priority, BindingInteraction interaction)
+        public DirectBinding(string name, string target, ushort? contentType, int priority, BindingInteraction interaction,
+                             RouteMethod routeMethod = RouteMethod.Distribute)
             : base(name, target, contentType, priority, interaction)
         {
+            RouteMethod = routeMethod;
         }
 
         /// <summary>
@@ -47,7 +63,10 @@ namespace Twino.MQ.Routing
 
             message.Type = MessageType.DirectMessage;
             message.SetTarget(Target);
-            message.ContentType = ContentType;
+
+            if (ContentType.HasValue)
+                message.ContentType = ContentType.Value;
+
             message.PendingAcknowledge = false;
             message.PendingResponse = false;
 
@@ -56,15 +75,50 @@ namespace Twino.MQ.Routing
             else if (Interaction == BindingInteraction.Response)
                 message.PendingResponse = true;
 
-            bool atLeastOneSent = false;
-            foreach (MqClient client in clients)
+            switch (RouteMethod)
             {
-                bool sent = await client.SendAsync(message);
-                if (sent && !atLeastOneSent)
-                    atLeastOneSent = true;
+                case RouteMethod.OnlyFirst:
+                    var first = clients.FirstOrDefault();
+                    if (first == null)
+                        return false;
+
+                    return await first.SendAsync(message);
+
+                case RouteMethod.Distribute:
+                    bool atLeastOneSent = false;
+                    foreach (MqClient client in clients)
+                    {
+                        bool sent = await client.SendAsync(message);
+                        if (sent && !atLeastOneSent)
+                            atLeastOneSent = true;
+                    }
+
+                    return atLeastOneSent;
+
+                case RouteMethod.RoundRobin:
+                    return await SendRoundRobin(message);
+
+                default:
+                    return false;
+            }
+        }
+
+        private Task<bool> SendRoundRobin(TmqMessage message)
+        {
+            _roundRobinIndex++;
+            int i = _roundRobinIndex;
+
+            if (i >= _clients.Length)
+            {
+                _roundRobinIndex = 0;
+                i = 0;
             }
 
-            return atLeastOneSent;
+            if (_clients.Length == 0)
+                return Task.FromResult(false);
+
+            var client = _clients[i];
+            return client.SendAsync(message);
         }
 
         /// <summary>

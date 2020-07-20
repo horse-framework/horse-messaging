@@ -81,9 +81,9 @@ namespace Twino.MQ
         Task<Decision> AcknowledgeTimedOut(ChannelQueue queue, MessageDelivery delivery);
 
         /// <summary>
-        /// Message is about to remove
+        /// Message is dequeued
         /// </summary>
-        Task MessageRemoved(ChannelQueue queue, QueueMessage message);
+        Task MessageDequeued(ChannelQueue queue, QueueMessage message);
 
         /// <summary>
         /// Called when an exception is thrown

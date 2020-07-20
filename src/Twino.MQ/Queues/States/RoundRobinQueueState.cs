@@ -110,7 +110,7 @@ namespace Twino.MQ.Queues.States
             if (message.Decision.Allow && message.Decision.PutBack == PutBackDecision.No)
             {
                 _queue.Info.AddMessageRemove();
-                _ = _queue.DeliveryHandler.MessageRemoved(_queue, message);
+                _ = _queue.DeliveryHandler.MessageDequeued(_queue, message);
             }
 
             return PushResult.Success;

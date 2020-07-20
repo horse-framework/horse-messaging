@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using Test.Mq.Internal;
 using Test.Mq.Models;
@@ -425,7 +424,7 @@ namespace Test.Mq
             Channel channel1 = server.Server.FindChannel("ch-push");
             ChannelQueue queue1 = channel1.FindQueue(MessageA.ContentType);
 
-            TmqMessage message = await producer.Routers.PublishRequest("router", MessageA.ContentType, "Hello, World!");
+            TmqMessage message = await producer.Routers.PublishRequest("router", "Hello, World!", MessageA.ContentType);
             Assert.NotNull(message);
             Assert.Equal("Response", message.GetStringContent());
             Assert.Equal(1, queue1.MessageCount());

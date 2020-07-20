@@ -82,7 +82,7 @@ namespace Twino.MQ.Network
                 //check sending message authority
                 if (_server.Authorization != null)
                 {
-                    bool grant = await _server.Authorization.CanMessageToPeer(sender, message, receiver);
+                    bool grant = await _server.Authorization.CanDirectMessage(sender, message, receiver);
                     if (!grant)
                     {
                         await sender.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
@@ -111,7 +111,7 @@ namespace Twino.MQ.Network
             //check sending message authority
             if (_server.Authorization != null)
             {
-                bool grant = await _server.Authorization.CanMessageToPeer(client, message, other);
+                bool grant = await _server.Authorization.CanDirectMessage(client, message, other);
                 if (!grant)
                 {
                     await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));

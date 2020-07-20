@@ -63,6 +63,28 @@ namespace Twino.Client.TMQ.Connectors
         }
 
         /// <summary>
+        /// Subscribes for reading direct messages
+        /// </summary>
+        public void OnDirect<T>(ushort content, Action<T> action)
+        {
+            if (_consumer == null)
+                throw new NullReferenceException("Reader is null. Please init reader first with InitReader methods");
+
+            _consumer.OnDirect(content, action);
+        }
+
+        /// <summary>
+        /// Subscribes for reading direct messages
+        /// </summary>
+        public void OnDirect<T>(ushort content, Action<T, TmqMessage> action)
+        {
+            if (_consumer == null)
+                throw new NullReferenceException("Reader is null. Please init reader first with InitReader methods");
+
+            _consumer.OnDirect(content, action);
+        }
+
+        /// <summary>
         /// Unsubscribes from reading messages in a queue
         /// </summary>
         public void Off(string channel, ushort content)
@@ -71,6 +93,17 @@ namespace Twino.Client.TMQ.Connectors
                 throw new NullReferenceException("Reader is null. Please init reader first with InitReader methods");
 
             _consumer.Off(channel, content);
+        }
+
+        /// <summary>
+        /// Unsubscribes from reading direct messages
+        /// </summary>
+        public void OffDirect(ushort content)
+        {
+            if (_consumer == null)
+                throw new NullReferenceException("Reader is null. Please init reader first with InitReader methods");
+
+            _consumer.Off(content);
         }
 
         /// <summary>

@@ -88,7 +88,7 @@ namespace Twino.MQ.Handlers
         /// <summary>
         /// Does nothing in this implementation
         /// </summary>
-        public async Task MessageRemoved(ChannelQueue queue, QueueMessage message)
+        public async Task MessageDequeued(ChannelQueue queue, QueueMessage message)
         {
             await Task.CompletedTask;
         }

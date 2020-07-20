@@ -64,7 +64,7 @@ namespace Sample.Mq.Server
             return Task.FromResult(new Decision(true, true));
         }
 
-        public Task MessageRemoved(ChannelQueue queue, QueueMessage message)
+        public Task MessageDequeued(ChannelQueue queue, QueueMessage message)
         {
             Console.WriteLine($"Message removed from {queue.Id} queue in {queue.Channel.Name}");
             return Task.CompletedTask;

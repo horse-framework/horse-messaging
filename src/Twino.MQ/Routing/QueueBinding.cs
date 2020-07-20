@@ -45,7 +45,9 @@ namespace Twino.MQ.Routing
 
             msg.Type = MessageType.QueueMessage;
             msg.SetTarget(Target);
-            msg.ContentType = ContentType;
+            
+            // ReSharper disable once PossibleInvalidOperationException
+            msg.ContentType = ContentType.Value;
             msg.PendingAcknowledge = false;
             msg.PendingResponse = false;
 
@@ -75,7 +77,8 @@ namespace Twino.MQ.Routing
             if (channel == null)
                 return null;
 
-            ChannelQueue queue = channel.FindQueue(ContentType);
+            // ReSharper disable once PossibleInvalidOperationException
+            ChannelQueue queue = channel.FindQueue(ContentType.Value);
             if (queue == null)
                 return null;
 
