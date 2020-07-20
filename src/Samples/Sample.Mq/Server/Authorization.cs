@@ -39,11 +39,18 @@ namespace Sample.Mq.Server
             return await Task.FromResult(true);
         }
 
-        public async Task<bool> CanMessageToPeer(MqClient sender, TmqMessage message, MqClient receiver)
+        public async Task<bool> CanDirectMessage(MqClient sender, TmqMessage message, MqClient receiver)
         {
-            Console.WriteLine("Can message to peer passed");
+            Console.WriteLine("Can direct message");
             return await Task.FromResult(true);
         }
+
+        public async Task<bool> CanResponseMessage(MqClient sender, TmqMessage message, MqClient receiver)
+        {
+            Console.WriteLine("Can response message");
+            return await Task.FromResult(true);
+        }
+
 
         public async Task<bool> CanMessageToQueue(MqClient client, ChannelQueue queue, TmqMessage message)
         {

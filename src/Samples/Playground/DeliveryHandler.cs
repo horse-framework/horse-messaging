@@ -97,7 +97,7 @@ namespace Playground
             return Task.FromResult(Decision.JustAllow());
         }
 
-        public Task MessageRemoved(ChannelQueue queue, QueueMessage message)
+        public Task MessageDequeued(ChannelQueue queue, QueueMessage message)
         {
             return Task.CompletedTask;
         }

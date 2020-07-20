@@ -74,7 +74,7 @@ namespace Test.Mq.Internal
             return await Task.FromResult(new Decision(true, false));
         }
 
-        public async Task MessageRemoved(ChannelQueue queue, QueueMessage message)
+        public async Task MessageDequeued(ChannelQueue queue, QueueMessage message)
         {
             _server.OnRemove++;
             await Task.CompletedTask;

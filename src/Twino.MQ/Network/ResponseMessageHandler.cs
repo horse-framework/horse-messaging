@@ -29,7 +29,17 @@ namespace Twino.MQ.Network
             MqClient receiver = _server.FindClient(message.Target);
 
             if (receiver != null)
+            {
+                //check sending message authority
+                if (_server.Authorization != null)
+                {
+                    bool grant = await _server.Authorization.CanResponseMessage(sender, message, receiver);
+                    if (!grant)
+                        return;
+                }
+
                 await receiver.SendAsync(message);
+            }
         }
     }
 }

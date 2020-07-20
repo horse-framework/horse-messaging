@@ -333,7 +333,7 @@ namespace Twino.MQ.Queues
             if (!silent)
             {
                 Info.AddMessageRemove();
-                await DeliveryHandler.MessageRemoved(this, message);
+                await DeliveryHandler.MessageDequeued(this, message);
             }
 
             return true;
@@ -778,7 +778,7 @@ namespace Twino.MQ.Queues
             else if (!decision.Allow)
             {
                 Info.AddMessageRemove();
-                _ = DeliveryHandler.MessageRemoved(this, message);
+                _ = DeliveryHandler.MessageDequeued(this, message);
             }
 
             return decision.Allow;

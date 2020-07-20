@@ -21,7 +21,7 @@ namespace Sample.Tmq
             TmqClient client = new TmqClient();
             client.Data.Properties.Add("Host", "localhost");
             client.ClientId = "123";
-
+            
             client.Connect("tmq://localhost:82/sample");
 
             Console.ReadLine();
