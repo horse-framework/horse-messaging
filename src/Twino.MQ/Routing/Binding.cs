@@ -22,9 +22,10 @@ namespace Twino.MQ.Routing
         public string Target { get; }
 
         /// <summary>
-        /// Binding content type
+        /// Binding content type.
+        /// Null, passes same content type from producer to receiver
         /// </summary>
-        public ushort ContentType { get; }
+        public ushort? ContentType { get; }
 
         /// <summary>
         /// Binding priority
@@ -44,7 +45,7 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Creates new binding
         /// </summary>
-        protected Binding(string name, string target, ushort contentType, int priority, BindingInteraction interaction)
+        protected Binding(string name, string target, ushort? contentType, int priority, BindingInteraction interaction)
         {
             Name = name;
             Target = target;

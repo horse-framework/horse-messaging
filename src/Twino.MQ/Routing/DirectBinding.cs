@@ -28,10 +28,24 @@ namespace Twino.MQ.Routing
         /// Target should be client id.
         /// If you want to target clients by name, target should be @name:client_name.
         /// Same usage available for client type @type:type_name.
+        /// Priority for router binding.
+        /// </summary>
+        public DirectBinding(string name, string target, int priority, BindingInteraction interaction,
+                             RouteMethod routeMethod = RouteMethod.Distribute)
+            : this(name, target, null, priority, interaction, routeMethod)
+        {
+        }
+
+        /// <summary>
+        /// Creates new direct binding.
+        /// Name is the name of the binding.
+        /// Target should be client id.
+        /// If you want to target clients by name, target should be @name:client_name.
+        /// Same usage available for client type @type:type_name.
         /// Content type the value how receiver will see the content type.
         /// Priority for router binding.
         /// </summary>
-        public DirectBinding(string name, string target, ushort contentType, int priority, BindingInteraction interaction,
+        public DirectBinding(string name, string target, ushort? contentType, int priority, BindingInteraction interaction,
                              RouteMethod routeMethod = RouteMethod.Distribute)
             : base(name, target, contentType, priority, interaction)
         {
@@ -49,7 +63,10 @@ namespace Twino.MQ.Routing
 
             message.Type = MessageType.DirectMessage;
             message.SetTarget(Target);
-            message.ContentType = ContentType;
+
+            if (ContentType.HasValue)
+                message.ContentType = ContentType.Value;
+
             message.PendingAcknowledge = false;
             message.PendingResponse = false;
 

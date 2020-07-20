@@ -34,7 +34,8 @@ namespace Twino.MQ.Routing
         {
             HttpClient client = new HttpClient();
 
-            HttpBindingMethod method = (HttpBindingMethod) ContentType;
+            // ReSharper disable once PossibleInvalidOperationException
+            HttpBindingMethod method = (HttpBindingMethod) ContentType.Value;
             string content = message.Length > 0 ? message.ToString() : null;
             Task<HttpResponseMessage> response = null;
 
