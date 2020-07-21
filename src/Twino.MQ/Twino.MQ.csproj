@@ -2,19 +2,19 @@
 
     <PropertyGroup>
         <TargetFramework>netcoreapp3.1</TargetFramework>
-        <Title>Twino.Mq</Title>
-        <Product>Twino.Mq</Product>
+        <Title>Twino.MQ</Title>
+        <Product>Twino.MQ</Product>
         <Description>Messaging Queue Server library with TMQ Protocol via Twino Server</Description>
         <PackageTags>twino,server,tmq,messaging,queue,mq</PackageTags>
-        <AssemblyVersion>3.2.1</AssemblyVersion>
-        <FileVersion>3.2.1</FileVersion>
-        <PackageVersion>3.2.1</PackageVersion>
+        <AssemblyVersion>3.2.2</AssemblyVersion>
+        <FileVersion>3.2.2</FileVersion>
+        <PackageVersion>3.2.2</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/twino-framework/twino-mq</PackageProjectUrl>
         <PackageLicenseUrl>https://github.com/twino-framework/twino-mq/blob/master/LICENSE</PackageLicenseUrl>
         <RepositoryUrl>https://github.com/twino-framework/twino-mq</RepositoryUrl>
-        <RootNamespace>Twino.Mq</RootNamespace>
+        <RootNamespace>Twino.MQ</RootNamespace>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
@@ -26,13 +26,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Twino.Server" Version="3.2.0"/>
-        <PackageReference Include="Twino.Client.Connectors" Version="3.2.0"/>
+        <PackageReference Include="Twino.Server" Version="3.2.0" />
+        <PackageReference Include="Twino.Client.Connectors" Version="3.2.0" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Twino.Client.Tmq\Twino.Client.Tmq.csproj"/>
-        <ProjectReference Include="..\Twino.Protocols.Tmq\Twino.Protocols.Tmq.csproj"/>
+        <ProjectReference Include="..\Twino.Client.TMQ\Twino.Client.TMQ.csproj" />
+        <ProjectReference Include="..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
     </ItemGroup>
 
 </Project>

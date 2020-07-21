@@ -2,19 +2,19 @@
 
     <PropertyGroup>
         <TargetFramework>netcoreapp3.1</TargetFramework>
-        <Title>Twino.Protocols.Tmq</Title>
-        <Product>Twino.Protocols.Tmq</Product>
+        <Title>Twino.Protocols.TMQ</Title>
+        <Product>Twino.Protocols.TMQ</Product>
         <Description>Twino Messaging Queue (TMQ) Protocol library and server extension for Twino Server</Description>
         <PackageTags>twino,tcp,server,http,messaging,queue,tmq,mq,protocol</PackageTags>
-        <AssemblyVersion>3.2.1</AssemblyVersion>
-        <FileVersion>3.2.1</FileVersion>
-        <PackageVersion>3.2.1</PackageVersion>
+        <AssemblyVersion>3.2.2</AssemblyVersion>
+        <FileVersion>3.2.2</FileVersion>
+        <PackageVersion>3.2.2</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/twino-framework/twino-mq</PackageProjectUrl>
         <PackageLicenseUrl>https://github.com/twino-framework/twino-mq/blob/master/LICENSE</PackageLicenseUrl>
         <RepositoryUrl>https://github.com/twino-framework/twino-mq</RepositoryUrl>
-        <RootNamespace>Twino.Protocols.Tmq</RootNamespace>
+        <RootNamespace>Twino.Protocols.TMQ</RootNamespace>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
