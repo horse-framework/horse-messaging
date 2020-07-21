@@ -5,12 +5,12 @@ using Twino.Server;
 namespace Twino.MQ
 {
     /// <summary>
-    /// Extension Methods for Twino.MQ
+    /// Extension Methods for Twino.Mq
     /// </summary>
     public static class MqExtensions
     {
         /// <summary>
-        /// Uses Twino.MQ Messaging Queue server
+        /// Uses Twino.Mq Messaging Queue server
         /// </summary>
         public static TwinoServer UseMqServer(this TwinoServer server, MqServer mqServer)
         {

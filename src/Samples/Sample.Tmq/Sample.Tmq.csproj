@@ -11,8 +11,8 @@
     </ItemGroup>
     
     <ItemGroup>
-      <ProjectReference Include="..\..\Twino.Client.TMQ\Twino.Client.TMQ.csproj" />
-      <ProjectReference Include="..\..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
+      <ProjectReference Include="..\..\Twino.Client.Tmq\Twino.Client.Tmq.csproj" />
+      <ProjectReference Include="..\..\Twino.Protocols.Tmq\Twino.Protocols.Tmq.csproj" />
     </ItemGroup>
 
 </Project>
