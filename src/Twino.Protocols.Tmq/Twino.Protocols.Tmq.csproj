@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <Title>Twino.Protocols.Tmq</Title>
+        <Product>Twino.Protocols.Tmq</Product>
+        <Description>Twino Messaging Queue (TMQ) Protocol library and server extension for Twino Server</Description>
+        <PackageTags>twino,tcp,server,http,messaging,queue,tmq,mq,protocol</PackageTags>
+        <AssemblyVersion>3.2.1</AssemblyVersion>
+        <FileVersion>3.2.1</FileVersion>
+        <PackageVersion>3.2.1</PackageVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
+        <PackageProjectUrl>https://github.com/twino-framework/twino-mq</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/twino-framework/twino-mq/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/twino-framework/twino-mq</RepositoryUrl>
+        <RootNamespace>Twino.Protocols.Tmq</RootNamespace>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+        <DocumentationFile>bin\Debug\Twino.Protocols.Tmq.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <DocumentationFile>bin\Release\Twino.Protocols.Tmq.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Twino.Core" Version="3.2.0"/>
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <Title>Twino.Mq.Data</Title>
+        <Product>Twino.Mq.Data</Product>
+        <Description>Persistant queue message data library for Twino MQ</Description>
+        <PackageTags>twino,server,messaging,queue,mq,persistent,database,db</PackageTags>
+        <AssemblyVersion>3.2.1</AssemblyVersion>
+        <FileVersion>3.2.1</FileVersion>
+        <PackageVersion>3.2.1</PackageVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
+        <PackageProjectUrl>https://github.com/twino-framework/twino-mq</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/twino-framework/twino-mq/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/twino-framework/twino-mq</RepositoryUrl>
+        <RootNamespace>Twino.Mq.Data</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Twino.Mq\Twino.Mq.csproj"/>
+    </ItemGroup>
+
+</Project>

@@ -145,7 +145,11 @@ namespace Twino.Protocols.TMQ
             //if user makes a mistake in received method, we should not interrupt connection handling
             try
             {
-                socket.KeepAlive();
+                if (socket.SmartHealthCheck)
+                    socket.KeepAlive();
+                else if (message.Type == MessageType.Pong)
+                    socket.KeepAlive();
+
                 return _handler.Received(_server, info, socket, message);
             }
             catch (Exception e)

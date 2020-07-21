@@ -6,13 +6,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Twino.Server" Version="3.1.2" />
+        <PackageReference Include="Twino.Server" Version="3.2.0" />
     </ItemGroup>
     
     <ItemGroup>
       <ProjectReference Include="..\..\Tests\Test.Mq\Test.Mq.csproj" />
-      <ProjectReference Include="..\..\Twino.MQ.Data\Twino.MQ.Data.csproj" />
-      <ProjectReference Include="..\..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
+      <ProjectReference Include="..\..\Twino.Mq.Data\Twino.Mq.Data.csproj" />
+      <ProjectReference Include="..\..\Twino.Protocols.Tmq\Twino.Protocols.Tmq.csproj" />
     </ItemGroup>
 
 </Project>

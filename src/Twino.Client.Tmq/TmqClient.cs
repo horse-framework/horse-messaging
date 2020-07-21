@@ -400,7 +400,9 @@ namespace Twino.Client.TMQ
             if (message.Ttl < 0)
                 return;
 
-            KeepAlive();
+            if (SmartHealthCheck)
+                KeepAlive();
+
             switch (message.Type)
             {
                 case MessageType.Server:
@@ -413,6 +415,7 @@ namespace Twino.Client.TMQ
                     break;
 
                 case MessageType.Pong:
+                    KeepAlive();
                     break;
 
                 case MessageType.Ping:

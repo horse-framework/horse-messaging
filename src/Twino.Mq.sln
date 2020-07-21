@@ -9,11 +9,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{41761E68
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Playground", "Samples\Playground\Playground.csproj", "{3A3A6CBA-E31C-4E63-A06A-E0FF5DFE1619}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.MQ", "Twino.MQ\Twino.MQ.csproj", "{CFB19F80-FBC0-4999-BD95-44CF0B916B86}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Mq", "Twino.Mq\Twino.Mq.csproj", "{CFB19F80-FBC0-4999-BD95-44CF0B916B86}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Protocols.TMQ", "Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj", "{D0F826C2-8B03-48D1-88C1-8BFF917C8EBC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Protocols.Tmq", "Twino.Protocols.Tmq\Twino.Protocols.Tmq.csproj", "{D0F826C2-8B03-48D1-88C1-8BFF917C8EBC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Client.TMQ", "Twino.Client.TMQ\Twino.Client.TMQ.csproj", "{A75CABEB-197E-457A-AAC9-4C59D49DDF68}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Client.Tmq", "Twino.Client.Tmq\Twino.Client.Tmq.csproj", "{A75CABEB-197E-457A-AAC9-4C59D49DDF68}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Tmq", "Samples\Sample.Tmq\Sample.Tmq.csproj", "{971CA2D0-FED0-43C5-9270-69B0C51A0F1C}"
 EndProject
@@ -21,9 +21,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Mq", "Samples\Sample
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Mq", "Tests\Test.Mq\Test.Mq.csproj", "{44BCC806-180F-42F7-A848-D3623356D318}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.MQ.Data", "Twino.MQ.Data\Twino.MQ.Data.csproj", "{45017EA4-63E1-49BF-8B53-25A45ADF8FCD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Mq.Data", "Twino.Mq.Data\Twino.Mq.Data.csproj", "{45017EA4-63E1-49BF-8B53-25A45ADF8FCD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.MQ.Data", "Samples\Sample.MQ.Data\Sample.MQ.Data.csproj", "{BA38A487-2107-4BB5-AA57-02EFB58CDD91}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Mq.Data", "Samples\Sample.Mq.Data\Sample.Mq.Data.csproj", "{BA38A487-2107-4BB5-AA57-02EFB58CDD91}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
