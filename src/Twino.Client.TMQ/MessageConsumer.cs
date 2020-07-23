@@ -465,7 +465,7 @@ namespace Twino.Client.TMQ
             lock (_subscriptions)
                 _subscriptions.Clear();
         }
-        
+
         /// <summary>
         /// Returns all subscribed channels
         /// </summary>
@@ -496,13 +496,15 @@ namespace Twino.Client.TMQ
         /// </summary>
         public void RegisterAssemblyConsumers(params Type[] assemblyTypes)
         {
-            Type openGeneric = typeof(IQueueConsumer<>);
+            Type openQueueGeneric = typeof(IQueueConsumer<>);
+            Type openDirectGeneric = typeof(IDirectConsumer<>);
             Type executerType = typeof(ConsumerExecuter<>);
 
             foreach (Type assemblyType in assemblyTypes)
             {
                 foreach (Type type in assemblyType.Assembly.GetTypes())
                 {
+                    bool queue = false;
                     Type modelType = null;
 
                     Type[] interfaceTypes = type.GetInterfaces();
@@ -512,7 +514,14 @@ namespace Twino.Client.TMQ
                             continue;
 
                         Type generic = interfaceType.GetGenericTypeDefinition();
-                        if (openGeneric.IsAssignableFrom(generic))
+                        if (openQueueGeneric.IsAssignableFrom(generic))
+                        {
+                            modelType = interfaceType.GetGenericArguments().FirstOrDefault();
+                            queue = true;
+                            break;
+                        }
+
+                        if (openDirectGeneric.IsAssignableFrom(generic))
                         {
                             modelType = interfaceType.GetGenericArguments().FirstOrDefault();
                             break;
@@ -529,11 +538,20 @@ namespace Twino.Client.TMQ
                     Type executerGenericType = executerType.MakeGenericType(modelType);
                     ConsumerExecuter executer = (ConsumerExecuter) Activator.CreateInstance(executerGenericType, consumerInstance);
 
+                    ushort contentType = 0;
+                    if (queue)
+                    {
+                        if (descriptor.QueueId.HasValue)
+                            contentType = descriptor.QueueId.Value;
+                    }
+                    else if (descriptor.ContentType.HasValue)
+                        contentType = descriptor.ContentType.Value;
+
                     ReadSubscription subscription = new ReadSubscription
                                                     {
-                                                        Source = ReadSource.Queue,
+                                                        Source = queue ? ReadSource.Queue : ReadSource.Direct,
                                                         Channel = descriptor.ChannelName,
-                                                        ContentType = descriptor.QueueId ?? 0,
+                                                        ContentType = contentType,
                                                         MessageType = modelType,
                                                         Action = null,
                                                         ConsumerExecuter = executer

@@ -1,3 +1,4 @@
+using System;
 using System.Reflection;
 using System.Threading.Tasks;
 using Twino.Client.TMQ.Annotations;
@@ -7,18 +8,29 @@ namespace Twino.Client.TMQ.Internal
 {
     internal class ConsumerExecuter<TModel> : ConsumerExecuter
     {
-        private readonly IQueueConsumer<TModel> _consumer;
-        private readonly bool _sendAck;
-        private readonly bool _sendNack;
+        private readonly IDirectConsumer<TModel> _directConsumer;
+        private readonly IQueueConsumer<TModel> _queueConsumer;
+        private bool _sendAck;
+        private bool _sendNack;
+
+        public ConsumerExecuter(IDirectConsumer<TModel> consumer)
+        {
+            _directConsumer = consumer;
+            ResolveAttributes(consumer.GetType());
+        }
 
         public ConsumerExecuter(IQueueConsumer<TModel> consumer)
         {
-            _consumer = consumer;
+            _queueConsumer = consumer;
+            ResolveAttributes(consumer.GetType());
+        }
 
-            AutoAckAttribute ackAttribute = consumer.GetType().GetCustomAttribute<AutoAckAttribute>();
+        private void ResolveAttributes(Type type)
+        {
+            AutoAckAttribute ackAttribute = type.GetCustomAttribute<AutoAckAttribute>();
             _sendAck = ackAttribute != null;
 
-            AutoNackAttribute nackAttribute = consumer.GetType().GetCustomAttribute<AutoNackAttribute>();
+            AutoNackAttribute nackAttribute = type.GetCustomAttribute<AutoNackAttribute>();
             _sendNack = nackAttribute != null;
         }
 
@@ -28,7 +40,13 @@ namespace Twino.Client.TMQ.Internal
 
             try
             {
-                await _consumer.Consume(message, t);
+                if (_queueConsumer != null)
+                    await _queueConsumer.Consume(message, t);
+                else if (_directConsumer != null)
+                    await _directConsumer.Consume(message, t);
+                else
+                    throw new ArgumentNullException("There is no consumer defined");
+
                 if (_sendAck)
                     await client.SendAck(message);
             }
