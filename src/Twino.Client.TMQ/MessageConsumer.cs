@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Twino.Client.TMQ.Annotations.Resolvers;
 using Twino.Client.TMQ.Models;
 using Twino.Core;
 using Twino.Protocols.TMQ;
@@ -39,6 +40,8 @@ namespace Twino.Client.TMQ
         /// </summary>
         public event ReaderExceptionThrownHandler OnException;
 
+        private ITypeDeliveryContainer _deliveryContainer;
+
         #endregion
 
         #region Create
@@ -49,6 +52,7 @@ namespace Twino.Client.TMQ
         public MessageConsumer(Func<TmqMessage, Type, object> func)
         {
             _func = func;
+            _deliveryContainer = new TypeDeliveryContainer(new TypeDeliveryResolver());
         }
 
         /// <summary>
@@ -190,6 +194,25 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Subscribe to messages in a queue in a channel
         /// </summary>
+        public void On<T>(Action<T> action)
+        {
+            TypeDeliveryDescriptor descriptor = _deliveryContainer.GetDescriptor<T>();
+
+            if (descriptor == null)
+                throw new ArgumentNullException("Can't resolve TypeDeliveryDescriptor. Use overload method On(string,ushort,T)");
+
+            if (string.IsNullOrEmpty(descriptor.ChannelName))
+                throw new NullReferenceException("Type doesn't have ChannelNameAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
+
+            if (!descriptor.QueueId.HasValue)
+                throw new NullReferenceException("Type doesn't have QueueIdAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
+
+            On(descriptor.ChannelName, descriptor.QueueId.Value, action);
+        }
+
+        /// <summary>
+        /// Subscribe to messages in a queue in a channel
+        /// </summary>
         public void On<T>(string channel, ushort queueId, Action<T> action)
         {
             ReadSubscription subscription = new ReadSubscription
@@ -227,6 +250,25 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Subscribe to messages in a queue in a channel
         /// </summary>
+        public void On<T>(Action<T, TmqMessage> action)
+        {
+            TypeDeliveryDescriptor descriptor = _deliveryContainer.GetDescriptor<T>();
+
+            if (descriptor == null)
+                throw new ArgumentNullException("Can't resolve TypeDeliveryDescriptor. Use overload method On(string,ushort,T)");
+
+            if (string.IsNullOrEmpty(descriptor.ChannelName))
+                throw new NullReferenceException("Type doesn't have ChannelNameAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
+
+            if (!descriptor.QueueId.HasValue)
+                throw new NullReferenceException("Type doesn't have QueueIdAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
+
+            On(descriptor.ChannelName, descriptor.QueueId.Value, action);
+        }
+
+        /// <summary>
+        /// Subscribe to messages in a queue in a channel
+        /// </summary>
         public void On<T>(string channel, ushort queueId, Action<T, TmqMessage> action)
         {
             ReadSubscription subscription = new ReadSubscription
@@ -241,6 +283,22 @@ namespace Twino.Client.TMQ
 
             lock (_subscriptions)
                 _subscriptions.Add(subscription);
+        }
+
+        /// <summary>
+        /// Subscribe to direct messages with a content type
+        /// </summary>
+        public void OnDirect<T>(Action<T> action)
+        {
+            TypeDeliveryDescriptor descriptor = _deliveryContainer.GetDescriptor<T>();
+
+            if (descriptor == null)
+                throw new ArgumentNullException("Can't resolve TypeDeliveryDescriptor. Use overload method On(ushort,T)");
+
+            if (!descriptor.ContentType.HasValue)
+                throw new NullReferenceException("Type doesn't have ContentTypeAttribute. Add that attribute to type or use overload method On(ushort,T)");
+
+            OnDirect(descriptor.ContentType.Value, action);
         }
 
         /// <summary>
@@ -281,6 +339,22 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Subscribe to direct messages with a content type
         /// </summary>
+        public void OnDirect<T>(Action<T, TmqMessage> action)
+        {
+            TypeDeliveryDescriptor descriptor = _deliveryContainer.GetDescriptor<T>();
+
+            if (descriptor == null)
+                throw new ArgumentNullException("Can't resolve TypeDeliveryDescriptor. Use overload method On(ushort,T)");
+
+            if (!descriptor.ContentType.HasValue)
+                throw new NullReferenceException("Type doesn't have ContentTypeAttribute. Add that attribute to type or use overload method On(ushort,T)");
+
+            OnDirect(descriptor.ContentType.Value, action);
+        }
+
+        /// <summary>
+        /// Subscribe to direct messages with a content type
+        /// </summary>
         public void OnDirect<T>(ushort contentType, Action<T, TmqMessage> action)
         {
             ReadSubscription subscription = new ReadSubscription
@@ -299,6 +373,25 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Unsubscribe from messages in a queue in a channel 
         /// </summary>
+        public void Off<T>()
+        {
+            TypeDeliveryDescriptor descriptor = _deliveryContainer.GetDescriptor<T>();
+
+            if (descriptor == null)
+                throw new ArgumentNullException("Can't resolve TypeDeliveryDescriptor. Use overload method On(string,ushort,T)");
+
+            if (string.IsNullOrEmpty(descriptor.ChannelName))
+                throw new NullReferenceException("Type doesn't have ChannelNameAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
+
+            if (!descriptor.QueueId.HasValue)
+                throw new NullReferenceException("Type doesn't have QueueIdAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
+
+            Off(descriptor.ChannelName, descriptor.QueueId.Value);
+        }
+
+        /// <summary>
+        /// Unsubscribe from messages in a queue in a channel 
+        /// </summary>
         public void Off(string channel, ushort queueId)
         {
             lock (_subscriptions)
@@ -308,9 +401,25 @@ namespace Twino.Client.TMQ
         }
 
         /// <summary>
+        /// Unsubscribe from direct messages 
+        /// </summary>
+        public void OffDirect<T>()
+        {
+            TypeDeliveryDescriptor descriptor = _deliveryContainer.GetDescriptor<T>();
+
+            if (descriptor == null)
+                throw new ArgumentNullException("Can't resolve TypeDeliveryDescriptor. Use overload method On(ushort,T)");
+
+            if (!descriptor.ContentType.HasValue)
+                throw new NullReferenceException("Type doesn't have ContentTypeAttribute. Add that attribute to type or use overload method On(ushort,T)");
+
+            OffDirect(descriptor.ContentType.Value);
+        }
+
+        /// <summary>
         /// Unsubscribe from direct messages with a content type 
         /// </summary>
-        public void Off(ushort contentType)
+        public void OffDirect(ushort contentType)
         {
             lock (_subscriptions)
                 _subscriptions.RemoveAll(x => x.Source == ReadSource.Direct && x.ContentType == contentType);
