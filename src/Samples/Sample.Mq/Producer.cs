@@ -49,8 +49,8 @@ namespace Sample.Mq
                     Console.WriteLine($"Sending package #{e.No}");
                     _eventCount++;
 
-                    client.PushJson("BasicChannel", ModelTypes.ProducerEvent, e, false);
-                    client.PushJson("AckChannel", ModelTypes.ProducerEvent, e, false);
+                    client.Queues.PushJson("BasicChannel", ModelTypes.ProducerEvent, e, false);
+                    client.Queues.PushJson("AckChannel", ModelTypes.ProducerEvent, e, false);
                 }
             }, null, 1000, 1000);
         }
