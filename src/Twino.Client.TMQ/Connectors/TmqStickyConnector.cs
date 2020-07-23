@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Twino.Client.Connectors;
+using Twino.Client.TMQ.Exceptions;
 using Twino.Core;
 using Twino.Protocols.TMQ;
 
@@ -20,6 +21,16 @@ namespace Twino.Client.TMQ.Connectors
         public MessageConsumer Consumer => _consumer;
 
         /// <summary>
+        /// If true, automatically joins all subscribed channels
+        /// </summary>
+        public bool AutoJoinConsumerChannels { get; set; }
+
+        /// <summary>
+        /// If true, disconnected from server when auto join fails
+        /// </summary>
+        public bool DisconnectionOnAutoJoinFailure { get; set; } = true;
+
+        /// <summary>
         /// Creates new sticky connector for TMQ protocol clients
         /// </summary>
         public TmqStickyConnector(TimeSpan reconnectInterval, Func<TmqClient> createInstance = null)
@@ -32,7 +43,7 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public void InitJsonReader()
         {
-            _consumer = MessageConsumer.JsonReader();
+            _consumer = MessageConsumer.JsonConsumer();
         }
 
         /// <summary>
@@ -50,6 +61,62 @@ namespace Twino.Client.TMQ.Connectors
 
             if (_consumer != null)
                 _consumer.Read((TmqClient) client, payload);
+        }
+
+        /// <inheritdoc />
+        protected override void ClientConnected(SocketBase client)
+        {
+            base.ClientConnected(client);
+
+            if (AutoJoinConsumerChannels)
+                _ = JoinAllSubscribedChannels(true, DisconnectionOnAutoJoinFailure);
+        }
+
+        /// <summary>
+        /// Joins all subscribed channels
+        /// </summary>
+        /// <param name="verify">If true, waits response from server for each join operation</param>
+        /// <param name="disconnectOnFail">If any of channels fails to join, disconnected from server</param>
+        /// <param name="silent">If true, errors are hidden, no exception thrown</param>
+        /// <returns></returns>
+        /// <exception cref="NullReferenceException">Thrown if there is no consumer initialized</exception>
+        /// <exception cref="TwinoSocketException">Thrown if not connected to server</exception>
+        public async Task<bool> JoinAllSubscribedChannels(bool verify, bool disconnectOnFail = true, bool silent = true)
+        {
+            if (_consumer == null)
+            {
+                if (silent)
+                    return false;
+
+                throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
+            }
+
+            TmqClient client = GetClient();
+            if (client == null)
+            {
+                if (silent)
+                    return false;
+
+                throw new TwinoSocketException("There is no active connection");
+            }
+
+            string[] channels = _consumer.GetSubscribedChannels();
+            foreach (string channel in channels)
+            {
+                TwinoResult joinResult = await client.Channels.Join(channel, verify);
+                if (joinResult.Code == TwinoResultCode.Ok)
+                    continue;
+
+                if (disconnectOnFail)
+                    client.Disconnect();
+
+                if (!silent)
+                    throw new TwinoChannelException($"Can't join to {channel} channel: {joinResult.Reason} ({joinResult.Code})");
+
+                return false;
+            }
+
+            return true;
         }
 
         #region On - Consume

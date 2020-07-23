@@ -71,6 +71,8 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
             ChannelNameAttribute channelNameAttribute = type.GetCustomAttribute<ChannelNameAttribute>(false);
             if (channelNameAttribute != null)
                 descriptor.ChannelName = channelNameAttribute.Channel;
+            else
+                descriptor.ChannelName = type.FullName;
 
             QueueIdAttribute queueIdAttribute = type.GetCustomAttribute<QueueIdAttribute>(false);
             if (queueIdAttribute != null)

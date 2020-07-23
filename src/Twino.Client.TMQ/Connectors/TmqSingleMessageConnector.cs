@@ -20,6 +20,11 @@ namespace Twino.Client.TMQ.Connectors
         public MessageConsumer Consumer => _consumer;
 
         /// <summary>
+        /// If true, automatically joins all subscribed channels
+        /// </summary>
+        public bool AutoJoinConsumerChannels { get; set; }
+
+        /// <summary>
         /// Creates new single message connector for TMQ protocol clients
         /// </summary>
         public TmqSingleMessageConnector(Func<TmqClient> createInstance = null) : base(createInstance)
@@ -31,7 +36,7 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public void InitJsonReader()
         {
-            _consumer = MessageConsumer.JsonReader();
+            _consumer = MessageConsumer.JsonConsumer();
         }
 
         /// <summary>

@@ -27,7 +27,7 @@ namespace Test.Mq
             server.Start();
 
             bool received = false;
-            MessageConsumer consumer = MessageConsumer.JsonReader();
+            MessageConsumer consumer = MessageConsumer.JsonConsumer();
             consumer.On<MessageA>("ch-1", MessageA.ContentType, a => { received = true; });
 
             TmqClient client = new TmqClient();
@@ -73,7 +73,7 @@ namespace Test.Mq
 
             bool ch0 = false;
             bool ch1 = false;
-            MessageConsumer consumer = MessageConsumer.JsonReader();
+            MessageConsumer consumer = MessageConsumer.JsonConsumer();
             consumer.On<MessageA>("ch-0", MessageA.ContentType, a => ch0 = true);
             consumer.On<MessageA>("ch-1", MessageA.ContentType, a => ch1 = true);
             consumer.Attach(client);
@@ -111,7 +111,7 @@ namespace Test.Mq
 
             bool ma = false;
             bool mc = false;
-            MessageConsumer consumer = MessageConsumer.JsonReader();
+            MessageConsumer consumer = MessageConsumer.JsonConsumer();
             consumer.On<MessageA>("ch-1", MessageA.ContentType, a => ma = true);
             consumer.On<MessageA>("ch-1", MessageC.ContentType, c => mc = true);
             consumer.Attach(client);
@@ -150,7 +150,7 @@ namespace Test.Mq
             server.Start();
 
             bool thrown = false;
-            MessageConsumer consumer = MessageConsumer.JsonReader();
+            MessageConsumer consumer = MessageConsumer.JsonConsumer();
             consumer.OnException += (tm, e) => thrown = true;
             consumer.On<MessageA>("ch-1", MessageA.ContentType, a => throw new InvalidOperationException());
 
@@ -198,7 +198,7 @@ namespace Test.Mq
             Assert.True(client2.IsConnected);
 
             bool received = false;
-            MessageConsumer consumer = MessageConsumer.JsonReader();
+            MessageConsumer consumer = MessageConsumer.JsonConsumer();
             consumer.OnDirect<MessageA>(MessageA.ContentType, a => received = true);
             consumer.Attach(client1);
 

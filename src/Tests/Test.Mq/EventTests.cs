@@ -202,11 +202,11 @@ namespace Test.Mq
         public async Task ChannelRemoved()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42256);
+            server.Initialize(22256);
             server.Start(3000, 3000);
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42256");
+            await client.ConnectAsync("tmq://localhost:22256");
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Channels.OnRemoved(c =>

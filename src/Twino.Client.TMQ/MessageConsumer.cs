@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Twino.Client.TMQ.Annotations.Resolvers;
+using Twino.Client.TMQ.Internal;
 using Twino.Client.TMQ.Models;
 using Twino.Core;
 using Twino.Protocols.TMQ;
@@ -58,7 +59,16 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Creates new message reader, reads UTF-8 string from message content and deserializes it with System.Text.Json
         /// </summary>
+        [Obsolete("This method will be removed in future. Use JsonConsumer instead.")]
         public static MessageConsumer JsonReader()
+        {
+            return JsonConsumer();
+        }
+
+        /// <summary>
+        /// Creates new message consumer, reads UTF-8 string from message content and deserializes it with System.Text.Json
+        /// </summary>
+        public static MessageConsumer JsonConsumer()
         {
             return new MessageConsumer((msg, type) =>
             {
@@ -125,65 +135,78 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// When a message received to Tmq Client, this method will be called
         /// </summary>
-        private void ClientOnMessageReceived(ClientSocketBase<TmqMessage> client, TmqMessage message)
+        private async void ClientOnMessageReceived(ClientSocketBase<TmqMessage> client, TmqMessage message)
         {
-            ReadSource source;
-
-            if (message.Type == MessageType.QueueMessage)
+            try
             {
-                if (string.IsNullOrEmpty(message.Target))
+                ReadSource source;
+
+                if (message.Type == MessageType.QueueMessage)
+                {
+                    if (string.IsNullOrEmpty(message.Target))
+                        return;
+
+                    source = ReadSource.Queue;
+                }
+                else if (message.Type == MessageType.DirectMessage)
+                    source = ReadSource.Direct;
+                else
                     return;
 
-                source = ReadSource.Queue;
-            }
-            else if (message.Type == MessageType.DirectMessage)
-                source = ReadSource.Direct;
-            else
-                return;
-
-            //find all subscriber actions
-            List<ReadSubscription> subs;
-            lock (_subscriptions)
-            {
-                if (source == ReadSource.Direct)
-                    subs = _subscriptions.Where(x => x.Source == ReadSource.Direct && x.ContentType == message.ContentType)
-                                         .ToList();
-                else
-                    subs = _subscriptions.Where(x => x.Source == ReadSource.Queue &&
-                                                     x.ContentType == message.ContentType &&
-                                                     x.Channel.Equals(message.Target, StringComparison.InvariantCultureIgnoreCase))
-                                         .ToList();
-            }
-
-            if (subs.Count == 0)
-                return;
-
-            //convert model, only one time to first susbcriber's type
-            Type type = subs[0].MessageType;
-            object model = _func(message, type);
-
-            //call all subscriber methods if they have same type
-            foreach (ReadSubscription sub in subs)
-            {
-                if (sub.MessageType == null || sub.MessageType == type)
+                //find all subscriber actions
+                List<ReadSubscription> subs;
+                lock (_subscriptions)
                 {
-                    try
+                    if (source == ReadSource.Direct)
+                        subs = _subscriptions.Where(x => x.Source == ReadSource.Direct && x.ContentType == message.ContentType)
+                                             .ToList();
+                    else
+                        subs = _subscriptions.Where(x => x.Source == ReadSource.Queue &&
+                                                         x.ContentType == message.ContentType &&
+                                                         x.Channel.Equals(message.Target, StringComparison.InvariantCultureIgnoreCase))
+                                             .ToList();
+                }
+
+                if (subs.Count == 0)
+                    return;
+
+                //convert model, only one time to first susbcriber's type
+                Type type = subs[0].MessageType;
+                object model = _func(message, type);
+
+                //call all subscriber methods if they have same type
+                foreach (ReadSubscription sub in subs)
+                {
+                    if (sub.MessageType == null || sub.MessageType == type)
                     {
-                        if (sub.TmqMessageParameter)
+                        try
                         {
-                            if (sub.MessageType == null)
-                                sub.Action.DynamicInvoke(message);
-                            else
-                                sub.Action.DynamicInvoke(model, message);
+                            if (sub.ConsumerExecuter != null)
+                                await sub.ConsumerExecuter.Execute((TmqClient) client, message, model);
+
+                            if (sub.Action != null)
+                            {
+                                if (sub.TmqMessageParameter)
+                                {
+                                    if (sub.MessageType == null)
+                                        sub.Action.DynamicInvoke(message);
+                                    else
+                                        sub.Action.DynamicInvoke(model, message);
+                                }
+                                else
+                                    sub.Action.DynamicInvoke(model);
+                            }
                         }
-                        else
-                            sub.Action.DynamicInvoke(model);
-                    }
-                    catch (Exception ex)
-                    {
-                        OnException?.Invoke(message, ex);
+                        catch (Exception ex)
+                        {
+                            OnException?.Invoke(message, ex);
+                        }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                OnException?.Invoke(message, ex);
             }
         }
 
@@ -441,6 +464,85 @@ namespace Twino.Client.TMQ
         {
             lock (_subscriptions)
                 _subscriptions.Clear();
+        }
+        
+        /// <summary>
+        /// Returns all subscribed channels
+        /// </summary>
+        public string[] GetSubscribedChannels()
+        {
+            List<string> channels = new List<string>();
+
+            lock (_subscriptions)
+            {
+                foreach (ReadSubscription subscription in _subscriptions)
+                {
+                    if (subscription.Source != ReadSource.Queue)
+                        continue;
+
+                    channels.Add(subscription.Channel);
+                }
+            }
+
+            return channels.Distinct().ToArray();
+        }
+
+        #endregion
+
+        #region Consumer Registration
+
+        /// <summary>
+        /// Registers all IQueueConsumers in assemblies
+        /// </summary>
+        public void RegisterAssemblyConsumers(params Type[] assemblyTypes)
+        {
+            Type openGeneric = typeof(IQueueConsumer<>);
+            Type executerType = typeof(ConsumerExecuter<>);
+
+            foreach (Type assemblyType in assemblyTypes)
+            {
+                foreach (Type type in assemblyType.Assembly.GetTypes())
+                {
+                    Type modelType = null;
+
+                    Type[] interfaceTypes = type.GetInterfaces();
+                    foreach (Type interfaceType in interfaceTypes)
+                    {
+                        if (!interfaceType.IsGenericType)
+                            continue;
+
+                        Type generic = interfaceType.GetGenericTypeDefinition();
+                        if (openGeneric.IsAssignableFrom(generic))
+                        {
+                            modelType = interfaceType.GetGenericArguments().FirstOrDefault();
+                            break;
+                        }
+                    }
+
+                    if (modelType == null)
+                        continue;
+
+                    TypeDeliveryResolver resolver = new TypeDeliveryResolver();
+                    TypeDeliveryDescriptor descriptor = resolver.Resolve(modelType);
+
+                    object consumerInstance = Activator.CreateInstance(type);
+                    Type executerGenericType = executerType.MakeGenericType(modelType);
+                    ConsumerExecuter executer = (ConsumerExecuter) Activator.CreateInstance(executerGenericType, consumerInstance);
+
+                    ReadSubscription subscription = new ReadSubscription
+                                                    {
+                                                        Source = ReadSource.Queue,
+                                                        Channel = descriptor.ChannelName,
+                                                        ContentType = descriptor.QueueId ?? 0,
+                                                        MessageType = modelType,
+                                                        Action = null,
+                                                        ConsumerExecuter = executer
+                                                    };
+
+                    lock (_subscriptions)
+                        _subscriptions.Add(subscription);
+                }
+            }
         }
 
         #endregion
