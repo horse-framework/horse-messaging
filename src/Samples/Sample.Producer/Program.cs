@@ -29,7 +29,14 @@ namespace Sample.Producer
 
                 TwinoResult resultB = await client.Queues.PushJson(b, false);
                 
-                await Task.Delay(1000);
+                await Task.Delay(500);
+
+                ModelC c = new ModelC();
+                c.Value = "Hello";
+
+                await client.SendJsonAsync(MessageType.DirectMessage, c, false);
+                
+                await Task.Delay(500);
             }
         }
     }
