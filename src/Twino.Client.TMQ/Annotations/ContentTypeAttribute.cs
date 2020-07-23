@@ -3,7 +3,7 @@ using System;
 namespace Twino.Client.TMQ.Annotations
 {
     /// <summary>
-    /// Attribute to specify content type of direct messages
+    /// Attribute to specify content type of direct and router messages
     /// Used for describing message type
     /// </summary>
     [AttributeUsage(AttributeTargets.Class)]

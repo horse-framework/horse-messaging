@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Twino.Protocols.TMQ;
 
 namespace Twino.Client.TMQ.Annotations.Resolvers
 {
@@ -32,7 +33,7 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         /// <summary>
         /// Content type for direct messages
         /// </summary>
-        public ushort? DirectContentType { get; set; }
+        public ushort? ContentType { get; set; }
 
         /// <summary>
         /// Receiver finding method for direct messages
@@ -70,6 +71,57 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         public TypeDeliveryDescriptor()
         {
             Headers = new List<KeyValuePair<string, string>>();
+        }
+
+        /// <summary>
+        /// Applies descriptor information to the message
+        /// </summary>
+        public TmqMessage CreateMessage(MessageType type, string overrideTargetName, ushort? overrideContentType)
+        {
+            string target = overrideTargetName;
+            ushort? contentType = overrideContentType;
+
+            switch (type)
+            {
+                case MessageType.QueueMessage:
+                    if (string.IsNullOrEmpty(target))
+                        target = ChannelName;
+
+                    if (!contentType.HasValue)
+                        contentType = QueueId;
+                    break;
+                
+                case MessageType.DirectMessage:
+                    if (string.IsNullOrEmpty(target))
+                        target = DirectTarget;
+                    
+                    if (!contentType.HasValue)
+                        contentType = ContentType;
+                    break;
+                
+                case MessageType.Router:
+                    if (string.IsNullOrEmpty(target))
+                        target = RouterName;
+                    
+                    if (!contentType.HasValue)
+                        contentType = ContentType;
+                    break;
+            }
+
+            TmqMessage message = new TmqMessage(type, target, contentType ?? 0);
+            if (HighPriority)
+                message.HighPriority = HighPriority;
+
+            if (OnlyFirstAcquirer)
+                message.FirstAcquirer = true;
+
+            foreach (KeyValuePair<string,string> pair in Headers)
+                message.AddHeader(pair.Key, pair.Value);
+
+            if (string.IsNullOrEmpty(target))
+                throw new ArgumentNullException("Message target cannot be null");
+
+            return message;
         }
     }
 }

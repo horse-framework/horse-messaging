@@ -60,7 +60,7 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
 
             ContentTypeAttribute contentTypeAttribute = type.GetCustomAttribute<ContentTypeAttribute>(false);
             if (contentTypeAttribute != null)
-                descriptor.DirectContentType = contentTypeAttribute.ContentType;
+                descriptor.ContentType = contentTypeAttribute.ContentType;
         }
 
         /// <summary>

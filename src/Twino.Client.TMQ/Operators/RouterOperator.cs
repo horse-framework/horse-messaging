@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using Twino.Client.TMQ.Annotations.Resolvers;
 using Twino.Protocols.TMQ;
 
 namespace Twino.Client.TMQ.Operators
@@ -47,9 +48,19 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Publishes a JSON object to a router
         /// </summary>
-        public async Task<TwinoResult> PublishJson<TModel>(string routerName, TModel model, bool waitForAcknowledge = false, ushort contentType = 0)
+        public Task<TwinoResult> PublishJson<TModel>(TModel model, bool waitForAcknowledge = false)
         {
-            TmqMessage message = new TmqMessage(MessageType.Router, routerName, contentType);
+            return PublishJson(null, model, waitForAcknowledge);
+        }
+
+        /// <summary>
+        /// Publishes a JSON object to a router
+        /// </summary>
+        public async Task<TwinoResult> PublishJson<TModel>(string routerName, TModel model, bool waitForAcknowledge = false, ushort? contentType = null)
+        {
+            TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor<TModel>();
+            TmqMessage message = descriptor.CreateMessage(MessageType.Router, routerName, contentType);
+            
             message.PendingAcknowledge = waitForAcknowledge;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
 
@@ -75,9 +86,20 @@ namespace Twino.Client.TMQ.Operators
         /// Sends a request to router.
         /// Waits response from at least one binding.
         /// </summary>
-        public async Task<TmqMessage> PublishRequestJson<TModel>(string routerName, TModel model, ushort contentType = 0)
+        public Task<TmqMessage> PublishRequestJson<TModel>(TModel model)
         {
-            TmqMessage message = new TmqMessage(MessageType.Router, routerName, contentType);
+            return PublishRequestJson(null, model);
+        }
+        
+
+        /// <summary>
+        /// Sends a request to router.
+        /// Waits response from at least one binding.
+        /// </summary>
+        public async Task<TmqMessage> PublishRequestJson<TModel>(string routerName, TModel model, ushort? contentType = null)
+        {
+            TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor<TModel>();
+            TmqMessage message = descriptor.CreateMessage(MessageType.Router, routerName, contentType);
             message.PendingResponse = true;
             await message.SetJsonContent(model);
             return await _client.Request(message);

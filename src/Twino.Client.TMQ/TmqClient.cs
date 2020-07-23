@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Twino.Client.TMQ.Annotations.Resolvers;
 using Twino.Client.TMQ.Internal;
 using Twino.Client.TMQ.Models;
 using Twino.Client.TMQ.Operators;
@@ -120,6 +121,11 @@ namespace Twino.Client.TMQ
         /// </summary>
         internal EventManager Events { get; }
 
+        /// <summary>
+        /// Type delivery container
+        /// </summary>
+        internal ITypeDeliveryContainer DeliveryContainer { get; set; }
+
         #endregion
 
         #region Constructors - Destructors
@@ -138,6 +144,7 @@ namespace Twino.Client.TMQ
             Routers = new RouterOperator(this);
 
             Events = new EventManager();
+            DeliveryContainer = new TypeDeliveryContainer(new TypeDeliveryResolver());
 
             _follower = new MessageFollower(this);
             _follower.Run();
@@ -537,45 +544,6 @@ namespace Twino.Client.TMQ
         }
 
         /// <summary>
-        /// Sends a json object message
-        /// </summary>
-        public bool SendJson(string target, ushort contentType, object model)
-        {
-            TmqMessage msg = new TmqMessage();
-            msg.SetTarget(target);
-            msg.ContentType = contentType;
-            msg.SetJsonContent(model).Wait();
-
-            return Send(msg);
-        }
-
-        /// <summary>
-        /// Sends a string message
-        /// </summary>
-        public bool Send(string target, ushort contentType, string message)
-        {
-            TmqMessage msg = new TmqMessage();
-            msg.SetTarget(target);
-            msg.ContentType = contentType;
-            msg.SetStringContent(message);
-
-            return Send(msg);
-        }
-
-        /// <summary>
-        /// Sends a memory stream message
-        /// </summary>
-        public bool Send(string target, ushort contentType, MemoryStream content)
-        {
-            TmqMessage message = new TmqMessage();
-            message.SetTarget(target);
-            message.ContentType = contentType;
-            message.Content = content;
-
-            return Send(message);
-        }
-
-        /// <summary>
         /// Sends a TMQ message
         /// </summary>
         public async Task<TwinoResult> SendAsync(TmqMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
@@ -611,9 +579,18 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a json object message
         /// </summary>
-        public async Task<TwinoResult> SendJsonAsync(MessageType type, string target, ushort contentType, object model, bool waitAcknowledge)
+        public Task<TwinoResult> SendJsonAsync(MessageType type, object model, bool waitAcknowledge)
         {
-            TmqMessage msg = new TmqMessage(type, target, contentType);
+            return SendJsonAsync(type, null, null, model, waitAcknowledge);
+        }
+
+        /// <summary>
+        /// Sends a json object message
+        /// </summary>
+        public async Task<TwinoResult> SendJsonAsync(MessageType type, string target, ushort? contentType, object model, bool waitAcknowledge)
+        {
+            TypeDeliveryDescriptor descriptor = DeliveryContainer.GetDescriptor(model.GetType());
+            TmqMessage msg = descriptor.CreateMessage(type, target, contentType);
             await msg.SetJsonContent(model);
 
             if (waitAcknowledge)
@@ -882,9 +859,18 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a request to target with a JSON model, waits response
         /// </summary>
-        public async Task<TmqMessage> RequestJson(string target, ushort contentType, object model)
+        public Task<TmqMessage> RequestJson(object model)
         {
-            TmqMessage message = new TmqMessage(MessageType.DirectMessage, target, contentType);
+            return RequestJson(null, null, model);
+        }
+
+        /// <summary>
+        /// Sends a request to target with a JSON model, waits response
+        /// </summary>
+        public async Task<TmqMessage> RequestJson(string target, ushort? contentType, object model)
+        {
+            TypeDeliveryDescriptor descriptor = DeliveryContainer.GetDescriptor(model.GetType());
+            TmqMessage message = descriptor.CreateMessage(MessageType.DirectMessage, target, contentType);
             await message.SetJsonContent(model);
             return await Request(message);
         }
