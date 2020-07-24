@@ -8,7 +8,7 @@ namespace Sample.Consumer.Consumers
 {
     public class DirectConsumerC : IDirectConsumer<ModelC>
     {
-        public Task Consume(TmqMessage message, ModelC model)
+        public Task Consume(TmqMessage message, ModelC model, TmqClient client)
         {
             Console.WriteLine("Model C consumed");
             return Task.CompletedTask;

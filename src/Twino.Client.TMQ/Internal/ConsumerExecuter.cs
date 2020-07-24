@@ -61,9 +61,9 @@ namespace Twino.Client.TMQ.Internal
             try
             {
                 if (_queueConsumer != null)
-                    await _queueConsumer.Consume(message, t);
+                    await _queueConsumer.Consume(message, t, client);
                 else if (_directConsumer != null)
-                    await _directConsumer.Consume(message, t);
+                    await _directConsumer.Consume(message, t, client);
                 else
                     throw new ArgumentNullException("There is no consumer defined");
 

@@ -10,7 +10,7 @@ namespace Sample.Consumer.Consumers
     [PushExceptions("error", 500)]
     public class QueueConsumerB : IQueueConsumer<ModelB>
     {
-        public Task Consume(TmqMessage message, ModelB model)
+        public Task Consume(TmqMessage message, ModelB model, TmqClient client)
         {
             Console.WriteLine("Model B consumed");
             Random rnd = new Random();

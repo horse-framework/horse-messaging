@@ -11,7 +11,7 @@ namespace Sample.Consumer.Consumers
     [AutoNack]
     public class QueueConsumerA : IQueueConsumer<ModelA>
     {
-        public Task Consume(TmqMessage message, ModelA model)
+        public Task Consume(TmqMessage message, ModelA model, TmqClient client)
         {
             Console.WriteLine("Model A Consumed");
             return Task.CompletedTask;

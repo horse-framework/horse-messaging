@@ -10,7 +10,7 @@ namespace Sample.Consumer.Consumers
     [ChannelName("error")]
     public class ErrorConsumer : IQueueConsumer<string>
     {
-        public Task Consume(TmqMessage message, string model)
+        public Task Consume(TmqMessage message, string model, TmqClient client)
         {
             Console.WriteLine("Error consumed");
             return Task.CompletedTask;
