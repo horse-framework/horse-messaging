@@ -64,7 +64,32 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         /// Router messages router name
         /// </summary>
         public string RouterName { get; set; }
-        
+
+        /// <summary>
+        /// True if type has ChannelNameAttribute
+        /// </summary>
+        public bool HasChannelName { get; set; }
+
+        /// <summary>
+        /// True if type has QueueIdAttribute
+        /// </summary>
+        public bool HasQueueId { get; set; }
+
+        /// <summary>
+        /// True if type has ContentTypeAttribute
+        /// </summary>
+        public bool HasContentType { get; set; }
+
+        /// <summary>
+        /// True if type has RouterNameAttribute
+        /// </summary>
+        public bool HasRouterName { get; set; }
+
+        /// <summary>
+        /// True if type has DirectReceiverAttribute
+        /// </summary>
+        public bool HasDirectReceiver { get; set; }
+
         /// <summary>
         /// Creates new type delivery descriptor
         /// </summary>
@@ -90,19 +115,19 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
                     if (!contentType.HasValue)
                         contentType = QueueId;
                     break;
-                
+
                 case MessageType.DirectMessage:
                     if (string.IsNullOrEmpty(target))
                         target = DirectTarget;
-                    
+
                     if (!contentType.HasValue)
                         contentType = ContentType;
                     break;
-                
+
                 case MessageType.Router:
                     if (string.IsNullOrEmpty(target))
                         target = RouterName;
-                    
+
                     if (!contentType.HasValue)
                         contentType = ContentType;
                     break;
@@ -115,7 +140,7 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
             if (OnlyFirstAcquirer)
                 message.FirstAcquirer = true;
 
-            foreach (KeyValuePair<string,string> pair in Headers)
+            foreach (KeyValuePair<string, string> pair in Headers)
                 message.AddHeader(pair.Key, pair.Value);
 
             if (string.IsNullOrEmpty(target))

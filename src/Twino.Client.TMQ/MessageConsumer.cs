@@ -172,7 +172,7 @@ namespace Twino.Client.TMQ
 
                 //convert model, only one time to first susbcriber's type
                 Type type = subs[0].MessageType;
-                object model = _func(message, type);
+                object model = type == typeof(string) ? message.GetStringContent() : _func(message, type);
 
                 //call all subscriber methods if they have same type
                 foreach (ReadSubscription sub in subs)
@@ -532,26 +532,21 @@ namespace Twino.Client.TMQ
                         continue;
 
                     TypeDeliveryResolver resolver = new TypeDeliveryResolver();
-                    TypeDeliveryDescriptor descriptor = resolver.Resolve(modelType);
+                    TypeDeliveryDescriptor consumerDescriptor = resolver.Resolve(type);
+                    TypeDeliveryDescriptor modelDescriptor = resolver.Resolve(modelType);
+                    var target = GetTarget(queue, consumerDescriptor, modelDescriptor);
+                    if (string.IsNullOrEmpty(target.Item1))
+                        continue;
 
                     object consumerInstance = Activator.CreateInstance(type);
                     Type executerGenericType = executerType.MakeGenericType(modelType);
                     ConsumerExecuter executer = (ConsumerExecuter) Activator.CreateInstance(executerGenericType, consumerInstance);
 
-                    ushort contentType = 0;
-                    if (queue)
-                    {
-                        if (descriptor.QueueId.HasValue)
-                            contentType = descriptor.QueueId.Value;
-                    }
-                    else if (descriptor.ContentType.HasValue)
-                        contentType = descriptor.ContentType.Value;
-
                     ReadSubscription subscription = new ReadSubscription
                                                     {
                                                         Source = queue ? ReadSource.Queue : ReadSource.Direct,
-                                                        Channel = descriptor.ChannelName,
-                                                        ContentType = contentType,
+                                                        Channel = target.Item1,
+                                                        ContentType = target.Item2,
                                                         MessageType = modelType,
                                                         Action = null,
                                                         ConsumerExecuter = executer
@@ -561,6 +556,41 @@ namespace Twino.Client.TMQ
                         _subscriptions.Add(subscription);
                 }
             }
+        }
+
+        /// <summary>
+        /// Finds target for consumer and model
+        /// </summary>
+        private Tuple<string, ushort> GetTarget(bool isQueue, TypeDeliveryDescriptor consumerDescriptor, TypeDeliveryDescriptor modelDescriptor)
+        {
+            ushort contentType = 0;
+            string target = null;
+            if (isQueue)
+            {
+                if (consumerDescriptor.HasQueueId)
+                    contentType = consumerDescriptor.QueueId ?? 0;
+                else if (modelDescriptor.HasQueueId)
+                    contentType = modelDescriptor.QueueId ?? 0;
+
+                if (consumerDescriptor.HasChannelName)
+                    target = consumerDescriptor.ChannelName;
+                else if (modelDescriptor.HasChannelName)
+                    target = modelDescriptor.ChannelName;
+            }
+            else
+            {
+                if (consumerDescriptor.HasContentType)
+                    contentType = consumerDescriptor.ContentType ?? 0;
+                else if (modelDescriptor.HasContentType)
+                    contentType = modelDescriptor.ContentType ?? 0;
+                
+                if (consumerDescriptor.HasDirectReceiver)
+                    target = consumerDescriptor.DirectTarget;
+                else if (modelDescriptor.HasDirectReceiver)
+                    target = modelDescriptor.DirectTarget;
+            }
+
+            return new Tuple<string, ushort>(target, contentType);
         }
 
         #endregion

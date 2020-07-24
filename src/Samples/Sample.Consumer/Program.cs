@@ -18,8 +18,6 @@ namespace Sample.Consumer
 
             connector.Consumer.RegisterAssemblyConsumers(typeof(Program));
 
-            connector.On<Exception>("error", 500, (t, m) => { Console.WriteLine("exception consumed"); });
-
             connector.AddHost("tmq://127.0.0.1:22200");
             connector.Run();
 

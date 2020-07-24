@@ -11,6 +11,7 @@ namespace Sample.Producer
         static async Task Main(string[] args)
         {
             TmqClient client = new TmqClient();
+            client.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
             await client.ConnectAsync("tmq://127.0.0.1:22200");
 
             while (true)

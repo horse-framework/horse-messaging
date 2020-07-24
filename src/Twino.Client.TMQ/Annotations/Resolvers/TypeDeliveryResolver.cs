@@ -40,6 +40,7 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
             DirectReceiverAttribute receiverAttribute = type.GetCustomAttribute<DirectReceiverAttribute>(false);
             if (receiverAttribute != null)
             {
+                descriptor.HasDirectReceiver = true;
                 descriptor.DirectValue = receiverAttribute.Value;
                 descriptor.DirectFindBy = receiverAttribute.FindBy;
                 switch (receiverAttribute.FindBy)
@@ -60,7 +61,10 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
 
             ContentTypeAttribute contentTypeAttribute = type.GetCustomAttribute<ContentTypeAttribute>(false);
             if (contentTypeAttribute != null)
+            {
+                descriptor.HasContentType = true;
                 descriptor.ContentType = contentTypeAttribute.ContentType;
+            }
         }
 
         /// <summary>
@@ -70,13 +74,19 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         {
             ChannelNameAttribute channelNameAttribute = type.GetCustomAttribute<ChannelNameAttribute>(false);
             if (channelNameAttribute != null)
+            {
+                descriptor.HasChannelName = true;
                 descriptor.ChannelName = channelNameAttribute.Channel;
+            }
             else
                 descriptor.ChannelName = type.FullName;
 
             QueueIdAttribute queueIdAttribute = type.GetCustomAttribute<QueueIdAttribute>(false);
             if (queueIdAttribute != null)
+            {
+                descriptor.HasQueueId = true;
                 descriptor.QueueId = queueIdAttribute.QueueId;
+            }
         }
 
         /// <summary>
@@ -86,7 +96,10 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         {
             RouterNameAttribute routerNameAttribute = type.GetCustomAttribute<RouterNameAttribute>(false);
             if (routerNameAttribute != null)
+            {
+                descriptor.HasRouterName = true;
                 descriptor.RouterName = routerNameAttribute.Name;
+            }
         }
 
         /// <summary>
