@@ -496,19 +496,18 @@ namespace Twino.Client.TMQ
         /// </summary>
         public void RegisterAssemblyConsumers(params Type[] assemblyTypes)
         {
-            RegisterAssemblyConsumers<NoConsumerFactory>(assemblyTypes);
+            RegisterAssemblyConsumers(null, assemblyTypes);
         }
 
         /// <summary>
         /// Registers all IQueueConsumers in assemblies
         /// </summary>
-        public void RegisterAssemblyConsumers<TConsumerFactory>(params Type[] assemblyTypes)
-            where TConsumerFactory : IConsumerFactory, new()
+        public void RegisterAssemblyConsumers(Func<IConsumerFactory> consumerFactoryBuilder, params Type[] assemblyTypes)
         {
             Type openQueueGeneric = typeof(IQueueConsumer<>);
             Type openDirectGeneric = typeof(IDirectConsumer<>);
             Type executerType = typeof(ConsumerExecuter<>);
-            bool useConsumerFactory = typeof(TConsumerFactory) != typeof(NoConsumerFactory);
+            bool useConsumerFactory = consumerFactoryBuilder != null;
 
             foreach (Type assemblyType in assemblyTypes)
             {
@@ -550,12 +549,8 @@ namespace Twino.Client.TMQ
 
                     object consumerInstance = useConsumerFactory ? null : Activator.CreateInstance(type);
                     Type executerGenericType = executerType.MakeGenericType(modelType);
-                    
-                    Func<IConsumerFactory> consumerFactoryCreator = null;
-                    if (useConsumerFactory)
-                        consumerFactoryCreator = () => new TConsumerFactory();
 
-                    ConsumerExecuter executer = (ConsumerExecuter) Activator.CreateInstance(executerGenericType, type, consumerInstance, consumerFactoryCreator);
+                    ConsumerExecuter executer = (ConsumerExecuter) Activator.CreateInstance(executerGenericType, type, consumerInstance, consumerFactoryBuilder);
 
                     ReadSubscription subscription = new ReadSubscription
                                                     {
