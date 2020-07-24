@@ -602,6 +602,9 @@ namespace Twino.Client.TMQ
                     target = modelDescriptor.DirectTarget;
             }
 
+            if (isQueue && string.IsNullOrEmpty(target))
+                target = modelDescriptor.ChannelName;
+            
             return new Tuple<string, ushort>(target, contentType);
         }
 
