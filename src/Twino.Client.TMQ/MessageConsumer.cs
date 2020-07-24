@@ -494,15 +494,15 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Registers all IQueueConsumers in assemblies
         /// </summary>
-        public void RegisterAssemblyConsumers(params Type[] assemblyTypes)
+        public IEnumerable<Type> RegisterAssemblyConsumers(params Type[] assemblyTypes)
         {
-            RegisterAssemblyConsumers(null, assemblyTypes);
+            return RegisterAssemblyConsumers(null, assemblyTypes);
         }
 
         /// <summary>
         /// Registers all IQueueConsumers in assemblies
         /// </summary>
-        public void RegisterAssemblyConsumers(Func<IConsumerFactory> consumerFactoryBuilder, params Type[] assemblyTypes)
+        public IEnumerable<Type> RegisterAssemblyConsumers(Func<IConsumerFactory> consumerFactoryBuilder, params Type[] assemblyTypes)
         {
             Type openQueueGeneric = typeof(IQueueConsumer<>);
             Type openDirectGeneric = typeof(IDirectConsumer<>);
@@ -564,6 +564,8 @@ namespace Twino.Client.TMQ
 
                     lock (_subscriptions)
                         _subscriptions.Add(subscription);
+
+                    yield return type;
                 }
             }
         }
