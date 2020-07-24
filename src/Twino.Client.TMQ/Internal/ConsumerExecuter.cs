@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
 using Twino.Client.TMQ.Annotations;
+using Twino.Client.TMQ.Exceptions;
 using Twino.Protocols.TMQ;
 
 namespace Twino.Client.TMQ.Internal
@@ -12,6 +14,9 @@ namespace Twino.Client.TMQ.Internal
         private readonly IQueueConsumer<TModel> _queueConsumer;
         private bool _sendAck;
         private bool _sendNack;
+
+        private KeyValuePair<string, ushort> _defaultPushException;
+        private Dictionary<Type, KeyValuePair<string, ushort>> _pushExceptions;
 
         public ConsumerExecuter(IDirectConsumer<TModel> consumer)
         {
@@ -32,6 +37,21 @@ namespace Twino.Client.TMQ.Internal
 
             AutoNackAttribute nackAttribute = type.GetCustomAttribute<AutoNackAttribute>();
             _sendNack = nackAttribute != null;
+
+            _pushExceptions = new Dictionary<Type, KeyValuePair<string, ushort>>();
+            IEnumerable<PushExceptionsAttribute> attributes = type.GetCustomAttributes<PushExceptionsAttribute>(false);
+            foreach (PushExceptionsAttribute attribute in attributes)
+            {
+                if (attribute.ExceptionType == null)
+                    _defaultPushException = new KeyValuePair<string, ushort>(attribute.ChannelName, attribute.QueueId);
+                else
+                {
+                    if (_pushExceptions.ContainsKey(attribute.ExceptionType))
+                        throw new DuplicatePushException($"Multiple registration of {attribute.ExceptionType} for {typeof(TModel)}");
+
+                    _pushExceptions.Add(attribute.ExceptionType, new KeyValuePair<string, ushort>(attribute.ChannelName, attribute.QueueId));
+                }
+            }
         }
 
         public override async Task Execute(TmqClient client, TmqMessage message, object model)
@@ -50,12 +70,19 @@ namespace Twino.Client.TMQ.Internal
                 if (_sendAck)
                     await client.SendAck(message);
             }
-            catch
+            catch (Exception e)
             {
                 if (_sendNack)
                     await client.SendNegativeAck(message, TmqHeaders.NACK_REASON_ERROR);
 
-                //throw for message consumer event
+                Type exceptionType = e.GetType();
+                var kv = _pushExceptions.ContainsKey(exceptionType)
+                             ? _pushExceptions[exceptionType]
+                             : _defaultPushException;
+
+                if (!string.IsNullOrEmpty(kv.Key))
+                    await client.Queues.PushJson(kv.Key, kv.Value, e, false);
+
                 throw;
             }
         }

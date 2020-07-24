@@ -1,4 +1,6 @@
-﻿
+﻿using System;
+using System.Reflection;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Twino.Client.TMQ;
 using Twino.Client.TMQ.Annotations;
@@ -19,9 +21,10 @@ namespace Playground
             throw new System.NotImplementedException();
         }
     }
+
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             MessageConsumer consumer = MessageConsumer.JsonConsumer();
 

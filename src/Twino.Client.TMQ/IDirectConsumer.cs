@@ -7,7 +7,7 @@ namespace Twino.Client.TMQ
     /// Directmessage Consumer implementation.
     /// </summary>
     /// <typeparam name="TModel">Model type</typeparam>
-    public interface IDirectConsumer<TModel>
+    public interface IDirectConsumer<in TModel>
     {
         /// <summary>
         /// Consumes a direct message
