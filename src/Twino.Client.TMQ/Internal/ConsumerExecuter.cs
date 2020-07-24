@@ -10,24 +10,26 @@ namespace Twino.Client.TMQ.Internal
 {
     internal class ConsumerExecuter<TModel> : ConsumerExecuter
     {
-        private readonly IDirectConsumer<TModel> _directConsumer;
-        private readonly IQueueConsumer<TModel> _queueConsumer;
+        private readonly Func<IConsumerFactory> _consumerFactoryCreator;
+#pragma warning disable 618
+        private readonly ITwinoConsumer<TModel> _consumer;
+#pragma warning restore 618
         private bool _sendAck;
         private bool _sendNack;
+
+        private readonly Type _consumerType;
 
         private KeyValuePair<string, ushort> _defaultPushException;
         private Dictionary<Type, KeyValuePair<string, ushort>> _pushExceptions;
 
-        public ConsumerExecuter(IDirectConsumer<TModel> consumer)
+#pragma warning disable 618
+        public ConsumerExecuter(Type consumerType, ITwinoConsumer<TModel> consumer, Func<IConsumerFactory> consumerFactoryCreator)
+#pragma warning restore 618
         {
-            _directConsumer = consumer;
-            ResolveAttributes(consumer.GetType());
-        }
-
-        public ConsumerExecuter(IQueueConsumer<TModel> consumer)
-        {
-            _queueConsumer = consumer;
-            ResolveAttributes(consumer.GetType());
+            _consumer = consumer;
+            _consumerFactoryCreator = consumerFactoryCreator;
+            _consumerType = consumerType;
+            ResolveAttributes(consumerType);
         }
 
         private void ResolveAttributes(Type type)
@@ -57,13 +59,22 @@ namespace Twino.Client.TMQ.Internal
         public override async Task Execute(TmqClient client, TmqMessage message, object model)
         {
             TModel t = (TModel) model;
+            Exception exception = null;
+            IConsumerFactory consumerFactory = null;
 
             try
             {
-                if (_queueConsumer != null)
-                    await _queueConsumer.Consume(message, t, client);
-                else if (_directConsumer != null)
-                    await _directConsumer.Consume(message, t, client);
+                if (_consumer != null)
+                    await _consumer.Consume(message, t, client);
+                else if (_consumerFactoryCreator != null)
+                {
+                    consumerFactory = _consumerFactoryCreator();
+                    object consumerObject = await consumerFactory.CreateConsumer(_consumerType);
+#pragma warning disable 618
+                    ITwinoConsumer<TModel> consumer = (ITwinoConsumer<TModel>) consumerObject;
+#pragma warning restore 618
+                    await consumer.Consume(message, t, client);
+                }
                 else
                     throw new ArgumentNullException("There is no consumer defined");
 
@@ -86,7 +97,13 @@ namespace Twino.Client.TMQ.Internal
                     await client.Queues.Push(kv.Key, kv.Value, serialized, false);
                 }
 
+                exception = e;
                 throw;
+            }
+            finally
+            {
+                if (consumerFactory != null)
+                    consumerFactory.Consumed(exception);
             }
         }
     }

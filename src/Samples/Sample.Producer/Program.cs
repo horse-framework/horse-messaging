@@ -35,8 +35,6 @@ namespace Sample.Producer
                 ModelC c = new ModelC();
                 c.Value = "Hello";
 
-                await client.SendJsonAsync(MessageType.DirectMessage, c, false);
-                
                 await Task.Delay(500);
             }
         }

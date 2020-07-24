@@ -7,14 +7,9 @@ namespace Twino.Client.TMQ
     /// Directmessage Consumer implementation.
     /// </summary>
     /// <typeparam name="TModel">Model type</typeparam>
-    public interface IDirectConsumer<in TModel>
+#pragma warning disable 618
+    public interface IDirectConsumer<in TModel> : ITwinoConsumer<TModel>
+#pragma warning restore 618
     {
-        /// <summary>
-        /// Consumes a direct message
-        /// </summary>
-        /// <param name="message">Raw TMQ message</param>
-        /// <param name="model">Deserialized model</param>
-        /// <param name="client">Connection client object</param>
-        Task Consume(TmqMessage message, TModel model, TmqClient client);
     }
 }

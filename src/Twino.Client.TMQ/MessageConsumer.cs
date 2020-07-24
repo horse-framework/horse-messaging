@@ -496,9 +496,19 @@ namespace Twino.Client.TMQ
         /// </summary>
         public void RegisterAssemblyConsumers(params Type[] assemblyTypes)
         {
+            RegisterAssemblyConsumers<NoConsumerFactory>(assemblyTypes);
+        }
+
+        /// <summary>
+        /// Registers all IQueueConsumers in assemblies
+        /// </summary>
+        public void RegisterAssemblyConsumers<TConsumerFactory>(params Type[] assemblyTypes)
+            where TConsumerFactory : IConsumerFactory, new()
+        {
             Type openQueueGeneric = typeof(IQueueConsumer<>);
             Type openDirectGeneric = typeof(IDirectConsumer<>);
             Type executerType = typeof(ConsumerExecuter<>);
+            bool useConsumerFactory = typeof(TConsumerFactory) != typeof(NoConsumerFactory);
 
             foreach (Type assemblyType in assemblyTypes)
             {
@@ -538,9 +548,14 @@ namespace Twino.Client.TMQ
                     if (string.IsNullOrEmpty(target.Item1))
                         continue;
 
-                    object consumerInstance = Activator.CreateInstance(type);
+                    object consumerInstance = useConsumerFactory ? null : Activator.CreateInstance(type);
                     Type executerGenericType = executerType.MakeGenericType(modelType);
-                    ConsumerExecuter executer = (ConsumerExecuter) Activator.CreateInstance(executerGenericType, consumerInstance);
+                    
+                    Func<IConsumerFactory> consumerFactoryCreator = null;
+                    if (useConsumerFactory)
+                        consumerFactoryCreator = () => new TConsumerFactory();
+
+                    ConsumerExecuter executer = (ConsumerExecuter) Activator.CreateInstance(executerGenericType, type, consumerInstance, consumerFactoryCreator);
 
                     ReadSubscription subscription = new ReadSubscription
                                                     {
@@ -583,7 +598,7 @@ namespace Twino.Client.TMQ
                     contentType = consumerDescriptor.ContentType ?? 0;
                 else if (modelDescriptor.HasContentType)
                     contentType = modelDescriptor.ContentType ?? 0;
-                
+
                 if (consumerDescriptor.HasDirectReceiver)
                     target = consumerDescriptor.DirectTarget;
                 else if (modelDescriptor.HasDirectReceiver)
