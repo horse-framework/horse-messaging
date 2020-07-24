@@ -81,7 +81,10 @@ namespace Twino.Client.TMQ.Internal
                              : _defaultPushException;
 
                 if (!string.IsNullOrEmpty(kv.Key))
-                    await client.Queues.PushJson(kv.Key, kv.Value, e, false);
+                {
+                    string serialized = Newtonsoft.Json.JsonConvert.SerializeObject(e);
+                    await client.Queues.Push(kv.Key, kv.Value, serialized, false);
+                }
 
                 throw;
             }

@@ -9,14 +9,16 @@ namespace Sample.Consumer
     {
         static async Task Main(string[] args)
         {
-            TmqStickyConnector connector = new TmqAbsoluteConnector(TimeSpan.FromSeconds(1));
-           
+            TmqStickyConnector connector = new TmqStickyConnector(TimeSpan.FromSeconds(1));
+
             connector.AutoJoinConsumerChannels = true;
             connector.InitJsonReader();
 
             connector.AddProperty(TmqHeaders.CLIENT_NAME, "consumer");
-            
+
             connector.Consumer.RegisterAssemblyConsumers(typeof(Program));
+
+            connector.On<Exception>("error", 500, (t, m) => { Console.WriteLine("exception consumed"); });
 
             connector.AddHost("tmq://127.0.0.1:22200");
             connector.Run();
