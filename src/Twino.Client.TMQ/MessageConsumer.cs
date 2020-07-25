@@ -587,8 +587,6 @@ namespace Twino.Client.TMQ
             TypeDeliveryDescriptor consumerDescriptor = resolver.Resolve(typeInfo.ConsumerType);
             TypeDeliveryDescriptor modelDescriptor = resolver.Resolve(typeInfo.ModelType);
             var target = GetTarget(typeInfo.Method, consumerDescriptor, modelDescriptor);
-            if (string.IsNullOrEmpty(target.Item1))
-                return null;
 
             object consumerInstance = useConsumerFactory ? null : Activator.CreateInstance(typeInfo.ConsumerType);
             Type executerGenericType = executerType.MakeGenericType(typeInfo.ModelType);
