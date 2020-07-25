@@ -496,7 +496,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         public IEnumerable<Type> RegisterAssemblyConsumers(params Type[] assemblyTypes)
         {
-            return RegisterAssemblyConsumers(null, assemblyTypes);
+            return RegisterAssemblyConsumers((Func<IConsumerFactory>) null, assemblyTypes);
         }
 
         /// <summary>
@@ -504,70 +504,105 @@ namespace Twino.Client.TMQ
         /// </summary>
         public IEnumerable<Type> RegisterAssemblyConsumers(Func<IConsumerFactory> consumerFactoryBuilder, params Type[] assemblyTypes)
         {
-            Type openQueueGeneric = typeof(IQueueConsumer<>);
-            Type openDirectGeneric = typeof(IDirectConsumer<>);
-            Type executerType = typeof(ConsumerExecuter<>);
-            bool useConsumerFactory = consumerFactoryBuilder != null;
-
+            List<Type> list = new List<Type>();
             foreach (Type assemblyType in assemblyTypes)
             {
                 foreach (Type type in assemblyType.Assembly.GetTypes())
                 {
-                    bool queue = false;
-                    Type modelType = null;
-
-                    Type[] interfaceTypes = type.GetInterfaces();
-                    foreach (Type interfaceType in interfaceTypes)
-                    {
-                        if (!interfaceType.IsGenericType)
-                            continue;
-
-                        Type generic = interfaceType.GetGenericTypeDefinition();
-                        if (openQueueGeneric.IsAssignableFrom(generic))
-                        {
-                            modelType = interfaceType.GetGenericArguments().FirstOrDefault();
-                            queue = true;
-                            break;
-                        }
-
-                        if (openDirectGeneric.IsAssignableFrom(generic))
-                        {
-                            modelType = interfaceType.GetGenericArguments().FirstOrDefault();
-                            break;
-                        }
-                    }
-
-                    if (modelType == null)
+                    ModelTypeInfo typeInfo = FindModelType(type);
+                    if (typeInfo.ModelType == null)
                         continue;
 
-                    TypeDeliveryResolver resolver = new TypeDeliveryResolver();
-                    TypeDeliveryDescriptor consumerDescriptor = resolver.Resolve(type);
-                    TypeDeliveryDescriptor modelDescriptor = resolver.Resolve(modelType);
-                    var target = GetTarget(queue, consumerDescriptor, modelDescriptor);
-                    if (string.IsNullOrEmpty(target.Item1))
+                    ReadSubscription subscription = CreateConsumerSubscription(typeInfo, consumerFactoryBuilder);
+                    if (subscription == null)
                         continue;
-
-                    object consumerInstance = useConsumerFactory ? null : Activator.CreateInstance(type);
-                    Type executerGenericType = executerType.MakeGenericType(modelType);
-
-                    ConsumerExecuter executer = (ConsumerExecuter) Activator.CreateInstance(executerGenericType, type, consumerInstance, consumerFactoryBuilder);
-
-                    ReadSubscription subscription = new ReadSubscription
-                                                    {
-                                                        Source = queue ? ReadSource.Queue : ReadSource.Direct,
-                                                        Channel = target.Item1,
-                                                        ContentType = target.Item2,
-                                                        MessageType = modelType,
-                                                        Action = null,
-                                                        ConsumerExecuter = executer
-                                                    };
 
                     lock (_subscriptions)
                         _subscriptions.Add(subscription);
 
-                    yield return type;
+                    list.Add(type);
                 }
             }
+
+            return list;
+        }
+
+        private ModelTypeInfo FindModelType(Type consumerType)
+        {
+            Type openQueueGeneric = typeof(IQueueConsumer<>);
+            Type openDirectGeneric = typeof(IDirectConsumer<>);
+
+            Type modelType = null;
+            bool isQueueConsumer = false;
+
+            Type[] interfaceTypes = consumerType.GetInterfaces();
+            foreach (Type interfaceType in interfaceTypes)
+            {
+                if (!interfaceType.IsGenericType)
+                    continue;
+
+                Type generic = interfaceType.GetGenericTypeDefinition();
+                if (openQueueGeneric.IsAssignableFrom(generic))
+                {
+                    modelType = interfaceType.GetGenericArguments().FirstOrDefault();
+                    isQueueConsumer = true;
+                    break;
+                }
+
+                if (openDirectGeneric.IsAssignableFrom(generic))
+                {
+                    modelType = interfaceType.GetGenericArguments().FirstOrDefault();
+                    break;
+                }
+            }
+
+            return new ModelTypeInfo(consumerType, modelType, isQueueConsumer);
+        }
+
+        private ReadSubscription CreateConsumerSubscription(ModelTypeInfo typeInfo, Func<IConsumerFactory> consumerFactoryBuilder)
+        {
+            Type executerType = typeof(ConsumerExecuter<>);
+            bool useConsumerFactory = consumerFactoryBuilder != null;
+
+            TypeDeliveryResolver resolver = new TypeDeliveryResolver();
+            TypeDeliveryDescriptor consumerDescriptor = resolver.Resolve(typeInfo.ConsumerType);
+            TypeDeliveryDescriptor modelDescriptor = resolver.Resolve(typeInfo.ModelType);
+            var target = GetTarget(typeInfo.IsQueueConsumer, consumerDescriptor, modelDescriptor);
+            if (string.IsNullOrEmpty(target.Item1))
+                return null;
+
+            object consumerInstance = useConsumerFactory ? null : Activator.CreateInstance(typeInfo.ConsumerType);
+            Type executerGenericType = executerType.MakeGenericType(typeInfo.ModelType);
+
+            ConsumerExecuter executer = (ConsumerExecuter) Activator.CreateInstance(executerGenericType, typeInfo.ConsumerType, consumerInstance, consumerFactoryBuilder);
+
+            ReadSubscription subscription = new ReadSubscription
+                                            {
+                                                Source = typeInfo.IsQueueConsumer ? ReadSource.Queue : ReadSource.Direct,
+                                                Channel = target.Item1,
+                                                ContentType = target.Item2,
+                                                MessageType = typeInfo.ModelType,
+                                                Action = null,
+                                                ConsumerExecuter = executer
+                                            };
+
+            return subscription;
+        }
+
+        /// <summary>
+        /// Registers a single consumer
+        /// </summary>
+        public void RegisterConsumer<TConsumer>(Func<IConsumerFactory> consumerFactoryBuilder = null)
+        {
+            Type type = typeof(TConsumer);
+            ModelTypeInfo typeInfo = FindModelType(type);
+
+            ReadSubscription subscription = CreateConsumerSubscription(typeInfo, consumerFactoryBuilder);
+            if (subscription == null)
+                throw new TypeLoadException("Cant resolve consumer type");
+
+            lock (_subscriptions)
+                _subscriptions.Add(subscription);
         }
 
         /// <summary>
@@ -604,7 +639,7 @@ namespace Twino.Client.TMQ
 
             if (isQueue && string.IsNullOrEmpty(target))
                 target = modelDescriptor.ChannelName;
-            
+
             return new Tuple<string, ushort>(target, contentType);
         }
 
