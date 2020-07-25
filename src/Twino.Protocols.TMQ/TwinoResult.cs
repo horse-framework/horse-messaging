@@ -1,19 +1,44 @@
 namespace Twino.Protocols.TMQ
 {
     /// <summary>
+    /// Twino Result object for responses
+    /// </summary>
+    public class TwinoResult<TModel> : TwinoResult
+    {
+        /// <summary>
+        /// Response model
+        /// </summary>
+        public TModel Model { get; }
+
+        /// <summary>
+        /// Response raw message
+        /// </summary>
+        public TmqMessage Message { get; }
+
+        /// <summary>
+        /// Creates new TwinoResult with a model
+        /// </summary>
+        public TwinoResult(TModel model, TmqMessage message, TwinoResultCode code) : base(code)
+        {
+            Model = model;
+            Message = message;
+        }
+    }
+
+    /// <summary>
     /// Twino Messagign Queue Operation Result
     /// </summary>
-    public struct TwinoResult
+    public class TwinoResult
     {
         /// <summary>
         /// Result code
         /// </summary>
-        public TwinoResultCode Code;
+        public TwinoResultCode Code { get; }
 
         /// <summary>
         /// Reason for unsuccessful results
         /// </summary>
-        public string Reason;
+        public string Reason { get; }
 
         /// <summary>
         /// Creates new result without reason
@@ -48,7 +73,7 @@ namespace Twino.Protocols.TMQ
         {
             return new TwinoResult(TwinoResultCode.Failed);
         }
-        
+
         /// <summary>
         /// Creates failed result with reason
         /// </summary>

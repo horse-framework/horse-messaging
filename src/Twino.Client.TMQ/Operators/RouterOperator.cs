@@ -60,7 +60,7 @@ namespace Twino.Client.TMQ.Operators
         {
             TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor<TModel>();
             TmqMessage message = descriptor.CreateMessage(MessageType.Router, routerName, contentType);
-            
+
             message.PendingAcknowledge = waitForAcknowledge;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
 
@@ -86,23 +86,31 @@ namespace Twino.Client.TMQ.Operators
         /// Sends a request to router.
         /// Waits response from at least one binding.
         /// </summary>
-        public Task<TmqMessage> PublishRequestJson<TModel>(TModel model)
+        public Task<TwinoResult<TResponse>> PublishRequestJson<TRequest, TResponse>(TRequest request)
         {
-            return PublishRequestJson(null, model);
+            return PublishRequestJson<TRequest, TResponse>(null, request);
         }
-        
+
 
         /// <summary>
         /// Sends a request to router.
         /// Waits response from at least one binding.
         /// </summary>
-        public async Task<TmqMessage> PublishRequestJson<TModel>(string routerName, TModel model, ushort? contentType = null)
+        public async Task<TwinoResult<TResponse>> PublishRequestJson<TRequest, TResponse>(string routerName, TRequest request, ushort? contentType = null)
         {
-            TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor<TModel>();
+            TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor<TRequest>();
             TmqMessage message = descriptor.CreateMessage(MessageType.Router, routerName, contentType);
             message.PendingResponse = true;
-            await message.SetJsonContent(model);
-            return await _client.Request(message);
+            await message.SetJsonContent(request);
+
+            TmqMessage responseMessage = await _client.Request(message);
+            if (responseMessage.ContentType == 0)
+            {
+                TResponse response = await message.GetJsonContent<TResponse>();
+                return new TwinoResult<TResponse>(response, message, TwinoResultCode.Ok);
+            }
+
+            return new TwinoResult<TResponse>(default, message, (TwinoResultCode) responseMessage.ContentType);
         }
     }
 }

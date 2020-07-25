@@ -38,7 +38,7 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         /// <summary>
         /// Receiver finding method for direct messages
         /// </summary>
-        public FindReceiverBy DirectFindBy { get; set; }
+        public FindTargetBy DirectFindBy { get; set; }
 
         /// <summary>
         /// Direct message receiver value

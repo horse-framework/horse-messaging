@@ -334,11 +334,11 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Sends a message
         /// </summary>
-        public Task<TmqMessage> RequestJsonAsync<TRequest>(TRequest request)
+        public Task<TwinoResult<TResponse>> RequestJsonAsync<TRequest, TResponse>(TRequest request)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
-                return client.RequestJson(request);
+                return client.RequestJson<TResponse>(request);
 
             return null;
         }
@@ -346,11 +346,11 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Sends a message
         /// </summary>
-        public Task<TmqMessage> RequestJsonAsync<TRequest>(string target, ushort contentType, TRequest request)
+        public Task<TwinoResult<TResponse>> RequestJsonAsync<TRequest, TResponse>(string target, ushort contentType, TRequest request)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
-                return client.RequestJson(target, contentType, request);
+                return client.RequestJson<TResponse>(target, contentType, request);
 
             return null;
         }
@@ -433,6 +433,33 @@ namespace Twino.Client.TMQ.Connectors
                 return client.Routers.PublishJson(routerName, jsonObject, waitAcknowledge);
 
             return Task.FromResult(TwinoResult.Failed());
+        }
+
+        /// <summary>
+        /// Publish a string message to a router and waits for a response message
+        /// </summary>
+        public Task<TmqMessage> PublishRequest(string routerName, string message, ushort contentType = 0)
+        {
+            TmqClient client = GetClient();
+            return client.Routers.PublishRequest(routerName, message, contentType);
+        }
+
+        /// <summary>
+        /// Publish a JSON message to a router and waits for a response message
+        /// </summary>
+        public Task<TwinoResult<TResponse>> PublishRequestJson<TRequest, TResponse>(TRequest request)
+        {
+            TmqClient client = GetClient();
+            return client.Routers.PublishRequestJson<TRequest, TResponse>(request);
+        }
+
+        /// <summary>
+        /// Publish a JSON message to a router and waits for a response message
+        /// </summary>
+        public Task<TwinoResult<TResponse>> PublishRequestJson<TRequest, TResponse>(string routerName, TRequest request, ushort? contentType = null)
+        {
+            TmqClient client = GetClient();
+            return client.Routers.PublishRequestJson<TRequest, TResponse>(routerName, request, contentType);
         }
 
         #endregion

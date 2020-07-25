@@ -40,15 +40,16 @@ namespace Twino.Client.TMQ.Connectors
         /// <param name="message">Raw message</param>
         /// <returns>Response message</returns>
         Task<TmqMessage> RequestAsync(TmqMessage message);
-        
+
         /// <summary>
         /// Sends a JSON request and waits for it's response
         /// </summary>
         /// <param name="request">Request model</param>
         /// <typeparam name="TRequest">Should be a class. Primitive types are not supported</typeparam>
+        /// <typeparam name="TResponse">Response model</typeparam>
         /// <returns>Response message</returns>
-        Task<TmqMessage> RequestJsonAsync<TRequest>(TRequest request);
-        
+        Task<TwinoResult<TResponse>> RequestJsonAsync<TRequest, TResponse>(TRequest request);
+
         /// <summary>
         /// Sends a JSON request to a specific target and waits for it's response
         /// </summary>
@@ -56,8 +57,9 @@ namespace Twino.Client.TMQ.Connectors
         /// <param name="contentType">Message content type</param>
         /// <param name="request">Request model</param>
         /// <typeparam name="TRequest">Should be a class. Primitive types are not supported</typeparam>
+        /// <typeparam name="TResponse">Response model</typeparam>
         /// <returns></returns>
-        Task<TmqMessage> RequestJsonAsync<TRequest>(string target, ushort contentType, TRequest request);
+        Task<TwinoResult<TResponse>> RequestJsonAsync<TRequest, TResponse>(string target, ushort contentType, TRequest request);
         
         /// <summary>
         /// Pushes a message into a queue
@@ -113,6 +115,34 @@ namespace Twino.Client.TMQ.Connectors
         /// <returns></returns>
         Task<TwinoResult> PublishJson(string routerName, object jsonObject, bool waitAcknowledge = false);
 
+        /// <summary>
+        /// Publish a string message to a router and waits for a response message
+        /// </summary>
+        /// <param name="routerName">Router name</param>
+        /// <param name="message"></param>
+        /// <param name="contentType"></param>
+        /// <returns></returns>
+        Task<TmqMessage> PublishRequest(string routerName, string message, ushort contentType = 0);
+
+        /// <summary>
+        /// Publish a JSON message to a router and waits for a response message
+        /// </summary>
+        /// <param name="request">Request model</param>
+        /// <typeparam name="TRequest">Request model type</typeparam>
+        /// <typeparam name="TResponse">Response model type</typeparam>
+        Task<TwinoResult<TResponse>> PublishRequestJson<TRequest, TResponse>(TRequest request);
+
+        /// <summary>
+        /// Publish a JSON message to a router and waits for a response message
+        /// </summary>
+        /// <param name="routerName">Target router name</param>
+        /// <param name="request">Request model</param>
+        /// <param name="contentType">Message content type</param>
+        /// <typeparam name="TRequest">Request model type</typeparam>
+        /// <typeparam name="TResponse">Response model type</typeparam>
+        /// <returns></returns>
+        Task<TwinoResult<TResponse>> PublishRequestJson<TRequest, TResponse>(string routerName, TRequest request, ushort? contentType = null);
+        
         /// <summary>
         /// Gets connected client object
         /// </summary>

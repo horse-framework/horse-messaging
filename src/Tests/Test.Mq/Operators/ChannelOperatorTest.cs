@@ -95,11 +95,11 @@ namespace Test.Mq.Operators
         public async Task LeaveChannelWithResponse()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(41204);
+            server.Initialize(21204);
             server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:41204");
+            await client.ConnectAsync("tmq://localhost:21204");
 
             TwinoResult joined = await client.Channels.Join("ch-1", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);

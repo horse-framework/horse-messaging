@@ -37,24 +37,24 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         /// </summary>
         private void ResolveDirect(Type type, TypeDeliveryDescriptor descriptor)
         {
-            DirectReceiverAttribute receiverAttribute = type.GetCustomAttribute<DirectReceiverAttribute>(false);
-            if (receiverAttribute != null)
+            DirectTargetAttribute targetAttribute = type.GetCustomAttribute<DirectTargetAttribute>(true);
+            if (targetAttribute != null)
             {
                 descriptor.HasDirectReceiver = true;
-                descriptor.DirectValue = receiverAttribute.Value;
-                descriptor.DirectFindBy = receiverAttribute.FindBy;
-                switch (receiverAttribute.FindBy)
+                descriptor.DirectValue = targetAttribute.Value;
+                descriptor.DirectFindBy = targetAttribute.FindBy;
+                switch (targetAttribute.FindBy)
                 {
-                    case FindReceiverBy.Id:
-                        descriptor.DirectTarget = receiverAttribute.Value;
+                    case FindTargetBy.Id:
+                        descriptor.DirectTarget = targetAttribute.Value;
                         break;
 
-                    case FindReceiverBy.Name:
-                        descriptor.DirectTarget = "@name:" + receiverAttribute.Value;
+                    case FindTargetBy.Name:
+                        descriptor.DirectTarget = "@name:" + targetAttribute.Value;
                         break;
 
-                    case FindReceiverBy.Type:
-                        descriptor.DirectTarget = "@type:" + receiverAttribute.Value;
+                    case FindTargetBy.Type:
+                        descriptor.DirectTarget = "@type:" + targetAttribute.Value;
                         break;
                 }
             }
@@ -72,7 +72,7 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         /// </summary>
         private void ResolveQueue(Type type, TypeDeliveryDescriptor descriptor)
         {
-            ChannelNameAttribute channelNameAttribute = type.GetCustomAttribute<ChannelNameAttribute>(false);
+            ChannelNameAttribute channelNameAttribute = type.GetCustomAttribute<ChannelNameAttribute>(true);
             if (channelNameAttribute != null)
             {
                 descriptor.HasChannelName = true;
@@ -94,7 +94,7 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         /// </summary>
         private void ResolveRouter(Type type, TypeDeliveryDescriptor descriptor)
         {
-            RouterNameAttribute routerNameAttribute = type.GetCustomAttribute<RouterNameAttribute>(false);
+            RouterNameAttribute routerNameAttribute = type.GetCustomAttribute<RouterNameAttribute>(true);
             if (routerNameAttribute != null)
             {
                 descriptor.HasRouterName = true;
@@ -109,15 +109,15 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         {
             descriptor.Type = type;
 
-            HighPriorityMessageAttribute hp = type.GetCustomAttribute<HighPriorityMessageAttribute>(false);
+            HighPriorityMessageAttribute hp = type.GetCustomAttribute<HighPriorityMessageAttribute>(true);
             if (hp != null)
                 descriptor.HighPriority = true;
 
-            OnlyFirstAcquirerAttribute of = type.GetCustomAttribute<OnlyFirstAcquirerAttribute>(false);
+            OnlyFirstAcquirerAttribute of = type.GetCustomAttribute<OnlyFirstAcquirerAttribute>(true);
             if (of != null)
                 descriptor.OnlyFirstAcquirer = true;
 
-            IEnumerable<MessageHeaderAttribute> headerAttributes = type.GetCustomAttributes<MessageHeaderAttribute>(false);
+            IEnumerable<MessageHeaderAttribute> headerAttributes = type.GetCustomAttributes<MessageHeaderAttribute>(true);
             foreach (MessageHeaderAttribute headerAttribute in headerAttributes)
                 descriptor.Headers.Add(new KeyValuePair<string, string>(headerAttribute.Key, headerAttribute.Value));
         }

@@ -6,12 +6,12 @@ namespace Twino.Client.TMQ.Annotations
     /// Used for models that are sent as direct messages.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
-    public class DirectReceiverAttribute : Attribute
+    public class DirectTargetAttribute : Attribute
     {
         /// <summary>
         /// Finding method for message target
         /// </summary>
-        public FindReceiverBy FindBy { get; }
+        public FindTargetBy FindBy { get; }
 
         /// <summary>
         /// The value is Id, Type or Name depends on FindBy value 
@@ -21,7 +21,7 @@ namespace Twino.Client.TMQ.Annotations
         /// <summary>
         /// Creates new Direct Receiver Attribute
         /// </summary>
-        public DirectReceiverAttribute(FindReceiverBy findBy, string value)
+        public DirectTargetAttribute(FindTargetBy findBy, string value)
         {
             FindBy = findBy;
             Value = value;

@@ -271,11 +271,11 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Sends a message
         /// </summary>
-        public Task<TmqMessage> RequestJsonAsync<TRequest>(TRequest request)
+        public Task<TwinoResult<TResponse>> RequestJsonAsync<TRequest, TResponse>(TRequest request)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
-                return client.RequestJson(request);
+                return client.RequestJson<TResponse>(request);
 
             return null;
         }
@@ -283,11 +283,11 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Sends a message
         /// </summary>
-        public Task<TmqMessage> RequestJsonAsync<TRequest>(string target, ushort contentType, TRequest request)
+        public Task<TwinoResult<TResponse>> RequestJsonAsync<TRequest, TResponse>(string target, ushort contentType, TRequest request)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
-                return client.RequestJson(target, contentType, request);
+                return client.RequestJson<TResponse>(target, contentType, request);
 
             return null;
         }

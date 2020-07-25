@@ -859,20 +859,28 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a request to target with a JSON model, waits response
         /// </summary>
-        public Task<TmqMessage> RequestJson(object model)
+        public Task<TwinoResult<TResponse>> RequestJson<TResponse>(object model)
         {
-            return RequestJson(null, null, model);
+            return RequestJson<TResponse>(null, null, model);
         }
 
         /// <summary>
         /// Sends a request to target with a JSON model, waits response
         /// </summary>
-        public async Task<TmqMessage> RequestJson(string target, ushort? contentType, object model)
+        public async Task<TwinoResult<TResponse>> RequestJson<TResponse>(string target, ushort? contentType, object model)
         {
             TypeDeliveryDescriptor descriptor = DeliveryContainer.GetDescriptor(model.GetType());
             TmqMessage message = descriptor.CreateMessage(MessageType.DirectMessage, target, contentType);
             await message.SetJsonContent(model);
-            return await Request(message);
+
+            TmqMessage responseMessage = await Request(message);
+            if (responseMessage.ContentType == 0)
+            {
+                TResponse response = await message.GetJsonContent<TResponse>();
+                return new TwinoResult<TResponse>(response, message, TwinoResultCode.Ok);
+            }
+
+            return new TwinoResult<TResponse>(default, message, (TwinoResultCode) responseMessage.ContentType);
         }
 
         /// <summary>

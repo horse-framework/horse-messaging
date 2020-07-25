@@ -4,7 +4,7 @@ namespace Twino.Client.TMQ.Annotations
     /// Used for direct receiver attribute.
     /// Describes how the target will be found.
     /// </summary>
-    public enum FindReceiverBy
+    public enum FindTargetBy
     {
         /// <summary>
         /// Finds client by Id
