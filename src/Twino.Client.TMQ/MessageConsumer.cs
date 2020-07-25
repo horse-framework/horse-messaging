@@ -527,6 +527,29 @@ namespace Twino.Client.TMQ
             return list;
         }
 
+        /// <summary>
+        /// Registers a single consumer
+        /// </summary>
+        public void RegisterConsumer<TConsumer>(Func<IConsumerFactory> consumerFactoryBuilder = null)
+        {
+            RegisterConsumer(typeof(TConsumer), consumerFactoryBuilder);
+        }
+
+        /// <summary>
+        /// Registers a single consumer
+        /// </summary>
+        public void RegisterConsumer(Type consumerType, Func<IConsumerFactory> consumerFactoryBuilder = null)
+        {
+            ModelTypeInfo typeInfo = FindModelType(consumerType);
+
+            ReadSubscription subscription = CreateConsumerSubscription(typeInfo, consumerFactoryBuilder);
+            if (subscription == null)
+                throw new TypeLoadException("Cant resolve consumer type");
+
+            lock (_subscriptions)
+                _subscriptions.Add(subscription);
+        }
+
         private ModelTypeInfo FindModelType(Type consumerType)
         {
             Type openQueueGeneric = typeof(IQueueConsumer<>);
@@ -587,22 +610,6 @@ namespace Twino.Client.TMQ
                                             };
 
             return subscription;
-        }
-
-        /// <summary>
-        /// Registers a single consumer
-        /// </summary>
-        public void RegisterConsumer<TConsumer>(Func<IConsumerFactory> consumerFactoryBuilder = null)
-        {
-            Type type = typeof(TConsumer);
-            ModelTypeInfo typeInfo = FindModelType(type);
-
-            ReadSubscription subscription = CreateConsumerSubscription(typeInfo, consumerFactoryBuilder);
-            if (subscription == null)
-                throw new TypeLoadException("Cant resolve consumer type");
-
-            lock (_subscriptions)
-                _subscriptions.Add(subscription);
         }
 
         /// <summary>
