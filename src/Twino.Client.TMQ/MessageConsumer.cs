@@ -509,18 +509,19 @@ namespace Twino.Client.TMQ
             {
                 foreach (Type type in assemblyType.Assembly.GetTypes())
                 {
-                    ModelTypeInfo typeInfo = FindModelType(type);
-                    if (typeInfo.ModelType == null)
-                        continue;
+                    List<ModelTypeInfo> types = FindModelTypes(type);
+                    foreach (ModelTypeInfo typeInfo in types)
+                    {
+                        ReadSubscription subscription = CreateConsumerSubscription(typeInfo, consumerFactoryBuilder);
+                        if (subscription == null)
+                            continue;
 
-                    ReadSubscription subscription = CreateConsumerSubscription(typeInfo, consumerFactoryBuilder);
-                    if (subscription == null)
-                        continue;
+                        lock (_subscriptions)
+                            _subscriptions.Add(subscription);
+                    }
 
-                    lock (_subscriptions)
-                        _subscriptions.Add(subscription);
-
-                    list.Add(type);
+                    if (types.Count > 0)
+                        list.Add(type);
                 }
             }
 
@@ -540,23 +541,25 @@ namespace Twino.Client.TMQ
         /// </summary>
         public void RegisterConsumer(Type consumerType, Func<IConsumerFactory> consumerFactoryBuilder = null)
         {
-            ModelTypeInfo typeInfo = FindModelType(consumerType);
+            List<ModelTypeInfo> types = FindModelTypes(consumerType);
 
-            ReadSubscription subscription = CreateConsumerSubscription(typeInfo, consumerFactoryBuilder);
-            if (subscription == null)
-                throw new TypeLoadException("Cant resolve consumer type");
+            foreach (ModelTypeInfo typeInfo in types)
+            {
+                ReadSubscription subscription = CreateConsumerSubscription(typeInfo, consumerFactoryBuilder);
+                if (subscription == null)
+                    throw new TypeLoadException("Cant resolve consumer type");
 
-            lock (_subscriptions)
-                _subscriptions.Add(subscription);
+                lock (_subscriptions)
+                    _subscriptions.Add(subscription);
+            }
         }
 
-        private ModelTypeInfo FindModelType(Type consumerType)
+        private List<ModelTypeInfo> FindModelTypes(Type consumerType)
         {
             Type openQueueGeneric = typeof(IQueueConsumer<>);
             Type openDirectGeneric = typeof(IDirectConsumer<>);
 
-            Type modelType = null;
-            bool isQueueConsumer = false;
+            List<ModelTypeInfo> result = new List<ModelTypeInfo>();
 
             Type[] interfaceTypes = consumerType.GetInterfaces();
             foreach (Type interfaceType in interfaceTypes)
@@ -566,20 +569,13 @@ namespace Twino.Client.TMQ
 
                 Type generic = interfaceType.GetGenericTypeDefinition();
                 if (openQueueGeneric.IsAssignableFrom(generic))
-                {
-                    modelType = interfaceType.GetGenericArguments().FirstOrDefault();
-                    isQueueConsumer = true;
-                    break;
-                }
+                    result.Add(new ModelTypeInfo(consumerType, interfaceType.GetGenericArguments().FirstOrDefault(), ConsumerMethod.Queue));
 
-                if (openDirectGeneric.IsAssignableFrom(generic))
-                {
-                    modelType = interfaceType.GetGenericArguments().FirstOrDefault();
-                    break;
-                }
+                else if (openDirectGeneric.IsAssignableFrom(generic))
+                    result.Add(new ModelTypeInfo(consumerType, interfaceType.GetGenericArguments().FirstOrDefault(), ConsumerMethod.Direct));
             }
 
-            return new ModelTypeInfo(consumerType, modelType, isQueueConsumer);
+            return result;
         }
 
         private ReadSubscription CreateConsumerSubscription(ModelTypeInfo typeInfo, Func<IConsumerFactory> consumerFactoryBuilder)
@@ -590,18 +586,22 @@ namespace Twino.Client.TMQ
             TypeDeliveryResolver resolver = new TypeDeliveryResolver();
             TypeDeliveryDescriptor consumerDescriptor = resolver.Resolve(typeInfo.ConsumerType);
             TypeDeliveryDescriptor modelDescriptor = resolver.Resolve(typeInfo.ModelType);
-            var target = GetTarget(typeInfo.IsQueueConsumer, consumerDescriptor, modelDescriptor);
+            var target = GetTarget(typeInfo.Method, consumerDescriptor, modelDescriptor);
             if (string.IsNullOrEmpty(target.Item1))
                 return null;
 
             object consumerInstance = useConsumerFactory ? null : Activator.CreateInstance(typeInfo.ConsumerType);
             Type executerGenericType = executerType.MakeGenericType(typeInfo.ModelType);
 
-            ConsumerExecuter executer = (ConsumerExecuter) Activator.CreateInstance(executerGenericType, typeInfo.ConsumerType, consumerInstance, consumerFactoryBuilder);
+            ConsumerExecuter executer = (ConsumerExecuter) Activator.CreateInstance(executerGenericType,
+                                                                                    typeInfo.ConsumerType,
+                                                                                    typeInfo.Method,
+                                                                                    consumerInstance,
+                                                                                    consumerFactoryBuilder);
 
             ReadSubscription subscription = new ReadSubscription
                                             {
-                                                Source = typeInfo.IsQueueConsumer ? ReadSource.Queue : ReadSource.Direct,
+                                                Source = typeInfo.Method == ConsumerMethod.Queue ? ReadSource.Queue : ReadSource.Direct,
                                                 Channel = target.Item1,
                                                 ContentType = target.Item2,
                                                 MessageType = typeInfo.ModelType,
@@ -615,11 +615,11 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Finds target for consumer and model
         /// </summary>
-        private Tuple<string, ushort> GetTarget(bool isQueue, TypeDeliveryDescriptor consumerDescriptor, TypeDeliveryDescriptor modelDescriptor)
+        private Tuple<string, ushort> GetTarget(ConsumerMethod method, TypeDeliveryDescriptor consumerDescriptor, TypeDeliveryDescriptor modelDescriptor)
         {
             ushort contentType = 0;
             string target = null;
-            if (isQueue)
+            if (method == ConsumerMethod.Queue)
             {
                 if (consumerDescriptor.HasQueueId)
                     contentType = consumerDescriptor.QueueId ?? 0;
@@ -644,7 +644,7 @@ namespace Twino.Client.TMQ
                     target = modelDescriptor.DirectTarget;
             }
 
-            if (isQueue && string.IsNullOrEmpty(target))
+            if (method == ConsumerMethod.Queue && string.IsNullOrEmpty(target))
                 target = modelDescriptor.ChannelName;
 
             return new Tuple<string, ushort>(target, contentType);

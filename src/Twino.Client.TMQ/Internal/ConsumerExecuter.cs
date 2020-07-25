@@ -8,27 +8,41 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.Client.TMQ.Internal
 {
+    internal enum ConsumerMethod
+    {
+        Queue,
+        Direct
+    }
+
     internal class ConsumerExecuter<TModel> : ConsumerExecuter
     {
         private readonly Func<IConsumerFactory> _consumerFactoryCreator;
-#pragma warning disable 618
-        private readonly ITwinoConsumer<TModel> _consumer;
-#pragma warning restore 618
+
         private bool _sendAck;
         private bool _sendNack;
+        private readonly ConsumerMethod _method;
+        private readonly IQueueConsumer<TModel> _queueConsumer;
+        private readonly IDirectConsumer<TModel> _directConsumer;
 
         private readonly Type _consumerType;
 
         private KeyValuePair<string, ushort> _defaultPushException;
         private Dictionary<Type, KeyValuePair<string, ushort>> _pushExceptions;
 
-#pragma warning disable 618
-        public ConsumerExecuter(Type consumerType, ITwinoConsumer<TModel> consumer, Func<IConsumerFactory> consumerFactoryCreator)
-#pragma warning restore 618
+        public ConsumerExecuter(Type consumerType, ConsumerMethod method, object consumer, Func<IConsumerFactory> consumerFactoryCreator)
         {
-            _consumer = consumer;
-            _consumerFactoryCreator = consumerFactoryCreator;
             _consumerType = consumerType;
+            _method = method;
+
+            if (consumer != null)
+            {
+                if (_method == ConsumerMethod.Queue)
+                    _queueConsumer = (IQueueConsumer<TModel>) consumer;
+                else
+                    _directConsumer = (IDirectConsumer<TModel>) consumer;
+            }
+
+            _consumerFactoryCreator = consumerFactoryCreator;
             ResolveAttributes(consumerType);
         }
 
@@ -64,19 +78,34 @@ namespace Twino.Client.TMQ.Internal
 
             try
             {
-                if (_consumer != null)
-                    await _consumer.Consume(message, t, client);
-                else if (_consumerFactoryCreator != null)
+                if (_method == ConsumerMethod.Queue)
                 {
-                    consumerFactory = _consumerFactoryCreator();
-                    object consumerObject = await consumerFactory.CreateConsumer(_consumerType);
-#pragma warning disable 618
-                    ITwinoConsumer<TModel> consumer = (ITwinoConsumer<TModel>) consumerObject;
-#pragma warning restore 618
-                    await consumer.Consume(message, t, client);
+                    if (_queueConsumer != null)
+                        await _queueConsumer.Consume(message, t, client);
+                    else if (_consumerFactoryCreator != null)
+                    {
+                        consumerFactory = _consumerFactoryCreator();
+                        object consumerObject = await consumerFactory.CreateConsumer(_consumerType);
+                        IQueueConsumer<TModel> consumer = (IQueueConsumer<TModel>) consumerObject;
+                        await consumer.Consume(message, t, client);
+                    }
+                    else
+                        throw new ArgumentNullException("There is no consumer defined");
                 }
                 else
-                    throw new ArgumentNullException("There is no consumer defined");
+                {
+                    if (_directConsumer != null)
+                        await _directConsumer.Consume(message, t, client);
+                    else if (_consumerFactoryCreator != null)
+                    {
+                        consumerFactory = _consumerFactoryCreator();
+                        object consumerObject = await consumerFactory.CreateConsumer(_consumerType);
+                        IDirectConsumer<TModel> consumer = (IDirectConsumer<TModel>) consumerObject;
+                        await consumer.Consume(message, t, client);
+                    }
+                    else
+                        throw new ArgumentNullException("There is no consumer defined");
+                }
 
                 if (_sendAck)
                     await client.SendAck(message);

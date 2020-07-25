@@ -1,18 +1,19 @@
 using System;
+using Twino.Client.TMQ.Internal;
 
 namespace Twino.Client.TMQ.Models
 {
     internal class ModelTypeInfo
     {
-        public bool IsQueueConsumer { get; }
+        public ConsumerMethod Method { get; }
         public Type ModelType { get; }
         public Type ConsumerType { get; }
 
-        public ModelTypeInfo(Type consumerType ,Type modelType, bool isQueueConsumer)
+        public ModelTypeInfo(Type consumerType ,Type modelType, ConsumerMethod method)
         {
             ConsumerType = consumerType;
             ModelType = modelType;
-            IsQueueConsumer = isQueueConsumer;
+            Method = method;
         }
     }
 }

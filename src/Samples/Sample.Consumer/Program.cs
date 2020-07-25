@@ -17,9 +17,9 @@ namespace Sample.Consumer
 
             connector.AddProperty(TmqHeaders.CLIENT_NAME, "consumer");
 
-            //connector.Consumer.RegisterAssemblyConsumers(typeof(Program));
-            connector.Consumer.RegisterConsumer<DirectConsumerC>();
-            connector.Consumer.RegisterConsumer<QueueConsumerA>();
+            connector.Consumer.RegisterAssemblyConsumers(typeof(Program));
+            //connector.Consumer.RegisterConsumer<DirectConsumerC>();
+            //connector.Consumer.RegisterConsumer<QueueConsumerA>();
 
             connector.AddHost("tmq://127.0.0.1:22200");
             connector.Run();
