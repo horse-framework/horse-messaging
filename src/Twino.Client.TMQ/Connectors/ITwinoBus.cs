@@ -21,7 +21,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <param name="waitForAcknowledge">If true, Task awaits until acknowledge received from server</param>
         /// <typeparam name="T">Model Type</typeparam>
         /// <returns></returns>
-        Task<TwinoResult> SendDirectJsonAsync<T>(T model, bool waitForAcknowledge);
+        Task<TwinoResult> SendDirectJsonAsync<T>(T model, bool waitForAcknowledge = false);
         
         /// <summary>
         /// Sends a JSON message to a specified direct receiver
@@ -32,7 +32,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <param name="waitForAcknowledge">If true, Task awaits until acknowledge received from server</param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        Task<TwinoResult> SendDirectJsonAsync<T>(string target, ushort contentType, T model, bool waitForAcknowledge);
+        Task<TwinoResult> SendDirectJsonAsync<T>(string target, ushort contentType, T model, bool waitForAcknowledge = false);
         
         /// <summary>
         /// Sends a raw message and waits for it's response
@@ -67,7 +67,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <param name="content">Message content</param>
         /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
         /// <returns></returns>
-        Task<TwinoResult> Push(string channel, ushort queueId, MemoryStream content, bool waitAcknowledge);
+        Task<TwinoResult> Push(string channel, ushort queueId, MemoryStream content, bool waitAcknowledge = false);
         
         /// <summary>
         /// Pushes a JSON message into a queue
@@ -85,7 +85,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <param name="jsonObject">The object that will be serialized to JSON string</param>
         /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
         /// <returns></returns>
-        Task<TwinoResult> PushJson(string channel, ushort queueId, object jsonObject, bool waitAcknowledge);
+        Task<TwinoResult> PushJson(string channel, ushort queueId, object jsonObject, bool waitAcknowledge = false);
         
         /// <summary>
         /// Publish a message to a router
@@ -94,7 +94,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <param name="content">Message content</param>
         /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
         /// <returns></returns>
-        Task<TwinoResult> Publish(string routerName, MemoryStream content, bool waitAcknowledge);
+        Task<TwinoResult> Publish(string routerName, MemoryStream content, bool waitAcknowledge = false);
         
         /// <summary>
         /// Publish a JSON message to a router
@@ -102,7 +102,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <param name="jsonObject">The object that will be serialized to JSON string</param>
         /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
         /// <returns></returns>
-        Task<TwinoResult> PublishJson(object jsonObject, bool waitAcknowledge);
+        Task<TwinoResult> PublishJson(object jsonObject, bool waitAcknowledge = false);
         
         /// <summary>
         /// Publish a JSON message to a router
@@ -111,7 +111,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <param name="jsonObject">The object that will be serialized to JSON string</param>
         /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
         /// <returns></returns>
-        Task<TwinoResult> PublishJson(string routerName, object jsonObject, bool waitAcknowledge);
+        Task<TwinoResult> PublishJson(string routerName, object jsonObject, bool waitAcknowledge = false);
 
         /// <summary>
         /// Gets connected client object

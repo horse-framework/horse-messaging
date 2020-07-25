@@ -294,7 +294,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Sends a message
         /// </summary>
-        public Task<TwinoResult> SendDirectJsonAsync<T>(T model, bool waitForAcknowledge)
+        public Task<TwinoResult> SendDirectJsonAsync<T>(T model, bool waitForAcknowledge = false)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
@@ -306,7 +306,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Sends a message
         /// </summary>
-        public Task<TwinoResult> SendDirectJsonAsync<T>(string target, ushort contentType, T model, bool waitForAcknowledge)
+        public Task<TwinoResult> SendDirectJsonAsync<T>(string target, ushort contentType, T model, bool waitForAcknowledge = false)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
@@ -362,7 +362,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Pushes a message to the queue
         /// </summary>
-        public Task<TwinoResult> Push(string channel, ushort queueId, MemoryStream content, bool waitAcknowledge)
+        public Task<TwinoResult> Push(string channel, ushort queueId, MemoryStream content, bool waitAcknowledge = false)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
@@ -386,7 +386,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Pushes a message to the queue
         /// </summary>
-        public Task<TwinoResult> PushJson(string channel, ushort queueId, object jsonObject, bool waitAcknowledge)
+        public Task<TwinoResult> PushJson(string channel, ushort queueId, object jsonObject, bool waitAcknowledge = false)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
@@ -402,7 +402,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Publishes a message to the router
         /// </summary>
-        public Task<TwinoResult> Publish(string routerName, MemoryStream content, bool waitAcknowledge)
+        public Task<TwinoResult> Publish(string routerName, MemoryStream content, bool waitAcknowledge = false)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
@@ -414,7 +414,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Publishes a message to the router
         /// </summary>
-        public Task<TwinoResult> PublishJson(object jsonObject, bool waitAcknowledge)
+        public Task<TwinoResult> PublishJson(object jsonObject, bool waitAcknowledge = false)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
@@ -426,7 +426,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Publishes a message to the router
         /// </summary>
-        public Task<TwinoResult> PublishJson(string routerName, object jsonObject, bool waitAcknowledge)
+        public Task<TwinoResult> PublishJson(string routerName, object jsonObject, bool waitAcknowledge = false)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
