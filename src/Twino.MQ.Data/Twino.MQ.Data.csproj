@@ -12,7 +12,7 @@
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/twino-framework/twino-mq</PackageProjectUrl>
-        <PackageLicenseUrl>https://github.com/twino-framework/twino-mq/blob/master/LICENSE</PackageLicenseUrl>
+        <PackageLicense>https://github.com/twino-framework/twino-mq/blob/master/LICENSE</PackageLicense>
         <RepositoryUrl>https://github.com/twino-framework/twino-mq</RepositoryUrl>
         <RootNamespace>Twino.MQ.Data</RootNamespace>
     </PropertyGroup>
