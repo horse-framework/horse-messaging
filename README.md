@@ -83,7 +83,7 @@ Model and Consumer same with example above. The Implementation change is here:
 If you use a service provider, you can inject other services to consumer objects.
 
 
-### Producer Raw Implementation
+### Sending Messages as Producer
 
 Twino accepts producers and consumers as client. Each client can be producer and consumer at same time. With ConsumerFactory implementation, you can inject ITwinoBus interface for being producer at same time. If you want to create only producer, you can skip Add..Consumers methods.
 
