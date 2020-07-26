@@ -106,7 +106,7 @@ namespace Twino.Client.TMQ.Operators
             TmqMessage responseMessage = await _client.Request(message);
             if (responseMessage.ContentType == 0)
             {
-                TResponse response = await message.GetJsonContent<TResponse>();
+                TResponse response = await responseMessage.GetJsonContent<TResponse>();
                 return new TwinoResult<TResponse>(response, message, TwinoResultCode.Ok);
             }
 
