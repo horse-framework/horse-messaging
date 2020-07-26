@@ -18,23 +18,23 @@ namespace Sample.Producer
             {
                 ModelA a = new ModelA();
                 a.Name = "Model A";
-                a.No = 1;
-                
+                a.No   = 1;
+
                 TwinoResult resultA = await client.Queues.PushJson(a, true);
-                
+
                 await Task.Delay(500);
-                
+
                 ModelB b = new ModelB();
                 b.FirstName = "Mehmet";
-                b.LastName = "Helvacikoylu";
+                b.LastName  = "Helvacikoylu";
 
                 TwinoResult resultB = await client.Queues.PushJson(b, false);
-                
+
                 await Task.Delay(500);
 
                 ModelC c = new ModelC();
                 c.Value = "Hello";
-                await client.SendJsonAsync(MessageType.DirectMessage, c, false);
+                var result = await client.RequestJson<ModelA>(c);
 
                 await Task.Delay(500);
             }

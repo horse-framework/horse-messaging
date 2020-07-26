@@ -11,7 +11,7 @@ namespace Sample.Consumer.Consumers
         public Task Consume(TmqMessage message, ModelC model, TmqClient client)
         {
             Console.WriteLine("Model C consumed");
-            return Task.CompletedTask;
+            return client.SendResponseAsync(message, new ModelA {Name = "response-a"});
         }
     }
 }
