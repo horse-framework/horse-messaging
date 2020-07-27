@@ -13,7 +13,7 @@ namespace Playground
         {
             Database db = new Database(new DatabaseOptions
                                        {
-                                           Filename = "/home/mehmet/Desktop/tdb/playground.tdb",
+                                           Filename = "playground.tdb",
                                            AutoShrink = true,
                                            ShrinkInterval = TimeSpan.FromMilliseconds(3000),
                                            AutoFlush = false,
