@@ -100,7 +100,7 @@ namespace Twino.MQ.Data
             if (_file != null)
                 return;
 
-            _file = new FileStream(Filename, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+            _file = new FileStream(Filename, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
 
             if (_file.Length > 0)
                 _file.Seek(0, SeekOrigin.End);

@@ -235,7 +235,7 @@ namespace Twino.MQ.Data
                 if (_source != null)
                     await DisposeSource();
 
-                await using (FileStream file = new FileStream(_database.File.Filename, FileMode.Open, FileAccess.Read))
+                await using (FileStream file = new FileStream(_database.File.Filename, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                     int capacity = Convert.ToInt32(_end);
                     _source = new MemoryStream(capacity);
@@ -243,7 +243,7 @@ namespace Twino.MQ.Data
                     _source.Position = 0;
                 }
 
-                _target = new FileStream(_database.File.Filename + ".shrink", FileMode.Create, FileAccess.Write);
+                _target = new FileStream(_database.File.Filename + ".shrink", FileMode.Create, FileAccess.Write, FileShare.Read);
 
                 sw.Stop();
                 _info.PreparationDuration = sw.Elapsed;
