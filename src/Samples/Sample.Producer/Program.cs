@@ -17,8 +17,7 @@ namespace Sample.Producer
             while (true)
             {
                 ModelA a = new ModelA();
-                a.Name = "Model A";
-                a.No   = 1;
+                a.Foo = "Model A";
 
                 TwinoResult resultA = await client.Queues.PushJson(a, true);
 

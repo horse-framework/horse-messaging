@@ -374,7 +374,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Pushes a message to the queue
         /// </summary>
-        public Task<TwinoResult> PushJson(object jsonObject, bool waitAcknowledge)
+        public Task<TwinoResult> PushJson(object jsonObject, bool waitAcknowledge = false)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)

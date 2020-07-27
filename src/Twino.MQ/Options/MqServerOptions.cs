@@ -10,24 +10,24 @@ namespace Twino.MQ.Options
         /// <summary>
         /// Server name, will be used while connecting to other instances
         /// </summary>
-        public string Name { get; set; }
+        public string Name { get; set; } = "twino-mq";
 
         /// <summary>
         /// Server type, will be used while connecting to other instances
         /// </summary>
-        public string Type { get; set; }
+        public string Type { get; set; } = "mq";
 
         /// <summary>
         /// If true, channel will be created automatically with default options
         /// when a client tries to subscribe or push a message to not existing channel.
         /// </summary>
-        public bool AutoChannelCreation { get; set; }
+        public bool AutoChannelCreation { get; set; } = true;
 
         /// <summary>
         /// If true, queue will be created automatically with default options
         /// when a client tries to subscribe or push a message to not existing queue.
         /// </summary>
-        public bool AutoQueueCreation { get; set; }
+        public bool AutoQueueCreation { get; set; } = true;
 
         /// <summary>
         /// Maximum channel limit of the server

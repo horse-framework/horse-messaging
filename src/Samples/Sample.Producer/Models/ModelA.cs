@@ -6,7 +6,6 @@ namespace Sample.Producer.Models
     [ChannelName("model-a")]
     public class ModelA
     {
-        public int No { get; set; }
-        public string Name { get; set; }
+        public string Foo { get; set; }
     }
 }
