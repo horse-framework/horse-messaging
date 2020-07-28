@@ -79,7 +79,7 @@ namespace Twino.MQ.Options
         /// <summary>
         /// Clones channel queue options from another options
         /// </summary>
-        internal static ChannelQueueOptions CloneFrom(ChannelQueueOptions options)
+        public static ChannelQueueOptions CloneFrom(ChannelQueueOptions options)
         {
             return new ChannelQueueOptions
                    {

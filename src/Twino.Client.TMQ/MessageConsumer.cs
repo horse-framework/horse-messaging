@@ -41,7 +41,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         public event ReaderExceptionThrownHandler OnException;
 
-        private ITypeDeliveryContainer _deliveryContainer;
+        private readonly ITypeDeliveryContainer _deliveryContainer;
 
         #endregion
 
@@ -149,25 +149,33 @@ namespace Twino.Client.TMQ
                     source = ReadSource.Queue;
                 }
                 else if (message.Type == MessageType.DirectMessage)
-                    source = ReadSource.Direct;
+                    source = message.PendingResponse ? ReadSource.Request : ReadSource.Direct;
                 else
                     return;
 
                 //find all subscriber actions
-                List<ReadSubscription> subs;
+                List<ReadSubscription> subs = null;
                 lock (_subscriptions)
                 {
-                    if (source == ReadSource.Direct)
-                        subs = _subscriptions.Where(x => x.Source == ReadSource.Direct && x.ContentType == message.ContentType)
-                                             .ToList();
-                    else
-                        subs = _subscriptions.Where(x => x.Source == ReadSource.Queue &&
-                                                         x.ContentType == message.ContentType &&
-                                                         x.Channel.Equals(message.Target, StringComparison.InvariantCultureIgnoreCase))
-                                             .ToList();
+                    switch (source)
+                    {
+                        case ReadSource.Queue:
+                            subs = _subscriptions.Where(x => x.Source == ReadSource.Queue &&
+                                                             x.ContentType == message.ContentType &&
+                                                             x.Channel.Equals(message.Target, StringComparison.InvariantCultureIgnoreCase)).ToList();
+                            break;
+
+                        case ReadSource.Direct:
+                            subs = _subscriptions.Where(x => x.Source == ReadSource.Direct && x.ContentType == message.ContentType).ToList();
+                            break;
+
+                        case ReadSource.Request:
+                            subs = _subscriptions.Where(x => x.Source == ReadSource.Request && x.ContentType == message.ContentType).ToList();
+                            break;
+                    }
                 }
 
-                if (subs.Count == 0)
+                if (subs == null || subs.Count == 0)
                     return;
 
                 //convert model, only one time to first susbcriber's type
@@ -212,7 +220,7 @@ namespace Twino.Client.TMQ
 
         #endregion
 
-        #region Subscriptions
+        #region Queue Subscriptions
 
         /// <summary>
         /// Subscribe to messages in a queue in a channel
@@ -309,6 +317,40 @@ namespace Twino.Client.TMQ
         }
 
         /// <summary>
+        /// Unsubscribe from messages in a queue in a channel 
+        /// </summary>
+        public void Off<T>()
+        {
+            TypeDeliveryDescriptor descriptor = _deliveryContainer.GetDescriptor<T>();
+
+            if (descriptor == null)
+                throw new ArgumentNullException("Can't resolve TypeDeliveryDescriptor. Use overload method On(string,ushort,T)");
+
+            if (string.IsNullOrEmpty(descriptor.ChannelName))
+                throw new NullReferenceException("Type doesn't have ChannelNameAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
+
+            if (!descriptor.QueueId.HasValue)
+                throw new NullReferenceException("Type doesn't have QueueIdAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
+
+            Off(descriptor.ChannelName, descriptor.QueueId.Value);
+        }
+
+        /// <summary>
+        /// Unsubscribe from messages in a queue in a channel 
+        /// </summary>
+        public void Off(string channel, ushort queueId)
+        {
+            lock (_subscriptions)
+                _subscriptions.RemoveAll(x => x.Source == ReadSource.Queue &&
+                                              x.ContentType == queueId
+                                              && x.Channel.Equals(channel, StringComparison.InvariantCultureIgnoreCase));
+        }
+
+        #endregion
+
+        #region Direct Subscriptions
+
+        /// <summary>
         /// Subscribe to direct messages with a content type
         /// </summary>
         public void OnDirect<T>(Action<T> action)
@@ -394,36 +436,6 @@ namespace Twino.Client.TMQ
         }
 
         /// <summary>
-        /// Unsubscribe from messages in a queue in a channel 
-        /// </summary>
-        public void Off<T>()
-        {
-            TypeDeliveryDescriptor descriptor = _deliveryContainer.GetDescriptor<T>();
-
-            if (descriptor == null)
-                throw new ArgumentNullException("Can't resolve TypeDeliveryDescriptor. Use overload method On(string,ushort,T)");
-
-            if (string.IsNullOrEmpty(descriptor.ChannelName))
-                throw new NullReferenceException("Type doesn't have ChannelNameAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
-
-            if (!descriptor.QueueId.HasValue)
-                throw new NullReferenceException("Type doesn't have QueueIdAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
-
-            Off(descriptor.ChannelName, descriptor.QueueId.Value);
-        }
-
-        /// <summary>
-        /// Unsubscribe from messages in a queue in a channel 
-        /// </summary>
-        public void Off(string channel, ushort queueId)
-        {
-            lock (_subscriptions)
-                _subscriptions.RemoveAll(x => x.Source == ReadSource.Queue &&
-                                              x.ContentType == queueId
-                                              && x.Channel.Equals(channel, StringComparison.InvariantCultureIgnoreCase));
-        }
-
-        /// <summary>
         /// Unsubscribe from direct messages 
         /// </summary>
         public void OffDirect<T>()
@@ -447,6 +459,44 @@ namespace Twino.Client.TMQ
             lock (_subscriptions)
                 _subscriptions.RemoveAll(x => x.Source == ReadSource.Direct && x.ContentType == contentType);
         }
+
+        #endregion
+
+        #region Request Subscriptions
+
+        /// <summary>
+        /// Subscribes to handle requests
+        /// </summary>
+        public void OnRequest<TRequest, TResponse>(ushort contentType, ITwinoRequestHandler<TRequest, TResponse> handler)
+        {
+            ReadSubscription subscription = new ReadSubscription
+                                            {
+                                                Source = ReadSource.Request,
+                                                Channel = null,
+                                                ContentType = contentType,
+                                                MessageType = typeof(TRequest),
+                                                Action = null,
+                                                TmqMessageParameter = true,
+                                                ConsumerExecuter = new RequestHandlerExecuter<TRequest, TResponse>(handler.GetType(), handler, null)
+                                            };
+
+            lock (_subscriptions)
+                _subscriptions.Add(subscription);
+        }
+
+        /// <summary>
+        /// Unsubscribe from handling requests 
+        /// </summary>
+        public void OffRequest(ushort contentType)
+        {
+            lock (_subscriptions)
+                _subscriptions.RemoveAll(x => x.Source == ReadSource.Request &&
+                                              x.ContentType == contentType);
+        }
+
+        #endregion
+
+        #region Subscriptions
 
         /// <summary>
         /// Clear all subscriptions for the channels and direct messages
@@ -496,7 +546,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         public IEnumerable<Type> RegisterAssemblyConsumers(params Type[] assemblyTypes)
         {
-            return RegisterAssemblyConsumers((Func<IConsumerFactory>) null, assemblyTypes);
+            return RegisterAssemblyConsumers(null, assemblyTypes);
         }
 
         /// <summary>
@@ -558,6 +608,7 @@ namespace Twino.Client.TMQ
         {
             Type openQueueGeneric = typeof(IQueueConsumer<>);
             Type openDirectGeneric = typeof(IDirectConsumer<>);
+            Type openRequestGeneric = typeof(ITwinoRequestHandler<,>);
 
             List<ModelTypeInfo> result = new List<ModelTypeInfo>();
 
@@ -569,10 +620,16 @@ namespace Twino.Client.TMQ
 
                 Type generic = interfaceType.GetGenericTypeDefinition();
                 if (openQueueGeneric.IsAssignableFrom(generic))
-                    result.Add(new ModelTypeInfo(consumerType, interfaceType.GetGenericArguments().FirstOrDefault(), ConsumerMethod.Queue));
+                    result.Add(new ModelTypeInfo(consumerType, ReadSource.Queue, interfaceType.GetGenericArguments().FirstOrDefault()));
 
                 else if (openDirectGeneric.IsAssignableFrom(generic))
-                    result.Add(new ModelTypeInfo(consumerType, interfaceType.GetGenericArguments().FirstOrDefault(), ConsumerMethod.Direct));
+                    result.Add(new ModelTypeInfo(consumerType, ReadSource.Direct, interfaceType.GetGenericArguments().FirstOrDefault()));
+
+                else if (openRequestGeneric.IsAssignableFrom(generic))
+                {
+                    Type[] genericArgs = interfaceType.GetGenericArguments();
+                    result.Add(new ModelTypeInfo(consumerType, ReadSource.Request, genericArgs[0], genericArgs[1]));
+                }
             }
 
             return result;
@@ -580,29 +637,58 @@ namespace Twino.Client.TMQ
 
         private ReadSubscription CreateConsumerSubscription(ModelTypeInfo typeInfo, Func<IConsumerFactory> consumerFactoryBuilder)
         {
-            Type executerType = typeof(ConsumerExecuter<>);
             bool useConsumerFactory = consumerFactoryBuilder != null;
 
             TypeDeliveryResolver resolver = new TypeDeliveryResolver();
             TypeDeliveryDescriptor consumerDescriptor = resolver.Resolve(typeInfo.ConsumerType);
             TypeDeliveryDescriptor modelDescriptor = resolver.Resolve(typeInfo.ModelType);
-            var target = GetTarget(typeInfo.Method, consumerDescriptor, modelDescriptor);
+            var target = GetTarget(typeInfo.Source, consumerDescriptor, modelDescriptor);
 
             object consumerInstance = useConsumerFactory ? null : Activator.CreateInstance(typeInfo.ConsumerType);
-            Type executerGenericType = executerType.MakeGenericType(typeInfo.ModelType);
 
-            ConsumerExecuter executer = (ConsumerExecuter) Activator.CreateInstance(executerGenericType,
-                                                                                    typeInfo.ConsumerType,
-                                                                                    typeInfo.Method,
-                                                                                    consumerInstance,
-                                                                                    consumerFactoryBuilder);
+            ConsumerExecuter executer = null;
+            switch (typeInfo.Source)
+            {
+                case ReadSource.Queue:
+                {
+                    Type executerType = typeof(QueueConsumerExecuter<>);
+                    Type executerGenericType = executerType.MakeGenericType(typeInfo.ModelType);
+                    executer = (ConsumerExecuter) Activator.CreateInstance(executerGenericType,
+                                                                           typeInfo.ConsumerType,
+                                                                           consumerInstance,
+                                                                           consumerFactoryBuilder);
+                    break;
+                }
+                case ReadSource.Direct:
+                {
+                    Type executerType = typeof(DirectConsumerExecuter<>);
+                    Type executerGenericType = executerType.MakeGenericType(typeInfo.ModelType);
+                    executer = (ConsumerExecuter) Activator.CreateInstance(executerGenericType,
+                                                                           typeInfo.ConsumerType,
+                                                                           consumerInstance,
+                                                                           consumerFactoryBuilder);
+                    break;
+                }
+
+                case ReadSource.Request:
+                {
+                    Type executerType = typeof(RequestHandlerExecuter<,>);
+                    Type executerGenericType = executerType.MakeGenericType(typeInfo.ModelType, typeInfo.ResponseType);
+                    executer = (ConsumerExecuter) Activator.CreateInstance(executerGenericType,
+                                                                           typeInfo.ConsumerType,
+                                                                           consumerInstance,
+                                                                           consumerFactoryBuilder);
+                    break;
+                }
+            }
 
             ReadSubscription subscription = new ReadSubscription
                                             {
-                                                Source = typeInfo.Method == ConsumerMethod.Queue ? ReadSource.Queue : ReadSource.Direct,
+                                                Source = typeInfo.Source,
                                                 Channel = target.Item1,
                                                 ContentType = target.Item2,
                                                 MessageType = typeInfo.ModelType,
+                                                ResponseType = typeInfo.ResponseType,
                                                 Action = null,
                                                 ConsumerExecuter = executer
                                             };
@@ -613,11 +699,11 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Finds target for consumer and model
         /// </summary>
-        private Tuple<string, ushort> GetTarget(ConsumerMethod method, TypeDeliveryDescriptor consumerDescriptor, TypeDeliveryDescriptor modelDescriptor)
+        private Tuple<string, ushort> GetTarget(ReadSource source, TypeDeliveryDescriptor consumerDescriptor, TypeDeliveryDescriptor modelDescriptor)
         {
             ushort contentType = 0;
             string target = null;
-            if (method == ConsumerMethod.Queue)
+            if (source == ReadSource.Queue)
             {
                 if (consumerDescriptor.HasQueueId)
                     contentType = consumerDescriptor.QueueId ?? 0;
@@ -642,7 +728,7 @@ namespace Twino.Client.TMQ
                     target = modelDescriptor.DirectTarget;
             }
 
-            if (method == ConsumerMethod.Queue && string.IsNullOrEmpty(target))
+            if (source == ReadSource.Queue && string.IsNullOrEmpty(target))
                 target = modelDescriptor.ChannelName;
 
             return new Tuple<string, ushort>(target, contentType);

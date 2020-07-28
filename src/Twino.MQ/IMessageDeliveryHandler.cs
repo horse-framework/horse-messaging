@@ -8,22 +8,6 @@ using Twino.Protocols.TMQ;
 namespace Twino.MQ
 {
     /// <summary>
-    /// Acknowledge message decision
-    /// </summary>
-    public enum AcknowledgeDecision
-    {
-        /// <summary>
-        /// Do nothing
-        /// </summary>
-        Nothing,
-
-        /// <summary>
-        /// Sends acknowldege message to it's owner
-        /// </summary>
-        SendToOwner
-    }
-
-    /// <summary>
     /// Message send and receive operations implementation
     /// (before starting to send, before and after single message sending, after sending completed, delivery and responses, time up)
     /// </summary>

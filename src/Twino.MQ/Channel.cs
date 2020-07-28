@@ -14,27 +14,6 @@ using Twino.MQ.Security;
 namespace Twino.MQ
 {
     /// <summary>
-    /// Joining channel result
-    /// </summary>
-    public enum ClientJoinResult
-    {
-        /// <summary>
-        /// Client has joined to channel
-        /// </summary>
-        Success,
-
-        /// <summary>
-        /// Unauthorized client
-        /// </summary>
-        Unauthorized,
-
-        /// <summary>
-        /// Channel is full
-        /// </summary>
-        Full
-    }
-
-    /// <summary>
     /// Messaging Queue Channel
     /// </summary>
     public class Channel
@@ -290,6 +269,73 @@ namespace Twino.MQ
                 throw new DuplicateNameException($"The channel has already a queue with same content type: {queueId}");
 
             queue = new ChannelQueue(this, queueId, options, deliveryHandler);
+            _queues.Add(queue);
+
+            if (EventHandler != null)
+                await EventHandler.OnQueueCreated(queue, this);
+
+            _ = OnQueueCreated.Trigger(queue);
+            return queue;
+        }
+
+        /// <summary>
+        /// Creates new queue
+        /// </summary>
+        /// <param name="queueId">Queue Id</param>
+        /// <param name="deliveryAction">Delivery handler creator function</param>
+        /// <returns></returns>
+        public Task<ChannelQueue> CreateQueue(ushort queueId, Func<ChannelQueue, Task<IMessageDeliveryHandler>> deliveryAction)
+        {
+            ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(Options);
+            return CreateQueue(queueId, options, deliveryAction);
+        }
+
+        /// <summary>
+        /// Creates new queue
+        /// </summary>
+        /// <param name="queueId">Queue Id</param>
+        /// <param name="optionsAction">Options function</param>
+        /// <param name="deliveryAction">Delivery handler creator function</param>
+        /// <returns></returns>
+        public Task<ChannelQueue> CreateQueue(ushort queueId, Action<ChannelQueueOptions> optionsAction, Func<ChannelQueue, Task<IMessageDeliveryHandler>> deliveryAction)
+        {
+            ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(Options);
+            optionsAction(options);
+            return CreateQueue(queueId, options, deliveryAction);
+        }
+
+        /// <summary>
+        /// Creates new queue
+        /// </summary>
+        /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
+        /// <exception cref="OperationCanceledException">Thrown when queue limit is exceeded for the channel</exception>
+        /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
+        public async Task<ChannelQueue> CreateQueue(ushort queueId, ChannelQueueOptions options, Func<ChannelQueue, Task<IMessageDeliveryHandler>> deliveryAction)
+        {
+            //multiple queues are not allowed
+            if (!Options.AllowMultipleQueues && _queues.Count > 0)
+                return null;
+
+            //if content type is not allowed for this channel, return null
+            if (Options.AllowedQueues != null && Options.AllowedQueues.Length > 0)
+                if (!Options.AllowedQueues.Contains(queueId))
+                    return null;
+
+            if (Options.QueueLimit > 0 && Options.QueueLimit >= _queues.Count)
+                throw new OperationCanceledException("Queue limit is exceeded for the channel");
+
+            ChannelQueue queue = _queues.Find(x => x.Id == queueId);
+
+            if (queue != null)
+                throw new DuplicateNameException($"The channel has already a queue with same content type: {queueId}");
+
+            queue = new ChannelQueue(this, queueId, options);
+
+            IMessageDeliveryHandler handler = await deliveryAction(queue);
+            if (handler == null)
+                throw new NoNullAllowedException("Delivery handler cannot be null.");
+
+            queue.SetMessageDeliveryHandler(handler);
             _queues.Add(queue);
 
             if (EventHandler != null)

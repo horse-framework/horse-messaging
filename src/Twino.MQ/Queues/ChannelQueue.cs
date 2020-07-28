@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +15,11 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Queues
 {
+    /// <summary>
+    /// Event handler for queues
+    /// </summary>
+    public delegate void QueueEventHandler(ChannelQueue queue);
+    
     /// <summary>
     /// Channel queue.
     /// Keeps queued messages and subscribed clients.
@@ -60,7 +66,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Triggered when a message is produced 
         /// </summary>
-        public MessageEventManager OnMessageProduced { get; }
+        public MessageEventManager OnMessageProduced { get; private set; }
 
         /// <summary>
         /// Queue messaging handler.
@@ -97,7 +103,7 @@ namespace Twino.MQ.Queues
         /// Time keeper for the queue.
         /// Checks message receiver deadlines and delivery deadlines.
         /// </summary>
-        internal QueueTimeKeeper TimeKeeper { get; }
+        internal QueueTimeKeeper TimeKeeper { get; private set; }
 
         /// <summary>
         /// Wait acknowledge cross thread locker
@@ -136,6 +142,11 @@ namespace Twino.MQ.Queues
         /// </summary>
         private Timer _triggerTimer;
 
+        /// <summary>
+        /// Triggered when queue is destroyed
+        /// </summary>
+        public event QueueEventHandler OnDestroyed;
+
         #endregion
 
         #region Constructors - Destroy
@@ -150,13 +161,31 @@ namespace Twino.MQ.Queues
             Options = options;
             Status = options.Status;
             DeliveryHandler = deliveryHandler;
-            State = QueueStateFactory.Create(this, options.Status);
+            InitializeQueue();
+        }
+
+        internal ChannelQueue(Channel channel,
+                              ushort id,
+                              ChannelQueueOptions options)
+        {
+            Channel = channel;
+            Id = id;
+            Options = options;
+            Status = options.Status;
+        }
+
+        /// <summary>
+        /// Initializes queue to first use
+        /// </summary>
+        private void InitializeQueue()
+        {
+            State = QueueStateFactory.Create(this, Options.Status);
             OnMessageProduced = new MessageEventManager(EventNames.MessageProduced, this);
 
             TimeKeeper = new QueueTimeKeeper(this);
             TimeKeeper.Run();
 
-            if (options.WaitForAcknowledge)
+            if (Options.WaitForAcknowledge)
                 _ackSync = new SemaphoreSlim(1, 1);
 
             _triggerTimer = new Timer(a =>
@@ -167,35 +196,54 @@ namespace Twino.MQ.Queues
         }
 
         /// <summary>
+        /// Sets message delivery handler and initializes queue
+        /// </summary>
+        internal void SetMessageDeliveryHandler(IMessageDeliveryHandler deliveryHandler)
+        {
+            if (DeliveryHandler != null)
+                throw new InvalidOperationException("Queue has already a delivery handler");
+
+            DeliveryHandler = deliveryHandler;
+            InitializeQueue();
+        }
+
+        /// <summary>
         /// Destorys the queue
         /// </summary>
         public async Task Destroy()
         {
-            await TimeKeeper.Destroy();
-            OnMessageProduced.Dispose();
-
-            lock (PriorityMessagesList)
-                PriorityMessagesList.Clear();
-
-            lock (MessagesList)
-                MessagesList.Clear();
-
-            if (_ackSync != null)
+            try
             {
-                _ackSync.Dispose();
-                _ackSync = null;
+                await TimeKeeper.Destroy();
+                OnMessageProduced.Dispose();
+
+                lock (PriorityMessagesList)
+                    PriorityMessagesList.Clear();
+
+                lock (MessagesList)
+                    MessagesList.Clear();
+
+                if (_ackSync != null)
+                {
+                    _ackSync.Dispose();
+                    _ackSync = null;
+                }
+
+                if (_listSync != null)
+                    _listSync.Dispose();
+
+                if (_pushSync != null)
+                    _pushSync.Dispose();
+
+                if (_triggerTimer != null)
+                {
+                    await _triggerTimer.DisposeAsync();
+                    _triggerTimer = null;
+                }
             }
-
-            if (_listSync != null)
-                _listSync.Dispose();
-
-            if (_pushSync != null)
-                _pushSync.Dispose();
-
-            if (_triggerTimer != null)
+            finally
             {
-                await _triggerTimer.DisposeAsync();
-                _triggerTimer = null;
+                OnDestroyed?.Invoke(this);
             }
         }
 
@@ -754,15 +802,16 @@ namespace Twino.MQ.Queues
             if (decision.SaveMessage)
                 await SaveMessage(message);
 
-            if (decision.Acknowledge == DeliveryAcknowledgeDecision.Always ||
-                decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ||
-                decision.Acknowledge == DeliveryAcknowledgeDecision.IfSaved && message.IsSaved)
+            if (!message.IsProducerAckSent && (decision.Acknowledge == DeliveryAcknowledgeDecision.Always ||
+                                               decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ||
+                                               decision.Acknowledge == DeliveryAcknowledgeDecision.IfSaved && message.IsSaved))
             {
                 TmqMessage acknowledge = customAck ?? message.Message.CreateAcknowledge(decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ? "none" : null);
 
                 if (message.Source != null && message.Source.IsConnected)
                 {
                     bool sent = await message.Source.SendAsync(acknowledge);
+                    message.IsProducerAckSent = sent;
                     if (decision.AcknowledgeDelivery != null)
                         await decision.AcknowledgeDelivery(message, message.Source, sent);
                 }

@@ -35,6 +35,11 @@ namespace Twino.MQ.Queues
         /// If true, message is saved to DB or Disk
         /// </summary>
         public bool IsSaved { get; internal set; }
+        
+        /// <summary>
+        /// True, if producer received ack
+        /// </summary>
+        public bool IsProducerAckSent { get; internal set; }
 
         /// <summary>
         /// True, if is sent

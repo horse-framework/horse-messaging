@@ -1,19 +1,20 @@
 using System;
-using Twino.Client.TMQ.Internal;
 
 namespace Twino.Client.TMQ.Models
 {
     internal class ModelTypeInfo
     {
-        public ConsumerMethod Method { get; }
+        public ReadSource Source { get; }
         public Type ModelType { get; }
         public Type ConsumerType { get; }
+        public Type ResponseType { get; }
 
-        public ModelTypeInfo(Type consumerType ,Type modelType, ConsumerMethod method)
+        public ModelTypeInfo(Type consumerType, ReadSource source, Type modelType, Type responseType = null)
         {
             ConsumerType = consumerType;
             ModelType = modelType;
-            Method = method;
+            Source = source;
+            ResponseType = responseType;
         }
     }
 }

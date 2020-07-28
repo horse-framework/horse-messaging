@@ -16,7 +16,12 @@ namespace Twino.Client.TMQ.Models
         /// <summary>
         /// Message source is another client, sending message directly
         /// </summary>
-        Direct
+        Direct,
+        
+        /// <summary>
+        /// Message is a request and waits for response
+        /// </summary>
+        Request
     }
 
     /// <summary>
@@ -43,6 +48,11 @@ namespace Twino.Client.TMQ.Models
         /// Message type in the queue
         /// </summary>
         public Type MessageType { get; set; }
+
+        /// <summary>
+        /// Response message type in the queue
+        /// </summary>
+        public Type ResponseType { get; set; }
 
         /// <summary>
         /// The action that will triggered when the message received
