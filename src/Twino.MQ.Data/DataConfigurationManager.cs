@@ -26,7 +26,7 @@ namespace Twino.MQ.Data
             throw new NotImplementedException();
         }
 
-        public Task LoadQueues()
+        public Task LoadQueues(MqServer server)
         {
             throw new NotImplementedException();
         }

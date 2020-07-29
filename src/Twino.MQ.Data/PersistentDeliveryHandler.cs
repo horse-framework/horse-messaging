@@ -7,38 +7,43 @@ using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Data
 {
-    public enum DeleteWhen
-    {
-        AfterSend,
-        AfterAcknowledgeReceived
-    }
-
+    /// <summary>
+    /// Delivery handler for persistent queues
+    /// </summary>
     public class PersistentDeliveryHandler : IMessageDeliveryHandler
     {
         private readonly ChannelQueue _queue;
         private readonly DeleteWhen _deleteWhen;
-        private readonly DeliveryAcknowledgeDecision _acknowledgeDecision;
+        private readonly DeliveryAcknowledgeDecision _producerAckDecision;
         private readonly Database _database;
         private readonly Action<ChannelQueue, QueueMessage, Exception> _exception;
 
         #region Init - Destroy
 
+        /// <summary>
+        /// Creates new persistent delivery handler
+        /// </summary>
         public PersistentDeliveryHandler(ChannelQueue queue,
                                          DatabaseOptions options,
                                          DeleteWhen deleteWhen,
-                                         DeliveryAcknowledgeDecision acknowledgeDecision,
+                                         DeliveryAcknowledgeDecision producerAckDecision,
                                          Action<ChannelQueue, QueueMessage, Exception> exception)
         {
             _queue = queue;
             _deleteWhen = deleteWhen;
-            _acknowledgeDecision = acknowledgeDecision;
+            _producerAckDecision = producerAckDecision;
             _exception = exception;
             _database = new Database(options);
         }
 
+        /// <summary>
+        /// Initializes queue, opens database files and fills messages into the queue
+        /// </summary>
         public async Task Initialize()
         {
             await _database.Open();
+            _queue.OnDestroyed += Destroy;
+
             var dict = await _database.List();
             if (dict.Count > 0)
             {
@@ -49,7 +54,10 @@ namespace Twino.MQ.Data
             }
         }
 
-        internal async void Destroy(ChannelQueue queue)
+        /// <summary>
+        /// Removes queue from configuration and deletes all database files
+        /// </summary>
+        private async void Destroy(ChannelQueue queue)
         {
             try
             {
@@ -75,35 +83,41 @@ namespace Twino.MQ.Data
 
         #region Events
 
+        /// <inheritdoc />
         public Task<Decision> ReceivedFromProducer(ChannelQueue queue, QueueMessage message, MqClient sender)
         {
-            return Task.FromResult(new Decision(true, true, PutBackDecision.No, _acknowledgeDecision));
+            return Task.FromResult(new Decision(true, true, PutBackDecision.No, _producerAckDecision));
         }
 
+        /// <inheritdoc />
         public Task<Decision> BeginSend(ChannelQueue queue, QueueMessage message)
         {
-            return Task.FromResult(new Decision(true, true, PutBackDecision.No, _acknowledgeDecision));
+            return Task.FromResult(new Decision(true, true, PutBackDecision.No, _producerAckDecision));
         }
 
+        /// <inheritdoc />
         public Task<Decision> CanConsumerReceive(ChannelQueue queue, QueueMessage message, MqClient receiver)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
+        /// <inheritdoc />
         public Task<Decision> ConsumerReceived(ChannelQueue queue, MessageDelivery delivery, MqClient receiver)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
+        /// <inheritdoc />
         public Task<Decision> ConsumerReceiveFailed(ChannelQueue queue, MessageDelivery delivery, MqClient receiver)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
+        /// <inheritdoc />
         public async Task<Decision> EndSend(ChannelQueue queue, QueueMessage message)
         {
             if (message.SendCount == 0)
-                return new Decision(true, true, PutBackDecision.Start, _acknowledgeDecision);
+                return new Decision(true, true, PutBackDecision.Start, _producerAckDecision);
 
             if (_deleteWhen == DeleteWhen.AfterSend)
                 await DeleteMessage(message.Message.MessageId);
@@ -111,6 +125,7 @@ namespace Twino.MQ.Data
             return Decision.JustAllow();
         }
 
+        /// <inheritdoc />
         public async Task<Decision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
             if (_deleteWhen == DeleteWhen.AfterAcknowledgeReceived)
@@ -119,6 +134,7 @@ namespace Twino.MQ.Data
             return Decision.JustAllow();
         }
 
+        /// <inheritdoc />
         public async Task<Decision> MessageTimedOut(ChannelQueue queue, QueueMessage message)
         {
             await DeleteMessage(message.Message.MessageId);
@@ -137,16 +153,19 @@ namespace Twino.MQ.Data
             }
         }
 
+        /// <inheritdoc />
         public Task<Decision> AcknowledgeTimedOut(ChannelQueue queue, MessageDelivery delivery)
         {
-            return Task.FromResult(new Decision(true, true, PutBackDecision.Start, _acknowledgeDecision));
+            return Task.FromResult(new Decision(true, true, PutBackDecision.Start, _producerAckDecision));
         }
 
+        /// <inheritdoc />
         public Task MessageDequeued(ChannelQueue queue, QueueMessage message)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
+        /// <inheritdoc />
         public Task<Decision> ExceptionThrown(ChannelQueue queue, QueueMessage message, Exception exception)
         {
             if (_exception != null)
@@ -155,6 +174,7 @@ namespace Twino.MQ.Data
             return Task.FromResult(Decision.JustAllow());
         }
 
+        /// <inheritdoc />
         public Task<bool> SaveMessage(ChannelQueue queue, QueueMessage message)
         {
             return _database.Insert(message.Message);
