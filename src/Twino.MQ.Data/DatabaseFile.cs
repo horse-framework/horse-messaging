@@ -181,6 +181,8 @@ namespace Twino.MQ.Data
             try
             {
                 File.Delete(Filename);
+                File.Delete(Filename + ".backup");
+                File.Delete(Filename + ".shrink");
                 return true;
             }
             catch (Exception e)

@@ -6,16 +6,14 @@ namespace Twino.MQ.Data
 {
     internal class DataConfigurationManager
     {
-        public DataConfigurationManager(DataConfiguration configuration)
+        public DataConfiguration Load()
         {
-        }
-        
-        public void Load()
-        {
+            throw new NotImplementedException();
         }
 
         public void Save()
         {
+            throw new NotImplementedException();
         }
 
         public void Add(ChannelQueue queue)

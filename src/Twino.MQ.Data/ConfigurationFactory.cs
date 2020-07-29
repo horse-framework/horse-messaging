@@ -16,11 +16,8 @@ namespace Twino.MQ.Data
                 throw new InvalidOperationException("Data configuration is already initialized");
             
             Builder = builder;
-
-            //todo: load configuration
-            //todo: initialize manager
-            
-            throw new NotImplementedException();
+            Manager = new DataConfigurationManager();
+            Configuration = Manager.Load();
         }
     }
 }
