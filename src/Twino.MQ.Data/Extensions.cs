@@ -55,7 +55,6 @@ namespace Twino.MQ.Data
         /// <param name="queueId">Queue Id</param>
         /// <param name="deleteWhen">Decision, when messages will be removed from disk</param>
         /// <param name="producerAckDecision">Decision, when ack will be sent to producer</param>
-        /// <param name="exception">Exception handler action for delivery handler</param>
         /// <returns></returns>
         public static Task<ChannelQueue> CreatePersistentQueue(this Channel channel,
                                                                ushort queueId,
@@ -74,7 +73,6 @@ namespace Twino.MQ.Data
         /// <param name="deleteWhen">Decision, when messages will be removed from disk</param>
         /// <param name="producerAckDecision">Decision, when ack will be sent to producer</param>
         /// <param name="optionsAction">Channel Queue Options builder action</param>
-        /// <param name="exception">Exception handler action for delivery handler</param>
         /// <returns></returns>
         public static Task<ChannelQueue> CreatePersistentQueue(this Channel channel,
                                                                ushort queueId,
@@ -95,7 +93,6 @@ namespace Twino.MQ.Data
         /// <param name="deleteWhen">Decision, when messages will be removed from disk</param>
         /// <param name="producerAckDecision">Decision, when ack will be sent to producer</param>
         /// <param name="options">Channel Queue Options</param>
-        /// <param name="exception">Exception handler action for delivery handler</param>
         /// <returns></returns>
         public static async Task<ChannelQueue> CreatePersistentQueue(this Channel channel,
                                                                      ushort queueId,
