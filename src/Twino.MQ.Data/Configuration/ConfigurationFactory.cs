@@ -29,7 +29,7 @@ namespace Twino.MQ.Data.Configuration
             
             Builder = builder;
             Manager = new DataConfigurationManager();
-            Configuration = Manager.Load();
+            Configuration = Manager.Load(builder.ConfigFile);
         }
     }
 }

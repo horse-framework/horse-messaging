@@ -16,6 +16,16 @@ namespace Twino.MQ.Data.Configuration
 
         [JsonProperty("Queues")]
         [JsonPropertyName("Queues")]
-        public List<QueueOptionsConfiguration> Queues { get; set; }
+        public List<QueueConfiguration> Queues { get; set; }
+        
+        public static ChannelConfiguration Empty()
+        {
+            ChannelConfiguration configuration = new ChannelConfiguration();
+            
+            configuration.Configuration = new ChannelOptionsConfiguration();
+            configuration.Queues = new List<QueueConfiguration>();
+            
+            return configuration;
+        }
     }
 }

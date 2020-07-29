@@ -14,7 +14,15 @@ namespace Twino.MQ.Data
     public static class Extensions
     {
         /// <summary>
-        /// Adds persistent queues with configuration
+        /// Adds persistent queues with default configuration
+        /// </summary>
+        public static MqServer AddPersistentQueues(this MqServer server)
+        {
+            return AddPersistentQueues(server, c => { });
+        }
+        
+        /// <summary>
+        /// Adds persistent queues with customized configuration
         /// </summary>
         public static MqServer AddPersistentQueues(this MqServer server,
                                                    Action<DataConfigurationBuilder> cfg)
@@ -99,7 +107,8 @@ namespace Twino.MQ.Data
                                                                      Action<ChannelQueue, QueueMessage, Exception> exception = null)
         {
             ChannelQueue queue = await CreateQueue(channel, queueId, deleteWhen, producerAckDecision, options, exception);
-            ConfigurationFactory.Manager.Add(queue);
+            PersistentDeliveryHandler deliveryHandler = (PersistentDeliveryHandler) queue.DeliveryHandler;
+            ConfigurationFactory.Manager.Add(queue, deliveryHandler.Database.File.Filename);
             ConfigurationFactory.Manager.Save();
             return queue;
         }

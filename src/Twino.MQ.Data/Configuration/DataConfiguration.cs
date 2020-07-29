@@ -12,5 +12,12 @@ namespace Twino.MQ.Data.Configuration
         [JsonProperty("Channels")]
         [JsonPropertyName("Channels")]
         internal List<ChannelConfiguration> Channels { get; set; }
+
+        public static DataConfiguration Empty()
+        {
+            DataConfiguration configuration = new DataConfiguration();
+            configuration.Channels = new List<ChannelConfiguration>();
+            return configuration;
+        }
     }
 }

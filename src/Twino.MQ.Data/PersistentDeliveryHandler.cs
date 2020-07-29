@@ -19,6 +19,8 @@ namespace Twino.MQ.Data
         private readonly Database _database;
         private readonly Action<ChannelQueue, QueueMessage, Exception> _exception;
 
+        internal Database Database => _database;
+
         #region Init - Destroy
 
         /// <summary>
@@ -173,6 +175,9 @@ namespace Twino.MQ.Data
         {
             if (_exception != null)
                 _exception(queue, message, exception);
+
+            if (ConfigurationFactory.Builder.ErrorAction != null)
+                ConfigurationFactory.Builder.ErrorAction(exception);
 
             return Task.FromResult(Decision.JustAllow());
         }

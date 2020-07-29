@@ -17,8 +17,10 @@ namespace Twino.MQ.Data.Configuration
         private TimeSpan _flushInteval = TimeSpan.FromMilliseconds(250);
         private TimeSpan _shrinkInteval = TimeSpan.FromMinutes(15);
 
-        internal string ConfigFile { get; private set; } = "queues.json";
+        internal string ConfigFile { get; private set; } = "config.json";
         internal Func<ChannelQueue, string> GenerateQueueFilename { get; set; }
+        
+        internal Action<Exception> ErrorAction { get; set; }
 
         #endregion
 
