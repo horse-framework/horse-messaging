@@ -51,6 +51,25 @@ namespace Twino.MQ.Data
         /// <summary>
         /// Creates new persistent queue in the channel
         /// </summary>
+        /// <param name="channelName">Name of the channel. Created, if it isn't exists</param>
+        /// <param name="queueId">Queue Id</param>
+        /// <param name="deleteWhen">Decision, when messages will be removed from disk</param>
+        /// <param name="producerAckDecision">Decision, when ack will be sent to producer</param>
+        /// <returns></returns>
+        public static Task<ChannelQueue> CreatePersistentQueue(this MqServer server,
+                                                               string channelName,
+                                                               ushort queueId,
+                                                               DeleteWhen deleteWhen,
+                                                               DeliveryAcknowledgeDecision producerAckDecision)
+        {
+            Channel channel= server.FindOrCreateChannel(channelName);
+            ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(channel.Options);
+            return CreatePersistentQueue(channel, queueId, deleteWhen, producerAckDecision, options);
+        }
+
+        /// <summary>
+        /// Creates new persistent queue in the channel
+        /// </summary>
         /// <param name="channel">The channel queue will be created in</param>
         /// <param name="queueId">Queue Id</param>
         /// <param name="deleteWhen">Decision, when messages will be removed from disk</param>

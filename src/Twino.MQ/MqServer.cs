@@ -155,8 +155,34 @@ namespace Twino.MQ
         /// Creates new Messaging Queue Server
         /// </summary>
         public MqServer(IClientAuthenticator authenticator = null, IClientAuthorization authorization = null)
-            : this(null, authenticator, authorization)
+            : this((MqServerOptions) null, authenticator, authorization)
         {
+        }
+
+        /// <summary>
+        /// Creates new Messaging Queue Server
+        /// </summary>
+        public MqServer(Action<MqServerOptions> options,
+                        IClientAuthenticator authenticator = null,
+                        IClientAuthorization authorization = null)
+        {
+            Options = new MqServerOptions();
+            options(Options);
+            Authenticator = authenticator;
+            Authorization = authorization;
+
+            _routers = new SafeList<IRouter>(256);
+            _channels = new SafeList<Channel>(256);
+            _clients = new SafeList<MqClient>(2048);
+
+            NodeManager = new NodeManager(this);
+
+            NodeManager.Initialize();
+
+            OnClientConnected = new ClientEventManager(EventNames.ClientConnected, this);
+            OnClientDisconnected = new ClientEventManager(EventNames.ClientDisconnected, this);
+            OnChannelCreated = new ChannelEventManager(EventNames.ChannelCreated, this);
+            OnChannelRemoved = new ChannelEventManager(EventNames.ChannelRemoved, this);
         }
 
         /// <summary>
@@ -262,7 +288,7 @@ namespace Twino.MQ
 
             return CreateChannel(name, DefaultChannelAuthenticator, DefaultChannelEventHandler, DefaultDeliveryHandler, options);
         }
-        
+
         /// <summary>
         /// Creates new channel with custom event handler, authenticator and default options
         /// </summary>

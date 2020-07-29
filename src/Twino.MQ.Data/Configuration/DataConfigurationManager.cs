@@ -24,6 +24,11 @@ namespace Twino.MQ.Data.Configuration
             {
                 var c = DataConfiguration.Empty();
                 string serialized = Newtonsoft.Json.JsonConvert.SerializeObject(c);
+                
+                string dir = FindDirectoryIfFile(ConfigurationFactory.Builder.ConfigFile);
+                if (!Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+
                 File.WriteAllText(ConfigurationFactory.Builder.ConfigFile, serialized);
                 return c;
             }
@@ -31,6 +36,11 @@ namespace Twino.MQ.Data.Configuration
             string json = File.ReadAllText(fullpath);
             DataConfiguration configuration = Newtonsoft.Json.JsonConvert.DeserializeObject<DataConfiguration>(json);
             return configuration;
+        }
+
+        private string FindDirectoryIfFile(string fullpath)
+        {
+            return fullpath.Substring(0, fullpath.LastIndexOf('/'));
         }
 
         /// <summary>
@@ -43,6 +53,11 @@ namespace Twino.MQ.Data.Configuration
                 string serialized;
                 lock (_optionsLock)
                     serialized = Newtonsoft.Json.JsonConvert.SerializeObject(Config);
+
+                string dir = FindDirectoryIfFile(ConfigurationFactory.Builder.ConfigFile);
+                if (!Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+                
                 File.WriteAllText(ConfigurationFactory.Builder.ConfigFile, serialized);
             }
             catch (Exception e)
@@ -71,6 +86,11 @@ namespace Twino.MQ.Data.Configuration
                 channelConfig.Configuration = channelOptions;
                 channelConfig.Name = queue.Channel.Name;
                 channelConfig.Queues = new List<QueueConfiguration>();
+
+                if (ConfigurationFactory.Configuration.Channels == null)
+                    ConfigurationFactory.Configuration.Channels = new List<ChannelConfiguration>();
+                
+                ConfigurationFactory.Configuration.Channels.Add(channelConfig);
             }
 
             PersistentDeliveryHandler deliveryHandler = (PersistentDeliveryHandler) queue.DeliveryHandler;
