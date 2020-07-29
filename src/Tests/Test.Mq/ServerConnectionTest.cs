@@ -12,9 +12,6 @@ using Xunit;
 
 namespace Test.Mq
 {
-    /// <summary>
-    /// Ports 42100 - 42199
-    /// </summary>
     public class ServerConnectionTest
     {
         /// <summary>
@@ -24,12 +21,12 @@ namespace Test.Mq
         public void ConnectWithInfo()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42101);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
-            client.Data.Properties.Add("Name", "Test-42101");
-            client.Connect("tmq://localhost:42101/path");
+            client.Data.Properties.Add("Name", "Test-" + port);
+            client.Connect("tmq://localhost:" + port + "/path");
 
             Thread.Sleep(50);
 
@@ -44,15 +41,15 @@ namespace Test.Mq
         public async Task ConnectWithoutInfo()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42102);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             List<TcpClient> clients = new List<TcpClient>();
 
             for (int i = 0; i < 50; i++)
             {
                 TcpClient client = new TcpClient();
-                client.Connect("127.0.0.1", 42102);
+                client.Connect("127.0.0.1", port);
                 clients.Add(client);
                 Thread.Sleep(20);
                 ThreadPool.UnsafeQueueUserWorkItem(async c =>
@@ -99,14 +96,14 @@ namespace Test.Mq
         public void ConnectAsOtherProtocol()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42103);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TwinoWebSocket webSocket = null;
             try
             {
                 webSocket = new TwinoWebSocket();
-                webSocket.Connect("ws://localhost:42103/path");
+                webSocket.Connect("ws://localhost:" + port + "/path");
             }
             catch
             {
@@ -126,12 +123,12 @@ namespace Test.Mq
         public void KeepAliveWithPingPong()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42104);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
-            client.Data.Properties.Add("Name", "Test-42104");
-            client.Connect("tmq://localhost:42104/path");
+            client.Data.Properties.Add("Name", "Test-" + port);
+            client.Connect("tmq://localhost:" + port + "/path");
 
             Thread.Sleep(25000);
 
@@ -146,18 +143,18 @@ namespace Test.Mq
         public async Task DisconnectDueToPingTimeout()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42105);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TcpClient client = new TcpClient();
-            await client.ConnectAsync("127.0.0.1", 42105);
+            await client.ConnectAsync("127.0.0.1", port);
 
             NetworkStream stream = client.GetStream();
             stream.Write(PredefinedMessages.PROTOCOL_BYTES_V2);
             TmqMessage msg = new TmqMessage();
             msg.Type = MessageType.Server;
             msg.ContentType = KnownContentTypes.Hello;
-            msg.SetStringContent("GET /\r\nName: Test-42105");
+            msg.SetStringContent("GET /\r\nName: Test-" + port);
             msg.CalculateLengths();
             TmqWriter.Write(msg, stream);
             await Task.Delay(1000);
@@ -194,11 +191,10 @@ namespace Test.Mq
             Random rnd = new Random();
             int connected = 0;
             int disconnected = 0;
-            int port = 42110 + rnd.Next(0, 89);
 
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
 
             for (int i = 0; i < concurrentClients; i++)

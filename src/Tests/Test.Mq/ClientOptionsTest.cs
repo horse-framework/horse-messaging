@@ -9,9 +9,6 @@ using Xunit;
 
 namespace Test.Mq
 {
-    /// <summary>
-    /// Ports 42620 - 42630
-    /// </summary>
     public class ClientOptionsTest
     {
         /// <summary>
@@ -22,12 +19,11 @@ namespace Test.Mq
         [InlineData(false)]
         public async Task UseUniqueMessageId(bool enabled)
         {
-            int port = enabled ? 42621 : 42622;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
+            server.Initialize();
             server.Server.Options.UseMessageId = enabled;
             server.Server.FindChannel("ch-1").FindQueue(MessageA.ContentType).Options.UseMessageId = false;
-            server.Start();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
             client.UseUniqueMessageId = false;
@@ -68,10 +64,9 @@ namespace Test.Mq
         [InlineData(false)]
         public async Task CatchResponseMessages(bool enabled)
         {
-            int port = enabled ? 42624 : 42625;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client1 = new TmqClient();
             TmqClient client2 = new TmqClient();

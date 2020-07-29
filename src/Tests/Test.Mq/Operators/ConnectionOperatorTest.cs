@@ -15,10 +15,9 @@ namespace Test.Mq.Operators
         [InlineData("*client*")]
         public async Task GetOnlineClients(string filter)
         {
-            int port = string.IsNullOrEmpty(filter) ? 41288 : 41289;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
             client.SetClientType("client-test");

@@ -9,9 +9,6 @@ using Xunit;
 
 namespace Test.Mq
 {
-    /// <summary>
-    /// Ports 42700 - 42710
-    /// </summary>
     public class QueueFillTest
     {
         [Fact]
@@ -22,7 +19,7 @@ namespace Test.Mq
                 items.Add(new MessageA("No #" + i));
 
             TestMqServer server = new TestMqServer();
-            server.Initialize(42701);
+            server.Initialize();
             server.Start(300, 300);
 
             Channel route = server.Server.FindChannel("ch-route");
@@ -54,7 +51,7 @@ namespace Test.Mq
                 items.Add("No #" + i);
 
             TestMqServer server = new TestMqServer();
-            server.Initialize(42702);
+            server.Initialize();
             server.Start(300, 300);
 
             Channel channel = server.Server.FindChannel("ch-push");
@@ -80,7 +77,7 @@ namespace Test.Mq
                 items.Add(Encoding.UTF8.GetBytes("No #" + i));
 
             TestMqServer server = new TestMqServer();
-            server.Initialize(42703);
+            server.Initialize();
             server.Start(300, 300);
 
             Channel channel = server.Server.FindChannel("ch-push");

@@ -13,9 +13,6 @@ using Xunit;
 
 namespace Test.Mq
 {
-    /// <summary>
-    /// Ports 42500 - 42520
-    /// </summary>
     public class MessagingOptionsTest
     {
         #region Route Messaging
@@ -27,11 +24,11 @@ namespace Test.Mq
         public async Task RouteToNoClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42501);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42501");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -70,11 +67,11 @@ namespace Test.Mq
         public async Task RouteToClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42502);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42502");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -115,12 +112,12 @@ namespace Test.Mq
         public async Task PushToClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42502);
+            server.Initialize();
             server.Server.Options.Status = QueueStatus.Push;
-            server.Start();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42502");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -157,11 +154,11 @@ namespace Test.Mq
         public async Task PushToLateClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42503);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42503");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -205,8 +202,8 @@ namespace Test.Mq
         public async Task SendOnlyFirstMultipleClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42504);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
@@ -222,7 +219,7 @@ namespace Test.Mq
             {
                 TmqClient client = new TmqClient();
                 client.ClientId = "client-" + no;
-                await client.ConnectAsync("tmq://localhost:42504");
+                await client.ConnectAsync("tmq://localhost:" + port);
                 Assert.True(client.IsConnected);
 
                 client.MessageReceived += (cx, m) =>
@@ -261,8 +258,8 @@ namespace Test.Mq
         public async Task SendOnlyFirstLateClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42505);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
@@ -279,7 +276,7 @@ namespace Test.Mq
             {
                 TmqClient client = new TmqClient();
                 client.ClientId = "client-" + no;
-                await client.ConnectAsync("tmq://localhost:42505");
+                await client.ConnectAsync("tmq://localhost:" + port);
                 Assert.True(client.IsConnected);
 
                 client.MessageReceived += (cx, m) =>
@@ -327,13 +324,13 @@ namespace Test.Mq
         public async Task NonQueueWaitAcknowledgeNoClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42506);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
             server.Server.Options.RequestAcknowledge = true;
             server.Server.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42506");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -372,11 +369,11 @@ namespace Test.Mq
         public async Task NonQueueWaitAcknowledgeOneClient()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42507);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42507");
+            await client.ConnectAsync("tmq://localhost:" + port);
             client.AutoAcknowledge = true;
             Assert.True(client.IsConnected);
 
@@ -417,15 +414,15 @@ namespace Test.Mq
         public async Task NonQueueWaitAcknowledgeMultipleClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42508);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client1 = new TmqClient();
             TmqClient client2 = new TmqClient();
             client1.AutoAcknowledge = true;
             client2.AutoAcknowledge = true;
-            await client1.ConnectAsync("tmq://localhost:42508");
-            await client2.ConnectAsync("tmq://localhost:42508");
+            await client1.ConnectAsync("tmq://localhost:" + port);
+            await client2.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
 
@@ -481,11 +478,11 @@ namespace Test.Mq
         public async Task QueueWaitAcknowledgeNoClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42509);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42509");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -500,7 +497,7 @@ namespace Test.Mq
 
             //the option sending ack from server to producer (without waiting for consumer)
             server.SendAcknowledgeFromMQ = true;
-            
+
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
             TwinoResult sent = await client.Queues.Push(channel.Name, queue.Id, ms, true);
 
@@ -530,11 +527,11 @@ namespace Test.Mq
         public async Task QueueWaitAcknowledgeOneClient()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42510);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42510");
+            await client.ConnectAsync("tmq://localhost:" + port);
             client.AutoAcknowledge = true;
             Assert.True(client.IsConnected);
 
@@ -576,15 +573,15 @@ namespace Test.Mq
         public async Task QueueWaitAcknowledgeMultipleClients()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42511);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client1 = new TmqClient();
             TmqClient client2 = new TmqClient();
             client1.AutoAcknowledge = true;
             client2.AutoAcknowledge = true;
-            await client1.ConnectAsync("tmq://localhost:42511");
-            await client2.ConnectAsync("tmq://localhost:42511");
+            await client1.ConnectAsync("tmq://localhost:" + port);
+            await client2.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
 
@@ -638,10 +635,9 @@ namespace Test.Mq
         [InlineData(false)]
         public async Task HideNamesInChannel(bool enabled)
         {
-            int port = enabled ? 42512 : 42513;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start(300);
+            server.Initialize();
+            int port = server.Start(300);
 
             Channel channel = server.Server.FindChannel("ch-1");
             Assert.NotNull(channel);
@@ -708,12 +704,12 @@ namespace Test.Mq
         public async Task SendAcknowledgeFromServerToProducer()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42514);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
             server.SendAcknowledgeFromMQ = true;
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42514");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
             TwinoResult ack = await client.Queues.Push("ch-route", MessageA.ContentType, "Hello", true);

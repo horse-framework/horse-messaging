@@ -20,10 +20,9 @@ namespace Test.Mq.Operators
         [Fact]
         public async Task Create()
         {
-            int port = 40905;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
@@ -43,11 +42,11 @@ namespace Test.Mq.Operators
         public async Task CreateWithProperties()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(21206);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:21206");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
             TwinoResult created = await client.Queues.Create("ch-test", MessageA.ContentType, o =>
@@ -73,8 +72,8 @@ namespace Test.Mq.Operators
         public async Task Update()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(41207);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             Channel channel = server.Server.FindChannel("ch-route");
             Assert.NotNull(channel);
@@ -87,7 +86,7 @@ namespace Test.Mq.Operators
             Assert.Equal(TimeSpan.FromSeconds(12), queue.Options.MessageTimeout);
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:41207");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
             TwinoResult updated = await client.Queues.SetOptions("ch-route", MessageA.ContentType, o =>
@@ -106,10 +105,9 @@ namespace Test.Mq.Operators
         [Fact]
         public async Task Delete()
         {
-            int port = 41208;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             Channel channel = server.Server.FindChannel("ch-route");
             Assert.NotNull(channel);
@@ -131,10 +129,9 @@ namespace Test.Mq.Operators
         [Fact]
         public async Task GetQueueInfo()
         {
-            int port = 41281;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
@@ -149,10 +146,9 @@ namespace Test.Mq.Operators
         [Fact]
         public async Task GetQueueList()
         {
-            int port = 41282;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
@@ -174,10 +170,9 @@ namespace Test.Mq.Operators
         [InlineData(false, true)]
         public async Task ClearMessages(bool priorityMessages, bool messages)
         {
-            int port = 41282 + Convert.ToInt32(priorityMessages) + (Convert.ToInt32(messages) * 3);
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             var channel = server.Server.FindChannel("ch-push");
             ChannelQueue queue = channel.FindQueue(MessageA.ContentType);

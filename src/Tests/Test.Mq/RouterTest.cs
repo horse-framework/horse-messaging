@@ -10,18 +10,14 @@ using Xunit;
 
 namespace Test.Mq
 {
-    /// <summary>
-    /// Ports 42900 - 42950
-    /// </summary>
     public class RouterTest
     {
         [Fact]
         public async Task Distribute()
         {
-            int port = 42901;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start(300, 300);
+            server.Initialize();
+            int port = server.Start(300, 300);
 
             Router router = new Router(server.Server, "router", RouteMethod.Distribute);
             router.AddBinding(new QueueBinding("qbind-1", "ch-push", MessageA.ContentType, 5, BindingInteraction.None));
@@ -73,10 +69,9 @@ namespace Test.Mq
         [Fact]
         public async Task RoundRobin()
         {
-            int port = 42902;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start(300, 300);
+            server.Initialize();
+            int port = server.Start(300, 300);
 
             Router router = new Router(server.Server, "router", RouteMethod.RoundRobin);
             router.AddBinding(new QueueBinding("qbind-1", "ch-push", MessageA.ContentType, 5, BindingInteraction.None));
@@ -128,10 +123,9 @@ namespace Test.Mq
         [Fact]
         public async Task OnlyFirst()
         {
-            int port = 42903;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start(300, 300);
+            server.Initialize();
+            int port = server.Start(300, 300);
 
             Router router = new Router(server.Server, "router", RouteMethod.OnlyFirst);
             router.AddBinding(new QueueBinding("qbind-1", "ch-push", MessageA.ContentType, 5, BindingInteraction.None));
@@ -183,10 +177,9 @@ namespace Test.Mq
         [Fact]
         public async Task MultipleQueue()
         {
-            int port = 42904;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start(300, 300);
+            server.Initialize();
+            int port = server.Start(300, 300);
 
             Router router = new Router(server.Server, "router", RouteMethod.Distribute);
             router.AddBinding(new QueueBinding("qbind-1", "ch-push", MessageA.ContentType, 0, BindingInteraction.None));
@@ -213,10 +206,9 @@ namespace Test.Mq
         [Fact]
         public async Task MultipleDirect()
         {
-            int port = 42905;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start(300, 300);
+            server.Initialize();
+            int port = server.Start(300, 300);
 
             Router router = new Router(server.Server, "router", RouteMethod.Distribute);
             router.AddBinding(new DirectBinding("dbind-1", "client-1", MessageA.ContentType, 0, BindingInteraction.None));
@@ -253,10 +245,9 @@ namespace Test.Mq
         [Fact]
         public async Task MultipleOfflineDirect()
         {
-            int port = 42906;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start(300, 300);
+            server.Initialize();
+            int port = server.Start(300, 300);
 
             Router router = new Router(server.Server, "router", RouteMethod.Distribute);
             router.AddBinding(new DirectBinding("dbind-1", "client-1", MessageA.ContentType, 0, BindingInteraction.None));
@@ -274,10 +265,9 @@ namespace Test.Mq
         [Fact]
         public async Task SingleQueueSingleDirect()
         {
-            int port = 42907;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start(300, 300);
+            server.Initialize();
+            int port = server.Start(300, 300);
 
             Router router = new Router(server.Server, "router", RouteMethod.Distribute);
             router.AddBinding(new QueueBinding("qbind-1", "ch-push", MessageA.ContentType, 0, BindingInteraction.None));
@@ -309,10 +299,9 @@ namespace Test.Mq
         [Fact]
         public async Task MultipleQueueMultipleDirect()
         {
-            int port = 42908;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start(300, 300);
+            server.Initialize();
+            int port = server.Start(300, 300);
 
             Router router = new Router(server.Server, "router", RouteMethod.Distribute);
             router.AddBinding(new QueueBinding("qbind-1", "ch-push", MessageA.ContentType, 0, BindingInteraction.None));
@@ -360,10 +349,9 @@ namespace Test.Mq
         [Fact]
         public async Task SingleQueueSingleDirectAckFromQueue()
         {
-            int port = 42909;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start(300, 300);
+            server.Initialize();
+            int port = server.Start(300, 300);
             server.SendAcknowledgeFromMQ = true;
 
             Router router = new Router(server.Server, "router", RouteMethod.Distribute);
@@ -396,10 +384,9 @@ namespace Test.Mq
         [Fact]
         public async Task SingleQueueSingleDirectResponseFromDirect()
         {
-            int port = 42910;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start(300, 300);
+            server.Initialize();
+            int port = server.Start(300, 300);
 
             Router router = new Router(server.Server, "router", RouteMethod.Distribute);
             router.AddBinding(new QueueBinding("qbind-1", "ch-push", MessageA.ContentType, 0, BindingInteraction.None));

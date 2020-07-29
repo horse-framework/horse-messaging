@@ -12,9 +12,6 @@ using Xunit;
 
 namespace Test.Mq
 {
-    /// <summary>
-    /// Ports 42300 - 42310
-    /// </summary>
     public class AcknowledgeTest
     {
         #region Client - Client
@@ -26,8 +23,8 @@ namespace Test.Mq
         public async Task FromClientToClientAuto()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42301);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             server.Server.Server.Options.PingInterval = 300;
             server.Server.Server.Options.RequestTimeout = 300;
@@ -40,8 +37,8 @@ namespace Test.Mq
             client2.ClientId = "client-2";
             client2.AutoAcknowledge = true;
 
-            await client1.ConnectAsync("tmq://localhost:42301");
-            await client2.ConnectAsync("tmq://localhost:42301");
+            await client1.ConnectAsync("tmq://localhost:" + port);
+            await client2.ConnectAsync("tmq://localhost:" + port);
 
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
@@ -63,8 +60,8 @@ namespace Test.Mq
         public async Task FromClientToClientManuel()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42302);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             server.Server.Server.Options.PingInterval = 300;
             server.Server.Server.Options.RequestTimeout = 300;
@@ -82,8 +79,8 @@ namespace Test.Mq
                     await client2.SendAsync(m.CreateAcknowledge());
             };
 
-            await client1.ConnectAsync("tmq://localhost:42302");
-            await client2.ConnectAsync("tmq://localhost:42302");
+            await client1.ConnectAsync("tmq://localhost:" + port);
+            await client2.ConnectAsync("tmq://localhost:" + port);
 
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
@@ -105,8 +102,8 @@ namespace Test.Mq
         public async Task FromClientToClientTimeout()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42307);
-            server.Start(15, 15);
+            server.Initialize();
+            int port = server.Start(15, 15);
 
             server.Server.Server.Options.PingInterval = 300;
             server.Server.Server.Options.RequestTimeout = 300;
@@ -120,8 +117,8 @@ namespace Test.Mq
             client1.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
             client2.AutoAcknowledge = false;
 
-            await client1.ConnectAsync("tmq://localhost:42307");
-            await client2.ConnectAsync("tmq://localhost:42307");
+            await client1.ConnectAsync("tmq://localhost:" + port);
+            await client2.ConnectAsync("tmq://localhost:" + port);
 
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
@@ -147,13 +144,13 @@ namespace Test.Mq
         public async Task FromClientToChannelAuto()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42304);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
             client.AutoAcknowledge = true;
 
-            await client.ConnectAsync("tmq://localhost:42304");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -179,14 +176,14 @@ namespace Test.Mq
         public async Task FromClientToChannelManuel()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42305);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
             client.AutoAcknowledge = false;
             client.MessageReceived += async (c, m) => { await client.SendAsync(m.CreateAcknowledge()); };
 
-            await client.ConnectAsync("tmq://localhost:42305");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
@@ -211,14 +208,14 @@ namespace Test.Mq
         public async Task FromClientToChannelTimeout()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42306);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
             client.AutoAcknowledge = false;
             client.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
 
-            await client.ConnectAsync("tmq://localhost:42306");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
             Channel channel = server.Server.Channels.FirstOrDefault();
