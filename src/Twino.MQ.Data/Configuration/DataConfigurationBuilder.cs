@@ -1,7 +1,7 @@
 using System;
 using Twino.MQ.Queues;
 
-namespace Twino.MQ.Data
+namespace Twino.MQ.Data.Configuration
 {
     /// <summary>
     /// Data configuration builder for persistent queues

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Twino.MQ.Data.Configuration;
 using Twino.MQ.Delivery;
 using Twino.MQ.Options;
 using Twino.MQ.Queues;

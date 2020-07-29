@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
+using Twino.MQ.Data.Configuration;
 using Twino.MQ.Delivery;
 using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
@@ -62,6 +63,7 @@ namespace Twino.MQ.Data
             try
             {
                 ConfigurationFactory.Manager.Remove(queue);
+                ConfigurationFactory.Manager.Save();
 
                 await _database.Close();
                 for (int i = 0; i < 5; i++)
@@ -73,9 +75,10 @@ namespace Twino.MQ.Data
                     await Task.Delay(3);
                 }
             }
-            catch
+            catch (Exception e)
             {
-                //files already not found
+                if (_exception != null)
+                    _exception(_queue, null, e);
             }
         }
 
