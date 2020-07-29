@@ -49,10 +49,26 @@ namespace Twino.MQ.Data
             }
         }
 
-        internal void Destroy(ChannelQueue queue)
+        internal async void Destroy(ChannelQueue queue)
         {
-            //todo: subscribe deleted event to remove from options
-            throw new NotImplementedException();
+            try
+            {
+                ConfigurationFactory.Manager.Remove(queue);
+
+                await _database.Close();
+                for (int i = 0; i < 5; i++)
+                {
+                    bool deleted = await _database.File.Delete();
+                    if (deleted)
+                        break;
+
+                    await Task.Delay(3);
+                }
+            }
+            catch
+            {
+                //files already not found
+            }
         }
 
         #endregion
