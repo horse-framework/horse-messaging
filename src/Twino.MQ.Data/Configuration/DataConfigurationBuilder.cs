@@ -20,7 +20,7 @@ namespace Twino.MQ.Data.Configuration
         internal string ConfigFile { get; private set; } = "config.json";
         internal Func<ChannelQueue, string> GenerateQueueFilename { get; set; }
         
-        internal Action<Exception> ErrorAction { get; set; }
+        internal Action<ChannelQueue, QueueMessage, Exception> ErrorAction { get; set; }
 
         #endregion
 

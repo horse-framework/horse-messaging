@@ -250,6 +250,20 @@ namespace Twino.MQ
         }
 
         /// <summary>
+        /// Creates new channel with default options, without event handler and authenticator
+        /// </summary>
+        /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
+        /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>
+        /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same name</exception>
+        public Channel CreateChannel(string name, ChannelOptions options)
+        {
+            if (DefaultDeliveryHandler == null)
+                throw new NoNullAllowedException("There is no default delivery handler defined. Channel must have it's own delivery handler.");
+
+            return CreateChannel(name, DefaultChannelAuthenticator, DefaultChannelEventHandler, DefaultDeliveryHandler, options);
+        }
+        
+        /// <summary>
         /// Creates new channel with custom event handler, authenticator and default options
         /// </summary>
         /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>

@@ -20,7 +20,7 @@ namespace Twino.MQ.Data
         {
             return AddPersistentQueues(server, c => { });
         }
-        
+
         /// <summary>
         /// Adds persistent queues with customized configuration
         /// </summary>
@@ -60,11 +60,10 @@ namespace Twino.MQ.Data
         public static Task<ChannelQueue> CreatePersistentQueue(this Channel channel,
                                                                ushort queueId,
                                                                DeleteWhen deleteWhen,
-                                                               DeliveryAcknowledgeDecision producerAckDecision,
-                                                               Action<ChannelQueue, QueueMessage, Exception> exception = null)
+                                                               DeliveryAcknowledgeDecision producerAckDecision)
         {
             ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(channel.Options);
-            return CreatePersistentQueue(channel, queueId, deleteWhen, producerAckDecision, options, exception);
+            return CreatePersistentQueue(channel, queueId, deleteWhen, producerAckDecision, options);
         }
 
         /// <summary>
@@ -81,12 +80,11 @@ namespace Twino.MQ.Data
                                                                ushort queueId,
                                                                DeleteWhen deleteWhen,
                                                                DeliveryAcknowledgeDecision producerAckDecision,
-                                                               Action<ChannelQueueOptions> optionsAction,
-                                                               Action<ChannelQueue, QueueMessage, Exception> exception = null)
+                                                               Action<ChannelQueueOptions> optionsAction)
         {
             ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(channel.Options);
             optionsAction(options);
-            return CreatePersistentQueue(channel, queueId, deleteWhen, producerAckDecision, options, exception);
+            return CreatePersistentQueue(channel, queueId, deleteWhen, producerAckDecision, options);
         }
 
         /// <summary>
@@ -103,10 +101,9 @@ namespace Twino.MQ.Data
                                                                      ushort queueId,
                                                                      DeleteWhen deleteWhen,
                                                                      DeliveryAcknowledgeDecision producerAckDecision,
-                                                                     ChannelQueueOptions options,
-                                                                     Action<ChannelQueue, QueueMessage, Exception> exception = null)
+                                                                     ChannelQueueOptions options)
         {
-            ChannelQueue queue = await CreateQueue(channel, queueId, deleteWhen, producerAckDecision, options, exception);
+            ChannelQueue queue = await CreateQueue(channel, queueId, deleteWhen, producerAckDecision, options);
             PersistentDeliveryHandler deliveryHandler = (PersistentDeliveryHandler) queue.DeliveryHandler;
             ConfigurationFactory.Manager.Add(queue, deliveryHandler.Database.File.Filename);
             ConfigurationFactory.Manager.Save();
@@ -120,13 +117,12 @@ namespace Twino.MQ.Data
                                                              ushort queueId,
                                                              DeleteWhen deleteWhen,
                                                              DeliveryAcknowledgeDecision producerAckDecision,
-                                                             ChannelQueueOptions options,
-                                                             Action<ChannelQueue, QueueMessage, Exception> exception = null)
+                                                             ChannelQueueOptions options)
         {
             return await channel.CreateQueue(queueId, options, async q =>
             {
                 DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(q);
-                PersistentDeliveryHandler handler = new PersistentDeliveryHandler(q, databaseOptions, deleteWhen, producerAckDecision, exception);
+                PersistentDeliveryHandler handler = new PersistentDeliveryHandler(q, databaseOptions, deleteWhen, producerAckDecision);
                 await handler.Initialize();
                 return handler;
             });

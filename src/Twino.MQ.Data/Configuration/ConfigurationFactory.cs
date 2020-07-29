@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 
 namespace Twino.MQ.Data.Configuration
 {
@@ -26,7 +27,7 @@ namespace Twino.MQ.Data.Configuration
         {
             if (Builder != null)
                 throw new InvalidOperationException("Data configuration is already initialized");
-            
+
             Builder = builder;
             Manager = new DataConfigurationManager();
             Configuration = Manager.Load(builder.ConfigFile);

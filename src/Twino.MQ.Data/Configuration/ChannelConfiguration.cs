@@ -18,6 +18,10 @@ namespace Twino.MQ.Data.Configuration
         [JsonPropertyName("Queues")]
         public List<QueueConfiguration> Queues { get; set; }
         
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
+        public Channel Channel { get; set; }
+        
         public static ChannelConfiguration Empty()
         {
             ChannelConfiguration configuration = new ChannelConfiguration();
