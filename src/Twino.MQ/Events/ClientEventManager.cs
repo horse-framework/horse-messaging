@@ -14,7 +14,7 @@ namespace Twino.MQ.Events
         /// <summary>
         /// Creates new client event manager
         /// </summary>
-        public ClientEventManager(string eventName, MqServer server)
+        public ClientEventManager(string eventName, TwinoMQ server)
             : base(eventName, null, 0)
         {
         }

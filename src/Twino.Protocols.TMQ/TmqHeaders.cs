@@ -159,5 +159,10 @@ namespace Twino.Protocols.TMQ
         /// "Messages"
         /// </summary>
         public const string MESSAGES = "Messages";
+        
+        /// <summary>
+        /// "Delivery-Handler"
+        /// </summary>
+        public const string DELIVERY_HANDLER = "Delivery-Handler";
     }
 }

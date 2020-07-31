@@ -9,7 +9,7 @@ using Twino.MQ.Events;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
 using Twino.MQ.Queues;
-using Twino.MQ.Security;
+using Twino.Protocols.TMQ;
 
 namespace Twino.MQ
 {
@@ -28,18 +28,12 @@ namespace Twino.MQ
         /// <summary>
         /// Server of the channel
         /// </summary>
-        public MqServer Server { get; }
+        public TwinoMQ Server { get; }
 
         /// <summary>
         /// Channel options
         /// </summary>
         public ChannelOptions Options { get; }
-
-        /// <summary>
-        /// Channel authenticator.
-        /// If null, server's default channel authenticator will be used.
-        /// </summary>
-        public IChannelAuthenticator Authenticator { get; }
 
         private readonly SafeList<QueueId> _allowedQueues = new SafeList<QueueId>(32);
 
@@ -47,17 +41,6 @@ namespace Twino.MQ
         /// Allowed queue id list in this channel
         /// </summary>
         public IEnumerable<QueueId> AllowedQueues => _allowedQueues.GetUnsafeList();
-
-        /// <summary>
-        /// Channel event handler
-        /// </summary>
-        public IChannelEventHandler EventHandler { get; }
-
-        /// <summary>
-        /// Channel messaging delivery handler.
-        /// If queue does not have it's own delivery handler, this one is used.
-        /// </summary>
-        public IMessageDeliveryHandler DeliveryHandler { get; }
 
         /// <summary>
         /// Active channel queues
@@ -122,20 +105,11 @@ namespace Twino.MQ
 
         #region Constructors
 
-        internal Channel(MqServer server,
-                         ChannelOptions options,
-                         string name,
-                         IChannelAuthenticator authenticator,
-                         IChannelEventHandler eventHandler,
-                         IMessageDeliveryHandler deliveryHandler)
+        internal Channel(TwinoMQ server, ChannelOptions options, string name)
         {
             Server = server;
             Options = options;
             Name = name;
-
-            Authenticator = authenticator;
-            EventHandler = eventHandler;
-            DeliveryHandler = deliveryHandler;
 
             _queues = new SafeList<ChannelQueue>(8);
             _clients = new SafeList<ChannelClient>(256);
@@ -204,9 +178,7 @@ namespace Twino.MQ
         public async Task<ChannelQueue> CreateQueue(ushort queueId)
         {
             ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(Options);
-            return await CreateQueue(queueId,
-                                     options,
-                                     Server.DefaultDeliveryHandler);
+            return await CreateQueue(queueId, options);
         }
 
         /// <summary>
@@ -223,19 +195,14 @@ namespace Twino.MQ
         }
 
         /// <summary>
-        /// Creates new queue in the channel with default handlers
+        /// Creates new queue in the channel
         /// </summary>
         /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
         /// <exception cref="OperationCanceledException">Thrown when queue limit is exceeded for the channel</exception>
         /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
-        public async Task<ChannelQueue> CreateQueue(ushort queueId, ChannelQueueOptions options)
+        public Task<ChannelQueue> CreateQueue(ushort queueId, ChannelQueueOptions options)
         {
-            if (DeliveryHandler == null)
-                throw new NoNullAllowedException("There is no default delivery handler defined for the channel. Queue must have it's own delivery handler.");
-
-            return await CreateQueue(queueId,
-                                     options,
-                                     Server.DefaultDeliveryHandler);
+            return CreateQueue(queueId, options, Server.DeliveryHandlerFactory);
         }
 
         /// <summary>
@@ -244,73 +211,17 @@ namespace Twino.MQ
         /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
         /// <exception cref="OperationCanceledException">Thrown when queue limit is exceeded for the channel</exception>
         /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
-        public async Task<ChannelQueue> CreateQueue(ushort queueId,
-                                                    ChannelQueueOptions options,
-                                                    IMessageDeliveryHandler deliveryHandler)
+        public Task<ChannelQueue> CreateQueue(ushort queueId,
+                                              ChannelQueueOptions options,
+                                              Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> asyncHandler)
         {
-            if (deliveryHandler == null)
-                throw new NoNullAllowedException("Delivery handler cannot be null.");
-
-            //multiple queues are not allowed
-            if (!Options.AllowMultipleQueues && _queues.Count > 0)
-                return null;
-
-            //if content type is not allowed for this channel, return null
-            if (Options.AllowedQueues != null && Options.AllowedQueues.Length > 0)
-                if (!Options.AllowedQueues.Contains(queueId))
-                    return null;
-
-            if (Options.QueueLimit > 0 && Options.QueueLimit >= _queues.Count)
-                throw new OperationCanceledException("Queue limit is exceeded for the channel");
-
-            ChannelQueue queue = _queues.Find(x => x.Id == queueId);
-
-            if (queue != null)
-                throw new DuplicateNameException($"The channel has already a queue with same content type: {queueId}");
-
-            queue = new ChannelQueue(this, queueId, options, deliveryHandler);
-            _queues.Add(queue);
-
-            if (EventHandler != null)
-                await EventHandler.OnQueueCreated(queue, this);
-
-            _ = OnQueueCreated.Trigger(queue);
-            return queue;
+            return CreateQueue(queueId, options, null, asyncHandler);
         }
 
-        /// <summary>
-        /// Creates new queue
-        /// </summary>
-        /// <param name="queueId">Queue Id</param>
-        /// <param name="deliveryAction">Delivery handler creator function</param>
-        /// <returns></returns>
-        public Task<ChannelQueue> CreateQueue(ushort queueId, Func<ChannelQueue, Task<IMessageDeliveryHandler>> deliveryAction)
-        {
-            ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(Options);
-            return CreateQueue(queueId, options, deliveryAction);
-        }
-
-        /// <summary>
-        /// Creates new queue
-        /// </summary>
-        /// <param name="queueId">Queue Id</param>
-        /// <param name="optionsAction">Options function</param>
-        /// <param name="deliveryAction">Delivery handler creator function</param>
-        /// <returns></returns>
-        public Task<ChannelQueue> CreateQueue(ushort queueId, Action<ChannelQueueOptions> optionsAction, Func<ChannelQueue, Task<IMessageDeliveryHandler>> deliveryAction)
-        {
-            ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(Options);
-            optionsAction(options);
-            return CreateQueue(queueId, options, deliveryAction);
-        }
-
-        /// <summary>
-        /// Creates new queue
-        /// </summary>
-        /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
-        /// <exception cref="OperationCanceledException">Thrown when queue limit is exceeded for the channel</exception>
-        /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
-        public async Task<ChannelQueue> CreateQueue(ushort queueId, ChannelQueueOptions options, Func<ChannelQueue, Task<IMessageDeliveryHandler>> deliveryAction)
+        internal async Task<ChannelQueue> CreateQueue(ushort queueId,
+                                                      ChannelQueueOptions options,
+                                                      TmqMessage requestMessage,
+                                                      Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> asyncHandler)
         {
             //multiple queues are not allowed
             if (!Options.AllowMultipleQueues && _queues.Count > 0)
@@ -330,20 +241,29 @@ namespace Twino.MQ
                 throw new DuplicateNameException($"The channel has already a queue with same content type: {queueId}");
 
             queue = new ChannelQueue(this, queueId, options);
+            DeliveryHandlerBuilder handlerBuilder = new DeliveryHandlerBuilder
+                                                    {
+                                                        Server = Server,
+                                                        Channel = this,
+                                                        Queue = queue
+                                                    };
+            if (requestMessage != null)
+            {
+                handlerBuilder.DeliveryHandlerHeader = requestMessage.FindHeader(TmqHeaders.DELIVERY_HANDLER);
+                handlerBuilder.Headers = requestMessage.Headers;
+            }
 
-            IMessageDeliveryHandler handler = await deliveryAction(queue);
-            if (handler == null)
-                throw new NoNullAllowedException("Delivery handler cannot be null.");
-
-            queue.SetMessageDeliveryHandler(handler);
+            IMessageDeliveryHandler deliveryHandler = await asyncHandler(handlerBuilder);
+            queue.SetMessageDeliveryHandler(deliveryHandler);
             _queues.Add(queue);
 
-            if (EventHandler != null)
-                await EventHandler.OnQueueCreated(queue, this);
+            if (Server.ChannelEventHandler != null)
+                await Server.ChannelEventHandler.OnQueueCreated(queue, this);
 
             _ = OnQueueCreated.Trigger(queue);
             return queue;
         }
+
 
         /// <summary>
         /// Searches the queue, if queue could not be found, it will be created
@@ -385,8 +305,8 @@ namespace Twino.MQ
             _queues.Remove(queue);
             await queue.SetStatus(QueueStatus.Stopped);
 
-            if (EventHandler != null)
-                await EventHandler.OnQueueRemoved(queue, this);
+            if (Server.ChannelEventHandler != null)
+                await Server.ChannelEventHandler.OnQueueRemoved(queue, this);
 
             _ = OnQueueRemoved.Trigger(queue);
             await queue.Destroy();
@@ -410,9 +330,9 @@ namespace Twino.MQ
         /// </summary>
         public async Task<ClientJoinResult> AddClient(MqClient client)
         {
-            if (Authenticator != null)
+            if (Server.ChannelAuthenticator != null)
             {
-                bool allowed = await Authenticator.Authenticate(this, client);
+                bool allowed = await Server.ChannelAuthenticator.Authenticate(this, client);
                 if (!allowed)
                     return ClientJoinResult.Unauthorized;
             }
@@ -424,8 +344,8 @@ namespace Twino.MQ
             _clients.Add(cc);
             client.Join(cc);
 
-            if (EventHandler != null)
-                await EventHandler.OnClientJoined(cc);
+            if (Server.ChannelEventHandler != null)
+                await Server.ChannelEventHandler.OnClientJoined(cc);
 
             IEnumerable<ChannelQueue> list = _queues.GetAsClone();
             foreach (ChannelQueue queue in list)
@@ -444,8 +364,8 @@ namespace Twino.MQ
             _clients.Remove(client);
             client.Client.Leave(client);
 
-            if (EventHandler != null)
-                await EventHandler.OnClientLeft(client);
+            if (Server.ChannelEventHandler != null)
+                await Server.ChannelEventHandler.OnClientLeft(client);
 
             if (Options.DestroyWhenEmpty && _clients.Count == 0)
                 await CheckAutoDestroy();
@@ -460,8 +380,8 @@ namespace Twino.MQ
         {
             _clients.Remove(client);
 
-            if (EventHandler != null)
-                await EventHandler.OnClientLeft(client);
+            if (Server.ChannelEventHandler != null)
+                await Server.ChannelEventHandler.OnClientLeft(client);
 
             if (Options.DestroyWhenEmpty && _clients.Count == 0)
                 await CheckAutoDestroy();
@@ -481,8 +401,8 @@ namespace Twino.MQ
 
             client.Leave(cc);
 
-            if (EventHandler != null)
-                await EventHandler.OnClientLeft(cc);
+            if (Server.ChannelEventHandler != null)
+                await Server.ChannelEventHandler.OnClientLeft(cc);
 
             if (Options.DestroyWhenEmpty && _clients.Count == 0)
                 await CheckAutoDestroy();

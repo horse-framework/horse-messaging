@@ -11,9 +11,9 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Messaging Queue Server
         /// </summary>
-        private readonly MqServer _server;
+        private readonly TwinoMQ _server;
 
-        public ResponseMessageHandler(MqServer server)
+        public ResponseMessageHandler(TwinoMQ server)
         {
             _server = server;
         }

@@ -11,13 +11,10 @@ namespace Sample.Server
     {
         static async Task Main(string[] args)
         {
-            MqServer mq = new MqServer();
-            mq.SetDefaultDeliveryHandler(new SendAckDeliveryHandler(AcknowledgeWhen.AfterReceived));
             TwinoServer server = new TwinoServer();
-            server.UseMqServer(mq);
-
-            mq.AddPersistentQueues(cfg => cfg.UseAutoFlush()
-                                             .KeepLastBackup());
+            TwinoMQ mq = server.UseTwinoMQ(cfg => cfg
+                                                  .AddPersistentQueues(q => q.UseAutoFlush().KeepLastBackup())
+                                                  .UseSendAckDeliveryHandler(AcknowledgeWhen.AfterReceived));
 
             await mq.LoadPersistentQueues();
 

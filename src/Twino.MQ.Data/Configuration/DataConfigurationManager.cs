@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Twino.MQ.Delivery;
 using Twino.MQ.Options;
 using Twino.MQ.Queues;
 
@@ -24,7 +23,7 @@ namespace Twino.MQ.Data.Configuration
             {
                 var c = DataConfiguration.Empty();
                 string serialized = Newtonsoft.Json.JsonConvert.SerializeObject(c);
-                
+
                 string dir = FindDirectoryIfFile(ConfigurationFactory.Builder.ConfigFile);
                 if (!Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
@@ -57,7 +56,7 @@ namespace Twino.MQ.Data.Configuration
                 string dir = FindDirectoryIfFile(ConfigurationFactory.Builder.ConfigFile);
                 if (!Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
-                
+
                 File.WriteAllText(ConfigurationFactory.Builder.ConfigFile, serialized);
             }
             catch (Exception e)
@@ -70,14 +69,19 @@ namespace Twino.MQ.Data.Configuration
         /// <summary>
         /// Adds new queue into configurations
         /// </summary>
-        public void Add(ChannelQueue queue, string filename)
+        public bool Add(ChannelQueue queue, string filename)
         {
             QueueOptionsConfiguration queueOptions = queue.Options.ToConfiguration();
             string channelName = queue.Channel.Name;
 
             ChannelConfiguration channelConfig;
             lock (_optionsLock)
+            {
                 channelConfig = ConfigurationFactory.Configuration.Channels.FirstOrDefault(x => x.Name == channelName);
+                if (channelConfig != null)
+                    if (channelConfig.Queues.Any(x => x.QueueId == queue.Id))
+                        return false;
+            }
 
             if (channelConfig == null)
             {
@@ -89,7 +93,7 @@ namespace Twino.MQ.Data.Configuration
 
                 if (ConfigurationFactory.Configuration.Channels == null)
                     ConfigurationFactory.Configuration.Channels = new List<ChannelConfiguration>();
-                
+
                 ConfigurationFactory.Configuration.Channels.Add(channelConfig);
             }
 
@@ -106,6 +110,8 @@ namespace Twino.MQ.Data.Configuration
 
             lock (_optionsLock)
                 channelConfig.Queues.Add(queueConfiguration);
+
+            return true;
         }
 
         /// <summary>
@@ -138,7 +144,7 @@ namespace Twino.MQ.Data.Configuration
         /// <summary>
         /// Loads messages of queues in configuration
         /// </summary>
-        public async Task LoadQueues(MqServer server)
+        public async Task LoadQueues(TwinoMQ server)
         {
             foreach (ChannelConfiguration channelConfiguration in Config.Channels)
             {
@@ -166,7 +172,7 @@ namespace Twino.MQ.Data.Configuration
                         queue = await Extensions.CreateQueue(channel,
                                                              queueConfiguration.QueueId,
                                                              (DeleteWhen) queueConfiguration.DeleteWhen,
-                                                             (DeliveryAcknowledgeDecision) queueConfiguration.ProducerAck,
+                                                             (ProducerAckDecision) queueConfiguration.ProducerAck,
                                                              queueConfiguration.Configuration.ToOptions());
 
                         //queue creation not permitted, skip

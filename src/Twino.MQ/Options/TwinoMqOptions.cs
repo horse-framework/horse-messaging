@@ -5,7 +5,7 @@ namespace Twino.MQ.Options
     /// <summary>
     /// Server default options
     /// </summary>
-    public class MqServerOptions : ChannelOptions
+    public class TwinoMqOptions : ChannelOptions
     {
         /// <summary>
         /// Server name, will be used while connecting to other instances

@@ -12,7 +12,7 @@ namespace Twino.MQ.Events
         /// <summary>
         /// Creates new channel event manager
         /// </summary>
-        public ChannelEventManager(string eventName, MqServer server)
+        public ChannelEventManager(string eventName, TwinoMQ server)
             : base(eventName, null, 0)
         {
         }

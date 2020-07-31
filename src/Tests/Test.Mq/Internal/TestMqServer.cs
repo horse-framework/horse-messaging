@@ -10,7 +10,7 @@ namespace Test.Mq.Internal
 {
     public class TestMqServer
     {
-        public MqServer Server { get; private set; }
+        public TwinoMQ Server { get; private set; }
 
         public int OnQueueCreated { get; set; }
         public int OnQueueRemoved { get; set; }
@@ -41,17 +41,19 @@ namespace Test.Mq.Internal
 
         public void Initialize()
         {
-            MqServerOptions mqOptions = new MqServerOptions();
-            mqOptions.AllowedQueues = new[] {MessageA.ContentType, MessageB.ContentType, MessageC.ContentType};
-            mqOptions.AllowMultipleQueues = true;
-            mqOptions.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
-            mqOptions.MessageTimeout = TimeSpan.FromSeconds(12);
+            TwinoMqOptions twinoMqOptions = new TwinoMqOptions();
+            twinoMqOptions.AllowedQueues = new[] {MessageA.ContentType, MessageB.ContentType, MessageC.ContentType};
+            twinoMqOptions.AllowMultipleQueues = true;
+            twinoMqOptions.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
+            twinoMqOptions.MessageTimeout = TimeSpan.FromSeconds(12);
 
-            Server = new MqServer(mqOptions);
-            Server.SetDefaultChannelHandler(new TestChannelHandler(this), null);
-            Server.SetDefaultDeliveryHandler(new TestDeliveryHandler(this));
-            Server.ClientHandler = new TestClientHandler(this);
-            Server.AdminAuthorization = new TestAdminAuthorization();
+            Server = TwinoMqBuilder.Create()
+                                   .AddOptions(twinoMqOptions)
+                                   .UseChannelEventHandler(new TestChannelHandler(this))
+                                   .UseDeliveryHandler(async d => new TestDeliveryHandler(this))
+                                   .UseClientHandler(new TestClientHandler(this))
+                                   .UseAdminAuthorization<TestAdminAuthorization>()
+                                   .Build();
 
             Channel channel = Server.CreateChannel("ch-1");
             channel.CreateQueue(MessageA.ContentType).Wait();
@@ -96,7 +98,7 @@ namespace Test.Mq.Internal
                     serverOptions.RequestTimeout = requestTimeout;
 
                     TwinoServer server = new TwinoServer(serverOptions);
-                    server.UseMqServer(Server);
+                    server.UseTwinoMQ(Server);
                     server.Start();
                     Port = port;
                     return port;

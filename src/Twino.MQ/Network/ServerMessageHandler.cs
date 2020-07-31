@@ -9,7 +9,6 @@ using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
 using Twino.MQ.Queues;
-using Twino.MQ.Security;
 using Twino.Protocols.TMQ;
 using Twino.Protocols.TMQ.Models;
 
@@ -22,9 +21,9 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Messaging Queue Server
         /// </summary>
-        private readonly MqServer _server;
+        private readonly TwinoMQ _server;
 
-        public ServerMessageHandler(MqServer server)
+        public ServerMessageHandler(TwinoMQ server)
         {
             _server = server;
         }
@@ -223,31 +222,7 @@ namespace Twino.MQ.Network
                 ChannelOptions options = ChannelOptions.CloneFrom(_server.Options);
                 builder.ApplyToChannel(options);
 
-                IChannelEventHandler eventHandler = _server.DefaultChannelEventHandler;
-                if (!string.IsNullOrEmpty(builder.ChannelEventHandler))
-                {
-                    IChannelEventHandler e = _server.Registry.GetChannelEvent(builder.ChannelEventHandler);
-                    if (e != null)
-                        eventHandler = e;
-                }
-
-                IChannelAuthenticator authenticator = _server.DefaultChannelAuthenticator;
-                if (!string.IsNullOrEmpty(builder.ChannelAuthenticator))
-                {
-                    IChannelAuthenticator e = _server.Registry.GetChannelAuthenticator(builder.ChannelAuthenticator);
-                    if (e != null)
-                        authenticator = e;
-                }
-
-                IMessageDeliveryHandler deliveryHandler = _server.DefaultDeliveryHandler;
-                if (!string.IsNullOrEmpty(builder.MessageDeliveryHandler))
-                {
-                    IMessageDeliveryHandler e = _server.Registry.GetMessageDelivery(builder.MessageDeliveryHandler);
-                    if (e != null)
-                        deliveryHandler = e;
-                }
-
-                Channel ch = _server.CreateChannel(message.Target, authenticator, eventHandler, deliveryHandler, options);
+                Channel ch = _server.CreateChannel(message.Target, options);
 
                 if (ch != null && message.PendingResponse)
                     await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
@@ -502,19 +477,7 @@ namespace Twino.MQ.Network
 
             //creates new queue
             ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(channel.Options);
-            IMessageDeliveryHandler delivery = channel.DeliveryHandler;
-            if (builder != null)
-            {
-                builder.ApplyToQueue(options);
-                if (!string.IsNullOrEmpty(builder.MessageDeliveryHandler))
-                {
-                    IMessageDeliveryHandler found = _server.Registry.GetMessageDelivery(builder.MessageDeliveryHandler);
-                    if (found != null)
-                        delivery = found;
-                }
-            }
-
-            queue = await channel.CreateQueue(contentType, options, delivery);
+            queue = await channel.CreateQueue(contentType, options, message, channel.Server.DeliveryHandlerFactory);
 
             //if creation successful, sends response
             if (queue != null && message.PendingResponse)

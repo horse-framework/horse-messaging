@@ -61,7 +61,7 @@ namespace Twino.MQ.Clients
         /// <summary>
         /// Messaging queue server
         /// </summary>
-        public MqServer MqServer { get; }
+        public TwinoMQ TwinoMq { get; }
 
         /// <summary>
         /// The time instance created
@@ -80,19 +80,19 @@ namespace Twino.MQ.Clients
         /// <summary>
         /// Creates new MQ Client
         /// </summary>
-        public MqClient(MqServer server, IConnectionInfo info) : base(server.Server, info)
+        public MqClient(TwinoMQ server, IConnectionInfo info) : base(server.Server, info)
         {
-            MqServer = server;
+            TwinoMq = server;
             IsConnected = true;
         }
 
         /// <summary>
         /// Creates new MQ Client
         /// </summary>
-        public MqClient(MqServer server, IConnectionInfo info, IUniqueIdGenerator generator, bool useUniqueMessageId = true)
+        public MqClient(TwinoMQ server, IConnectionInfo info, IUniqueIdGenerator generator, bool useUniqueMessageId = true)
             : base(server.Server, info, generator, useUniqueMessageId)
         {
-            MqServer = server;
+            TwinoMq = server;
             IsConnected = true;
         }
 

@@ -18,14 +18,14 @@ namespace Twino.MQ
     /// <summary>
     /// Twino Messaging Queue Server
     /// </summary>
-    public class MqServer
+    public class TwinoMQ
     {
         #region Properties
 
         /// <summary>
         /// Messaging Queue Server Options
         /// </summary>
-        public MqServerOptions Options { get; }
+        public TwinoMqOptions Options { get; internal set; }
 
         private readonly SafeList<Channel> _channels;
 
@@ -62,61 +62,54 @@ namespace Twino.MQ
         /// Client authenticator implementation.
         /// If null, all clients will be accepted.
         /// </summary>
-        public IClientAuthenticator Authenticator { get; }
+        public IClientAuthenticator Authenticator { get; internal set; }
 
         /// <summary>
         /// Authorization implementation for client operations
         /// </summary>
-        public IClientAuthorization Authorization { get; set; }
+        public IClientAuthorization Authorization { get; internal set; }
 
         /// <summary>
         /// Authorization implementation for administration operations
         /// </summary>
-        public IAdminAuthorization AdminAuthorization { get; set; }
+        public IAdminAuthorization AdminAuthorization { get; internal set; }
 
         /// <summary>
         /// Client connect and disconnect operations
         /// </summary>
-        public IClientHandler ClientHandler { get; set; }
+        public IClientHandler ClientHandler { get; internal set; }
 
         /// <summary>
         /// Client message received handler (for only server-type messages)
         /// </summary>
-        public IServerMessageHandler ServerMessageHandler { get; set; }
+        public IServerMessageHandler ServerMessageHandler { get; internal set; }
 
         /// <summary>
-        /// Default channel event handler.
-        /// If channels do not have their own custom event handlers, will event handler will run for them
+        /// Channel event handler
         /// </summary>
-        public IChannelEventHandler DefaultChannelEventHandler { get; private set; }
+        public IChannelEventHandler ChannelEventHandler { get; internal set; }
 
         /// <summary>
         /// Default channel authenticatır
         /// If channels do not have their own custom authenticator and this value is not null,
         /// this authenticator will authenticate the clients
         /// </summary>
-        public IChannelAuthenticator DefaultChannelAuthenticator { get; private set; }
+        public IChannelAuthenticator ChannelAuthenticator { get; internal set; }
 
         /// <summary>
-        /// Default message delivery handler for queues, if they do not have their custom delivery handler
+        /// Delivery handler creator method
         /// </summary>
-        public IMessageDeliveryHandler DefaultDeliveryHandler { get; private set; }
+        internal Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> DeliveryHandlerFactory { get; set; }
 
         /// <summary>
         /// Id generator for messages from server 
         /// </summary>
-        public IUniqueIdGenerator MessageIdGenerator { get; set; } = new DefaultUniqueIdGenerator();
+        public IUniqueIdGenerator MessageIdGenerator { get; internal set; } = new DefaultUniqueIdGenerator();
 
         /// <summary>
         /// Id generator for clients which has no specified unique id 
         /// </summary>
-        public IUniqueIdGenerator ClientIdGenerator { get; set; } = new DefaultUniqueIdGenerator();
-
-        /// <summary>
-        /// Implementation registry library.
-        /// Implementation instances are kept in this registry by their keys.
-        /// </summary>
-        public ImplementationRegistry Registry { get; } = new ImplementationRegistry();
+        public IUniqueIdGenerator ClientIdGenerator { get; internal set; } = new DefaultUniqueIdGenerator();
 
         /// <summary>
         /// Locker object for preventing to create duplicated channels when requests are concurrent and auto channel creation is enabled
@@ -154,19 +147,19 @@ namespace Twino.MQ
         /// <summary>
         /// Creates new Messaging Queue Server
         /// </summary>
-        public MqServer(IClientAuthenticator authenticator = null, IClientAuthorization authorization = null)
-            : this((MqServerOptions) null, authenticator, authorization)
+        public TwinoMQ(IClientAuthenticator authenticator = null, IClientAuthorization authorization = null)
+            : this((TwinoMqOptions) null, authenticator, authorization)
         {
         }
 
         /// <summary>
         /// Creates new Messaging Queue Server
         /// </summary>
-        public MqServer(Action<MqServerOptions> options,
+        public TwinoMQ(Action<TwinoMqOptions> options,
                         IClientAuthenticator authenticator = null,
                         IClientAuthorization authorization = null)
         {
-            Options = new MqServerOptions();
+            Options = new TwinoMqOptions();
             options(Options);
             Authenticator = authenticator;
             Authorization = authorization;
@@ -176,7 +169,6 @@ namespace Twino.MQ
             _clients = new SafeList<MqClient>(2048);
 
             NodeManager = new NodeManager(this);
-
             NodeManager.Initialize();
 
             OnClientConnected = new ClientEventManager(EventNames.ClientConnected, this);
@@ -188,11 +180,11 @@ namespace Twino.MQ
         /// <summary>
         /// Creates new Messaging Queue Server
         /// </summary>
-        public MqServer(MqServerOptions options,
+        public TwinoMQ(TwinoMqOptions options,
                         IClientAuthenticator authenticator = null,
                         IClientAuthorization authorization = null)
         {
-            Options = options ?? new MqServerOptions();
+            Options = options ?? new TwinoMqOptions();
             Authenticator = authenticator;
             Authorization = authorization;
 
@@ -212,95 +204,17 @@ namespace Twino.MQ
 
         #endregion
 
-        #region Set Default Interfaces
-
-        /// <summary>
-        /// Sets default channel event handler and authenticator
-        /// </summary>
-        /// <exception cref="ReadOnlyException">Thrown when default channel event handler or default channel authenticator already is set</exception>
-        public void SetDefaultChannelHandler(IChannelEventHandler eventHandler, IChannelAuthenticator authenticator)
-        {
-            if (DefaultChannelEventHandler != null)
-                throw new ReadOnlyException("Default channel event handler can be set only once");
-
-            DefaultChannelEventHandler = eventHandler;
-
-            if (DefaultChannelAuthenticator != null)
-                throw new ReadOnlyException("Default channel authenticator can be set only once");
-
-            DefaultChannelAuthenticator = authenticator;
-        }
-
-        /// <summary>
-        /// Sets default queue event handler, authenticator and message delivery handler
-        /// </summary>
-        /// <exception cref="ReadOnlyException">Thrown when default message delivery handler already is set</exception>
-        public void SetDefaultDeliveryHandler(IMessageDeliveryHandler deliveryHandler)
-        {
-            if (DefaultDeliveryHandler != null)
-                throw new ReadOnlyException("Default message delivery handler can be set only once");
-
-            DefaultDeliveryHandler = deliveryHandler;
-        }
-
-        #endregion
-
         #region Channel Actions
-
-        /// <summary>
-        /// Creates new channel with default options, without event handler and authenticator
-        /// </summary>
-        /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
-        /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>
-        /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same name</exception>
-        public Channel CreateChannel(string name)
-        {
-            if (DefaultDeliveryHandler == null)
-                throw new NoNullAllowedException("There is no default delivery handler defined. Channel must have it's own delivery handler.");
-
-            return CreateChannel(name, DefaultChannelAuthenticator, DefaultChannelEventHandler, DefaultDeliveryHandler);
-        }
-
-        /// <summary>
-        /// Creates new channel with default options, without event handler and authenticator
-        /// </summary>
-        /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
-        /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>
-        /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same name</exception>
-        public Channel CreateChannel(string name, Action<ChannelOptions> optionsAction)
-        {
-            if (DefaultDeliveryHandler == null)
-                throw new NoNullAllowedException("There is no default delivery handler defined. Channel must have it's own delivery handler.");
-
-            return CreateChannel(name, DefaultChannelAuthenticator, DefaultChannelEventHandler, DefaultDeliveryHandler, optionsAction);
-        }
-
-        /// <summary>
-        /// Creates new channel with default options, without event handler and authenticator
-        /// </summary>
-        /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
-        /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>
-        /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same name</exception>
-        public Channel CreateChannel(string name, ChannelOptions options)
-        {
-            if (DefaultDeliveryHandler == null)
-                throw new NoNullAllowedException("There is no default delivery handler defined. Channel must have it's own delivery handler.");
-
-            return CreateChannel(name, DefaultChannelAuthenticator, DefaultChannelEventHandler, DefaultDeliveryHandler, options);
-        }
 
         /// <summary>
         /// Creates new channel with custom event handler, authenticator and default options
         /// </summary>
         /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>
         /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same name</exception>
-        public Channel CreateChannel(string name,
-                                     IChannelAuthenticator authenticator,
-                                     IChannelEventHandler eventHandler,
-                                     IMessageDeliveryHandler deliveryHandler)
+        public Channel CreateChannel(string name)
         {
             ChannelOptions options = ChannelOptions.CloneFrom(Options);
-            return CreateChannel(name, authenticator, eventHandler, deliveryHandler, options);
+            return CreateChannel(name, options);
         }
 
         /// <summary>
@@ -308,15 +222,11 @@ namespace Twino.MQ
         /// </summary>
         /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>
         /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same name</exception>
-        public Channel CreateChannel(string name,
-                                     IChannelAuthenticator authenticator,
-                                     IChannelEventHandler eventHandler,
-                                     IMessageDeliveryHandler deliveryHandler,
-                                     Action<ChannelOptions> optionsAction)
+        public Channel CreateChannel(string name, Action<ChannelOptions> optionsAction)
         {
             ChannelOptions options = ChannelOptions.CloneFrom(Options);
             optionsAction(options);
-            return CreateChannel(name, authenticator, eventHandler, deliveryHandler, options);
+            return CreateChannel(name, options);
         }
 
         /// <summary>
@@ -324,11 +234,7 @@ namespace Twino.MQ
         /// </summary>
         /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>
         /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same name</exception>
-        public Channel CreateChannel(string name,
-                                     IChannelAuthenticator authenticator,
-                                     IChannelEventHandler eventHandler,
-                                     IMessageDeliveryHandler deliveryHandler,
-                                     ChannelOptions options)
+        public Channel CreateChannel(string name, ChannelOptions options)
         {
             if (!Filter.CheckNameEligibility(name))
                 throw new InvalidOperationException("Invalid channel name");
@@ -340,11 +246,11 @@ namespace Twino.MQ
             if (channel != null)
                 throw new DuplicateNameException("There is already a channel with same name: " + name);
 
-            channel = new Channel(this, options, name, authenticator, eventHandler, deliveryHandler);
+            channel = new Channel(this, options, name);
             _channels.Add(channel);
 
-            if (eventHandler != null)
-                _ = eventHandler.OnChannelCreated(channel);
+            if (ChannelEventHandler != null)
+                _ = ChannelEventHandler.OnChannelCreated(channel);
 
             _ = OnChannelCreated.Trigger(channel);
 
@@ -397,8 +303,8 @@ namespace Twino.MQ
 
             _channels.Remove(channel);
 
-            if (channel.EventHandler != null)
-                await channel.EventHandler.OnChannelRemoved(channel);
+            if (ChannelEventHandler != null)
+                await ChannelEventHandler.OnChannelRemoved(channel);
 
             await channel.Destroy();
 

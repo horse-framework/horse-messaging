@@ -12,14 +12,14 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Messaging Queue Server
         /// </summary>
-        private readonly MqServer _server;
+        private readonly TwinoMQ _server;
 
         /// <summary>
         /// Default TMQ protocol message writer
         /// </summary>
         private static readonly TmqWriter _writer = new TmqWriter();
 
-        public NodeMessageHandler(MqServer server)
+        public NodeMessageHandler(TwinoMQ server)
         {
             _server = server;
         }
