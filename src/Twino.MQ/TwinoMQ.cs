@@ -118,6 +118,7 @@ namespace Twino.MQ
         private readonly SemaphoreSlim _findOrCreateChannelLocker = new SemaphoreSlim(1, 1);
 
         internal IMessageContentSerializer MessageContentSerializer { get; } = new NewtonsoftContentSerializer();
+
         #endregion
 
         #region Events
@@ -150,33 +151,8 @@ namespace Twino.MQ
         /// Creates new Messaging Queue Server
         /// </summary>
         public TwinoMQ(IClientAuthenticator authenticator = null, IClientAuthorization authorization = null)
-            : this((TwinoMqOptions) null, authenticator, authorization)
+            : this(null, authenticator, authorization)
         {
-        }
-
-        /// <summary>
-        /// Creates new Messaging Queue Server
-        /// </summary>
-        public TwinoMQ(Action<TwinoMqOptions> options,
-                       IClientAuthenticator authenticator = null,
-                       IClientAuthorization authorization = null)
-        {
-            Options = new TwinoMqOptions();
-            options(Options);
-            Authenticator = authenticator;
-            Authorization = authorization;
-
-            _routers = new SafeList<IRouter>(256);
-            _channels = new SafeList<Channel>(256);
-            _clients = new SafeList<MqClient>(2048);
-
-            NodeManager = new NodeManager(this);
-            NodeManager.Initialize();
-
-            OnClientConnected = new ClientEventManager(EventNames.ClientConnected, this);
-            OnClientDisconnected = new ClientEventManager(EventNames.ClientDisconnected, this);
-            OnChannelCreated = new ChannelEventManager(EventNames.ChannelCreated, this);
-            OnChannelRemoved = new ChannelEventManager(EventNames.ChannelRemoved, this);
         }
 
         /// <summary>
