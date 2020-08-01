@@ -12,8 +12,6 @@ namespace Sample.Server
         {
             TwinoServer server = new TwinoServer();
             TwinoMQ mq = server.UseTwinoMQ(cfg => cfg
-                                                  .AddOptions(o => o.Status = QueueStatus.Push)
-                                                  .AddOptions(o => o.RequestAcknowledge = true)
                                                   .AddPersistentQueues(q => q.UseAutoFlush().KeepLastBackup())
                                                   .UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterReceived));
 

@@ -6,7 +6,7 @@ using Twino.Protocols.TMQ;
 
 namespace Sample.Consumer.Consumers
 {
-    public class CRequestHandler<TResult> : ITwinoRequestHandler<ModelC, ModelA>
+    public class CRequestHandler : ITwinoRequestHandler<ModelC, ModelA>
     {
         public Task<ModelA> Handle(ModelC request, TmqMessage rawMessage, TmqClient client)
         {

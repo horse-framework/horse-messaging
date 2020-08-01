@@ -21,7 +21,7 @@ namespace Twino.MQ.Options
         /// <summary>
         /// If true, messages will request acknowledge from receivers
         /// </summary>
-        public bool RequestAcknowledge { get; set; }
+        public bool RequestAcknowledge { get; set; } = true;
 
         /// <summary>
         /// When acknowledge is required, maximum duration for waiting acknowledge message

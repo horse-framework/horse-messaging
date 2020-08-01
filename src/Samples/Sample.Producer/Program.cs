@@ -15,7 +15,7 @@ namespace Sample.Producer
             await client.ConnectAsync("tmq://127.0.0.1:22200");
 
             while (true)
-            {/*
+            {
                 ModelA a = new ModelA();
                 a.Foo = "Model A";
 
@@ -25,12 +25,12 @@ namespace Sample.Producer
 
                 ModelB b = new ModelB();
                 b.FirstName = "Mehmet";
-                b.LastName  = "Helvacikoylu";
+                b.LastName = "Helvacikoylu";
 
                 TwinoResult resultB = await client.Queues.PushJson(b, false);
 
                 await Task.Delay(500);
-*/
+
                 ModelC c = new ModelC();
                 c.Value = "Hello";
                 var result = await client.RequestJson<ModelA>(c);

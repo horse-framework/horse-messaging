@@ -6,6 +6,7 @@ using Twino.Protocols.TMQ;
 
 namespace Sample.Consumer.Consumers
 {
+    [AutoAck]
     [QueueId(500)]
     [ChannelName("error")]
     public class ErrorConsumer1 : IQueueConsumer<string>
@@ -17,6 +18,7 @@ namespace Sample.Consumer.Consumers
         }
     }
 
+    [AutoAck]
     [QueueId(501)]
     [ChannelName("error")]
     public class ErrorConsumer2 : IQueueConsumer<string>
