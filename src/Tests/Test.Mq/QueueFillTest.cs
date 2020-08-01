@@ -35,8 +35,8 @@ namespace Test.Mq
             QueueFiller fillerRouteA = new QueueFiller(routeA);
             QueueFiller fillerPushA = new QueueFiller(pushA);
 
-            await fillerRouteA.FillJson(items, false, false);
-            await fillerPushA.FillJson(items, false, false);
+            fillerRouteA.FillJson(items, false, false);
+            fillerPushA.FillJson(items, false, false);
 
             await Task.Delay(500);
             Assert.NotEmpty(routeA.Messages);

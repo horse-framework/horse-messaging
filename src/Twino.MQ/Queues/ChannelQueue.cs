@@ -18,7 +18,7 @@ namespace Twino.MQ.Queues
     /// Event handler for queues
     /// </summary>
     public delegate void QueueEventHandler(ChannelQueue queue);
-    
+
     /// <summary>
     /// Channel queue.
     /// Keeps queued messages and subscribed clients.
@@ -179,7 +179,7 @@ namespace Twino.MQ.Queues
         private void InitializeQueue()
         {
             State = QueueStateFactory.Create(this, Options.Status);
-            OnMessageProduced = new MessageEventManager(EventNames.MessageProduced, this);
+            OnMessageProduced = new MessageEventManager(Channel.Server, EventNames.MessageProduced, this);
 
             TimeKeeper = new QueueTimeKeeper(this);
             TimeKeeper.Run();
@@ -608,7 +608,7 @@ namespace Twino.MQ.Queues
                     return PushResult.Success;
 
                 //trigger message produced event
-                _ = OnMessageProduced.Trigger(message);
+                OnMessageProduced.Trigger(message);
 
                 if (State.CanEnqueue(message))
                 {
@@ -868,7 +868,7 @@ namespace Twino.MQ.Queues
                                          SaveMessage = decision.SaveMessage
                                      };
 
-            await msg.SetJsonContent(model);
+            msg.Serialize(model, Channel.Server.MessageContentSerializer);
             Channel.Server.NodeManager.SendMessageToNodes(msg);
         }
 

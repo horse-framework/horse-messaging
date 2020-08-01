@@ -126,6 +126,11 @@ namespace Twino.Client.TMQ
         /// </summary>
         internal ITypeDeliveryContainer DeliveryContainer { get; set; }
 
+        /// <summary>
+        /// Serializer object for JSON messages
+        /// </summary>
+        public IMessageContentSerializer JsonSerializer { get; set; } = new NewtonsoftContentSerializer();
+
         #endregion
 
         #region Constructors - Destructors
@@ -444,7 +449,7 @@ namespace Twino.Client.TMQ
                     break;
 
                 case MessageType.Event:
-                    _ = Events.TriggerEvents(message);
+                    _ = Events.TriggerEvents(this, message);
                     break;
 
                 case MessageType.QueueMessage:
@@ -591,7 +596,7 @@ namespace Twino.Client.TMQ
         {
             TypeDeliveryDescriptor descriptor = DeliveryContainer.GetDescriptor(model.GetType());
             TmqMessage msg = descriptor.CreateMessage(type, target, contentType);
-            await msg.SetJsonContent(model);
+            msg.Serialize(model, JsonSerializer);
 
             if (waitAcknowledge)
                 return await SendWithAcknowledge(msg);
@@ -648,7 +653,7 @@ namespace Twino.Client.TMQ
             if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
                 return TmqModelResult<T>.FromContentType(message.ContentType);
 
-            T model = await response.GetJsonContent<T>();
+            T model = response.Deserialize<T>(JsonSerializer);
             return new TmqModelResult<T>(TwinoResult.Ok(), model);
         }
 
@@ -658,7 +663,7 @@ namespace Twino.Client.TMQ
         public async Task<TwinoResult> SendResponseAsync<TModel>(TmqMessage requestMessage, TModel responseModel)
         {
             TmqMessage response = requestMessage.CreateResponse(TwinoResultCode.Ok);
-            await response.SetJsonContent(responseModel);
+            response.Serialize(responseModel, JsonSerializer);
             return await SendAsync(response);
         }
 
@@ -713,7 +718,7 @@ namespace Twino.Client.TMQ
             message.Type = MessageType.DirectMessage;
             message.FirstAcquirer = toOnlyFirstReceiver;
             message.ContentType = contentType;
-            await message.SetJsonContent(model);
+            message.Serialize(model, JsonSerializer);
 
             if (waitAcknowledge)
                 return await SendWithAcknowledge(message);
@@ -871,12 +876,12 @@ namespace Twino.Client.TMQ
         {
             TypeDeliveryDescriptor descriptor = DeliveryContainer.GetDescriptor(model.GetType());
             TmqMessage message = descriptor.CreateMessage(MessageType.DirectMessage, target, contentType);
-            await message.SetJsonContent(model);
+            message.Serialize(model, JsonSerializer);
 
             TmqMessage responseMessage = await Request(message);
             if (responseMessage.ContentType == 0)
             {
-                TResponse response = await responseMessage.GetJsonContent<TResponse>();
+                TResponse response = responseMessage.Deserialize<TResponse>(JsonSerializer);
                 return new TwinoResult<TResponse>(response, message, TwinoResultCode.Ok);
             }
 

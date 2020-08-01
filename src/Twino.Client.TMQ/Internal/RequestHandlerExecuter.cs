@@ -27,7 +27,7 @@ namespace Twino.Client.TMQ.Internal
             try
             {
                 ITwinoRequestHandler<TRequest, TResponse> handler;
-                
+
                 if (_handler != null)
                     handler = _handler;
                 else if (_handlerFactoryCreator != null)
@@ -43,7 +43,7 @@ namespace Twino.Client.TMQ.Internal
                 {
                     TResponse responseModel = await handler.Handle(requestModel, message, client);
                     TmqMessage responseMessage = message.CreateResponse(TwinoResultCode.Ok);
-                    await responseMessage.SetJsonContent(responseModel);
+                    responseMessage.Serialize(responseModel, client.JsonSerializer);
                     await client.SendAsync(responseMessage);
                 }
                 catch (Exception e)
@@ -51,8 +51,8 @@ namespace Twino.Client.TMQ.Internal
                     ErrorResponse<TResponse> errorModel = await handler.OnError(e, requestModel, message, client);
                     TmqMessage responseMessage = message.CreateResponse(errorModel.ResultCode);
                     if (errorModel.ErrorModel != null)
-                        await responseMessage.SetJsonContent(errorModel.ErrorModel);
-                    
+                        responseMessage.Serialize(errorModel.ErrorModel, client.JsonSerializer);
+
                     await client.SendAsync(responseMessage);
                 }
             }

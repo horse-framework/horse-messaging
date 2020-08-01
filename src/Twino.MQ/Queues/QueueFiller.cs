@@ -26,7 +26,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Fills JSON object data to the queue
         /// </summary>
-        public async Task<PushResult> FillJson<T>(IEnumerable<T> items, bool createAsSaved, bool highPriority) where T : class
+        public PushResult FillJson<T>(IEnumerable<T> items, bool createAsSaved, bool highPriority) where T : class
         {
             if (_queue.Status == QueueStatus.Stopped)
                 return PushResult.StatusNotSupported;
@@ -46,8 +46,7 @@ namespace Twino.MQ.Queues
                 if (_queue.Options.UseMessageId)
                     message.SetMessageId(_queue.Channel.Server.MessageIdGenerator.Create());
 
-                await message.SetJsonContent(item);
-
+                message.Serialize(item, _queue.Channel.Server.MessageContentSerializer);
                 QueueMessage qm = new QueueMessage(message, createAsSaved);
 
                 if (highPriority)
@@ -67,7 +66,7 @@ namespace Twino.MQ.Queues
         /// Fills JSON object data to the queue.
         /// Creates new TmqMessage and before writing content and adding into queue calls the action.
         /// </summary>
-        public async Task<PushResult> FillJson<T>(IEnumerable<T> items, bool createAsSaved, Action<TmqMessage, T> action) where T : class
+        public PushResult FillJson<T>(IEnumerable<T> items, bool createAsSaved, Action<TmqMessage, T> action) where T : class
         {
             if (_queue.Status == QueueStatus.Stopped)
                 return PushResult.StatusNotSupported;
@@ -87,7 +86,7 @@ namespace Twino.MQ.Queues
                     message.SetMessageId(_queue.Channel.Server.MessageIdGenerator.Create());
 
                 action(message, item);
-                await message.SetJsonContent(item);
+                message.Serialize(item, _queue.Channel.Server.MessageContentSerializer);
 
                 QueueMessage qm = new QueueMessage(message, createAsSaved);
 

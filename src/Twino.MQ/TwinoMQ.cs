@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
+using Twino.Client.TMQ;
 using Twino.MQ.Clients;
 using Twino.MQ.Events;
 using Twino.MQ.Helpers;
@@ -116,6 +117,7 @@ namespace Twino.MQ
         /// </summary>
         private readonly SemaphoreSlim _findOrCreateChannelLocker = new SemaphoreSlim(1, 1);
 
+        internal IMessageContentSerializer MessageContentSerializer { get; } = new NewtonsoftContentSerializer();
         #endregion
 
         #region Events
@@ -156,8 +158,8 @@ namespace Twino.MQ
         /// Creates new Messaging Queue Server
         /// </summary>
         public TwinoMQ(Action<TwinoMqOptions> options,
-                        IClientAuthenticator authenticator = null,
-                        IClientAuthorization authorization = null)
+                       IClientAuthenticator authenticator = null,
+                       IClientAuthorization authorization = null)
         {
             Options = new TwinoMqOptions();
             options(Options);
@@ -181,8 +183,8 @@ namespace Twino.MQ
         /// Creates new Messaging Queue Server
         /// </summary>
         public TwinoMQ(TwinoMqOptions options,
-                        IClientAuthenticator authenticator = null,
-                        IClientAuthorization authorization = null)
+                       IClientAuthenticator authenticator = null,
+                       IClientAuthorization authorization = null)
         {
             Options = options ?? new TwinoMqOptions();
             Authenticator = authenticator;
@@ -252,7 +254,7 @@ namespace Twino.MQ
             if (ChannelEventHandler != null)
                 _ = ChannelEventHandler.OnChannelCreated(channel);
 
-            _ = OnChannelCreated.Trigger(channel);
+            OnChannelCreated.Trigger(channel);
 
             return channel;
         }
@@ -308,7 +310,7 @@ namespace Twino.MQ
 
             await channel.Destroy();
 
-            _ = OnChannelRemoved.Trigger(channel);
+            OnChannelRemoved.Trigger(channel);
         }
 
         #endregion
@@ -321,7 +323,7 @@ namespace Twino.MQ
         internal void AddClient(MqClient client)
         {
             _clients.Add(client);
-            _ = OnClientConnected.Trigger(client);
+            OnClientConnected.Trigger(client);
         }
 
         /// <summary>
@@ -331,7 +333,7 @@ namespace Twino.MQ
         {
             _clients.Remove(client);
             await client.LeaveFromAllChannels();
-            _ = OnClientDisconnected.Trigger(client);
+            OnClientDisconnected.Trigger(client);
         }
 
         /// <summary>

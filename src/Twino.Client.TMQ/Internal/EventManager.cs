@@ -69,7 +69,7 @@ namespace Twino.Client.TMQ.Internal
             }
         }
 
-        internal Task TriggerEvents(TmqMessage message)
+        internal Task TriggerEvents(TmqClient client, TmqMessage message)
         {
             string eventName = message.Source;
             string channelName = message.Target;
@@ -88,7 +88,7 @@ namespace Twino.Client.TMQ.Internal
             lock (descriptor.Methods)
                 methods = new List<Delegate>(descriptor.Methods);
 
-            object param = message.GetJsonContent(descriptor.ParameterType);
+            object param = message.Deserialize(descriptor.ParameterType, client.JsonSerializer);
             foreach (var m in methods)
                 m.DynamicInvoke(param);
 

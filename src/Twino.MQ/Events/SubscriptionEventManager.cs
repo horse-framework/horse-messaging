@@ -12,24 +12,24 @@ namespace Twino.MQ.Events
         /// <summary>
         /// Creates new client event manager
         /// </summary>
-        public SubscriptionEventManager(string eventName, Channel channel)
-            : base(eventName, channel.Name, 0)
+        public SubscriptionEventManager(TwinoMQ server, string eventName, Channel channel)
+            : base(server, eventName, channel.Name, 0)
         {
         }
 
         /// <summary>
         /// Triggers client joined or left channel events
         /// </summary>
-        public Task Trigger(ChannelClient client, string node = null)
+        public void Trigger(ChannelClient client, string node = null)
         {
-            return base.Trigger(new SubscriptionEvent
-                                {
-                                    Channel = client.Channel.Name,
-                                    ClientId = client.Client.UniqueId,
-                                    ClientName = client.Client.Name,
-                                    ClientType = client.Client.Type,
-                                    Node = node
-                                });
+            base.Trigger(new SubscriptionEvent
+                         {
+                             Channel = client.Channel.Name,
+                             ClientId = client.Client.UniqueId,
+                             ClientName = client.Client.Name,
+                             ClientType = client.Client.Type,
+                             Node = node
+                         });
         }
     }
 }

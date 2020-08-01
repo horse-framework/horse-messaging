@@ -216,30 +216,27 @@ namespace Twino.Protocols.TMQ
         }
 
         /// <summary>
-        /// Sets message content as json serialized object
+        /// Serializes message content
         /// </summary>
-        public async Task SetJsonContent(object value)
+        public void Serialize(object value, IMessageContentSerializer serializer)
         {
-            Content = new MemoryStream();
-            await System.Text.Json.JsonSerializer.SerializeAsync(Content, value, value.GetType());
-            Length = Content != null ? (ulong) Content.Length : 0;
+            serializer.Serialize(value, this);
         }
 
         /// <summary>
-        /// Reads content and deserializes to from json string
+        /// Deserializes message content
         /// </summary>
-        public async Task<TModel> GetJsonContent<TModel>()
+        public TModel Deserialize<TModel>(IMessageContentSerializer serializer)
         {
-            return await System.Text.Json.JsonSerializer.DeserializeAsync<TModel>(Content);
+            return (TModel) serializer.Deserialize(typeof(TModel), this);
         }
 
         /// <summary>
-        /// Reads content and deserializes to from json string
+        /// Deserializes message content
         /// </summary>
-        public object GetJsonContent(Type type)
+        public object Deserialize(Type type, IMessageContentSerializer serializer)
         {
-            string json = GetStringContent();
-            return System.Text.Json.JsonSerializer.Deserialize(json, type);
+            return serializer.Deserialize(type, this);
         }
 
         /// <summary>

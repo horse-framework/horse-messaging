@@ -101,12 +101,12 @@ namespace Twino.Client.TMQ.Operators
             TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor<TRequest>();
             TmqMessage message = descriptor.CreateMessage(MessageType.Router, routerName, contentType);
             message.PendingResponse = true;
-            await message.SetJsonContent(request);
+            message.Serialize(request, _client.JsonSerializer);
 
             TmqMessage responseMessage = await _client.Request(message);
             if (responseMessage.ContentType == 0)
             {
-                TResponse response = await responseMessage.GetJsonContent<TResponse>();
+                TResponse response = responseMessage.Deserialize<TResponse>(_client.JsonSerializer);
                 return new TwinoResult<TResponse>(response, message, TwinoResultCode.Ok);
             }
 

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.Protocols.TMQ;
 
@@ -34,13 +33,16 @@ namespace Twino.MQ.Events
         /// </summary>
         private Timer _cleanup;
 
+        private readonly TwinoMQ _server;
+
         /// <summary>
         /// Name is definition of the event.
         /// Target is the channel name of the event.
         /// Content Type is the Queue Id of the event.
         /// </summary>
-        protected EventManager(string name, string target, ushort contentType)
+        protected EventManager(TwinoMQ server, string name, string target, ushort contentType)
         {
+            _server = server;
             Name = name;
             Target = target;
             ContentType = contentType;
@@ -112,7 +114,7 @@ namespace Twino.MQ.Events
         /// <summary>
         /// Triggers event and sends message to subscribers
         /// </summary>
-        protected async Task Trigger(object model)
+        protected void Trigger(object model)
         {
             if (_subscribers.Count == 0)
                 return;
@@ -121,7 +123,7 @@ namespace Twino.MQ.Events
             message.SetSource(Name);
 
             if (model != null)
-                await message.SetJsonContent(model);
+                message.Serialize(model, _server.MessageContentSerializer);
 
             byte[] data = TmqWriter.Create(message);
 

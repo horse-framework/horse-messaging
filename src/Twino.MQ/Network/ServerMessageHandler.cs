@@ -320,7 +320,7 @@ namespace Twino.MQ.Network
 
             TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.ChannelList;
-            await response.SetJsonContent(list);
+            response.Serialize(list, _server.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
@@ -373,7 +373,7 @@ namespace Twino.MQ.Network
 
             TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.ChannelInformation;
-            await response.SetJsonContent(information);
+            response.Serialize(information, _server.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
@@ -427,7 +427,7 @@ namespace Twino.MQ.Network
 
             TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.ChannelConsumers;
-            await response.SetJsonContent(list);
+            response.Serialize(list, _server.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
@@ -582,7 +582,7 @@ namespace Twino.MQ.Network
             if (builder.Status.HasValue)
                 await queue.SetStatus(builder.Status.Value);
 
-            _ = channel.OnQueueUpdated.Trigger(queue);
+            channel.OnQueueUpdated.Trigger(queue);
 
             //if creation successful, sends response
             if (message.PendingResponse)
@@ -719,7 +719,7 @@ namespace Twino.MQ.Network
 
             TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.QueueList;
-            await response.SetJsonContent(list);
+            response.Serialize(list, _server.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
@@ -793,7 +793,7 @@ namespace Twino.MQ.Network
 
             TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.QueueInformation;
-            await response.SetJsonContent(information);
+            response.Serialize(information, _server.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
@@ -859,7 +859,7 @@ namespace Twino.MQ.Network
 
             TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.InstanceList;
-            await response.SetJsonContent(list);
+            response.Serialize(list, _server.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
@@ -915,7 +915,7 @@ namespace Twino.MQ.Network
 
             TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.ClientList;
-            await response.SetJsonContent(list);
+            response.Serialize(list, _server.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
