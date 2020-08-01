@@ -260,6 +260,7 @@ namespace Twino.MQ
             if (Server.ChannelEventHandler != null)
                 await Server.ChannelEventHandler.OnQueueCreated(queue, this);
 
+            handlerBuilder.TriggerAfterCompleted();
             _ = OnQueueCreated.Trigger(queue);
             return queue;
         }

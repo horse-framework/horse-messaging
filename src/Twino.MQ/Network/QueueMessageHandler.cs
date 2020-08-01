@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
+using Twino.MQ.Options;
 using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
 
@@ -46,7 +46,10 @@ namespace Twino.MQ.Network
 
             //if auto creation active, try to create queue
             if (queue == null && _server.Options.AutoQueueCreation)
-                queue = await channel.FindOrCreateQueue(message.ContentType);
+            {
+                ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(channel.Options);
+                queue = await channel.CreateQueue(contentType, options, message, channel.Server.DeliveryHandlerFactory);
+            }
 
             if (queue == null)
             {

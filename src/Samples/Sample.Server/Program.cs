@@ -1,8 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Twino.MQ;
 using Twino.MQ.Data;
-using Twino.MQ.Delivery;
-using Twino.MQ.Handlers;
+using Twino.MQ.Queues;
 using Twino.Server;
 
 namespace Sample.Server
@@ -13,12 +12,12 @@ namespace Sample.Server
         {
             TwinoServer server = new TwinoServer();
             TwinoMQ mq = server.UseTwinoMQ(cfg => cfg
+                                                  .AddOptions(o => o.Status = QueueStatus.Push)
+                                                  .AddOptions(o => o.RequestAcknowledge = true)
                                                   .AddPersistentQueues(q => q.UseAutoFlush().KeepLastBackup())
-                                                  .UseSendAckDeliveryHandler(AcknowledgeWhen.AfterReceived));
+                                                  .UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterReceived));
 
             await mq.LoadPersistentQueues();
-
-            //await mq.FindChannel("123").CreatePersistentQueue(123, DeleteWhen.AfterAcknowledgeReceived, DeliveryAcknowledgeDecision.IfSaved);
 
             server.Start(22200);
             await server.BlockWhileRunningAsync();

@@ -43,6 +43,7 @@ namespace Twino.MQ.Data
                 builder.GenerateQueueFilename = DefaultQueueDbPath;
 
             ConfigurationFactory.Initialize(builder);
+
             return server;
         }
 
@@ -73,9 +74,21 @@ namespace Twino.MQ.Data
                 DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(dh.Queue);
                 PersistentDeliveryHandler handler = new PersistentDeliveryHandler(dh.Queue, databaseOptions, deleteWhen, producerAckDecision);
                 await handler.Initialize();
+                dh.OnAfterCompleted(AfterDeliveryHandlerCreated);
                 return handler;
             };
             return builder;
+        }
+
+        private static void AfterDeliveryHandlerCreated(DeliveryHandlerBuilder builder)
+        {
+            PersistentDeliveryHandler persistentHandler = builder.Queue.DeliveryHandler as PersistentDeliveryHandler;
+            if (persistentHandler == null)
+                return;
+
+            bool added = ConfigurationFactory.Manager.Add(builder.Queue, persistentHandler.Database.File.Filename);
+            if (added)
+                ConfigurationFactory.Manager.Save();
         }
 
         /// <summary>

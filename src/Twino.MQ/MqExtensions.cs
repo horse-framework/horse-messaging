@@ -73,9 +73,10 @@ namespace Twino.MQ
         /// </summary>
         public static TwinoMqBuilder AddOptions(this TwinoMqBuilder builder, Action<TwinoMqOptions> options)
         {
-            TwinoMqOptions o = new TwinoMqOptions();
-            options(o);
-            builder.Server.Options = o;
+            if (builder.Server.Options == null)
+                builder.Server.Options = new TwinoMqOptions();
+            
+            options(builder.Server.Options);
             return builder;
         }
 

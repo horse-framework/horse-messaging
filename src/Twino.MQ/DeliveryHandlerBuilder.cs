@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Twino.MQ.Queues;
 
@@ -34,9 +35,26 @@ namespace Twino.MQ
         /// All header data of the message that is received over network from a client.
         /// </summary>
         public IEnumerable<KeyValuePair<string,string>> Headers { get; internal set; }
+
+        private Action<DeliveryHandlerBuilder> _afterCompleted;
         
         internal DeliveryHandlerBuilder()
         {
         }
+
+        /// <summary>
+        /// Subscribes to after delivery handler and queue created operation
+        /// </summary>
+        public void OnAfterCompleted(Action<DeliveryHandlerBuilder> action)
+        {
+            _afterCompleted = action;
+        }
+
+        internal void TriggerAfterCompleted()
+        {
+            if (_afterCompleted != null)
+                _afterCompleted(this);
+        }
+        
     }
 }
