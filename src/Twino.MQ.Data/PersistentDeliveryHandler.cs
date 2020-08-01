@@ -122,16 +122,17 @@ namespace Twino.MQ.Data
         {
             if (message.SendCount == 0)
                 return new Decision(true, true, PutBackDecision.Start, DeliveryAcknowledgeDecision.None);
+            
             if (DeleteWhen == DeleteWhen.AfterSend)
-
                 await DeleteMessage(message.Message.MessageId);
+            
             return Decision.JustAllow();
         }
 
         /// <inheritdoc />
         public async Task<Decision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
-            if (DeleteWhen == DeleteWhen.AfterAcknowledgeReceived)
+            if (success && DeleteWhen == DeleteWhen.AfterAcknowledgeReceived)
                 await DeleteMessage(delivery.Message.Message.MessageId);
 
             if (ProducerAckDecision == ProducerAckDecision.AfterConsumerAckReceived)
