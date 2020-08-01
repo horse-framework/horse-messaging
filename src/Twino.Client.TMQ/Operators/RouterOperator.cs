@@ -56,9 +56,9 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Publishes a JSON object to a router
         /// </summary>
-        public async Task<TwinoResult> PublishJson<TModel>(string routerName, TModel model, bool waitForAcknowledge = false, ushort? contentType = null)
+        public async Task<TwinoResult> PublishJson(string routerName, object model, bool waitForAcknowledge = false, ushort? contentType = null)
         {
-            TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor<TModel>();
+            TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor(model.GetType());
             TmqMessage message = descriptor.CreateMessage(MessageType.Router, routerName, contentType);
 
             message.PendingAcknowledge = waitForAcknowledge;
