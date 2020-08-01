@@ -49,6 +49,9 @@ namespace Twino.Client.TMQ.Internal
                 catch (Exception e)
                 {
                     ErrorResponse<TResponse> errorModel = await handler.OnError(e, requestModel, message, client);
+                    if (errorModel.ResultCode == TwinoResultCode.Ok)
+                        errorModel.ResultCode = TwinoResultCode.Failed;
+                    
                     TmqMessage responseMessage = message.CreateResponse(errorModel.ResultCode);
                     if (errorModel.ErrorModel != null)
                         responseMessage.Serialize(errorModel.ErrorModel, client.JsonSerializer);
