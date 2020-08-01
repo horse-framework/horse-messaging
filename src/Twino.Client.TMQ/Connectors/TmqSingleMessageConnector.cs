@@ -25,6 +25,12 @@ namespace Twino.Client.TMQ.Connectors
         public bool AutoJoinConsumerChannels { get; set; }
 
         /// <summary>
+        /// Content Serializer for clients in this connector.
+        /// If null, default content serializer will be used.
+        /// </summary>
+        public IMessageContentSerializer ContentSerializer { get; set; }
+
+        /// <summary>
         /// Creates new single message connector for TMQ protocol clients
         /// </summary>
         public TmqSingleMessageConnector(Func<TmqClient> createInstance = null) : base(createInstance)
@@ -45,6 +51,18 @@ namespace Twino.Client.TMQ.Connectors
         public void InitReader(Func<TmqMessage, Type, object> serailizationAction)
         {
             _consumer = new MessageConsumer(serailizationAction);
+        }
+
+        /// <inheritdoc />
+        protected override void ClientConnected(SocketBase client)
+        {
+            if (ContentSerializer != null)
+            {
+                if (client is TmqClient tmqClient)
+                    tmqClient.JsonSerializer = ContentSerializer;
+            }
+
+            base.ClientConnected(client);
         }
 
         /// <inheritdoc />

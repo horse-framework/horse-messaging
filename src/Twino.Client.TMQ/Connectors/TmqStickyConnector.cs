@@ -31,6 +31,12 @@ namespace Twino.Client.TMQ.Connectors
         public bool DisconnectionOnAutoJoinFailure { get; set; } = true;
 
         /// <summary>
+        /// Content Serializer for clients in this connector.
+        /// If null, default content serializer will be used.
+        /// </summary>
+        public IMessageContentSerializer ContentSerializer { get; set; }
+
+        /// <summary>
         /// Creates new sticky connector for TMQ protocol clients
         /// </summary>
         public TmqStickyConnector(TimeSpan reconnectInterval, Func<TmqClient> createInstance = null)
@@ -66,6 +72,12 @@ namespace Twino.Client.TMQ.Connectors
         /// <inheritdoc />
         protected override void ClientConnected(SocketBase client)
         {
+            if (ContentSerializer != null)
+            {
+                if (client is TmqClient tmqClient)
+                    tmqClient.JsonSerializer = ContentSerializer;
+            }
+
             base.ClientConnected(client);
 
             if (AutoJoinConsumerChannels)
