@@ -215,25 +215,24 @@ namespace Twino.MQ.Network
                 }
             }
 
-            if (!createForQueue && message.Length > 0 && message.Content != null && message.Content.Length > 0)
+            Channel ch;
+            if (message.Length > 0 && message.Content != null && message.Content.Length > 0)
             {
+                message.Content.Position = 0;
                 NetworkOptionsBuilder builder = await System.Text.Json.JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content);
 
                 ChannelOptions options = ChannelOptions.CloneFrom(_server.Options);
                 builder.ApplyToChannel(options);
 
-                Channel ch = _server.CreateChannel(message.Target, options);
-
-                if (ch != null && message.PendingResponse)
-                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
+                ch = _server.CreateChannel(message.Target, options);
             }
+            else
+                ch = _server.CreateChannel(message.Target);
 
-            Channel c = _server.CreateChannel(message.Target);
-
-            if (!createForQueue && c != null && message.PendingResponse)
+            if (!createForQueue && ch != null && message.PendingResponse)
                 await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
 
-            return c;
+            return ch;
         }
 
         /// <summary>

@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading.Tasks;
 
 [assembly: InternalsVisibleTo("Twino.MQ.Data")]
 [assembly: InternalsVisibleTo("Twino.MQ.Server")]
@@ -220,7 +219,7 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public void Serialize(object value, IMessageContentSerializer serializer)
         {
-            serializer.Serialize(value, this);
+            serializer.Serialize(this, value);
         }
 
         /// <summary>
@@ -228,7 +227,7 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public TModel Deserialize<TModel>(IMessageContentSerializer serializer)
         {
-            return (TModel) serializer.Deserialize(typeof(TModel), this);
+            return (TModel) serializer.Deserialize(this, typeof(TModel));
         }
 
         /// <summary>
@@ -236,7 +235,7 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public object Deserialize(Type type, IMessageContentSerializer serializer)
         {
-            return serializer.Deserialize(type, this);
+            return serializer.Deserialize(this, type);
         }
 
         /// <summary>

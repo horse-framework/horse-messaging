@@ -17,7 +17,7 @@ namespace Twino.Client.TMQ
     /// <summary>
     /// Type based message reader for TMQ client
     /// </summary>
-    public class MessageConsumer
+    public class MessageObserver
     {
         #region Fields
 
@@ -50,7 +50,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Creates new message reader with converter action
         /// </summary>
-        public MessageConsumer(Func<TmqMessage, Type, object> func)
+        public MessageObserver(Func<TmqMessage, Type, object> func)
         {
             _func = func;
             _deliveryContainer = new TypeDeliveryContainer(new TypeDeliveryResolver());
@@ -60,7 +60,7 @@ namespace Twino.Client.TMQ
         /// Creates new message reader, reads UTF-8 string from message content and deserializes it with System.Text.Json
         /// </summary>
         [Obsolete("This method will be removed in future. Use JsonConsumer instead.")]
-        public static MessageConsumer JsonReader()
+        public static MessageObserver JsonReader()
         {
             return JsonConsumer();
         }
@@ -68,9 +68,9 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Creates new message consumer, reads UTF-8 string from message content and deserializes it with System.Text.Json
         /// </summary>
-        public static MessageConsumer JsonConsumer()
+        public static MessageObserver JsonConsumer()
         {
-            return new MessageConsumer((msg, type) =>
+            return new MessageObserver((msg, type) =>
             {
                 if (msg.Content == null || msg.Length < 1)
                     return null;

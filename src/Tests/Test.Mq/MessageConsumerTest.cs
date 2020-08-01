@@ -24,13 +24,13 @@ namespace Test.Mq
             int port = server.Start();
 
             bool received = false;
-            MessageConsumer consumer = MessageConsumer.JsonConsumer();
-            consumer.On<MessageA>("ch-1", MessageA.ContentType, a => { received = true; });
+            MessageObserver observer = MessageObserver.JsonConsumer();
+            observer.On<MessageA>("ch-1", MessageA.ContentType, a => { received = true; });
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
-            consumer.Attach(client);
+            observer.Attach(client);
 
             TwinoResult joined = await client.Channels.Join("ch-1", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
@@ -70,10 +70,10 @@ namespace Test.Mq
 
             bool ch0 = false;
             bool ch1 = false;
-            MessageConsumer consumer = MessageConsumer.JsonConsumer();
-            consumer.On<MessageA>("ch-0", MessageA.ContentType, a => ch0 = true);
-            consumer.On<MessageA>("ch-1", MessageA.ContentType, a => ch1 = true);
-            consumer.Attach(client);
+            MessageObserver observer = MessageObserver.JsonConsumer();
+            observer.On<MessageA>("ch-0", MessageA.ContentType, a => ch0 = true);
+            observer.On<MessageA>("ch-1", MessageA.ContentType, a => ch1 = true);
+            observer.Attach(client);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(new MessageA("Ax"))));
 
@@ -108,10 +108,10 @@ namespace Test.Mq
 
             bool ma = false;
             bool mc = false;
-            MessageConsumer consumer = MessageConsumer.JsonConsumer();
-            consumer.On<MessageA>("ch-1", MessageA.ContentType, a => ma = true);
-            consumer.On<MessageA>("ch-1", MessageC.ContentType, c => mc = true);
-            consumer.Attach(client);
+            MessageObserver observer = MessageObserver.JsonConsumer();
+            observer.On<MessageA>("ch-1", MessageA.ContentType, a => ma = true);
+            observer.On<MessageA>("ch-1", MessageC.ContentType, c => mc = true);
+            observer.Attach(client);
 
             MemoryStream astream = new MemoryStream(Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(new MessageA("Ax"))));
             MemoryStream cstream = new MemoryStream(Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(new MessageC("Cx", "x"))));
@@ -147,14 +147,14 @@ namespace Test.Mq
             int port = server.Start();
 
             bool thrown = false;
-            MessageConsumer consumer = MessageConsumer.JsonConsumer();
-            consumer.OnException += (tm, e) => thrown = true;
-            consumer.On<MessageA>("ch-1", MessageA.ContentType, a => throw new InvalidOperationException());
+            MessageObserver observer = MessageObserver.JsonConsumer();
+            observer.OnException += (tm, e) => thrown = true;
+            observer.On<MessageA>("ch-1", MessageA.ContentType, a => throw new InvalidOperationException());
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
-            consumer.Attach(client);
+            observer.Attach(client);
 
             TwinoResult joined = await client.Channels.Join("ch-1", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
@@ -195,9 +195,9 @@ namespace Test.Mq
             Assert.True(client2.IsConnected);
 
             bool received = false;
-            MessageConsumer consumer = MessageConsumer.JsonConsumer();
-            consumer.OnDirect<MessageA>(MessageA.ContentType, a => received = true);
-            consumer.Attach(client1);
+            MessageObserver observer = MessageObserver.JsonConsumer();
+            observer.OnDirect<MessageA>(MessageA.ContentType, a => received = true);
+            observer.Attach(client1);
 
             MessageA m = new MessageA("Msg-A");
             var sent = await client2.SendJsonAsync(MessageType.DirectMessage, "client-1", MessageA.ContentType, m, true);

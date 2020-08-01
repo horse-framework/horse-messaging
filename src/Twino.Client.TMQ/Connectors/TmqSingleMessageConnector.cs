@@ -12,12 +12,12 @@ namespace Twino.Client.TMQ.Connectors
     /// </summary>
     public class TmqSingleMessageConnector : SingleMessageConnector<TmqClient, TmqMessage>
     {
-        private MessageConsumer _consumer;
+        private readonly MessageObserver _observer;
 
         /// <summary>
         /// Default TMQ Message reader for connector
         /// </summary>
-        public MessageConsumer Consumer => _consumer;
+        public MessageObserver Observer => _observer;
 
         /// <summary>
         /// If true, automatically joins all subscribed channels
@@ -35,22 +35,15 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public TmqSingleMessageConnector(Func<TmqClient> createInstance = null) : base(createInstance)
         {
+            _observer = new MessageObserver(ReadMessage);
         }
 
-        /// <summary>
-        /// Inits the JSON reader on the connector
-        /// </summary>
-        public void InitJsonReader()
+        private object ReadMessage(TmqMessage message, Type type)
         {
-            _consumer = MessageConsumer.JsonConsumer();
-        }
-
-        /// <summary>
-        /// Inits a custom reader on the connector
-        /// </summary>
-        public void InitReader(Func<TmqMessage, Type, object> serailizationAction)
-        {
-            _consumer = new MessageConsumer(serailizationAction);
+            if (ContentSerializer == null)
+                ContentSerializer = new NewtonsoftContentSerializer();
+            
+            return ContentSerializer.Deserialize(message, type);
         }
 
         /// <inheritdoc />
@@ -70,8 +63,8 @@ namespace Twino.Client.TMQ.Connectors
         {
             base.ClientMessageReceived(client, payload);
 
-            if (_consumer != null)
-                _consumer.Read((TmqClient) client, payload);
+            if (_observer != null)
+                _observer.Read((TmqClient) client, payload);
         }
 
         #region On - Consume
@@ -81,10 +74,10 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public void On<T>(Action<T> action)
         {
-            if (_consumer == null)
+            if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
-            _consumer.On(action);
+            _observer.On(action);
         }
 
 
@@ -93,10 +86,10 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public void On<T>(string channel, ushort content, Action<T> action)
         {
-            if (_consumer == null)
+            if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
-            _consumer.On(channel, content, action);
+            _observer.On(channel, content, action);
         }
 
         /// <summary>
@@ -104,10 +97,10 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public void On<T>(Action<T, TmqMessage> action)
         {
-            if (_consumer == null)
+            if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
-            _consumer.On(action);
+            _observer.On(action);
         }
 
 
@@ -116,10 +109,10 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public void On<T>(string channel, ushort content, Action<T, TmqMessage> action)
         {
-            if (_consumer == null)
+            if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
-            _consumer.On(channel, content, action);
+            _observer.On(channel, content, action);
         }
 
         #endregion
@@ -131,10 +124,10 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public void OnDirect<T>(Action<T> action)
         {
-            if (_consumer == null)
+            if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
-            _consumer.OnDirect(action);
+            _observer.OnDirect(action);
         }
 
         /// <summary>
@@ -142,10 +135,10 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public void OnDirect<T>(ushort content, Action<T> action)
         {
-            if (_consumer == null)
+            if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
-            _consumer.OnDirect(content, action);
+            _observer.OnDirect(content, action);
         }
 
         /// <summary>
@@ -153,10 +146,10 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public void OnDirect<T>(Action<T, TmqMessage> action)
         {
-            if (_consumer == null)
+            if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
-            _consumer.OnDirect(action);
+            _observer.OnDirect(action);
         }
 
         /// <summary>
@@ -164,10 +157,10 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public void OnDirect<T>(ushort content, Action<T, TmqMessage> action)
         {
-            if (_consumer == null)
+            if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
-            _consumer.OnDirect(content, action);
+            _observer.OnDirect(content, action);
         }
 
         #endregion
@@ -179,10 +172,10 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public void Off<T>()
         {
-            if (_consumer == null)
+            if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
-            _consumer.Off<T>();
+            _observer.Off<T>();
         }
 
         /// <summary>
@@ -190,10 +183,10 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public void Off(string channel, ushort content)
         {
-            if (_consumer == null)
+            if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
-            _consumer.Off(channel, content);
+            _observer.Off(channel, content);
         }
 
         /// <summary>
@@ -201,10 +194,10 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public void OffDirect<T>()
         {
-            if (_consumer == null)
+            if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
-            _consumer.OffDirect<T>();
+            _observer.OffDirect<T>();
         }
 
         /// <summary>
@@ -212,10 +205,10 @@ namespace Twino.Client.TMQ.Connectors
         /// </summary>
         public void OffDirect(ushort content)
         {
-            if (_consumer == null)
+            if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
-            _consumer.OffDirect(content);
+            _observer.OffDirect(content);
         }
 
         #endregion

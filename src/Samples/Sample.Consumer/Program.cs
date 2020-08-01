@@ -10,8 +10,7 @@ namespace Sample.Consumer
         {
             TmqStickyConnector connector = new TmqStickyConnector(TimeSpan.FromSeconds(1));
             connector.AutoJoinConsumerChannels = true;
-            connector.InitJsonReader();
-            connector.Consumer.RegisterAssemblyConsumers(typeof(Program));
+            connector.Observer.RegisterAssemblyConsumers(typeof(Program));
             connector.AddHost("tmq://127.0.0.1:22200");
             connector.Run();
             while (true)
