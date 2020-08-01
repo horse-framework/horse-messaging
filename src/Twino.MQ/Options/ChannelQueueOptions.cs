@@ -51,7 +51,7 @@ namespace Twino.MQ.Options
         /// <summary>
         /// Default status for the queue
         /// </summary>
-        public QueueStatus Status { get; set; } = QueueStatus.Broadcast;
+        public QueueStatus Status { get; set; } = QueueStatus.Push;
 
         /// <summary>
         /// Maximum message limit of the queue
