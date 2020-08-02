@@ -5,7 +5,7 @@ namespace Twino.MQ.Data
     /// <summary>
     /// Database file message object
     /// </summary>
-    public struct DataMessage
+    public class DataMessage
     {
         /// <summary>
         /// Message data type

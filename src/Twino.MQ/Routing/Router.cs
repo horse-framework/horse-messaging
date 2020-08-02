@@ -17,7 +17,7 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// The server that router is defined
         /// </summary>
-        public MqServer Server { get; }
+        public TwinoMQ Server { get; }
 
         /// <summary>
         /// Route name.
@@ -53,7 +53,7 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Creates new router on the server
         /// </summary>
-        public Router(MqServer server, string name, RouteMethod method)
+        public Router(TwinoMQ server, string name, RouteMethod method)
         {
             Server = server;
             IsEnabled = true;

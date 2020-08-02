@@ -100,7 +100,7 @@ namespace Twino.MQ.Data
             if (_file != null)
                 return;
 
-            _file = new FileStream(Filename, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+            _file = new FileStream(Filename, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
 
             if (_file.Length > 0)
                 _file.Seek(0, SeekOrigin.End);
@@ -181,6 +181,8 @@ namespace Twino.MQ.Data
             try
             {
                 File.Delete(Filename);
+                File.Delete(Filename + ".backup");
+                File.Delete(Filename + ".shrink");
                 return true;
             }
             catch (Exception e)

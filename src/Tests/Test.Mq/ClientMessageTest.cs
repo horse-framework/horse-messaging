@@ -7,9 +7,6 @@ using Xunit;
 
 namespace Test.Mq
 {
-    /// <summary>
-    /// Ports 42600 - 42610
-    /// </summary>
     public class ClientMessageTest
     {
         /// <summary>
@@ -19,8 +16,8 @@ namespace Test.Mq
         public async Task WithoutAnyResponse()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42601);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client1 = new TmqClient();
             TmqClient client2 = new TmqClient();
@@ -28,8 +25,8 @@ namespace Test.Mq
             client1.ClientId = "client-1";
             client2.ClientId = "client-2";
 
-            await client1.ConnectAsync("tmq://localhost:42601");
-            await client2.ConnectAsync("tmq://localhost:42601");
+            await client1.ConnectAsync("tmq://localhost:" + port);
+            await client2.ConnectAsync("tmq://localhost:" + port);
 
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
@@ -53,8 +50,8 @@ namespace Test.Mq
         public async Task WithAcknowledge()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42602);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client1 = new TmqClient();
             TmqClient client2 = new TmqClient();
@@ -64,8 +61,8 @@ namespace Test.Mq
             client2.AutoAcknowledge = true;
             client1.AcknowledgeTimeout = TimeSpan.FromMinutes(14);
 
-            await client1.ConnectAsync("tmq://localhost:42602");
-            await client2.ConnectAsync("tmq://localhost:42602");
+            await client1.ConnectAsync("tmq://localhost:" + port);
+            await client2.ConnectAsync("tmq://localhost:" + port);
 
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
@@ -88,8 +85,8 @@ namespace Test.Mq
         public async Task WithResponse()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42603);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client1 = new TmqClient();
             TmqClient client2 = new TmqClient();
@@ -98,8 +95,8 @@ namespace Test.Mq
             client2.ClientId = "client-2";
             client2.AutoAcknowledge = true;
 
-            await client1.ConnectAsync("tmq://localhost:42603");
-            await client2.ConnectAsync("tmq://localhost:42603");
+            await client1.ConnectAsync("tmq://localhost:" + port);
+            await client2.ConnectAsync("tmq://localhost:" + port);
 
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);

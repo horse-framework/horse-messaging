@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Test.Mq.Models;
 using Twino.MQ;
 using Twino.MQ.Options;
@@ -9,7 +10,7 @@ namespace Test.Mq.Internal
 {
     public class TestMqServer
     {
-        public MqServer Server { get; private set; }
+        public TwinoMQ Server { get; private set; }
 
         public int OnQueueCreated { get; set; }
         public int OnQueueRemoved { get; set; }
@@ -38,21 +39,22 @@ namespace Test.Mq.Internal
 
         public bool SendAcknowledgeFromMQ { get; set; }
 
-        public void Initialize(int port)
+        public void Initialize()
         {
-            Port = port;
+            TwinoMqOptions twinoMqOptions = new TwinoMqOptions();
+            twinoMqOptions.AllowedQueues = new[] {MessageA.ContentType, MessageB.ContentType, MessageC.ContentType};
+            twinoMqOptions.AllowMultipleQueues = true;
+            twinoMqOptions.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
+            twinoMqOptions.MessageTimeout = TimeSpan.FromSeconds(12);
+            twinoMqOptions.Status = QueueStatus.Broadcast;
 
-            MqServerOptions mqOptions = new MqServerOptions();
-            mqOptions.AllowedQueues = new[] { MessageA.ContentType, MessageB.ContentType, MessageC.ContentType };
-            mqOptions.AllowMultipleQueues = true;
-            mqOptions.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
-            mqOptions.MessageTimeout = TimeSpan.FromSeconds(12);
-
-            Server = new MqServer(mqOptions);
-            Server.SetDefaultChannelHandler(new TestChannelHandler(this), null);
-            Server.SetDefaultDeliveryHandler(new TestDeliveryHandler(this));
-            Server.ClientHandler = new TestClientHandler(this);
-            Server.AdminAuthorization = new TestAdminAuthorization();
+            Server = TwinoMqBuilder.Create()
+                                   .AddOptions(twinoMqOptions)
+                                   .UseChannelEventHandler(new TestChannelHandler(this))
+                                   .UseDeliveryHandler(async d => new TestDeliveryHandler(this))
+                                   .UseClientHandler(new TestClientHandler(this))
+                                   .UseAdminAuthorization<TestAdminAuthorization>()
+                                   .Build();
 
             Channel channel = Server.CreateChannel("ch-1");
             channel.CreateQueue(MessageA.ContentType).Wait();
@@ -68,7 +70,7 @@ namespace Test.Mq.Internal
             Channel cpush1 = Server.CreateChannel("ch-push");
             cpush1.Options.Status = QueueStatus.Push;
             cpush1.CreateQueue(MessageA.ContentType).Wait();
-            
+
             Channel cpush2 = Server.CreateChannel("ch-push-cc");
             cpush2.Options.Status = QueueStatus.Push;
             cpush2.CreateQueue(MessageA.ContentType).Wait();
@@ -82,16 +84,33 @@ namespace Test.Mq.Internal
             cround.CreateQueue(MessageA.ContentType).Wait();
         }
 
-        public void Start(int pingInterval = 3, int requestTimeout = 4)
+        public int Start(int pingInterval = 3, int requestTimeout = 4)
         {
-            ServerOptions serverOptions = ServerOptions.CreateDefault();
-            serverOptions.Hosts[0].Port = Port;
-            serverOptions.PingInterval = pingInterval;
-            serverOptions.RequestTimeout = requestTimeout;
+            Random rnd = new Random();
 
-            TwinoServer server = new TwinoServer(serverOptions);
-            server.UseMqServer(Server);
-            server.Start();
+            for (int i = 0; i < 50; i++)
+            {
+                try
+                {
+                    int port = rnd.Next(5000, 65000);
+                    ServerOptions serverOptions = ServerOptions.CreateDefault();
+                    serverOptions.Hosts[0].Port = port;
+                    serverOptions.PingInterval = pingInterval;
+                    serverOptions.RequestTimeout = requestTimeout;
+
+                    TwinoServer server = new TwinoServer(serverOptions);
+                    server.UseTwinoMQ(Server);
+                    server.Start();
+                    Port = port;
+                    return port;
+                }
+                catch
+                {
+                    Thread.Sleep(2);
+                }
+            }
+
+            return 0;
         }
     }
 }

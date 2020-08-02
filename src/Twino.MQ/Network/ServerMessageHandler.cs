@@ -9,7 +9,6 @@ using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
 using Twino.MQ.Queues;
-using Twino.MQ.Security;
 using Twino.Protocols.TMQ;
 using Twino.Protocols.TMQ.Models;
 
@@ -22,9 +21,9 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Messaging Queue Server
         /// </summary>
-        private readonly MqServer _server;
+        private readonly TwinoMQ _server;
 
-        public ServerMessageHandler(MqServer server)
+        public ServerMessageHandler(TwinoMQ server)
         {
             _server = server;
         }
@@ -216,49 +215,24 @@ namespace Twino.MQ.Network
                 }
             }
 
-            if (!createForQueue && message.Length > 0 && message.Content != null && message.Content.Length > 0)
+            Channel ch;
+            if (message.Length > 0 && message.Content != null && message.Content.Length > 0)
             {
+                message.Content.Position = 0;
                 NetworkOptionsBuilder builder = await System.Text.Json.JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content);
 
                 ChannelOptions options = ChannelOptions.CloneFrom(_server.Options);
                 builder.ApplyToChannel(options);
 
-                IChannelEventHandler eventHandler = _server.DefaultChannelEventHandler;
-                if (!string.IsNullOrEmpty(builder.ChannelEventHandler))
-                {
-                    IChannelEventHandler e = _server.Registry.GetChannelEvent(builder.ChannelEventHandler);
-                    if (e != null)
-                        eventHandler = e;
-                }
-
-                IChannelAuthenticator authenticator = _server.DefaultChannelAuthenticator;
-                if (!string.IsNullOrEmpty(builder.ChannelAuthenticator))
-                {
-                    IChannelAuthenticator e = _server.Registry.GetChannelAuthenticator(builder.ChannelAuthenticator);
-                    if (e != null)
-                        authenticator = e;
-                }
-
-                IMessageDeliveryHandler deliveryHandler = _server.DefaultDeliveryHandler;
-                if (!string.IsNullOrEmpty(builder.MessageDeliveryHandler))
-                {
-                    IMessageDeliveryHandler e = _server.Registry.GetMessageDelivery(builder.MessageDeliveryHandler);
-                    if (e != null)
-                        deliveryHandler = e;
-                }
-
-                Channel ch = _server.CreateChannel(message.Target, authenticator, eventHandler, deliveryHandler, options);
-
-                if (ch != null && message.PendingResponse)
-                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
+                ch = _server.CreateChannel(message.Target, options);
             }
+            else
+                ch = _server.CreateChannel(message.Target);
 
-            Channel c = _server.CreateChannel(message.Target);
-
-            if (!createForQueue && c != null && message.PendingResponse)
+            if (!createForQueue && ch != null && message.PendingResponse)
                 await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
 
-            return c;
+            return ch;
         }
 
         /// <summary>
@@ -345,7 +319,7 @@ namespace Twino.MQ.Network
 
             TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.ChannelList;
-            await response.SetJsonContent(list);
+            response.Serialize(list, _server.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
@@ -398,7 +372,7 @@ namespace Twino.MQ.Network
 
             TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.ChannelInformation;
-            await response.SetJsonContent(information);
+            response.Serialize(information, _server.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
@@ -452,7 +426,7 @@ namespace Twino.MQ.Network
 
             TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.ChannelConsumers;
-            await response.SetJsonContent(list);
+            response.Serialize(list, _server.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
@@ -502,19 +476,7 @@ namespace Twino.MQ.Network
 
             //creates new queue
             ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(channel.Options);
-            IMessageDeliveryHandler delivery = channel.DeliveryHandler;
-            if (builder != null)
-            {
-                builder.ApplyToQueue(options);
-                if (!string.IsNullOrEmpty(builder.MessageDeliveryHandler))
-                {
-                    IMessageDeliveryHandler found = _server.Registry.GetMessageDelivery(builder.MessageDeliveryHandler);
-                    if (found != null)
-                        delivery = found;
-                }
-            }
-
-            queue = await channel.CreateQueue(contentType, options, delivery);
+            queue = await channel.CreateQueue(contentType, options, message, channel.Server.DeliveryHandlerFactory);
 
             //if creation successful, sends response
             if (queue != null && message.PendingResponse)
@@ -619,7 +581,7 @@ namespace Twino.MQ.Network
             if (builder.Status.HasValue)
                 await queue.SetStatus(builder.Status.Value);
 
-            _ = channel.OnQueueUpdated.Trigger(queue);
+            channel.OnQueueUpdated.Trigger(queue);
 
             //if creation successful, sends response
             if (message.PendingResponse)
@@ -756,7 +718,7 @@ namespace Twino.MQ.Network
 
             TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.QueueList;
-            await response.SetJsonContent(list);
+            response.Serialize(list, _server.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
@@ -830,7 +792,7 @@ namespace Twino.MQ.Network
 
             TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.QueueInformation;
-            await response.SetJsonContent(information);
+            response.Serialize(information, _server.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
@@ -896,7 +858,7 @@ namespace Twino.MQ.Network
 
             TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.InstanceList;
-            await response.SetJsonContent(list);
+            response.Serialize(list, _server.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
@@ -952,7 +914,7 @@ namespace Twino.MQ.Network
 
             TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.ClientList;
-            await response.SetJsonContent(list);
+            response.Serialize(list, _server.MessageContentSerializer);
             await client.SendAsync(response);
         }
 

@@ -31,7 +31,7 @@ namespace Twino.MQ
         /// <summary>
         /// Messaging queue server of the node server
         /// </summary>
-        public MqServer Server { get; }
+        public TwinoMQ Server { get; }
 
         /// <summary>
         /// Remote node connectors
@@ -58,7 +58,7 @@ namespace Twino.MQ
         /// <summary>
         /// 
         /// </summary>
-        public NodeManager(MqServer server)
+        public NodeManager(TwinoMQ server)
         {
             Server = server;
         }

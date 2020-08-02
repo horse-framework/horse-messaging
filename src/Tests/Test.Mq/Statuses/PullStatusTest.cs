@@ -17,10 +17,9 @@ namespace Test.Mq.Statuses
         [Fact]
         public async Task SendAndPull()
         {
-            int port = 47411;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start(300, 300);
+            server.Initialize();
+            int port = server.Start(300, 300);
 
             TmqClient consumer = new TmqClient();
             consumer.ClientId = "consumer";
@@ -62,10 +61,9 @@ namespace Test.Mq.Statuses
         [Fact]
         public async Task RequestAcknowledge()
         {
-            int port = 47412;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start(300, 300);
+            server.Initialize();
+            int port = server.Start(300, 300);
 
             Channel channel = server.Server.FindChannel("ch-pull");
             ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
@@ -115,13 +113,9 @@ namespace Test.Mq.Statuses
         [InlineData(false)]
         public async Task PullOrder(bool? fifo)
         {
-            int port = 47413;
-            if (fifo.HasValue)
-                port += fifo.Value ? 1 : 2;
-            
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             var channel = server.Server.FindChannel("ch-pull");
             ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
@@ -163,10 +157,9 @@ namespace Test.Mq.Statuses
         [InlineData(10)]
         public async Task PullCount(int count)
         {
-            int port = 47421 + count;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             var channel = server.Server.FindChannel("ch-pull");
             ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
@@ -199,10 +192,9 @@ namespace Test.Mq.Statuses
         [InlineData(4, false, true)]
         public async Task PullClearAfter(int count, bool priorityMessages, bool messages)
         {
-            int port = 47489 + count;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             var channel = server.Server.FindChannel("ch-pull");
             ChannelQueue queue = channel.FindQueue(MessageA.ContentType);

@@ -21,10 +21,9 @@ namespace Test.Mq.Statuses
         [InlineData(20)]
         public async Task SendToOnlineConsumers(int onlineConsumerCount)
         {
-            int port = 47100 + onlineConsumerCount;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start(300, 300);
+            server.Initialize();
+            int port = server.Start(300, 300);
 
             TmqClient producer = new TmqClient();
             await producer.ConnectAsync("tmq://localhost:" + port);
@@ -51,10 +50,9 @@ namespace Test.Mq.Statuses
         [Fact]
         public async Task SendToOfflineConsumers()
         {
-            int port = 47117;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start(300, 300);
+            server.Initialize();
+            int port = server.Start(300, 300);
 
             TmqClient producer = new TmqClient();
             await producer.ConnectAsync("tmq://localhost:" + port);
@@ -81,10 +79,9 @@ namespace Test.Mq.Statuses
         [InlineData(false)]
         public async Task RequestAcknowledge(bool queueAckIsActive)
         {
-            int port = 47118 + Convert.ToInt32(queueAckIsActive);
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start(300, 300);
+            server.Initialize();
+            int port = server.Start(300, 300);
             Channel ch = server.Server.FindChannel("ch-route");
             ChannelQueue queue = ch.Queues.FirstOrDefault();
             Assert.NotNull(queue);

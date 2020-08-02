@@ -14,23 +14,23 @@ namespace Twino.MQ.Events
         /// <summary>
         /// Creates new client event manager
         /// </summary>
-        public ClientEventManager(string eventName, MqServer server)
-            : base(eventName, null, 0)
+        public ClientEventManager(string eventName, TwinoMQ server)
+            : base(server, eventName, null, 0)
         {
         }
 
         /// <summary>
         /// Triggers client connected or disconnected events
         /// </summary>
-        public Task Trigger(MqClient client, string node = null)
+        public void Trigger(MqClient client, string node = null)
         {
-            return base.Trigger(new ClientEvent
-                                {
-                                    Id = client.UniqueId,
-                                    Name = client.Name,
-                                    Type = client.Type,
-                                    Node = node
-                                });
+            base.Trigger(new ClientEvent
+                         {
+                             Id = client.UniqueId,
+                             Name = client.Name,
+                             Type = client.Type,
+                             Node = node
+                         });
         }
     }
 }

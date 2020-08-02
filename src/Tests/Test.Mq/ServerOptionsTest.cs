@@ -7,9 +7,6 @@ using Xunit;
 
 namespace Test.Mq
 {
-    /// <summary>
-    /// Ports 42000 - 42005
-    /// </summary>
     public class ServerOptionsTest
     {
         /// <summary>
@@ -19,7 +16,7 @@ namespace Test.Mq
         public async Task CreateMultipleQueuesInChannel()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42002);
+            server.Initialize();
 
             Channel channel = server.Server.FindChannel("ch-1");
             Assert.NotNull(channel);
@@ -42,7 +39,7 @@ namespace Test.Mq
         public async Task CreateContentType()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42003);
+            server.Initialize();
 
             Channel channel = server.Server.FindChannel("ch-1");
             Assert.NotNull(channel);

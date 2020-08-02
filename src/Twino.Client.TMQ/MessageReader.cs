@@ -8,7 +8,7 @@ namespace Twino.Client.TMQ
     /// Use MessageConsumer directly
     /// </summary>
     [Obsolete("Use MessageConsumer istead")]
-    public class MessageReader : MessageConsumer
+    public class MessageReader : MessageObserver
     {
         /// <summary>
         /// MessageReader name is changed to MessageConsumer.

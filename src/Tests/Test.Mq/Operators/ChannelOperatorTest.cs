@@ -21,11 +21,11 @@ namespace Test.Mq.Operators
         public async Task JoinChannel()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(41201);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:41201");
+            await client.ConnectAsync("tmq://localhost:" + port);
 
             TwinoResult joined = await client.Channels.Join("ch-1", false);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
@@ -45,11 +45,11 @@ namespace Test.Mq.Operators
         public async Task JoinChannelWithResponse()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(41202);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:41202");
+            await client.ConnectAsync("tmq://localhost:" + port);
 
             TwinoResult joined = await client.Channels.Join("ch-1", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
@@ -68,11 +68,11 @@ namespace Test.Mq.Operators
         public async Task LeaveChannel()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(41203);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:41203");
+            await client.ConnectAsync("tmq://localhost:" + port);
 
             TwinoResult joined = await client.Channels.Join("ch-1", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
@@ -95,11 +95,11 @@ namespace Test.Mq.Operators
         public async Task LeaveChannelWithResponse()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(41204);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:41204");
+            await client.ConnectAsync("tmq://localhost:" + port);
 
             TwinoResult joined = await client.Channels.Join("ch-1", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
@@ -120,10 +120,9 @@ namespace Test.Mq.Operators
         [Fact]
         public async Task Create()
         {
-            int port = 35905;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
@@ -135,10 +134,9 @@ namespace Test.Mq.Operators
         [Fact]
         public async Task Delete()
         {
-            int port = 35965;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             server.Server.CreateChannel("new-channel");
 
@@ -155,11 +153,11 @@ namespace Test.Mq.Operators
         public async Task CreateWithProperties()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(41206);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:41206");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
             TwinoResult created = await client.Channels.Create("new-channel", o =>
@@ -183,10 +181,9 @@ namespace Test.Mq.Operators
         [InlineData("*h-pu*")]
         public async Task FindChannels(string filter)
         {
-            int port = 35941 + new Random().Next(20);
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
@@ -199,10 +196,9 @@ namespace Test.Mq.Operators
         [Fact]
         public async Task GetChannelInfo()
         {
-            int port = 35959;
             TestMqServer server = new TestMqServer();
-            server.Initialize(port);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);

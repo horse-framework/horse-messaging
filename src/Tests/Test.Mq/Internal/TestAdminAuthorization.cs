@@ -9,7 +9,7 @@ namespace Test.Mq.Internal
 {
     public class TestAdminAuthorization : IAdminAuthorization
     {
-        public Task<bool> CanRemoveChannel(MqClient client, MqServer server, Channel channel)
+        public Task<bool> CanRemoveChannel(MqClient client, TwinoMQ server, Channel channel)
         {
             return Task.FromResult(true);
         }

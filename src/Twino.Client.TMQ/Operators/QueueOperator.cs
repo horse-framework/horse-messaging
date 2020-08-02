@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Twino.Client.TMQ.Annotations.Resolvers;
 using Twino.Client.TMQ.Internal;
 using Twino.Client.TMQ.Models;
 using Twino.Protocols.TMQ;
@@ -206,9 +207,19 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public async Task<TwinoResult> PushJson(string channel, ushort queueId, object jsonObject, bool waitAcknowledge)
+        public Task<TwinoResult> PushJson(object jsonObject, bool waitAcknowledge)
         {
-            TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
+            return PushJson(null, null, jsonObject, waitAcknowledge);
+        }
+
+        /// <summary>
+        /// Pushes a message to a queue
+        /// </summary>
+        public async Task<TwinoResult> PushJson(string channel, ushort? queueId, object jsonObject, bool waitAcknowledge)
+        {
+            TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor(jsonObject.GetType());
+            TmqMessage message = descriptor.CreateMessage(MessageType.QueueMessage, channel, queueId);
+
             message.Content = new MemoryStream();
             message.PendingAcknowledge = waitAcknowledge;
             await JsonSerializer.SerializeAsync(message.Content, jsonObject, jsonObject.GetType());
@@ -246,11 +257,12 @@ namespace Twino.Client.TMQ.Operators
         /// Pushes a message to a queue and does not wait for acknowledge.
         /// Uses legacy callback method instead of async
         /// </summary>
+        [Obsolete("That methods will be removed in future, use non Sync methods")]
         public bool PushJsonSync(string channel, ushort queueId, object jsonObject)
         {
             TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
             message.PendingAcknowledge = false;
-            byte[] data = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(jsonObject, jsonObject.GetType());
+            byte[] data = JsonSerializer.SerializeToUtf8Bytes(jsonObject, jsonObject.GetType());
             message.Content = new MemoryStream(data);
             message.Content.Position = 0;
 
@@ -264,6 +276,7 @@ namespace Twino.Client.TMQ.Operators
         /// Pushes a message to a queue and does not wait for acknowledge.
         /// Uses legacy callback method instead of async
         /// </summary>
+        [Obsolete("That methods will be removed in future, use non Sync methods")]
         public bool PushSync(string channel, ushort queueId, byte[] data)
         {
             TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);

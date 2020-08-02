@@ -1,27 +1,22 @@
-using System;
 using System.Threading.Tasks;
 using Test.Mq.Internal;
-using Test.Mq.Models;
 using Twino.Client.TMQ;
 using Twino.Protocols.TMQ;
 using Xunit;
 
 namespace Test.Mq
 {
-    /// <summary>
-    /// Ports 42250 - 42280
-    /// </summary>
     public class EventTests
     {
         [Fact]
         public async Task ClientConnected()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42251);
-            server.Start(3000, 3000);
+            server.Initialize();
+            int port = server.Start(3000, 3000);
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42251");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Connections.OnClientConnected(c =>
@@ -33,7 +28,7 @@ namespace Test.Mq
 
             TmqClient client2 = new TmqClient();
             client2.ClientId = "client-2";
-            await client2.ConnectAsync("tmq://localhost:42251");
+            await client2.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client2.IsConnected);
             await Task.Delay(500);
             Assert.True(received);
@@ -44,7 +39,7 @@ namespace Test.Mq
             client2.Disconnect();
             client2 = new TmqClient();
             client2.ClientId = "client-2";
-            await client2.ConnectAsync("tmq://localhost:42251");
+            await client2.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client2.IsConnected);
             await Task.Delay(500);
 
@@ -55,11 +50,11 @@ namespace Test.Mq
         public async Task ClientDisconnected()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42252);
-            server.Start(3000, 3000);
+            server.Initialize();
+            int port = server.Start(3000, 3000);
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42252");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Connections.OnClientDisconnected(c =>
@@ -71,7 +66,7 @@ namespace Test.Mq
 
             TmqClient client2 = new TmqClient();
             client2.ClientId = "client-2";
-            await client2.ConnectAsync("tmq://localhost:42252");
+            await client2.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client2.IsConnected);
             client2.Disconnect();
             await Task.Delay(500);
@@ -81,7 +76,7 @@ namespace Test.Mq
             bool unsubscribed = await client.Connections.OffClientDisconnected();
             Assert.True(unsubscribed);
 
-            await client2.ConnectAsync("tmq://localhost:42252");
+            await client2.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client2.IsConnected);
             client2.Disconnect();
             await Task.Delay(500);
@@ -93,11 +88,11 @@ namespace Test.Mq
         public async Task ClientJoined()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42253);
-            server.Start(3000, 3000);
+            server.Initialize();
+            int port = server.Start(3000, 3000);
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42253");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Channels.OnClientJoined("ch-push", c =>
@@ -128,11 +123,11 @@ namespace Test.Mq
         public async Task ClientLeft()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42254);
-            server.Start(3000, 3000);
+            server.Initialize();
+            int port = server.Start(3000, 3000);
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42254");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Channels.OnClientLeft("ch-push", c =>
@@ -169,11 +164,11 @@ namespace Test.Mq
         public async Task ChannelCreated()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42255);
-            server.Start(3000, 3000);
+            server.Initialize();
+            int port = server.Start(3000, 3000);
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42255");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Channels.OnCreated(c =>
@@ -202,11 +197,11 @@ namespace Test.Mq
         public async Task ChannelRemoved()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42256);
-            server.Start(3000, 3000);
+            server.Initialize();
+            int port = server.Start(3000, 3000);
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42256");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Channels.OnRemoved(c =>
@@ -235,11 +230,11 @@ namespace Test.Mq
         public async Task QueueCreated()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42257);
-            server.Start(3000, 3000);
+            server.Initialize();
+            int port = server.Start(3000, 3000);
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42257");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Queues.OnCreated("ch-pull", c =>
@@ -269,11 +264,11 @@ namespace Test.Mq
         public async Task QueueUpdated()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42258);
-            server.Start(3000, 3000);
+            server.Initialize();
+            int port = server.Start(3000, 3000);
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42258");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Queues.OnUpdated("ch-pull", c =>
@@ -284,10 +279,7 @@ namespace Test.Mq
             });
             Assert.True(subscribed);
 
-            var result = await client.Queues.SetOptions("ch-pull", 1001, opt =>
-            {
-                opt.MessageLimit = 666;
-            });
+            var result = await client.Queues.SetOptions("ch-pull", 1001, opt => { opt.MessageLimit = 666; });
             Assert.Equal(TwinoResultCode.Ok, result.Code);
             await Task.Delay(500);
             Assert.True(received);
@@ -297,11 +289,11 @@ namespace Test.Mq
         public async Task QueueRemoved()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42259);
-            server.Start(3000, 3000);
+            server.Initialize();
+            int port = server.Start(3000, 3000);
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42259");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Queues.OnRemoved("ch-pull", c =>
@@ -322,12 +314,12 @@ namespace Test.Mq
         public async Task MessageProduced()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42260);
-            server.Start(3000, 3000);
+            server.Initialize();
+            int port = server.Start(3000, 3000);
             server.SendAcknowledgeFromMQ = true;
-            
+
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42260");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Queues.OnMessageProduced("ch-pull", 1001, c =>

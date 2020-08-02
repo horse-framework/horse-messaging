@@ -10,9 +10,6 @@ using Xunit;
 
 namespace Test.Mq
 {
-    /// <summary>
-    /// Ports 42800 - 42810
-    /// </summary>
     public class MessageConsumerTest
     {
         /// <summary>
@@ -23,17 +20,17 @@ namespace Test.Mq
         public async Task ClientReadsMessageFromQueue()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42801);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             bool received = false;
-            MessageConsumer consumer = MessageConsumer.JsonReader();
-            consumer.On<MessageA>("ch-1", MessageA.ContentType, a => { received = true; });
+            MessageObserver observer = MessageObserver.JsonConsumer();
+            observer.On<MessageA>("ch-1", MessageA.ContentType, a => { received = true; });
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42801");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
-            consumer.Attach(client);
+            observer.Attach(client);
 
             TwinoResult joined = await client.Channels.Join("ch-1", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
@@ -57,11 +54,11 @@ namespace Test.Mq
         public async Task ClientReadsMessagesFromMultipleChannels()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42802);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42802");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
             TwinoResult joined = await client.Channels.Join("ch-1", true);
@@ -73,10 +70,10 @@ namespace Test.Mq
 
             bool ch0 = false;
             bool ch1 = false;
-            MessageConsumer consumer = MessageConsumer.JsonReader();
-            consumer.On<MessageA>("ch-0", MessageA.ContentType, a => ch0 = true);
-            consumer.On<MessageA>("ch-1", MessageA.ContentType, a => ch1 = true);
-            consumer.Attach(client);
+            MessageObserver observer = MessageObserver.JsonConsumer();
+            observer.On<MessageA>("ch-0", MessageA.ContentType, a => ch0 = true);
+            observer.On<MessageA>("ch-1", MessageA.ContentType, a => ch1 = true);
+            observer.Attach(client);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(new MessageA("Ax"))));
 
@@ -97,11 +94,11 @@ namespace Test.Mq
         public async Task ClientReadsMessagesFromMultipleQueues()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42803);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42803");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
             TwinoResult joined = await client.Channels.Join("ch-1", true);
@@ -111,10 +108,10 @@ namespace Test.Mq
 
             bool ma = false;
             bool mc = false;
-            MessageConsumer consumer = MessageConsumer.JsonReader();
-            consumer.On<MessageA>("ch-1", MessageA.ContentType, a => ma = true);
-            consumer.On<MessageA>("ch-1", MessageC.ContentType, c => mc = true);
-            consumer.Attach(client);
+            MessageObserver observer = MessageObserver.JsonConsumer();
+            observer.On<MessageA>("ch-1", MessageA.ContentType, a => ma = true);
+            observer.On<MessageA>("ch-1", MessageC.ContentType, c => mc = true);
+            observer.Attach(client);
 
             MemoryStream astream = new MemoryStream(Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(new MessageA("Ax"))));
             MemoryStream cstream = new MemoryStream(Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(new MessageC("Cx", "x"))));
@@ -136,7 +133,7 @@ namespace Test.Mq
         public void MultipleAttachOnSameReader()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42804);
+            server.Initialize();
         }
 
         /// <summary>
@@ -146,18 +143,18 @@ namespace Test.Mq
         public async Task ExceptionOnBindMethod()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42805);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             bool thrown = false;
-            MessageConsumer consumer = MessageConsumer.JsonReader();
-            consumer.OnException += (tm, e) => thrown = true;
-            consumer.On<MessageA>("ch-1", MessageA.ContentType, a => throw new InvalidOperationException());
+            MessageObserver observer = MessageObserver.JsonConsumer();
+            observer.OnException += (tm, e) => thrown = true;
+            observer.On<MessageA>("ch-1", MessageA.ContentType, a => throw new InvalidOperationException());
 
             TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:42805");
+            await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
-            consumer.Attach(client);
+            observer.Attach(client);
 
             TwinoResult joined = await client.Channels.Join("ch-1", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
@@ -182,25 +179,25 @@ namespace Test.Mq
         public async Task ConsumeDirectMessages()
         {
             TestMqServer server = new TestMqServer();
-            server.Initialize(42806);
-            server.Start();
+            server.Initialize();
+            int port = server.Start();
 
             TmqClient client1 = new TmqClient();
             client1.ClientId = "client-1";
             client1.AutoAcknowledge = true;
 
-            await client1.ConnectAsync("tmq://localhost:42806");
+            await client1.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client1.IsConnected);
 
             TmqClient client2 = new TmqClient();
             client2.ClientId = "client-2";
-            await client2.ConnectAsync("tmq://localhost:42806");
+            await client2.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client2.IsConnected);
 
             bool received = false;
-            MessageConsumer consumer = MessageConsumer.JsonReader();
-            consumer.OnDirect<MessageA>(MessageA.ContentType, a => received = true);
-            consumer.Attach(client1);
+            MessageObserver observer = MessageObserver.JsonConsumer();
+            observer.OnDirect<MessageA>(MessageA.ContentType, a => received = true);
+            observer.Attach(client1);
 
             MessageA m = new MessageA("Msg-A");
             var sent = await client2.SendJsonAsync(MessageType.DirectMessage, "client-1", MessageA.ContentType, m, true);

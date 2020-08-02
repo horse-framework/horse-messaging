@@ -1,34 +1,115 @@
-# What's Twino MQ?
+# Twino MQ
 
-Twino MQ is a Messaging Queue Library for .NET Core projects. It provides to create your own messaging queue server application with a few interface implementations. It's extendable and flexible, allows you to customize incredibly a lot of things in a messaging queue server. If you want to go further about Twino MQ Architecture, you can read [Twino MQ Documentation](https://github.com/mhelvacikoylu/twino/blob/v3/docs/twino-mq.pdf)
+* Twino MQ is a .NET Core messaging queue and communication framework.
+* Twino MQ is not only queue messaging server. In provides direct messages, requests, responses and getting server and client informations.
+* Twino MQ has many queue messaging structure: Broadcast, Push, Pull, Cache.
+* Clients can subscribe events and gets information when another client is connected or does something.
 
 ## NuGet Packages
 
-**[Twino Messaging Queue Server](https://www.nuget.org/packages/Twino.MQ)**<br>
-**[Twino Messaging Queue Client](https://www.nuget.org/packages/Twino.Client.TMQ)**<br>
-**[Lightweight Database For Twino MQ Queues](https://www.nuget.org/packages/Twino.MQ.Data)**<br>
-**[TMQ Protocol Library for Creating Custom Servers](https://www.nuget.org/packages/Twino.Protocols.TMQ)**
+**[Twino MQ Client](https://www.nuget.org/packages/Twino.Client.TMQ)**<br>
+**[Twino MQ Server](https://www.nuget.org/packages/Twino.MQ)**<br>
+**[Twino MQ Server Data](https://www.nuget.org/packages/Twino.MQ.Data)**<br>
+**[TMQ Protocol](https://www.nuget.org/packages/Twino.Protocols.TMQ)**<br>
 
+And Twino MQ has useful extension package to implement Twino Clients to Twino.IOC or Microsoft.Extentions.DependencyInjection service providers.
 
-### Basic MQ Server Example
+**[Twino Consumer Factory](https://www.nuget.org/packages/Twino.Extensions.ConsumerFactory)**<br>
 
-Basic MQ Server creation example
+If you want to go further about Twino MQ infrastructure you can read specification and documentation from [here](https://github.com/twino-framework/twino-mq/blob/master/docs/twino-mq.pdf)<br><br>
+
+### Very Quick Messaging Queue Server Example
 
     class Program
     {
-        static void Main(string[] args)
+        static Task Main(string[] args)
         {
-            MqServerOptions options = new MqServerOptions();
-            //set your options here
-            
-            MqServer mq = new MqServer(options);
-            mq.SetDefaultDeliveryHandler(new YourCustomDeliveryHandler());
-            TwinoServer twinoServer = new TwinoServer(ServerOptions.CreateDefault());
-            twinoServer.UseMqServer(mq);
-            twinoServer.Start();
-            
-            //optional
-            _server.Server.BlockWhileRunning();
+            TwinoServer server = new TwinoServer();
+            server.UseTwinoMQ(cfg => cfg.UseJustAllowDeliveryHandler());
+            server.Start(22200);
+            await server.BlockWhileRunningAsync();
+        }
+    }
+    
+### Very Quick Server Example with Persistent Queues
+
+    class Program
+    {
+        static Task Main(string[] args)
+        {
+            TwinoServer server = new TwinoServer();
+            TwinoMQ mq = server.UseTwinoMQ(cfg => cfg
+                                                  .AddPersistentQueues(q => q.KeepLastBackup())
+                                                  .UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterReceived));
+
+            await mq.LoadPersistentQueues();
+            server.Start(22200);
+            await server.BlockWhileRunningAsync();
         }
     }
 
+### Consumer without ConsumerFactory Implementation
+
+Implementation
+
+        static async Task Main(string[] args)
+        {
+            TmqStickyConnector connector = new TmqStickyConnector(TimeSpan.FromSeconds(1));
+            connector.AutoJoinConsumerChannels = true;
+            connector.InitJsonReader();
+            connector.Consumer.RegisterAssemblyConsumers(typeof(Program));
+            connector.AddHost("tmq://127.0.0.1:22200");
+            connector.Run();
+            while (true)
+                await Task.Delay(1000);
+        }
+
+Model
+
+    [QueueId(100)]
+    [ChannelName("model-a")]
+    public class ModelA
+    {
+        public string Foo { get; set; }
+    }
+
+Consumer
+
+    [AutoAck]
+    [AutoNack]
+    public class QueueConsumerA : IQueueConsumer<ModelA>
+    {
+        public Task Consume(TmqMessage message, ModelA model, TmqClient client)
+        {
+            Console.WriteLine("Model A Consumed");
+            return Task.CompletedTask;
+        }
+    }
+
+
+### Consumer with ConsumerFactory Implementation
+
+Model and Consumer same with example above. The Implementation change is here:
+
+    services.UseTwinoBus(cfg => cfg.AddHost("tmq://127.0.0.1:22200")
+                                   .AddTransientConsumers(typeof(Program)));
+
+
+If you use a service provider, you can inject other services to consumer objects.
+
+
+### Sending Messages as Producer
+
+Twino accepts producers and consumers as client. Each client can be producer and consumer at same time. With ConsumerFactory implementation, you can inject ITwinoBus interface for being producer at same time. If you want to create only producer, you can skip Add..Consumers methods.
+
+     ITwinoBus bus; //injected from somewhere
+     //or you can do it with TmqStickyConnector object
+
+     //push to a queue
+     await bus.PushJson(new ModelA(), false);
+
+     //publish to a router
+     await bus.PublishJson(new ModelA(), false);
+
+     //to a direct target, ModelA required DirectTarget attribute
+     await bus.SendDirectJsonAsync(new ModelA(), false);

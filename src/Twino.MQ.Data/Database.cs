@@ -163,6 +163,8 @@ namespace Twino.MQ.Data
         /// <returns></returns>
         public async Task<bool> RemoveDatabase()
         {
+            _shrinkManager.Stop();
+
             await File.Close();
             return await File.Delete();
         }

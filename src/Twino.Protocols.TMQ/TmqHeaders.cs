@@ -36,9 +36,19 @@ namespace Twino.Protocols.TMQ
         public const string NEGATIVE_ACKNOWLEDGE_REASON = "Nack-Reason";
 
         /// <summary>
+        /// "Reason"
+        /// </summary>
+        public const string REASON = "Reason";
+
+        /// <summary>
         /// "none"
         /// </summary>
         public const string NACK_REASON_NONE = "none";
+
+        /// <summary>
+        /// "error"
+        /// </summary>
+        public const string NACK_REASON_ERROR = "error";
 
         /// <summary>
         /// "no-consumers"
@@ -154,5 +164,10 @@ namespace Twino.Protocols.TMQ
         /// "Messages"
         /// </summary>
         public const string MESSAGES = "Messages";
+        
+        /// <summary>
+        /// "Delivery-Handler"
+        /// </summary>
+        public const string DELIVERY_HANDLER = "Delivery-Handler";
     }
 }

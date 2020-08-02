@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using Twino.MQ.Queues;
-using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Options
 {
@@ -23,7 +21,7 @@ namespace Twino.MQ.Options
         /// <summary>
         /// If true, messages will request acknowledge from receivers
         /// </summary>
-        public bool RequestAcknowledge { get; set; }
+        public bool RequestAcknowledge { get; set; } = true;
 
         /// <summary>
         /// When acknowledge is required, maximum duration for waiting acknowledge message
@@ -53,7 +51,7 @@ namespace Twino.MQ.Options
         /// <summary>
         /// Default status for the queue
         /// </summary>
-        public QueueStatus Status { get; set; } = QueueStatus.Broadcast;
+        public QueueStatus Status { get; set; } = QueueStatus.Push;
 
         /// <summary>
         /// Maximum message limit of the queue
@@ -79,7 +77,7 @@ namespace Twino.MQ.Options
         /// <summary>
         /// Clones channel queue options from another options
         /// </summary>
-        internal static ChannelQueueOptions CloneFrom(ChannelQueueOptions options)
+        public static ChannelQueueOptions CloneFrom(ChannelQueueOptions options)
         {
             return new ChannelQueueOptions
                    {

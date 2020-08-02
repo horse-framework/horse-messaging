@@ -13,7 +13,7 @@ namespace Twino.MQ.Security
         /// <summary>
         /// Returns true, if user can remove the channel
         /// </summary>
-        Task<bool> CanRemoveChannel(MqClient client, MqServer server, Channel channel);
+        Task<bool> CanRemoveChannel(MqClient client, TwinoMQ server, Channel channel);
 
         /// <summary>
         /// Returns true, if client can update queue options

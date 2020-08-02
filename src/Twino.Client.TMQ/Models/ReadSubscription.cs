@@ -1,4 +1,5 @@
 using System;
+using Twino.Client.TMQ.Internal;
 
 namespace Twino.Client.TMQ.Models
 {
@@ -11,12 +12,18 @@ namespace Twino.Client.TMQ.Models
         /// Message source is queue, it's getting consumed
         /// </summary>
         Queue,
-        
+
         /// <summary>
         /// Message source is another client, sending message directly
         /// </summary>
-        Direct
+        Direct,
+        
+        /// <summary>
+        /// Message is a request and waits for response
+        /// </summary>
+        Request
     }
+
     /// <summary>
     /// Queue subscription meta data for message reader
     /// </summary>
@@ -26,7 +33,7 @@ namespace Twino.Client.TMQ.Models
         /// Describes where the message comes from
         /// </summary>
         public ReadSource Source { get; set; }
-        
+
         /// <summary>
         /// Subscribed channel
         /// </summary>
@@ -43,6 +50,11 @@ namespace Twino.Client.TMQ.Models
         public Type MessageType { get; set; }
 
         /// <summary>
+        /// Response message type in the queue
+        /// </summary>
+        public Type ResponseType { get; set; }
+
+        /// <summary>
         /// The action that will triggered when the message received
         /// </summary>
         public Delegate Action { get; set; }
@@ -51,5 +63,10 @@ namespace Twino.Client.TMQ.Models
         /// True, if action has message parameter as second
         /// </summary>
         public bool TmqMessageParameter { get; set; }
+        
+        /// <summary>
+        /// If subscription created via IQueueConsumer, the consuemr executer object for the consumer
+        /// </summary>
+        public ConsumerExecuter ConsumerExecuter { get; set; }
     }
 }

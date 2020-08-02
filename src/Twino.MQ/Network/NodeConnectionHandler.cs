@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Core.Protocols;
@@ -85,7 +84,10 @@ namespace Twino.MQ.Network
             if (message.Type == MessageType.Server)
             {
                 if (message.ContentType == KnownContentTypes.DecisionOverNode)
-                    return DecisionOverNode(message);
+                {
+                    DecisionOverNode(message);
+                    return Task.CompletedTask;
+                }
             }
 
             return _connectionHandler.RouteToHandler(mc, message, true);
@@ -105,9 +107,9 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Reads decision and applies it
         /// </summary>
-        private async Task DecisionOverNode(TmqMessage message)
+        private void DecisionOverNode(TmqMessage message)
         {
-            DecisionOverNode model = await message.GetJsonContent<DecisionOverNode>();
+            DecisionOverNode model = message.Deserialize<DecisionOverNode>(_server.Server.MessageContentSerializer);
             if (model == null)
                 return;
 
