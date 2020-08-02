@@ -36,6 +36,11 @@ namespace Twino.Protocols.TMQ
         public const string NEGATIVE_ACKNOWLEDGE_REASON = "Nack-Reason";
 
         /// <summary>
+        /// "Reason"
+        /// </summary>
+        public const string REASON = "Reason";
+
+        /// <summary>
         /// "none"
         /// </summary>
         public const string NACK_REASON_NONE = "none";

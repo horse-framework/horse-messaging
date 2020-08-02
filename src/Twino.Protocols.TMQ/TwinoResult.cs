@@ -22,6 +22,7 @@ namespace Twino.Protocols.TMQ
         {
             Model = model;
             Message = message;
+            Reason = message.FindHeader(TmqHeaders.REASON);
         }
     }
 
@@ -38,7 +39,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Reason for unsuccessful results
         /// </summary>
-        public string Reason { get; }
+        public string Reason { get; protected set; }
 
         /// <summary>
         /// Creates new result without reason

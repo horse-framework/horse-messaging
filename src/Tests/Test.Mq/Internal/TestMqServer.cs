@@ -46,6 +46,7 @@ namespace Test.Mq.Internal
             twinoMqOptions.AllowMultipleQueues = true;
             twinoMqOptions.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
             twinoMqOptions.MessageTimeout = TimeSpan.FromSeconds(12);
+            twinoMqOptions.Status = QueueStatus.Broadcast;
 
             Server = TwinoMqBuilder.Create()
                                    .AddOptions(twinoMqOptions)

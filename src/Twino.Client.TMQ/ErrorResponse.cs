@@ -17,5 +17,10 @@ namespace Twino.Client.TMQ
         /// Error response model
         /// </summary>
         public TResponse ErrorModel { get; set; }
+
+        /// <summary>
+        /// Error Reason message
+        /// </summary>
+        public string Reason { get; set; }
     }
 }

@@ -56,6 +56,9 @@ namespace Twino.Client.TMQ.Internal
                     if (errorModel.ErrorModel != null)
                         responseMessage.Serialize(errorModel.ErrorModel, client.JsonSerializer);
 
+                    if (!string.IsNullOrEmpty(errorModel.Reason))
+                        responseMessage.AddHeader(TmqHeaders.REASON, errorModel.Reason);
+
                     await client.SendAsync(responseMessage);
                 }
             }
