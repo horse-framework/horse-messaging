@@ -25,6 +25,19 @@ If you want to go further about Twino MQ infrastructure you can read specificati
         static Task Main(string[] args)
         {
             TwinoServer server = new TwinoServer();
+            server.UseTwinoMQ(cfg => cfg.UseJustAllowDeliveryHandler());
+            server.Start(22200);
+            await server.BlockWhileRunningAsync();
+        }
+    }
+    
+### Very Quick Server Example with Persistent Queues
+
+    class Program
+    {
+        static Task Main(string[] args)
+        {
+            TwinoServer server = new TwinoServer();
             TwinoMQ mq = server.UseTwinoMQ(cfg => cfg
                                                   .AddPersistentQueues(q => q.KeepLastBackup())
                                                   .UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterReceived));
