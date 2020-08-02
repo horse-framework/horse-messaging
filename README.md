@@ -24,12 +24,14 @@ If you want to go further about Twino MQ infrastructure you can read specificati
     {
         static Task Main(string[] args)
         {
-            MqServer mq = new MqServer();
-            mq.SetDefaultDeliveryHandler(new SendAckDeliveryHandler(AcknowledgeWhen.AfterReceived));
             TwinoServer server = new TwinoServer();
-            server.UseMqServer(mq);
+            TwinoMQ mq = server.UseTwinoMQ(cfg => cfg
+                                                  .AddPersistentQueues(q => q.KeepLastBackup())
+                                                  .UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterReceived));
+
+            await mq.LoadPersistentQueues();
             server.Start(22200);
-            return server.BlockWhileRunningAsync();
+            await server.BlockWhileRunningAsync();
         }
     }
 
