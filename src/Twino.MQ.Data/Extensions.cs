@@ -23,6 +23,14 @@ namespace Twino.MQ.Data
         /// <summary>
         /// Adds persistent queues with customized configuration
         /// </summary>
+        public static TwinoMqBuilder AddPersistentQueues(this TwinoMqBuilder builder)
+        {
+            return AddPersistentQueues(builder, c => { });
+        }
+
+        /// <summary>
+        /// Adds persistent queues with customized configuration
+        /// </summary>
         public static TwinoMqBuilder AddPersistentQueues(this TwinoMqBuilder builder,
                                                          Action<DataConfigurationBuilder> cfg)
         {
@@ -78,6 +86,24 @@ namespace Twino.MQ.Data
                 return handler;
             };
             return builder;
+        }
+
+        /// <summary>
+        /// Creates and initializes new persistent delivery handler for the queue
+        /// </summary>
+        /// <param name="builder">Delivery handler builder</param>
+        /// <param name="deleteWhen">Decision when messages are deleted from disk</param>
+        /// <param name="producerAckDecision">Decision when producer receives acknowledge</param>
+        /// <returns></returns>
+        public static async Task<IMessageDeliveryHandler> CreatePersistentDeliveryHandler(this DeliveryHandlerBuilder builder,
+                                                                                          DeleteWhen deleteWhen,
+                                                                                          ProducerAckDecision producerAckDecision)
+        {
+            DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
+            PersistentDeliveryHandler handler = new PersistentDeliveryHandler(builder.Queue, databaseOptions, deleteWhen, producerAckDecision);
+            await handler.Initialize();
+            builder.OnAfterCompleted(AfterDeliveryHandlerCreated);
+            return handler;
         }
 
         private static void AfterDeliveryHandlerCreated(DeliveryHandlerBuilder builder)
