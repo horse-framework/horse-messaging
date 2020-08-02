@@ -110,7 +110,7 @@ namespace Twino.Client.TMQ.Operators
                 return new TwinoResult<TResponse>(response, message, TwinoResultCode.Ok);
             }
 
-            return new TwinoResult<TResponse>(default, message, (TwinoResultCode) responseMessage.ContentType);
+            return new TwinoResult<TResponse>(default, responseMessage, (TwinoResultCode) responseMessage.ContentType);
         }
     }
 }

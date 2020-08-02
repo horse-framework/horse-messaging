@@ -14,7 +14,7 @@ namespace Sample.Consumer.Consumers
             return Task.FromResult(new ModelA {Foo = "response-a"});
         }
 
-        public async Task<ErrorResponse<ModelA>> OnError(Exception exception, ModelC request, TmqMessage rawMessage, TmqClient client)
+        public async Task<ErrorResponse> OnError(Exception exception, ModelC request, TmqMessage rawMessage, TmqClient client)
         {
             throw new NotImplementedException();
         }

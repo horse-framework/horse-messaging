@@ -28,6 +28,6 @@ namespace Twino.Client.TMQ
         /// <param name="rawMessage">Raw TMQ messsage</param>
         /// <param name="client">Twino MQ connection client</param>
         /// <returns></returns>
-        Task<ErrorResponse<TResponse>> OnError(Exception exception, TRequest request, TmqMessage rawMessage, TmqClient client);
+        Task<ErrorResponse> OnError(Exception exception, TRequest request, TmqMessage rawMessage, TmqClient client);
     }
 }

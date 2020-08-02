@@ -48,16 +48,14 @@ namespace Twino.Client.TMQ.Internal
                 }
                 catch (Exception e)
                 {
-                    ErrorResponse<TResponse> errorModel = await handler.OnError(e, requestModel, message, client);
+                    ErrorResponse errorModel = await handler.OnError(e, requestModel, message, client);
                     if (errorModel.ResultCode == TwinoResultCode.Ok)
                         errorModel.ResultCode = TwinoResultCode.Failed;
                     
                     TmqMessage responseMessage = message.CreateResponse(errorModel.ResultCode);
-                    if (errorModel.ErrorModel != null)
-                        responseMessage.Serialize(errorModel.ErrorModel, client.JsonSerializer);
 
                     if (!string.IsNullOrEmpty(errorModel.Reason))
-                        responseMessage.AddHeader(TmqHeaders.REASON, errorModel.Reason);
+                        responseMessage.SetStringContent(errorModel.Reason);
 
                     await client.SendAsync(responseMessage);
                 }

@@ -22,7 +22,12 @@ namespace Twino.Protocols.TMQ
         {
             Model = model;
             Message = message;
-            Reason = message.FindHeader(TmqHeaders.REASON);
+            
+            if (code != TwinoResultCode.Ok)
+            {
+                if (message.Content != null && message.Length > 0)
+                    Reason = message.GetStringContent();
+            }
         }
     }
 
