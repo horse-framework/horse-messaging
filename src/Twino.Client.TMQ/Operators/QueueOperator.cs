@@ -315,6 +315,9 @@ namespace Twino.Client.TMQ.Operators
             if (request.Order == MessageOrder.LIFO)
                 message.AddHeader(TmqHeaders.ORDER, TmqHeaders.LIFO);
 
+            foreach (KeyValuePair<string, string> pair in request.RequestHeaders)
+                message.AddHeader(pair.Key, pair.Value);
+
             PullContainer container = new PullContainer(message.MessageId, request.Count, actionForEachMessage);
             lock (PullContainers)
                 PullContainers.Add(message.MessageId, container);
