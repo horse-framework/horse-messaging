@@ -294,43 +294,6 @@ namespace Twino.Client.TMQ.Operators
         }
 
         /// <summary>
-        /// Pushes a message to a queue and does not wait for acknowledge.
-        /// Uses legacy callback method instead of async
-        /// </summary>
-        [Obsolete("That methods will be removed in future, use non Sync methods")]
-        public bool PushJsonSync(string channel, ushort queueId, object jsonObject)
-        {
-            TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
-            message.PendingAcknowledge = false;
-            byte[] data = JsonSerializer.SerializeToUtf8Bytes(jsonObject, jsonObject.GetType());
-            message.Content = new MemoryStream(data);
-            message.Content.Position = 0;
-
-            if (_client.UseUniqueMessageId)
-                message.SetMessageId(_client.UniqueIdGenerator.Create());
-
-            return _client.Send(message);
-        }
-
-        /// <summary>
-        /// Pushes a message to a queue and does not wait for acknowledge.
-        /// Uses legacy callback method instead of async
-        /// </summary>
-        [Obsolete("That methods will be removed in future, use non Sync methods")]
-        public bool PushSync(string channel, ushort queueId, byte[] data)
-        {
-            TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
-            message.PendingAcknowledge = false;
-            message.Content = new MemoryStream(data);
-            message.Content.Position = 0;
-
-            if (_client.UseUniqueMessageId)
-                message.SetMessageId(_client.UniqueIdGenerator.Create());
-
-            return _client.Send(message);
-        }
-
-        /// <summary>
         /// Request a message from Pull queue
         /// </summary>
         public async Task<PullContainer> Pull(PullRequest request, Func<int, TmqMessage, Task> actionForEachMessage = null)
