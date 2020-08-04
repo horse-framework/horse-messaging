@@ -76,10 +76,8 @@ namespace Twino.Client.TMQ.Operators
 
             message.PendingAcknowledge = waitForAcknowledge;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
-
-            message.Content = new MemoryStream();
-            await System.Text.Json.JsonSerializer.SerializeAsync(message.Content, model);
-
+            message.Serialize(model, _client.JsonSerializer);
+            
             return await _client.SendAndWaitForAcknowledge(message, waitForAcknowledge);
         }
 
