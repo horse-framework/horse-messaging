@@ -22,7 +22,7 @@ namespace Twino.Client.TMQ.Operators
         private readonly TmqClient _client;
 
         internal Dictionary<string, PullContainer> PullContainers { get; }
-        private Timer _pullContainerTimeoutHandler;
+        private readonly Timer _pullContainerTimeoutHandler;
 
         internal QueueOperator(TmqClient client)
         {
@@ -77,7 +77,40 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Creates new queue in server
         /// </summary>
-        public async Task<TwinoResult> Create(string channel, ushort queueId, Action<QueueOptions> optionsAction = null)
+        public Task<TwinoResult> Create(string channel, ushort queueId)
+        {
+            return Create(channel, queueId, null, null, null);
+        }
+
+        /// <summary>
+        /// Creates new queue in server
+        /// </summary>
+        public Task<TwinoResult> Create(string channel,
+                                        ushort queueId,
+                                        IEnumerable<KeyValuePair<string, string>> additionalHeaders)
+        {
+            return Create(channel, queueId, null, null, additionalHeaders);
+        }
+
+        /// <summary>
+        /// Creates new queue in server
+        /// </summary>
+        public Task<TwinoResult> Create(string channel,
+                                        ushort queueId,
+                                        string deliveryHandlerHeader,
+                                        IEnumerable<KeyValuePair<string, string>> additionalHeaders)
+        {
+            return Create(channel, queueId, null, deliveryHandlerHeader, additionalHeaders);
+        }
+
+        /// <summary>
+        /// Creates new queue in server
+        /// </summary>
+        public async Task<TwinoResult> Create(string channel,
+                                              ushort queueId,
+                                              Action<QueueOptions> optionsAction,
+                                              string deliveryHandlerHeader = null,
+                                              IEnumerable<KeyValuePair<string, string>> additionalHeaders = null)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -87,6 +120,13 @@ namespace Twino.Client.TMQ.Operators
 
             message.AddHeader(TmqHeaders.CHANNEL_NAME, channel);
             message.AddHeader(TmqHeaders.QUEUE_ID, queueId);
+
+            if (!string.IsNullOrEmpty(deliveryHandlerHeader))
+                message.AddHeader(TmqHeaders.DELIVERY_HANDLER, deliveryHandlerHeader);
+
+            if (additionalHeaders != null)
+                foreach (KeyValuePair<string, string> pair in additionalHeaders)
+                    message.AddHeader(pair.Key, pair.Value);
 
             if (optionsAction != null)
             {

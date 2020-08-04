@@ -18,6 +18,19 @@ namespace Twino.Client.TMQ.Operators
             _client = client;
         }
 
+        #region Actions
+
+        //todo: create
+        //todo: list
+        //todo: remove
+        
+        //todo: add binding
+        //todo: get bindings
+        //todo: remove binding
+        
+        #endregion
+
+        #region Publish
 
         /// <summary>
         /// Publishes a string message to a router
@@ -91,7 +104,6 @@ namespace Twino.Client.TMQ.Operators
             return PublishRequestJson<TRequest, TResponse>(null, request);
         }
 
-
         /// <summary>
         /// Sends a request to router.
         /// Waits response from at least one binding.
@@ -112,5 +124,7 @@ namespace Twino.Client.TMQ.Operators
 
             return new TwinoResult<TResponse>(default, responseMessage, (TwinoResultCode) responseMessage.ContentType);
         }
+
+        #endregion
     }
 }

@@ -16,7 +16,7 @@ namespace Twino.Client.TMQ.Annotations
         /// <summary>
         /// Header value
         /// </summary>
-        public String Value { get; }
+        public string Value { get; }
 
         /// <summary>
         /// Creates new message header attribute
