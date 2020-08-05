@@ -46,7 +46,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Message bus for the connector
         /// </summary>
-        public ITwinoBus Bus { get; set; }
+        public ITwinoBus Bus { get; protected set; }
 
         /// <summary>
         /// Creates new sticky connector for TMQ protocol clients
