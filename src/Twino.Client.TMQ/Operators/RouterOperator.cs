@@ -142,7 +142,7 @@ namespace Twino.Client.TMQ.Operators
         public async Task<TwinoResult<TResponse>> PublishRequestJson<TRequest, TResponse>(string routerName, TRequest request, ushort? contentType = null,
                                                                                           IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor<TRequest>();
+            TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor(request.GetType());
             TmqMessage message = descriptor.CreateMessage(MessageType.Router, routerName, contentType);
             message.PendingResponse = true;
             message.Serialize(request, _client.JsonSerializer);
