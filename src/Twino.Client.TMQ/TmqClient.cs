@@ -516,6 +516,15 @@ namespace Twino.Client.TMQ
             }
         }
 
+        /// <summary>
+        /// Client disconnected from the server
+        /// </summary>
+        protected override void OnDisconnected()
+        {
+            base.OnDisconnected();
+            _follower.MarkAllMessagesExpired();
+        }
+
         #endregion
 
         #region Ping - Pong

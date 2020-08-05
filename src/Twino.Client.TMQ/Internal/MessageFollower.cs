@@ -88,6 +88,19 @@ namespace Twino.Client.TMQ.Internal
         }
 
         /// <summary>
+        /// Marks all messages as expired
+        /// </summary>
+        internal void MarkAllMessagesExpired()
+        {
+            List<MessageDescriptor> temp;
+            lock (_descriptors)
+                temp = new List<MessageDescriptor>(_descriptors);
+
+            foreach (MessageDescriptor descriptor in temp)
+                descriptor.Set(false, new TwinoResult(TwinoResultCode.Failed, "timeout"));
+        }
+
+        /// <summary>
         /// This method process the ack message, when it is received
         /// </summary>
         public void ProcessAcknowledge(TmqMessage message)
