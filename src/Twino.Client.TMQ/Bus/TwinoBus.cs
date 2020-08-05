@@ -12,19 +12,24 @@ namespace Twino.Client.TMQ.Bus
         private readonly TmqStickyConnector _connector;
 
         /// <summary>
+        /// Gets connector of the bus
+        /// </summary>
+        public TmqStickyConnector Connector => _connector;
+
+        /// <summary>
         /// Implementation for direct messages and requests
         /// </summary>
-        public ITwinoDirectBus Direct { get; }
+        public ITwinoDirectBus Direct { get; protected set; }
 
         /// <summary>
         /// Implementation for queue messages and requests
         /// </summary>
-        public ITwinoQueueBus Queue { get; }
+        public ITwinoQueueBus Queue { get; protected set; }
 
         /// <summary>
         /// Implementation for route messages and requests
         /// </summary>
-        public ITwinoRouteBus Route { get; }
+        public ITwinoRouteBus Route { get; protected set; }
 
         /// <summary>
         /// Creates new twino bus
