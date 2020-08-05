@@ -28,6 +28,7 @@ namespace Twino.Client.TMQ.Internal
             {
                 if (_consumer != null)
                     await _consumer.Consume(message, t, client);
+                
                 else if (_consumerFactoryCreator != null)
                 {
                     consumerFactory = _consumerFactoryCreator();

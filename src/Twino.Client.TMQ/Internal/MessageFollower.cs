@@ -94,10 +94,16 @@ namespace Twino.Client.TMQ.Internal
         {
             List<MessageDescriptor> temp;
             lock (_descriptors)
+            {
                 temp = new List<MessageDescriptor>(_descriptors);
+                _descriptors.Clear();
+            }
 
             foreach (MessageDescriptor descriptor in temp)
+            {
+                descriptor.Completed = true;
                 descriptor.Set(false, new TwinoResult(TwinoResultCode.Failed, "timeout"));
+            }
         }
 
         /// <summary>

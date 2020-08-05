@@ -23,6 +23,8 @@ namespace Twino.Client.TMQ.Internal
         /// </summary>
         public bool Completed { get; set; }
 
+        protected bool SourceCompleted { get; set; }
+
         protected MessageDescriptor(TmqMessage message, DateTime expiration)
         {
             Message = message;
