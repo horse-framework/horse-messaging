@@ -2,7 +2,9 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Twino.Client.Connectors;
+using Twino.Client.TMQ.Bus;
 using Twino.Client.TMQ.Exceptions;
+using Twino.Client.TMQ.Internal;
 using Twino.Core;
 using Twino.Protocols.TMQ;
 
@@ -11,7 +13,7 @@ namespace Twino.Client.TMQ.Connectors
     /// <summary>
     /// Sticky connector for TMQ protocol.
     /// </summary>
-    public class TmqStickyConnector : StickyConnector<TmqClient, TmqMessage>, ITwinoBus
+    public class TmqStickyConnector : StickyConnector<TmqClient, TmqMessage>
     {
         private readonly MessageObserver _observer;
 
@@ -37,19 +39,31 @@ namespace Twino.Client.TMQ.Connectors
         public IMessageContentSerializer ContentSerializer { get; set; }
 
         /// <summary>
+        /// Event manager for clients
+        /// </summary>
+        internal EventManager Events { get; set; }
+
+        /// <summary>
+        /// Message bus for the connector
+        /// </summary>
+        public ITwinoBus Bus { get; }
+
+        /// <summary>
         /// Creates new sticky connector for TMQ protocol clients
         /// </summary>
         public TmqStickyConnector(TimeSpan reconnectInterval, Func<TmqClient> createInstance = null)
             : base(reconnectInterval, createInstance)
         {
             _observer = new MessageObserver(ReadMessage);
+            Events = new EventManager();
+            Bus = new TwinoBus(this);
         }
 
         private object ReadMessage(TmqMessage message, Type type)
         {
             if (ContentSerializer == null)
                 ContentSerializer = new NewtonsoftContentSerializer();
-            
+
             return ContentSerializer.Deserialize(message, type);
         }
 
@@ -65,11 +79,11 @@ namespace Twino.Client.TMQ.Connectors
         /// <inheritdoc />
         protected override void ClientConnected(SocketBase client)
         {
+            TmqClient tmqClient = (TmqClient) client;
+            tmqClient.Events = Events;
+
             if (ContentSerializer != null)
-            {
-                if (client is TmqClient tmqClient)
-                    tmqClient.JsonSerializer = ContentSerializer;
-            }
+                tmqClient.JsonSerializer = ContentSerializer;
 
             base.ClientConnected(client);
 
@@ -266,205 +280,6 @@ namespace Twino.Client.TMQ.Connectors
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
             _observer.OffDirect(content);
-        }
-
-        #endregion
-
-        #region Send
-
-        /// <summary>
-        /// Sends a message
-        /// </summary>
-        public bool Send(TmqMessage message)
-        {
-            TmqClient client = GetClient();
-            if (client != null && client.IsConnected)
-                return client.Send(message);
-
-            return false;
-        }
-
-        /// <summary>
-        /// Sends a message
-        /// </summary>
-        public Task<TwinoResult> SendAsync(TmqMessage message)
-        {
-            TmqClient client = GetClient();
-            if (client != null && client.IsConnected)
-                return client.SendAsync(message);
-
-            return Task.FromResult(TwinoResult.Failed());
-        }
-
-        /// <summary>
-        /// Sends a message
-        /// </summary>
-        public Task<TwinoResult> SendDirectJsonAsync<T>(T model, bool waitForAcknowledge = false)
-        {
-            TmqClient client = GetClient();
-            if (client != null && client.IsConnected)
-                return client.SendJsonAsync(MessageType.DirectMessage, model, waitForAcknowledge);
-
-            return Task.FromResult(TwinoResult.Failed());
-        }
-
-        /// <summary>
-        /// Sends a message
-        /// </summary>
-        public Task<TwinoResult> SendDirectJsonAsync<T>(string target, ushort contentType, T model, bool waitForAcknowledge = false)
-        {
-            TmqClient client = GetClient();
-            if (client != null && client.IsConnected)
-                return client.SendJsonAsync(MessageType.DirectMessage, target, contentType, model, waitForAcknowledge);
-
-            return Task.FromResult(TwinoResult.Failed());
-        }
-
-        #endregion
-
-        #region Request
-
-        /// <summary>
-        /// Sends a message
-        /// </summary>
-        public Task<TmqMessage> RequestAsync(TmqMessage message)
-        {
-            TmqClient client = GetClient();
-            if (client != null && client.IsConnected)
-                return client.Request(message);
-
-            return null;
-        }
-
-        /// <summary>
-        /// Sends a message
-        /// </summary>
-        public Task<TwinoResult<TResponse>> RequestJsonAsync<TRequest, TResponse>(TRequest request)
-        {
-            TmqClient client = GetClient();
-            if (client != null && client.IsConnected)
-                return client.RequestJson<TResponse>(request);
-
-            return null;
-        }
-
-        /// <summary>
-        /// Sends a message
-        /// </summary>
-        public Task<TwinoResult<TResponse>> RequestJsonAsync<TRequest, TResponse>(string target, ushort contentType, TRequest request)
-        {
-            TmqClient client = GetClient();
-            if (client != null && client.IsConnected)
-                return client.RequestJson<TResponse>(target, contentType, request);
-
-            return null;
-        }
-
-        #endregion
-
-        #region Push
-
-        /// <summary>
-        /// Pushes a message to the queue
-        /// </summary>
-        public Task<TwinoResult> Push(string channel, ushort queueId, MemoryStream content, bool waitAcknowledge = false)
-        {
-            TmqClient client = GetClient();
-            if (client != null && client.IsConnected)
-                return client.Queues.Push(channel, queueId, content, waitAcknowledge);
-
-            return Task.FromResult(TwinoResult.Failed());
-        }
-
-        /// <summary>
-        /// Pushes a message to the queue
-        /// </summary>
-        public Task<TwinoResult> PushJson(object jsonObject, bool waitAcknowledge = false)
-        {
-            TmqClient client = GetClient();
-            if (client != null && client.IsConnected)
-                return client.Queues.PushJson(jsonObject, waitAcknowledge);
-
-            return Task.FromResult(TwinoResult.Failed());
-        }
-
-        /// <summary>
-        /// Pushes a message to the queue
-        /// </summary>
-        public Task<TwinoResult> PushJson(string channel, ushort queueId, object jsonObject, bool waitAcknowledge = false)
-        {
-            TmqClient client = GetClient();
-            if (client != null && client.IsConnected)
-                return client.Queues.PushJson(channel, queueId, jsonObject, waitAcknowledge);
-
-            return Task.FromResult(TwinoResult.Failed());
-        }
-
-        #endregion
-
-        #region Publish
-
-        /// <summary>
-        /// Publishes a message to the router
-        /// </summary>
-        public Task<TwinoResult> Publish(string routerName, MemoryStream content, bool waitAcknowledge = false)
-        {
-            TmqClient client = GetClient();
-            if (client != null && client.IsConnected)
-                return client.Routers.Publish(routerName, content.ToArray(), waitAcknowledge);
-
-            return Task.FromResult(TwinoResult.Failed());
-        }
-
-        /// <summary>
-        /// Publishes a message to the router
-        /// </summary>
-        public Task<TwinoResult> PublishJson(object jsonObject, bool waitAcknowledge = false)
-        {
-            TmqClient client = GetClient();
-            if (client != null && client.IsConnected)
-                return client.Routers.PublishJson(jsonObject, waitAcknowledge);
-
-            return Task.FromResult(TwinoResult.Failed());
-        }
-
-        /// <summary>
-        /// Publishes a message to the router
-        /// </summary>
-        public Task<TwinoResult> PublishJson(string routerName, object jsonObject, bool waitAcknowledge = false)
-        {
-            TmqClient client = GetClient();
-            if (client != null && client.IsConnected)
-                return client.Routers.PublishJson(routerName, jsonObject, waitAcknowledge);
-
-            return Task.FromResult(TwinoResult.Failed());
-        }
-
-        /// <summary>
-        /// Publish a string message to a router and waits for a response message
-        /// </summary>
-        public Task<TmqMessage> PublishRequest(string routerName, string message, ushort contentType = 0)
-        {
-            TmqClient client = GetClient();
-            return client.Routers.PublishRequest(routerName, message, contentType);
-        }
-
-        /// <summary>
-        /// Publish a JSON message to a router and waits for a response message
-        /// </summary>
-        public Task<TwinoResult<TResponse>> PublishRequestJson<TRequest, TResponse>(TRequest request)
-        {
-            TmqClient client = GetClient();
-            return client.Routers.PublishRequestJson<TRequest, TResponse>(request);
-        }
-
-        /// <summary>
-        /// Publish a JSON message to a router and waits for a response message
-        /// </summary>
-        public Task<TwinoResult<TResponse>> PublishRequestJson<TRequest, TResponse>(string routerName, TRequest request, ushort? contentType = null)
-        {
-            TmqClient client = GetClient();
-            return client.Routers.PublishRequestJson<TRequest, TResponse>(routerName, request, contentType);
         }
 
         #endregion

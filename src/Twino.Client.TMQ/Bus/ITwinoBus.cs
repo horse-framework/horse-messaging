@@ -1,12 +1,12 @@
 using System.Threading.Tasks;
 using Twino.Protocols.TMQ;
 
-namespace Twino.Client.TMQ.Connectors
+namespace Twino.Client.TMQ.Bus
 {
     /// <summary>
-    /// Base Twino Connection implementation
+    /// Implementation for sending messages to Twino MQ
     /// </summary>
-    public interface ITwinoConnection
+    public interface ITwinoBus : ITwinoConnection
     {
         /// <summary>
         /// Sends a raw message
@@ -19,10 +19,5 @@ namespace Twino.Client.TMQ.Connectors
         /// <param name="message">Raw message</param>
         /// <returns>Response message</returns>
         Task<TmqMessage> RequestAsync(TmqMessage message);
-        
-        /// <summary>
-        /// Gets connected client object
-        /// </summary>
-        TmqClient GetClient();
     }
 }

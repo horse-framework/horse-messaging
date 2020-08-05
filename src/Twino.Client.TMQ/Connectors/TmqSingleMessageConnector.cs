@@ -42,7 +42,7 @@ namespace Twino.Client.TMQ.Connectors
         {
             if (ContentSerializer == null)
                 ContentSerializer = new NewtonsoftContentSerializer();
-            
+
             return ContentSerializer.Deserialize(message, type);
         }
 
@@ -239,30 +239,6 @@ namespace Twino.Client.TMQ.Connectors
             return Task.FromResult(TwinoResult.Failed());
         }
 
-        /// <summary>
-        /// Sends a message
-        /// </summary>
-        public Task<TwinoResult> SendDirectJsonAsync<T>(T model, bool waitForAcknowledge)
-        {
-            TmqClient client = GetClient();
-            if (client != null && client.IsConnected)
-                return client.SendJsonAsync(MessageType.DirectMessage, model, waitForAcknowledge);
-
-            return Task.FromResult(TwinoResult.Failed());
-        }
-
-        /// <summary>
-        /// Sends a message
-        /// </summary>
-        public Task<TwinoResult> SendDirectJsonAsync<T>(string target, ushort contentType, T model, bool waitForAcknowledge)
-        {
-            TmqClient client = GetClient();
-            if (client != null && client.IsConnected)
-                return client.SendJsonAsync(MessageType.DirectMessage, target, contentType, model, waitForAcknowledge);
-
-            return Task.FromResult(TwinoResult.Failed());
-        }
-
         #endregion
 
         #region Request
@@ -286,7 +262,7 @@ namespace Twino.Client.TMQ.Connectors
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
-                return client.RequestJson<TResponse>(request);
+                return client.Direct.RequestJson<TResponse>(request);
 
             return null;
         }
@@ -298,7 +274,7 @@ namespace Twino.Client.TMQ.Connectors
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
-                return client.RequestJson<TResponse>(target, contentType, request);
+                return client.Direct.RequestJson<TResponse>(target, contentType, request);
 
             return null;
         }

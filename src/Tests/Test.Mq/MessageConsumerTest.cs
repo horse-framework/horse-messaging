@@ -200,7 +200,7 @@ namespace Test.Mq
             observer.Attach(client1);
 
             MessageA m = new MessageA("Msg-A");
-            var sent = await client2.SendJsonAsync(MessageType.DirectMessage, "client-1", MessageA.ContentType, m, true);
+            var sent = await client2.Direct.SendJsonById("client-1", MessageA.ContentType, m, true, true);
 
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
             await Task.Delay(100);

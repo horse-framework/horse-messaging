@@ -78,9 +78,10 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Publishes a JSON object to a router
         /// </summary>
-        public Task<TwinoResult> PublishJson<TModel>(TModel model, bool waitForAcknowledge = false)
+        public Task<TwinoResult> PublishJson(object model, bool waitForAcknowledge = false,
+                                             IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return PublishJson(null, model, waitForAcknowledge);
+            return PublishJson(null, model, waitForAcknowledge, null, messageHeaders);
         }
 
         /// <summary>
@@ -128,9 +129,10 @@ namespace Twino.Client.TMQ.Operators
         /// Sends a request to router.
         /// Waits response from at least one binding.
         /// </summary>
-        public Task<TwinoResult<TResponse>> PublishRequestJson<TRequest, TResponse>(TRequest request)
+        public Task<TwinoResult<TResponse>> PublishRequestJson<TRequest, TResponse>(TRequest request,
+                                                                                    IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return PublishRequestJson<TRequest, TResponse>(null, request);
+            return PublishRequestJson<TRequest, TResponse>(null, request, null, messageHeaders);
         }
 
         /// <summary>
