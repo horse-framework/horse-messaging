@@ -9,6 +9,21 @@ namespace Twino.Client.TMQ.Bus
     public interface ITwinoBus : ITwinoConnection
     {
         /// <summary>
+        /// Implementation for direct messages and requests
+        /// </summary>
+        public ITwinoDirectBus Direct { get; }
+
+        /// <summary>
+        /// Implementation for queue messages and requests
+        /// </summary>
+        public ITwinoQueueBus Queue { get; }
+
+        /// <summary>
+        /// Implementation for route messages and requests
+        /// </summary>
+        public ITwinoRouteBus Route { get; }
+
+        /// <summary>
         /// Sends a raw message
         /// </summary>
         Task<TwinoResult> SendAsync(TmqMessage message);
