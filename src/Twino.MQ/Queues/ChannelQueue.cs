@@ -854,7 +854,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Sends decision to all connected master nodes
         /// </summary>
-        public async Task SendDecisionToNodes(QueueMessage queueMessage, Decision decision)
+        public void SendDecisionToNodes(QueueMessage queueMessage, Decision decision)
         {
             TmqMessage msg = new TmqMessage(MessageType.Server, null, 10);
             DecisionOverNode model = new DecisionOverNode

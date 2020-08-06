@@ -183,7 +183,7 @@ namespace Twino.MQ
         public void SendMessageToNodes(TmqMessage message)
         {
             foreach (TmqStickyConnector connector in Connectors)
-                _ = connector.SendAsync(message);
+                _ = connector.GetClient()?.SendAsync(message);
         }
     }
 }

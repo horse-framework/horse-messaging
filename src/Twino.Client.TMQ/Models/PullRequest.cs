@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Twino.Client.TMQ.Models
 {
     /// <summary>
@@ -56,6 +58,19 @@ namespace Twino.Client.TMQ.Models
         /// Consuming order
         /// </summary>
         public MessageOrder Order { get; set; }
+
+        /// <summary>
+        /// Additinal headers for pull request message
+        /// </summary>
+        public List<KeyValuePair<string, string>> RequestHeaders { get; }
+
+        /// <summary>
+        /// Creates new pull request
+        /// </summary>
+        public PullRequest()
+        {
+            RequestHeaders = new List<KeyValuePair<string, string>>();
+        }
 
         /// <summary>
         /// Creates request for pulling single message with default options

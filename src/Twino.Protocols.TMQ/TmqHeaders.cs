@@ -126,6 +126,11 @@ namespace Twino.Protocols.TMQ
         public const string END = "End";
 
         /// <summary>
+        /// "Error"
+        /// </summary>
+        public const string ERROR = "Error";
+
+        /// <summary>
         /// "Index"
         /// </summary>
         public const string INDEX = "Index";

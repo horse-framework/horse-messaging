@@ -22,7 +22,7 @@ namespace Twino.Client.TMQ.Operators
         private readonly TmqClient _client;
 
         internal Dictionary<string, PullContainer> PullContainers { get; }
-        private Timer _pullContainerTimeoutHandler;
+        private readonly Timer _pullContainerTimeoutHandler;
 
         internal QueueOperator(TmqClient client)
         {
@@ -77,7 +77,40 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Creates new queue in server
         /// </summary>
-        public async Task<TwinoResult> Create(string channel, ushort queueId, Action<QueueOptions> optionsAction = null)
+        public Task<TwinoResult> Create(string channel, ushort queueId)
+        {
+            return Create(channel, queueId, null, null, null);
+        }
+
+        /// <summary>
+        /// Creates new queue in server
+        /// </summary>
+        public Task<TwinoResult> Create(string channel,
+                                        ushort queueId,
+                                        IEnumerable<KeyValuePair<string, string>> additionalHeaders)
+        {
+            return Create(channel, queueId, null, null, additionalHeaders);
+        }
+
+        /// <summary>
+        /// Creates new queue in server
+        /// </summary>
+        public Task<TwinoResult> Create(string channel,
+                                        ushort queueId,
+                                        string deliveryHandlerHeader,
+                                        IEnumerable<KeyValuePair<string, string>> additionalHeaders)
+        {
+            return Create(channel, queueId, null, deliveryHandlerHeader, additionalHeaders);
+        }
+
+        /// <summary>
+        /// Creates new queue in server
+        /// </summary>
+        public async Task<TwinoResult> Create(string channel,
+                                              ushort queueId,
+                                              Action<QueueOptions> optionsAction,
+                                              string deliveryHandlerHeader = null,
+                                              IEnumerable<KeyValuePair<string, string>> additionalHeaders = null)
         {
             TmqMessage message = new TmqMessage();
             message.Type = MessageType.Server;
@@ -87,6 +120,13 @@ namespace Twino.Client.TMQ.Operators
 
             message.AddHeader(TmqHeaders.CHANNEL_NAME, channel);
             message.AddHeader(TmqHeaders.QUEUE_ID, queueId);
+
+            if (!string.IsNullOrEmpty(deliveryHandlerHeader))
+                message.AddHeader(TmqHeaders.DELIVERY_HANDLER, deliveryHandlerHeader);
+
+            if (additionalHeaders != null)
+                foreach (KeyValuePair<string, string> pair in additionalHeaders)
+                    message.AddHeader(pair.Key, pair.Value);
 
             if (optionsAction != null)
             {
@@ -207,22 +247,27 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public Task<TwinoResult> PushJson(object jsonObject, bool waitAcknowledge)
+        public Task<TwinoResult> PushJson(object jsonObject, bool waitAcknowledge,
+                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return PushJson(null, null, jsonObject, waitAcknowledge);
+            return PushJson(null, null, jsonObject, waitAcknowledge, messageHeaders);
         }
 
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public async Task<TwinoResult> PushJson(string channel, ushort? queueId, object jsonObject, bool waitAcknowledge)
+        public async Task<TwinoResult> PushJson(string channel, ushort? queueId, object jsonObject, bool waitAcknowledge,
+                                                IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor(jsonObject.GetType());
             TmqMessage message = descriptor.CreateMessage(MessageType.QueueMessage, channel, queueId);
-
-            message.Content = new MemoryStream();
             message.PendingAcknowledge = waitAcknowledge;
-            await JsonSerializer.SerializeAsync(message.Content, jsonObject, jsonObject.GetType());
+
+            if (messageHeaders != null)
+                foreach (KeyValuePair<string, string> pair in messageHeaders)
+                    message.AddHeader(pair.Key, pair.Value);
+
+            message.Serialize(jsonObject, _client.JsonSerializer);
 
             if (waitAcknowledge)
                 message.SetMessageId(_client.UniqueIdGenerator.Create());
@@ -233,61 +278,30 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public async Task<TwinoResult> Push(string channel, ushort queueId, string content, bool waitAcknowledge)
+        public async Task<TwinoResult> Push(string channel, ushort queueId, string content, bool waitAcknowledge,
+                                            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return await Push(channel, queueId, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge);
+            return await Push(channel, queueId, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge, messageHeaders);
         }
 
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public async Task<TwinoResult> Push(string channel, ushort queueId, MemoryStream content, bool waitAcknowledge)
+        public async Task<TwinoResult> Push(string channel, ushort queueId, MemoryStream content, bool waitAcknowledge,
+                                            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
             message.Content = content;
             message.PendingAcknowledge = waitAcknowledge;
 
+            if (messageHeaders != null)
+                foreach (KeyValuePair<string, string> pair in messageHeaders)
+                    message.AddHeader(pair.Key, pair.Value);
+
             if (waitAcknowledge)
                 message.SetMessageId(_client.UniqueIdGenerator.Create());
 
             return await _client.SendAndWaitForAcknowledge(message, waitAcknowledge);
-        }
-
-        /// <summary>
-        /// Pushes a message to a queue and does not wait for acknowledge.
-        /// Uses legacy callback method instead of async
-        /// </summary>
-        [Obsolete("That methods will be removed in future, use non Sync methods")]
-        public bool PushJsonSync(string channel, ushort queueId, object jsonObject)
-        {
-            TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
-            message.PendingAcknowledge = false;
-            byte[] data = JsonSerializer.SerializeToUtf8Bytes(jsonObject, jsonObject.GetType());
-            message.Content = new MemoryStream(data);
-            message.Content.Position = 0;
-
-            if (_client.UseUniqueMessageId)
-                message.SetMessageId(_client.UniqueIdGenerator.Create());
-
-            return _client.Send(message);
-        }
-
-        /// <summary>
-        /// Pushes a message to a queue and does not wait for acknowledge.
-        /// Uses legacy callback method instead of async
-        /// </summary>
-        [Obsolete("That methods will be removed in future, use non Sync methods")]
-        public bool PushSync(string channel, ushort queueId, byte[] data)
-        {
-            TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
-            message.PendingAcknowledge = false;
-            message.Content = new MemoryStream(data);
-            message.Content.Position = 0;
-
-            if (_client.UseUniqueMessageId)
-                message.SetMessageId(_client.UniqueIdGenerator.Create());
-
-            return _client.Send(message);
         }
 
         /// <summary>
@@ -311,6 +325,9 @@ namespace Twino.Client.TMQ.Operators
 
             if (request.Order == MessageOrder.LIFO)
                 message.AddHeader(TmqHeaders.ORDER, TmqHeaders.LIFO);
+
+            foreach (KeyValuePair<string, string> pair in request.RequestHeaders)
+                message.AddHeader(pair.Key, pair.Value);
 
             PullContainer container = new PullContainer(message.MessageId, request.Count, actionForEachMessage);
             lock (PullContainers)
