@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Twino.Client.TMQ.Models;
 using Twino.Protocols.TMQ;
 
 namespace Twino.Client.TMQ.Annotations.Resolvers
@@ -26,9 +27,14 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         public bool OnlyFirstAcquirer { get; set; }
 
         /// <summary>
-        /// If queue is created with a message push and that value is true, wait for acknowledge option will be used
+        /// If queue is created with a message push and that value is not null, wait for acknowledge option will be used
         /// </summary>
         public bool? WaitForAcknowledge { get; set; }
+
+        /// <summary>
+        /// If queue is created with a message push and that value is not null, queue will be created with that status
+        /// </summary>
+        public MessagingQueueStatus? QueueStatus { get; set; }
 
         /// <summary>
         /// Headers for delivery descriptor of type
@@ -148,6 +154,9 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
             if (WaitForAcknowledge.HasValue)
                 message.AddHeader(TmqHeaders.WAIT_FOR_ACKNOWLEDGE, WaitForAcknowledge.Value ? "1" : "0");
             
+            if (QueueStatus.HasValue)
+                message.AddHeader(TmqHeaders.QUEUE_STATUS, QueueStatus.Value.ToString().ToLower());
+
             foreach (KeyValuePair<string, string> pair in Headers)
                 message.AddHeader(pair.Key, pair.Value);
 

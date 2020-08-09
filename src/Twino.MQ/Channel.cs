@@ -245,6 +245,10 @@ namespace Twino.MQ
                 string waitForAck = requestMessage.FindHeader(TmqHeaders.WAIT_FOR_ACKNOWLEDGE);
                 if (!string.IsNullOrEmpty(waitForAck))
                     options.WaitForAcknowledge = waitForAck == "1" || waitForAck.Equals("true", StringComparison.OrdinalIgnoreCase);
+
+                string queueStatus = requestMessage.FindHeader(TmqHeaders.QUEUE_STATUS);
+                if (queueStatus != null)
+                    options.Status = QueueStatusHelper.FindStatus(queueStatus);
             }
 
             queue = new ChannelQueue(this, queueId, options);

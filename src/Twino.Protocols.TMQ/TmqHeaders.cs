@@ -179,6 +179,11 @@ namespace Twino.Protocols.TMQ
         /// "Wait-For-Acknowledge"
         /// </summary>
         public const string WAIT_FOR_ACKNOWLEDGE = "Wait-For-Acknowledge";
-
+        
+        /// <summary>
+        /// "Queue-Status"
+        /// </summary>
+        public const string QUEUE_STATUS = "Queue-Status";
+        
     }
 }

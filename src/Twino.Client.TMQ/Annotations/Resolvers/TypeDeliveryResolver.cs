@@ -121,6 +121,10 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
             if (wfa != null)
                 descriptor.WaitForAcknowledge = wfa.Value;
 
+            QueueStatusAttribute qsa = type.GetCustomAttribute<QueueStatusAttribute>(true);
+            if (qsa != null)
+                descriptor.QueueStatus = qsa.Status;
+
             IEnumerable<MessageHeaderAttribute> headerAttributes = type.GetCustomAttributes<MessageHeaderAttribute>(true);
             foreach (MessageHeaderAttribute headerAttribute in headerAttributes)
                 descriptor.Headers.Add(new KeyValuePair<string, string>(headerAttribute.Key, headerAttribute.Value));
