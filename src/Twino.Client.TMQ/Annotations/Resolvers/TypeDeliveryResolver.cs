@@ -116,6 +116,10 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
             OnlyFirstAcquirerAttribute of = type.GetCustomAttribute<OnlyFirstAcquirerAttribute>(true);
             if (of != null)
                 descriptor.OnlyFirstAcquirer = true;
+            
+            WaitForAcknowledgeAttribute wfa = type.GetCustomAttribute<WaitForAcknowledgeAttribute>(true);
+            if (wfa != null)
+                descriptor.WaitForAcknowledge = wfa.Value;
 
             IEnumerable<MessageHeaderAttribute> headerAttributes = type.GetCustomAttributes<MessageHeaderAttribute>(true);
             foreach (MessageHeaderAttribute headerAttribute in headerAttributes)

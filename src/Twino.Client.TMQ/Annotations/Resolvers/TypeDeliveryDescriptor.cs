@@ -26,6 +26,11 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         public bool OnlyFirstAcquirer { get; set; }
 
         /// <summary>
+        /// If queue is created with a message push and that value is true, wait for acknowledge option will be used
+        /// </summary>
+        public bool? WaitForAcknowledge { get; set; }
+
+        /// <summary>
         /// Headers for delivery descriptor of type
         /// </summary>
         public List<KeyValuePair<string, string>> Headers { get; }
@@ -140,6 +145,9 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
             if (OnlyFirstAcquirer)
                 message.FirstAcquirer = true;
 
+            if (WaitForAcknowledge.HasValue)
+                message.AddHeader(TmqHeaders.WAIT_FOR_ACKNOWLEDGE, WaitForAcknowledge.Value ? "1" : "0");
+            
             foreach (KeyValuePair<string, string> pair in Headers)
                 message.AddHeader(pair.Key, pair.Value);
 

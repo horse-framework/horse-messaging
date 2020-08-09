@@ -240,6 +240,13 @@ namespace Twino.MQ
             if (queue != null)
                 throw new DuplicateNameException($"The channel has already a queue with same content type: {queueId}");
 
+            if (requestMessage != null)
+            {
+                string waitForAck = requestMessage.FindHeader(TmqHeaders.WAIT_FOR_ACKNOWLEDGE);
+                if (!string.IsNullOrEmpty(waitForAck))
+                    options.WaitForAcknowledge = waitForAck == "1" || waitForAck.Equals("true", StringComparison.OrdinalIgnoreCase);
+            }
+
             queue = new ChannelQueue(this, queueId, options);
             DeliveryHandlerBuilder handlerBuilder = new DeliveryHandlerBuilder
                                                     {
