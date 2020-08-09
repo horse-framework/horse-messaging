@@ -12,6 +12,7 @@ namespace Twino.Client.TMQ.Internal
     {
         protected bool SendAck { get; private set; }
         protected bool SendNack { get; private set; }
+        protected NackReason NackReason { get; private set; }
         protected KeyValuePair<string, ushort> DefaultPushException { get; private set; }
         protected Dictionary<Type, KeyValuePair<string, ushort>> PushExceptions { get; private set; }
 
@@ -24,6 +25,7 @@ namespace Twino.Client.TMQ.Internal
 
             AutoNackAttribute nackAttribute = type.GetCustomAttribute<AutoNackAttribute>();
             SendNack = nackAttribute != null;
+            NackReason = nackAttribute != null ? nackAttribute.Reason : NackReason.None;
 
             PushExceptions = new Dictionary<Type, KeyValuePair<string, ushort>>();
             IEnumerable<PushExceptionsAttribute> attributes = type.GetCustomAttributes<PushExceptionsAttribute>(false);
@@ -39,6 +41,34 @@ namespace Twino.Client.TMQ.Internal
                     PushExceptions.Add(attribute.ExceptionType, new KeyValuePair<string, ushort>(attribute.ChannelName, attribute.QueueId));
                 }
             }
+        }
+
+        /// <summary>
+        /// Sends negative ack
+        /// </summary>
+        protected Task SendNegativeAck(TmqMessage message, TmqClient client, Exception exception)
+        {
+            string reason;
+            switch (NackReason)
+            {
+                case NackReason.Error:
+                    reason = TmqHeaders.NACK_REASON_ERROR;
+                    break;
+                
+                case NackReason.ExceptionType:
+                    reason = exception.GetType().Name;
+                    break;
+                
+                case NackReason.ExceptionMessage:
+                    reason = exception.Message;
+                    break;
+                
+                default:
+                    reason = TmqHeaders.NACK_REASON_NONE;
+                    break;
+            }
+
+            return client.SendNegativeAck(message, reason);
         }
     }
 }

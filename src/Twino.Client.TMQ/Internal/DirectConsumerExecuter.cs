@@ -46,7 +46,7 @@ namespace Twino.Client.TMQ.Internal
             catch (Exception e)
             {
                 if (SendNack)
-                    await client.SendNegativeAck(message, TmqHeaders.NACK_REASON_ERROR);
+                    await SendNegativeAck(message, client, e);
 
                 Type exceptionType = e.GetType();
                 var kv = PushExceptions.ContainsKey(exceptionType)
