@@ -17,7 +17,7 @@ namespace Sample.Server
 				.UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterReceived));
 
 			var router = mq.AddRouter("deneme-router", RouteMethod.Distribute);
-			var binding = new DirectBinding("deneme-binding", "@name:consumer", 1, BindingInteraction.Acknowledge, RouteMethod.Distribute);
+			var binding = new DirectBinding("deneme-binding", "@name:consumer", 1, BindingInteraction.Response);
 			router.AddBinding(binding);
 
 			await mq.LoadPersistentQueues();

@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Sample.Producer.Models;
 using Twino.Client.TMQ;
+using Twino.Client.TMQ.Bus;
+using Twino.Extensions.ConsumerFactory;
 using Twino.Protocols.TMQ;
 
 namespace Sample.Producer
@@ -10,30 +13,17 @@ namespace Sample.Producer
 	{
 		static async Task Main(string[] args)
 		{
-			TmqClient client = new TmqClient();
-			client.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
-			await client.ConnectAsync("tmq://127.0.0.1:22200");
+			var services = new ServiceCollection();
+			services.AddTwinoBus(tmq => { tmq.AddHost("tmq://127.0.0.1:22200"); });
+			var provider = services.BuildServiceProvider();
+			provider.UseTwinoBus();
+			var bus = provider.GetService<ITwinoRouteBus>();
 
 			while (true)
 			{
-				ModelA a = new ModelA();
-				a.Foo = "Model A";
-
-				TwinoResult resultA = await client.Queues.PushJson(a, true);
-
-				await Task.Delay(500);
-
-				ModelB b = new ModelB();
-				b.FirstName = "Mehmet";
-				b.LastName = "Helvacikoylu";
-
-				TwinoResult resultB = await client.Queues.PushJson(b, false);
-
-				await Task.Delay(500);
-
 				ModelC c = new ModelC();
 				c.Value = "Hello";
-				var result = await client.Routers.PublishJson(c);
+				var result = await bus.PublishRequestJson<ModelC, ModelA>(c);
 
 				await Task.Delay(500);
 			}

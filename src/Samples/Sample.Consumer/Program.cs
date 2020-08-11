@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Twino.Client.TMQ.Bus;
 using Twino.Client.TMQ.Connectors;
+using Twino.Extensions.ConsumerFactory;
 using Twino.Protocols.TMQ;
 
 namespace Sample.Consumer
@@ -9,12 +12,15 @@ namespace Sample.Consumer
     {
         static async Task Main(string[] args)
         {
-            TmqStickyConnector connector = new TmqStickyConnector(TimeSpan.FromSeconds(1));
-            connector.AutoJoinConsumerChannels = true;
-            connector.AddProperty(TmqHeaders.CLIENT_NAME, "consumer");
-            connector.Observer.RegisterAssemblyConsumers(typeof(Program));
-            connector.AddHost("tmq://127.0.0.1:22200");
-            connector.Run();
+            var services = new ServiceCollection();
+            services.AddTwinoBus(tmq =>
+            {
+                tmq.AddHost("tmq://127.0.0.1:22200");
+                tmq.SetClientName("consumer");
+                tmq.AddTransientConsumers(typeof(Program));
+            });
+            var provider = services.BuildServiceProvider();
+            provider.UseTwinoBus();
             while (true)
                 await Task.Delay(1000);
         }
