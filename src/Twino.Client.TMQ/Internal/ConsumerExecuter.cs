@@ -28,7 +28,7 @@ namespace Twino.Client.TMQ.Internal
             NackReason = nackAttribute != null ? nackAttribute.Reason : NackReason.None;
 
             PushExceptions = new Dictionary<Type, KeyValuePair<string, ushort>>();
-            IEnumerable<PushExceptionsAttribute> attributes = type.GetCustomAttributes<PushExceptionsAttribute>(false);
+            IEnumerable<PushExceptionsAttribute> attributes = type.GetCustomAttributes<PushExceptionsAttribute>(true);
             foreach (PushExceptionsAttribute attribute in attributes)
             {
                 if (attribute.ExceptionType == null)
