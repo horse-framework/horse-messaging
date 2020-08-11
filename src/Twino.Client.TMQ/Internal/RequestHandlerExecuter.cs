@@ -44,7 +44,7 @@ namespace Twino.Client.TMQ.Internal
 					TResponse responseModel = await handler.Handle(requestModel, message, client);
 					TwinoResultCode code = responseModel is null ? TwinoResultCode.NoContent : TwinoResultCode.Ok;
 					TmqMessage responseMessage = message.CreateResponse(code);
-					if (requestModel != null)
+					if (responseModel != null)
 						responseMessage.Serialize(responseModel, client.JsonSerializer);
 					await client.SendAsync(responseMessage);
 				}
