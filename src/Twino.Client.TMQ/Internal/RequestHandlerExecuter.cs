@@ -60,6 +60,7 @@ namespace Twino.Client.TMQ.Internal
 						responseMessage.SetStringContent(errorModel.Reason);
 
 					await client.SendAsync(responseMessage);
+					throw;
 				}
 			}
 			catch (Exception e)
