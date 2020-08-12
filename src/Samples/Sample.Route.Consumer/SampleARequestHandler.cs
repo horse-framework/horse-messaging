@@ -22,6 +22,11 @@ namespace Sample.Route.Consumer
 
 		public Task<SampleResult> Handle(SampleARequest request, TmqMessage rawMessage, TmqClient client)
 		{
+			return Task.FromResult(new SampleResult
+			                       {
+				                       Message = "Hello, World!"
+			                       });
+			
 			var requestB = new SampleBRequest
 			{
 				Name = request.Name,

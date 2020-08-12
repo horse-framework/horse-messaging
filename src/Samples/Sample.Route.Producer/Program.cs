@@ -34,6 +34,7 @@ namespace Sample.Route.Producer
 					Guid = Guid.NewGuid()
 				};
 				var result = await bus.Execute<SampleARequest, SampleResult>(request);
+				Console.WriteLine(result.Message);
 				Thread.Sleep(1000);
 			}
 		}
