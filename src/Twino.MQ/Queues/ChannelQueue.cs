@@ -489,6 +489,8 @@ namespace Twino.MQ.Queues
 
                 Info.UpdateRegularMessageCount(MessagesList.Count);
             }
+
+            _ = Trigger();
         }
 
         /// <summary>
