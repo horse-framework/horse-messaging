@@ -44,10 +44,10 @@ namespace Twino.Client.TMQ.Internal
                     TResponse responseModel = await handler.Handle(requestModel, message, client);
                     TwinoResultCode code = responseModel is null ? TwinoResultCode.NoContent : TwinoResultCode.Ok;
                     TmqMessage responseMessage = message.CreateResponse(code);
-                    
+
                     if (responseModel != null)
                         responseMessage.Serialize(responseModel, client.JsonSerializer);
-                    
+
                     await client.SendAsync(responseMessage);
                 }
                 catch (Exception e)
@@ -79,17 +79,7 @@ namespace Twino.Client.TMQ.Internal
             }
             catch (Exception e)
             {
-                Type exceptionType = e.GetType();
-                var kv = PushExceptions.ContainsKey(exceptionType)
-                             ? PushExceptions[exceptionType]
-                             : DefaultPushException;
-
-                if (!string.IsNullOrEmpty(kv.Key))
-                {
-                    string serialized = Newtonsoft.Json.JsonConvert.SerializeObject(e);
-                    await client.Queues.Push(kv.Key, kv.Value, serialized, false);
-                }
-
+                await SendExceptions(client, e);
                 exception = e;
                 throw;
             }

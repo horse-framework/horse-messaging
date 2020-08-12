@@ -28,7 +28,7 @@ namespace Twino.Client.TMQ.Internal
             {
                 if (_consumer != null)
                     await _consumer.Consume(message, t, client);
-                
+
                 else if (_consumerFactoryCreator != null)
                 {
                     consumerFactory = _consumerFactoryCreator();
@@ -48,17 +48,7 @@ namespace Twino.Client.TMQ.Internal
                 if (SendNack)
                     await SendNegativeAck(message, client, e);
 
-                Type exceptionType = e.GetType();
-                var kv = PushExceptions.ContainsKey(exceptionType)
-                             ? PushExceptions[exceptionType]
-                             : DefaultPushException;
-
-                if (!string.IsNullOrEmpty(kv.Key))
-                {
-                    string serialized = Newtonsoft.Json.JsonConvert.SerializeObject(e);
-                    await client.Queues.Push(kv.Key, kv.Value, serialized, false);
-                }
-
+                await SendExceptions(client, e);
                 exception = e;
                 throw;
             }
