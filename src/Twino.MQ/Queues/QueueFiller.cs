@@ -59,6 +59,9 @@ namespace Twino.MQ.Queues
 
             _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
             _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
+            
+            _ = _queue.Trigger();
+
             return PushResult.Success;
         }
 
@@ -100,6 +103,9 @@ namespace Twino.MQ.Queues
 
             _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
             _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
+            
+            _ = _queue.Trigger();
+
             return PushResult.Success;
         }
 
@@ -142,6 +148,9 @@ namespace Twino.MQ.Queues
 
             _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
             _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
+            
+            _ = _queue.Trigger();
+
             return PushResult.Success;
         }
 
@@ -184,6 +193,9 @@ namespace Twino.MQ.Queues
 
             _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
             _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
+            
+            _ = _queue.Trigger();
+
             return PushResult.Success;
         }
 
@@ -221,6 +233,9 @@ namespace Twino.MQ.Queues
 
             _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
             _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
+            
+            _ = _queue.Trigger();
+            
             return PushResult.Success;
         }
     }
