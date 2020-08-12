@@ -670,7 +670,11 @@ namespace Twino.Client.TMQ
                 return message.CreateResponse(sent.Code);
             }
 
-            return await task;
+            TmqMessage response = await task;
+            if (response == null)
+                response = message.CreateResponse(TwinoResultCode.RequestTimeout);
+            
+            return response;
         }
 
         #endregion
