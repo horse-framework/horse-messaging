@@ -42,37 +42,44 @@ namespace Twino.Client.TMQ.Internal
                 try
                 {
                     TResponse responseModel = await handler.Handle(requestModel, message, client);
-                    TmqMessage responseMessage = message.CreateResponse(TwinoResultCode.Ok);
-                    responseMessage.Serialize(responseModel, client.JsonSerializer);
+                    TwinoResultCode code = responseModel is null ? TwinoResultCode.NoContent : TwinoResultCode.Ok;
+                    TmqMessage responseMessage = message.CreateResponse(code);
+
+                    if (responseModel != null)
+                        responseMessage.Serialize(responseModel, client.JsonSerializer);
+
                     await client.SendAsync(responseMessage);
                 }
                 catch (Exception e)
                 {
-                    ErrorResponse errorModel = await handler.OnError(e, requestModel, message, client);
+                    ErrorResponse errorModel;
+                    try
+                    {
+                        errorModel = await handler.OnError(e, requestModel, message, client);
+                    }
+                    catch
+                    {
+                        errorModel = new ErrorResponse
+                                     {
+                                         ResultCode = TwinoResultCode.InternalServerError
+                                     };
+                    }
+
                     if (errorModel.ResultCode == TwinoResultCode.Ok)
                         errorModel.ResultCode = TwinoResultCode.Failed;
-                    
+
                     TmqMessage responseMessage = message.CreateResponse(errorModel.ResultCode);
 
                     if (!string.IsNullOrEmpty(errorModel.Reason))
                         responseMessage.SetStringContent(errorModel.Reason);
 
                     await client.SendAsync(responseMessage);
+                    throw;
                 }
             }
             catch (Exception e)
             {
-                Type exceptionType = e.GetType();
-                var kv = PushExceptions.ContainsKey(exceptionType)
-                             ? PushExceptions[exceptionType]
-                             : DefaultPushException;
-
-                if (!string.IsNullOrEmpty(kv.Key))
-                {
-                    string serialized = Newtonsoft.Json.JsonConvert.SerializeObject(e);
-                    await client.Queues.Push(kv.Key, kv.Value, serialized, false);
-                }
-
+                await SendExceptions(client, e);
                 exception = e;
                 throw;
             }

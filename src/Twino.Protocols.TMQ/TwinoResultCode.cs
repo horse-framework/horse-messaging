@@ -14,6 +14,11 @@ namespace Twino.Protocols.TMQ
         /// Unknown failed response
         /// </summary>
         Failed = 1,
+        
+        /// <summary>
+        /// Request successfull but response has no content
+        /// </summary>
+        NoContent = 204,
 
         /// <summary>
         /// Request is not recognized or verified by the server

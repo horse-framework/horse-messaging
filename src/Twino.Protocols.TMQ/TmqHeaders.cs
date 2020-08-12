@@ -174,5 +174,16 @@ namespace Twino.Protocols.TMQ
         /// "Delivery-Handler"
         /// </summary>
         public const string DELIVERY_HANDLER = "Delivery-Handler";
+        
+        /// <summary>
+        /// "Wait-For-Acknowledge"
+        /// </summary>
+        public const string WAIT_FOR_ACKNOWLEDGE = "Wait-For-Acknowledge";
+        
+        /// <summary>
+        /// "Queue-Status"
+        /// </summary>
+        public const string QUEUE_STATUS = "Queue-Status";
+        
     }
 }

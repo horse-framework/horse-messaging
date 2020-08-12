@@ -44,19 +44,9 @@ namespace Twino.Client.TMQ.Internal
             catch (Exception e)
             {
                 if (SendNack)
-                    await client.SendNegativeAck(message, TmqHeaders.NACK_REASON_ERROR);
+                    await SendNegativeAck(message, client, e);
 
-                Type exceptionType = e.GetType();
-                var kv = PushExceptions.ContainsKey(exceptionType)
-                             ? PushExceptions[exceptionType]
-                             : DefaultPushException;
-
-                if (!string.IsNullOrEmpty(kv.Key))
-                {
-                    string serialized = Newtonsoft.Json.JsonConvert.SerializeObject(e);
-                    await client.Queues.Push(kv.Key, kv.Value, serialized, false);
-                }
-
+                await SendExceptions(client, e);
                 exception = e;
                 throw;
             }

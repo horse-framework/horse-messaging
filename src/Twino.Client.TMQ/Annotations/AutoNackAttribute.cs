@@ -9,5 +9,18 @@ namespace Twino.Client.TMQ.Annotations
     [AttributeUsage(AttributeTargets.Class)]
     public class AutoNackAttribute : Attribute
     {
+        /// <summary>
+        /// Reason
+        /// </summary>
+        public NackReason Reason { get; }
+
+        /// <summary>
+        /// Creates new negative acknowledge attribute
+        /// </summary>
+        /// <param name="reason"></param>
+        public AutoNackAttribute(NackReason reason = NackReason.None)
+        {
+            Reason = reason;
+        }
     }
 }
