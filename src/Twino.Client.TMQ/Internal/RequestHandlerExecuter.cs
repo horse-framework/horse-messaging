@@ -20,13 +20,13 @@ namespace Twino.Client.TMQ.Internal
 
         public override async Task Execute(TmqClient client, TmqMessage message, object model)
         {
-            TRequest requestModel = (TRequest) model;
             Exception exception = null;
             IConsumerFactory consumerFactory = null;
             bool respond = false;
 
             try
             {
+                TRequest requestModel = (TRequest) model;
                 ITwinoRequestHandler<TRequest, TResponse> handler;
 
                 if (_handler != null)
@@ -54,18 +54,7 @@ namespace Twino.Client.TMQ.Internal
                 }
                 catch (Exception e)
                 {
-                    ErrorResponse errorModel;
-                    try
-                    {
-                        errorModel = await handler.OnError(e, requestModel, message, client);
-                    }
-                    catch
-                    {
-                        errorModel = new ErrorResponse
-                                     {
-                                         ResultCode = TwinoResultCode.InternalServerError
-                                     };
-                    }
+                    ErrorResponse errorModel = await handler.OnError(e, requestModel, message, client);
 
                     if (errorModel.ResultCode == TwinoResultCode.Ok)
                         errorModel.ResultCode = TwinoResultCode.Failed;
