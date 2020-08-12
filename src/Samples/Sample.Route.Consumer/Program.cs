@@ -6,10 +6,6 @@ using Twino.Extensions.ConsumerFactory;
 
 namespace Sample.Route.Consumer
 {
-	public interface IConsumerA { }
-
-	interface IConsumerB { }
-
 	class Program
 	{
 		static void Main(string[] args)
@@ -17,19 +13,19 @@ namespace Sample.Route.Consumer
 			var serviceA = new ServiceCollection();
 			var serviceB = new ServiceCollection();
 
-			BuildConsumer<IConsumerA>(serviceA, "sample-a-consumer", cfg => { cfg.AddTransientConsumers(typeof(Program)); });
-			BuildConsumer<IConsumerB>(serviceB, "sample-b-consumer", cfg => { cfg.AddTransientConsumers(typeof(Program)); });
+			BuildConsumer(serviceA, "sample-a-consumer", cfg => { cfg.AddTransientConsumers(typeof(Program)); });
+			BuildConsumer(serviceB, "sample-b-consumer", cfg => { cfg.AddTransientConsumers(typeof(Program)); });
 
-			RunConsumer<IConsumerA>(serviceA);
-			RunConsumer<IConsumerB>(serviceB);
+			RunConsumer(serviceA);
+			RunConsumer(serviceB);
 
 			while (true)
 				Thread.Sleep(250);
 		}
 
-		private static void BuildConsumer<T>(IServiceCollection services, string clientType, Action<TwinoConnectorBuilder> configure)
+		private static void BuildConsumer(IServiceCollection services, string clientType, Action<TwinoConnectorBuilder> configure)
 		{
-			services.AddTwinoBus<T>(tmq =>
+			services.AddTwinoBus(tmq =>
 			{
 				tmq.AddHost("tmq://localhost:22201");
 				tmq.SetClientType(clientType);
@@ -38,10 +34,10 @@ namespace Sample.Route.Consumer
 			});
 		}
 
-		private static IServiceProvider RunConsumer<T>(IServiceCollection services)
+		private static IServiceProvider RunConsumer(IServiceCollection services)
 		{
 			var provider = services.BuildServiceProvider();
-			provider.UseTwinoBus<T>();
+			provider.UseTwinoBus();
 			return provider;
 		}
 	}

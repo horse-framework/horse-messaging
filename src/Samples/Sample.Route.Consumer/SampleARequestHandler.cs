@@ -4,6 +4,7 @@ using Sample.Route.Models;
 using Twino.Client.TMQ;
 using Twino.Client.TMQ.Annotations;
 using Twino.Client.TMQ.Bus;
+using Twino.Extensions.ConsumerFactory;
 using Twino.Protocols.TMQ;
 
 namespace Sample.Route.Consumer
