@@ -1,17 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Sample.Route.Models;
 using Twino.Client.TMQ;
-using Twino.Client.TMQ.Annotations;
 using Twino.Client.TMQ.Bus;
-using Twino.Extensions.ConsumerFactory;
 using Twino.Protocols.TMQ;
 
-namespace Sample.Route.Consumer
+namespace Sample.Route.Consumer1
 {
-	[AutoAck]
-	[AutoNack]
-	public class SampleARequestHandler: ITwinoRequestHandler<SampleARequest, SampleResult>
+	public class SampleARequestHandler: ITwinoRequestHandler<SampleARequest, List<SampleResult>>
 	{
 		private readonly ITwinoRouteBus _bus;
 
@@ -20,19 +17,15 @@ namespace Sample.Route.Consumer
 			_bus = bus;
 		}
 
-		public Task<SampleResult> Handle(SampleARequest request, TmqMessage rawMessage, TmqClient client)
+		public async Task<List<SampleResult>> Handle(SampleARequest request, TmqMessage rawMessage, TmqClient client)
 		{
-			return Task.FromResult(new SampleResult
-			                       {
-				                       Message = "Hello, World!"
-			                       });
-			
 			var requestB = new SampleBRequest
 			{
 				Name = request.Name,
 				Guid = request.Guid
 			};
-			return _bus.Execute<SampleBRequest, SampleResult>(requestB);
+			var result = await _bus.Execute<SampleBRequest, List<SampleResult>>(requestB);
+			return result;
 		}
 
 		public Task<ErrorResponse> OnError(Exception exception, SampleARequest request, TmqMessage rawMessage, TmqClient client)

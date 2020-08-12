@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +18,7 @@ namespace Sample.Route.Producer
 			{
 				tmq.AddHost("tmq://localhost:22201");
 				tmq.SetClientType("sample-producer");
+				tmq.EnhanceConnection(c => c.ResponseTimeout = TimeSpan.FromSeconds(555));
 				tmq.OnConnected(connector => Console.WriteLine("CONNECTED => sample-producer"));
 			});
 
@@ -33,8 +35,7 @@ namespace Sample.Route.Producer
 					Name = "A-REQUEST",
 					Guid = Guid.NewGuid()
 				};
-				var result = await bus.Execute<SampleARequest, SampleResult>(request);
-				Console.WriteLine(result.Message);
+				var result = await bus.Execute<SampleARequest, List<SampleResult>>(request);
 				Thread.Sleep(1000);
 			}
 		}
