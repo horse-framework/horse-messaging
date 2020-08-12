@@ -21,7 +21,7 @@ namespace Sample.Route.Consumer1
 		{
 			var requestB = new SampleBRequest
 			{
-				Name = request.Name,
+				Name = "B-REQUEST",
 				Guid = request.Guid
 			};
 			var result = await _bus.Execute<SampleBRequest, List<SampleResult>>(requestB);
