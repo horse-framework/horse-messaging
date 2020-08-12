@@ -153,7 +153,7 @@ namespace Twino.Client.TMQ.Operators
 
 			TmqMessage responseMessage = await _client.Request(message);
 			if (responseMessage is null)
-				return new TwinoResult<TResponse>(TwinoResultCode.RequestTimeout, "no-consumer");
+				return new TwinoResult<TResponse>(TwinoResultCode.RequestTimeout, "timeout");
 
 			if (responseMessage.ContentType == 0)
 			{
