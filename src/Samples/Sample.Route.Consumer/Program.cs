@@ -13,8 +13,8 @@ namespace Sample.Route.Consumer
 			var serviceA = new ServiceCollection();
 			var serviceB = new ServiceCollection();
 
-			BuildConsumer(serviceA, "sample-a-consumer", cfg => { cfg.AddTransientConsumers(typeof(Program)); });
-			BuildConsumer(serviceB, "sample-b-consumer", cfg => { cfg.AddTransientConsumers(typeof(Program)); });
+			BuildConsumer(serviceA, "sample-a-consumer", cfg => { cfg.AddTransientConsumer<SampleARequestHandler>(); });
+			BuildConsumer(serviceB, "sample-b-consumer", cfg => { cfg.AddTransientConsumer<SampleBRequestHandler>(); });
 
 			RunConsumer(serviceA);
 			RunConsumer(serviceB);

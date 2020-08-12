@@ -152,9 +152,6 @@ namespace Twino.Client.TMQ.Operators
 					message.AddHeader(pair.Key, pair.Value);
 
 			TmqMessage responseMessage = await _client.Request(message);
-			if (responseMessage is null)
-				return new TwinoResult<TResponse>(TwinoResultCode.RequestTimeout, "timeout");
-
 			if (responseMessage.ContentType == 0)
 			{
 				TResponse response = responseMessage.Deserialize<TResponse>(_client.JsonSerializer);
