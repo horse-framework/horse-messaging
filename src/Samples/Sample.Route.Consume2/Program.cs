@@ -14,6 +14,7 @@ namespace Sample.Route.Consume2
 			{
 				tmq.AddHost("tmq://localhost:22201");
 				tmq.SetClientType("sample-b-consumer");
+				tmq.SetClientId("consumer2");
 				tmq.AddTransientConsumers(typeof(Program));
 				tmq.EnhanceConnection(c => c.ResponseTimeout = TimeSpan.FromSeconds(555));
 				tmq.OnConnected(connector => Console.WriteLine($"CONNECTED => sample-b-consumer"));
