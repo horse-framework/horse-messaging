@@ -575,7 +575,7 @@ namespace Twino.Client.TMQ
 
             byte[] data = TmqWriter.Create(message, additionalHeaders);
             bool sent = await SendAsync(data);
-            return sent ? TwinoResult.Ok() : TwinoResult.Failed();
+            return sent ? TwinoResult.Ok() : new TwinoResult(TwinoResultCode.SendError);
         }
 
         /// <summary>
@@ -667,7 +667,7 @@ namespace Twino.Client.TMQ
             if (sent.Code != TwinoResultCode.Ok)
             {
                 _follower.UnfollowMessage(message);
-                return null;
+                return message.CreateResponse(sent.Code);
             }
 
             return await task;
