@@ -14,7 +14,10 @@ namespace Sample.Route.Consumer
 	{
 		private readonly ITwinoRouteBus _bus;
 
-	
+		// public SampleARequestHandler(ITwinoRouteBus bus)
+		// {
+		// 	_bus = bus;
+		// }
 
 		public Task<SampleResult> Handle(SampleARequest request, TmqMessage rawMessage, TmqClient client)
 		{
