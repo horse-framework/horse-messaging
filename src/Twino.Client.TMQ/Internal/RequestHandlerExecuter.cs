@@ -23,6 +23,7 @@ namespace Twino.Client.TMQ.Internal
             TRequest requestModel = (TRequest) model;
             Exception exception = null;
             IConsumerFactory consumerFactory = null;
+            bool respond = false;
 
             try
             {
@@ -48,6 +49,7 @@ namespace Twino.Client.TMQ.Internal
                     if (responseModel != null)
                         responseMessage.Serialize(responseModel, client.JsonSerializer);
 
+                    respond = true;
                     await client.SendAsync(responseMessage);
                 }
                 catch (Exception e)
@@ -73,12 +75,25 @@ namespace Twino.Client.TMQ.Internal
                     if (!string.IsNullOrEmpty(errorModel.Reason))
                         responseMessage.SetStringContent(errorModel.Reason);
 
+                    respond = true;
                     await client.SendAsync(responseMessage);
                     throw;
                 }
             }
             catch (Exception e)
             {
+                if (!respond)
+                {
+                    try
+                    {
+                        TmqMessage response = message.CreateResponse(TwinoResultCode.InternalServerError);
+                        await client.SendAsync(response);
+                    }
+                    catch
+                    {
+                    }
+                }
+
                 await SendExceptions(client, e);
                 exception = e;
                 throw;
