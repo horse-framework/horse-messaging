@@ -26,17 +26,12 @@ namespace Sample.Route.Producer
 			var provider = services.BuildServiceProvider();
 			provider.UseTwinoBus();
 
-			var bus = provider.GetService<ITwinoRouteBus>();
+			var bus = provider.GetService<ITwinoQueueBus>();
 
 			while (true)
 			{
 				if (!bus.GetClient().IsConnected) continue;
-				var request = new SampleARequest
-				{
-					Name = "A-REQUEST",
-					Guid = Guid.NewGuid()
-				};
-				var result = await bus.Execute<SampleARequest, List<SampleResult>>(request);
+				var pushed = bus.PushJson(new ProduceRequestA());
 				Thread.Sleep(1000);
 			}
 		}
