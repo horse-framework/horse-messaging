@@ -60,7 +60,7 @@ namespace Twino.MQ.Queues.States
 
             //if to process next message is requires previous message acknowledge, wait here
             if (_queue.Options.RequestAcknowledge && _queue.Options.WaitForAcknowledge)
-                await _queue.WaitForAcknowledge(message);
+                 await _queue.WaitForAcknowledge(message);
 
             message.Decision = await _queue.DeliveryHandler.BeginSend(_queue, message);
             if (!await _queue.ApplyDecision(message.Decision, message))

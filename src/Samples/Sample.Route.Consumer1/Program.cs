@@ -16,7 +16,7 @@ namespace Sample.Route.Consumer1
 				tmq.SetClientType("sample-a-consumer");
 				tmq.SetClientId("consumer1");
 				tmq.AddTransientConsumers(typeof(Program));
-				tmq.EnhanceConnection(c => c.ResponseTimeout = TimeSpan.FromSeconds(555));
+				tmq.EnhanceConnection(c => c.ResponseTimeout = TimeSpan.FromSeconds(5));
 				tmq.OnConnected(connector => Console.WriteLine($"CONNECTED => sample-a-consumer"));
 			});
 
