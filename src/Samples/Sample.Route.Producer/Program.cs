@@ -28,12 +28,16 @@ namespace Sample.Route.Producer
 
 			var bus = provider.GetService<ITwinoQueueBus>();
 
-			while (true)
+			int messageCount = 0;
+			while (messageCount < 4)
 			{
 				if (!bus.GetClient().IsConnected) continue;
-				var pushed = bus.PushJson(new ProduceRequestA());
-				Thread.Sleep(1000);
+				var pushed = await bus.PushJson(new ProduceRequestA());
+				messageCount++;
 			}
+
+			while (true)
+				await Task.Delay(500);
 		}
 	}
 }

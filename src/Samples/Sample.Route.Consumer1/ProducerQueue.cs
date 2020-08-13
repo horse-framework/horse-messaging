@@ -3,11 +3,15 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Sample.Route.Models;
 using Twino.Client.TMQ;
+using Twino.Client.TMQ.Annotations;
 using Twino.Client.TMQ.Bus;
 using Twino.Protocols.TMQ;
 
+
 namespace Sample.Route.Consumer1
 {
+	[AutoAck]
+	[AutoNack]
 	public class ProducerQueue: IQueueConsumer<ProduceRequestA>
 	{
 		private readonly ITwinoRouteBus _bus;
@@ -24,7 +28,8 @@ namespace Sample.Route.Consumer1
 				Name = "A-REQUEST",
 				Guid = Guid.NewGuid()
 			};
-			var result = await _bus.Execute<SampleARequest, List<SampleResult>>(request);
+			await Task.Delay(2000);
+			// var result = await _bus.Execute<SampleARequest, List<SampleResult>>(request);
 		}
 	}
 }
