@@ -20,12 +20,13 @@ namespace Twino.Client.TMQ.Internal
 
         public override async Task Execute(TmqClient client, TmqMessage message, object model)
         {
-            TRequest requestModel = (TRequest) model;
             Exception exception = null;
             IConsumerFactory consumerFactory = null;
+            bool respond = false;
 
             try
             {
+                TRequest requestModel = (TRequest) model;
                 ITwinoRequestHandler<TRequest, TResponse> handler;
 
                 if (_handler != null)
@@ -48,22 +49,12 @@ namespace Twino.Client.TMQ.Internal
                     if (responseModel != null)
                         responseMessage.Serialize(responseModel, client.JsonSerializer);
 
+                    respond = true;
                     await client.SendAsync(responseMessage);
                 }
                 catch (Exception e)
                 {
-                    ErrorResponse errorModel;
-                    try
-                    {
-                        errorModel = await handler.OnError(e, requestModel, message, client);
-                    }
-                    catch
-                    {
-                        errorModel = new ErrorResponse
-                                     {
-                                         ResultCode = TwinoResultCode.InternalServerError
-                                     };
-                    }
+                    ErrorResponse errorModel = await handler.OnError(e, requestModel, message, client);
 
                     if (errorModel.ResultCode == TwinoResultCode.Ok)
                         errorModel.ResultCode = TwinoResultCode.Failed;
@@ -73,12 +64,25 @@ namespace Twino.Client.TMQ.Internal
                     if (!string.IsNullOrEmpty(errorModel.Reason))
                         responseMessage.SetStringContent(errorModel.Reason);
 
+                    respond = true;
                     await client.SendAsync(responseMessage);
                     throw;
                 }
             }
             catch (Exception e)
             {
+                if (!respond)
+                {
+                    try
+                    {
+                        TmqMessage response = message.CreateResponse(TwinoResultCode.InternalServerError);
+                        await client.SendAsync(response);
+                    }
+                    catch
+                    {
+                    }
+                }
+
                 await SendExceptions(client, e);
                 exception = e;
                 throw;
