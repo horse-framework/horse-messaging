@@ -924,9 +924,6 @@ namespace Twino.MQ.Queues
             if (!message.Message.PendingAcknowledge)
                 message.Message.PendingAcknowledge = true;
 
-            if (_acknowledgeCallback == null)
-                return;
-
             //lock the object, because pending ack message should be queued
             if (_ackSync == null)
                 _ackSync = new SemaphoreSlim(1, 1);
@@ -934,7 +931,9 @@ namespace Twino.MQ.Queues
             await _ackSync.WaitAsync();
             try
             {
-                await _acknowledgeCallback.Task;
+                if (_acknowledgeCallback != null)
+                    await _acknowledgeCallback.Task;
+                
                 _acknowledgeCallback = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             }
             finally

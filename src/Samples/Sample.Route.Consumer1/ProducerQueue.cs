@@ -28,7 +28,8 @@ namespace Sample.Route.Consumer1
 				Name = "A-REQUEST",
 				Guid = Guid.NewGuid()
 			};
-			await Task.Delay(2000);
+			Console.WriteLine("Received");
+			await Task.Delay(5000);
 			// var result = await _bus.Execute<SampleARequest, List<SampleResult>>(request);
 		}
 	}
