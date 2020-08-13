@@ -1,20 +1,13 @@
 # Twino MQ
 
+[![NuGet](https://img.shields.io/nuget/v/Twino.MQ?label=server%20nuget)](https://www.nuget.org/packages/Twino.MQ)
+[![NuGet](https://img.shields.io/nuget/v/Twino.Client.TMQ?label=client%20nuget)](https://www.nuget.org/packages/Twino.Client.TMQ)
+[![NuGet](https://img.shields.io/nuget/v/Twino.Extensions.ConsumerFactory?label=extensions%20nuget)](https://www.nuget.org/packages/Twino.Extensions.ConsumerFactory)
+
 * Twino MQ is a .NET Core messaging queue and communication framework.
 * Twino MQ is not only queue messaging server. In provides direct messages, requests, responses and getting server and client informations.
 * Twino MQ has many queue messaging structure: Broadcast, Push, Pull, Cache.
 * Clients can subscribe events and gets information when another client is connected or does something.
-
-## NuGet Packages
-
-**[Twino MQ Client](https://www.nuget.org/packages/Twino.Client.TMQ)**<br>
-**[Twino MQ Server](https://www.nuget.org/packages/Twino.MQ)**<br>
-**[Twino MQ Server Data](https://www.nuget.org/packages/Twino.MQ.Data)**<br>
-**[TMQ Protocol](https://www.nuget.org/packages/Twino.Protocols.TMQ)**<br>
-
-And Twino MQ has useful extension package to implement Twino Clients to Twino.IOC or Microsoft.Extentions.DependencyInjection service providers.
-
-**[Twino Consumer Factory](https://www.nuget.org/packages/Twino.Extensions.ConsumerFactory)**<br>
 
 If you want to go further about Twino MQ infrastructure you can read specification and documentation from [here](https://github.com/twino-framework/twino-mq/blob/master/docs/twino-mq.pdf)<br><br>
 
@@ -113,3 +106,4 @@ Twino accepts producers and consumers as client. Each client can be producer and
 
      //to a direct target, ModelA required DirectTarget attribute
      await bus.SendDirectJsonAsync(new ModelA(), false);
+
