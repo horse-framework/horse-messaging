@@ -959,10 +959,10 @@ namespace Twino.MQ.Network
                 return;
             }
 
-            string content = message.GetStringContent();
+            string methodHeader = message.FindHeader(TmqHeaders.ROUTE_METHOD);
             RouteMethod method = RouteMethod.Distribute;
-            if (!string.IsNullOrEmpty(content))
-                method = (RouteMethod) Convert.ToInt32(content);
+            if (!string.IsNullOrEmpty(methodHeader))
+                method = (RouteMethod) Convert.ToInt32(methodHeader);
 
             //check create channel access
             if (_server.Authorization != null)
@@ -1090,7 +1090,7 @@ namespace Twino.MQ.Network
                 return;
             }
 
-            string name = message.GetStringContent();
+            string name = message.FindHeader(TmqHeaders.BINDING_NAME);
             if (string.IsNullOrEmpty(name))
             {
                 await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));

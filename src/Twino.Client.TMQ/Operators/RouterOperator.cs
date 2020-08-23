@@ -25,41 +25,113 @@ namespace Twino.Client.TMQ.Operators
         #region Actions
 
         /// <summary>
-        /// Creates new router, returns true if successful
+        /// Creates new router.
+        /// Returns success result if router already exists.
         /// </summary>
-        public async Task<bool> Create(string name, RouteMethod method)
+        public async Task<TwinoResult> Create(string name, RouteMethod method)
         {
-            throw new NotImplementedException();
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ContentType = KnownContentTypes.CreateRouter;
+            message.SetTarget(name);
+            message.PendingResponse = true;
+            message.AddHeader(TmqHeaders.ROUTE_METHOD, Convert.ToInt32(method).ToString());
+            message.SetMessageId(_client.UniqueIdGenerator.Create());
+            return await _client.WaitResponse(message, true);
         }
 
-        public async Task<RouterInformation[]> List()
+        /// <summary>
+        /// Gets information of all routers in server
+        /// </summary>
+        public async Task<TmqModelResult<List<RouterInformation>>> List()
         {
-            throw new NotImplementedException();
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ContentType = KnownContentTypes.ListRouters;
+            return await _client.SendAndGetJson<List<RouterInformation>>(message);
         }
 
-        public async Task<bool> Remove(string name)
+        /// <summary>
+        /// Removes a router.
+        /// Returns success result if router doesn't exists.
+        /// </summary>
+        public async Task<TwinoResult> Remove(string name)
         {
-            throw new NotImplementedException();
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ContentType = KnownContentTypes.RemoveRouter;
+            message.SetTarget(name);
+            message.PendingResponse = true;
+            message.SetMessageId(_client.UniqueIdGenerator.Create());
+            return await _client.WaitResponse(message, true);
         }
 
-        public async Task<bool> AddBinding(string routerName,
-                                           BindingType type,
-                                           string name,
-                                           BindingInteraction interaction,
-                                           ushort? contentType = null,
-                                           int priority = 1)
+        /// <summary>
+        /// Adds new binding to a router
+        /// </summary>
+        /// <param name="routerName">Router name of the binding</param>
+        /// <param name="type">Binding type</param>
+        /// <param name="name">Binding name</param>
+        /// <param name="target">Binding target. Queue name, tag name, direct receiver id, name, type, etc.</param>
+        /// <param name="interaction">Binding interaction</param>
+        /// <param name="bindingMethod">Binding method is used when multiple receivers available in same binding. It's used for Direct and Tag bindings.</param>
+        /// <param name="contentType">Overwritten content type if specified</param>
+        /// <param name="priority">Binding priority</param>
+        /// <returns></returns>
+        public async Task<TwinoResult> AddBinding(string routerName,
+                                                  BindingType type,
+                                                  string name,
+                                                  string target,
+                                                  BindingInteraction interaction,
+                                                  RouteMethod bindingMethod = RouteMethod.Distribute,
+                                                  ushort? contentType = null,
+                                                  int priority = 1)
         {
-            throw new NotImplementedException();
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ContentType = KnownContentTypes.AddBinding;
+            message.SetTarget(routerName);
+            message.PendingResponse = true;
+            message.SetMessageId(_client.UniqueIdGenerator.Create());
+            BindingInformation info = new BindingInformation
+                                      {
+                                          Name = name,
+                                          Target = target,
+                                          Interaction = interaction,
+                                          ContentType = contentType,
+                                          Priority = priority,
+                                          BindingType = type,
+                                          Method = bindingMethod
+                                      };
+            message.Serialize(info, new NewtonsoftContentSerializer());
+            return await _client.WaitResponse(message, true);
         }
 
-        public async Task<BindingInformation[]> GetBindings(string routerName)
+        /// <summary>
+        /// Gets all bindings of a router
+        /// </summary>
+        public async Task<TmqModelResult<List<BindingInformation>>> GetBindings(string routerName)
         {
-            throw new NotImplementedException();
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ContentType = KnownContentTypes.ListBindings;
+            message.SetTarget(routerName);
+            return await _client.SendAndGetJson<List<BindingInformation>>(message);
         }
 
-        public async Task<bool> RemoveBinding(string routerName, string bindingName)
+        /// <summary>
+        /// Remove a binding from a router
+        /// </summary>
+        public async Task<TwinoResult> RemoveBinding(string routerName, string bindingName)
         {
-            throw new NotImplementedException();
+            TmqMessage message = new TmqMessage();
+            message.Type = MessageType.Server;
+            message.ContentType = KnownContentTypes.RemoveBinding;
+            message.SetTarget(routerName);
+            message.PendingResponse = true;
+            message.SetMessageId(_client.UniqueIdGenerator.Create());
+            message.AddHeader(TmqHeaders.BINDING_NAME, bindingName);
+            return await _client.WaitResponse(message, true);
         }
 
         #endregion

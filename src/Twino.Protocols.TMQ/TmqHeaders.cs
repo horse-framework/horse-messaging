@@ -190,5 +190,15 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public const string QUEUE_TAG = "Queue-Tag";
         
+        /// <summary>
+        /// "Route-Method"
+        /// </summary>
+        public const string ROUTE_METHOD = "Route-Method";
+        
+        /// <summary>
+        /// "Binding-Name"
+        /// </summary>
+        public const string BINDING_NAME = "Binding-Name";
+
     }
 }
