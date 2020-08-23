@@ -140,5 +140,34 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public const ushort DecisionOverNode = 641;
 
+        /// <summary>
+        /// "651" Gets all rouuters
+        /// </summary>
+        public const ushort ListRouters = 651;
+
+        /// <summary>
+        /// "652" Creates new router
+        /// </summary>
+        public const ushort CreateRouter = 652;
+
+        /// <summary>
+        /// "653" Removes a router with it's bindings
+        /// </summary>
+        public const ushort RemoveRouter = 653;
+
+        /// <summary>
+        /// "661" List all bindings of a router
+        /// </summary>
+        public const ushort ListBindings = 661;
+
+        /// <summary>
+        /// "662" Creates new binding in a router
+        /// </summary>
+        public const ushort AddBinding = 662;
+
+        /// <summary>
+        /// "663" Removes a binding from a router
+        /// </summary>
+        public const ushort RemoveBinding = 663;
     }
 }

@@ -125,6 +125,10 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
             if (qsa != null)
                 descriptor.QueueStatus = qsa.Status;
 
+            QueueTagAttribute qta = type.GetCustomAttribute<QueueTagAttribute>(true);
+            if (qta != null)
+                descriptor.Tag = qta.Tag;
+
             IEnumerable<MessageHeaderAttribute> headerAttributes = type.GetCustomAttributes<MessageHeaderAttribute>(true);
             foreach (MessageHeaderAttribute headerAttribute in headerAttributes)
                 descriptor.Headers.Add(new KeyValuePair<string, string>(headerAttribute.Key, headerAttribute.Value));

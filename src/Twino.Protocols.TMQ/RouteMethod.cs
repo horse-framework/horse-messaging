@@ -1,4 +1,4 @@
-namespace Twino.MQ.Routing
+namespace Twino.Protocols.TMQ
 {
     /// <summary>
     /// Describes how messages are routed
@@ -8,12 +8,12 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Routes each message to all bindings
         /// </summary>
-        Distribute,
+        Distribute = 0,
 
         /// <summary>
         /// Routes each message to only one binding
         /// </summary>
-        RoundRobin,
+        RoundRobin = 1,
 
         /// <summary>
         /// Routes message to only first binding.
@@ -21,6 +21,6 @@ namespace Twino.MQ.Routing
         /// Messages are sent to only one active queue when it exists.
         /// When it's removed messages are sent to other queue while it's active. 
         /// </summary>
-        OnlyFirst
+        OnlyFirst = 2
     }
 }
