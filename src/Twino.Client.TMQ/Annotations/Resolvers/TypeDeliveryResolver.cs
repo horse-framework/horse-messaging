@@ -129,6 +129,10 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
             if (qta != null)
                 descriptor.Tag = qta.Tag;
 
+            ChannelTopicAttribute cta = type.GetCustomAttribute<ChannelTopicAttribute>(true);
+            if (cta != null)
+                descriptor.Topic = cta.Topic;
+
             IEnumerable<MessageHeaderAttribute> headerAttributes = type.GetCustomAttributes<MessageHeaderAttribute>(true);
             foreach (MessageHeaderAttribute headerAttribute in headerAttributes)
                 descriptor.Headers.Add(new KeyValuePair<string, string>(headerAttribute.Key, headerAttribute.Value));

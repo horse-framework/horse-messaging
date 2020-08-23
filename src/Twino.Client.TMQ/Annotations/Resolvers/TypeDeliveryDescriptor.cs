@@ -42,6 +42,11 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         public string Tag { get; set; }
 
         /// <summary>
+        /// If channel is created with a message push and that value is not null, channel topic.
+        /// </summary>
+        public string Topic { get; set; }
+
+        /// <summary>
         /// Headers for delivery descriptor of type
         /// </summary>
         public List<KeyValuePair<string, string>> Headers { get; }
@@ -164,6 +169,9 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
 
             if (!string.IsNullOrEmpty(Tag))
                 message.AddHeader(TmqHeaders.QUEUE_TAG, Tag);
+
+            if (!string.IsNullOrEmpty(Topic))
+                message.AddHeader(TmqHeaders.CHANNEL_TOPIC, Topic);
 
             foreach (KeyValuePair<string, string> pair in Headers)
                 message.AddHeader(pair.Key, pair.Value);

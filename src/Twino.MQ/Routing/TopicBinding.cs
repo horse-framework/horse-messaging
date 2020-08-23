@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
@@ -10,15 +9,15 @@ using Twino.Protocols.TMQ;
 namespace Twino.MQ.Routing
 {
     /// <summary>
-    /// Tag binding targets channel queues with tag name.
-    /// Binding can send message to multiple queues with same tag name.
+    /// Topic binding targets channels with topics.
+    /// Messages are pushed to queues in channels with topic.
     /// Binding receivers are received messages as QueueMessage.
     /// </summary>
-    public class TagBinding : Binding
+    public class TopicBinding : Binding
     {
-        private ChannelQueue[] _targetQueues;
-        private DateTime _queueUpdateTime;
-        private readonly TimeSpan _queueCacheDuration = TimeSpan.FromMilliseconds(1000);
+        private Channel[] _channels;
+        private DateTime _channelUpdateTime;
+        private readonly TimeSpan _channelCacheDuration = TimeSpan.FromMilliseconds(1000);
         private readonly IUniqueIdGenerator _idGenerator = new DefaultUniqueIdGenerator();
 
         /// <summary>
@@ -27,14 +26,14 @@ namespace Twino.MQ.Routing
         public RouteMethod RouteMethod { get; set; }
 
         /// <summary>
-        /// Creates new tag binding.
+        /// Creates new direct binding.
         /// Name is the name of the binding.
-        /// Target is the tag of queues.
+        /// Target is the topic of channels.
         /// Content Type should be Queue Id.
         /// Priority for router binding.
         /// </summary>
-        public TagBinding(string name, string target, ushort? contentType, int priority, BindingInteraction interaction,
-                          RouteMethod routeMethod = RouteMethod.Distribute)
+        public TopicBinding(string name, string target, ushort? contentType, int priority, BindingInteraction interaction,
+                            RouteMethod routeMethod = RouteMethod.Distribute)
             : base(name, target, contentType, priority, interaction)
         {
             RouteMethod = routeMethod;
@@ -43,10 +42,10 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Sends the message to binding receivers
         /// </summary>
-        public override Task<bool> Send(MqClient sender, TmqMessage message)
+        public override async Task<bool> Send(MqClient sender, TmqMessage message)
         {
-            if (DateTime.UtcNow - _queueUpdateTime > _queueCacheDuration)
-                RefreshQueueCache();
+            if (DateTime.UtcNow - _channelUpdateTime > _channelCacheDuration)
+                RefreshChannelCache();
 
             message.PendingAcknowledge = false;
             message.PendingResponse = false;
@@ -55,9 +54,19 @@ namespace Twino.MQ.Routing
             else if (Interaction == BindingInteraction.Response)
                 message.PendingResponse = true;
 
+            ushort queueId = ContentType.HasValue ? ContentType.Value : message.ContentType;
             bool sent = false;
-            foreach (ChannelQueue queue in _targetQueues)
+            foreach (Channel channel in _channels)
             {
+                ChannelQueue queue = channel.FindQueue(queueId);
+                if (queue == null)
+                {
+                    if (!Router.Server.Options.AutoQueueCreation)
+                        continue;
+
+                    queue = await channel.CreateQueue(queueId, channel.Options, message, Router.Server.DeliveryHandlerFactory);
+                }
+
                 string messageId = sent || Interaction == BindingInteraction.None
                                        ? message.MessageId
                                        : _idGenerator.Create();
@@ -70,22 +79,13 @@ namespace Twino.MQ.Routing
                 queue.AddMessage(queueMessage);
             }
 
-            return Task.FromResult(sent);
+            return sent;
         }
 
-        private void RefreshQueueCache()
+        private void RefreshChannelCache()
         {
-            _queueUpdateTime = DateTime.UtcNow;
-            List<ChannelQueue> list = new List<ChannelQueue>();
-
-            foreach (Channel channel in Router.Server.Channels)
-            {
-                IEnumerable<ChannelQueue> queues = channel.QueuesClone.Where(x => x.TagName != null && Filter.CheckMatch(x.TagName, Target));
-                foreach (ChannelQueue queue in queues)
-                    list.Add(queue);
-            }
-
-            _targetQueues = list.ToArray();
+            _channelUpdateTime = DateTime.UtcNow;
+            _channels = Router.Server.Channels.Where(x => x.Topic != null && Filter.CheckMatch(x.Topic, Target)).ToArray();
         }
     }
 }
