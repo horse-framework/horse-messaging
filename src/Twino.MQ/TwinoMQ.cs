@@ -225,6 +225,7 @@ namespace Twino.MQ
                 throw new DuplicateNameException("There is already a channel with same name: " + name);
 
             channel = new Channel(this, options, name);
+            channel.Topic = options.Topic;
             _channels.Add(channel);
 
             if (ChannelEventHandler != null)

@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.Protocols.TMQ;
@@ -15,7 +16,7 @@ namespace Twino.MQ.Routing
     {
         private DateTime _clientListUpdateTime;
         private MqClient[] _clients;
-        private volatile int _roundRobinIndex = -1;
+        private int _roundRobinIndex = -1;
 
         /// <summary>
         /// Direct binding routing method
@@ -105,7 +106,7 @@ namespace Twino.MQ.Routing
 
         private Task<bool> SendRoundRobin(TmqMessage message)
         {
-            _roundRobinIndex++;
+            Interlocked.Increment(ref _roundRobinIndex);
             int i = _roundRobinIndex;
 
             if (i >= _clients.Length)

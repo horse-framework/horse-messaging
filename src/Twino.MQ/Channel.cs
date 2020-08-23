@@ -26,6 +26,11 @@ namespace Twino.MQ
         public string Name { get; }
 
         /// <summary>
+        /// Channel Topic
+        /// </summary>
+        public string Topic { get; set; }
+
+        /// <summary>
         /// Server of the channel
         /// </summary>
         public TwinoMQ Server { get; }

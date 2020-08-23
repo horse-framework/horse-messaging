@@ -159,46 +159,50 @@ namespace Twino.Protocols.TMQ
         /// "LIFO"
         /// </summary>
         public const string LIFO = "LIFO";
-        
+
         /// <summary>
         /// "Priority-Messages"
         /// </summary>
         public const string PRIORITY_MESSAGES = "Priority-Messages";
-        
+
         /// <summary>
         /// "Messages"
         /// </summary>
         public const string MESSAGES = "Messages";
-        
+
         /// <summary>
         /// "Delivery-Handler"
         /// </summary>
         public const string DELIVERY_HANDLER = "Delivery-Handler";
-        
+
         /// <summary>
         /// "Wait-For-Acknowledge"
         /// </summary>
         public const string WAIT_FOR_ACKNOWLEDGE = "Wait-For-Acknowledge";
-        
+
         /// <summary>
         /// "Queue-Status"
         /// </summary>
         public const string QUEUE_STATUS = "Queue-Status";
-        
+
         /// <summary>
         /// "Queue-Tag"
         /// </summary>
         public const string QUEUE_TAG = "Queue-Tag";
-        
+
         /// <summary>
         /// "Route-Method"
         /// </summary>
         public const string ROUTE_METHOD = "Route-Method";
-        
+
         /// <summary>
         /// "Binding-Name"
         /// </summary>
         public const string BINDING_NAME = "Binding-Name";
 
+        /// <summary>
+        /// "Channel-Topic"
+        /// </summary>
+        public const string CHANNEL_TOPIC = "Channel-Topic";
     }
 }

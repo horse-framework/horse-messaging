@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
@@ -18,8 +19,9 @@ namespace Twino.MQ.Routing
     {
         private ChannelQueue[] _targetQueues;
         private DateTime _queueUpdateTime;
-        private readonly TimeSpan _queueCacheDuration = TimeSpan.FromMilliseconds(1000);
+        private readonly TimeSpan _queueCacheDuration = TimeSpan.FromMilliseconds(250);
         private readonly IUniqueIdGenerator _idGenerator = new DefaultUniqueIdGenerator();
+        private int _roundRobinIndex = -1;
 
         /// <summary>
         /// Tag binding routing method
@@ -27,9 +29,9 @@ namespace Twino.MQ.Routing
         public RouteMethod RouteMethod { get; set; }
 
         /// <summary>
-        /// Creates new direct binding.
+        /// Creates new tag binding.
         /// Name is the name of the binding.
-        /// Target is the tag of channels..
+        /// Target is the tag of queues.
         /// Content Type should be Queue Id.
         /// Priority for router binding.
         /// </summary>
@@ -55,6 +57,24 @@ namespace Twino.MQ.Routing
             else if (Interaction == BindingInteraction.Response)
                 message.PendingResponse = true;
 
+            switch (RouteMethod)
+            {
+                case RouteMethod.Distribute:
+                    return SendDistribute(message);
+
+                case RouteMethod.OnlyFirst:
+                    return SendOnlyFirst(message);
+
+                case RouteMethod.RoundRobin:
+                    return SendRoundRobin(message);
+
+                default:
+                    return Task.FromResult(false);
+            }
+        }
+
+        private Task<bool> SendDistribute(TmqMessage message)
+        {
             bool sent = false;
             foreach (ChannelQueue queue in _targetQueues)
             {
@@ -71,6 +91,37 @@ namespace Twino.MQ.Routing
             }
 
             return Task.FromResult(sent);
+        }
+
+        private Task<bool> SendRoundRobin(TmqMessage message)
+        {
+            Interlocked.Increment(ref _roundRobinIndex);
+            int i = _roundRobinIndex;
+
+            if (i >= _targetQueues.Length)
+            {
+                _roundRobinIndex = 0;
+                i = 0;
+            }
+
+            if (_targetQueues.Length == 0)
+                return Task.FromResult(false);
+
+            ChannelQueue queue = _targetQueues[i];
+            QueueMessage queueMessage = new QueueMessage(message);
+            queue.AddMessage(queueMessage);
+            return Task.FromResult(true);
+        }
+
+        private Task<bool> SendOnlyFirst(TmqMessage message)
+        {
+            if (_targetQueues.Length < 1)
+                return Task.FromResult(false);
+
+            ChannelQueue queue = _targetQueues[0];
+            QueueMessage queueMessage = new QueueMessage(message);
+            queue.AddMessage(queueMessage);
+            return Task.FromResult(true);
         }
 
         private void RefreshQueueCache()

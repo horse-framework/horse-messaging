@@ -169,6 +169,10 @@ namespace Twino.MQ.Network
                 return;
             }
 
+            string topic = message.FindHeader(TmqHeaders.CHANNEL_TOPIC);
+            if (!string.IsNullOrEmpty(topic))
+                channel.Topic = topic;
+
             ChannelClient found = channel.FindClient(client.UniqueId);
             if (found != null)
             {
