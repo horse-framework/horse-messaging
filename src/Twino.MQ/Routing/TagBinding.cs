@@ -107,9 +107,8 @@ namespace Twino.MQ.Routing
             if (_targetQueues.Length == 0)
                 return Task.FromResult(false);
 
-            ChannelQueue queue = _targetQueues[_roundRobinIndex];
-            TmqMessage msg = message.Clone(true, true, message.MessageId);
-            QueueMessage queueMessage = new QueueMessage(msg);
+            ChannelQueue queue = _targetQueues[i];
+            QueueMessage queueMessage = new QueueMessage(message);
             queue.AddMessage(queueMessage);
             return Task.FromResult(true);
         }
@@ -120,8 +119,7 @@ namespace Twino.MQ.Routing
                 return Task.FromResult(false);
 
             ChannelQueue queue = _targetQueues[0];
-            TmqMessage msg = message.Clone(true, true, message.MessageId);
-            QueueMessage queueMessage = new QueueMessage(msg);
+            QueueMessage queueMessage = new QueueMessage(message);
             queue.AddMessage(queueMessage);
             return Task.FromResult(true);
         }
