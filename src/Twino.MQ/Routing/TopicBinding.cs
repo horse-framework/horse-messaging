@@ -17,7 +17,7 @@ namespace Twino.MQ.Routing
     {
         private Channel[] _channels;
         private DateTime _channelUpdateTime;
-        private readonly TimeSpan _channelCacheDuration = TimeSpan.FromMilliseconds(1000);
+        private readonly TimeSpan _channelCacheDuration = TimeSpan.FromMilliseconds(250);
         private readonly IUniqueIdGenerator _idGenerator = new DefaultUniqueIdGenerator();
 
         /// <summary>
