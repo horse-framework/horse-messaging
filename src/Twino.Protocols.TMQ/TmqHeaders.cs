@@ -185,5 +185,10 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         public const string QUEUE_STATUS = "Queue-Status";
         
+        /// <summary>
+        /// "Queue-Tag"
+        /// </summary>
+        public const string QUEUE_TAG = "Queue-Tag";
+        
     }
 }

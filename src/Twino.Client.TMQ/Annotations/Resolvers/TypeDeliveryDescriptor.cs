@@ -37,6 +37,11 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         public MessagingQueueStatus? QueueStatus { get; set; }
 
         /// <summary>
+        /// If queue is created with a message push and that value is not null, queue will be created with that Tag
+        /// </summary>
+        public string Tag { get; set; }
+
+        /// <summary>
         /// Headers for delivery descriptor of type
         /// </summary>
         public List<KeyValuePair<string, string>> Headers { get; }
@@ -156,6 +161,9 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
             
             if (QueueStatus.HasValue)
                 message.AddHeader(TmqHeaders.QUEUE_STATUS, QueueStatus.Value.ToString().ToLower());
+
+            if (!string.IsNullOrEmpty(Tag))
+                message.AddHeader(TmqHeaders.QUEUE_TAG, Tag);
 
             foreach (KeyValuePair<string, string> pair in Headers)
                 message.AddHeader(pair.Key, pair.Value);

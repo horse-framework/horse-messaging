@@ -249,6 +249,10 @@ namespace Twino.MQ
                 string queueStatus = requestMessage.FindHeader(TmqHeaders.QUEUE_STATUS);
                 if (queueStatus != null)
                     options.Status = QueueStatusHelper.FindStatus(queueStatus);
+
+                string tag = requestMessage.FindHeader(TmqHeaders.QUEUE_TAG);
+                if (!string.IsNullOrEmpty(tag))
+                    options.TagName = tag;
             }
 
             queue = new ChannelQueue(this, queueId, options);

@@ -10,7 +10,7 @@ using Twino.Protocols.TMQ;
 namespace Twino.MQ.Routing
 {
     /// <summary>
-    /// Queue message binding. Targets channel queues.
+    /// Tag binding targets channel queues with tag name.
     /// Binding can send message to multiple queues with same tag name.
     /// Binding receivers are received messages as QueueMessage.
     /// </summary>
