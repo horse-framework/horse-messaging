@@ -34,6 +34,11 @@ namespace Twino.MQ.Options
         public bool DestroyWhenEmpty { get; set; }
 
         /// <summary>
+        /// Channel Topic
+        /// </summary>
+        public string Topic { get; set; }
+
+        /// <summary>
         /// Clones channel options from another options
         /// </summary>
         internal static ChannelOptions CloneFrom(ChannelOptions options)
@@ -55,7 +60,8 @@ namespace Twino.MQ.Options
                 MessageSizeLimit = options.MessageSizeLimit,
                 ClientLimit = options.ClientLimit,
                 QueueLimit = options.QueueLimit,
-                DestroyWhenEmpty = options.DestroyWhenEmpty
+                DestroyWhenEmpty = options.DestroyWhenEmpty,
+                Topic = options.Topic
             };
         }
     }
