@@ -91,39 +91,31 @@ namespace Twino.MQ.Queues.States
                 delivery.FirstAcquirer = message.Message.FirstAcquirer;
 
                 //send the message
-                bool sent = await client.Client.SendAsync(messageData);
+                _ = client.Client.SendAsync(messageData);
 
-                if (sent)
-                {
-                    messageIsSent = true;
+                messageIsSent = true;
 
-                    //adds the delivery to time keeper to check timing up
-                    _queue.TimeKeeper.AddAcknowledgeCheck(delivery);
+                //adds the delivery to time keeper to check timing up
+                _queue.TimeKeeper.AddAcknowledgeCheck(delivery);
 
-                    //set as sent, if message is sent to it's first acquirer,
-                    //set message first acquirer false and re-create byte array data of the message
-                    bool firstAcquirer = message.Message.FirstAcquirer;
+                //set as sent, if message is sent to it's first acquirer,
+                //set message first acquirer false and re-create byte array data of the message
+                bool firstAcquirer = message.Message.FirstAcquirer;
 
-                    //mark message is sent
-                    delivery.MarkAsSent();
+                //mark message is sent
+                delivery.MarkAsSent();
 
-                    //do after send operations for per message
-                    _queue.Info.AddDelivery();
-                    Decision d = await _queue.DeliveryHandler.ConsumerReceived(_queue, delivery, client.Client);
-                    final = ChannelQueue.CreateFinalDecision(final, d);
+                //do after send operations for per message
+                _queue.Info.AddDelivery();
+                Decision d = await _queue.DeliveryHandler.ConsumerReceived(_queue, delivery, client.Client);
+                final = ChannelQueue.CreateFinalDecision(final, d);
 
-                    //if we are sending to only first acquirer, break
-                    if (_queue.Options.SendOnlyFirstAcquirer && firstAcquirer)
-                        break;
+                //if we are sending to only first acquirer, break
+                if (_queue.Options.SendOnlyFirstAcquirer && firstAcquirer)
+                    break;
 
-                    if (firstAcquirer && clients.Count > 1)
-                        messageData = TmqWriter.Create(message.Message);
-                }
-                else
-                {
-                    Decision d = await _queue.DeliveryHandler.ConsumerReceiveFailed(_queue, delivery, client.Client);
-                    final = ChannelQueue.CreateFinalDecision(final, d);
-                }
+                if (firstAcquirer && clients.Count > 1)
+                    messageData = TmqWriter.Create(message.Message);
             }
 
             message.Decision = final;
