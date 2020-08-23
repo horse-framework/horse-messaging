@@ -1,4 +1,4 @@
-namespace Twino.MQ.Routing
+namespace Twino.Protocols.TMQ
 {
     /// <summary>
     /// Options for pending acknowledge or response from binding receiver

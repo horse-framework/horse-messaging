@@ -1,4 +1,4 @@
-namespace Twino.MQ.Routing
+namespace Twino.Protocols.TMQ
 {
     /// <summary>
     /// Describes how messages are routed
