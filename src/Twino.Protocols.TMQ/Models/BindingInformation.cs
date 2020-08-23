@@ -52,5 +52,12 @@ namespace Twino.Protocols.TMQ.Models
         [JsonProperty("BindingType")]
         [JsonPropertyName("BindingType")]
         public BindingType BindingType { get; set; }
+
+        /// <summary>
+        /// Routing method in binding
+        /// </summary>
+        [JsonProperty("Method")]
+        [JsonPropertyName("Method")]
+        public RouteMethod Method { get; set; }
     }
 }

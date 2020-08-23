@@ -15,7 +15,7 @@ namespace Twino.Protocols.TMQ.Models
         /// </summary>
         [JsonProperty("Name")]
         [JsonPropertyName("Name")]
-        public string Name { get; }
+        public string Name { get; set; }
 
         /// <summary>
         /// If true, messages are routed to bindings.
@@ -30,6 +30,6 @@ namespace Twino.Protocols.TMQ.Models
         /// </summary>
         [JsonProperty("Method")]
         [JsonPropertyName("Method")]
-        public RouteMethod Method { get; }
+        public RouteMethod Method { get; set; }
     }
 }

@@ -8,26 +8,26 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// "GET"
         /// </summary>
-        Get,
+        Get = 0,
 
         /// <summary>
         /// "POST"
         /// </summary>
-        Post,
+        Post = 1,
 
         /// <summary>
         /// "PUT"
         /// </summary>
-        Put,
+        Put = 2,
 
         /// <summary>
         /// "PATCH"
         /// </summary>
-        Patch,
+        Patch = 3,
 
         /// <summary>
         /// "DELETE"
         /// </summary>
-        Delete
+        Delete = 4
     }
 }

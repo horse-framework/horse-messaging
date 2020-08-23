@@ -9,6 +9,7 @@ using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
 using Twino.MQ.Queues;
+using Twino.MQ.Routing;
 using Twino.Protocols.TMQ;
 using Twino.Protocols.TMQ.Models;
 
@@ -111,6 +112,30 @@ namespace Twino.MQ.Network
                 //get client information list
                 case KnownContentTypes.ClientList:
                     return GetClients(client, message);
+
+                //lists all routers
+                case KnownContentTypes.ListRouters:
+                    return ListRouters(client, message);
+
+                //creates new router
+                case KnownContentTypes.CreateRouter:
+                    return CreateRouter(client, message);
+
+                //removes a router
+                case KnownContentTypes.RemoveRouter:
+                    return RemoveRouter(client, message);
+
+                //lists all bindings of a router
+                case KnownContentTypes.ListBindings:
+                    return ListRouterBindings(client, message);
+
+                //adds new binding to a router
+                case KnownContentTypes.AddBinding:
+                    return CreateRouterBinding(client, message);
+
+                //removes a binding from a router
+                case KnownContentTypes.RemoveBinding:
+                    return RemoveRouterBinding(client, message);
 
                 //for not-defines content types, use user-defined message handler
                 default:
@@ -915,6 +940,230 @@ namespace Twino.MQ.Network
             TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.ClientList;
             response.Serialize(list, _server.MessageContentSerializer);
+            await client.SendAsync(response);
+        }
+
+        #endregion
+
+        #region Router
+
+        /// <summary>
+        /// Creates new router
+        /// </summary>
+        private async Task CreateRouter(MqClient client, TmqMessage message)
+        {
+            IRouter found = _server.FindRouter(message.Target);
+            if (found != null)
+            {
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
+                return;
+            }
+
+            string content = message.GetStringContent();
+            RouteMethod method = RouteMethod.Distribute;
+            if (!string.IsNullOrEmpty(content))
+                method = (RouteMethod) Convert.ToInt32(content);
+
+            //check create channel access
+            if (_server.Authorization != null)
+            {
+                bool grant = await _server.Authorization.CanCreateRouter(client, message.Target, method);
+                if (!grant)
+                {
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
+                    return;
+                }
+            }
+
+            _server.AddRouter(message.Target, method);
+            await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
+        }
+
+        /// <summary>
+        /// Removes a router with it's bindings
+        /// </summary>
+        private async Task RemoveRouter(MqClient client, TmqMessage message)
+        {
+            IRouter found = _server.FindRouter(message.Target);
+            if (found == null)
+            {
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
+                return;
+            }
+
+            //check create channel access
+            if (_server.Authorization != null)
+            {
+                bool grant = await _server.Authorization.CanRemoveRouter(client, found);
+                if (!grant)
+                {
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
+                    return;
+                }
+            }
+
+            _server.RemoveRouter(found);
+            await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
+        }
+
+        /// <summary>
+        /// Sends all routers
+        /// </summary>
+        private async Task ListRouters(MqClient client, TmqMessage message)
+        {
+            List<RouterInformation> items = new List<RouterInformation>();
+            foreach (IRouter router in _server.Routers)
+            {
+                RouterInformation info = new RouterInformation
+                                         {
+                                             Name = router.Name,
+                                             IsEnabled = router.IsEnabled
+                                         };
+
+                if (router is Router r)
+                    info.Method = r.Method;
+
+                items.Add(info);
+            }
+
+            TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
+            response.Serialize(items, new NewtonsoftContentSerializer());
+            await client.SendAsync(response);
+        }
+
+        /// <summary>
+        /// Creates new binding for a router
+        /// </summary>
+        private async Task CreateRouterBinding(MqClient client, TmqMessage message)
+        {
+            IRouter router = _server.FindRouter(message.Target);
+            if (router == null)
+            {
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
+                return;
+            }
+
+            BindingInformation info = message.Deserialize<BindingInformation>(new NewtonsoftContentSerializer());
+
+            //check create channel access
+            if (_server.Authorization != null)
+            {
+                bool grant = await _server.Authorization.CanCreateBinding(client, router, info);
+                if (!grant)
+                {
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
+                    return;
+                }
+            }
+
+            switch (info.BindingType)
+            {
+                case BindingType.Direct:
+                    router.AddBinding(new DirectBinding(info.Name, info.Target, info.ContentType, info.Priority, info.Interaction, info.Method));
+                    break;
+
+                case BindingType.Queue:
+                    router.AddBinding(new QueueBinding(info.Name, info.Target, info.ContentType ?? 0, info.Priority, info.Interaction));
+                    break;
+
+                case BindingType.Http:
+                    router.AddBinding(new HttpBinding(info.Name, info.Target, (HttpBindingMethod) (info.ContentType ?? 0), info.Priority, info.Interaction));
+                    break;
+
+                case BindingType.Tag:
+                    router.AddBinding(new TagBinding(info.Name, info.Target, info.ContentType ?? 0, info.Priority, info.Interaction, info.Method));
+                    break;
+            }
+
+            await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
+        }
+
+        /// <summary>
+        /// Removes a router with it's bindings
+        /// </summary>
+        private async Task RemoveRouterBinding(MqClient client, TmqMessage message)
+        {
+            IRouter router = _server.FindRouter(message.Target);
+            if (router == null)
+            {
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
+                return;
+            }
+
+            string name = message.GetStringContent();
+            if (string.IsNullOrEmpty(name))
+            {
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
+                return;
+            }
+
+            Binding[] bindings = router.GetBindings();
+            Binding binding = bindings.FirstOrDefault(x => x.Name == name);
+            if (binding == null)
+            {
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
+                return;
+            }
+
+            //check create channel access
+            if (_server.Authorization != null)
+            {
+                bool grant = await _server.Authorization.CanRemoveBinding(client, binding);
+                if (!grant)
+                {
+                    await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
+                    return;
+                }
+            }
+
+            router.RemoveBinding(binding);
+            await client.SendAsync(message.CreateResponse(TwinoResultCode.Ok));
+        }
+
+        /// <summary>
+        /// Sends all bindings of a router
+        /// </summary>
+        private async Task ListRouterBindings(MqClient client, TmqMessage message)
+        {
+            IRouter router = _server.FindRouter(message.Target);
+            if (router == null)
+            {
+                await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
+                return;
+            }
+
+            List<BindingInformation> items = new List<BindingInformation>();
+            foreach (Binding binding in router.GetBindings())
+            {
+                BindingInformation info = new BindingInformation
+                                          {
+                                              Name = binding.Name,
+                                              Target = binding.Target,
+                                              Priority = binding.Priority,
+                                              ContentType = binding.ContentType,
+                                              Interaction = binding.Interaction
+                                          };
+
+                if (binding is QueueBinding)
+                    info.BindingType = BindingType.Queue;
+                else if (binding is DirectBinding directBinding)
+                {
+                    info.Method = directBinding.RouteMethod;
+                    info.BindingType = BindingType.Direct;
+                }
+                else if (binding is TagBinding tagBinding)
+                {
+                    info.Method = tagBinding.RouteMethod;
+                    info.BindingType = BindingType.Tag;
+                }
+                else if (binding is HttpBinding)
+                    info.BindingType = BindingType.Http;
+
+                items.Add(info);
+            }
+
+            TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
+            response.Serialize(items, new NewtonsoftContentSerializer());
             await client.SendAsync(response);
         }
 

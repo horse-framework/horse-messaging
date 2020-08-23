@@ -22,15 +22,22 @@ namespace Twino.MQ.Routing
         private readonly IUniqueIdGenerator _idGenerator = new DefaultUniqueIdGenerator();
 
         /// <summary>
+        /// Tag binding routing method
+        /// </summary>
+        public RouteMethod RouteMethod { get; set; }
+
+        /// <summary>
         /// Creates new direct binding.
         /// Name is the name of the binding.
         /// Target is the tag of channels..
         /// Content Type should be Queue Id.
         /// Priority for router binding.
         /// </summary>
-        public TagBinding(string name, string target, ushort? contentType, int priority, BindingInteraction interaction)
+        public TagBinding(string name, string target, ushort? contentType, int priority, BindingInteraction interaction,
+                          RouteMethod routeMethod = RouteMethod.Distribute)
             : base(name, target, contentType, priority, interaction)
         {
+            RouteMethod = routeMethod;
         }
 
         /// <summary>

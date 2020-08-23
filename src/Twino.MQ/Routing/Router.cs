@@ -64,6 +64,14 @@ namespace Twino.MQ.Routing
         #region Add - Remove
 
         /// <summary>
+        /// Returns all bindings of router
+        /// </summary>
+        public Binding[] GetBindings()
+        {
+            return Bindings;
+        }
+
+        /// <summary>
         /// Adds new binding to router
         /// </summary>
         public bool AddBinding(Binding binding)
@@ -188,7 +196,7 @@ namespace Twino.MQ.Routing
                 {
                     if (binding.Interaction != BindingInteraction.None)
                         result = RouterPublishResult.OkAndWillBeRespond;
-                    
+
                     else if (result == RouterPublishResult.NoReceivers)
                         result = RouterPublishResult.OkWillNotRespond;
                 }

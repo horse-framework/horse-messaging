@@ -26,6 +26,11 @@ namespace Twino.MQ.Routing
         bool IsEnabled { get; set; }
 
         /// <summary>
+        /// Gets all bindings of router
+        /// </summary>
+        Binding[] GetBindings();
+
+        /// <summary>
         /// Adds new binding to router
         /// </summary>
         bool AddBinding(Binding binding);
