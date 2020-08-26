@@ -148,7 +148,7 @@ namespace Twino.Client.TMQ.Operators
                                                IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TwinoMessage msg = new TwinoMessage(MessageType.Router, routerName, contentType);
-            msg.PendingAcknowledge = waitForAcknowledge;
+            msg.PendingResponse = waitForAcknowledge;
             msg.SetMessageId(_client.UniqueIdGenerator.Create());
             msg.Content = new MemoryStream(Encoding.UTF8.GetBytes(message));
 
@@ -169,7 +169,7 @@ namespace Twino.Client.TMQ.Operators
                                                IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TwinoMessage msg = new TwinoMessage(MessageType.Router, routerName, contentType);
-            msg.PendingAcknowledge = waitForAcknowledge;
+            msg.PendingResponse = waitForAcknowledge;
             msg.SetMessageId(_client.UniqueIdGenerator.Create());
             msg.Content = new MemoryStream(data);
 
@@ -201,7 +201,7 @@ namespace Twino.Client.TMQ.Operators
             TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor(model.GetType());
             TwinoMessage message = descriptor.CreateMessage(MessageType.Router, routerName, contentType);
 
-            message.PendingAcknowledge = waitForAcknowledge;
+            message.PendingResponse = waitForAcknowledge;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
             message.Serialize(model, _client.JsonSerializer);
 

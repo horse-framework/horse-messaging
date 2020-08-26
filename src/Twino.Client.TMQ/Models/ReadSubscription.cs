@@ -35,9 +35,9 @@ namespace Twino.Client.TMQ.Models
         public ReadSource Source { get; set; }
 
         /// <summary>
-        /// Subscribed channel
+        /// Subscribed queue name
         /// </summary>
-        public string Channel { get; set; }
+        public string Queue { get; set; }
 
         /// <summary>
         /// Subscribed content type

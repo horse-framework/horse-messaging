@@ -161,8 +161,7 @@ namespace Twino.Client.TMQ
                     {
                         case ReadSource.Queue:
                             subs = _subscriptions.Where(x => x.Source == ReadSource.Queue &&
-                                                             x.ContentType == message.ContentType &&
-                                                             x.Channel.Equals(message.Target, StringComparison.InvariantCultureIgnoreCase)).ToList();
+                                                             x.Queue.Equals(message.Target, StringComparison.InvariantCultureIgnoreCase)).ToList();
                             break;
 
                         case ReadSource.Direct:
@@ -232,25 +231,21 @@ namespace Twino.Client.TMQ
             if (descriptor == null)
                 throw new ArgumentNullException("Can't resolve TypeDeliveryDescriptor. Use overload method On(string,ushort,T)");
 
-            if (string.IsNullOrEmpty(descriptor.ChannelName))
-                throw new NullReferenceException("Type doesn't have ChannelNameAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
+            if (string.IsNullOrEmpty(descriptor.QueueName))
+                throw new NullReferenceException("Type doesn't have QueueNameAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
 
-            if (!descriptor.QueueId.HasValue)
-                throw new NullReferenceException("Type doesn't have QueueIdAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
-
-            On(descriptor.ChannelName, descriptor.QueueId.Value, action);
+            On(descriptor.QueueName, action);
         }
 
         /// <summary>
-        /// Subscribe to messages in a queue in a channel
+        /// Subscribe to messages from a queue
         /// </summary>
-        public void On<T>(string channel, ushort queueId, Action<T> action)
+        public void On<T>(string queueName, Action<T> action)
         {
             ReadSubscription subscription = new ReadSubscription
                                             {
                                                 Source = ReadSource.Queue,
-                                                Channel = channel,
-                                                ContentType = queueId,
+                                                Queue = queueName,
                                                 MessageType = typeof(T),
                                                 Action = action
                                             };
@@ -260,15 +255,14 @@ namespace Twino.Client.TMQ
         }
 
         /// <summary>
-        /// Subscribe to messages in a queue in a channel
+        /// Subscribe to messages from a queue
         /// </summary>
-        public void On(string channel, ushort queueId, Action<TwinoMessage> action)
+        public void On(string queueName, Action<TwinoMessage> action)
         {
             ReadSubscription subscription = new ReadSubscription
                                             {
                                                 Source = ReadSource.Queue,
-                                                Channel = channel,
-                                                ContentType = queueId,
+                                                Queue = queueName,
                                                 MessageType = null,
                                                 Action = action,
                                                 TmqMessageParameter = true
@@ -288,25 +282,21 @@ namespace Twino.Client.TMQ
             if (descriptor == null)
                 throw new ArgumentNullException("Can't resolve TypeDeliveryDescriptor. Use overload method On(string,ushort,T)");
 
-            if (string.IsNullOrEmpty(descriptor.ChannelName))
-                throw new NullReferenceException("Type doesn't have ChannelNameAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
+            if (string.IsNullOrEmpty(descriptor.QueueName))
+                throw new NullReferenceException("Type doesn't have QueueNameAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
 
-            if (!descriptor.QueueId.HasValue)
-                throw new NullReferenceException("Type doesn't have QueueIdAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
-
-            On(descriptor.ChannelName, descriptor.QueueId.Value, action);
+            On(descriptor.QueueName, action);
         }
 
         /// <summary>
         /// Subscribe to messages in a queue in a channel
         /// </summary>
-        public void On<T>(string channel, ushort queueId, Action<T, TwinoMessage> action)
+        public void On<T>(string queueName, Action<T, TwinoMessage> action)
         {
             ReadSubscription subscription = new ReadSubscription
                                             {
                                                 Source = ReadSource.Queue,
-                                                Channel = channel,
-                                                ContentType = queueId,
+                                                Queue = queueName,
                                                 MessageType = typeof(T),
                                                 Action = action,
                                                 TmqMessageParameter = true
@@ -326,24 +316,20 @@ namespace Twino.Client.TMQ
             if (descriptor == null)
                 throw new ArgumentNullException("Can't resolve TypeDeliveryDescriptor. Use overload method On(string,ushort,T)");
 
-            if (string.IsNullOrEmpty(descriptor.ChannelName))
+            if (string.IsNullOrEmpty(descriptor.QueueName))
                 throw new NullReferenceException("Type doesn't have ChannelNameAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
 
-            if (!descriptor.QueueId.HasValue)
-                throw new NullReferenceException("Type doesn't have QueueIdAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
-
-            Off(descriptor.ChannelName, descriptor.QueueId.Value);
+            Off(descriptor.QueueName);
         }
 
         /// <summary>
         /// Unsubscribe from messages in a queue in a channel 
         /// </summary>
-        public void Off(string channel, ushort queueId)
+        public void Off(string queueName)
         {
             lock (_subscriptions)
-                _subscriptions.RemoveAll(x => x.Source == ReadSource.Queue &&
-                                              x.ContentType == queueId
-                                              && x.Channel.Equals(channel, StringComparison.InvariantCultureIgnoreCase));
+                _subscriptions.RemoveAll(x => x.Source == ReadSource.Queue
+                                              && x.Queue.Equals(queueName, StringComparison.InvariantCultureIgnoreCase));
         }
 
         #endregion
@@ -472,7 +458,7 @@ namespace Twino.Client.TMQ
             ReadSubscription subscription = new ReadSubscription
                                             {
                                                 Source = ReadSource.Request,
-                                                Channel = null,
+                                                Queue = null,
                                                 ContentType = contentType,
                                                 MessageType = typeof(TRequest),
                                                 Action = null,
@@ -499,15 +485,6 @@ namespace Twino.Client.TMQ
         #region Subscriptions
 
         /// <summary>
-        /// Clear all subscriptions for the channels and direct messages
-        /// </summary>
-        public void Clear(string channel)
-        {
-            lock (_subscriptions)
-                _subscriptions.RemoveAll(x => x.Channel.Equals(channel, StringComparison.InvariantCultureIgnoreCase));
-        }
-
-        /// <summary>
         /// Clear all subscription for this instance
         /// </summary>
         public void ClearAll()
@@ -517,9 +494,9 @@ namespace Twino.Client.TMQ
         }
 
         /// <summary>
-        /// Returns all subscribed channels
+        /// Returns all subscribed queues
         /// </summary>
-        public string[] GetSubscribedChannels()
+        public string[] GetSubscribedQueues()
         {
             List<string> channels = new List<string>();
 
@@ -530,7 +507,7 @@ namespace Twino.Client.TMQ
                     if (subscription.Source != ReadSource.Queue)
                         continue;
 
-                    channels.Add(subscription.Channel);
+                    channels.Add(subscription.Queue);
                 }
             }
 
@@ -685,7 +662,7 @@ namespace Twino.Client.TMQ
             ReadSubscription subscription = new ReadSubscription
                                             {
                                                 Source = typeInfo.Source,
-                                                Channel = target.Item1,
+                                                Queue = target.Item1,
                                                 ContentType = target.Item2,
                                                 MessageType = typeInfo.ModelType,
                                                 ResponseType = typeInfo.ResponseType,
@@ -705,15 +682,10 @@ namespace Twino.Client.TMQ
             string target = null;
             if (source == ReadSource.Queue)
             {
-                if (consumerDescriptor.HasQueueId)
-                    contentType = consumerDescriptor.QueueId ?? 0;
-                else if (modelDescriptor.HasQueueId)
-                    contentType = modelDescriptor.QueueId ?? 0;
-
-                if (consumerDescriptor.HasChannelName)
-                    target = consumerDescriptor.ChannelName;
-                else if (modelDescriptor.HasChannelName)
-                    target = modelDescriptor.ChannelName;
+                if (consumerDescriptor.HasQueueName)
+                    target = consumerDescriptor.QueueName;
+                else if (modelDescriptor.HasQueueName)
+                    target = modelDescriptor.QueueName;
             }
             else
             {
@@ -729,7 +701,7 @@ namespace Twino.Client.TMQ
             }
 
             if (source == ReadSource.Queue && string.IsNullOrEmpty(target))
-                target = modelDescriptor.ChannelName;
+                target = modelDescriptor.QueueName;
 
             return new Tuple<string, ushort>(target, contentType);
         }
