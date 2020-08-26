@@ -176,9 +176,9 @@ namespace Twino.Protocols.TMQ
         public const string DELIVERY_HANDLER = "Delivery-Handler";
 
         /// <summary>
-        /// "Wait-For-Acknowledge"
+        /// "Acknowledge"
         /// </summary>
-        public const string WAIT_FOR_ACKNOWLEDGE = "Wait-For-Acknowledge";
+        public const string ACKNOWLEDGE = "Acknowledge";
 
         /// <summary>
         /// "Queue-Status"
@@ -201,8 +201,8 @@ namespace Twino.Protocols.TMQ
         public const string BINDING_NAME = "Binding-Name";
 
         /// <summary>
-        /// "Channel-Topic"
+        /// "Queue-Topic"
         /// </summary>
-        public const string CHANNEL_TOPIC = "Channel-Topic";
+        public const string QUEUE_TOPIC = "Queue-Topic";
     }
 }

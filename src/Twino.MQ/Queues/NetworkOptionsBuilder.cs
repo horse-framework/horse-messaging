@@ -1,6 +1,7 @@
 using System;
 using System.Text.Json.Serialization;
 using Twino.MQ.Options;
+using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Queues
 {

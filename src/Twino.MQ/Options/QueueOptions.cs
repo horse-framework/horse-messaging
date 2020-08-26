@@ -1,5 +1,6 @@
 using System;
 using Twino.MQ.Queues;
+using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Options
 {

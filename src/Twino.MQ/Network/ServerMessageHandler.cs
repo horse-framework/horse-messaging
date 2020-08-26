@@ -169,7 +169,7 @@ namespace Twino.MQ.Network
                 return;
             }
 
-            string topic = message.FindHeader(TmqHeaders.CHANNEL_TOPIC);
+            string topic = message.FindHeader(TmqHeaders.QUEUE_TOPIC);
             if (!string.IsNullOrEmpty(topic))
                 channel.Topic = topic;
 

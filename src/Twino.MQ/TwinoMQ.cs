@@ -259,7 +259,7 @@ namespace Twino.MQ
 
             if (requestMessage != null)
             {
-                string waitForAck = requestMessage.FindHeader(TmqHeaders.WAIT_FOR_ACKNOWLEDGE);
+                string waitForAck = requestMessage.FindHeader(TmqHeaders.ACKNOWLEDGE);
                 if (!string.IsNullOrEmpty(waitForAck))
                     options.WaitForAcknowledge = waitForAck == "1" || waitForAck.Equals("true", StringComparison.OrdinalIgnoreCase);
 

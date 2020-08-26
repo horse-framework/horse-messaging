@@ -1,4 +1,5 @@
 using System;
+using Twino.Protocols.TMQ;
 
 namespace Twino.Client.TMQ.Annotations
 {
@@ -6,17 +7,17 @@ namespace Twino.Client.TMQ.Annotations
     /// Used when queue is created with first push
     /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
-    public class WaitForAcknowledgeAttribute : Attribute
+    public class AcknowledgeAttribute : Attribute
     {
         /// <summary>
-        /// If true, queue waits for acknowledge before sending next message
+        /// Queue acknowledge decision
         /// </summary>
-        public bool Value { get; }
+        public QueueAckDecision Value { get; }
 
         /// <summary>
-        /// Creates new wait for acknowledge attribute
+        /// Creates new acknowledge attribute
         /// </summary>
-        public WaitForAcknowledgeAttribute(bool value = true)
+        public AcknowledgeAttribute(QueueAckDecision value)
         {
             Value = value;
         }

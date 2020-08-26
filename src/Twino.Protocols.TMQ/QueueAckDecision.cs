@@ -1,4 +1,4 @@
-namespace Twino.MQ.Options
+namespace Twino.Protocols.TMQ
 {
     /// <summary>
     /// Queue message acknowledge decisions
