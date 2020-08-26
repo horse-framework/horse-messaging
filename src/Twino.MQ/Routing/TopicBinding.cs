@@ -49,12 +49,7 @@ namespace Twino.MQ.Routing
             if (DateTime.UtcNow - _queueUpdateTime > _queueCacheDuration)
                 RefreshQueueCache();
 
-            message.PendingAcknowledge = false;
-            message.PendingResponse = false;
-            if (Interaction == BindingInteraction.Acknowledge)
-                message.PendingAcknowledge = true;
-            else if (Interaction == BindingInteraction.Response)
-                message.PendingResponse = true;
+            message.PendingResponse = Interaction == BindingInteraction.Response;
 
             switch (RouteMethod)
             {

@@ -11,11 +11,6 @@ namespace Twino.Protocols.TMQ
         None,
 
         /// <summary>
-        /// Receiver should send acknowledge
-        /// </summary>
-        Acknowledge,
-
-        /// <summary>
         /// Receiver should respond
         /// </summary>
         Response
