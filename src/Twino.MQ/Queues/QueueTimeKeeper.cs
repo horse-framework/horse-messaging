@@ -18,7 +18,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Queue of the keeper
         /// </summary>
-        private readonly ChannelQueue _queue;
+        private readonly TwinoQueue _queue;
 
         /// <summary>
         /// Timeout checker timer
@@ -32,7 +32,7 @@ namespace Twino.MQ.Queues
 
         #endregion
 
-        public QueueTimeKeeper(ChannelQueue queue)
+        public QueueTimeKeeper(TwinoQueue queue)
         {
             _queue = queue;
         }

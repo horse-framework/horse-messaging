@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Delivery;
 using Twino.Protocols.TMQ;
@@ -24,7 +23,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// TMQ Message
         /// </summary>
-        public TmqMessage Message { get; set; }
+        public TwinoMessage Message { get; set; }
 
         /// <summary>
         /// Real source client of the message
@@ -75,7 +74,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Creates new QueueMessage from TmqMessage with save status
         /// </summary>
-        public QueueMessage(TmqMessage message, bool isSaved = false)
+        public QueueMessage(TwinoMessage message, bool isSaved = false)
         {
             CreatedDate = DateTime.UtcNow;
             Message = message;
@@ -87,9 +86,6 @@ namespace Twino.MQ.Queues
         /// </summary>
         public void MarkAsSent()
         {
-            if (Message.FirstAcquirer)
-                Message.FirstAcquirer = false;
-
             if (!IsSent)
                 IsSent = true;
 

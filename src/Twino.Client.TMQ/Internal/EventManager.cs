@@ -69,7 +69,7 @@ namespace Twino.Client.TMQ.Internal
             }
         }
 
-        internal Task TriggerEvents(TmqClient client, TmqMessage message)
+        internal Task TriggerEvents(TmqClient client, TwinoMessage message)
         {
             string eventName = message.Source;
             string channelName = message.Target;

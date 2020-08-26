@@ -12,7 +12,7 @@ namespace Twino.MQ.Network
     /// <summary>
     /// Messaging queue node handler
     /// </summary>
-    internal class NodeConnectionHandler : IProtocolConnectionHandler<TmqServerSocket, TmqMessage>
+    internal class NodeConnectionHandler : IProtocolConnectionHandler<TmqServerSocket, TwinoMessage>
     {
         private readonly NodeManager _server;
         private readonly NetworkMessageHandler _connectionHandler;
@@ -78,7 +78,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// 
         /// </summary>
-        public Task Received(ITwinoServer server, IConnectionInfo info, TmqServerSocket client, TmqMessage message)
+        public Task Received(ITwinoServer server, IConnectionInfo info, TmqServerSocket client, TwinoMessage message)
         {
             MqClient mc = (MqClient) client;
             if (message.Type == MessageType.Server)
@@ -107,7 +107,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Reads decision and applies it
         /// </summary>
-        private void DecisionOverNode(TmqMessage message)
+        private void DecisionOverNode(TwinoMessage message)
         {
             DecisionOverNode model = message.Deserialize<DecisionOverNode>(_server.Server.MessageContentSerializer);
             if (model == null)
@@ -117,7 +117,7 @@ namespace Twino.MQ.Network
             if (channel == null)
                 return;
 
-            ChannelQueue queue = channel.FindQueue(model.Queue);
+            TwinoQueue queue = channel.FindQueue(model.Queue);
             if (queue == null)
                 return;
 

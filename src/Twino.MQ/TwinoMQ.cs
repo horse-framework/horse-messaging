@@ -28,12 +28,12 @@ namespace Twino.MQ
         /// </summary>
         public TwinoMqOptions Options { get; internal set; }
 
-        private readonly SafeList<Channel> _channels;
+        private readonly SafeList<TwinoQueue> _queues;
 
         /// <summary>
-        /// All channels of the server
+        /// All Queues of the server
         /// </summary>
-        public IEnumerable<Channel> Channels => _channels.GetAsClone();
+        public IEnumerable<TwinoQueue> Queues => _queues.GetAsClone();
 
         private readonly SafeList<MqClient> _clients;
 
@@ -88,14 +88,14 @@ namespace Twino.MQ
         /// <summary>
         /// Channel event handler
         /// </summary>
-        public IChannelEventHandler ChannelEventHandler { get; internal set; }
+        public IQueueEventHandler QueueEventHandler { get; internal set; }
 
         /// <summary>
         /// Default channel authenticatır
         /// If channels do not have their own custom authenticator and this value is not null,
         /// this authenticator will authenticate the clients
         /// </summary>
-        public IChannelAuthenticator ChannelAuthenticator { get; internal set; }
+        public IQueueAuthenticator QueueAuthenticator { get; internal set; }
 
         /// <summary>
         /// Delivery handler creator method
@@ -115,7 +115,7 @@ namespace Twino.MQ
         /// <summary>
         /// Locker object for preventing to create duplicated channels when requests are concurrent and auto channel creation is enabled
         /// </summary>
-        private readonly SemaphoreSlim _findOrCreateChannelLocker = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _findOrCreateQueueLocker = new SemaphoreSlim(1, 1);
 
         internal IMessageContentSerializer MessageContentSerializer { get; } = new NewtonsoftContentSerializer();
 
@@ -136,12 +136,12 @@ namespace Twino.MQ
         /// <summary>
         /// Triggered when a channel is created 
         /// </summary>
-        public ChannelEventManager OnChannelCreated { get; set; }
+        public QueueEventManager OnQueueCreated { get; set; }
 
         /// <summary>
         /// Triggered when a channel is removed 
         /// </summary>
-        public ChannelEventManager OnChannelRemoved { get; set; }
+        public QueueEventManager OnQueueRemoved { get; set; }
 
         #endregion
 
@@ -167,7 +167,7 @@ namespace Twino.MQ
             Authorization = authorization;
 
             _routers = new SafeList<IRouter>(256);
-            _channels = new SafeList<Channel>(256);
+            _queues = new SafeList<TwinoQueue>(256);
             _clients = new SafeList<MqClient>(2048);
 
             NodeManager = new NodeManager(this);
@@ -176,118 +176,172 @@ namespace Twino.MQ
 
             OnClientConnected = new ClientEventManager(EventNames.ClientConnected, this);
             OnClientDisconnected = new ClientEventManager(EventNames.ClientDisconnected, this);
-            OnChannelCreated = new ChannelEventManager(EventNames.ChannelCreated, this);
-            OnChannelRemoved = new ChannelEventManager(EventNames.ChannelRemoved, this);
+            OnQueueCreated = new QueueEventManager(this, EventNames.QueueCreated);
+            OnQueueRemoved = new QueueEventManager(this, EventNames.QueueRemoved);
         }
 
         #endregion
 
-        #region Channel Actions
+        #region Queue Actions
 
         /// <summary>
-        /// Creates new channel with custom event handler, authenticator and default options
+        /// Finds queue by name
         /// </summary>
-        /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>
-        /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same name</exception>
-        public Channel CreateChannel(string name)
+        public TwinoQueue FindQueue(string name)
         {
-            ChannelOptions options = ChannelOptions.CloneFrom(Options);
-            return CreateChannel(name, options);
+            return _queues.Find(x => x.Name == name);
         }
 
         /// <summary>
-        /// Creates new channel with custom event handler, authenticator and options
+        /// Creates new queue in the channel with default options and default handlers
         /// </summary>
-        /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>
-        /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same name</exception>
-        public Channel CreateChannel(string name, Action<ChannelOptions> optionsAction)
+        /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
+        /// <exception cref="OperationCanceledException">Thrown when queue limit is exceeded for the channel</exception>
+        /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
+        public async Task<TwinoQueue> CreateQueue(string queueName)
         {
-            ChannelOptions options = ChannelOptions.CloneFrom(Options);
+            QueueOptions options = QueueOptions.CloneFrom(Options);
+            return await CreateQueue(queueName, options);
+        }
+
+        /// <summary>
+        /// Creates new queue in the channel with default handlers
+        /// </summary>
+        /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
+        /// <exception cref="OperationCanceledException">Thrown when queue limit is exceeded for the channel</exception>
+        /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
+        public async Task<TwinoQueue> CreateQueue(string queueName, Action<QueueOptions> optionsAction)
+        {
+            QueueOptions options = QueueOptions.CloneFrom(Options);
             optionsAction(options);
-            return CreateChannel(name, options);
+            return await CreateQueue(queueName, options);
         }
 
         /// <summary>
-        /// Creates new channel with custom event handler, authenticator and options
+        /// Creates new queue in the channel
         /// </summary>
-        /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>
-        /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same name</exception>
-        public Channel CreateChannel(string name, ChannelOptions options)
+        /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
+        /// <exception cref="OperationCanceledException">Thrown when queue limit is exceeded for the channel</exception>
+        /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
+        public Task<TwinoQueue> CreateQueue(string queueName, QueueOptions options)
         {
-            if (!Filter.CheckNameEligibility(name))
+            return CreateQueue(queueName, options, DeliveryHandlerFactory);
+        }
+
+        /// <summary>
+        /// Creates new queue in the channel
+        /// </summary>
+        /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
+        /// <exception cref="OperationCanceledException">Thrown when queue limit is exceeded for the channel</exception>
+        /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
+        public Task<TwinoQueue> CreateQueue(string queueName,
+                                              QueueOptions options,
+                                              Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> asyncHandler)
+        {
+            return CreateQueue(queueName, options, null, asyncHandler);
+        }
+
+        internal async Task<TwinoQueue> CreateQueue(string queueName,
+                                                      QueueOptions options,
+                                                      TwinoMessage requestMessage,
+                                                      Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> asyncHandler)
+        {
+            if (!Filter.CheckNameEligibility(queueName))
                 throw new InvalidOperationException("Invalid channel name");
 
-            if (Options.ChannelLimit > 0 && _channels.Count >= Options.ChannelLimit)
-                throw new OperationCanceledException("Channel limit is exceeded for the server");
+            if (Options.QueueLimit > 0 && Options.QueueLimit >= _queues.Count)
+                throw new OperationCanceledException("Queue limit is exceeded for the channel");
 
-            Channel channel = _channels.Find(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-            if (channel != null)
-                throw new DuplicateNameException("There is already a channel with same name: " + name);
+            TwinoQueue queue = _queues.Find(x => x.Name == queueName);
 
-            channel = new Channel(this, options, name);
-            channel.Topic = options.Topic;
-            _channels.Add(channel);
+            if (queue != null)
+                throw new DuplicateNameException($"The channel has already a queue with same name: {queueName}");
 
-            if (ChannelEventHandler != null)
-                _ = ChannelEventHandler.OnChannelCreated(channel);
-
-            OnChannelCreated.Trigger(channel);
-
-            return channel;
-        }
-
-        /// <summary>
-        /// Finds the channel by name
-        /// </summary>
-        public Channel FindChannel(string name)
-        {
-            Channel channel = _channels.Find(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-            return channel;
-        }
-
-        /// <summary>
-        /// Searches the channel, if channel could not be found, it will be created
-        /// </summary>
-        public Channel FindOrCreateChannel(string name)
-        {
-            lock (_findOrCreateChannelLocker)
+            if (requestMessage != null)
             {
-                Channel channel = FindChannel(name);
-                if (channel == null)
-                    channel = CreateChannel(name);
+                string waitForAck = requestMessage.FindHeader(TmqHeaders.WAIT_FOR_ACKNOWLEDGE);
+                if (!string.IsNullOrEmpty(waitForAck))
+                    options.WaitForAcknowledge = waitForAck == "1" || waitForAck.Equals("true", StringComparison.OrdinalIgnoreCase);
 
-                return channel;
+                string queueStatus = requestMessage.FindHeader(TmqHeaders.QUEUE_STATUS);
+                if (queueStatus != null)
+                    options.Status = QueueStatusHelper.FindStatus(queueStatus);
+
+                string tag = requestMessage.FindHeader(TmqHeaders.QUEUE_TAG);
+                if (!string.IsNullOrEmpty(tag))
+                    options.TagName = tag;
+            }
+
+            queue = new TwinoQueue(this, queueName, options);
+            DeliveryHandlerBuilder handlerBuilder = new DeliveryHandlerBuilder
+                                                    {
+                                                        Server = this,
+                                                        Queue = queue
+                                                    };
+            if (requestMessage != null)
+            {
+                handlerBuilder.DeliveryHandlerHeader = requestMessage.FindHeader(TmqHeaders.DELIVERY_HANDLER);
+                handlerBuilder.Headers = requestMessage.Headers;
+            }
+
+            IMessageDeliveryHandler deliveryHandler = await asyncHandler(handlerBuilder);
+            queue.SetMessageDeliveryHandler(deliveryHandler);
+            _queues.Add(queue);
+
+            if (QueueEventHandler != null)
+                await QueueEventHandler.OnCreated(queue);
+
+            handlerBuilder.TriggerAfterCompleted();
+            //todo: ! OnQueueCreated.Trigger(queue);
+            return queue;
+        }
+
+
+        /// <summary>
+        /// Searches the queue, if queue could not be found, it will be created
+        /// </summary>
+        public async Task<TwinoQueue> FindOrCreateQueue(string name)
+        {
+            await _findOrCreateQueueLocker.WaitAsync();
+            try
+            {
+                TwinoQueue queue = FindQueue(name);
+                if (queue == null)
+                    queue = await CreateQueue(name);
+
+                return queue;
+            }
+            finally
+            {
+                _findOrCreateQueueLocker.Release();
             }
         }
 
         /// <summary>
-        /// Removes channel, destroys all queues in it
+        /// Removes a queue from the channel
         /// </summary>
-        public async Task RemoveChannel(string name)
+        public async Task RemoveQueue(string name)
         {
-            Channel channel = FindChannel(name);
-            if (channel == null)
+            TwinoQueue queue = FindQueue(name);
+            if (queue == null)
                 return;
 
-            await RemoveChannel(channel);
+            await RemoveQueue(queue);
         }
 
         /// <summary>
-        /// Removes channel, destroys all queues in it
+        /// Removes a queue from the channel
         /// </summary>
-        public async Task RemoveChannel(Channel channel)
+        public async Task RemoveQueue(TwinoQueue queue)
         {
-            foreach (ChannelQueue queue in channel.QueuesClone)
-                await channel.RemoveQueue(queue);
+            _queues.Remove(queue);
+            await queue.SetStatus(QueueStatus.Stopped);
 
-            _channels.Remove(channel);
+            if (QueueEventHandler != null)
+                await QueueEventHandler.OnRemoved(queue);
 
-            if (ChannelEventHandler != null)
-                await ChannelEventHandler.OnChannelRemoved(channel);
-
-            await channel.Destroy();
-
-            OnChannelRemoved.Trigger(channel);
+            //todo: ! OnQueueRemoved.Trigger(queue);
+            await queue.Destroy();
         }
 
         #endregion

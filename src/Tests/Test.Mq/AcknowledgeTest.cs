@@ -43,7 +43,7 @@ namespace Test.Mq
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
 
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.HighPriority = true;
             message.Type = MessageType.DirectMessage;
             message.SetTarget(client2.ClientId);
@@ -85,7 +85,7 @@ namespace Test.Mq
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
 
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.HighPriority = true;
             message.Type = MessageType.DirectMessage;
             message.SetTarget(client2.ClientId);
@@ -123,7 +123,7 @@ namespace Test.Mq
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
 
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.HighPriority = true;
             message.Type = MessageType.DirectMessage;
             message.SetTarget(client2.ClientId);
@@ -155,7 +155,7 @@ namespace Test.Mq
 
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
-            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            TwinoQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
             queue.Options.RequestAcknowledge = true;
 
@@ -188,7 +188,7 @@ namespace Test.Mq
 
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
-            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            TwinoQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
             queue.Options.RequestAcknowledge = true;
 
@@ -220,7 +220,7 @@ namespace Test.Mq
 
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
-            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            TwinoQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
             queue.Options.RequestAcknowledge = true;
 

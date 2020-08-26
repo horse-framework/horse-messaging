@@ -151,7 +151,7 @@ namespace Test.Mq
 
             NetworkStream stream = client.GetStream();
             stream.Write(PredefinedMessages.PROTOCOL_BYTES_V2);
-            TmqMessage msg = new TmqMessage();
+            TwinoMessage msg = new TwinoMessage();
             msg.Type = MessageType.Server;
             msg.ContentType = KnownContentTypes.Hello;
             msg.SetStringContent("GET /\r\nName: Test-" + port);

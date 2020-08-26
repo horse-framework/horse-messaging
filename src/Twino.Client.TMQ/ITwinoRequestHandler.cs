@@ -18,7 +18,7 @@ namespace Twino.Client.TMQ
         /// <param name="rawMessage">Raw TMQ messsage</param>
         /// <param name="client">Twino MQ connection client</param>
         /// <returns></returns>
-        Task<TResponse> Handle(TRequest request, TmqMessage rawMessage, TmqClient client);
+        Task<TResponse> Handle(TRequest request, TwinoMessage rawMessage, TmqClient client);
 
         /// <summary>
         /// Executed if an exception is thrown in Handle method
@@ -28,6 +28,6 @@ namespace Twino.Client.TMQ
         /// <param name="rawMessage">Raw TMQ messsage</param>
         /// <param name="client">Twino MQ connection client</param>
         /// <returns></returns>
-        Task<ErrorResponse> OnError(Exception exception, TRequest request, TmqMessage rawMessage, TmqClient client);
+        Task<ErrorResponse> OnError(Exception exception, TRequest request, TwinoMessage rawMessage, TmqClient client);
     }
 }

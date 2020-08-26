@@ -34,7 +34,7 @@ namespace Test.Mq
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
 
-            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            TwinoQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
@@ -77,7 +77,7 @@ namespace Test.Mq
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
 
-            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            TwinoQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
             TwinoResult joined = await client.Channels.Join(channel.Name, true);
@@ -123,7 +123,7 @@ namespace Test.Mq
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
 
-            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            TwinoQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
             TwinoResult joined = await client.Channels.Join(channel.Name, true);
@@ -164,7 +164,7 @@ namespace Test.Mq
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
 
-            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            TwinoQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
             await queue.SetStatus(QueueStatus.Push);
 
@@ -208,7 +208,7 @@ namespace Test.Mq
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
 
-            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            TwinoQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
             queue.Options.SendOnlyFirstAcquirer = true;
@@ -264,7 +264,7 @@ namespace Test.Mq
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
 
-            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            TwinoQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
             queue.Options.SendOnlyFirstAcquirer = true;
@@ -336,7 +336,7 @@ namespace Test.Mq
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
 
-            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            TwinoQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!"));
@@ -380,7 +380,7 @@ namespace Test.Mq
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
 
-            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            TwinoQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
             queue.Options.RequestAcknowledge = true;
@@ -429,7 +429,7 @@ namespace Test.Mq
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
 
-            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            TwinoQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
             queue.Options.RequestAcknowledge = true;
@@ -488,7 +488,7 @@ namespace Test.Mq
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
 
-            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            TwinoQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
             queue.Options.RequestAcknowledge = true;
@@ -538,7 +538,7 @@ namespace Test.Mq
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
 
-            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            TwinoQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
             queue.Options.Status = QueueStatus.Push;
@@ -588,7 +588,7 @@ namespace Test.Mq
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
 
-            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            TwinoQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
             queue.Options.Status = QueueStatus.Push;
@@ -641,7 +641,7 @@ namespace Test.Mq
 
             Channel channel = server.Server.FindChannel("ch-1");
             Assert.NotNull(channel);
-            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
             Assert.NotNull(queue);
 
             queue.Options.HideClientNames = enabled;
@@ -657,8 +657,8 @@ namespace Test.Mq
             TwinoResult joined = await client.Channels.Join("ch-1", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
-            TmqMessage received = null;
-            TmqMessage ack = null;
+            TwinoMessage received = null;
+            TwinoMessage ack = null;
             client.MessageReceived += (c, m) =>
             {
                 switch (m.Type)

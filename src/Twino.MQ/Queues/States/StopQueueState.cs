@@ -9,14 +9,14 @@ namespace Twino.MQ.Queues.States
         public QueueMessage ProcessingMessage { get; private set; }
         public bool TriggerSupported => false;
 
-        private readonly ChannelQueue _queue;
+        private readonly TwinoQueue _queue;
 
-        public StopQueueState(ChannelQueue queue)
+        public StopQueueState(TwinoQueue queue)
         {
             _queue = queue;
         }
 
-        public Task<PullResult> Pull(ChannelClient client, TmqMessage request)
+        public Task<PullResult> Pull(QueueClient client, TwinoMessage request)
         {
             return Task.FromResult(PullResult.StatusNotSupported);
         }

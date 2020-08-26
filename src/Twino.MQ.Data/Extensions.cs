@@ -126,14 +126,14 @@ namespace Twino.MQ.Data
         /// <param name="deleteWhen">Decision, when messages will be removed from disk</param>
         /// <param name="producerAckDecision">Decision, when ack will be sent to producer</param>
         /// <returns></returns>
-        public static Task<ChannelQueue> CreatePersistentQueue(this TwinoMQ mq,
+        public static Task<TwinoQueue> CreatePersistentQueue(this TwinoMQ mq,
                                                                string channelName,
                                                                ushort queueId,
                                                                DeleteWhen deleteWhen,
                                                                ProducerAckDecision producerAckDecision)
         {
             Channel channel = mq.FindOrCreateChannel(channelName);
-            ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(channel.Options);
+            QueueOptions options = QueueOptions.CloneFrom(channel.Options);
             return CreatePersistentQueue(channel, queueId, deleteWhen, producerAckDecision, options);
         }
 
@@ -145,12 +145,12 @@ namespace Twino.MQ.Data
         /// <param name="deleteWhen">Decision, when messages will be removed from disk</param>
         /// <param name="producerAckDecision">Decision, when ack will be sent to producer</param>
         /// <returns></returns>
-        public static Task<ChannelQueue> CreatePersistentQueue(this Channel channel,
+        public static Task<TwinoQueue> CreatePersistentQueue(this Channel channel,
                                                                ushort queueId,
                                                                DeleteWhen deleteWhen,
                                                                ProducerAckDecision producerAckDecision)
         {
-            ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(channel.Options);
+            QueueOptions options = QueueOptions.CloneFrom(channel.Options);
             return CreatePersistentQueue(channel, queueId, deleteWhen, producerAckDecision, options);
         }
 
@@ -163,13 +163,13 @@ namespace Twino.MQ.Data
         /// <param name="producerAckDecision">Decision, when ack will be sent to producer</param>
         /// <param name="optionsAction">Channel Queue Options builder action</param>
         /// <returns></returns>
-        public static Task<ChannelQueue> CreatePersistentQueue(this Channel channel,
+        public static Task<TwinoQueue> CreatePersistentQueue(this Channel channel,
                                                                ushort queueId,
                                                                DeleteWhen deleteWhen,
                                                                ProducerAckDecision producerAckDecision,
-                                                               Action<ChannelQueueOptions> optionsAction)
+                                                               Action<QueueOptions> optionsAction)
         {
-            ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(channel.Options);
+            QueueOptions options = QueueOptions.CloneFrom(channel.Options);
             optionsAction(options);
             return CreatePersistentQueue(channel, queueId, deleteWhen, producerAckDecision, options);
         }
@@ -183,13 +183,13 @@ namespace Twino.MQ.Data
         /// <param name="producerAckDecision">Decision, when ack will be sent to producer</param>
         /// <param name="options">Channel Queue Options</param>
         /// <returns></returns>
-        public static async Task<ChannelQueue> CreatePersistentQueue(this Channel channel,
+        public static async Task<TwinoQueue> CreatePersistentQueue(this Channel channel,
                                                                      ushort queueId,
                                                                      DeleteWhen deleteWhen,
                                                                      ProducerAckDecision producerAckDecision,
-                                                                     ChannelQueueOptions options)
+                                                                     QueueOptions options)
         {
-            ChannelQueue queue = await CreateQueue(channel, queueId, deleteWhen, producerAckDecision, options);
+            TwinoQueue queue = await CreateQueue(channel, queueId, deleteWhen, producerAckDecision, options);
             PersistentDeliveryHandler deliveryHandler = (PersistentDeliveryHandler) queue.DeliveryHandler;
             ConfigurationFactory.Manager.Add(queue, deliveryHandler.Database.File.Filename);
             ConfigurationFactory.Manager.Save();
@@ -199,11 +199,11 @@ namespace Twino.MQ.Data
         /// <summary>
         /// Creates and returns queue
         /// </summary>
-        internal static async Task<ChannelQueue> CreateQueue(Channel channel,
+        internal static async Task<TwinoQueue> CreateQueue(Channel channel,
                                                              ushort queueId,
                                                              DeleteWhen deleteWhen,
                                                              ProducerAckDecision producerAckDecision,
-                                                             ChannelQueueOptions options)
+                                                             QueueOptions options)
         {
             return await channel.CreateQueue(queueId, options, async builder =>
             {
@@ -217,7 +217,7 @@ namespace Twino.MQ.Data
         /// <summary>
         /// Generates full file path for database file of the queue
         /// </summary>
-        private static string DefaultQueueDbPath(ChannelQueue queue)
+        private static string DefaultQueueDbPath(TwinoQueue queue)
         {
             string dir = "data/" + queue.Channel.Name;
             try

@@ -112,7 +112,7 @@ namespace Twino.Client.TMQ.Operators
                                               string deliveryHandlerHeader = null,
                                               IEnumerable<KeyValuePair<string, string>> additionalHeaders = null)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.CreateQueue;
             message.SetTarget(channel);
@@ -147,7 +147,7 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<TmqModelResult<List<QueueInformation>>> List(string channel)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.QueueList;
             message.SetTarget(channel);
@@ -160,7 +160,7 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<TmqModelResult<QueueInformation>> GetInfo(string channel, ushort id)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.QueueInformation;
             message.SetTarget(channel);
@@ -176,7 +176,7 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<TwinoResult> Remove(string channel, ushort queueId)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.RemoveQueue;
             message.SetTarget(channel);
@@ -192,7 +192,7 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<TwinoResult> SetOptions(string channel, ushort queueId, Action<QueueOptions> optionsAction)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.UpdateQueue;
             message.SetTarget(channel);
@@ -221,7 +221,7 @@ namespace Twino.Client.TMQ.Operators
             if (!clearPriorityMessages && !clearMessages)
                 return Task.FromResult(TwinoResult.Failed());
 
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.ClearMessages;
             message.SetTarget(channel);
@@ -260,7 +260,7 @@ namespace Twino.Client.TMQ.Operators
                                                 IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor(jsonObject.GetType());
-            TmqMessage message = descriptor.CreateMessage(MessageType.QueueMessage, channel, queueId);
+            TwinoMessage message = descriptor.CreateMessage(MessageType.QueueMessage, channel, queueId);
             message.PendingAcknowledge = waitAcknowledge;
 
             if (messageHeaders != null)
@@ -290,7 +290,7 @@ namespace Twino.Client.TMQ.Operators
         public async Task<TwinoResult> Push(string channel, ushort queueId, MemoryStream content, bool waitAcknowledge,
                                             IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            TmqMessage message = new TmqMessage(MessageType.QueueMessage, channel, queueId);
+            TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, channel, queueId);
             message.Content = content;
             message.PendingAcknowledge = waitAcknowledge;
 
@@ -307,9 +307,9 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Request a message from Pull queue
         /// </summary>
-        public async Task<PullContainer> Pull(PullRequest request, Func<int, TmqMessage, Task> actionForEachMessage = null)
+        public async Task<PullContainer> Pull(PullRequest request, Func<int, TwinoMessage, Task> actionForEachMessage = null)
         {
-            TmqMessage message = new TmqMessage(MessageType.QueuePullRequest, request.Channel, request.QueueId);
+            TwinoMessage message = new TwinoMessage(MessageType.QueuePullRequest, request.Channel, request.QueueId);
             message.SetMessageId(_client.UniqueIdGenerator.Create());
             message.AddHeader(TmqHeaders.COUNT, request.Count);
 

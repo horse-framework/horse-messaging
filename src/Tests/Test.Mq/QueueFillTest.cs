@@ -27,8 +27,8 @@ namespace Test.Mq
             Assert.NotNull(route);
             Assert.NotNull(push);
 
-            ChannelQueue routeA = route.FindQueue(MessageA.ContentType);
-            ChannelQueue pushA = push.FindQueue(MessageA.ContentType);
+            TwinoQueue routeA = route.FindQueue(MessageA.ContentType);
+            TwinoQueue pushA = push.FindQueue(MessageA.ContentType);
             Assert.NotNull(routeA);
             Assert.NotNull(pushA);
 
@@ -57,7 +57,7 @@ namespace Test.Mq
             Channel channel = server.Server.FindChannel("ch-push");
             Assert.NotNull(channel);
 
-            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
             Assert.NotNull(queue);
 
             QueueFiller filler = new QueueFiller(queue);
@@ -83,7 +83,7 @@ namespace Test.Mq
             Channel channel = server.Server.FindChannel("ch-push");
             Assert.NotNull(channel);
 
-            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
             Assert.NotNull(queue);
 
             QueueFiller filler = new QueueFiller(queue);

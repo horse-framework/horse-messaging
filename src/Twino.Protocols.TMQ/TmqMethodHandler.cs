@@ -7,12 +7,12 @@ namespace Twino.Protocols.TMQ
     /// <summary>
     /// TMQ Message received handler
     /// </summary>
-    public delegate Task TmqMessageHandler(TmqServerSocket socket, TmqMessage message);
+    public delegate Task TmqMessageHandler(TmqServerSocket socket, TwinoMessage message);
 
     /// <summary>
     /// TMQ message handler for action-based use
     /// </summary>
-    public class TmqMethodHandler : IProtocolConnectionHandler<TmqServerSocket, TmqMessage>
+    public class TmqMethodHandler : IProtocolConnectionHandler<TmqServerSocket, TwinoMessage>
     {
         /// <summary>
         /// Default unique Id generator
@@ -52,7 +52,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Triggered when a TMQ message received from client
         /// </summary>
-        public async Task Received(ITwinoServer server, IConnectionInfo info, TmqServerSocket client, TmqMessage message)
+        public async Task Received(ITwinoServer server, IConnectionInfo info, TmqServerSocket client, TwinoMessage message)
         {
             await _action(client, message);
         }

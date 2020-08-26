@@ -9,11 +9,11 @@ namespace Twino.Client.TMQ.Internal
     /// </summary>
     internal class ResponseMessageDescriptor : MessageDescriptor
     {
-        public TaskCompletionSource<TmqMessage> Source { get; }
+        public TaskCompletionSource<TwinoMessage> Source { get; }
 
-        public ResponseMessageDescriptor(TmqMessage message, DateTime expiration) : base(message, expiration)
+        public ResponseMessageDescriptor(TwinoMessage message, DateTime expiration) : base(message, expiration)
         {
-            Source = new TaskCompletionSource<TmqMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Source = new TaskCompletionSource<TwinoMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
         /// <inheritdoc />
@@ -27,7 +27,7 @@ namespace Twino.Client.TMQ.Internal
             if (!successful || value == null)
                 Source.SetResult(default);
             else
-                Source.SetResult(value as TmqMessage);
+                Source.SetResult(value as TwinoMessage);
         }
     }
 }

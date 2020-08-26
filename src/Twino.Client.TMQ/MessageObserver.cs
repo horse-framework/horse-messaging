@@ -12,7 +12,7 @@ namespace Twino.Client.TMQ
     /// <summary>
     /// Exception thrown handler for message reader
     /// </summary>
-    public delegate void ReaderExceptionThrownHandler(TmqMessage message, Exception exception);
+    public delegate void ReaderExceptionThrownHandler(TwinoMessage message, Exception exception);
 
     /// <summary>
     /// Type based message reader for TMQ client
@@ -34,7 +34,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// TmqMessage to model type converter function
         /// </summary>
-        private Func<TmqMessage, Type, object> _func;
+        private Func<TwinoMessage, Type, object> _func;
 
         /// <summary>
         /// This event is triggered when user defined action throws an exception
@@ -50,7 +50,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Creates new message reader with converter action
         /// </summary>
-        public MessageObserver(Func<TmqMessage, Type, object> func)
+        public MessageObserver(Func<TwinoMessage, Type, object> func)
         {
             _func = func;
             _deliveryContainer = new TypeDeliveryContainer(new TypeDeliveryResolver());
@@ -127,7 +127,7 @@ namespace Twino.Client.TMQ
         /// Reads the received model, if there is subscription to the model, trigger the actions.
         /// Use this method when you can't attach the client easily or directly. (ex: use for connections)
         /// </summary>
-        public void Read(TmqClient sender, TmqMessage message)
+        public void Read(TmqClient sender, TwinoMessage message)
         {
             ClientOnMessageReceived(sender, message);
         }
@@ -135,7 +135,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// When a message received to Tmq Client, this method will be called
         /// </summary>
-        private async void ClientOnMessageReceived(ClientSocketBase<TmqMessage> client, TmqMessage message)
+        private async void ClientOnMessageReceived(ClientSocketBase<TwinoMessage> client, TwinoMessage message)
         {
             try
             {
@@ -262,7 +262,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Subscribe to messages in a queue in a channel
         /// </summary>
-        public void On(string channel, ushort queueId, Action<TmqMessage> action)
+        public void On(string channel, ushort queueId, Action<TwinoMessage> action)
         {
             ReadSubscription subscription = new ReadSubscription
                                             {
@@ -281,7 +281,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Subscribe to messages in a queue in a channel
         /// </summary>
-        public void On<T>(Action<T, TmqMessage> action)
+        public void On<T>(Action<T, TwinoMessage> action)
         {
             TypeDeliveryDescriptor descriptor = _deliveryContainer.GetDescriptor<T>();
 
@@ -300,7 +300,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Subscribe to messages in a queue in a channel
         /// </summary>
-        public void On<T>(string channel, ushort queueId, Action<T, TmqMessage> action)
+        public void On<T>(string channel, ushort queueId, Action<T, TwinoMessage> action)
         {
             ReadSubscription subscription = new ReadSubscription
                                             {
@@ -386,7 +386,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Subscribe to direct messages with a content type
         /// </summary>
-        public void OnDirect(ushort contentType, Action<TmqMessage> action)
+        public void OnDirect(ushort contentType, Action<TwinoMessage> action)
         {
             ReadSubscription subscription = new ReadSubscription
                                             {
@@ -404,7 +404,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Subscribe to direct messages with a content type
         /// </summary>
-        public void OnDirect<T>(Action<T, TmqMessage> action)
+        public void OnDirect<T>(Action<T, TwinoMessage> action)
         {
             TypeDeliveryDescriptor descriptor = _deliveryContainer.GetDescriptor<T>();
 
@@ -420,7 +420,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Subscribe to direct messages with a content type
         /// </summary>
-        public void OnDirect<T>(ushort contentType, Action<T, TmqMessage> action)
+        public void OnDirect<T>(ushort contentType, Action<T, TwinoMessage> action)
         {
             ReadSubscription subscription = new ReadSubscription
                                             {

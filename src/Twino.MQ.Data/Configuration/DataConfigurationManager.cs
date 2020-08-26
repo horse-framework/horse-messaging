@@ -69,7 +69,7 @@ namespace Twino.MQ.Data.Configuration
         /// <summary>
         /// Adds new queue into configurations
         /// </summary>
-        public bool Add(ChannelQueue queue, string filename)
+        public bool Add(TwinoQueue queue, string filename)
         {
             QueueOptionsConfiguration queueOptions = queue.Options.ToConfiguration();
             string channelName = queue.Channel.Name;
@@ -117,7 +117,7 @@ namespace Twino.MQ.Data.Configuration
         /// <summary>
         /// Removes queue from configurations
         /// </summary>
-        public void Remove(ChannelQueue queue)
+        public void Remove(TwinoQueue queue)
         {
             string channelName = queue.Channel.Name;
 
@@ -166,7 +166,7 @@ namespace Twino.MQ.Data.Configuration
 
                 foreach (QueueConfiguration queueConfiguration in channelConfiguration.Queues)
                 {
-                    ChannelQueue queue = channel.FindQueue(queueConfiguration.QueueId);
+                    TwinoQueue queue = channel.FindQueue(queueConfiguration.QueueId);
                     if (queue == null)
                     {
                         queue = await Extensions.CreateQueue(channel,

@@ -56,7 +56,7 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Sends the message to binding receivers
         /// </summary>
-        public override async Task<bool> Send(MqClient sender, TmqMessage message)
+        public override async Task<bool> Send(MqClient sender, TwinoMessage message)
         {
             MqClient[] clients = GetClients();
             if (clients.Length == 0)
@@ -104,7 +104,7 @@ namespace Twino.MQ.Routing
             }
         }
 
-        private Task<bool> SendRoundRobin(TmqMessage message)
+        private Task<bool> SendRoundRobin(TwinoMessage message)
         {
             Interlocked.Increment(ref _roundRobinIndex);
             int i = _roundRobinIndex;

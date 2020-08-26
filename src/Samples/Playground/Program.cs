@@ -26,7 +26,7 @@ namespace Playground
 
             while (true)
             {
-                TmqMessage msg = new TmqMessage(MessageType.QueueMessage, "a");
+                TwinoMessage msg = new TwinoMessage(MessageType.QueueMessage, "a");
                 msg.SetMessageId(Guid.NewGuid().ToString());
                 msg.SetStringContent("Hello");
                 await db.Insert(msg);

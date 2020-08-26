@@ -18,6 +18,11 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Twino MQ Protocol Version 2
         /// </summary>
-        Version2
+        Version2,
+        
+        /// <summary>
+        /// Twino MQ Protocol Version 4
+        /// </summary>
+        Version4
     }
 }

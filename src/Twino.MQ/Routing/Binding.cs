@@ -57,6 +57,6 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Sends the message to binding receivers
         /// </summary>
-        public abstract Task<bool> Send(MqClient sender, TmqMessage message);
+        public abstract Task<bool> Send(MqClient sender, TwinoMessage message);
     }
 }

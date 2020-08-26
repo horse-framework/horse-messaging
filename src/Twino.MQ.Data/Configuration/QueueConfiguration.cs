@@ -32,6 +32,6 @@ namespace Twino.MQ.Data.Configuration
 
         [Newtonsoft.Json.JsonIgnore]
         [System.Text.Json.Serialization.JsonIgnore]
-        public ChannelQueue Queue { get; set; }
+        public TwinoQueue Queue { get; set; }
     }
 }

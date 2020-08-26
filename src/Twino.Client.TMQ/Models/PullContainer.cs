@@ -39,16 +39,16 @@ namespace Twino.Client.TMQ.Models
         /// <summary>
         /// Received messages
         /// </summary>
-        public IEnumerable<TmqMessage> ReceivedMessages => _messages;
+        public IEnumerable<TwinoMessage> ReceivedMessages => _messages;
 
-        private readonly List<TmqMessage> _messages;
+        private readonly List<TwinoMessage> _messages;
         private readonly TaskCompletionSource<PullContainer> _source;
-        private readonly Func<int, TmqMessage, Task> _cycleAction;
+        private readonly Func<int, TwinoMessage, Task> _cycleAction;
 
-        internal PullContainer(string requestId, int requestCount, Func<int, TmqMessage, Task> cycleAction)
+        internal PullContainer(string requestId, int requestCount, Func<int, TwinoMessage, Task> cycleAction)
         {
             _source = new TaskCompletionSource<PullContainer>();
-            _messages = new List<TmqMessage>();
+            _messages = new List<TwinoMessage>();
 
             RequestId = requestId;
             RequestCount = requestCount;
@@ -57,7 +57,7 @@ namespace Twino.Client.TMQ.Models
             LastReceived = DateTime.UtcNow;
         }
 
-        internal void AddMessage(TmqMessage message)
+        internal void AddMessage(TwinoMessage message)
         {
             LastReceived = DateTime.UtcNow;
 

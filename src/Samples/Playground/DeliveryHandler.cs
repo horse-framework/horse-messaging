@@ -35,7 +35,7 @@ namespace Playground
             await _database.Open();
         }
 
-        public Task<Decision> ReceivedFromProducer(ChannelQueue queue, QueueMessage message, MqClient sender)
+        public Task<Decision> ReceivedFromProducer(TwinoQueue queue, QueueMessage message, MqClient sender)
         {
             Interlocked.Increment(ref Count);
             return Task.FromResult(new Decision(true, false, PutBackDecision.No, DeliveryAcknowledgeDecision.None));
@@ -49,27 +49,27 @@ namespace Playground
             return Decision.JustAllow();
         }*/
 
-        public Task<Decision> BeginSend(ChannelQueue queue, QueueMessage message)
+        public Task<Decision> BeginSend(TwinoQueue queue, QueueMessage message)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
-        public Task<Decision> CanConsumerReceive(ChannelQueue queue, QueueMessage message, MqClient receiver)
+        public Task<Decision> CanConsumerReceive(TwinoQueue queue, QueueMessage message, MqClient receiver)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
-        public Task<Decision> ConsumerReceived(ChannelQueue queue, MessageDelivery delivery, MqClient receiver)
+        public Task<Decision> ConsumerReceived(TwinoQueue queue, MessageDelivery delivery, MqClient receiver)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
-        public Task<Decision> ConsumerReceiveFailed(ChannelQueue queue, MessageDelivery delivery, MqClient receiver)
+        public Task<Decision> ConsumerReceiveFailed(TwinoQueue queue, MessageDelivery delivery, MqClient receiver)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
-        public Task<Decision> EndSend(ChannelQueue queue, QueueMessage message)
+        public Task<Decision> EndSend(TwinoQueue queue, QueueMessage message)
         {
             return Task.FromResult(Decision.JustAllow());
         }
@@ -81,33 +81,33 @@ namespace Playground
             return Decision.JustAllow();
         }*/
 
-        public Task<Decision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery, bool success)
+        public Task<Decision> AcknowledgeReceived(TwinoQueue queue, TwinoMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
             //   await _database.Delete(delivery.Message.Message);
             return Task.FromResult(Decision.JustAllow());
         }
 
-        public Task<Decision> MessageTimedOut(ChannelQueue queue, QueueMessage message)
+        public Task<Decision> MessageTimedOut(TwinoQueue queue, QueueMessage message)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
-        public Task<Decision> AcknowledgeTimedOut(ChannelQueue queue, MessageDelivery delivery)
+        public Task<Decision> AcknowledgeTimedOut(TwinoQueue queue, MessageDelivery delivery)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
-        public Task MessageDequeued(ChannelQueue queue, QueueMessage message)
+        public Task MessageDequeued(TwinoQueue queue, QueueMessage message)
         {
             return Task.CompletedTask;
         }
 
-        public Task<Decision> ExceptionThrown(ChannelQueue queue, QueueMessage message, Exception exception)
+        public Task<Decision> ExceptionThrown(TwinoQueue queue, QueueMessage message, Exception exception)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
-        public Task<bool> SaveMessage(ChannelQueue queue, QueueMessage message)
+        public Task<bool> SaveMessage(TwinoQueue queue, QueueMessage message)
         {
             return Task.FromResult(false); // _database.Insert(message.Message);
         }

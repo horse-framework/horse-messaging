@@ -36,7 +36,7 @@ namespace Test.Mq.Statuses
             await Task.Delay(700);
 
             Channel channel = server.Server.FindChannel("ch-pull");
-            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
             Assert.NotNull(channel);
             Assert.NotNull(queue);
             Assert.Single(queue.Messages);
@@ -66,7 +66,7 @@ namespace Test.Mq.Statuses
             int port = server.Start(300, 300);
 
             Channel channel = server.Server.FindChannel("ch-pull");
-            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
             Assert.NotNull(channel);
             Assert.NotNull(queue);
             queue.Options.RequestAcknowledge = true;
@@ -118,7 +118,7 @@ namespace Test.Mq.Statuses
             int port = server.Start();
 
             var channel = server.Server.FindChannel("ch-pull");
-            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
             queue.AddStringMessageWithId("First Message");
             queue.AddStringMessageWithId("Second Message");
 
@@ -138,7 +138,7 @@ namespace Test.Mq.Statuses
             PullContainer container = await client.Queues.Pull(request);
             Assert.Equal(PullProcess.Completed, container.Status);
 
-            TmqMessage msg = container.ReceivedMessages.FirstOrDefault();
+            TwinoMessage msg = container.ReceivedMessages.FirstOrDefault();
             Assert.NotNull(msg);
 
             string content = msg.GetStringContent();
@@ -162,7 +162,7 @@ namespace Test.Mq.Statuses
             int port = server.Start();
 
             var channel = server.Server.FindChannel("ch-pull");
-            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
             for (int i = 0; i < 25; i++)
                 queue.AddStringMessageWithId("Hello, World");
 
@@ -197,7 +197,7 @@ namespace Test.Mq.Statuses
             int port = server.Start();
 
             var channel = server.Server.FindChannel("ch-pull");
-            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
             for (int i = 0; i < 5; i++)
             {
                 queue.AddStringMessageWithId("Hello, World");

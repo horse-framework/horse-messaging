@@ -7,41 +7,31 @@ namespace Twino.MQ
     /// <summary>
     /// Channel event handler implementation (client join/leave, queue created/removed, status changes)
     /// </summary>
-    public interface IChannelEventHandler
+    public interface IQueueEventHandler
     {
         /// <summary>
         /// Called when a new queue is created in a channel
         /// </summary>
-        Task OnQueueCreated(ChannelQueue queue, Channel channel);
+        Task OnCreated(TwinoQueue queue);
 
         /// <summary>
         /// Called when a queue is removed from a channel
         /// </summary>
-        Task OnQueueRemoved(ChannelQueue queue, Channel channel);
+        Task OnRemoved(TwinoQueue queue);
 
         /// <summary>
         /// Called when a client joined to the channel
         /// </summary>
-        Task OnClientJoined(ChannelClient client);
+        Task OnConsumerSubscribed(QueueClient client);
 
         /// <summary>
         /// Called when a client left from the channel
         /// </summary>
-        Task OnClientLeft(ChannelClient client);
+        Task OnConsumerUnsubscribed(QueueClient client);
 
         /// <summary>
         /// Called when queue status has changed
         /// </summary>
-        Task OnQueueStatusChanged(ChannelQueue queue, QueueStatus from, QueueStatus to);
-
-        /// <summary>
-        /// Called when a new channel is created
-        /// </summary>
-        Task OnChannelCreated(Channel channel);
-
-        /// <summary>
-        /// Called when channel is removed
-        /// </summary>
-        Task OnChannelRemoved(Channel channel);
+        Task OnStatusChanged(TwinoQueue queue, QueueStatus from, QueueStatus to);
     }
 }

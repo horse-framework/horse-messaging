@@ -26,7 +26,7 @@ namespace Twino.MQ.Network
 
         #endregion
 
-        public async Task Handle(MqClient client, TmqMessage message, bool fromNode)
+        public async Task Handle(MqClient client, TwinoMessage message, bool fromNode)
         {
             //if server is not set or there is no connected server
             if (_server.NodeManager.Connectors.Length == 0)

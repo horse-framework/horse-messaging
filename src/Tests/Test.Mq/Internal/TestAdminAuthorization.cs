@@ -14,22 +14,22 @@ namespace Test.Mq.Internal
             return Task.FromResult(true);
         }
 
-        public Task<bool> CanUpdateQueueOptions(MqClient client, Channel channel, ChannelQueue queue, NetworkOptionsBuilder options)
+        public Task<bool> CanUpdateQueueOptions(MqClient client, Channel channel, TwinoQueue queue, NetworkOptionsBuilder options)
         {
             return Task.FromResult(true);
         }
 
-        public Task<bool> CanRemoveQueue(MqClient client, ChannelQueue queue)
+        public Task<bool> CanRemoveQueue(MqClient client, TwinoQueue queue)
         {
             return Task.FromResult(true);
         }
 
-        public Task<bool> CanClearQueueMessages(MqClient client, ChannelQueue queue, bool priorityMessages, bool messages)
+        public Task<bool> CanClearQueueMessages(MqClient client, TwinoQueue queue, bool priorityMessages, bool messages)
         {
             return Task.FromResult(true);
         }
 
-        public Task<bool> CanManageInstances(MqClient client, TmqMessage request)
+        public Task<bool> CanManageInstances(MqClient client, TwinoMessage request)
         {
             return Task.FromResult(true);
         }

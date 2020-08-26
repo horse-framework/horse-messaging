@@ -23,12 +23,12 @@ namespace Test.Mq
             channel.Options.AllowMultipleQueues = true;
             channel.Options.AllowedQueues = null;
 
-            ChannelQueue queue1 = await channel.CreateQueue(301);
+            TwinoQueue queue1 = await channel.CreateQueue(301);
             Assert.NotNull(queue1);
 
             channel.Options.AllowMultipleQueues = false;
 
-            ChannelQueue queue2 = await channel.CreateQueue(302);
+            TwinoQueue queue2 = await channel.CreateQueue(302);
             Assert.Null(queue2);
         }
 
@@ -45,10 +45,10 @@ namespace Test.Mq
             Assert.NotNull(channel);
             channel.Options.AllowedQueues = new[] { MessageA.ContentType, MessageB.ContentType, MessageC.ContentType };
 
-            ChannelQueue queue1 = await channel.CreateQueue(MessageB.ContentType);
+            TwinoQueue queue1 = await channel.CreateQueue(MessageB.ContentType);
             Assert.NotNull(queue1);
 
-            ChannelQueue queue2 = await channel.CreateQueue(305);
+            TwinoQueue queue2 = await channel.CreateQueue(305);
             Assert.Null(queue2);
         }
     }

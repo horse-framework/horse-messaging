@@ -21,7 +21,7 @@ namespace Twino.MQ.Network
 
         #endregion
 
-        public async Task Handle(MqClient client, TmqMessage message, bool fromNode)
+        public async Task Handle(MqClient client, TwinoMessage message, bool fromNode)
         {
             bool pendingAck = message.PendingAcknowledge;
             bool pendingResponse = message.PendingResponse;
@@ -40,7 +40,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Sends negative ack or failed response if client is pending ack or response
         /// </summary>
-        private static Task SendResponse(RouterPublishResult result, MqClient client, TmqMessage message, bool pendingAck, bool pendingResponse)
+        private static Task SendResponse(RouterPublishResult result, MqClient client, TwinoMessage message, bool pendingAck, bool pendingResponse)
         {
             if (result == RouterPublishResult.OkAndWillBeRespond)
                 return Task.CompletedTask;
@@ -49,13 +49,13 @@ namespace Twino.MQ.Network
             
             if (pendingAck)
             {
-                TmqMessage ack = positive ? message.CreateAcknowledge() : message.CreateAcknowledge(TmqHeaders.NACK_REASON_NO_CONSUMERS);
+                TwinoMessage ack = positive ? message.CreateAcknowledge() : message.CreateAcknowledge(TmqHeaders.NACK_REASON_NO_CONSUMERS);
                 return client.SendAsync(ack);
             }
 
             if (pendingResponse)
             {
-                TmqMessage response = positive ? message.CreateResponse(TwinoResultCode.Ok) : message.CreateResponse(TwinoResultCode.NotFound);
+                TwinoMessage response = positive ? message.CreateResponse(TwinoResultCode.Ok) : message.CreateResponse(TwinoResultCode.NotFound);
                 return client.SendAsync(response);
             }
 

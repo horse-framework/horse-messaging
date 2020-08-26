@@ -2,7 +2,7 @@ namespace Twino.MQ.Queues.States
 {
     internal class QueueStateFactory
     {
-        internal static IQueueState Create(ChannelQueue queue, QueueStatus status)
+        internal static IQueueState Create(TwinoQueue queue, QueueStatus status)
         {
             switch (status)
             {

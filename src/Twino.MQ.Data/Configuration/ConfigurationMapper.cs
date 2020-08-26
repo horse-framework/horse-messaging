@@ -29,9 +29,9 @@ namespace Twino.MQ.Data.Configuration
                    };
         }
 
-        internal static ChannelQueueOptions ToOptions(this QueueOptionsConfiguration configuration)
+        internal static QueueOptions ToOptions(this QueueOptionsConfiguration configuration)
         {
-            return new ChannelQueueOptions
+            return new QueueOptions
                    {
                        Status = configuration.Status.ToQueueStatus(),
                        AcknowledgeTimeout = TimeSpan.FromMilliseconds(configuration.AcknowledgeTimeout),
@@ -70,7 +70,7 @@ namespace Twino.MQ.Data.Configuration
                    };
         }
 
-        internal static QueueOptionsConfiguration ToConfiguration(this ChannelQueueOptions options)
+        internal static QueueOptionsConfiguration ToConfiguration(this QueueOptions options)
         {
             return new QueueOptionsConfiguration
                    {

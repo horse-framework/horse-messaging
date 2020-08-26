@@ -64,6 +64,6 @@ namespace Twino.Client.TMQ.Bus
         /// <param name="request">Pull request object</param>
         /// <param name="actionForEachMessage">Action for each pulled messages</param>
         /// <returns></returns>
-        Task<PullContainer> Pull(PullRequest request, Func<int, TmqMessage, Task> actionForEachMessage = null);
+        Task<PullContainer> Pull(PullRequest request, Func<int, TwinoMessage, Task> actionForEachMessage = null);
     }
 }

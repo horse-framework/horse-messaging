@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using Twino.MQ.Options;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Queues
@@ -13,12 +13,12 @@ namespace Twino.MQ.Queues
     /// </summary>
     public class QueueFiller
     {
-        private readonly ChannelQueue _queue;
+        private readonly TwinoQueue _queue;
 
         /// <summary>
         /// Creates new queue filler
         /// </summary>
-        public QueueFiller(ChannelQueue queue)
+        public QueueFiller(TwinoQueue queue)
         {
             _queue = queue;
         }
@@ -37,16 +37,14 @@ namespace Twino.MQ.Queues
 
             foreach (T item in items)
             {
-                TmqMessage message = new TmqMessage(MessageType.QueueMessage, _queue.Channel.Name);
-                message.FirstAcquirer = true;
+                TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, _queue.Name);
                 message.HighPriority = highPriority;
-                message.PendingAcknowledge = _queue.Options.RequestAcknowledge;
-                message.ContentType = _queue.Id;
+                message.PendingResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
 
                 if (_queue.Options.UseMessageId)
-                    message.SetMessageId(_queue.Channel.Server.MessageIdGenerator.Create());
+                    message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
 
-                message.Serialize(item, _queue.Channel.Server.MessageContentSerializer);
+                message.Serialize(item, _queue.Server.MessageContentSerializer);
                 QueueMessage qm = new QueueMessage(message, createAsSaved);
 
                 if (highPriority)
@@ -69,7 +67,7 @@ namespace Twino.MQ.Queues
         /// Fills JSON object data to the queue.
         /// Creates new TmqMessage and before writing content and adding into queue calls the action.
         /// </summary>
-        public PushResult FillJson<T>(IEnumerable<T> items, bool createAsSaved, Action<TmqMessage, T> action) where T : class
+        public PushResult FillJson<T>(IEnumerable<T> items, bool createAsSaved, Action<TwinoMessage, T> action) where T : class
         {
             if (_queue.Status == QueueStatus.Stopped)
                 return PushResult.StatusNotSupported;
@@ -80,16 +78,14 @@ namespace Twino.MQ.Queues
 
             foreach (T item in items)
             {
-                TmqMessage message = new TmqMessage(MessageType.QueueMessage, _queue.Channel.Name);
-                message.FirstAcquirer = true;
-                message.PendingAcknowledge = _queue.Options.RequestAcknowledge;
-                message.ContentType = _queue.Id;
+                TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, _queue.Name);
+                message.PendingResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
 
                 if (_queue.Options.UseMessageId)
-                    message.SetMessageId(_queue.Channel.Server.MessageIdGenerator.Create());
+                    message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
 
                 action(message, item);
-                message.Serialize(item, _queue.Channel.Server.MessageContentSerializer);
+                message.Serialize(item, _queue.Server.MessageContentSerializer);
 
                 QueueMessage qm = new QueueMessage(message, createAsSaved);
 
@@ -123,14 +119,12 @@ namespace Twino.MQ.Queues
 
             foreach (string item in items)
             {
-                TmqMessage message = new TmqMessage(MessageType.QueueMessage, _queue.Channel.Name);
-                message.FirstAcquirer = true;
+                TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, _queue.Name);
                 message.HighPriority = highPriority;
-                message.PendingAcknowledge = _queue.Options.RequestAcknowledge;
-                message.ContentType = _queue.Id;
+                message.PendingResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
 
                 if (_queue.Options.UseMessageId)
-                    message.SetMessageId(_queue.Channel.Server.MessageIdGenerator.Create());
+                    message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
 
                 message.Content = new MemoryStream(Encoding.UTF8.GetBytes(item));
                 message.Content.Position = 0;
@@ -168,14 +162,12 @@ namespace Twino.MQ.Queues
 
             foreach (byte[] item in items)
             {
-                TmqMessage message = new TmqMessage(MessageType.QueueMessage, _queue.Channel.Name);
-                message.FirstAcquirer = true;
+                TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, _queue.Name);
                 message.HighPriority = highPriority;
-                message.PendingAcknowledge = _queue.Options.RequestAcknowledge;
-                message.ContentType = _queue.Id;
+                message.PendingResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
 
                 if (_queue.Options.UseMessageId)
-                    message.SetMessageId(_queue.Channel.Server.MessageIdGenerator.Create());
+                    message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
 
                 message.Content = new MemoryStream(item);
                 message.Content.Position = 0;
@@ -202,7 +194,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Fills TMQ Message objects to the queue
         /// </summary>
-        public PushResult FillMessage(IEnumerable<TmqMessage> messages, bool isSaved)
+        public PushResult FillMessage(IEnumerable<TwinoMessage> messages, bool isSaved)
         {
             if (_queue.Status == QueueStatus.Stopped)
                 return PushResult.StatusNotSupported;
@@ -211,13 +203,12 @@ namespace Twino.MQ.Queues
             if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
                 return PushResult.LimitExceeded;
 
-            foreach (TmqMessage message in messages)
+            foreach (TwinoMessage message in messages)
             {
-                message.SetTarget(_queue.Channel.Name);
-                message.ContentType = _queue.Id;
+                message.SetTarget(_queue.Name);
 
                 if (_queue.Options.UseMessageId && string.IsNullOrEmpty(message.MessageId))
-                    message.SetMessageId(_queue.Channel.Server.MessageIdGenerator.Create());
+                    message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
 
                 message.CalculateLengths();
 

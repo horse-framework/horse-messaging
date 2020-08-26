@@ -26,17 +26,7 @@ namespace Twino.MQ.Events
         public const string ClientLeft = "ClientLeft";
 
         /// <summary>
-        /// When a channel is created.
-        /// </summary>
-        public const string ChannelCreated = "ChannelCreated";
-
-        /// <summary>
-        /// When a channel and it’s queues are removed.
-        /// </summary>
-        public const string ChannelRemoved = "ChannelRemoved";
-
-        /// <summary>
-        /// When a queue is created in a channel.
+        /// When a queue is created.
         /// </summary>
         public const string QueueCreated = "QueueCreated";
 

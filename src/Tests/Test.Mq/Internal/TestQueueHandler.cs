@@ -5,40 +5,40 @@ using Twino.MQ.Queues;
 
 namespace Test.Mq.Internal
 {
-    public class TestChannelHandler : IChannelEventHandler
+    public class TestQueueHandler : IQueueEventHandler
     {
         private readonly TestMqServer _server;
 
-        public TestChannelHandler(TestMqServer server)
+        public TestQueueHandler(TestMqServer server)
         {
             _server = server;
         }
 
-        public async Task OnQueueCreated(ChannelQueue queue, Channel channel)
+        public async Task OnQueueCreated(TwinoQueue queue, Channel channel)
         {
             _server.OnQueueCreated++;
             await Task.CompletedTask;
         }
 
-        public async Task OnQueueRemoved(ChannelQueue queue, Channel channel)
+        public async Task OnQueueRemoved(TwinoQueue queue, Channel channel)
         {
             _server.OnQueueRemoved++;
             await Task.CompletedTask;
         }
 
-        public async Task OnClientJoined(ChannelClient client)
+        public async Task OnClientJoined(QueueClient client)
         {
             _server.ClientJoined++;
             await Task.CompletedTask;
         }
 
-        public async Task OnClientLeft(ChannelClient client)
+        public async Task OnClientLeft(QueueClient client)
         {
             _server.ClientLeft++;
             await Task.CompletedTask;
         }
 
-        public async Task OnQueueStatusChanged(ChannelQueue queue, QueueStatus @from, QueueStatus to)
+        public async Task OnQueueStatusChanged(TwinoQueue queue, QueueStatus @from, QueueStatus to)
         {
             _server.OnQueueStatusChanged++;
             await Task.CompletedTask;

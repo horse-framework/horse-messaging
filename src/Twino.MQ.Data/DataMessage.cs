@@ -20,12 +20,12 @@ namespace Twino.MQ.Data
         /// <summary>
         /// TMQ Message itself
         /// </summary>
-        public readonly TmqMessage Message;
+        public readonly TwinoMessage Message;
 
         /// <summary>
         /// Creates new data message for database IO operations
         /// </summary>
-        public DataMessage(DataType type, string id, TmqMessage message = null)
+        public DataMessage(DataType type, string id, TwinoMessage message = null)
         {
             Type = type;
             Id = id;

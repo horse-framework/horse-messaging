@@ -20,7 +20,7 @@ namespace Twino.Client.TMQ.Internal
         protected KeyValuePair<string, ushort> DefaultPublishException { get; private set; }
         protected List<Tuple<Type, KeyValuePair<string, ushort>>> PublishExceptions { get; private set; }
 
-        public abstract Task Execute(TmqClient client, TmqMessage message, object model);
+        public abstract Task Execute(TmqClient client, TwinoMessage message, object model);
 
         protected void ResolveAttributes(Type type, Type modelType)
         {
@@ -57,7 +57,7 @@ namespace Twino.Client.TMQ.Internal
         /// <summary>
         /// Sends negative ack
         /// </summary>
-        protected Task SendNegativeAck(TmqMessage message, TmqClient client, Exception exception)
+        protected Task SendNegativeAck(TwinoMessage message, TmqClient client, Exception exception)
         {
             string reason;
             switch (NackReason)

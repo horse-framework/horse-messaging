@@ -129,7 +129,7 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Pushes a message to router
         /// </summary>
-        public Task<RouterPublishResult> Publish(MqClient sender, TmqMessage message)
+        public Task<RouterPublishResult> Publish(MqClient sender, TwinoMessage message)
         {
             if (!IsEnabled)
                 return Task.FromResult(RouterPublishResult.Disabled);
@@ -156,7 +156,7 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Sends the message to only first binding
         /// </summary>
-        private async Task<RouterPublishResult> OnlyFirst(MqClient sender, TmqMessage message)
+        private async Task<RouterPublishResult> OnlyFirst(MqClient sender, TwinoMessage message)
         {
             int index = 0;
             bool sent;
@@ -185,7 +185,7 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Distributes the message to all bindings
         /// </summary>
-        private async Task<RouterPublishResult> Distribute(MqClient sender, TmqMessage message)
+        private async Task<RouterPublishResult> Distribute(MqClient sender, TwinoMessage message)
         {
             RouterPublishResult result = RouterPublishResult.NoReceivers;
 
@@ -208,7 +208,7 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Sends the message to only one binding within round robin algorithm
         /// </summary>
-        private async Task<RouterPublishResult> RoundRobin(MqClient sender, TmqMessage message)
+        private async Task<RouterPublishResult> RoundRobin(MqClient sender, TwinoMessage message)
         {
             for (int i = 0; i < Bindings.Length; i++)
             {

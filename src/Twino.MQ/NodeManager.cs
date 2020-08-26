@@ -180,7 +180,7 @@ namespace Twino.MQ
         /// <summary>
         /// Sends a message to connected master nodes
         /// </summary>
-        public void SendMessageToNodes(TmqMessage message)
+        public void SendMessageToNodes(TwinoMessage message)
         {
             foreach (TmqStickyConnector connector in Connectors)
                 _ = connector.GetClient()?.SendAsync(message);

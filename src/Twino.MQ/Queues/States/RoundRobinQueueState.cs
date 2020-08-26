@@ -12,19 +12,19 @@ namespace Twino.MQ.Queues.States
         public bool TriggerSupported => true;
 
         private static readonly TmqWriter _writer = new TmqWriter();
-        private readonly ChannelQueue _queue;
+        private readonly TwinoQueue _queue;
 
         /// <summary>
         /// Round robin client list index
         /// </summary>
         private int _roundRobinIndex = -1;
 
-        public RoundRobinQueueState(ChannelQueue queue)
+        public RoundRobinQueueState(TwinoQueue queue)
         {
             _queue = queue;
         }
 
-        public Task<PullResult> Pull(ChannelClient client, TmqMessage request)
+        public Task<PullResult> Pull(QueueClient client, TwinoMessage request)
         {
             return Task.FromResult(PullResult.StatusNotSupported);
         }
@@ -41,7 +41,7 @@ namespace Twino.MQ.Queues.States
 
         public async Task<PushResult> Push(QueueMessage message)
         {
-            ChannelClient cc = _queue.Channel.GetNextRRClient(ref _roundRobinIndex);
+            QueueClient cc = _queue.GetNextRRClient(ref _roundRobinIndex);
             if (cc == null)
             {
                 _queue.AddMessage(message, false);
@@ -55,7 +55,7 @@ namespace Twino.MQ.Queues.States
             return result;
         }
 
-        private async Task<PushResult> ProcessMessage(QueueMessage message, ChannelClient receiver)
+        private async Task<PushResult> ProcessMessage(QueueMessage message, QueueClient receiver)
         {
             //if we need acknowledge from receiver, it has a deadline.
             DateTime? deadline = null;

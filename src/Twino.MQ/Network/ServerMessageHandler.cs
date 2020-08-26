@@ -33,7 +33,7 @@ namespace Twino.MQ.Network
 
         #region Handle
 
-        public Task Handle(MqClient client, TmqMessage message, bool fromNode)
+        public Task Handle(MqClient client, TwinoMessage message, bool fromNode)
         {
             try
             {
@@ -49,7 +49,7 @@ namespace Twino.MQ.Network
             }
         }
 
-        private Task HandleUnsafe(MqClient client, TmqMessage message)
+        private Task HandleUnsafe(MqClient client, TwinoMessage message)
         {
             switch (message.ContentType)
             {
@@ -153,7 +153,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Finds and joins to channel and sends response
         /// </summary>
-        private async Task JoinChannel(MqClient client, TmqMessage message)
+        private async Task JoinChannel(MqClient client, TwinoMessage message)
         {
             Channel channel = _server.FindChannel(message.Target);
 
@@ -173,7 +173,7 @@ namespace Twino.MQ.Network
             if (!string.IsNullOrEmpty(topic))
                 channel.Topic = topic;
 
-            ChannelClient found = channel.FindClient(client.UniqueId);
+            QueueClient found = channel.FindClient(client.UniqueId);
             if (found != null)
             {
                 if (message.PendingResponse)
@@ -205,7 +205,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Leaves from the channel and sends response
         /// </summary>
-        private async Task LeaveChannel(MqClient client, TmqMessage message)
+        private async Task LeaveChannel(MqClient client, TwinoMessage message)
         {
             Channel channel = _server.FindChannel(message.Target);
             if (channel == null)
@@ -225,7 +225,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Creates new channel
         /// </summary>
-        private async Task<Channel> CreateChannel(MqClient client, TmqMessage message, bool createForQueue)
+        private async Task<Channel> CreateChannel(MqClient client, TwinoMessage message, bool createForQueue)
         {
             Channel channel = _server.FindChannel(message.Target);
             if (channel != null)
@@ -267,7 +267,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Removes a channel with it's queues
         /// </summary>
-        private async Task RemoveChannel(MqClient client, TmqMessage message)
+        private async Task RemoveChannel(MqClient client, TwinoMessage message)
         {
             if (_server.AdminAuthorization == null)
             {
@@ -302,7 +302,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Finds the channel and sends the information
         /// </summary>
-        private async Task GetChannelList(MqClient client, TmqMessage message)
+        private async Task GetChannelList(MqClient client, TwinoMessage message)
         {
             if (_server.AdminAuthorization == null)
             {
@@ -346,7 +346,7 @@ namespace Twino.MQ.Network
                          });
             }
 
-            TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
+            TwinoMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.ChannelList;
             response.Serialize(list, _server.MessageContentSerializer);
             await client.SendAsync(response);
@@ -355,7 +355,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Finds the channel and sends the information
         /// </summary>
-        private async Task GetChannelInformation(MqClient client, TmqMessage message)
+        private async Task GetChannelInformation(MqClient client, TwinoMessage message)
         {
             if (_server.AdminAuthorization == null)
             {
@@ -399,7 +399,7 @@ namespace Twino.MQ.Network
                                                  ActiveClients = channel.ClientsCount()
                                              };
 
-            TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
+            TwinoMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.ChannelInformation;
             response.Serialize(information, _server.MessageContentSerializer);
             await client.SendAsync(response);
@@ -408,7 +408,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Gets active consumers of channel 
         /// </summary>
-        public async Task GetChannelConsumers(MqClient client, TmqMessage message)
+        public async Task GetChannelConsumers(MqClient client, TwinoMessage message)
         {
             if (_server.AdminAuthorization == null)
             {
@@ -443,7 +443,7 @@ namespace Twino.MQ.Network
 
             List<ClientInformation> list = new List<ClientInformation>();
 
-            foreach (ChannelClient cc in channel.ClientsClone)
+            foreach (QueueClient cc in channel.ClientsClone)
                 list.Add(new ClientInformation
                          {
                              Id = cc.Client.UniqueId,
@@ -453,7 +453,7 @@ namespace Twino.MQ.Network
                              Online = cc.JoinDate.LifetimeMilliseconds(),
                          });
 
-            TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
+            TwinoMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.ChannelConsumers;
             response.Serialize(list, _server.MessageContentSerializer);
             await client.SendAsync(response);
@@ -466,7 +466,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Creates new queue and sends response
         /// </summary>
-        private async Task CreateQueue(MqClient client, TmqMessage message)
+        private async Task CreateQueue(MqClient client, TwinoMessage message)
         {
             string queueId = message.FindHeader(TmqHeaders.QUEUE_ID);
             if (string.IsNullOrEmpty(queueId))
@@ -479,7 +479,7 @@ namespace Twino.MQ.Network
                 builder = await System.Text.Json.JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content);
 
             Channel channel = await CreateChannel(client, message, true);
-            ChannelQueue queue = channel.FindQueue(contentType);
+            TwinoQueue queue = channel.FindQueue(contentType);
 
             //if queue exists, we can't create. return duplicate response.
             if (queue != null)
@@ -504,7 +504,7 @@ namespace Twino.MQ.Network
             }
 
             //creates new queue
-            ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(channel.Options);
+            QueueOptions options = QueueOptions.CloneFrom(channel.Options);
             queue = await channel.CreateQueue(contentType, options, message, channel.Server.DeliveryHandlerFactory);
 
             //if creation successful, sends response
@@ -515,7 +515,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Removes a queue from a channel
         /// </summary>
-        private async Task RemoveQueue(MqClient client, TmqMessage message)
+        private async Task RemoveQueue(MqClient client, TwinoMessage message)
         {
             if (_server.AdminAuthorization == null)
             {
@@ -536,7 +536,7 @@ namespace Twino.MQ.Network
             await message.Content.ReadAsync(bytes);
             ushort contentType = BitConverter.ToUInt16(bytes);
 
-            ChannelQueue queue = channel.FindQueue(contentType);
+            TwinoQueue queue = channel.FindQueue(contentType);
             if (queue == null)
             {
                 await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
@@ -561,7 +561,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Creates new queue and sends response
         /// </summary>
-        private async Task UpdateQueue(MqClient client, TmqMessage message)
+        private async Task UpdateQueue(MqClient client, TwinoMessage message)
         {
             string queueId = message.FindHeader(TmqHeaders.QUEUE_ID);
             if (string.IsNullOrEmpty(queueId))
@@ -588,7 +588,7 @@ namespace Twino.MQ.Network
                 return;
             }
 
-            ChannelQueue queue = channel.FindQueue(contentType);
+            TwinoQueue queue = channel.FindQueue(contentType);
             if (queue == null)
             {
                 if (message.PendingResponse)
@@ -620,7 +620,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Clears messages in a queue
         /// </summary>
-        private async Task ClearMessages(MqClient client, TmqMessage message)
+        private async Task ClearMessages(MqClient client, TwinoMessage message)
         {
             string queueId = message.FindHeader(TmqHeaders.QUEUE_ID);
             if (string.IsNullOrEmpty(queueId))
@@ -645,7 +645,7 @@ namespace Twino.MQ.Network
                 return;
             }
 
-            ChannelQueue queue = channel.FindQueue(contentType);
+            TwinoQueue queue = channel.FindQueue(contentType);
             if (queue == null)
             {
                 if (message.PendingResponse)
@@ -683,7 +683,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Finds all queues in channel
         /// </summary>
-        private async Task GetQueueList(MqClient client, TmqMessage message)
+        private async Task GetQueueList(MqClient client, TwinoMessage message)
         {
             if (_server.AdminAuthorization == null)
             {
@@ -710,7 +710,7 @@ namespace Twino.MQ.Network
             }
 
             List<QueueInformation> list = new List<QueueInformation>();
-            foreach (ChannelQueue queue in channel.QueuesClone)
+            foreach (TwinoQueue queue in channel.QueuesClone)
             {
                 if (queue == null)
                     continue;
@@ -745,7 +745,7 @@ namespace Twino.MQ.Network
                          });
             }
 
-            TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
+            TwinoMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.QueueList;
             response.Serialize(list, _server.MessageContentSerializer);
             await client.SendAsync(response);
@@ -754,7 +754,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Finds the queue and sends the information
         /// </summary>
-        private async Task GetQueueInformation(MqClient client, TmqMessage message)
+        private async Task GetQueueInformation(MqClient client, TwinoMessage message)
         {
             if (_server.AdminAuthorization == null)
             {
@@ -783,7 +783,7 @@ namespace Twino.MQ.Network
             byte[] bytes = new byte[2];
             await message.Content.ReadAsync(bytes);
             ushort id = BitConverter.ToUInt16(bytes);
-            ChannelQueue queue = channel.FindQueue(id);
+            TwinoQueue queue = channel.FindQueue(id);
             if (queue == null)
             {
                 await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
@@ -819,7 +819,7 @@ namespace Twino.MQ.Network
                                                MessageSizeLimit = queue.Options.MessageSizeLimit
                                            };
 
-            TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
+            TwinoMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.QueueInformation;
             response.Serialize(information, _server.MessageContentSerializer);
             await client.SendAsync(response);
@@ -832,7 +832,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Gets connected instance list
         /// </summary>
-        private async Task GetInstanceList(MqClient client, TmqMessage message)
+        private async Task GetInstanceList(MqClient client, TwinoMessage message)
         {
             if (_server.AdminAuthorization == null)
             {
@@ -885,7 +885,7 @@ namespace Twino.MQ.Network
                          });
             }
 
-            TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
+            TwinoMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.InstanceList;
             response.Serialize(list, _server.MessageContentSerializer);
             await client.SendAsync(response);
@@ -898,7 +898,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Gets all connected clients
         /// </summary>
-        public async Task GetClients(MqClient client, TmqMessage message)
+        public async Task GetClients(MqClient client, TwinoMessage message)
         {
             if (_server.AdminAuthorization == null)
             {
@@ -941,7 +941,7 @@ namespace Twino.MQ.Network
                          });
             }
 
-            TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
+            TwinoMessage response = message.CreateResponse(TwinoResultCode.Ok);
             message.ContentType = KnownContentTypes.ClientList;
             response.Serialize(list, _server.MessageContentSerializer);
             await client.SendAsync(response);
@@ -954,7 +954,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Creates new router
         /// </summary>
-        private async Task CreateRouter(MqClient client, TmqMessage message)
+        private async Task CreateRouter(MqClient client, TwinoMessage message)
         {
             IRouter found = _server.FindRouter(message.Target);
             if (found != null)
@@ -986,7 +986,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Removes a router with it's bindings
         /// </summary>
-        private async Task RemoveRouter(MqClient client, TmqMessage message)
+        private async Task RemoveRouter(MqClient client, TwinoMessage message)
         {
             IRouter found = _server.FindRouter(message.Target);
             if (found == null)
@@ -1013,7 +1013,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Sends all routers
         /// </summary>
-        private async Task ListRouters(MqClient client, TmqMessage message)
+        private async Task ListRouters(MqClient client, TwinoMessage message)
         {
             List<RouterInformation> items = new List<RouterInformation>();
             foreach (IRouter router in _server.Routers)
@@ -1030,7 +1030,7 @@ namespace Twino.MQ.Network
                 items.Add(info);
             }
 
-            TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
+            TwinoMessage response = message.CreateResponse(TwinoResultCode.Ok);
             response.Serialize(items, new NewtonsoftContentSerializer());
             await client.SendAsync(response);
         }
@@ -1038,7 +1038,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Creates new binding for a router
         /// </summary>
-        private async Task CreateRouterBinding(MqClient client, TmqMessage message)
+        private async Task CreateRouterBinding(MqClient client, TwinoMessage message)
         {
             IRouter router = _server.FindRouter(message.Target);
             if (router == null)
@@ -1085,7 +1085,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Removes a router with it's bindings
         /// </summary>
-        private async Task RemoveRouterBinding(MqClient client, TmqMessage message)
+        private async Task RemoveRouterBinding(MqClient client, TwinoMessage message)
         {
             IRouter router = _server.FindRouter(message.Target);
             if (router == null)
@@ -1127,7 +1127,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Sends all bindings of a router
         /// </summary>
-        private async Task ListRouterBindings(MqClient client, TmqMessage message)
+        private async Task ListRouterBindings(MqClient client, TwinoMessage message)
         {
             IRouter router = _server.FindRouter(message.Target);
             if (router == null)
@@ -1166,7 +1166,7 @@ namespace Twino.MQ.Network
                 items.Add(info);
             }
 
-            TmqMessage response = message.CreateResponse(TwinoResultCode.Ok);
+            TwinoMessage response = message.CreateResponse(TwinoResultCode.Ok);
             response.Serialize(items, new NewtonsoftContentSerializer());
             await client.SendAsync(response);
         }

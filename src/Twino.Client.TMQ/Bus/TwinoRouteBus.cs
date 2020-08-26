@@ -99,14 +99,14 @@ namespace Twino.Client.TMQ.Bus
 		#region Request
 
 		/// <inheritdoc />
-		public Task<TmqMessage> PublishRequest(string routerName,
+		public Task<TwinoMessage> PublishRequest(string routerName,
 			string message,
 			ushort contentType = 0,
 			IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
 		{
 			TmqClient client = _connector.GetClient();
 			if (client == null)
-				return Task.FromResult<TmqMessage>(null);
+				return Task.FromResult<TwinoMessage>(null);
 
 			return client.Routers.PublishRequest(routerName, message, contentType, messageHeaders);
 		}

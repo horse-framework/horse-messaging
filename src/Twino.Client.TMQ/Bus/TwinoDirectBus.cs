@@ -108,31 +108,31 @@ namespace Twino.Client.TMQ.Bus
         }
 
         /// <inheritdoc />
-        public Task<TmqMessage> Request(string target, ushort contentType, MemoryStream content, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        public Task<TwinoMessage> Request(string target, ushort contentType, MemoryStream content, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TmqClient client = _connector.GetClient();
             if (client == null)
-                return Task.FromResult<TmqMessage>(null);
+                return Task.FromResult<TwinoMessage>(null);
 
             return client.Direct.Request(target, contentType, content, messageHeaders);
         }
 
         /// <inheritdoc />
-        public Task<TmqMessage> Request(string target, ushort contentType, string content, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        public Task<TwinoMessage> Request(string target, ushort contentType, string content, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TmqClient client = _connector.GetClient();
             if (client == null)
-                return Task.FromResult<TmqMessage>(null);
+                return Task.FromResult<TwinoMessage>(null);
 
             return client.Direct.Request(target, contentType, content, messageHeaders);
         }
 
         /// <inheritdoc />
-        public Task<TmqMessage> Request(string target, ushort contentType, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        public Task<TwinoMessage> Request(string target, ushort contentType, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TmqClient client = _connector.GetClient();
             if (client == null)
-                return Task.FromResult<TmqMessage>(null);
+                return Task.FromResult<TwinoMessage>(null);
 
             return client.Direct.Request(target, contentType, messageHeaders);
         }

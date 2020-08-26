@@ -10,14 +10,14 @@ namespace Twino.MQ.Queues.States
         public QueueMessage ProcessingMessage { get; private set; }
         public bool TriggerSupported => false;
 
-        private readonly ChannelQueue _queue;
+        private readonly TwinoQueue _queue;
 
-        public CacheQueueState(ChannelQueue queue)
+        public CacheQueueState(TwinoQueue queue)
         {
             _queue = queue;
         }
 
-        public async Task<PullResult> Pull(ChannelClient client, TmqMessage request)
+        public async Task<PullResult> Pull(QueueClient client, TwinoMessage request)
         {
             QueueMessage message = _queue.FindNextMessage();
             if (message == null)

@@ -74,7 +74,7 @@ namespace Twino.Client.TMQ.Bus
         /// <param name="contentType">Message content type</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
-        Task<TmqMessage> PublishRequest(string routerName, string message, ushort contentType = 0,
+        Task<TwinoMessage> PublishRequest(string routerName, string message, ushort contentType = 0,
                                         IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>

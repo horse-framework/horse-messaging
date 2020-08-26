@@ -23,15 +23,15 @@ namespace Twino.MQ.Network
 
         #endregion
 
-        private static async Task SendResponse(MqClient client, TmqMessage message, bool successful)
+        private static async Task SendResponse(MqClient client, TwinoMessage message, bool successful)
         {
             ushort contentType = successful ? (ushort) TwinoResultCode.Ok : (ushort) TwinoResultCode.Failed;
-            TmqMessage response = new TmqMessage(MessageType.Response, client.UniqueId, contentType);
+            TwinoMessage response = new TwinoMessage(MessageType.Response, client.UniqueId, contentType);
             response.SetMessageId(message.MessageId);
             await client.SendAsync(response);
         }
 
-        public Task Handle(MqClient client, TmqMessage message, bool fromNode)
+        public Task Handle(MqClient client, TwinoMessage message, bool fromNode)
         {
             string eventName = message.Target;
             string channelName = message.FindHeader(TmqHeaders.CHANNEL_NAME);
@@ -63,7 +63,7 @@ namespace Twino.MQ.Network
                     if (channel == null)
                         return SendResponse(client, message, false);
 
-                    ChannelQueue queue = null;
+                    TwinoQueue queue = null;
                     if (!string.IsNullOrEmpty(queueId))
                         queue = channel.FindQueue(Convert.ToUInt16(queueId));
 

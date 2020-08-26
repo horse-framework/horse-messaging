@@ -68,7 +68,7 @@ namespace Test.Mq.Statuses
             await Task.Delay(700);
 
             Channel channel = server.Server.FindChannel("ch-round");
-            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
             Assert.NotNull(channel);
             Assert.NotNull(queue);
             Assert.Single(queue.Messages);
@@ -96,7 +96,7 @@ namespace Test.Mq.Statuses
             int port = server.Start(300, 300);
 
             Channel ch = server.Server.FindChannel("ch-round");
-            ChannelQueue queue = ch.Queues.FirstOrDefault();
+            TwinoQueue queue = ch.Queues.FirstOrDefault();
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
             queue.Options.RequestAcknowledge = queueAckIsActive;

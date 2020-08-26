@@ -33,7 +33,7 @@ namespace Test.Mq.Operators
             Channel channel = server.Server.Channels.FirstOrDefault(x => x.Name == "ch-2");
             Assert.NotNull(channel);
 
-            ChannelQueue queue = channel.Queues.FirstOrDefault();
+            TwinoQueue queue = channel.Queues.FirstOrDefault();
             Assert.NotNull(queue);
             Assert.Equal(MessageA.ContentType, queue.Id);
         }
@@ -60,7 +60,7 @@ namespace Test.Mq.Operators
             Channel channel = server.Server.FindChannel("ch-test");
             Assert.NotNull(channel);
 
-            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
             Assert.NotNull(queue);
 
             Assert.True(queue.Options.SendOnlyFirstAcquirer);
@@ -78,7 +78,7 @@ namespace Test.Mq.Operators
             Channel channel = server.Server.FindChannel("ch-route");
             Assert.NotNull(channel);
 
-            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
             Assert.NotNull(queue);
 
             Assert.False(queue.Options.WaitForAcknowledge);
@@ -112,7 +112,7 @@ namespace Test.Mq.Operators
             Channel channel = server.Server.FindChannel("ch-route");
             Assert.NotNull(channel);
 
-            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
             Assert.NotNull(queue);
 
             TmqClient client = new TmqClient();
@@ -175,7 +175,7 @@ namespace Test.Mq.Operators
             int port = server.Start();
 
             var channel = server.Server.FindChannel("ch-push");
-            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
             queue.AddStringMessageWithId("Hello, World", false, false);
             queue.AddStringMessageWithId("Hello, World", false, true);
 

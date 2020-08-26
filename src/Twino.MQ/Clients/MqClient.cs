@@ -16,7 +16,7 @@ namespace Twino.MQ.Clients
         /// <summary>
         /// Channels that client is in
         /// </summary>
-        private readonly List<ChannelClient> _channels = new List<ChannelClient>();
+        private readonly List<QueueClient> _channels = new List<QueueClient>();
 
         /// <summary>
         /// Connection data of the client.
@@ -103,12 +103,12 @@ namespace Twino.MQ.Clients
         /// <summary>
         /// Gets all channels of the client
         /// </summary>
-        public IEnumerable<ChannelClient> GetChannels()
+        public IEnumerable<QueueClient> GetChannels()
         {
-            List<ChannelClient> list;
+            List<QueueClient> list;
 
             lock (_channels)
-                list = new List<ChannelClient>(_channels);
+                list = new List<QueueClient>(_channels);
 
             return list;
         }
@@ -116,19 +116,19 @@ namespace Twino.MQ.Clients
         /// <summary>
         /// Adds channel into client's channel list
         /// </summary>
-        internal void Join(ChannelClient channel)
+        internal void Join(QueueClient queue)
         {
             lock (_channels)
-                _channels.Add(channel);
+                _channels.Add(queue);
         }
 
         /// <summary>
         /// Removes channel from client's channel list
         /// </summary>
-        internal void Leave(ChannelClient channel)
+        internal void Leave(QueueClient queue)
         {
             lock (_channels)
-                _channels.Remove(channel);
+                _channels.Remove(queue);
         }
 
         /// <summary>
@@ -136,16 +136,16 @@ namespace Twino.MQ.Clients
         /// </summary>
         internal async Task LeaveFromAllChannels()
         {
-            List<ChannelClient> list;
+            List<QueueClient> list;
             lock (_channels)
             {
-                list = new List<ChannelClient>(_channels);
+                list = new List<QueueClient>(_channels);
                 _channels.Clear();
             }
 
-            foreach (ChannelClient cc in list)
-                if (cc.Channel != null)
-                    await cc.Channel.RemoveClientSilent(cc);
+            foreach (QueueClient cc in list)
+                if (cc.Queue != null)
+                    await cc.Queue.RemoveClientSilent(cc);
         }
 
         #endregion

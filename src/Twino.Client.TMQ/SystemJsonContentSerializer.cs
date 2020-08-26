@@ -25,7 +25,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         /// <param name="message">Message</param>
         /// <param name="model">Model that will be serialized into the tmq message</param>
-        public void Serialize(TmqMessage message, object model)
+        public void Serialize(TwinoMessage message, object model)
         {
             byte[] array = JsonSerializer.SerializeToUtf8Bytes(model, model.GetType(), _options);
             message.Content = new MemoryStream(array);
@@ -37,7 +37,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         /// <param name="message">Message</param>
         /// <param name="type">Model type</param>
-        public object Deserialize(TmqMessage message, Type type)
+        public object Deserialize(TwinoMessage message, Type type)
         {
             if (message.Content == null || message.Content.Length < 1)
                 return null;

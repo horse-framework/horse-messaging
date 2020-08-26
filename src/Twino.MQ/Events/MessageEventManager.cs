@@ -13,8 +13,8 @@ namespace Twino.MQ.Events
         /// <summary>
         /// Creates new message event manager
         /// </summary>
-        public MessageEventManager(TwinoMQ server, string eventName, ChannelQueue queue)
-            : base(server, eventName, queue.Channel.Name, queue.Id)
+        public MessageEventManager(TwinoMQ server, string eventName, TwinoQueue queue)
+            : base(server, eventName, queue.Name)
         {
         }
 

@@ -22,7 +22,7 @@ namespace Twino.MQ.Network
 
         #endregion
 
-        public async Task Handle(MqClient client, TmqMessage message, bool fromNode)
+        public async Task Handle(MqClient client, TwinoMessage message, bool fromNode)
         {
             if (string.IsNullOrEmpty(message.Target))
                 return;
@@ -69,7 +69,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Processes the client message which has multiple receivers (message by name or type)
         /// </summary>
-        private async Task ProcessMultipleReceiverClientMessage(MqClient sender, List<MqClient> receivers, TmqMessage message)
+        private async Task ProcessMultipleReceiverClientMessage(MqClient sender, List<MqClient> receivers, TwinoMessage message)
         {
             if (receivers.Count < 1)
             {
@@ -98,7 +98,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Processes the client message which has single receiver (message by unique id)
         /// </summary>
-        private async Task ProcessSingleReceiverClientMessage(MqClient client, TmqMessage message)
+        private async Task ProcessSingleReceiverClientMessage(MqClient client, TwinoMessage message)
         {
             //find the receiver
             MqClient other = _server.FindClient(message.Target);

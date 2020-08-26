@@ -109,7 +109,7 @@ namespace Twino.Client.TMQ.Internal
         /// <summary>
         /// This method process the ack message, when it is received
         /// </summary>
-        public void ProcessAcknowledge(TmqMessage message)
+        public void ProcessAcknowledge(TwinoMessage message)
         {
             if (message.Type != MessageType.Acknowledge || string.IsNullOrEmpty(message.MessageId))
                 return;
@@ -135,7 +135,7 @@ namespace Twino.Client.TMQ.Internal
         /// <summary>
         /// This method process the response message, when it is received
         /// </summary>
-        public void ProcessResponse(TmqMessage message)
+        public void ProcessResponse(TwinoMessage message)
         {
             if (message.Type != MessageType.Response || string.IsNullOrEmpty(message.MessageId))
                 return;
@@ -154,7 +154,7 @@ namespace Twino.Client.TMQ.Internal
         /// <summary>
         /// Starts to follow message acknowledge
         /// </summary>
-        public Task<TwinoResult> FollowAcknowledge(TmqMessage message)
+        public Task<TwinoResult> FollowAcknowledge(TwinoMessage message)
         {
             if (!message.PendingAcknowledge || string.IsNullOrEmpty(message.MessageId))
                 return Task.FromResult(TwinoResult.Failed());
@@ -171,7 +171,7 @@ namespace Twino.Client.TMQ.Internal
         /// <summary>
         /// Starts to follow message response
         /// </summary>
-        public async Task<TmqMessage> FollowResponse(TmqMessage message)
+        public async Task<TwinoMessage> FollowResponse(TwinoMessage message)
         {
             if (!message.PendingResponse || string.IsNullOrEmpty(message.MessageId))
                 return default;
@@ -188,7 +188,7 @@ namespace Twino.Client.TMQ.Internal
         /// <summary>
         /// Cancels following response of the message
         /// </summary>
-        public void UnfollowMessage(TmqMessage message)
+        public void UnfollowMessage(TwinoMessage message)
         {
             lock (_descriptors)
             {

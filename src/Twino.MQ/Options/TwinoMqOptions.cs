@@ -5,7 +5,7 @@ namespace Twino.MQ.Options
     /// <summary>
     /// Server default options
     /// </summary>
-    public class TwinoMqOptions : ChannelOptions
+    public class TwinoMqOptions : QueueOptions
     {
         /// <summary>
         /// Server name, will be used while connecting to other instances
@@ -18,12 +18,6 @@ namespace Twino.MQ.Options
         public string Type { get; set; } = "mq";
 
         /// <summary>
-        /// If true, channel will be created automatically with default options
-        /// when a client tries to subscribe or push a message to not existing channel.
-        /// </summary>
-        public bool AutoChannelCreation { get; set; } = true;
-
-        /// <summary>
         /// If true, queue will be created automatically with default options
         /// when a client tries to subscribe or push a message to not existing queue.
         /// </summary>
@@ -33,7 +27,7 @@ namespace Twino.MQ.Options
         /// Maximum channel limit of the server
         /// Zero is unlimited.
         /// </summary>
-        public int ChannelLimit { get; set; }
+        public int QueueLimit { get; set; }
 
         /// <summary>
         /// Other server node informations that will be connected

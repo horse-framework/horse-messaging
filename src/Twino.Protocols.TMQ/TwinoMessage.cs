@@ -13,14 +13,15 @@ namespace Twino.Protocols.TMQ
     /// <summary>
     /// TMQ Protocol message
     /// </summary>
-    public class TmqMessage
+    public class TwinoMessage
     {
         #region Properties
 
         /// <summary>
-        /// If true, receiver is the first acquirer of the message
+        /// True means, client is pending response (or acknowledge).
+        /// Sending response is not mandatory but it SHOULD sent.
         /// </summary>
-        public bool FirstAcquirer { get; set; }
+        public bool PendingResponse { get; set; }
 
         /// <summary>
         /// If true, message should be at first element in the queue
@@ -36,23 +37,6 @@ namespace Twino.Protocols.TMQ
         /// Message type
         /// </summary>
         public MessageType Type { get; set; }
-
-        /// <summary>
-        /// True means, client is pending a response.
-        /// Sending response is not mandatory but it SHOULD sent.
-        /// </summary>
-        public bool PendingResponse { get; set; }
-
-        /// <summary>
-        /// True means, client is pending a response.
-        /// If acknowledge isn't sent, server will complete process as not acknowledged
-        /// </summary>
-        public bool PendingAcknowledge { get; set; }
-
-        /// <summary>
-        /// Message TTL value. Default is 16
-        /// </summary>
-        public int Ttl { get; set; } = 16;
 
         /// <summary>
         /// Message Id length
@@ -117,14 +101,14 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Creates new empty TMQ Protocol message
         /// </summary>
-        public TmqMessage()
+        public TwinoMessage()
         {
         }
 
         /// <summary>
         /// Creates new TMQ Protocol message with specified type
         /// </summary>
-        public TmqMessage(MessageType type)
+        public TwinoMessage(MessageType type)
         {
             Type = type;
         }
@@ -132,7 +116,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Creates new TMQ Protocol message with specified type and target
         /// </summary>
-        public TmqMessage(MessageType type, string target)
+        public TwinoMessage(MessageType type, string target)
         {
             Type = type;
             SetTarget(target);
@@ -141,7 +125,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Creates new TMQ Protocol message with specified type and target
         /// </summary>
-        public TmqMessage(MessageType type, string target, ushort contentType)
+        public TwinoMessage(MessageType type, string target, ushort contentType)
         {
             Type = type;
             ContentType = contentType;
@@ -253,18 +237,16 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Clones the message
         /// </summary>
-        public TmqMessage Clone(bool cloneHeaders, bool cloneContent, string cloneId, List<KeyValuePair<string, string>> additionalHeaders = null)
+        public TwinoMessage Clone(bool cloneHeaders, bool cloneContent, string cloneId, List<KeyValuePair<string, string>> additionalHeaders = null)
         {
-            TmqMessage clone = new TmqMessage(Type, Target);
+            TwinoMessage clone = new TwinoMessage(Type, Target);
 
             if (!string.IsNullOrEmpty(cloneId))
                 clone.SetMessageId(cloneId);
 
             clone.SetSource(Source);
 
-            clone.FirstAcquirer = FirstAcquirer;
             clone.HighPriority = HighPriority;
-            clone.PendingAcknowledge = PendingAcknowledge;
             clone.PendingResponse = PendingResponse;
             clone.ContentType = ContentType;
 
@@ -349,12 +331,11 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Create an acknowledge message of the message
         /// </summary>
-        public TmqMessage CreateAcknowledge(string negativeReason = null)
+        public TwinoMessage CreateAcknowledge(string negativeReason = null)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
 
             message.SetMessageId(MessageId);
-            message.FirstAcquirer = FirstAcquirer;
             message.Type = MessageType.Acknowledge;
             message.ContentType = ContentType;
 
@@ -390,11 +371,10 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Create a response message of the message
         /// </summary>
-        public TmqMessage CreateResponse(TwinoResultCode status)
+        public TwinoMessage CreateResponse(TwinoResultCode status)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
 
-            message.FirstAcquirer = FirstAcquirer;
             message.HighPriority = HighPriority;
             message.Type = MessageType.Response;
             message.ContentType = Convert.ToUInt16(status);

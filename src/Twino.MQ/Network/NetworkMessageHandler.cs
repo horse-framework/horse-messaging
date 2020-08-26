@@ -10,7 +10,7 @@ namespace Twino.MQ.Network
     /// <summary>
     /// Message queue server handler
     /// </summary>
-    internal class NetworkMessageHandler : IProtocolConnectionHandler<TmqServerSocket, TmqMessage>
+    internal class NetworkMessageHandler : IProtocolConnectionHandler<TmqServerSocket, TwinoMessage>
     {
         #region Fields
 
@@ -126,7 +126,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Called when a new message received from the client
         /// </summary>
-        public Task Received(ITwinoServer server, IConnectionInfo info, TmqServerSocket client, TmqMessage message)
+        public Task Received(ITwinoServer server, IConnectionInfo info, TmqServerSocket client, TwinoMessage message)
         {
             MqClient mc = (MqClient) client;
 
@@ -159,7 +159,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Routes message to it's type handler
         /// </summary>
-        internal Task RouteToHandler(MqClient mc, TmqMessage message, bool fromNode)
+        internal Task RouteToHandler(MqClient mc, TwinoMessage message, bool fromNode)
         {
             switch (message.Type)
             {

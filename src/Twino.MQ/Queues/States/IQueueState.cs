@@ -14,7 +14,7 @@ namespace Twino.MQ.Queues.States
 
         Task<PushResult> Push(QueueMessage message);
 
-        Task<PullResult> Pull(ChannelClient client, TmqMessage request);
+        Task<PullResult> Pull(QueueClient client, TwinoMessage request);
 
         Task<QueueStatusAction> EnterStatus(QueueStatus previousStatus);
 

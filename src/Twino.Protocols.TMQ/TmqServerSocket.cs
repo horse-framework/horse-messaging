@@ -91,7 +91,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Sends TMQ message to client
         /// </summary>
-        public bool Send(TmqMessage message, IList<KeyValuePair<string,string>> additionalHeaders = null)
+        public bool Send(TwinoMessage message, IList<KeyValuePair<string,string>> additionalHeaders = null)
         {
             if (UseUniqueMessageId && string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(_uniqueIdGenerator.Create());
@@ -103,7 +103,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Sends TMQ message to client
         /// </summary>
-        public Task<bool> SendAsync(TmqMessage message, IList<KeyValuePair<string,string>> additionalHeaders = null)
+        public Task<bool> SendAsync(TwinoMessage message, IList<KeyValuePair<string,string>> additionalHeaders = null)
         {
             if (UseUniqueMessageId && string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(_uniqueIdGenerator.Create());

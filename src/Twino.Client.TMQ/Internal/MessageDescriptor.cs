@@ -11,7 +11,7 @@ namespace Twino.Client.TMQ.Internal
         /// <summary>
         /// Message
         /// </summary>
-        public TmqMessage Message { get; }
+        public TwinoMessage Message { get; }
 
         /// <summary>
         /// Message follow expiration date
@@ -25,7 +25,7 @@ namespace Twino.Client.TMQ.Internal
 
         protected bool SourceCompleted { get; set; }
 
-        protected MessageDescriptor(TmqMessage message, DateTime expiration)
+        protected MessageDescriptor(TwinoMessage message, DateTime expiration)
         {
             Message = message;
             Expiration = expiration;

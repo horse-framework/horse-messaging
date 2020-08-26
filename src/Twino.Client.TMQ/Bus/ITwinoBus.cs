@@ -26,13 +26,13 @@ namespace Twino.Client.TMQ.Bus
         /// <summary>
         /// Sends a raw message
         /// </summary>
-        Task<TwinoResult> SendAsync(TmqMessage message);
+        Task<TwinoResult> SendAsync(TwinoMessage message);
 
         /// <summary>
         /// Sends a raw message and waits for it's response
         /// </summary>
         /// <param name="message">Raw message</param>
         /// <returns>Response message</returns>
-        Task<TmqMessage> RequestAsync(TmqMessage message);
+        Task<TwinoMessage> RequestAsync(TwinoMessage message);
     }
 }

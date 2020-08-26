@@ -13,7 +13,7 @@ namespace Twino.MQ.Routing
     /// </summary>
     public class QueueBinding : Binding
     {
-        private ChannelQueue _targetQueue;
+        private TwinoQueue _targetQueue;
         private DateTime _queueUpdateTime;
 
         /// <summary>
@@ -31,9 +31,9 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Sends the message to binding receivers
         /// </summary>
-        public override async Task<bool> Send(MqClient sender, TmqMessage message)
+        public override async Task<bool> Send(MqClient sender, TwinoMessage message)
         {
-            ChannelQueue queue = GetQueue();
+            TwinoQueue queue = GetQueue();
             if (queue == null)
                 return false;
 
@@ -41,11 +41,11 @@ namespace Twino.MQ.Routing
                                    ? Router.Server.MessageIdGenerator.Create()
                                    : message.MessageId;
 
-            TmqMessage msg = message.Clone(true, true, messageId);
+            TwinoMessage msg = message.Clone(true, true, messageId);
 
             msg.Type = MessageType.QueueMessage;
             msg.SetTarget(Target);
-            
+
             // ReSharper disable once PossibleInvalidOperationException
             msg.ContentType = ContentType.Value;
             msg.PendingAcknowledge = false;
@@ -68,17 +68,12 @@ namespace Twino.MQ.Routing
         /// If it's not cached, finds and caches it before returns.
         /// </summary>
         /// <returns></returns>
-        private ChannelQueue GetQueue()
+        private TwinoQueue GetQueue()
         {
             if (_targetQueue != null && DateTime.UtcNow - _queueUpdateTime < TimeSpan.FromMinutes(1))
                 return _targetQueue;
 
-            Channel channel = Router.Server.FindChannel(Target);
-            if (channel == null)
-                return null;
-
-            // ReSharper disable once PossibleInvalidOperationException
-            ChannelQueue queue = channel.FindQueue(ContentType.Value);
+            TwinoQueue queue = Router.Server.FindQueue(Target);
             if (queue == null)
                 return null;
 

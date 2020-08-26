@@ -12,15 +12,15 @@ namespace Twino.MQ.Queues.States
         public QueueMessage ProcessingMessage { get; private set; }
         public bool TriggerSupported => true;
 
-        private readonly ChannelQueue _queue;
+        private readonly TwinoQueue _queue;
         private static readonly TmqWriter _writer = new TmqWriter();
 
-        public PushQueueState(ChannelQueue queue)
+        public PushQueueState(TwinoQueue queue)
         {
             _queue = queue;
         }
 
-        public Task<PullResult> Pull(ChannelClient client, TmqMessage request)
+        public Task<PullResult> Pull(QueueClient client, TwinoMessage request)
         {
             return Task.FromResult(PullResult.StatusNotSupported);
         }
@@ -51,7 +51,7 @@ namespace Twino.MQ.Queues.States
                 ackDeadline = DateTime.UtcNow.Add(_queue.Options.AcknowledgeTimeout);
 
             //if there are not receivers, complete send operation
-            List<ChannelClient> clients = _queue.Channel.ClientsClone;
+            List<QueueClient> clients = _queue.ClientsClone;
             if (clients.Count == 0)
             {
                 _queue.AddMessage(message, false);
@@ -73,7 +73,7 @@ namespace Twino.MQ.Queues.States
             bool messageIsSent = false;
 
             //to all receivers
-            foreach (ChannelClient client in clients)
+            foreach (QueueClient client in clients)
             {
                 //to only online receivers
                 if (!client.Client.IsConnected)
@@ -85,7 +85,7 @@ namespace Twino.MQ.Queues.States
 
                 //call before send and check decision
                 Decision ccrd = await _queue.DeliveryHandler.CanConsumerReceive(_queue, message, client.Client);
-                final = ChannelQueue.CreateFinalDecision(final, ccrd);
+                final = TwinoQueue.CreateFinalDecision(final, ccrd);
 
                 if (!ccrd.Allow)
                     continue;
@@ -114,7 +114,7 @@ namespace Twino.MQ.Queues.States
                     //do after send operations for per message
                     _queue.Info.AddDelivery();
                     Decision d = await _queue.DeliveryHandler.ConsumerReceived(_queue, delivery, client.Client);
-                    final = ChannelQueue.CreateFinalDecision(final, d);
+                    final = TwinoQueue.CreateFinalDecision(final, d);
 
                     //if we are sending to only first acquirer, break
                     if (_queue.Options.SendOnlyFirstAcquirer && firstAcquirer)
@@ -126,7 +126,7 @@ namespace Twino.MQ.Queues.States
                 else
                 {
                     Decision d = await _queue.DeliveryHandler.ConsumerReceiveFailed(_queue, delivery, client.Client);
-                    final = ChannelQueue.CreateFinalDecision(final, d);
+                    final = TwinoQueue.CreateFinalDecision(final, d);
                 }
             }
 

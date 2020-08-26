@@ -26,7 +26,7 @@ namespace Twino.Client.TMQ.Operators
         public async Task<TwinoResult> SendAsync(string target, ushort contentType, MemoryStream content, bool waitAcknowledge,
                                                  IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.SetTarget(target);
             message.ContentType = contentType;
             message.Content = content;
@@ -65,7 +65,7 @@ namespace Twino.Client.TMQ.Operators
         public async Task<TwinoResult> SendJsonById<T>(string id, ushort contentType, T model, bool toOnlyFirstReceiver, bool waitAcknowledge,
                                                        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.SetTarget(id);
             message.Type = MessageType.DirectMessage;
             message.FirstAcquirer = toOnlyFirstReceiver;
@@ -88,7 +88,7 @@ namespace Twino.Client.TMQ.Operators
         public async Task<TwinoResult> SendJson<T>(T model, bool waitAcknowledge, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor(model.GetType());
-            TmqMessage message = descriptor.CreateMessage(MessageType.DirectMessage, null, null);
+            TwinoMessage message = descriptor.CreateMessage(MessageType.DirectMessage, null, null);
             if (string.IsNullOrEmpty(message.Target))
                 return new TwinoResult(TwinoResultCode.SendError);
 
@@ -129,7 +129,7 @@ namespace Twino.Client.TMQ.Operators
         private async Task<TwinoResult> SendById(string id, ushort contentType, MemoryStream content, bool toOnlyFirstReceiver, bool waitAcknowledge,
                                                  IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.SetTarget(id);
             message.FirstAcquirer = toOnlyFirstReceiver;
             message.ContentType = contentType;
@@ -166,14 +166,14 @@ namespace Twino.Client.TMQ.Operators
                                                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor(model.GetType());
-            TmqMessage message = descriptor.CreateMessage(MessageType.DirectMessage, target, contentType);
+            TwinoMessage message = descriptor.CreateMessage(MessageType.DirectMessage, target, contentType);
             message.Serialize(model, _client.JsonSerializer);
 
             if (messageHeaders != null)
                 foreach (KeyValuePair<string, string> pair in messageHeaders)
                     message.AddHeader(pair.Key, pair.Value);
 
-            TmqMessage responseMessage = await _client.Request(message);
+            TwinoMessage responseMessage = await _client.Request(message);
             if (responseMessage.ContentType == 0)
             {
                 TResponse response = responseMessage.Deserialize<TResponse>(_client.JsonSerializer);
@@ -186,10 +186,10 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Sends a request to target, waits response
         /// </summary>
-        public async Task<TmqMessage> Request(string target, ushort contentType, MemoryStream content,
+        public async Task<TwinoMessage> Request(string target, ushort contentType, MemoryStream content,
                                               IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            TmqMessage message = new TmqMessage(MessageType.DirectMessage, target, contentType);
+            TwinoMessage message = new TwinoMessage(MessageType.DirectMessage, target, contentType);
             message.Content = content;
 
             if (messageHeaders != null)
@@ -202,10 +202,10 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Sends a request to target, waits response
         /// </summary>
-        public async Task<TmqMessage> Request(string target, ushort contentType, string content,
+        public async Task<TwinoMessage> Request(string target, ushort contentType, string content,
                                               IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            TmqMessage message = new TmqMessage(MessageType.DirectMessage, target, contentType);
+            TwinoMessage message = new TwinoMessage(MessageType.DirectMessage, target, contentType);
             message.SetStringContent(content);
 
             if (messageHeaders != null)
@@ -218,10 +218,10 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Sends a request to without body
         /// </summary>
-        public async Task<TmqMessage> Request(string target, ushort contentType,
+        public async Task<TwinoMessage> Request(string target, ushort contentType,
                                               IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            TmqMessage message = new TmqMessage(MessageType.DirectMessage, target, contentType);
+            TwinoMessage message = new TwinoMessage(MessageType.DirectMessage, target, contentType);
 
             if (messageHeaders != null)
                 foreach (KeyValuePair<string, string> pair in messageHeaders)

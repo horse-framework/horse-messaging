@@ -34,7 +34,7 @@ namespace Test.Mq.Operators
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
 
-            List<ChannelClient> clients = channel.ClientsClone;
+            List<QueueClient> clients = channel.ClientsClone;
             Assert.Single(clients);
         }
 
@@ -57,7 +57,7 @@ namespace Test.Mq.Operators
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
 
-            List<ChannelClient> clients = channel.ClientsClone;
+            List<QueueClient> clients = channel.ClientsClone;
             Assert.Single(clients);
         }
 
@@ -84,7 +84,7 @@ namespace Test.Mq.Operators
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
 
-            List<ChannelClient> clients = channel.ClientsClone;
+            List<QueueClient> clients = channel.ClientsClone;
             Assert.Empty(clients);
         }
 
@@ -110,7 +110,7 @@ namespace Test.Mq.Operators
             Channel channel = server.Server.Channels.FirstOrDefault();
             Assert.NotNull(channel);
 
-            List<ChannelClient> clients = channel.ClientsClone;
+            List<QueueClient> clients = channel.ClientsClone;
             Assert.Empty(clients);
         }
 

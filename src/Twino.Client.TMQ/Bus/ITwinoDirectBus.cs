@@ -131,7 +131,7 @@ namespace Twino.Client.TMQ.Bus
         /// <param name="content">Message content</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
-        Task<TmqMessage> Request(string target,
+        Task<TwinoMessage> Request(string target,
                                  ushort contentType,
                                  MemoryStream content,
                                  IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
@@ -144,7 +144,7 @@ namespace Twino.Client.TMQ.Bus
         /// <param name="content">Message content</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
-        Task<TmqMessage> Request(string target,
+        Task<TwinoMessage> Request(string target,
                                  ushort contentType,
                                  string content,
                                  IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
@@ -156,7 +156,7 @@ namespace Twino.Client.TMQ.Bus
         /// <param name="contentType">Message content type</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
-        Task<TmqMessage> Request(string target,
+        Task<TwinoMessage> Request(string target,
                                  ushort contentType,
                                  IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 

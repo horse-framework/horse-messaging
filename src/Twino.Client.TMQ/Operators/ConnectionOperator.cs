@@ -28,7 +28,7 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public Task<TmqModelResult<List<NodeInformation>>> GetInstances()
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.InstanceList;
 
@@ -40,7 +40,7 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public Task<TmqModelResult<List<ClientInformation>>> GetConnectedClients(string typeFilter = null)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.ClientList;
             message.SetTarget(typeFilter);

@@ -122,7 +122,7 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         /// <summary>
         /// Applies descriptor information to the message
         /// </summary>
-        public TmqMessage CreateMessage(MessageType type, string overrideTargetName, ushort? overrideContentType)
+        public TwinoMessage CreateMessage(MessageType type, string overrideTargetName, ushort? overrideContentType)
         {
             string target = overrideTargetName;
             ushort? contentType = overrideContentType;
@@ -154,7 +154,7 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
                     break;
             }
 
-            TmqMessage message = new TmqMessage(type, target, contentType ?? 0);
+            TwinoMessage message = new TwinoMessage(type, target, contentType ?? 0);
             if (HighPriority)
                 message.HighPriority = HighPriority;
 

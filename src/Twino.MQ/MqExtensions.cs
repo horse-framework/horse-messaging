@@ -168,18 +168,18 @@ namespace Twino.MQ
         /// Uses channel authentication
         /// </summary>
         public static TwinoMqBuilder UseChannelAuthentication<TChannelAuthenticator>(this TwinoMqBuilder builder)
-            where TChannelAuthenticator : IChannelAuthenticator, new()
+            where TChannelAuthenticator : IQueueAuthenticator, new()
         {
-            builder.Server.ChannelAuthenticator = new TChannelAuthenticator();
+            builder.Server.QueueAuthenticator = new TChannelAuthenticator();
             return builder;
         }
 
         /// <summary>
         /// Uses channel authentication
         /// </summary>
-        public static TwinoMqBuilder UseChannelAuthentication(this TwinoMqBuilder builder, IChannelAuthenticator authenticator)
+        public static TwinoMqBuilder UseChannelAuthentication(this TwinoMqBuilder builder, IQueueAuthenticator authenticator)
         {
-            builder.Server.ChannelAuthenticator = authenticator;
+            builder.Server.QueueAuthenticator = authenticator;
             return builder;
         }
 
@@ -210,18 +210,18 @@ namespace Twino.MQ
         /// Uses channel event handler
         /// </summary>
         public static TwinoMqBuilder UseChannelEventHandler<TChannelEventHandler>(this TwinoMqBuilder builder)
-            where TChannelEventHandler : IChannelEventHandler, new()
+            where TChannelEventHandler : IQueueEventHandler, new()
         {
-            builder.Server.ChannelEventHandler = new TChannelEventHandler();
+            builder.Server.QueueEventHandler = new TChannelEventHandler();
             return builder;
         }
 
         /// <summary>
         /// Uses channel event handler
         /// </summary>
-        public static TwinoMqBuilder UseChannelEventHandler(this TwinoMqBuilder builder, IChannelEventHandler channelEventHandler)
+        public static TwinoMqBuilder UseChannelEventHandler(this TwinoMqBuilder builder, IQueueEventHandler queueEventHandler)
         {
-            builder.Server.ChannelEventHandler = channelEventHandler;
+            builder.Server.QueueEventHandler = queueEventHandler;
             return builder;
         }
 

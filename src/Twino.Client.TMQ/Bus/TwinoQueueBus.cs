@@ -85,7 +85,7 @@ namespace Twino.Client.TMQ.Bus
 
         /// <inheritdoc />
         public Task<PullContainer> Pull(PullRequest request,
-                                        Func<int, TmqMessage, Task> actionForEachMessage = null)
+                                        Func<int, TwinoMessage, Task> actionForEachMessage = null)
         {
             TmqClient client = _connector.GetClient();
             if (client == null)

@@ -1,11 +1,12 @@
 using System;
+using Twino.MQ.Queues;
 
 namespace Twino.MQ.Clients
 {
     /// <summary>
     /// Definition object of a client in a channel
     /// </summary>
-    public class ChannelClient
+    public class QueueClient
     {
         /// <summary>
         /// The time when client has joined to the channel
@@ -13,9 +14,9 @@ namespace Twino.MQ.Clients
         public DateTime JoinDate { get; }
 
         /// <summary>
-        /// Channel object
+        /// Queue object
         /// </summary>
-        public Channel Channel { get; set; }
+        public TwinoQueue Queue { get; set; }
 
         /// <summary>
         /// Client object
@@ -25,9 +26,9 @@ namespace Twino.MQ.Clients
         /// <summary>
         /// Creates new channel client pair descriptor
         /// </summary>
-        public ChannelClient(Channel channel, MqClient client)
+        public QueueClient(TwinoQueue queue, MqClient client)
         {
-            Channel = channel;
+            Queue = queue;
             Client = client;
             JoinDate = DateTime.UtcNow;
         }

@@ -10,8 +10,8 @@ namespace Twino.Protocols.TMQ.Models.Events
         /// <summary>
         /// Channel name
         /// </summary>
-        [JsonPropertyName("Channel")]
-        public string Channel { get; set; }
+        [JsonPropertyName("Queue")]
+        public string Queue { get; set; }
 
         /// <summary>
         /// Client Id

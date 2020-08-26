@@ -34,7 +34,7 @@ namespace Test.Mq
             bool received = false;
             client2.MessageReceived += (c, m) => received = m.Source == "client-1";
 
-            TmqMessage message = new TmqMessage(MessageType.DirectMessage, "client-2");
+            TwinoMessage message = new TwinoMessage(MessageType.DirectMessage, "client-2");
             message.SetStringContent("Hello, World!");
 
             TwinoResult sent = await client1.SendAsync(message);
@@ -70,7 +70,7 @@ namespace Test.Mq
             bool received = false;
             client2.MessageReceived += (c, m) => received = m.Source == "client-1";
 
-            TmqMessage message = new TmqMessage(MessageType.DirectMessage, "client-2");
+            TwinoMessage message = new TwinoMessage(MessageType.DirectMessage, "client-2");
             message.SetStringContent("Hello, World!");
 
             TwinoResult sent = await client1.SendWithAcknowledge(message);
@@ -105,16 +105,16 @@ namespace Test.Mq
             {
                 if (m.Source == "client-1")
                 {
-                    TmqMessage rmsg = m.CreateResponse(TwinoResultCode.Ok);
+                    TwinoMessage rmsg = m.CreateResponse(TwinoResultCode.Ok);
                     rmsg.SetStringContent("Hello, World Response!");
                     await ((TmqClient) c).SendAsync(rmsg);
                 }
             };
 
-            TmqMessage message = new TmqMessage(MessageType.DirectMessage, "client-2");
+            TwinoMessage message = new TwinoMessage(MessageType.DirectMessage, "client-2");
             message.SetStringContent("Hello, World!");
 
-            TmqMessage response = await client1.Request(message);
+            TwinoMessage response = await client1.Request(message);
             Assert.NotNull(response);
             Assert.Equal(0, response.ContentType);
         }

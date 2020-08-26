@@ -21,9 +21,9 @@ namespace Twino.MQ.Queues.States
         public QueueMessage ProcessingMessage { get; private set; }
         public bool TriggerSupported => false;
 
-        private readonly ChannelQueue _queue;
+        private readonly TwinoQueue _queue;
 
-        public PullQueueState(ChannelQueue queue)
+        public PullQueueState(TwinoQueue queue)
         {
             _queue = queue;
         }
@@ -31,7 +31,7 @@ namespace Twino.MQ.Queues.States
         /// <summary>
         /// Reads Count header value and returns as integer
         /// </summary>
-        private static int FindCount(TmqMessage request)
+        private static int FindCount(TwinoMessage request)
         {
             string countStr = request.FindHeader(TmqHeaders.COUNT);
 
@@ -44,7 +44,7 @@ namespace Twino.MQ.Queues.States
         /// <summary>
         /// Reads Clear header value and returns as enum
         /// </summary>
-        private static ClearDecision FindClearDecision(TmqMessage request)
+        private static ClearDecision FindClearDecision(TwinoMessage request)
         {
             string clearStr = request.FindHeader(TmqHeaders.CLEAR);
 
@@ -68,7 +68,7 @@ namespace Twino.MQ.Queues.States
         /// <summary>
         /// Reads Info header value and returns as boolean
         /// </summary>
-        private static bool FindInfoRequest(TmqMessage request)
+        private static bool FindInfoRequest(TwinoMessage request)
         {
             string infoStr = request.FindHeader(TmqHeaders.INFO);
             return !string.IsNullOrEmpty(infoStr) && infoStr.Trim().Equals("Yes", StringComparison.InvariantCultureIgnoreCase);
@@ -79,7 +79,7 @@ namespace Twino.MQ.Queues.States
         /// If true, it's fifo (as default).
         /// If false, it's lifo.
         /// </summary>
-        private static bool FindOrder(TmqMessage request)
+        private static bool FindOrder(TwinoMessage request)
         {
             string orderStr = request.FindHeader(TmqHeaders.ORDER);
             if (string.IsNullOrEmpty(orderStr))
@@ -89,7 +89,7 @@ namespace Twino.MQ.Queues.States
             return !lifo;
         }
 
-        public async Task<PullResult> Pull(ChannelClient client, TmqMessage request)
+        public async Task<PullResult> Pull(QueueClient client, TwinoMessage request)
         {
             int index = 1;
             int count = FindCount(request);
@@ -243,7 +243,7 @@ namespace Twino.MQ.Queues.States
         /// <summary>
         /// Process pull request and sends queue message to requester as response
         /// </summary>
-        private async Task<bool> ProcessPull(ChannelClient requester, TmqMessage request, QueueMessage message, IList<KeyValuePair<string, string>> headers)
+        private async Task<bool> ProcessPull(QueueClient requester, TwinoMessage request, QueueMessage message, IList<KeyValuePair<string, string>> headers)
         {
             //if we need acknowledge, we are sending this information to receivers that we require response
             message.Message.PendingAcknowledge = _queue.Options.RequestAcknowledge;

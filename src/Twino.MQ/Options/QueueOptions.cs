@@ -6,22 +6,12 @@ namespace Twino.MQ.Options
     /// <summary>
     /// Queue options
     /// </summary>
-    public class ChannelQueueOptions
+    public class QueueOptions
     {
         /// <summary>
-        /// Queue tag name
+        /// Acknowledge decision. Default is wait for acknowledge.
         /// </summary>
-        public string TagName { get; set; }
-
-        /// <summary>
-        /// If true, messages will send to only first acquirers
-        /// </summary>
-        public bool SendOnlyFirstAcquirer { get; set; }
-
-        /// <summary>
-        /// If true, messages will request acknowledge from receivers
-        /// </summary>
-        public bool RequestAcknowledge { get; set; } = true;
+        public QueueAckDecision Acknowledge { get; set; } = QueueAckDecision.WaitForAcknowledge;
 
         /// <summary>
         /// When acknowledge is required, maximum duration for waiting acknowledge message
@@ -37,11 +27,6 @@ namespace Twino.MQ.Options
         /// If true, server creates unique id for each message.
         /// </summary>
         public bool UseMessageId { get; set; } = true;
-
-        /// <summary>
-        /// If true, queue does not send next message to receivers until acknowledge message received
-        /// </summary>
-        public bool WaitForAcknowledge { get; set; }
 
         /// <summary>
         /// If true, server doesn't send client name to receivers in queueus.
@@ -66,6 +51,17 @@ namespace Twino.MQ.Options
         public ulong MessageSizeLimit { get; set; }
 
         /// <summary>
+        /// Maximum client limit of the channel
+        /// Zero is unlimited
+        /// </summary>
+        public int ClientLimit { get; set; }
+
+        /// <summary>
+        /// Channel auto destroy options. Default value is NoMessagesAndConsumers.
+        /// </summary>
+        public QueueDestroy AutoDestroy { get; set; } = QueueDestroy.Empty;
+
+        /// <summary>
         /// Creates clone of the object
         /// </summary>
         /// <returns></returns>
@@ -77,19 +73,16 @@ namespace Twino.MQ.Options
         /// <summary>
         /// Clones channel queue options from another options
         /// </summary>
-        public static ChannelQueueOptions CloneFrom(ChannelQueueOptions options)
+        public static QueueOptions CloneFrom(QueueOptions options)
         {
-            return new ChannelQueueOptions
+            return new QueueOptions
                    {
                        Status = options.Status,
-                       TagName = options.TagName,
                        AcknowledgeTimeout = options.AcknowledgeTimeout,
                        MessageTimeout = options.MessageTimeout,
-                       RequestAcknowledge = options.RequestAcknowledge,
+                       Acknowledge = options.Acknowledge,
                        HideClientNames = options.HideClientNames,
                        UseMessageId = options.UseMessageId,
-                       WaitForAcknowledge = options.WaitForAcknowledge,
-                       SendOnlyFirstAcquirer = options.SendOnlyFirstAcquirer,
                        MessageLimit = options.MessageLimit,
                        MessageSizeLimit = options.MessageSizeLimit
                    };

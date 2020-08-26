@@ -56,8 +56,8 @@ namespace Test.Mq
             Channel channel1 = server.Server.FindChannel("ch-push");
             Channel channel2 = server.Server.FindChannel("ch-push-cc");
 
-            ChannelQueue queue1 = channel1.FindQueue(MessageA.ContentType);
-            ChannelQueue queue2 = channel2.FindQueue(MessageA.ContentType);
+            TwinoQueue queue1 = channel1.FindQueue(MessageA.ContentType);
+            TwinoQueue queue2 = channel2.FindQueue(MessageA.ContentType);
 
             Assert.Equal(4, queue1.MessageCount());
             Assert.Equal(4, queue2.MessageCount());
@@ -110,8 +110,8 @@ namespace Test.Mq
             Channel channel1 = server.Server.FindChannel("ch-push");
             Channel channel2 = server.Server.FindChannel("ch-push-cc");
 
-            ChannelQueue queue1 = channel1.FindQueue(MessageA.ContentType);
-            ChannelQueue queue2 = channel2.FindQueue(MessageA.ContentType);
+            TwinoQueue queue1 = channel1.FindQueue(MessageA.ContentType);
+            TwinoQueue queue2 = channel2.FindQueue(MessageA.ContentType);
 
             Assert.Equal(1, queue1.MessageCount());
             Assert.Equal(1, queue2.MessageCount());
@@ -164,8 +164,8 @@ namespace Test.Mq
             Channel channel1 = server.Server.FindChannel("ch-push");
             Channel channel2 = server.Server.FindChannel("ch-push-cc");
 
-            ChannelQueue queue1 = channel1.FindQueue(MessageA.ContentType);
-            ChannelQueue queue2 = channel2.FindQueue(MessageA.ContentType);
+            TwinoQueue queue1 = channel1.FindQueue(MessageA.ContentType);
+            TwinoQueue queue2 = channel2.FindQueue(MessageA.ContentType);
 
             Assert.Equal(0, queue1.MessageCount());
             Assert.Equal(4, queue2.MessageCount());
@@ -196,8 +196,8 @@ namespace Test.Mq
             Channel channel1 = server.Server.FindChannel("ch-push");
             Channel channel2 = server.Server.FindChannel("ch-push-cc");
 
-            ChannelQueue queue1 = channel1.FindQueue(MessageA.ContentType);
-            ChannelQueue queue2 = channel2.FindQueue(MessageA.ContentType);
+            TwinoQueue queue1 = channel1.FindQueue(MessageA.ContentType);
+            TwinoQueue queue2 = channel2.FindQueue(MessageA.ContentType);
 
             Assert.Equal(1, queue1.MessageCount());
             Assert.Equal(1, queue2.MessageCount());
@@ -290,7 +290,7 @@ namespace Test.Mq
             await Task.Delay(500);
 
             Channel channel1 = server.Server.FindChannel("ch-push");
-            ChannelQueue queue1 = channel1.FindQueue(MessageA.ContentType);
+            TwinoQueue queue1 = channel1.FindQueue(MessageA.ContentType);
 
             Assert.Equal(1, queue1.MessageCount());
             Assert.True(client1Received);
@@ -336,8 +336,8 @@ namespace Test.Mq
             Channel channel1 = server.Server.FindChannel("ch-push");
             Channel channel2 = server.Server.FindChannel("ch-push-cc");
 
-            ChannelQueue queue1 = channel1.FindQueue(MessageA.ContentType);
-            ChannelQueue queue2 = channel2.FindQueue(MessageA.ContentType);
+            TwinoQueue queue1 = channel1.FindQueue(MessageA.ContentType);
+            TwinoQueue queue2 = channel2.FindQueue(MessageA.ContentType);
 
             Assert.Equal(1, queue1.MessageCount());
             Assert.Equal(1, queue2.MessageCount());
@@ -371,7 +371,7 @@ namespace Test.Mq
             Assert.True(client1.IsConnected);
 
             Channel channel1 = server.Server.FindChannel("ch-push");
-            ChannelQueue queue1 = channel1.FindQueue(MessageA.ContentType);
+            TwinoQueue queue1 = channel1.FindQueue(MessageA.ContentType);
 
             TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
             Assert.Equal(TwinoResultCode.Ok, result.Code);
@@ -402,16 +402,16 @@ namespace Test.Mq
             await client1.ConnectAsync("tmq://localhost:" + port);
             client1.MessageReceived += (c, m) =>
             {
-                TmqMessage response = m.CreateResponse(TwinoResultCode.Ok);
+                TwinoMessage response = m.CreateResponse(TwinoResultCode.Ok);
                 response.SetStringContent("Response");
                 client1.SendAsync(response);
             };
             Assert.True(client1.IsConnected);
 
             Channel channel1 = server.Server.FindChannel("ch-push");
-            ChannelQueue queue1 = channel1.FindQueue(MessageA.ContentType);
+            TwinoQueue queue1 = channel1.FindQueue(MessageA.ContentType);
 
-            TmqMessage message = await producer.Routers.PublishRequest("router", "Hello, World!", MessageA.ContentType);
+            TwinoMessage message = await producer.Routers.PublishRequest("router", "Hello, World!", MessageA.ContentType);
             Assert.NotNull(message);
             Assert.Equal("Response", message.GetStringContent());
             Assert.Equal(1, queue1.MessageCount());

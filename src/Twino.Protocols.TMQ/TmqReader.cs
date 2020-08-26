@@ -20,27 +20,19 @@ namespace Twino.Protocols.TMQ
         private const int REQUIRED_SIZE = 8;
 
         /// <summary>
-        /// If true, each read operation decreases TTL value of the message
-        /// </summary>
-        public bool DecreaseTTL { get; set; } = true;
-
-        /// <summary>
         /// Reads TMQ message from stream
         /// </summary>
-        public async Task<TmqMessage> Read(Stream stream)
+        public async Task<TwinoMessage> Read(Stream stream)
         {
             byte[] bytes = new byte[REQUIRED_SIZE];
             bool done = await ReadCertainBytes(stream, bytes, 0, REQUIRED_SIZE);
             if (!done)
                 return null;
 
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             done = await ReadFrame(message, bytes, stream);
             if (!done)
                 return null;
-
-            if (DecreaseTTL)
-                message.Ttl--;
 
             if (message.HasHeader)
                 done = await ReadHeader(message, stream);
@@ -62,44 +54,36 @@ namespace Twino.Protocols.TMQ
         /// Reads and process required frame data of the message
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<bool> ReadFrame(TmqMessage message, byte[] bytes, Stream stream)
+        private async Task<bool> ReadFrame(TwinoMessage message, byte[] bytes, Stream stream)
         {
-            byte first = bytes[0];
-            if (first >= 128)
-            {
-                message.FirstAcquirer = true;
-                first -= 128;
-            }
-
-            if (first >= 64)
-            {
-                message.HighPriority = true;
-                first -= 64;
-            }
-
-            message.Type = (MessageType) first;
-
-            byte second = bytes[1];
-            if (second >= 128)
+            byte proto = bytes[0];
+            if (proto >= 128)
             {
                 message.PendingResponse = true;
-                second -= 128;
+                proto -= 128;
             }
 
-            if (second >= 64)
+            if (proto >= 64)
             {
-                message.PendingAcknowledge = true;
-                second -= 64;
+                message.HighPriority = true;
+                proto -= 64;
             }
 
-            if (second >= 32 && message.Type != MessageType.Ping && message.Type != MessageType.Pong)
+            if (proto >= 32)
             {
-                message.HasHeader = true;
-                message.HeadersList = new List<KeyValuePair<string, string>>();
-                second -= 32;
-            }
+                proto -= 32;
+                message.Type = (MessageType) proto;
 
-            message.Ttl = second;
+                if (message.Type != MessageType.Ping && message.Type != MessageType.Pong)
+                {
+                    message.HasHeader = true;
+                    message.HeadersList = new List<KeyValuePair<string, string>>();
+                }
+            }
+            else
+                message.Type = (MessageType) proto;
+
+            // bytes[1] is reserved
 
             message.MessageIdLength = bytes[2];
             message.SourceLength = bytes[3];
@@ -152,7 +136,7 @@ namespace Twino.Protocols.TMQ
         /// Reads and process header data of the message
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static async Task<bool> ReadHeader(TmqMessage message, Stream stream)
+        private static async Task<bool> ReadHeader(TwinoMessage message, Stream stream)
         {
             byte[] size = new byte[2];
             bool read = await ReadCertainBytes(stream, size, 0, size.Length);
@@ -185,7 +169,7 @@ namespace Twino.Protocols.TMQ
         /// Reads message content
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<bool> ReadContent(TmqMessage message, Stream stream)
+        private async Task<bool> ReadContent(TwinoMessage message, Stream stream)
         {
             if (message.Length == 0)
                 return true;

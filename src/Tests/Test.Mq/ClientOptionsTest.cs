@@ -35,7 +35,7 @@ namespace Test.Mq
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(250);
 
-            TmqMessage received = null;
+            TwinoMessage received = null;
             client.MessageReceived += (c, m) => received = m;
 
             MessageA a = new MessageA("A");
@@ -85,16 +85,16 @@ namespace Test.Mq
             client1.MessageReceived += (c, m) => responseCaught = true;
             client2.MessageReceived += async (c, m) =>
             {
-                TmqMessage rmsg = m.CreateResponse(TwinoResultCode.Ok);
+                TwinoMessage rmsg = m.CreateResponse(TwinoResultCode.Ok);
                 rmsg.SetStringContent("Response!");
                 await ((TmqClient) c).SendAsync(rmsg);
             };
 
-            TmqMessage msg = new TmqMessage(MessageType.DirectMessage, "client-2");
+            TwinoMessage msg = new TwinoMessage(MessageType.DirectMessage, "client-2");
             msg.PendingResponse = true;
             msg.SetStringContent("Hello, World!");
 
-            TmqMessage response = await client1.Request(msg);
+            TwinoMessage response = await client1.Request(msg);
 
             Assert.NotNull(response);
             Assert.Equal(msg.MessageId, response.MessageId);

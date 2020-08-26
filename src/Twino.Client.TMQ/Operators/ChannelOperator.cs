@@ -29,7 +29,7 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<TwinoResult> Join(string channel, bool verifyResponse)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.Join;
             message.SetTarget(channel);
@@ -46,7 +46,7 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<TwinoResult> Leave(string channel, bool verifyResponse)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.Leave;
             message.SetTarget(channel);
@@ -67,7 +67,7 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<TwinoResult> Create(string channel, Action<ChannelOptions> optionsAction = null)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.CreateChannel;
             message.SetTarget(channel);
@@ -91,7 +91,7 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<TwinoResult> Remove(string channel)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.RemoveChannel;
             message.SetTarget(channel);
@@ -112,7 +112,7 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<TmqModelResult<ChannelInformation>> GetInfo(string name)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.ChannelInformation;
             message.SetTarget(name);
@@ -129,7 +129,7 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<TmqModelResult<List<ChannelInformation>>> List(string filter = null)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.ChannelList;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
@@ -145,7 +145,7 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<TmqModelResult<List<ClientInformation>>> GetConsumers(string channel)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.SetTarget(channel);
             message.ContentType = KnownContentTypes.ChannelConsumers;

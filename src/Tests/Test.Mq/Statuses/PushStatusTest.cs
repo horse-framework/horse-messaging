@@ -65,7 +65,7 @@ namespace Test.Mq.Statuses
             await Task.Delay(700);
 
             Channel channel = server.Server.FindChannel("ch-push");
-            ChannelQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
             Assert.NotNull(channel);
             Assert.NotNull(queue);
             Assert.Single(queue.Messages);
@@ -92,7 +92,7 @@ namespace Test.Mq.Statuses
             server.Initialize();
             int port = server.Start(300, 300);
             Channel ch = server.Server.FindChannel("ch-push");
-            ChannelQueue queue = ch.Queues.FirstOrDefault();
+            TwinoQueue queue = ch.Queues.FirstOrDefault();
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
             queue.Options.RequestAcknowledge = queueAckIsActive;
@@ -150,7 +150,7 @@ namespace Test.Mq.Statuses
             TwinoResult joined2 = await consumer2.Channels.Join("ch-push-cc", true);
             Assert.Equal(TwinoResultCode.Ok, joined2.Code);
 
-            TmqMessage msg = new TmqMessage(MessageType.QueueMessage, "ch-push", MessageA.ContentType);
+            TwinoMessage msg = new TwinoMessage(MessageType.QueueMessage, "ch-push", MessageA.ContentType);
             msg.AddHeader(TmqHeaders.CC, "ch-push-cc");
             msg.SetStringContent("Hello, World!");
 

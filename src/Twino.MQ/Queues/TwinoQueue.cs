@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Delivery;
 using Twino.MQ.Events;
+using Twino.MQ.Helpers;
 using Twino.MQ.Options;
 using Twino.MQ.Queues.States;
 using Twino.Protocols.TMQ;
@@ -17,20 +18,30 @@ namespace Twino.MQ.Queues
     /// <summary>
     /// Event handler for queues
     /// </summary>
-    public delegate void QueueEventHandler(ChannelQueue queue);
+    public delegate void QueueEventHandler(TwinoQueue queue);
 
     /// <summary>
     /// Channel queue.
     /// Keeps queued messages and subscribed clients.
     /// </summary>
-    public class ChannelQueue
+    public class TwinoQueue
     {
         #region Properties
 
         /// <summary>
-        /// Channel of the queue
+        /// Unique channel name (not case-sensetive)
         /// </summary>
-        public Channel Channel { get; }
+        public string Name { get; }
+
+        /// <summary>
+        /// Queue topic
+        /// </summary>
+        public string Topic { get; set; }
+
+        /// <summary>
+        /// Server of the channel
+        /// </summary>
+        public TwinoMQ Server { get; }
 
         /// <summary>
         /// Queue status
@@ -43,24 +54,10 @@ namespace Twino.MQ.Queues
         internal IQueueState State { get; private set; }
 
         /// <summary>
-        /// Queue content type
-        /// </summary>
-        public ushort Id { get; }
-
-        /// <summary>
-        /// Tag name for the queue
-        /// </summary>
-        public string TagName
-        {
-            get => Options.TagName;
-            set => Options.TagName = value;
-        }
-
-        /// <summary>
         /// Queue options.
         /// If null, channel default options will be used
         /// </summary>
-        public ChannelQueueOptions Options { get; }
+        public QueueOptions Options { get; }
 
         /// <summary>
         /// Triggered when a message is produced 
@@ -146,29 +143,57 @@ namespace Twino.MQ.Queues
         /// </summary>
         public event QueueEventHandler OnDestroyed;
 
+
+        /// <summary>
+        /// Clients in the channel as thread-unsafe list
+        /// </summary>
+        public IEnumerable<QueueClient> ClientsUnsafe => _clients.GetUnsafeList();
+
+        /// <summary>
+        /// Clients in the channel as cloned list
+        /// </summary>
+        public List<QueueClient> ClientsClone => _clients.GetAsClone();
+
+        private readonly SafeList<QueueClient> _clients;
+
+        /// <summary>
+        /// Triggered when a client is subscribed 
+        /// </summary>
+        public SubscriptionEventManager OnConsumerSubscribed { get; }
+
+        /// <summary>
+        /// Triggered when a client is unsubscribed 
+        /// </summary>
+        public SubscriptionEventManager OnConsumerUnsubscribed { get; }
+
         #endregion
 
         #region Constructors - Destroy
 
-        internal ChannelQueue(Channel channel,
-                              ushort id,
-                              ChannelQueueOptions options,
-                              IMessageDeliveryHandler deliveryHandler)
+        internal TwinoQueue(TwinoMQ server,
+                            string name,
+                            QueueOptions options,
+                            IMessageDeliveryHandler deliveryHandler)
         {
-            Channel = channel;
-            Id = id;
+            Server = server;
+            Name = name;
             Options = options;
             Status = options.Status;
             DeliveryHandler = deliveryHandler;
+            _clients = new SafeList<QueueClient>(256);
+
+            OnConsumerSubscribed = new SubscriptionEventManager(server, EventNames.ClientJoined, this);
+            OnConsumerUnsubscribed = new SubscriptionEventManager(server, EventNames.ClientLeft, this);
+
             InitializeQueue();
         }
 
-        internal ChannelQueue(Channel channel,
-                              ushort id,
-                              ChannelQueueOptions options)
+        internal TwinoQueue(TwinoMQ server,
+                            string name,
+                            QueueOptions options)
         {
-            Channel = channel;
-            Id = id;
+            Server = server;
+            Name = name;
             Options = options;
             Status = options.Status;
         }
@@ -179,13 +204,12 @@ namespace Twino.MQ.Queues
         private void InitializeQueue()
         {
             State = QueueStateFactory.Create(this, Options.Status);
-            OnMessageProduced = new MessageEventManager(Channel.Server, EventNames.MessageProduced, this);
+            OnMessageProduced = new MessageEventManager(Server, EventNames.MessageProduced, this);
 
             TimeKeeper = new QueueTimeKeeper(this);
             TimeKeeper.Run();
 
-            if (Options.WaitForAcknowledge)
-                _ackSync = new SemaphoreSlim(1, 1);
+            _ackSync = new SemaphoreSlim(1, 1);
 
             _triggerTimer = new Timer(a =>
             {
@@ -244,6 +268,27 @@ namespace Twino.MQ.Queues
             {
                 OnDestroyed?.Invoke(this);
             }
+
+            _clients.Clear();
+            OnConsumerSubscribed.Dispose();
+            OnConsumerUnsubscribed.Dispose();
+        }
+
+        /// <summary>
+        /// If all queues are empty and there is no client, destroys the channel 
+        /// </summary>
+        private async Task CheckAutoDestroy()
+        {
+            /* todo: !
+            List<ChannelQueue> list = _queues.GetAsClone();
+
+            foreach (ChannelQueue queue in list)
+            {
+                if (!queue.IsEmpty())
+                    return;
+            }
+
+            await Server.RemoveChannel(this);*/
         }
 
         #endregion
@@ -403,7 +448,7 @@ namespace Twino.MQ.Queues
                                              IEnumerable<KeyValuePair<string, string>> headers = null)
 
         {
-            string messageId = Channel.Server.MessageIdGenerator.Create();
+            string messageId = Server.MessageIdGenerator.Create();
             AddStringMessage(messageId, messageContent, firstAcquirer, priority, headers);
             return messageId;
         }
@@ -429,10 +474,9 @@ namespace Twino.MQ.Queues
                                      bool priority = false,
                                      IEnumerable<KeyValuePair<string, string>> headers = null)
         {
-            TmqMessage message = new TmqMessage(MessageType.QueueMessage, Channel.Name, Id);
+            TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, Name);
             message.SetMessageId(messageId);
             message.Content = new MemoryStream(messageContent);
-            message.FirstAcquirer = firstAcquirer;
             message.HighPriority = priority;
 
             if (headers != null)
@@ -546,8 +590,8 @@ namespace Twino.MQ.Queues
             if (newDeliveryHandler != null)
                 DeliveryHandler = newDeliveryHandler;
 
-            if (Channel.Server.ChannelEventHandler != null)
-                await Channel.Server.ChannelEventHandler.OnQueueStatusChanged(this, prevStatus, status);
+            if (Server.QueueEventHandler != null)
+                await Server.QueueEventHandler.OnStatusChanged(this, prevStatus, status);
 
             if (enter == QueueStatusAction.AllowAndTrigger)
                 _ = Trigger();
@@ -583,12 +627,11 @@ namespace Twino.MQ.Queues
                 return PushResult.LimitExceeded;
 
             //prepare properties
-            message.Message.FirstAcquirer = true;
-            message.Message.PendingAcknowledge = Options.RequestAcknowledge;
+            message.Message.PendingResponse = Options.Acknowledge != QueueAckDecision.None;
 
             //if message doesn't have message id and "UseMessageId" option is enabled, create new message id for the message
             if (Options.UseMessageId && string.IsNullOrEmpty(message.Message.MessageId))
-                message.Message.SetMessageId(Channel.Server.MessageIdGenerator.Create());
+                message.Message.SetMessageId(Server.MessageIdGenerator.Create());
 
             //if we have an option maximum wait duration for message, set it after message joined to the queue.
             //time keeper will check this value and if message time is up, it will remove message from the queue.
@@ -681,7 +724,7 @@ namespace Twino.MQ.Queues
                 if (_triggering || !State.TriggerSupported)
                     return;
 
-                if (Channel.ClientsCount() == 0)
+                if (ClientsCount() == 0)
                     return;
 
                 _triggering = true;
@@ -801,7 +844,7 @@ namespace Twino.MQ.Queues
         /// If acknowledge is chosen, sends an ack message to source.
         /// Returns true is allowed
         /// </summary>
-        internal async Task<bool> ApplyDecision(Decision decision, QueueMessage message, TmqMessage customAck = null)
+        internal async Task<bool> ApplyDecision(Decision decision, QueueMessage message, TwinoMessage customAck = null)
         {
             if (decision.SaveMessage)
                 await SaveMessage(message);
@@ -810,7 +853,7 @@ namespace Twino.MQ.Queues
                                                decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ||
                                                decision.Acknowledge == DeliveryAcknowledgeDecision.IfSaved && message.IsSaved))
             {
-                TmqMessage acknowledge = customAck ?? message.Message.CreateAcknowledge(decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ? "none" : null);
+                TwinoMessage acknowledge = customAck ?? message.Message.CreateAcknowledge(decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ? "none" : null);
 
                 if (message.Source != null && message.Source.IsConnected)
                 {
@@ -858,11 +901,10 @@ namespace Twino.MQ.Queues
         /// </summary>
         public void SendDecisionToNodes(QueueMessage queueMessage, Decision decision)
         {
-            TmqMessage msg = new TmqMessage(MessageType.Server, null, 10);
+            TwinoMessage msg = new TwinoMessage(MessageType.Server, null, 10);
             DecisionOverNode model = new DecisionOverNode
                                      {
-                                         Channel = Channel.Name,
-                                         Queue = Id,
+                                         Queue = Name,
                                          MessageId = queueMessage.Message.MessageId,
                                          Acknowledge = decision.Acknowledge,
                                          Allow = decision.Allow,
@@ -870,8 +912,8 @@ namespace Twino.MQ.Queues
                                          SaveMessage = decision.SaveMessage
                                      };
 
-            msg.Serialize(model, Channel.Server.MessageContentSerializer);
-            Channel.Server.NodeManager.SendMessageToNodes(msg);
+            msg.Serialize(model, Server.MessageContentSerializer);
+            Server.NodeManager.SendMessageToNodes(msg);
         }
 
         /// <summary>
@@ -921,19 +963,15 @@ namespace Twino.MQ.Queues
         internal async Task WaitForAcknowledge(QueueMessage message)
         {
             //if we will lock the queue until ack received, we must request ack
-            if (!message.Message.PendingAcknowledge)
-                message.Message.PendingAcknowledge = true;
-
-            //lock the object, because pending ack message should be queued
-            if (_ackSync == null)
-                _ackSync = new SemaphoreSlim(1, 1);
+            if (!message.Message.PendingResponse)
+                message.Message.PendingResponse = true;
 
             await _ackSync.WaitAsync();
             try
             {
                 if (_acknowledgeCallback != null)
                     await _acknowledgeCallback.Task;
-                
+
                 _acknowledgeCallback = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             }
             finally
@@ -945,7 +983,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Called when a acknowledge message is received from the client
         /// </summary>
-        internal async Task AcknowledgeDelivered(MqClient from, TmqMessage deliveryMessage)
+        internal async Task AcknowledgeDelivered(MqClient from, TwinoMessage deliveryMessage)
         {
             MessageDelivery delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
 
@@ -1004,6 +1042,136 @@ namespace Twino.MQ.Queues
                 _acknowledgeCallback = null;
                 ack.SetResult(received);
             }
+        }
+
+        #endregion
+
+        #region Client Actions
+
+        /// <summary>
+        /// Returns client count in the channel
+        /// </summary>
+        /// <returns></returns>
+        public int ClientsCount()
+        {
+            return _clients.Count;
+        }
+
+        /// <summary>
+        /// Adds the client to the channel
+        /// </summary>
+        public async Task<ClientJoinResult> AddClient(MqClient client)
+        {
+            if (Server.QueueAuthenticator != null)
+            {
+                bool allowed = await Server.QueueAuthenticator.Authenticate(this, client);
+                if (!allowed)
+                    return ClientJoinResult.Unauthorized;
+            }
+
+            if (Options.ClientLimit > 0 && _clients.Count >= Options.ClientLimit)
+                return ClientJoinResult.Full;
+
+            QueueClient cc = new QueueClient(this, client);
+            _clients.Add(cc);
+            client.Join(cc);
+
+            if (Server.QueueEventHandler != null)
+                await Server.QueueEventHandler.OnConsumerSubscribed(cc);
+
+            _ = Trigger();
+            OnConsumerSubscribed.Trigger(cc);
+            return ClientJoinResult.Success;
+        }
+
+        /// <summary>
+        /// Removes client from the channel
+        /// </summary>
+        public async Task RemoveClient(QueueClient client)
+        {
+            _clients.Remove(client);
+            client.Client.Leave(client);
+
+            if (Server.QueueEventHandler != null)
+                await Server.QueueEventHandler.OnConsumerUnsubscribed(client);
+
+            if (_clients.Count == 0 && (Options.AutoDestroy == QueueDestroy.NoConsumers || Options.AutoDestroy == QueueDestroy.Empty))
+                await CheckAutoDestroy();
+
+            OnConsumerUnsubscribed.Trigger(client);
+        }
+
+        /// <summary>
+        /// Removes client from the channel, does not call MqClient's remove method
+        /// </summary>
+        internal async Task RemoveClientSilent(QueueClient client)
+        {
+            _clients.Remove(client);
+
+            if (Server.QueueEventHandler != null)
+                await Server.QueueEventHandler.OnConsumerUnsubscribed(client);
+
+            if (_clients.Count == 0 && (Options.AutoDestroy == QueueDestroy.NoConsumers || Options.AutoDestroy == QueueDestroy.Empty))
+                await CheckAutoDestroy();
+
+            OnConsumerUnsubscribed.Trigger(client);
+        }
+
+        /// <summary>
+        /// Removes client from the channel
+        /// </summary>
+        public async Task<bool> RemoveClient(MqClient client)
+        {
+            QueueClient cc = _clients.FindAndRemove(x => x.Client == client);
+
+            if (cc == null)
+                return false;
+
+            client.Leave(cc);
+
+            if (Server.QueueEventHandler != null)
+                await Server.QueueEventHandler.OnConsumerUnsubscribed(cc);
+
+            if (_clients.Count == 0 && (Options.AutoDestroy == QueueDestroy.NoConsumers || Options.AutoDestroy == QueueDestroy.Empty))
+                await CheckAutoDestroy();
+
+            OnConsumerUnsubscribed.Trigger(cc);
+            return true;
+        }
+
+        /// <summary>
+        /// Finds client in the channel
+        /// </summary>
+        public QueueClient FindClient(string uniqueId)
+        {
+            return _clients.Find(x => x.Client.UniqueId == uniqueId);
+        }
+
+        /// <summary>
+        /// Finds client in the channel
+        /// </summary>
+        public QueueClient FindClient(MqClient client)
+        {
+            return _clients.Find(x => x.Client == client);
+        }
+
+        /// <summary>
+        /// Gets next client with round robin algorithm and updates index
+        /// </summary>
+        internal QueueClient GetNextRRClient(ref int index)
+        {
+            List<QueueClient> clients = _clients.GetAsClone();
+            if (index < 0 || index + 1 >= clients.Count)
+            {
+                if (clients.Count == 0)
+                    return null;
+
+                index = 0;
+                return clients[0];
+            }
+
+            index++;
+            return clients[index];
         }
 
         #endregion

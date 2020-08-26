@@ -18,7 +18,7 @@ namespace Twino.Client.TMQ.Internal
             ResolveAttributes(_handlerType, typeof(TRequest));
         }
 
-        public override async Task Execute(TmqClient client, TmqMessage message, object model)
+        public override async Task Execute(TmqClient client, TwinoMessage message, object model)
         {
             Exception exception = null;
             IConsumerFactory consumerFactory = null;
@@ -44,7 +44,7 @@ namespace Twino.Client.TMQ.Internal
                 {
                     TResponse responseModel = await handler.Handle(requestModel, message, client);
                     TwinoResultCode code = responseModel is null ? TwinoResultCode.NoContent : TwinoResultCode.Ok;
-                    TmqMessage responseMessage = message.CreateResponse(code);
+                    TwinoMessage responseMessage = message.CreateResponse(code);
 
                     if (responseModel != null)
                         responseMessage.Serialize(responseModel, client.JsonSerializer);
@@ -59,7 +59,7 @@ namespace Twino.Client.TMQ.Internal
                     if (errorModel.ResultCode == TwinoResultCode.Ok)
                         errorModel.ResultCode = TwinoResultCode.Failed;
 
-                    TmqMessage responseMessage = message.CreateResponse(errorModel.ResultCode);
+                    TwinoMessage responseMessage = message.CreateResponse(errorModel.ResultCode);
 
                     if (!string.IsNullOrEmpty(errorModel.Reason))
                         responseMessage.SetStringContent(errorModel.Reason);
@@ -75,7 +75,7 @@ namespace Twino.Client.TMQ.Internal
                 {
                     try
                     {
-                        TmqMessage response = message.CreateResponse(TwinoResultCode.InternalServerError);
+                        TwinoMessage response = message.CreateResponse(TwinoResultCode.InternalServerError);
                         await client.SendAsync(response);
                     }
                     catch

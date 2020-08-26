@@ -15,6 +15,6 @@ namespace Twino.Client.TMQ
         /// <param name="message">Raw TMQ message</param>
         /// <param name="model">Deserialized model</param>
         /// <param name="client">Connection client object</param>
-        Task Consume(TmqMessage message, TModel model, TmqClient client);
+        Task Consume(TwinoMessage message, TModel model, TmqClient client);
     }
 }

@@ -52,7 +52,7 @@ namespace Twino.MQ.Data
         /// <summary>
         /// All messages in queue
         /// </summary>
-        private readonly Dictionary<string, TmqMessage> _messages = new Dictionary<string, TmqMessage>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly Dictionary<string, TwinoMessage> _messages = new Dictionary<string, TwinoMessage>(StringComparer.InvariantCultureIgnoreCase);
 
         /// <summary>
         /// Database file
@@ -262,7 +262,7 @@ namespace Twino.MQ.Data
         /// Inserts new message to database
         /// </summary>
         /// <returns></returns>
-        public async Task<bool> Insert(TmqMessage message)
+        public async Task<bool> Insert(TwinoMessage message)
         {
             if (string.IsNullOrEmpty(message.MessageId))
                 return false;
@@ -298,7 +298,7 @@ namespace Twino.MQ.Data
         /// <summary>
         /// Deletes the message from database
         /// </summary>
-        public async Task<bool> Delete(TmqMessage message)
+        public async Task<bool> Delete(TwinoMessage message)
         {
             if (string.IsNullOrEmpty(message.MessageId))
                 return false;
@@ -344,13 +344,13 @@ namespace Twino.MQ.Data
         /// Lists all messages in database
         /// </summary>
         /// <returns></returns>
-        public async Task<Dictionary<string, TmqMessage>> List()
+        public async Task<Dictionary<string, TwinoMessage>> List()
         {
-            Dictionary<string, TmqMessage> messages;
+            Dictionary<string, TwinoMessage> messages;
             await WaitForLock();
             try
             {
-                messages = new Dictionary<string, TmqMessage>(_messages);
+                messages = new Dictionary<string, TwinoMessage>(_messages);
             }
             finally
             {

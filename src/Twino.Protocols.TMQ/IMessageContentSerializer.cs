@@ -12,13 +12,13 @@ namespace Twino.Protocols.TMQ
         /// </summary>
         /// <param name="model">Model that will be serialized into the tmq message</param>
         /// <param name="message">Message</param>
-        void Serialize(TmqMessage message, object model);
+        void Serialize(TwinoMessage message, object model);
 
         /// <summary>
         /// Deserializes message content and returns the object
         /// </summary>
         /// <param name="type">Model type</param>
         /// <param name="message">Message</param>
-        object Deserialize(TmqMessage message, Type type);
+        object Deserialize(TwinoMessage message, Type type);
     }
 }

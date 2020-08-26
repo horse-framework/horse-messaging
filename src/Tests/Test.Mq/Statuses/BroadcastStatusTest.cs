@@ -83,7 +83,7 @@ namespace Test.Mq.Statuses
             server.Initialize();
             int port = server.Start(300, 300);
             Channel ch = server.Server.FindChannel("ch-route");
-            ChannelQueue queue = ch.Queues.FirstOrDefault();
+            TwinoQueue queue = ch.Queues.FirstOrDefault();
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
             queue.Options.RequestAcknowledge = queueAckIsActive;

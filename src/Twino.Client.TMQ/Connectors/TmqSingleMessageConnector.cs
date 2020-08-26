@@ -10,7 +10,7 @@ namespace Twino.Client.TMQ.Connectors
     /// <summary>
     /// Single message connector for TMQ protocol.
     /// </summary>
-    public class TmqSingleMessageConnector : SingleMessageConnector<TmqClient, TmqMessage>
+    public class TmqSingleMessageConnector : SingleMessageConnector<TmqClient, TwinoMessage>
     {
         private readonly MessageObserver _observer;
 
@@ -38,7 +38,7 @@ namespace Twino.Client.TMQ.Connectors
             _observer = new MessageObserver(ReadMessage);
         }
 
-        private object ReadMessage(TmqMessage message, Type type)
+        private object ReadMessage(TwinoMessage message, Type type)
         {
             if (ContentSerializer == null)
                 ContentSerializer = new NewtonsoftContentSerializer();
@@ -59,7 +59,7 @@ namespace Twino.Client.TMQ.Connectors
         }
 
         /// <inheritdoc />
-        protected override void ClientMessageReceived(ClientSocketBase<TmqMessage> client, TmqMessage payload)
+        protected override void ClientMessageReceived(ClientSocketBase<TwinoMessage> client, TwinoMessage payload)
         {
             base.ClientMessageReceived(client, payload);
 
@@ -95,7 +95,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Subscribes from reading messages in a queue
         /// </summary>
-        public void On<T>(Action<T, TmqMessage> action)
+        public void On<T>(Action<T, TwinoMessage> action)
         {
             if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
@@ -107,7 +107,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Subscribes from reading messages in a queue
         /// </summary>
-        public void On<T>(string channel, ushort content, Action<T, TmqMessage> action)
+        public void On<T>(string channel, ushort content, Action<T, TwinoMessage> action)
         {
             if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
@@ -144,7 +144,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Subscribes for reading direct messages
         /// </summary>
-        public void OnDirect<T>(Action<T, TmqMessage> action)
+        public void OnDirect<T>(Action<T, TwinoMessage> action)
         {
             if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
@@ -155,7 +155,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Subscribes for reading direct messages
         /// </summary>
-        public void OnDirect<T>(ushort content, Action<T, TmqMessage> action)
+        public void OnDirect<T>(ushort content, Action<T, TwinoMessage> action)
         {
             if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
@@ -218,7 +218,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Sends a message
         /// </summary>
-        public bool Send(TmqMessage message)
+        public bool Send(TwinoMessage message)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
@@ -230,7 +230,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Sends a message
         /// </summary>
-        public Task<TwinoResult> SendAsync(TmqMessage message)
+        public Task<TwinoResult> SendAsync(TwinoMessage message)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
@@ -246,7 +246,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Sends a message
         /// </summary>
-        public Task<TmqMessage> RequestAsync(TmqMessage message)
+        public Task<TwinoMessage> RequestAsync(TwinoMessage message)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)

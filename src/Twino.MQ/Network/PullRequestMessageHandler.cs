@@ -23,7 +23,7 @@ namespace Twino.MQ.Network
 
         #endregion
 
-        public async Task Handle(MqClient client, TmqMessage message, bool fromNode)
+        public async Task Handle(MqClient client, TwinoMessage message, bool fromNode)
         {
             //find channel and queue
             Channel channel = _server.FindChannel(message.Target);
@@ -39,12 +39,12 @@ namespace Twino.MQ.Network
                 return;
             }
 
-            ChannelQueue queue = channel.FindQueue(message.ContentType);
+            TwinoQueue queue = channel.FindQueue(message.ContentType);
 
             //if auto creation active, try to create queue
             if (queue == null && _server.Options.AutoQueueCreation)
             {
-                ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(channel.Options);
+                QueueOptions options = QueueOptions.CloneFrom(channel.Options);
                 queue = await channel.CreateQueue(message.ContentType, options, message, channel.Server.DeliveryHandlerFactory);
             }
 
@@ -63,7 +63,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Handles pulling a message from a queue
         /// </summary>
-        private async Task HandlePullRequest(MqClient client, TmqMessage message, Channel channel, ChannelQueue queue)
+        private async Task HandlePullRequest(MqClient client, TwinoMessage message, Channel channel, TwinoQueue queue)
         {
             //only pull statused queues can handle this request
             if (queue.Status != QueueStatus.Pull)
@@ -75,8 +75,8 @@ namespace Twino.MQ.Network
             }
 
             //client cannot pull message from the channel not in
-            ChannelClient channelClient = channel.FindClient(client);
-            if (channelClient == null)
+            QueueClient queueClient = channel.FindClient(client);
+            if (queueClient == null)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
                     await client.SendAsync(MessageBuilder.CreateNoContentPullResponse(message, TmqHeaders.UNAUTHORIZED));
@@ -86,7 +86,7 @@ namespace Twino.MQ.Network
             //check authorization
             if (_server.Authorization != null)
             {
-                bool grant = await _server.Authorization.CanPullFromQueue(channelClient, queue);
+                bool grant = await _server.Authorization.CanPullFromQueue(queueClient, queue);
                 if (!grant)
                 {
                     if (!string.IsNullOrEmpty(message.MessageId))
@@ -95,7 +95,7 @@ namespace Twino.MQ.Network
                 }
             }
 
-            await queue.State.Pull(channelClient, message);
+            await queue.State.Pull(queueClient, message);
         }
     }
 }
