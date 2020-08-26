@@ -154,7 +154,7 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
             }
 
             if (QueueStatus.HasValue)
-                message.AddHeader(TmqHeaders.QUEUE_STATUS, QueueStatus.Value.ToString().ToLower());
+                message.AddHeader(TmqHeaders.QUEUE_STATUS, QueueStatus.Value.ToString().Trim().ToLower());
 
             if (!string.IsNullOrEmpty(Topic))
                 message.AddHeader(TmqHeaders.QUEUE_TOPIC, Topic);

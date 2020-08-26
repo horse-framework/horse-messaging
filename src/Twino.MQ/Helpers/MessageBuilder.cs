@@ -1,4 +1,3 @@
-using System.IO;
 using System.Text;
 using Twino.Protocols.TMQ;
 
@@ -37,7 +36,7 @@ namespace Twino.MQ.Helpers
 
             return builder;
         }
-        
+
         /// <summary>
         /// Creates new Pull Request response message with no content
         /// </summary>
@@ -104,7 +103,6 @@ namespace Twino.MQ.Helpers
             message.Type = MessageType.Server;
             message.ContentType = contentType;
             message.SetTarget(target);
-            message.FirstAcquirer = true;
 
             return message;
         }
@@ -119,7 +117,6 @@ namespace Twino.MQ.Helpers
             response.Type = MessageType.Response;
             response.SetMessageId(request.MessageId);
             response.ContentType = status;
-            response.FirstAcquirer = true;
 
             response.SetTarget(request.Type == MessageType.QueueMessage
                                    ? request.Target

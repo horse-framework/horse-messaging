@@ -13,7 +13,6 @@ namespace Twino.MQ.Queues.States
         public bool TriggerSupported => true;
 
         private readonly TwinoQueue _queue;
-        private static readonly TmqWriter _writer = new TmqWriter();
 
         public PushQueueState(TwinoQueue queue)
         {
@@ -47,7 +46,7 @@ namespace Twino.MQ.Queues.States
         {
             //if we need acknowledge from receiver, it has a deadline.
             DateTime? ackDeadline = null;
-            if (_queue.Options.RequestAcknowledge)
+            if (_queue.Options.Acknowledge != QueueAckDecision.None)
                 ackDeadline = DateTime.UtcNow.Add(_queue.Options.AcknowledgeTimeout);
 
             //if there are not receivers, complete send operation
@@ -59,8 +58,8 @@ namespace Twino.MQ.Queues.States
             }
 
             //if to process next message is requires previous message acknowledge, wait here
-            if (_queue.Options.RequestAcknowledge && _queue.Options.WaitForAcknowledge)
-                 await _queue.WaitForAcknowledge(message);
+            if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
+                await _queue.WaitForAcknowledge(message);
 
             message.Decision = await _queue.DeliveryHandler.BeginSend(_queue, message);
             if (!await _queue.ApplyDecision(message.Decision, message))
@@ -79,10 +78,6 @@ namespace Twino.MQ.Queues.States
                 if (!client.Client.IsConnected)
                     continue;
 
-                //somehow if code comes here (it should not cuz of last "break" in this foreach, break
-                if (!message.Message.FirstAcquirer && _queue.Options.SendOnlyFirstAcquirer)
-                    break;
-
                 //call before send and check decision
                 Decision ccrd = await _queue.DeliveryHandler.CanConsumerReceive(_queue, message, client.Client);
                 final = TwinoQueue.CreateFinalDecision(final, ccrd);
@@ -92,7 +87,6 @@ namespace Twino.MQ.Queues.States
 
                 //create delivery object
                 MessageDelivery delivery = new MessageDelivery(message, client, ackDeadline);
-                delivery.FirstAcquirer = message.Message.FirstAcquirer;
 
                 //send the message
                 bool sent = await client.Client.SendAsync(messageData);
@@ -100,13 +94,9 @@ namespace Twino.MQ.Queues.States
                 if (sent)
                 {
                     messageIsSent = true;
-                    
+
                     //adds the delivery to time keeper to check timing up
                     _queue.TimeKeeper.AddAcknowledgeCheck(delivery);
-
-                    //set as sent, if message is sent to it's first acquirer,
-                    //set message first acquirer false and re-create byte array data of the message
-                    bool firstAcquirer = message.Message.FirstAcquirer;
 
                     //mark message is sent
                     delivery.MarkAsSent();
@@ -115,13 +105,6 @@ namespace Twino.MQ.Queues.States
                     _queue.Info.AddDelivery();
                     Decision d = await _queue.DeliveryHandler.ConsumerReceived(_queue, delivery, client.Client);
                     final = TwinoQueue.CreateFinalDecision(final, d);
-
-                    //if we are sending to only first acquirer, break
-                    if (_queue.Options.SendOnlyFirstAcquirer && firstAcquirer)
-                        break;
-
-                    if (firstAcquirer && clients.Count > 1)
-                        messageData = TmqWriter.Create(message.Message);
                 }
                 else
                 {

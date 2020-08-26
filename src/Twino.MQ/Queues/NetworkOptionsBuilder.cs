@@ -85,7 +85,7 @@ namespace Twino.MQ.Queues
         public void ApplyToQueue(QueueOptions target)
         {
             if (!string.IsNullOrEmpty(Acknowledge))
-                switch (Acknowledge.ToLower())
+                switch (Acknowledge.Trim().ToLower())
                 {
                     case "none":
                         target.Acknowledge = QueueAckDecision.None;
@@ -101,7 +101,7 @@ namespace Twino.MQ.Queues
                 }
 
             if (!string.IsNullOrEmpty(AutoDestroy))
-                switch (AutoDestroy.ToLower())
+                switch (AutoDestroy.Trim().ToLower())
                 {
                     case "disabled":
                         target.AutoDestroy = QueueDestroy.Disabled;

@@ -11,7 +11,6 @@ namespace Twino.MQ.Queues.States
         public QueueMessage ProcessingMessage { get; private set; }
         public bool TriggerSupported => true;
 
-        private static readonly TmqWriter _writer = new TmqWriter();
         private readonly TwinoQueue _queue;
 
         /// <summary>
@@ -59,11 +58,11 @@ namespace Twino.MQ.Queues.States
         {
             //if we need acknowledge from receiver, it has a deadline.
             DateTime? deadline = null;
-            if (_queue.Options.RequestAcknowledge)
+            if (_queue.Options.Acknowledge != QueueAckDecision.None)
                 deadline = DateTime.UtcNow.Add(_queue.Options.AcknowledgeTimeout);
 
             //if to process next message is requires previous message acknowledge, wait here
-            if (_queue.Options.RequestAcknowledge && _queue.Options.WaitForAcknowledge)
+            if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
                 await _queue.WaitForAcknowledge(message);
 
             message.Decision = await _queue.DeliveryHandler.BeginSend(_queue, message);
@@ -80,7 +79,6 @@ namespace Twino.MQ.Queues.States
 
             //create delivery object
             MessageDelivery delivery = new MessageDelivery(message, receiver, deadline);
-            delivery.FirstAcquirer = message.Message.FirstAcquirer;
 
             //send the message
             bool sent = await receiver.Client.SendAsync(messageData);

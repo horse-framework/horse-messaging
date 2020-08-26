@@ -235,16 +235,16 @@ namespace Twino.MQ
         /// <exception cref="OperationCanceledException">Thrown when queue limit is exceeded for the channel</exception>
         /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
         public Task<TwinoQueue> CreateQueue(string queueName,
-                                              QueueOptions options,
-                                              Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> asyncHandler)
+                                            QueueOptions options,
+                                            Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> asyncHandler)
         {
             return CreateQueue(queueName, options, null, asyncHandler);
         }
 
         internal async Task<TwinoQueue> CreateQueue(string queueName,
-                                                      QueueOptions options,
-                                                      TwinoMessage requestMessage,
-                                                      Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> asyncHandler)
+                                                    QueueOptions options,
+                                                    TwinoMessage requestMessage,
+                                                    Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> asyncHandler)
         {
             if (!Filter.CheckNameEligibility(queueName))
                 throw new InvalidOperationException("Invalid channel name");
@@ -257,22 +257,35 @@ namespace Twino.MQ
             if (queue != null)
                 throw new DuplicateNameException($"The channel has already a queue with same name: {queueName}");
 
+            string topic = null;
             if (requestMessage != null)
             {
                 string waitForAck = requestMessage.FindHeader(TmqHeaders.ACKNOWLEDGE);
                 if (!string.IsNullOrEmpty(waitForAck))
-                    options.WaitForAcknowledge = waitForAck == "1" || waitForAck.Equals("true", StringComparison.OrdinalIgnoreCase);
+                    switch (waitForAck.Trim().ToLower())
+                    {
+                        case "none":
+                            options.Acknowledge = QueueAckDecision.None;
+                            break;
+                        case "request":
+                            options.Acknowledge = QueueAckDecision.JustRequest;
+                            break;
+                        case "wait":
+                            options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                            break;
+                    }
 
                 string queueStatus = requestMessage.FindHeader(TmqHeaders.QUEUE_STATUS);
                 if (queueStatus != null)
                     options.Status = QueueStatusHelper.FindStatus(queueStatus);
 
-                string tag = requestMessage.FindHeader(TmqHeaders.QUEUE_TAG);
-                if (!string.IsNullOrEmpty(tag))
-                    options.TagName = tag;
+                topic = requestMessage.FindHeader(TmqHeaders.QUEUE_TOPIC);
             }
 
             queue = new TwinoQueue(this, queueName, options);
+            if (!string.IsNullOrEmpty(topic))
+                queue.Topic = topic;
+            
             DeliveryHandlerBuilder handlerBuilder = new DeliveryHandlerBuilder
                                                     {
                                                         Server = this,

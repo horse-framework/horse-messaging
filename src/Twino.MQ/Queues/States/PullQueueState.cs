@@ -246,15 +246,15 @@ namespace Twino.MQ.Queues.States
         private async Task<bool> ProcessPull(QueueClient requester, TwinoMessage request, QueueMessage message, IList<KeyValuePair<string, string>> headers)
         {
             //if we need acknowledge, we are sending this information to receivers that we require response
-            message.Message.PendingAcknowledge = _queue.Options.RequestAcknowledge;
+            message.Message.PendingResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
 
             //if we need acknowledge from receiver, it has a deadline.
             DateTime? deadline = null;
-            if (_queue.Options.RequestAcknowledge)
+            if (_queue.Options.Acknowledge != QueueAckDecision.None)
                 deadline = DateTime.UtcNow.Add(_queue.Options.AcknowledgeTimeout);
 
             //if to process next message is requires previous message acknowledge, wait here
-            if (_queue.Options.RequestAcknowledge && _queue.Options.WaitForAcknowledge)
+            if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
                 await _queue.WaitForAcknowledge(message);
 
             message.Decision = await _queue.DeliveryHandler.BeginSend(_queue, message);
@@ -268,8 +268,6 @@ namespace Twino.MQ.Queues.States
 
             //create delivery object
             MessageDelivery delivery = new MessageDelivery(message, requester, deadline);
-            delivery.FirstAcquirer = message.Message.FirstAcquirer;
-
             bool sent = await requester.Client.SendAsync(message.Message, headers);
 
             if (sent)

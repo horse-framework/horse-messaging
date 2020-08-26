@@ -6,7 +6,7 @@ namespace Twino.MQ.Helpers
     {
         internal static QueueStatus FindStatus(string statusName)
         {
-            switch (statusName.ToLower())
+            switch (statusName.Trim().ToLower())
             {
                 case "broadcast":
                     return QueueStatus.Broadcast;
