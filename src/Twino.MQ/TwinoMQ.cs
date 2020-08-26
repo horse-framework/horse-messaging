@@ -260,7 +260,7 @@ namespace Twino.MQ
             string topic = null;
             if (requestMessage != null)
             {
-                string waitForAck = requestMessage.FindHeader(TmqHeaders.ACKNOWLEDGE);
+                string waitForAck = requestMessage.FindHeader(TwinoHeaders.ACKNOWLEDGE);
                 if (!string.IsNullOrEmpty(waitForAck))
                     switch (waitForAck.Trim().ToLower())
                     {
@@ -275,11 +275,11 @@ namespace Twino.MQ
                             break;
                     }
 
-                string queueStatus = requestMessage.FindHeader(TmqHeaders.QUEUE_STATUS);
+                string queueStatus = requestMessage.FindHeader(TwinoHeaders.QUEUE_STATUS);
                 if (queueStatus != null)
                     options.Status = QueueStatusHelper.FindStatus(queueStatus);
 
-                topic = requestMessage.FindHeader(TmqHeaders.QUEUE_TOPIC);
+                topic = requestMessage.FindHeader(TwinoHeaders.QUEUE_TOPIC);
             }
 
             queue = new TwinoQueue(this, queueName, options);
@@ -293,7 +293,7 @@ namespace Twino.MQ
                                                     };
             if (requestMessage != null)
             {
-                handlerBuilder.DeliveryHandlerHeader = requestMessage.FindHeader(TmqHeaders.DELIVERY_HANDLER);
+                handlerBuilder.DeliveryHandlerHeader = requestMessage.FindHeader(TwinoHeaders.DELIVERY_HANDLER);
                 handlerBuilder.Headers = requestMessage.Headers;
             }
 

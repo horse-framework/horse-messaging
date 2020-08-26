@@ -39,7 +39,7 @@ namespace Twino.MQ.Queues
             {
                 TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, _queue.Name);
                 message.HighPriority = highPriority;
-                message.PendingResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
+                message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
 
                 if (_queue.Options.UseMessageId)
                     message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
@@ -79,7 +79,7 @@ namespace Twino.MQ.Queues
             foreach (T item in items)
             {
                 TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, _queue.Name);
-                message.PendingResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
+                message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
 
                 if (_queue.Options.UseMessageId)
                     message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
@@ -121,7 +121,7 @@ namespace Twino.MQ.Queues
             {
                 TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, _queue.Name);
                 message.HighPriority = highPriority;
-                message.PendingResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
+                message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
 
                 if (_queue.Options.UseMessageId)
                     message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
@@ -164,7 +164,7 @@ namespace Twino.MQ.Queues
             {
                 TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, _queue.Name);
                 message.HighPriority = highPriority;
-                message.PendingResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
+                message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
 
                 if (_queue.Options.UseMessageId)
                     message.SetMessageId(_queue.Server.MessageIdGenerator.Create());

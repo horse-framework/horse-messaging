@@ -140,24 +140,24 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
                 switch (Acknowledge.Value)
                 {
                     case QueueAckDecision.None:
-                        message.AddHeader(TmqHeaders.ACKNOWLEDGE, "none");
+                        message.AddHeader(TwinoHeaders.ACKNOWLEDGE, "none");
                         break;
 
                     case QueueAckDecision.JustRequest:
-                        message.AddHeader(TmqHeaders.ACKNOWLEDGE, "request");
+                        message.AddHeader(TwinoHeaders.ACKNOWLEDGE, "request");
                         break;
 
                     case QueueAckDecision.WaitForAcknowledge:
-                        message.AddHeader(TmqHeaders.ACKNOWLEDGE, "wait");
+                        message.AddHeader(TwinoHeaders.ACKNOWLEDGE, "wait");
                         break;
                 }
             }
 
             if (QueueStatus.HasValue)
-                message.AddHeader(TmqHeaders.QUEUE_STATUS, QueueStatus.Value.ToString().Trim().ToLower());
+                message.AddHeader(TwinoHeaders.QUEUE_STATUS, QueueStatus.Value.ToString().Trim().ToLower());
 
             if (!string.IsNullOrEmpty(Topic))
-                message.AddHeader(TmqHeaders.QUEUE_TOPIC, Topic);
+                message.AddHeader(TwinoHeaders.QUEUE_TOPIC, Topic);
 
             foreach (KeyValuePair<string, string> pair in Headers)
                 message.AddHeader(pair.Key, pair.Value);

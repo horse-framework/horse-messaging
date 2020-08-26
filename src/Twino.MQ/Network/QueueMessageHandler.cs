@@ -76,8 +76,8 @@ namespace Twino.MQ.Network
             List<KeyValuePair<string, string>> additionalHeaders = null;
             if (message.HasHeader)
             {
-                additionalHeaders = message.Headers.Where(x => !x.Key.Equals(TmqHeaders.CC, StringComparison.InvariantCultureIgnoreCase)).ToList();
-                ccList = new List<string>(message.Headers.Where(x => x.Key.Equals(TmqHeaders.CC, StringComparison.InvariantCultureIgnoreCase)).Select(x => x.Value));
+                additionalHeaders = message.Headers.Where(x => !x.Key.Equals(TwinoHeaders.CC, StringComparison.InvariantCultureIgnoreCase)).ToList();
+                ccList = new List<string>(message.Headers.Where(x => x.Key.Equals(TwinoHeaders.CC, StringComparison.InvariantCultureIgnoreCase)).Select(x => x.Value));
                 clone = message.Clone(false, true, _server.MessageIdGenerator.Create(), additionalHeaders);
             }
 

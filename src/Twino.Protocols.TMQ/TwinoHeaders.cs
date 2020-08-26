@@ -3,7 +3,7 @@ namespace Twino.Protocols.TMQ
     /// <summary>
     /// Known header messages for TMQ Protocol
     /// </summary>
-    public class TmqHeaders
+    public class TwinoHeaders
     {
         /// <summary>
         /// "Client-Id"
@@ -66,11 +66,6 @@ namespace Twino.Protocols.TMQ
         public const string TWINO_MQ_SERVER = "Twino-MQ-Server";
 
         /// <summary>
-        /// "Channel-Name"
-        /// </summary>
-        public const string CHANNEL_NAME = "Channel-Name";
-
-        /// <summary>
         /// "CC"
         /// </summary>
         public const string CC = "CC";
@@ -79,11 +74,6 @@ namespace Twino.Protocols.TMQ
         /// "Request-Id"
         /// </summary>
         public const string REQUEST_ID = "Request-Id";
-
-        /// <summary>
-        /// "Queue-Id"
-        /// </summary>
-        public const string QUEUE_ID = "Queue-Id";
 
         /// <summary>
         /// "No-Content"
@@ -104,11 +94,6 @@ namespace Twino.Protocols.TMQ
         /// "Unacceptable"
         /// </summary>
         public const string UNACCEPTABLE = "Unacceptable";
-
-        /// <summary>
-        /// "No-Channel"
-        /// </summary>
-        public const string NO_CHANNEL = "No-Channel";
 
         /// <summary>
         /// "No-Queue"
@@ -186,11 +171,6 @@ namespace Twino.Protocols.TMQ
         public const string QUEUE_STATUS = "Queue-Status";
 
         /// <summary>
-        /// "Queue-Tag"
-        /// </summary>
-        public const string QUEUE_TAG = "Queue-Tag";
-
-        /// <summary>
         /// "Route-Method"
         /// </summary>
         public const string ROUTE_METHOD = "Route-Method";
@@ -199,6 +179,11 @@ namespace Twino.Protocols.TMQ
         /// "Binding-Name"
         /// </summary>
         public const string BINDING_NAME = "Binding-Name";
+
+        /// <summary>
+        /// "Queue-Name"
+        /// </summary>
+        public const string QUEUE_NAME = "Queue-Name";
 
         /// <summary>
         /// "Queue-Topic"

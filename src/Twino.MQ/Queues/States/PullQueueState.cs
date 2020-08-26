@@ -33,7 +33,7 @@ namespace Twino.MQ.Queues.States
         /// </summary>
         private static int FindCount(TwinoMessage request)
         {
-            string countStr = request.FindHeader(TmqHeaders.COUNT);
+            string countStr = request.FindHeader(TwinoHeaders.COUNT);
 
             if (string.IsNullOrEmpty(countStr))
                 return 0;
@@ -46,7 +46,7 @@ namespace Twino.MQ.Queues.States
         /// </summary>
         private static ClearDecision FindClearDecision(TwinoMessage request)
         {
-            string clearStr = request.FindHeader(TmqHeaders.CLEAR);
+            string clearStr = request.FindHeader(TwinoHeaders.CLEAR);
 
             if (string.IsNullOrEmpty(clearStr))
                 return ClearDecision.None;
@@ -70,7 +70,7 @@ namespace Twino.MQ.Queues.States
         /// </summary>
         private static bool FindInfoRequest(TwinoMessage request)
         {
-            string infoStr = request.FindHeader(TmqHeaders.INFO);
+            string infoStr = request.FindHeader(TwinoHeaders.INFO);
             return !string.IsNullOrEmpty(infoStr) && infoStr.Trim().Equals("Yes", StringComparison.InvariantCultureIgnoreCase);
         }
 
@@ -81,11 +81,11 @@ namespace Twino.MQ.Queues.States
         /// </summary>
         private static bool FindOrder(TwinoMessage request)
         {
-            string orderStr = request.FindHeader(TmqHeaders.ORDER);
+            string orderStr = request.FindHeader(TwinoHeaders.ORDER);
             if (string.IsNullOrEmpty(orderStr))
                 return true;
 
-            bool lifo = orderStr.Trim().Equals(TmqHeaders.LIFO, StringComparison.InvariantCultureIgnoreCase);
+            bool lifo = orderStr.Trim().Equals(TwinoHeaders.LIFO, StringComparison.InvariantCultureIgnoreCase);
             return !lifo;
         }
 
@@ -95,7 +95,7 @@ namespace Twino.MQ.Queues.States
             int count = FindCount(request);
             if (count < 1)
             {
-                await client.Client.SendAsync(MessageBuilder.CreateNoContentPullResponse(request, TmqHeaders.UNACCEPTABLE));
+                await client.Client.SendAsync(MessageBuilder.CreateNoContentPullResponse(request, TwinoHeaders.UNACCEPTABLE));
                 return PullResult.Unacceptable;
             }
 
@@ -108,13 +108,13 @@ namespace Twino.MQ.Queues.States
             //there is no pullable message
             if (messageTuple.Item1 == null)
             {
-                await client.Client.SendAsync(MessageBuilder.CreateNoContentPullResponse(request, TmqHeaders.EMPTY));
+                await client.Client.SendAsync(MessageBuilder.CreateNoContentPullResponse(request, TwinoHeaders.EMPTY));
                 return PullResult.Empty;
             }
 
             List<KeyValuePair<string, string>> headers = new List<KeyValuePair<string, string>>();
-            KeyValuePair<string, string> requestId = new KeyValuePair<string, string>(TmqHeaders.REQUEST_ID, request.MessageId);
-            KeyValuePair<string, string> countHeader = new KeyValuePair<string, string>(TmqHeaders.COUNT, count.ToString());
+            KeyValuePair<string, string> requestId = new KeyValuePair<string, string>(TwinoHeaders.REQUEST_ID, request.MessageId);
+            KeyValuePair<string, string> countHeader = new KeyValuePair<string, string>(TwinoHeaders.COUNT, count.ToString());
 
             while (index <= count)
             {
@@ -126,12 +126,12 @@ namespace Twino.MQ.Queues.States
                 {
                     headers.Add(requestId);
                     headers.Add(countHeader);
-                    headers.Add(new KeyValuePair<string, string>(TmqHeaders.INDEX, index.ToString()));
+                    headers.Add(new KeyValuePair<string, string>(TwinoHeaders.INDEX, index.ToString()));
 
                     if (sendInfo)
                     {
-                        headers.Add(new KeyValuePair<string, string>(TmqHeaders.PRIORITY_MESSAGES, messageTuple.Item2.ToString()));
-                        headers.Add(new KeyValuePair<string, string>(TmqHeaders.MESSAGES, messageTuple.Item3.ToString()));
+                        headers.Add(new KeyValuePair<string, string>(TwinoHeaders.PRIORITY_MESSAGES, messageTuple.Item2.ToString()));
+                        headers.Add(new KeyValuePair<string, string>(TwinoHeaders.MESSAGES, messageTuple.Item3.ToString()));
                     }
 
                     bool processed = await ProcessPull(client, request, message, headers);
@@ -165,7 +165,7 @@ namespace Twino.MQ.Queues.States
                 }
             }
 
-            await client.Client.SendAsync(MessageBuilder.CreateNoContentPullResponse(request, TmqHeaders.END));
+            await client.Client.SendAsync(MessageBuilder.CreateNoContentPullResponse(request, TwinoHeaders.END));
             return PullResult.Success;
         }
 
@@ -246,7 +246,7 @@ namespace Twino.MQ.Queues.States
         private async Task<bool> ProcessPull(QueueClient requester, TwinoMessage request, QueueMessage message, IList<KeyValuePair<string, string>> headers)
         {
             //if we need acknowledge, we are sending this information to receivers that we require response
-            message.Message.PendingResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
+            message.Message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
 
             //if we need acknowledge from receiver, it has a deadline.
             DateTime? deadline = null;

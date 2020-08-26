@@ -149,7 +149,7 @@ namespace Twino.Client.TMQ
                     source = ReadSource.Queue;
                 }
                 else if (message.Type == MessageType.DirectMessage)
-                    source = message.PendingResponse ? ReadSource.Request : ReadSource.Direct;
+                    source = message.WaitResponse ? ReadSource.Request : ReadSource.Direct;
                 else
                     return;
 

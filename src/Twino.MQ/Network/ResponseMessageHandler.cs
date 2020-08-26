@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
+using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Network
@@ -22,23 +23,34 @@ namespace Twino.MQ.Network
 
         public async Task Handle(MqClient sender, TwinoMessage message, bool fromNode)
         {
-            //server does not care response messages
-            //if receiver could be found, message is sent to it's receiver
-            //if receiver isn't available, response will be thrown
-
-            MqClient receiver = _server.FindClient(message.Target);
-
-            if (receiver != null)
+            //priority has no role in ack message.
+            //we are using priority for helping receiver type recognization for better performance
+            if (message.HighPriority)
             {
-                //check sending message authority
-                if (_server.Authorization != null)
+                //target should be client
+                MqClient target = _server.FindClient(message.Target);
+                if (target != null)
                 {
-                    bool grant = await _server.Authorization.CanResponseMessage(sender, message, receiver);
-                    if (!grant)
-                        return;
+                    await target.SendAsync(message);
+                    return;
                 }
+            }
 
-                await receiver.SendAsync(message);
+            //find channel and queue
+            TwinoQueue queue = _server.FindQueue(message.Target);
+            if (queue != null)
+            {
+                await queue.AcknowledgeDelivered(sender, message);
+                return;
+            }
+
+            //if high prio, dont try to find client again
+            if (!message.HighPriority)
+            {
+                //target should be client
+                MqClient target = _server.FindClient(message.Target);
+                if (target != null)
+                    await target.SendAsync(message);
             }
         }
     }

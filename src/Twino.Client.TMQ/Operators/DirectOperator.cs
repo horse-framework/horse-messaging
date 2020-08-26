@@ -91,7 +91,7 @@ namespace Twino.Client.TMQ.Operators
             if (string.IsNullOrEmpty(message.Target))
                 return new TwinoResult(TwinoResultCode.SendError);
 
-            message.PendingResponse = waitAcknowledge;
+            message.WaitResponse = waitAcknowledge;
             message.Serialize(model, _client.JsonSerializer);
 
             if (messageHeaders != null)

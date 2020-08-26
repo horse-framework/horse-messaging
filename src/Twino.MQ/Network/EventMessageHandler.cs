@@ -34,23 +34,15 @@ namespace Twino.MQ.Network
         public Task Handle(MqClient client, TwinoMessage message, bool fromNode)
         {
             string eventName = message.Target;
-            string channelName = message.FindHeader(TmqHeaders.CHANNEL_NAME);
-            string queueId = message.FindHeader(TmqHeaders.QUEUE_ID);
+            string queueName = message.FindHeader(TwinoHeaders.QUEUE_NAME);
             bool subscribe = message.ContentType == 1;
 
-            Channel channel = null;
-            if (!string.IsNullOrEmpty(channelName))
-                channel = _server.FindChannel(channelName);
-
+            TwinoQueue queue = !string.IsNullOrEmpty(queueName) ? _server.FindQueue(queueName) : null;
             if (subscribe)
             {
                 if (_server.Authorization != null)
                 {
-                    ushort authQueueId = 0;
-                    if (!string.IsNullOrEmpty(queueId))
-                        authQueueId = Convert.ToUInt16(queueId);
-
-                    if (!_server.Authorization.CanSubscribeEvent(client, eventName, channelName, authQueueId))
+                    if (!_server.Authorization.CanSubscribeEvent(client, queue))
                         return SendResponse(client, message, false);
                 }
             }

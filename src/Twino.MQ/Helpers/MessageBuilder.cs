@@ -46,8 +46,8 @@ namespace Twino.MQ.Helpers
             msg.SetMessageId(request.MessageId);
             msg.SetTarget(request.Target);
             msg.ContentType = request.ContentType;
-            msg.AddHeader(TmqHeaders.REQUEST_ID, request.MessageId);
-            msg.AddHeader(TmqHeaders.NO_CONTENT, reason);
+            msg.AddHeader(TwinoHeaders.REQUEST_ID, request.MessageId);
+            msg.AddHeader(TwinoHeaders.NO_CONTENT, reason);
             return msg;
         }
 

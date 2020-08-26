@@ -116,13 +116,13 @@ namespace Twino.Client.TMQ.Operators
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.CreateQueue;
             message.SetTarget(channel);
-            message.PendingResponse = true;
+            message.WaitResponse = true;
 
-            message.AddHeader(TmqHeaders.CHANNEL_NAME, channel);
-            message.AddHeader(TmqHeaders.QUEUE_ID, queueId);
+            message.AddHeader(TwinoHeaders.CHANNEL_NAME, channel);
+            message.AddHeader(TwinoHeaders.QUEUE_ID, queueId);
 
             if (!string.IsNullOrEmpty(deliveryHandlerHeader))
-                message.AddHeader(TmqHeaders.DELIVERY_HANDLER, deliveryHandlerHeader);
+                message.AddHeader(TwinoHeaders.DELIVERY_HANDLER, deliveryHandlerHeader);
 
             if (additionalHeaders != null)
                 foreach (KeyValuePair<string, string> pair in additionalHeaders)
@@ -179,7 +179,7 @@ namespace Twino.Client.TMQ.Operators
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.RemoveQueue;
             message.SetTarget(channel);
-            message.PendingResponse = true;
+            message.WaitResponse = true;
             message.Content = new MemoryStream(BitConverter.GetBytes(queueId));
             message.SetMessageId(_client.UniqueIdGenerator.Create());
 
@@ -195,11 +195,11 @@ namespace Twino.Client.TMQ.Operators
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.UpdateQueue;
             message.SetTarget(channel);
-            message.PendingResponse = true;
+            message.WaitResponse = true;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
 
-            message.AddHeader(TmqHeaders.CHANNEL_NAME, channel);
-            message.AddHeader(TmqHeaders.QUEUE_ID, queueId);
+            message.AddHeader(TwinoHeaders.CHANNEL_NAME, channel);
+            message.AddHeader(TwinoHeaders.QUEUE_ID, queueId);
 
             QueueOptions options = new QueueOptions();
             optionsAction(options);
@@ -224,17 +224,17 @@ namespace Twino.Client.TMQ.Operators
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.ClearMessages;
             message.SetTarget(channel);
-            message.PendingResponse = true;
+            message.WaitResponse = true;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
 
-            message.AddHeader(TmqHeaders.CHANNEL_NAME, channel);
-            message.AddHeader(TmqHeaders.QUEUE_ID, queueId);
+            message.AddHeader(TwinoHeaders.CHANNEL_NAME, channel);
+            message.AddHeader(TwinoHeaders.QUEUE_ID, queueId);
 
             if (clearPriorityMessages)
-                message.AddHeader(TmqHeaders.PRIORITY_MESSAGES, "yes");
+                message.AddHeader(TwinoHeaders.PRIORITY_MESSAGES, "yes");
 
             if (clearMessages)
-                message.AddHeader(TmqHeaders.MESSAGES, "yes");
+                message.AddHeader(TwinoHeaders.MESSAGES, "yes");
 
             return _client.WaitResponse(message, true);
         }
@@ -260,7 +260,7 @@ namespace Twino.Client.TMQ.Operators
         {
             TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor(jsonObject.GetType());
             TwinoMessage message = descriptor.CreateMessage(MessageType.QueueMessage, channel, queueId);
-            message.PendingResponse = waitAcknowledge;
+            message.WaitResponse = waitAcknowledge;
 
             if (messageHeaders != null)
                 foreach (KeyValuePair<string, string> pair in messageHeaders)
@@ -291,7 +291,7 @@ namespace Twino.Client.TMQ.Operators
         {
             TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, channel, queueId);
             message.Content = content;
-            message.PendingResponse = waitAcknowledge;
+            message.WaitResponse = waitAcknowledge;
 
             if (messageHeaders != null)
                 foreach (KeyValuePair<string, string> pair in messageHeaders)
@@ -310,20 +310,20 @@ namespace Twino.Client.TMQ.Operators
         {
             TwinoMessage message = new TwinoMessage(MessageType.QueuePullRequest, request.Channel, request.QueueId);
             message.SetMessageId(_client.UniqueIdGenerator.Create());
-            message.AddHeader(TmqHeaders.COUNT, request.Count);
+            message.AddHeader(TwinoHeaders.COUNT, request.Count);
 
             if (request.ClearAfter == ClearDecision.AllMessages)
-                message.AddHeader(TmqHeaders.CLEAR, "all");
+                message.AddHeader(TwinoHeaders.CLEAR, "all");
             else if (request.ClearAfter == ClearDecision.PriorityMessages)
-                message.AddHeader(TmqHeaders.CLEAR, "High-Priority");
+                message.AddHeader(TwinoHeaders.CLEAR, "High-Priority");
             else if (request.ClearAfter == ClearDecision.Messages)
-                message.AddHeader(TmqHeaders.CLEAR, "Default-Priority");
+                message.AddHeader(TwinoHeaders.CLEAR, "Default-Priority");
 
             if (request.GetQueueMessageCounts)
-                message.AddHeader(TmqHeaders.INFO, "yes");
+                message.AddHeader(TwinoHeaders.INFO, "yes");
 
             if (request.Order == MessageOrder.LIFO)
-                message.AddHeader(TmqHeaders.ORDER, TmqHeaders.LIFO);
+                message.AddHeader(TwinoHeaders.ORDER, TwinoHeaders.LIFO);
 
             foreach (KeyValuePair<string, string> pair in request.RequestHeaders)
                 message.AddHeader(pair.Key, pair.Value);
@@ -461,7 +461,7 @@ namespace Twino.Client.TMQ.Operators
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.Join;
             message.SetTarget(channel);
-            message.PendingResponse = verifyResponse;
+            message.WaitResponse = verifyResponse;
 
             if (verifyResponse)
                 message.SetMessageId(_client.UniqueIdGenerator.Create());
@@ -478,7 +478,7 @@ namespace Twino.Client.TMQ.Operators
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.Leave;
             message.SetTarget(channel);
-            message.PendingResponse = verifyResponse;
+            message.WaitResponse = verifyResponse;
 
             if (verifyResponse)
                 message.SetMessageId(_client.UniqueIdGenerator.Create());
@@ -499,8 +499,8 @@ namespace Twino.Client.TMQ.Operators
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.CreateChannel;
             message.SetTarget(channel);
-            message.PendingResponse = true;
-            message.AddHeader(TmqHeaders.CHANNEL_NAME, channel);
+            message.WaitResponse = true;
+            message.AddHeader(TwinoHeaders.CHANNEL_NAME, channel);
             message.SetMessageId(_client.UniqueIdGenerator.Create());
 
             if (optionsAction != null)
@@ -523,10 +523,10 @@ namespace Twino.Client.TMQ.Operators
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.RemoveChannel;
             message.SetTarget(channel);
-            message.PendingResponse = true;
+            message.WaitResponse = true;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
 
-            message.AddHeader(TmqHeaders.CHANNEL_NAME, channel);
+            message.AddHeader(TwinoHeaders.CHANNEL_NAME, channel);
 
             return await _client.WaitResponse(message, true);
         }
@@ -546,7 +546,7 @@ namespace Twino.Client.TMQ.Operators
             message.SetTarget(name);
             message.SetMessageId(_client.UniqueIdGenerator.Create());
 
-            message.AddHeader(TmqHeaders.CHANNEL_NAME, name);
+            message.AddHeader(TwinoHeaders.CHANNEL_NAME, name);
 
             return await _client.SendAndGetJson<ChannelInformation>(message);
         }
@@ -563,7 +563,7 @@ namespace Twino.Client.TMQ.Operators
             message.SetMessageId(_client.UniqueIdGenerator.Create());
 
             if (!string.IsNullOrEmpty(filter))
-                message.AddHeader(TmqHeaders.CHANNEL_NAME, filter);
+                message.AddHeader(TwinoHeaders.CHANNEL_NAME, filter);
 
             return await _client.SendAndGetJson<List<ChannelInformation>>(message);
         }
@@ -579,7 +579,7 @@ namespace Twino.Client.TMQ.Operators
             message.ContentType = KnownContentTypes.ChannelConsumers;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
 
-            message.AddHeader(TmqHeaders.CHANNEL_NAME, channel);
+            message.AddHeader(TwinoHeaders.CHANNEL_NAME, channel);
 
             return await _client.SendAndGetJson<List<ClientInformation>>(message);
         }

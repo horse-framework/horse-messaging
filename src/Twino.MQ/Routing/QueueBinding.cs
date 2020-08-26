@@ -48,7 +48,7 @@ namespace Twino.MQ.Routing
 
             // ReSharper disable once PossibleInvalidOperationException
             msg.ContentType = ContentType.Value;
-            message.PendingResponse = Interaction == BindingInteraction.Response;
+            message.WaitResponse = Interaction == BindingInteraction.Response;
 
             QueueMessage queueMessage = new QueueMessage(msg);
             queueMessage.Source = sender;

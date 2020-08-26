@@ -76,7 +76,7 @@ namespace Twino.Protocols.TMQ
         {
             byte proto = (byte) message.Type;
 
-            if (message.PendingResponse)
+            if (message.WaitResponse)
                 proto += 128;
 
             if (message.HighPriority)

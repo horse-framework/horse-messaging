@@ -69,7 +69,7 @@ namespace Twino.MQ.Network
             if (queue.Status != QueueStatus.Pull)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(MessageBuilder.CreateNoContentPullResponse(message, TmqHeaders.UNACCEPTABLE));
+                    await client.SendAsync(MessageBuilder.CreateNoContentPullResponse(message, TwinoHeaders.UNACCEPTABLE));
                 
                 return;
             }
@@ -79,7 +79,7 @@ namespace Twino.MQ.Network
             if (queueClient == null)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(MessageBuilder.CreateNoContentPullResponse(message, TmqHeaders.UNAUTHORIZED));
+                    await client.SendAsync(MessageBuilder.CreateNoContentPullResponse(message, TwinoHeaders.UNAUTHORIZED));
                 return;
             }
 
@@ -90,7 +90,7 @@ namespace Twino.MQ.Network
                 if (!grant)
                 {
                     if (!string.IsNullOrEmpty(message.MessageId))
-                        await client.SendAsync(MessageBuilder.CreateNoContentPullResponse(message, TmqHeaders.UNAUTHORIZED));
+                        await client.SendAsync(MessageBuilder.CreateNoContentPullResponse(message, TwinoHeaders.UNAUTHORIZED));
                     return;
                 }
             }

@@ -23,11 +23,6 @@ namespace Twino.MQ.Security
         Task<bool> CanDirectMessage(MqClient sender, TwinoMessage message, MqClient receiver);
 
         /// <summary>
-        /// Returns true, if client can send a peer message
-        /// </summary>
-        Task<bool> CanResponseMessage(MqClient sender, TwinoMessage message, MqClient receiver);
-
-        /// <summary>
         /// Returns true, if client can send a message to the queue
         /// </summary>
         Task<bool> CanMessageToQueue(MqClient client, TwinoQueue queue, TwinoMessage message);
@@ -40,7 +35,7 @@ namespace Twino.MQ.Security
         /// <summary>
         /// Returns true, if client can subscribe to the event
         /// </summary>
-        bool CanSubscribeEvent(MqClient client, string eventName, string channelName, ushort queueId);
+        bool CanSubscribeEvent(MqClient client, TwinoQueue queue);
 
         /// <summary>
         /// Returns true, if client can create a router

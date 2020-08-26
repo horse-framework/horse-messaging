@@ -74,7 +74,7 @@ namespace Twino.MQ.Queues.States
         public bool CanEnqueue(QueueMessage message)
         {
             //if we need acknowledge, we are sending this information to receivers that we require response
-            message.Message.PendingResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
+            message.Message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
             message.IsInQueue = true;
             message.Message.Type = MessageType.Response;
 

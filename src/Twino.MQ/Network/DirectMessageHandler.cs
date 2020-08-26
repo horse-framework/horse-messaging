@@ -41,7 +41,7 @@ namespace Twino.MQ.Network
 
                     await ProcessMultipleReceiverClientMessage(client, receivers, message);
                 }
-                else if (message.PendingResponse)
+                else if (message.WaitResponse)
                     await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
             }
             else if (message.Target.StartsWith("@type:"))
@@ -58,7 +58,7 @@ namespace Twino.MQ.Network
 
                     await ProcessMultipleReceiverClientMessage(client, receivers, message);
                 }
-                else if (message.PendingResponse)
+                else if (message.WaitResponse)
                     await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
             }
             else

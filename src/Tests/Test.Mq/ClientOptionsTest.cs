@@ -91,7 +91,7 @@ namespace Test.Mq
             };
 
             TwinoMessage msg = new TwinoMessage(MessageType.DirectMessage, "client-2");
-            msg.PendingResponse = true;
+            msg.WaitResponse = true;
             msg.SetStringContent("Hello, World!");
 
             TwinoMessage response = await client1.Request(msg);

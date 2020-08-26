@@ -75,15 +75,15 @@ namespace Twino.Client.TMQ.Models
         {
             if (string.IsNullOrEmpty(noContentReason))
                 Status = PullProcess.Timeout;
-            else if (noContentReason.Equals(TmqHeaders.END, StringComparison.InvariantCultureIgnoreCase))
+            else if (noContentReason.Equals(TwinoHeaders.END, StringComparison.InvariantCultureIgnoreCase))
                 Status = PullProcess.Completed;
-            else if (noContentReason.Equals(TmqHeaders.EMPTY, StringComparison.InvariantCultureIgnoreCase))
+            else if (noContentReason.Equals(TwinoHeaders.EMPTY, StringComparison.InvariantCultureIgnoreCase))
                 Status = PullProcess.Empty;
             else if (noContentReason.Equals("Error", StringComparison.InvariantCultureIgnoreCase))
                 Status = PullProcess.NetworkError;
-            else if (noContentReason.Equals(TmqHeaders.UNACCEPTABLE, StringComparison.InvariantCultureIgnoreCase))
+            else if (noContentReason.Equals(TwinoHeaders.UNACCEPTABLE, StringComparison.InvariantCultureIgnoreCase))
                 Status = PullProcess.Unacceptable;
-            else if (noContentReason.Equals(TmqHeaders.UNAUTHORIZED, StringComparison.InvariantCultureIgnoreCase))
+            else if (noContentReason.Equals(TwinoHeaders.UNAUTHORIZED, StringComparison.InvariantCultureIgnoreCase))
                 Status = PullProcess.Unauthorized;
             else
                 Status = PullProcess.Completed;

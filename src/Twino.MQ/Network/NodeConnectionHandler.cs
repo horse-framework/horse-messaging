@@ -32,7 +32,7 @@ namespace Twino.MQ.Network
         public async Task<TmqServerSocket> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
             string clientId;
-            bool found = data.Properties.TryGetValue(TmqHeaders.CLIENT_ID, out clientId);
+            bool found = data.Properties.TryGetValue(TwinoHeaders.CLIENT_ID, out clientId);
             if (!found || string.IsNullOrEmpty(clientId))
                 clientId = _server.Server.ClientIdGenerator.Create();
 
@@ -48,9 +48,9 @@ namespace Twino.MQ.Network
             MqClient client = new MqClient(_server.Server, connection);
             client.Data = data;
             client.UniqueId = clientId.Trim();
-            client.Token = data.Properties.GetStringValue(TmqHeaders.CLIENT_TOKEN);
-            client.Name = data.Properties.GetStringValue(TmqHeaders.CLIENT_NAME);
-            client.Type = data.Properties.GetStringValue(TmqHeaders.CLIENT_TYPE);
+            client.Token = data.Properties.GetStringValue(TwinoHeaders.CLIENT_TOKEN);
+            client.Name = data.Properties.GetStringValue(TwinoHeaders.CLIENT_NAME);
+            client.Type = data.Properties.GetStringValue(TwinoHeaders.CLIENT_TYPE);
 
             if (_server.Authenticator != null)
             {

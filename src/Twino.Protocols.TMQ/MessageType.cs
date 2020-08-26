@@ -42,11 +42,6 @@ namespace Twino.Protocols.TMQ
         DirectMessage = 0x12,
 
         /// <summary>
-        /// A acknowledge message, points to a message received before.
-        /// </summary>
-        Acknowledge = 0x13,
-
-        /// <summary>
         /// A response message, point to a message received before.
         /// </summary>
         Response = 0x14,

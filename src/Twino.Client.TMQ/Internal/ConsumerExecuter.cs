@@ -63,7 +63,7 @@ namespace Twino.Client.TMQ.Internal
             switch (NackReason)
             {
                 case NackReason.Error:
-                    reason = TmqHeaders.NACK_REASON_ERROR;
+                    reason = TwinoHeaders.NACK_REASON_ERROR;
                     break;
 
                 case NackReason.ExceptionType:
@@ -75,7 +75,7 @@ namespace Twino.Client.TMQ.Internal
                     break;
 
                 default:
-                    reason = TmqHeaders.NACK_REASON_NONE;
+                    reason = TwinoHeaders.NACK_REASON_NONE;
                     break;
             }
 

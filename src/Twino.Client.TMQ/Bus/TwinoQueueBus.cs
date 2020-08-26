@@ -91,7 +91,7 @@ namespace Twino.Client.TMQ.Bus
             if (client == null)
             {
                 PullContainer con = new PullContainer(null, 0, null);
-                con.Complete(TmqHeaders.ERROR);
+                con.Complete(TwinoHeaders.ERROR);
                 return con.GetAwaitableTask();
             }
 

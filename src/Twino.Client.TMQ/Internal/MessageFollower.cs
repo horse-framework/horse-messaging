@@ -122,13 +122,13 @@ namespace Twino.Client.TMQ.Internal
                 return;
 
             descriptor.Completed = true;
-            if (!message.HasHeader || !message.Headers.Any(x => x.Key.Equals(TmqHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)))
+            if (!message.HasHeader || !message.Headers.Any(x => x.Key.Equals(TwinoHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)))
             {
                 descriptor.Set(true, TwinoResult.Ok());
                 return;
             }
 
-            var nackReason = message.Headers.FirstOrDefault(x => x.Key.Equals(TmqHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase));
+            var nackReason = message.Headers.FirstOrDefault(x => x.Key.Equals(TwinoHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase));
             descriptor.Set(false, TwinoResult.Failed(nackReason.Value));
         }
 
@@ -142,7 +142,7 @@ namespace Twino.Client.TMQ.Internal
 
             MessageDescriptor descriptor;
             lock (_descriptors)
-                descriptor = _descriptors.Find(x => x.Message.PendingResponse && x.Message.MessageId == message.MessageId);
+                descriptor = _descriptors.Find(x => x.Message.WaitResponse && x.Message.MessageId == message.MessageId);
 
             if (descriptor == null)
                 return;
@@ -173,7 +173,7 @@ namespace Twino.Client.TMQ.Internal
         /// </summary>
         public async Task<TwinoMessage> FollowResponse(TwinoMessage message)
         {
-            if (!message.PendingResponse || string.IsNullOrEmpty(message.MessageId))
+            if (!message.WaitResponse || string.IsNullOrEmpty(message.MessageId))
                 return default;
 
             DateTime expiration = DateTime.UtcNow + _client.ResponseTimeout;

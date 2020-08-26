@@ -25,7 +25,6 @@ namespace Twino.MQ.Network
         private readonly INetworkMessageHandler _pullRequestHandler;
         private readonly INetworkMessageHandler _clientHandler;
         private readonly INetworkMessageHandler _responseHandler;
-        private readonly INetworkMessageHandler _acknowledgeHandler;
         private readonly INetworkMessageHandler _instanceHandler;
         private readonly INetworkMessageHandler _eventHandler;
 
@@ -38,7 +37,6 @@ namespace Twino.MQ.Network
             _pullRequestHandler = new PullRequestMessageHandler(server);
             _clientHandler = new DirectMessageHandler(server);
             _responseHandler = new ResponseMessageHandler(server);
-            _acknowledgeHandler = new AcknowledgeMessageHandler(server);
             _instanceHandler = new NodeMessageHandler(server);
             _eventHandler = new EventMessageHandler(server);
         }
@@ -53,7 +51,7 @@ namespace Twino.MQ.Network
         public async Task<TmqServerSocket> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
             string clientId;
-            bool found = data.Properties.TryGetValue(TmqHeaders.CLIENT_ID, out clientId);
+            bool found = data.Properties.TryGetValue(TwinoHeaders.CLIENT_ID, out clientId);
             if (!found || string.IsNullOrEmpty(clientId))
                 clientId = _server.ClientIdGenerator.Create();
 
@@ -72,9 +70,9 @@ namespace Twino.MQ.Network
             MqClient client = new MqClient(_server, connection, _server.MessageIdGenerator, _server.Options.UseMessageId);
             client.Data = data;
             client.UniqueId = clientId.Trim();
-            client.Token = data.Properties.GetStringValue(TmqHeaders.CLIENT_TOKEN);
-            client.Name = data.Properties.GetStringValue(TmqHeaders.CLIENT_NAME);
-            client.Type = data.Properties.GetStringValue(TmqHeaders.CLIENT_TYPE);
+            client.Token = data.Properties.GetStringValue(TwinoHeaders.CLIENT_TOKEN);
+            client.Name = data.Properties.GetStringValue(TwinoHeaders.CLIENT_NAME);
+            client.Type = data.Properties.GetStringValue(TwinoHeaders.CLIENT_TYPE);
 
             //authenticates client
             if (_server.Authenticator != null)
@@ -134,8 +132,8 @@ namespace Twino.MQ.Network
             if (string.IsNullOrEmpty(message.MessageId))
             {
                 //anonymous messages can't be responsed, do not wait response
-                if (message.PendingResponse)
-                    message.PendingResponse = false;
+                if (message.WaitResponse)
+                    message.WaitResponse = false;
 
                 //if server want to use message id anyway, generate new.
                 if (_server.Options.UseMessageId)
@@ -183,12 +181,6 @@ namespace Twino.MQ.Network
                     if (!fromNode)
                         _ = _instanceHandler.Handle(mc, message, false);
                     return _clientHandler.Handle(mc, message, fromNode);
-
-                //client sends an acknowledge message of a message
-                case MessageType.Acknowledge:
-                    if (!fromNode)
-                        _ = _instanceHandler.Handle(mc, message, false);
-                    return _acknowledgeHandler.Handle(mc, message, fromNode);
 
                 //client sends a response message for a message
                 case MessageType.Response:

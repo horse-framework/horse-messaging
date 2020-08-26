@@ -151,7 +151,7 @@ namespace Test.Mq.Statuses
             Assert.Equal(TwinoResultCode.Ok, joined2.Code);
 
             TwinoMessage msg = new TwinoMessage(MessageType.QueueMessage, "ch-push", MessageA.ContentType);
-            msg.AddHeader(TmqHeaders.CC, "ch-push-cc");
+            msg.AddHeader(TwinoHeaders.CC, "ch-push-cc");
             msg.SetStringContent("Hello, World!");
 
             await producer.SendAsync(msg);

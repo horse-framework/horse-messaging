@@ -68,7 +68,7 @@ namespace Twino.MQ.Routing
             if (ContentType.HasValue)
                 message.ContentType = ContentType.Value;
 
-            message.PendingResponse = Interaction == BindingInteraction.Response;
+            message.WaitResponse = Interaction == BindingInteraction.Response;
             switch (RouteMethod)
             {
                 case RouteMethod.OnlyFirst:

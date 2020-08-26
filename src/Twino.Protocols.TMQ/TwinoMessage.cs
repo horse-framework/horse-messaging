@@ -18,10 +18,10 @@ namespace Twino.Protocols.TMQ
         #region Properties
 
         /// <summary>
-        /// True means, client is pending response (or acknowledge).
+        /// True means, client is waiting for response (or acknowledge).
         /// Sending response is not mandatory but it SHOULD sent.
         /// </summary>
-        public bool PendingResponse { get; set; }
+        public bool WaitResponse { get; set; }
 
         /// <summary>
         /// If true, message should be at first element in the queue
@@ -247,7 +247,7 @@ namespace Twino.Protocols.TMQ
             clone.SetSource(Source);
 
             clone.HighPriority = HighPriority;
-            clone.PendingResponse = PendingResponse;
+            clone.WaitResponse = WaitResponse;
             clone.ContentType = ContentType;
 
             if (cloneHeaders && HasHeader)
@@ -336,34 +336,34 @@ namespace Twino.Protocols.TMQ
             TwinoMessage message = new TwinoMessage();
 
             message.SetMessageId(MessageId);
-            message.Type = MessageType.Acknowledge;
-            message.ContentType = ContentType;
+            message.Type = MessageType.Response;
 
             if (Type == MessageType.DirectMessage)
             {
                 message.HighPriority = true;
-
                 message.SetSource(Target);
                 message.SetTarget(Source);
             }
             else
             {
                 message.HighPriority = false;
-
                 //target will be channel name
                 message.SetTarget(Target);
             }
 
             if (!string.IsNullOrEmpty(negativeReason))
             {
+                message.ContentType = KnownContentTypes.Failed;
                 if (!message.HasHeader)
                     message.HasHeader = true;
 
                 if (message.HeadersList == null)
                     message.HeadersList = new List<KeyValuePair<string, string>>();
 
-                message.HeadersList.Add(new KeyValuePair<string, string>(TmqHeaders.NEGATIVE_ACKNOWLEDGE_REASON, negativeReason));
+                message.HeadersList.Add(new KeyValuePair<string, string>(TwinoHeaders.NEGATIVE_ACKNOWLEDGE_REASON, negativeReason));
             }
+            else
+                message.ContentType = KnownContentTypes.Ok;
 
             return message;
         }
@@ -375,7 +375,7 @@ namespace Twino.Protocols.TMQ
         {
             TwinoMessage message = new TwinoMessage();
 
-            message.HighPriority = HighPriority;
+            message.HighPriority = Type == MessageType.DirectMessage;
             message.Type = MessageType.Response;
             message.ContentType = Convert.ToUInt16(status);
             message.SetMessageId(MessageId);

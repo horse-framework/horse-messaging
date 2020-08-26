@@ -59,7 +59,7 @@ namespace Twino.Protocols.TMQ
             byte proto = bytes[0];
             if (proto >= 128)
             {
-                message.PendingResponse = true;
+                message.WaitResponse = true;
                 proto -= 128;
             }
 

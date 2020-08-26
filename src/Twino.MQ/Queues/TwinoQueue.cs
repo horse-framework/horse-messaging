@@ -627,7 +627,7 @@ namespace Twino.MQ.Queues
                 return PushResult.LimitExceeded;
 
             //prepare properties
-            message.Message.PendingResponse = Options.Acknowledge != QueueAckDecision.None;
+            message.Message.WaitResponse = Options.Acknowledge != QueueAckDecision.None;
 
             //if message doesn't have message id and "UseMessageId" option is enabled, create new message id for the message
             if (Options.UseMessageId && string.IsNullOrEmpty(message.Message.MessageId))
@@ -963,8 +963,8 @@ namespace Twino.MQ.Queues
         internal async Task WaitForAcknowledge(QueueMessage message)
         {
             //if we will lock the queue until ack received, we must request ack
-            if (!message.Message.PendingResponse)
-                message.Message.PendingResponse = true;
+            if (!message.Message.WaitResponse)
+                message.Message.WaitResponse = true;
 
             await _ackSync.WaitAsync();
             try
@@ -1006,7 +1006,7 @@ namespace Twino.MQ.Queues
             }
 
             bool success = !(deliveryMessage.HasHeader &&
-                             deliveryMessage.Headers.Any(x => x.Key.Equals(TmqHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)));
+                             deliveryMessage.Headers.Any(x => x.Key.Equals(TwinoHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)));
 
             // ReSharper disable once ConditionIsAlwaysTrueOrFalse (it's possible, resharper doesn't work properly in here)
             if (delivery != null)
