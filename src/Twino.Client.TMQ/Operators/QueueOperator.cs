@@ -77,37 +77,34 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Creates new queue in server
         /// </summary>
-        public Task<TwinoResult> Create(string channel, ushort queueId)
+        public Task<TwinoResult> Create(string queue)
         {
-            return Create(channel, queueId, null, null, null);
+            return Create(queue, null, null, null);
         }
 
         /// <summary>
         /// Creates new queue in server
         /// </summary>
-        public Task<TwinoResult> Create(string channel,
-                                        ushort queueId,
+        public Task<TwinoResult> Create(string queue,
                                         IEnumerable<KeyValuePair<string, string>> additionalHeaders)
         {
-            return Create(channel, queueId, null, null, additionalHeaders);
+            return Create(queue, null, null, additionalHeaders);
         }
 
         /// <summary>
         /// Creates new queue in server
         /// </summary>
-        public Task<TwinoResult> Create(string channel,
-                                        ushort queueId,
+        public Task<TwinoResult> Create(string queue,
                                         string deliveryHandlerHeader,
                                         IEnumerable<KeyValuePair<string, string>> additionalHeaders)
         {
-            return Create(channel, queueId, null, deliveryHandlerHeader, additionalHeaders);
+            return Create(queue, null, deliveryHandlerHeader, additionalHeaders);
         }
 
         /// <summary>
         /// Creates new queue in server
         /// </summary>
-        public async Task<TwinoResult> Create(string channel,
-                                              ushort queueId,
+        public async Task<TwinoResult> Create(string queue,
                                               Action<QueueOptions> optionsAction,
                                               string deliveryHandlerHeader = null,
                                               IEnumerable<KeyValuePair<string, string>> additionalHeaders = null)
@@ -115,11 +112,9 @@ namespace Twino.Client.TMQ.Operators
             TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.CreateQueue;
-            message.SetTarget(channel);
+            message.SetTarget(queue);
             message.WaitResponse = true;
-
-            message.AddHeader(TwinoHeaders.CHANNEL_NAME, channel);
-            message.AddHeader(TwinoHeaders.QUEUE_ID, queueId);
+            message.AddHeader(TwinoHeaders.QUEUE_NAME, queue);
 
             if (!string.IsNullOrEmpty(deliveryHandlerHeader))
                 message.AddHeader(TwinoHeaders.DELIVERY_HANDLER, deliveryHandlerHeader);
@@ -145,11 +140,14 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Finds all queues in server
         /// </summary>
-        public async Task<TmqModelResult<List<QueueInformation>>> List()
+        public async Task<TmqModelResult<List<QueueInformation>>> List(string filter = null)
         {
             TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
+            message.SetMessageId(_client.UniqueIdGenerator.Create());
             message.ContentType = KnownContentTypes.QueueList;
+
+            message.AddHeader(TwinoHeaders.FILTER, filter);
 
             return await _client.SendAndGetJson<List<QueueInformation>>(message);
         }
@@ -169,18 +167,17 @@ namespace Twino.Client.TMQ.Operators
         }
 
         /// <summary>
-        /// Removes a queue in a channel in server.
+        /// Removes a queue in server.
         /// Required administration permission.
         /// If server has no implementation for administration authorization, request is not allowed.
         /// </summary>
-        public async Task<TwinoResult> Remove(string channel, ushort queueId)
+        public async Task<TwinoResult> Remove(string queue)
         {
             TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.RemoveQueue;
-            message.SetTarget(channel);
+            message.SetTarget(queue);
             message.WaitResponse = true;
-            message.Content = new MemoryStream(BitConverter.GetBytes(queueId));
             message.SetMessageId(_client.UniqueIdGenerator.Create());
 
             return await _client.WaitResponse(message, true);
@@ -189,17 +186,15 @@ namespace Twino.Client.TMQ.Operators
         /// <summary>
         /// Updates queue options
         /// </summary>
-        public async Task<TwinoResult> SetOptions(string channel, ushort queueId, Action<QueueOptions> optionsAction)
+        public async Task<TwinoResult> SetOptions(string queue, Action<QueueOptions> optionsAction)
         {
             TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.UpdateQueue;
-            message.SetTarget(channel);
+            message.SetTarget(queue);
             message.WaitResponse = true;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
-
-            message.AddHeader(TwinoHeaders.CHANNEL_NAME, channel);
-            message.AddHeader(TwinoHeaders.QUEUE_ID, queueId);
+            message.AddHeader(TwinoHeaders.QUEUE_NAME, queue);
 
             QueueOptions options = new QueueOptions();
             optionsAction(options);
@@ -215,7 +210,7 @@ namespace Twino.Client.TMQ.Operators
         /// Required administration permission.
         /// If server has no implementation for administration authorization, request is not allowed.
         /// </summary>
-        public Task<TwinoResult> ClearMessages(string channel, ushort queueId, bool clearPriorityMessages, bool clearMessages)
+        public Task<TwinoResult> ClearMessages(string queue, bool clearPriorityMessages, bool clearMessages)
         {
             if (!clearPriorityMessages && !clearMessages)
                 return Task.FromResult(TwinoResult.Failed());
@@ -223,12 +218,10 @@ namespace Twino.Client.TMQ.Operators
             TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.ClearMessages;
-            message.SetTarget(channel);
+            message.SetTarget(queue);
             message.WaitResponse = true;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
-
-            message.AddHeader(TwinoHeaders.CHANNEL_NAME, channel);
-            message.AddHeader(TwinoHeaders.QUEUE_ID, queueId);
+            message.AddHeader(TwinoHeaders.QUEUE_NAME, queue);
 
             if (clearPriorityMessages)
                 message.AddHeader(TwinoHeaders.PRIORITY_MESSAGES, "yes");
@@ -237,6 +230,22 @@ namespace Twino.Client.TMQ.Operators
                 message.AddHeader(TwinoHeaders.MESSAGES, "yes");
 
             return _client.WaitResponse(message, true);
+        }
+
+        /// <summary>
+        /// Gets all consumers of queue
+        /// </summary>
+        public async Task<TmqModelResult<List<ClientInformation>>> GetConsumers(string queue)
+        {
+            TwinoMessage message = new TwinoMessage();
+            message.Type = MessageType.Server;
+            message.SetTarget(queue);
+            message.ContentType = KnownContentTypes.QueueConsumers;
+            message.SetMessageId(_client.UniqueIdGenerator.Create());
+
+            message.AddHeader(TwinoHeaders.QUEUE_NAME, queue);
+
+            return await _client.SendAndGetJson<List<ClientInformation>>(message);
         }
 
         #endregion
@@ -444,23 +453,67 @@ namespace Twino.Client.TMQ.Operators
             return ok;
         }
 
+        /// <summary>
+        /// Triggers the action when a client subscribed from the queue
+        /// </summary>
+        public async Task<bool> OnSubscribed(string queue, Action<SubscriptionEvent> action)
+        {
+            bool ok = await _client.EventSubscription(EventNames.Subscribe, true, queue, null);
+            if (ok)
+                _client.Events.Add(EventNames.Subscribe, queue, 0, action, typeof(SubscriptionEvent));
+
+            return ok;
+        }
+
+        /// <summary>
+        /// Unsubscribes from subscribe events in the queue
+        /// </summary>
+        public async Task<bool> OffSubscribed(string queue)
+        {
+            bool ok = await _client.EventSubscription(EventNames.Subscribe, false, queue, null);
+            if (ok)
+                _client.Events.Remove(EventNames.Subscribe, queue, 0);
+
+            return ok;
+        }
+
+        /// <summary>
+        /// Triggers the action when a client unsubscribed from the queue
+        /// </summary>
+        public async Task<bool> OnUnsubscribed(string queue, Action<SubscriptionEvent> action)
+        {
+            bool ok = await _client.EventSubscription(EventNames.Unsubscribe, true, queue, null);
+            if (ok)
+                _client.Events.Add(EventNames.Unsubscribe, queue, 0, action, typeof(SubscriptionEvent));
+
+            return ok;
+        }
+
+        /// <summary>
+        /// Unsubscribes from unsubscribe events in the queue
+        /// </summary>
+        public async Task<bool> OffUnsubscribed(string queue)
+        {
+            bool ok = await _client.EventSubscription(EventNames.Unsubscribe, false, queue, null);
+            if (ok)
+                _client.Events.Remove(EventNames.Unsubscribe, queue, 0);
+
+            return ok;
+        }
+
         #endregion
-
-
-        // //////////////////////////////////////////// channel
-
 
         #region Join - Leave
 
         /// <summary>
-        /// Joins to a channel
+        /// Subscribes to a queue
         /// </summary>
-        public async Task<TwinoResult> Join(string channel, bool verifyResponse)
+        public async Task<TwinoResult> Subscribe(string queue, bool verifyResponse)
         {
             TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.Subscribe;
-            message.SetTarget(channel);
+            message.SetTarget(queue);
             message.WaitResponse = verifyResponse;
 
             if (verifyResponse)
@@ -470,222 +523,20 @@ namespace Twino.Client.TMQ.Operators
         }
 
         /// <summary>
-        /// Leaves from a channel
+        /// Unsubscribes from a queue
         /// </summary>
-        public async Task<TwinoResult> Leave(string channel, bool verifyResponse)
+        public async Task<TwinoResult> Unsubscribe(string queue, bool verifyResponse)
         {
             TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.Unsubscribe;
-            message.SetTarget(channel);
+            message.SetTarget(queue);
             message.WaitResponse = verifyResponse;
 
             if (verifyResponse)
                 message.SetMessageId(_client.UniqueIdGenerator.Create());
 
             return await _client.WaitResponse(message, verifyResponse);
-        }
-
-        #endregion
-
-        #region Create - Delete
-
-        /// <summary>
-        /// Creates a new channel without any queue
-        /// </summary>
-        public async Task<TwinoResult> Create(string channel, Action<ChannelOptions> optionsAction = null)
-        {
-            TwinoMessage message = new TwinoMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.CreateChannel;
-            message.SetTarget(channel);
-            message.WaitResponse = true;
-            message.AddHeader(TwinoHeaders.CHANNEL_NAME, channel);
-            message.SetMessageId(_client.UniqueIdGenerator.Create());
-
-            if (optionsAction != null)
-            {
-                ChannelOptions options = new ChannelOptions();
-                optionsAction(options);
-                message.Content = new MemoryStream();
-                await System.Text.Json.JsonSerializer.SerializeAsync(message.Content, options);
-            }
-
-            return await _client.WaitResponse(message, true);
-        }
-
-        /// <summary>
-        /// Removes a channel and all queues in it
-        /// </summary>
-        public async Task<TwinoResult> Remove(string channel)
-        {
-            TwinoMessage message = new TwinoMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.RemoveChannel;
-            message.SetTarget(channel);
-            message.WaitResponse = true;
-            message.SetMessageId(_client.UniqueIdGenerator.Create());
-
-            message.AddHeader(TwinoHeaders.CHANNEL_NAME, channel);
-
-            return await _client.WaitResponse(message, true);
-        }
-
-        #endregion
-
-        #region Get
-
-        /// <summary>
-        /// Finds the channel and gets information if exists
-        /// </summary>
-        public async Task<TmqModelResult<ChannelInformation>> GetInfo(string name)
-        {
-            TwinoMessage message = new TwinoMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.ChannelInformation;
-            message.SetTarget(name);
-            message.SetMessageId(_client.UniqueIdGenerator.Create());
-
-            message.AddHeader(TwinoHeaders.CHANNEL_NAME, name);
-
-            return await _client.SendAndGetJson<ChannelInformation>(message);
-        }
-
-        /// <summary>
-        /// Gets all channels in server.
-        /// Filter supports * joker character.
-        /// </summary>
-        public async Task<TmqModelResult<List<ChannelInformation>>> List(string filter = null)
-        {
-            TwinoMessage message = new TwinoMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.ChannelList;
-            message.SetMessageId(_client.UniqueIdGenerator.Create());
-
-            if (!string.IsNullOrEmpty(filter))
-                message.AddHeader(TwinoHeaders.CHANNEL_NAME, filter);
-
-            return await _client.SendAndGetJson<List<ChannelInformation>>(message);
-        }
-
-        /// <summary>
-        /// Gets all consumers of channel
-        /// </summary>
-        public async Task<TmqModelResult<List<ClientInformation>>> GetConsumers(string channel)
-        {
-            TwinoMessage message = new TwinoMessage();
-            message.Type = MessageType.Server;
-            message.SetTarget(channel);
-            message.ContentType = KnownContentTypes.QueueConsumers;
-            message.SetMessageId(_client.UniqueIdGenerator.Create());
-
-            message.AddHeader(TwinoHeaders.CHANNEL_NAME, channel);
-
-            return await _client.SendAndGetJson<List<ClientInformation>>(message);
-        }
-
-        #endregion
-
-        #region Subscription Events
-
-        /// <summary>
-        /// Triggers the action when a client is joined to the channel
-        /// </summary>
-        public async Task<bool> OnClientJoined(string channelName, Action<SubscriptionEvent> action)
-        {
-            bool ok = await _client.EventSubscription(EventNames.ClientJoined, true, channelName, null);
-            if (ok)
-                _client.Events.Add(EventNames.ClientJoined, channelName, 0, action, typeof(SubscriptionEvent));
-
-            return ok;
-        }
-
-        /// <summary>
-        /// Unsubscribes from all client join events in the channel
-        /// </summary>
-        public async Task<bool> OffClientJoined(string channelName)
-        {
-            bool ok = await _client.EventSubscription(EventNames.ClientJoined, false, channelName, null);
-            if (ok)
-                _client.Events.Remove(EventNames.ClientJoined, channelName, 0);
-
-            return ok;
-        }
-
-        /// <summary>
-        /// Triggers the action when a client is left from the channel
-        /// </summary>
-        public async Task<bool> OnClientLeft(string channelName, Action<SubscriptionEvent> action)
-        {
-            bool ok = await _client.EventSubscription(EventNames.ClientLeft, true, channelName, null);
-            if (ok)
-                _client.Events.Add(EventNames.ClientLeft, channelName, 0, action, typeof(SubscriptionEvent));
-
-            return ok;
-        }
-
-        /// <summary>
-        /// Unsubscribes from all client leave events in the channel
-        /// </summary>
-        public async Task<bool> OffClientLeft(string channelName)
-        {
-            bool ok = await _client.EventSubscription(EventNames.ClientLeft, false, channelName, null);
-            if (ok)
-                _client.Events.Remove(EventNames.ClientLeft, channelName, 0);
-
-            return ok;
-        }
-
-        #endregion
-
-        #region Channel Events
-
-        /// <summary> 
-        /// Triggers the action when a client is created in the server
-        /// </summary>
-        public async Task<bool> OnCreated(Action<ChannelEvent> action)
-        {
-            bool ok = await _client.EventSubscription(EventNames.ChannelCreated, true, null, null);
-            if (ok)
-                _client.Events.Add(EventNames.ChannelCreated, null, 0, action, typeof(ChannelEvent));
-
-            return ok;
-        }
-
-        /// <summary>
-        /// Unsubscribes from all channel created events
-        /// </summary>
-        public async Task<bool> OffCreated()
-        {
-            bool ok = await _client.EventSubscription(EventNames.ChannelCreated, false, null, null);
-            if (ok)
-                _client.Events.Remove(EventNames.ChannelCreated, null, 0);
-
-            return ok;
-        }
-
-        /// <summary> 
-        /// Triggers the action when a client is removed in the server
-        /// </summary>
-        public async Task<bool> OnRemoved(Action<ChannelEvent> action)
-        {
-            bool ok = await _client.EventSubscription(EventNames.ChannelRemoved, true, null, null);
-            if (ok)
-                _client.Events.Add(EventNames.ChannelRemoved, null, 0, action, typeof(ChannelEvent));
-
-            return ok;
-        }
-
-        /// <summary>
-        /// Unsubscribes from all channel removed events
-        /// </summary>
-        public async Task<bool> OffRemoved()
-        {
-            bool ok = await _client.EventSubscription(EventNames.ChannelRemoved, false, null, null);
-            if (ok)
-                _client.Events.Remove(EventNames.ChannelRemoved, null, 0);
-
-            return ok;
         }
 
         #endregion

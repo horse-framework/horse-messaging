@@ -31,14 +31,12 @@ namespace Twino.Client.TMQ.Bus
         /// <param name="name">Receiver client name</param>
         /// <param name="contentType">Message content type</param>
         /// <param name="content">Message content</param>
-        /// <param name="toOnlyFirstReceiver">If true, message is sent to only one receiver</param>
         /// <param name="waitAcknowledge">If true, awaitable waits for acknowledge</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<TwinoResult> SendByName(string name,
                                      ushort contentType,
                                      MemoryStream content,
-                                     bool toOnlyFirstReceiver,
                                      bool waitAcknowledge,
                                      IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
@@ -48,14 +46,12 @@ namespace Twino.Client.TMQ.Bus
         /// <param name="type">Receiver client type</param>
         /// <param name="contentType">Message content type</param>
         /// <param name="content">Message content</param>
-        /// <param name="toOnlyFirstReceiver">If true, message is sent to only one receiver</param>
         /// <param name="waitAcknowledge">If true, awaitable waits for acknowledge</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<TwinoResult> SendByType(string type,
                                      ushort contentType,
                                      MemoryStream content,
-                                     bool toOnlyFirstReceiver,
                                      bool waitAcknowledge,
                                      IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
@@ -80,11 +76,10 @@ namespace Twino.Client.TMQ.Bus
         /// <param name="name">Receiver name</param>
         /// <param name="contentType">Message content type</param>
         /// <param name="model">Message model</param>
-        /// <param name="toOnlyFirstReceiver">If true, message is sent to only first target</param>
         /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
-        Task<TwinoResult> SendJsonByName<T>(string name, ushort contentType, T model, bool toOnlyFirstReceiver, bool waitAcknowledge,
+        Task<TwinoResult> SendJsonByName<T>(string name, ushort contentType, T model, bool waitAcknowledge,
                                             IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
@@ -93,11 +88,10 @@ namespace Twino.Client.TMQ.Bus
         /// <param name="type">Receiver type</param>
         /// <param name="contentType">Message content type</param>
         /// <param name="model">Message model</param>
-        /// <param name="toOnlyFirstReceiver">If true, message is sent to only first target</param>
         /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
-        Task<TwinoResult> SendJsonByType<T>(string type, ushort contentType, T model, bool toOnlyFirstReceiver, bool waitAcknowledge,
+        Task<TwinoResult> SendJsonByType<T>(string type, ushort contentType, T model, bool waitAcknowledge,
                                             IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
@@ -132,9 +126,9 @@ namespace Twino.Client.TMQ.Bus
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<TwinoMessage> Request(string target,
-                                 ushort contentType,
-                                 MemoryStream content,
-                                 IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+                                   ushort contentType,
+                                   MemoryStream content,
+                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Sends a request to a target
@@ -145,9 +139,9 @@ namespace Twino.Client.TMQ.Bus
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<TwinoMessage> Request(string target,
-                                 ushort contentType,
-                                 string content,
-                                 IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+                                   ushort contentType,
+                                   string content,
+                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Sends an empty request to a target
@@ -157,8 +151,8 @@ namespace Twino.Client.TMQ.Bus
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<TwinoMessage> Request(string target,
-                                 ushort contentType,
-                                 IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+                                   ushort contentType,
+                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Sends a JSON message to a specified direct receiver

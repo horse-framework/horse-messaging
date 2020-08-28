@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Threading.Tasks;
 using Twino.Client.Connectors;
 using Twino.Client.TMQ.Bus;
@@ -119,10 +118,10 @@ namespace Twino.Client.TMQ.Connectors
                 throw new TwinoSocketException("There is no active connection");
             }
 
-            string[] channels = _observer.GetSubscribedChannels();
+            string[] channels = _observer.GetSubscribedQueues();
             foreach (string channel in channels)
             {
-                TwinoResult joinResult = await client.Channels.Join(channel, verify);
+                TwinoResult joinResult = await client.Queues.Subscribe(channel, verify);
                 if (joinResult.Code == TwinoResultCode.Ok)
                     continue;
 
@@ -155,12 +154,12 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Subscribes from reading messages in a queue
         /// </summary>
-        public void On<T>(string channel, ushort content, Action<T> action)
+        public void On<T>(string queue, Action<T> action)
         {
             if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
-            _observer.On(channel, content, action);
+            _observer.On(queue, action);
         }
 
         /// <summary>
@@ -178,12 +177,12 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Subscribes from reading messages in a queue
         /// </summary>
-        public void On<T>(string channel, ushort content, Action<T, TwinoMessage> action)
+        public void On<T>(string queue, Action<T, TwinoMessage> action)
         {
             if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
-            _observer.On(channel, content, action);
+            _observer.On(queue, action);
         }
 
         #endregion
@@ -252,12 +251,12 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Unsubscribes from reading messages in a queue
         /// </summary>
-        public void Off(string channel, ushort content)
+        public void Off(string queue)
         {
             if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
-            _observer.Off(channel, content);
+            _observer.Off(queue);
         }
 
         /// <summary>

@@ -182,8 +182,8 @@ namespace Twino.MQ.Queues
             DeliveryHandler = deliveryHandler;
             _clients = new SafeList<QueueClient>(256);
 
-            OnConsumerSubscribed = new SubscriptionEventManager(server, EventNames.ClientJoined, this);
-            OnConsumerUnsubscribed = new SubscriptionEventManager(server, EventNames.ClientLeft, this);
+            OnConsumerSubscribed = new SubscriptionEventManager(server, EventNames.Subscribe, this);
+            OnConsumerUnsubscribed = new SubscriptionEventManager(server, EventNames.Unsubscribe, this);
 
             InitializeQueue();
         }

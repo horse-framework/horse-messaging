@@ -76,7 +76,7 @@ namespace Twino.MQ.Network
 
                     return SendResponse(client, message, true);
 
-                case EventNames.ClientJoined:
+                case EventNames.Subscribe:
                     if (queue == null)
                         return SendResponse(client, message, false);
 
@@ -87,7 +87,7 @@ namespace Twino.MQ.Network
 
                     return SendResponse(client, message, true);
 
-                case EventNames.ClientLeft:
+                case EventNames.Unsubscribe:
                     if (queue == null)
                         return SendResponse(client, message, false);
 

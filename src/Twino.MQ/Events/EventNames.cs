@@ -16,14 +16,14 @@ namespace Twino.MQ.Events
         public const string ClientDisconnected = "ClientDisconnected";
 
         /// <summary>
-        /// When a client joined to a channel.
+        /// When a client subscribes to a queue
         /// </summary>
-        public const string ClientJoined = "ClientJoined";
+        public const string Subscribe = "Subscribe";
 
         /// <summary>
-        /// When a client left a channel.
+        /// When a client unsubcribes from a queue
         /// </summary>
-        public const string ClientLeft = "ClientLeft";
+        public const string Unsubscribe = "Unsubscribe";
 
         /// <summary>
         /// When a queue is created.
