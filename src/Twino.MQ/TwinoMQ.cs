@@ -139,6 +139,11 @@ namespace Twino.MQ
         public QueueEventManager OnQueueCreated { get; set; }
 
         /// <summary>
+        /// Triggered when a queue is updated 
+        /// </summary>
+        public QueueEventManager OnQueueUpdated { get; set; }
+
+        /// <summary>
         /// Triggered when a channel is removed 
         /// </summary>
         public QueueEventManager OnQueueRemoved { get; set; }
@@ -177,6 +182,7 @@ namespace Twino.MQ
             OnClientConnected = new ClientEventManager(EventNames.ClientConnected, this);
             OnClientDisconnected = new ClientEventManager(EventNames.ClientDisconnected, this);
             OnQueueCreated = new QueueEventManager(this, EventNames.QueueCreated);
+            OnQueueUpdated = new QueueEventManager(this, EventNames.QueueUpdated);
             OnQueueRemoved = new QueueEventManager(this, EventNames.QueueRemoved);
         }
 

@@ -49,16 +49,7 @@ namespace Twino.MQ.Network
 
             switch (eventName)
             {
-                #region Queue Events
-
                 case EventNames.MessageProduced:
-                    if (channel == null)
-                        return SendResponse(client, message, false);
-
-                    TwinoQueue queue = null;
-                    if (!string.IsNullOrEmpty(queueId))
-                        queue = channel.FindQueue(Convert.ToUInt16(queueId));
-
                     if (queue == null)
                         return SendResponse(client, message, false);
 
@@ -68,10 +59,6 @@ namespace Twino.MQ.Network
                         queue.OnMessageProduced.Unsubscribe(client);
 
                     return SendResponse(client, message, true);
-
-                #endregion
-
-                #region Server Events
 
                 case EventNames.ClientConnected:
                     if (subscribe)
@@ -89,82 +76,51 @@ namespace Twino.MQ.Network
 
                     return SendResponse(client, message, true);
 
-                case EventNames.ChannelCreated:
-                    if (subscribe)
-                        _server.OnChannelCreated.Subscribe(client);
-                    else
-                        _server.OnChannelCreated.Unsubscribe(client);
-
-                    return SendResponse(client, message, true);
-
-                case EventNames.ChannelRemoved:
-                    if (subscribe)
-                        _server.OnChannelRemoved.Subscribe(client);
-                    else
-                        _server.OnChannelRemoved.Unsubscribe(client);
-
-                    return SendResponse(client, message, true);
-
-                #endregion
-
-                #region Channel Events
-
                 case EventNames.ClientJoined:
-                    if (channel == null)
+                    if (queue == null)
                         return SendResponse(client, message, false);
 
                     if (subscribe)
-                        channel.OnClientJoined.Subscribe(client);
+                        queue.OnConsumerSubscribed.Subscribe(client);
                     else
-                        channel.OnClientJoined.Unsubscribe(client);
+                        queue.OnConsumerSubscribed.Unsubscribe(client);
 
                     return SendResponse(client, message, true);
 
                 case EventNames.ClientLeft:
-                    if (channel == null)
+                    if (queue == null)
                         return SendResponse(client, message, false);
 
                     if (subscribe)
-                        channel.OnClientLeft.Subscribe(client);
+                        queue.OnConsumerUnsubscribed.Subscribe(client);
                     else
-                        channel.OnClientLeft.Unsubscribe(client);
+                        queue.OnConsumerUnsubscribed.Unsubscribe(client);
 
                     return SendResponse(client, message, true);
 
                 case EventNames.QueueCreated:
-                    if (channel == null)
-                        return SendResponse(client, message, false);
-
                     if (subscribe)
-                        channel.OnQueueCreated.Subscribe(client);
+                        _server.OnQueueCreated.Subscribe(client);
                     else
-                        channel.OnQueueCreated.Unsubscribe(client);
+                        _server.OnQueueCreated.Unsubscribe(client);
 
                     return SendResponse(client, message, true);
 
                 case EventNames.QueueUpdated:
-                    if (channel == null)
-                        return SendResponse(client, message, false);
-
                     if (subscribe)
-                        channel.OnQueueUpdated.Subscribe(client);
+                        _server.OnQueueUpdated.Subscribe(client);
                     else
-                        channel.OnQueueUpdated.Unsubscribe(client);
+                        _server.OnQueueUpdated.Unsubscribe(client);
 
                     return SendResponse(client, message, true);
 
                 case EventNames.QueueRemoved:
-                    if (channel == null)
-                        return SendResponse(client, message, false);
-
                     if (subscribe)
-                        channel.OnQueueRemoved.Subscribe(client);
+                        _server.OnQueueRemoved.Subscribe(client);
                     else
-                        channel.OnQueueRemoved.Unsubscribe(client);
+                        _server.OnQueueRemoved.Unsubscribe(client);
 
                     return SendResponse(client, message, true);
-
-                #endregion
             }
 
             return Task.CompletedTask;

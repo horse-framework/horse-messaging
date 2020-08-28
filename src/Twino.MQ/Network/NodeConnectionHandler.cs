@@ -113,11 +113,7 @@ namespace Twino.MQ.Network
             if (model == null)
                 return;
 
-            Channel channel = _server.Server.FindChannel(model.Channel);
-            if (channel == null)
-                return;
-
-            TwinoQueue queue = channel.FindQueue(model.Queue);
+            TwinoQueue queue = _server.Server.FindQueue(model.Queue);
             if (queue == null)
                 return;
 

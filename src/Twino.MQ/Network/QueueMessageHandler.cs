@@ -25,30 +25,15 @@ namespace Twino.MQ.Network
 
         #endregion
 
-        private async Task<TwinoQueue> FindQueue(MqClient client, string channelName, ushort contentType, TwinoMessage message)
+        private async Task<TwinoQueue> FindQueue(MqClient client, string name, TwinoMessage message)
         {
-            //find channel and queue
-            Channel channel = _server.FindChannel(channelName);
-
-            //if auto creation active, try to create channel
-            if (channel == null && _server.Options.AutoChannelCreation)
-                channel = _server.FindOrCreateChannel(channelName);
-
-            if (channel == null)
-            {
-                if (client != null && message != null && !string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
-
-                return null;
-            }
-
-            TwinoQueue queue = channel.FindQueue(contentType);
+            TwinoQueue queue = _server.FindQueue(name);
 
             //if auto creation active, try to create queue
             if (queue == null && _server.Options.AutoQueueCreation)
             {
-                QueueOptions options = QueueOptions.CloneFrom(channel.Options);
-                queue = await channel.CreateQueue(contentType, options, message, channel.Server.DeliveryHandlerFactory);
+                QueueOptions options = QueueOptions.CloneFrom(_server.Options);
+                queue = await _server.CreateQueue(name, options, message, _server.DeliveryHandlerFactory);
             }
 
             if (queue == null)
@@ -64,7 +49,7 @@ namespace Twino.MQ.Network
 
         public async Task Handle(MqClient client, TwinoMessage message, bool fromNode)
         {
-            TwinoQueue queue = await FindQueue(client, message.Target, message.ContentType, message);
+            TwinoQueue queue = await FindQueue(client, message.Target, message);
             if (queue == null)
                 return;
 
@@ -85,7 +70,7 @@ namespace Twino.MQ.Network
 
             //if there are cc headers, we will push the message to other queues
             if (clone != null)
-                await PushOtherChannels(client, clone, ccList, additionalHeaders);
+                await PushOtherQueues(client, clone, ccList, additionalHeaders);
         }
 
         /// <summary>
@@ -126,7 +111,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Pushes clones of the message to cc channel queues
         /// </summary>
-        private async Task PushOtherChannels(MqClient client, TwinoMessage clone, List<string> ccList, List<KeyValuePair<string, string>> additionalHeaders)
+        private async Task PushOtherQueues(MqClient client, TwinoMessage clone, List<string> ccList, List<KeyValuePair<string, string>> additionalHeaders)
         {
             for (int i = 0; i < ccList.Count; i++)
             {
@@ -136,11 +121,12 @@ namespace Twino.MQ.Network
                 if (split.Length < 1)
                     continue;
 
-                string channel = split[0].Trim();
-                ushort contentType = split.Length > 1 ? Convert.ToUInt16(split[1].Trim()) : clone.ContentType;
-                string messageId = split.Length > 2 ? split[2].Trim() : null;
+                string queueName = split[0].Trim();
+                string messageId = null;
+                if (split.Length > 1)
+                    messageId = split[1];
 
-                TwinoQueue queue = await FindQueue(null, channel, contentType, null);
+                TwinoQueue queue = await FindQueue(null, queueName, clone);
                 if (queue == null)
                     continue;
 
