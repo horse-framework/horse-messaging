@@ -109,7 +109,7 @@ namespace Twino.MQ.Network
         }
 
         /// <summary>
-        /// Pushes clones of the message to cc channel queues
+        /// Pushes clones of the message to cc queues
         /// </summary>
         private async Task PushOtherQueues(MqClient client, TwinoMessage clone, List<string> ccList, List<KeyValuePair<string, string>> additionalHeaders)
         {

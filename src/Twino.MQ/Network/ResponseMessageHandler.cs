@@ -36,7 +36,7 @@ namespace Twino.MQ.Network
                 }
             }
 
-            //find channel and queue
+            //find queue
             TwinoQueue queue = _server.FindQueue(message.Target);
             if (queue != null)
             {

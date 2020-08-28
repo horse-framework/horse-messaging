@@ -52,13 +52,13 @@ namespace Twino.MQ.Options
         public ulong MessageSizeLimit { get; set; }
 
         /// <summary>
-        /// Maximum client limit of the channel
+        /// Maximum client limit of the queue
         /// Zero is unlimited
         /// </summary>
         public int ClientLimit { get; set; }
 
         /// <summary>
-        /// Channel auto destroy options. Default value is NoMessagesAndConsumers.
+        /// Queue auto destroy options. Default value is NoMessagesAndConsumers.
         /// </summary>
         public QueueDestroy AutoDestroy { get; set; } = QueueDestroy.Empty;
 
@@ -72,7 +72,7 @@ namespace Twino.MQ.Options
         }
 
         /// <summary>
-        /// Clones channel queue options from another options
+        /// Clones queue options from another options
         /// </summary>
         public static QueueOptions CloneFrom(QueueOptions options)
         {

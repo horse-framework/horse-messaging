@@ -40,7 +40,7 @@ namespace Twino.MQ.Queues.States
             //create delivery object
             MessageDelivery delivery = new MessageDelivery(message, client);
 
-            //change to response message, send, change back to channel message
+            //change to response message, send, change back to queue message
             message.Message.SetMessageId(request.MessageId);
             bool sent = await client.Client.SendAsync(message.Message);
 

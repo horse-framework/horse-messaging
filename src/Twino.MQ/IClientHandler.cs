@@ -14,7 +14,7 @@ namespace Twino.MQ
         Task Connected(TwinoMQ server, MqClient client);
 
         /// <summary>
-        /// Called when a client is disconnected and removed from all channels and all queues
+        /// Called when a client is disconnected and removed from all queues
         /// </summary>
         Task Disconnected(TwinoMQ server, MqClient client);
     }

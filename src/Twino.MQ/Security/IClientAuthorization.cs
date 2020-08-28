@@ -13,7 +13,7 @@ namespace Twino.MQ.Security
     public interface IClientAuthorization
     {
         /// <summary>
-        /// Returns true, if client can create new queue in the channel
+        /// Returns true, if client can create new queue
         /// </summary>
         Task<bool> CanCreateQueue(MqClient client, string name, NetworkOptionsBuilder options);
 

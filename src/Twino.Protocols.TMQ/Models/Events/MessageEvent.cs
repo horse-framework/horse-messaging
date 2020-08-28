@@ -8,16 +8,10 @@ namespace Twino.Protocols.TMQ.Models.Events
     public class MessageEvent
     {
         /// <summary>
-        /// Channel name
-        /// </summary>
-        [JsonPropertyName("Channel")]
-        public string Channel { get; set; }
-
-        /// <summary>
-        /// Queue Id
+        /// Queue name
         /// </summary>
         [JsonPropertyName("Queue")]
-        public ushort Queue { get; set; }
+        public string Queue { get; set; }
 
         /// <summary>
         /// Message Unique Id

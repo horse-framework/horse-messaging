@@ -61,7 +61,7 @@ namespace Twino.MQ.Network
                 case KnownContentTypes.Unsubscribe:
                     return Unsubscribe(client, message);
 
-                //get channel consumers
+                //get queue consumers
                 case KnownContentTypes.QueueConsumers:
                     return GetQueueConsumers(client, message);
 
@@ -135,13 +135,13 @@ namespace Twino.MQ.Network
         #region Queue
 
         /// <summary>
-        /// Finds and joins to channel and sends response
+        /// Finds and subscribes to the queue and sends response
         /// </summary>
         private async Task Subscribe(MqClient client, TwinoMessage message)
         {
             TwinoQueue queue = _server.FindQueue(message.Target);
 
-            //if auto creation active, try to create channel
+            //if auto creation active, try to create queue
             if (queue == null && _server.Options.AutoQueueCreation)
             {
                 QueueOptions options = QueueOptions.CloneFrom(_server.Options);
@@ -186,7 +186,7 @@ namespace Twino.MQ.Network
         }
 
         /// <summary>
-        /// Leaves from the channel and sends response
+        /// Unsubscribes from the queue and sends response
         /// </summary>
         private async Task Unsubscribe(MqClient client, TwinoMessage message)
         {
@@ -206,7 +206,7 @@ namespace Twino.MQ.Network
         }
 
         /// <summary>
-        /// Gets active consumers of channel 
+        /// Gets active consumers of the queue 
         /// </summary>
         public async Task GetQueueConsumers(MqClient client, TwinoMessage message)
         {
@@ -301,7 +301,7 @@ namespace Twino.MQ.Network
         }
 
         /// <summary>
-        /// Removes a queue from a channel
+        /// Removes a queue from a server
         /// </summary>
         private async Task RemoveQueue(MqClient client, TwinoMessage message)
         {
@@ -429,7 +429,7 @@ namespace Twino.MQ.Network
         }
 
         /// <summary>
-        /// Finds all queues in channel
+        /// Finds all queues in the server
         /// </summary>
         private async Task GetQueueList(MqClient client, TwinoMessage message)
         {
@@ -696,7 +696,7 @@ namespace Twino.MQ.Network
             if (!string.IsNullOrEmpty(methodHeader))
                 method = (RouteMethod) Convert.ToInt32(methodHeader);
 
-            //check create channel access
+            //check create queue access
             if (_server.Authorization != null)
             {
                 bool grant = await _server.Authorization.CanCreateRouter(client, message.Target, method);
@@ -723,7 +723,7 @@ namespace Twino.MQ.Network
                 return;
             }
 
-            //check create channel access
+            //check create queue access
             if (_server.Authorization != null)
             {
                 bool grant = await _server.Authorization.CanRemoveRouter(client, found);
@@ -777,7 +777,7 @@ namespace Twino.MQ.Network
 
             BindingInformation info = message.Deserialize<BindingInformation>(new NewtonsoftContentSerializer());
 
-            //check create channel access
+            //check create queue access
             if (_server.Authorization != null)
             {
                 bool grant = await _server.Authorization.CanCreateBinding(client, router, info);
@@ -837,7 +837,7 @@ namespace Twino.MQ.Network
                 return;
             }
 
-            //check create channel access
+            //check create queue access
             if (_server.Authorization != null)
             {
                 bool grant = await _server.Authorization.CanRemoveBinding(client, binding);

@@ -5,27 +5,27 @@ using Twino.MQ.Queues;
 namespace Twino.MQ
 {
     /// <summary>
-    /// Channel event handler implementation (client join/leave, queue created/removed, status changes)
+    /// Queue event handler implementation (client join/leave, queue created/removed, status changes)
     /// </summary>
     public interface IQueueEventHandler
     {
         /// <summary>
-        /// Called when a new queue is created in a channel
+        /// Called when a new queue is created
         /// </summary>
         Task OnCreated(TwinoQueue queue);
 
         /// <summary>
-        /// Called when a queue is removed from a channel
+        /// Called when a queue is removed
         /// </summary>
         Task OnRemoved(TwinoQueue queue);
 
         /// <summary>
-        /// Called when a client joined to the channel
+        /// Called when a client subscribes to the queue
         /// </summary>
         Task OnConsumerSubscribed(QueueClient client);
 
         /// <summary>
-        /// Called when a client left from the channel
+        /// Called when a client unsubscribes from the queue
         /// </summary>
         Task OnConsumerUnsubscribed(QueueClient client);
 

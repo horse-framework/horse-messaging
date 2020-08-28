@@ -10,8 +10,8 @@ using Twino.Protocols.TMQ;
 namespace Twino.MQ.Routing
 {
     /// <summary>
-    /// Topic binding targets channels with topics.
-    /// Messages are pushed to queues in channels with topic.
+    /// Topic binding targets queues with topics.
+    /// Messages are pushed to queues with topic.
     /// Binding receivers are received messages as QueueMessage.
     /// </summary>
     public class TopicBinding : Binding
@@ -30,7 +30,7 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Creates new direct binding.
         /// Name is the name of the binding.
-        /// Target is the topic of channels.
+        /// Target is the topic of queues.
         /// Content Type should be Queue Id.
         /// Priority for router binding.
         /// </summary>

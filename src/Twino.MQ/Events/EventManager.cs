@@ -19,7 +19,7 @@ namespace Twino.MQ.Events
         public string Name { get; }
 
         /// <summary>
-        /// Event target name (Channel name)
+        /// Event target name (Queue name)
         /// </summary>
         public string Target { get; }
 
@@ -32,7 +32,7 @@ namespace Twino.MQ.Events
 
         /// <summary>
         /// Name is definition of the event.
-        /// Target is the channel name of the event.
+        /// Target is the queue name of the event.
         /// Content Type is the Queue Id of the event.
         /// </summary>
         protected EventManager(TwinoMQ server, string name, string target)

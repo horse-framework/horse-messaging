@@ -19,7 +19,7 @@ namespace Twino.MQ.Events
         }
 
         /// <summary>
-        /// Triggers client joined or left channel events
+        /// Triggers client subscribes/unsubscribes queue events
         /// </summary>
         public void Trigger(QueueClient client, string node = null)
         {

@@ -26,8 +26,7 @@ namespace Twino.MQ.Events
             base.Trigger(new MessageEvent
                          {
                              Id = message.Message.MessageId,
-                             Queue = message.Message.ContentType,
-                             Channel = message.Message.Target,
+                             Queue = message.Message.Target,
                              Saved = message.IsSaved,
                              ProducerId = message.Source?.UniqueId,
                              ProducerName = message.Source?.Name,

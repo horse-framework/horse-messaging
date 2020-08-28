@@ -14,9 +14,9 @@ namespace Twino.MQ.Clients
         #region Properties
 
         /// <summary>
-        /// Channels that client is in
+        /// Queues that client subscribed
         /// </summary>
-        private readonly List<QueueClient> _channels = new List<QueueClient>();
+        private readonly List<QueueClient> _queues = new List<QueueClient>();
 
         /// <summary>
         /// Connection data of the client.
@@ -101,46 +101,46 @@ namespace Twino.MQ.Clients
         #region Actions
 
         /// <summary>
-        /// Gets all channels of the client
+        /// Gets all queues of the server
         /// </summary>
-        public IEnumerable<QueueClient> GetChannels()
+        public IEnumerable<QueueClient> GetQueues()
         {
             List<QueueClient> list;
 
-            lock (_channels)
-                list = new List<QueueClient>(_channels);
+            lock (_queues)
+                list = new List<QueueClient>(_queues);
 
             return list;
         }
 
         /// <summary>
-        /// Adds channel into client's channel list
+        /// Adds queue into client's subscription list
         /// </summary>
         internal void Join(QueueClient queue)
         {
-            lock (_channels)
-                _channels.Add(queue);
+            lock (_queues)
+                _queues.Add(queue);
         }
 
         /// <summary>
-        /// Removes channel from client's channel list
+        /// Removes queue from client's subscription list
         /// </summary>
         internal void Leave(QueueClient queue)
         {
-            lock (_channels)
-                _channels.Remove(queue);
+            lock (_queues)
+                _queues.Remove(queue);
         }
 
         /// <summary>
-        /// Leaves client from all channels
+        /// Unsubscribes from all queues
         /// </summary>
-        internal async Task LeaveFromAllChannels()
+        internal async Task UnsubscribeFromAllQueues()
         {
             List<QueueClient> list;
-            lock (_channels)
+            lock (_queues)
             {
-                list = new List<QueueClient>(_channels);
-                _channels.Clear();
+                list = new List<QueueClient>(_queues);
+                _queues.Clear();
             }
 
             foreach (QueueClient cc in list)

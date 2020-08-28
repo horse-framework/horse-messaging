@@ -21,7 +21,7 @@ namespace Twino.MQ.Queues
     public delegate void QueueEventHandler(TwinoQueue queue);
 
     /// <summary>
-    /// Channel queue.
+    /// Twino message queue.
     /// Keeps queued messages and subscribed clients.
     /// </summary>
     public class TwinoQueue
@@ -29,7 +29,7 @@ namespace Twino.MQ.Queues
         #region Properties
 
         /// <summary>
-        /// Unique channel name (not case-sensetive)
+        /// Unique name (not case-sensetive)
         /// </summary>
         public string Name { get; }
 
@@ -39,7 +39,7 @@ namespace Twino.MQ.Queues
         public string Topic { get; set; }
 
         /// <summary>
-        /// Server of the channel
+        /// Server of the queue
         /// </summary>
         public TwinoMQ Server { get; }
 
@@ -55,7 +55,7 @@ namespace Twino.MQ.Queues
 
         /// <summary>
         /// Queue options.
-        /// If null, channel default options will be used
+        /// If null, queue default options will be used
         /// </summary>
         public QueueOptions Options { get; }
 
@@ -145,12 +145,12 @@ namespace Twino.MQ.Queues
 
 
         /// <summary>
-        /// Clients in the channel as thread-unsafe list
+        /// Clients in the queue as thread-unsafe list
         /// </summary>
         public IEnumerable<QueueClient> ClientsUnsafe => _clients.GetUnsafeList();
 
         /// <summary>
-        /// Clients in the channel as cloned list
+        /// Clients in the queue as cloned list
         /// </summary>
         public List<QueueClient> ClientsClone => _clients.GetAsClone();
 
@@ -275,11 +275,11 @@ namespace Twino.MQ.Queues
         }
 
         /// <summary>
-        /// If all queues are empty and there is no client, destroys the channel 
+        /// 
         /// </summary>
         private async Task CheckAutoDestroy()
         {
-            /* todo: !
+            /* todo: !!
             List<ChannelQueue> list = _queues.GetAsClone();
 
             foreach (ChannelQueue queue in list)
@@ -710,7 +710,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Checks all pending messages and subscribed receivers.
         /// If they should receive the messages, runs the process.
-        /// This method is called automatically after a client joined to channel or status has changed.
+        /// This method is called automatically after a client subscribed to the queue or status has changed.
         /// You can call manual after you filled queue manually.
         /// </summary>
         public async Task Trigger()
@@ -1049,7 +1049,7 @@ namespace Twino.MQ.Queues
         #region Client Actions
 
         /// <summary>
-        /// Returns client count in the channel
+        /// Returns client count in the queue
         /// </summary>
         /// <returns></returns>
         public int ClientsCount()
@@ -1058,7 +1058,7 @@ namespace Twino.MQ.Queues
         }
 
         /// <summary>
-        /// Adds the client to the channel
+        /// Adds the client to the queue
         /// </summary>
         public async Task<QueueSubscriptionResult> AddClient(MqClient client)
         {
@@ -1085,7 +1085,7 @@ namespace Twino.MQ.Queues
         }
 
         /// <summary>
-        /// Removes client from the channel
+        /// Removes client from the queue
         /// </summary>
         public async Task RemoveClient(QueueClient client)
         {
@@ -1102,7 +1102,7 @@ namespace Twino.MQ.Queues
         }
 
         /// <summary>
-        /// Removes client from the channel, does not call MqClient's remove method
+        /// Removes client from the queue, does not call MqClient's remove method
         /// </summary>
         internal async Task RemoveClientSilent(QueueClient client)
         {
@@ -1118,7 +1118,7 @@ namespace Twino.MQ.Queues
         }
 
         /// <summary>
-        /// Removes client from the channel
+        /// Removes client from the queue
         /// </summary>
         public async Task<bool> RemoveClient(MqClient client)
         {
@@ -1140,7 +1140,7 @@ namespace Twino.MQ.Queues
         }
 
         /// <summary>
-        /// Finds client in the channel
+        /// Finds client in the queue
         /// </summary>
         public QueueClient FindClient(string uniqueId)
         {
@@ -1148,7 +1148,7 @@ namespace Twino.MQ.Queues
         }
 
         /// <summary>
-        /// Finds client in the channel
+        /// Finds client in the queue
         /// </summary>
         public QueueClient FindClient(MqClient client)
         {

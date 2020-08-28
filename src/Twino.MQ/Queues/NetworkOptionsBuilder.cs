@@ -56,14 +56,14 @@ namespace Twino.MQ.Queues
         public int? MessageLimit { get; set; }
 
         /// <summary>
-        /// Maximum client limit of the channel
+        /// Maximum client limit of the queue
         /// Zero is unlimited
         /// </summary>
         [JsonPropertyName("ClientLimit")]
         public int? ClientLimit { get; set; }
 
         /// <summary>
-        /// Maximum queue limit of the channel
+        /// Maximum queue limit of the server
         /// Zero is unlimited
         /// </summary>
         [JsonPropertyName("QueueLimit")]
@@ -80,7 +80,7 @@ namespace Twino.MQ.Queues
         #region Apply
 
         /// <summary>
-        /// Applies non-null values to channel queue options
+        /// Applies non-null values to queue options
         /// </summary>
         public void ApplyToQueue(QueueOptions target)
         {

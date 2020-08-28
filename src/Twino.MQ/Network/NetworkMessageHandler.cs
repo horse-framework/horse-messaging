@@ -161,7 +161,7 @@ namespace Twino.MQ.Network
         {
             switch (message.Type)
             {
-                //client sends a queue message in a channel
+                //client sends a queue message
                 case MessageType.QueueMessage:
                     if (!fromNode)
                         _ = _instanceHandler.Handle(mc, message, false);

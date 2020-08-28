@@ -16,7 +16,7 @@ namespace Twino.MQ.Queues
         Empty,
 
         /// <summary>
-        /// There are no consumers in channel
+        /// There are no consumers in queue
         /// </summary>
         NoConsumers,
 

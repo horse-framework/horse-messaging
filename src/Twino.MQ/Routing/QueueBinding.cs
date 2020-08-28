@@ -8,7 +8,7 @@ namespace Twino.MQ.Routing
 {
     /// <summary>
     /// Queue message binding.
-    /// Targets channel queues.
+    /// Targets queues.
     /// Binding receivers are received messages as QueueMessage.
     /// </summary>
     public class QueueBinding : Binding
@@ -19,7 +19,7 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Creates new direct binding.
         /// Name is the name of the binding.
-        /// Target should be channel name.
+        /// Target should be queue name.
         /// Content Type should be Queue Id.
         /// Priority for router binding.
         /// </summary>

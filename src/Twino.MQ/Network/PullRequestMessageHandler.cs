@@ -60,7 +60,7 @@ namespace Twino.MQ.Network
                 return;
             }
 
-            //client cannot pull message from the channel not in
+            //client cannot pull message from the queue not in
             QueueClient queueClient = queue.FindClient(client);
             if (queueClient == null)
             {

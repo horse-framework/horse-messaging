@@ -324,7 +324,7 @@ namespace Test.Mq
             bool received = false;
             bool subscribed = await client.Queues.OnMessageProduced("ch-pull", 1001, c =>
             {
-                Assert.Equal("ch-pull", c.Channel);
+                Assert.Equal("ch-pull", c.Queue);
                 Assert.Equal(1001, c.Queue);
                 received = true;
             });

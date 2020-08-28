@@ -24,7 +24,7 @@ namespace Twino.MQ.Options
         public bool AutoQueueCreation { get; set; } = true;
 
         /// <summary>
-        /// Maximum channel limit of the server
+        /// Maximum queue limit of the server
         /// Zero is unlimited.
         /// </summary>
         public int QueueLimit { get; set; }

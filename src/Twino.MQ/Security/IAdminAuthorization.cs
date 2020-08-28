@@ -16,7 +16,7 @@ namespace Twino.MQ.Security
         Task<bool> CanUpdateQueueOptions(MqClient client, TwinoQueue queue, NetworkOptionsBuilder options);
 
         /// <summary>
-        /// Returns true, if client can remove the queue in a channel
+        /// Returns true, if client can remove the queue
         /// </summary>
         Task<bool> CanRemoveQueue(MqClient client, TwinoQueue queue);
 

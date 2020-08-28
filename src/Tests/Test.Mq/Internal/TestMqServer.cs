@@ -50,7 +50,7 @@ namespace Test.Mq.Internal
 
             Server = TwinoMqBuilder.Create()
                                    .AddOptions(twinoMqOptions)
-                                   .UseChannelEventHandler(new TestQueueHandler(this))
+                                   .UseQueueEventHandler(new TestQueueHandler(this))
                                    .UseDeliveryHandler(async d => new TestDeliveryHandler(this))
                                    .UseClientHandler(new TestClientHandler(this))
                                    .UseAdminAuthorization<TestAdminAuthorization>()
