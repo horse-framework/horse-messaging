@@ -25,27 +25,13 @@ namespace Twino.MQ.Network
 
         public async Task Handle(MqClient client, TwinoMessage message, bool fromNode)
         {
-            //find channel and queue
-            Channel channel = _server.FindChannel(message.Target);
-
-            //if auto creation active, try to create channel
-            if (channel == null && _server.Options.AutoChannelCreation)
-                channel = _server.FindOrCreateChannel(message.Target);
-
-            if (channel == null)
-            {
-                if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
-                return;
-            }
-
-            TwinoQueue queue = channel.FindQueue(message.ContentType);
+            TwinoQueue queue = _server.FindQueue(message.Target);
 
             //if auto creation active, try to create queue
             if (queue == null && _server.Options.AutoQueueCreation)
             {
-                QueueOptions options = QueueOptions.CloneFrom(channel.Options);
-                queue = await channel.CreateQueue(message.ContentType, options, message, channel.Server.DeliveryHandlerFactory);
+                QueueOptions options = QueueOptions.CloneFrom(_server.Options);
+                queue = await _server.CreateQueue(message.Target, options, message, _server.DeliveryHandlerFactory);
             }
 
             if (queue == null)
@@ -56,14 +42,14 @@ namespace Twino.MQ.Network
                 return;
             }
 
-            await HandlePullRequest(client, message, channel, queue);
+            await HandlePullRequest(client, message, queue);
         }
 
 
         /// <summary>
         /// Handles pulling a message from a queue
         /// </summary>
-        private async Task HandlePullRequest(MqClient client, TwinoMessage message, Channel channel, TwinoQueue queue)
+        private async Task HandlePullRequest(MqClient client, TwinoMessage message, TwinoQueue queue)
         {
             //only pull statused queues can handle this request
             if (queue.Status != QueueStatus.Pull)
@@ -75,11 +61,12 @@ namespace Twino.MQ.Network
             }
 
             //client cannot pull message from the channel not in
-            QueueClient queueClient = channel.FindClient(client);
+            QueueClient queueClient = queue.FindClient(client);
             if (queueClient == null)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(MessageBuilder.CreateNoContentPullResponse(message, TwinoHeaders.UNAUTHORIZED));
+                    await client.SendAsync(MessageBuilder.CreateNoContentPullResponse(message, TwinoHeaders.UNACCEPTABLE));
+                
                 return;
             }
 
