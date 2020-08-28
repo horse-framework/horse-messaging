@@ -6,13 +6,9 @@ namespace Twino.MQ.Data.Configuration
 {
     internal class QueueConfiguration
     {
-        [JsonProperty("QueueId")]
-        [JsonPropertyName("QueueId")]
-        public ushort QueueId { get; set; }
-
-        [JsonProperty("Channel")]
-        [JsonPropertyName("Channel")]
-        public string Channel { get; set; }
+        [JsonProperty("Name")]
+        [JsonPropertyName("Name")]
+        public string Name { get; set; }
 
         [JsonProperty("File")]
         [JsonPropertyName("File")]

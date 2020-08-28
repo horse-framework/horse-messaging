@@ -48,7 +48,7 @@ namespace Twino.MQ.Data
                 QueueFiller filler = new QueueFiller(Queue);
                 PushResult result = filler.FillMessage(dict.Values, true);
                 if (result != PushResult.Success)
-                    throw new InvalidOperationException($"Cannot fill messages into {Queue.Id} queue in {Queue.Channel.Name} : {result}");
+                    throw new InvalidOperationException($"Cannot fill messages into {Queue.Name} queue : {result}");
             }
         }
 

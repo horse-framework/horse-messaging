@@ -1,9 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Twino.MQ.Options;
 using Twino.MQ.Queues;
 
 namespace Twino.MQ.Data.Configuration
@@ -72,44 +70,18 @@ namespace Twino.MQ.Data.Configuration
         public bool Add(TwinoQueue queue, string filename)
         {
             QueueOptionsConfiguration queueOptions = queue.Options.ToConfiguration();
-            string channelName = queue.Channel.Name;
-
-            ChannelConfiguration channelConfig;
-            lock (_optionsLock)
-            {
-                channelConfig = ConfigurationFactory.Configuration.Channels.FirstOrDefault(x => x.Name == channelName);
-                if (channelConfig != null)
-                    if (channelConfig.Queues.Any(x => x.QueueId == queue.Id))
-                        return false;
-            }
-
-            if (channelConfig == null)
-            {
-                ChannelOptionsConfiguration channelOptions = queue.Channel.Options.ToConfiguration();
-                channelConfig = new ChannelConfiguration();
-                channelConfig.Configuration = channelOptions;
-                channelConfig.Name = queue.Channel.Name;
-                channelConfig.Queues = new List<QueueConfiguration>();
-
-                if (ConfigurationFactory.Configuration.Channels == null)
-                    ConfigurationFactory.Configuration.Channels = new List<ChannelConfiguration>();
-
-                ConfigurationFactory.Configuration.Channels.Add(channelConfig);
-            }
-
             PersistentDeliveryHandler deliveryHandler = (PersistentDeliveryHandler) queue.DeliveryHandler;
 
             QueueConfiguration queueConfiguration = new QueueConfiguration();
             queueConfiguration.Configuration = queueOptions;
-            queueConfiguration.Channel = channelName;
-            queueConfiguration.QueueId = queue.Id;
+            queueConfiguration.Name = queue.Name;
             queueConfiguration.File = filename;
             queueConfiguration.Queue = queue;
             queueConfiguration.DeleteWhen = Convert.ToInt32(deliveryHandler.DeleteWhen);
             queueConfiguration.ProducerAck = Convert.ToInt32(deliveryHandler.ProducerAckDecision);
 
             lock (_optionsLock)
-                channelConfig.Queues.Add(queueConfiguration);
+                Config.Queues.Add(queueConfiguration);
 
             return true;
         }
@@ -119,25 +91,12 @@ namespace Twino.MQ.Data.Configuration
         /// </summary>
         public void Remove(TwinoQueue queue)
         {
-            string channelName = queue.Channel.Name;
-
-            ChannelConfiguration channelConfiguration;
-            lock (_optionsLock)
-                channelConfiguration = Config.Channels.FirstOrDefault(x => x.Name == channelName);
-
-            //already removed
-            if (channelConfiguration == null)
-                return;
-
             lock (_optionsLock)
             {
-                QueueConfiguration queueConfiguration = channelConfiguration.Queues.FirstOrDefault(x => x.QueueId == queue.Id);
+                QueueConfiguration queueConfiguration = Config.Queues.FirstOrDefault(x => x.Name == queue.Name);
 
-                //if last queue in channel is removing, remove channel too 
-                if (queueConfiguration != null && channelConfiguration.Queues.Count == 1)
-                    channelConfiguration.Queues.Remove(queueConfiguration);
-                else
-                    Config.Channels.Remove(channelConfiguration);
+                if (queueConfiguration != null)
+                    Config.Queues.Remove(queueConfiguration);
             }
         }
 
@@ -146,47 +105,28 @@ namespace Twino.MQ.Data.Configuration
         /// </summary>
         public async Task LoadQueues(TwinoMQ server)
         {
-            foreach (ChannelConfiguration channelConfiguration in Config.Channels)
+            foreach (QueueConfiguration queueConfiguration in Config.Queues)
             {
-                Channel channel = server.FindChannel(channelConfiguration.Name);
-                if (channel == null)
+                TwinoQueue queue = server.FindQueue(queueConfiguration.Name);
+                if (queue == null)
                 {
-                    ChannelOptions options = channelConfiguration.Configuration.ToOptions();
-                    channel = server.CreateChannel(channelConfiguration.Name, options);
+                    queue = await Extensions.CreateQueue(server,
+                                                         queueConfiguration.Name,
+                                                         (DeleteWhen) queueConfiguration.DeleteWhen,
+                                                         (ProducerAckDecision) queueConfiguration.ProducerAck,
+                                                         queueConfiguration.Configuration.ToOptions());
 
-                    //creation not allowed, skip the channel and it's queues
-                    if (channel == null)
+                    //queue creation not permitted, skip
+                    if (queue == null)
                         continue;
                 }
-
-                channelConfiguration.Channel = channel;
-
-                if (channelConfiguration.Queues == null)
-                    continue;
-
-                foreach (QueueConfiguration queueConfiguration in channelConfiguration.Queues)
+                else
                 {
-                    TwinoQueue queue = channel.FindQueue(queueConfiguration.QueueId);
-                    if (queue == null)
-                    {
-                        queue = await Extensions.CreateQueue(channel,
-                                                             queueConfiguration.QueueId,
-                                                             (DeleteWhen) queueConfiguration.DeleteWhen,
-                                                             (ProducerAckDecision) queueConfiguration.ProducerAck,
-                                                             queueConfiguration.Configuration.ToOptions());
-
-                        //queue creation not permitted, skip
-                        if (queue == null)
-                            continue;
-                    }
-                    else
-                    {
-                        PersistentDeliveryHandler deliveryHandler = (PersistentDeliveryHandler) queue.DeliveryHandler;
-                        await deliveryHandler.Initialize();
-                    }
-
-                    queueConfiguration.Queue = queue;
+                    PersistentDeliveryHandler deliveryHandler = (PersistentDeliveryHandler) queue.DeliveryHandler;
+                    await deliveryHandler.Initialize();
                 }
+
+                queueConfiguration.Queue = queue;
             }
         }
     }
