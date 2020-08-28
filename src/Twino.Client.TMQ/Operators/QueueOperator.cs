@@ -459,7 +459,7 @@ namespace Twino.Client.TMQ.Operators
         {
             TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.Join;
+            message.ContentType = KnownContentTypes.Subscribe;
             message.SetTarget(channel);
             message.WaitResponse = verifyResponse;
 
@@ -476,7 +476,7 @@ namespace Twino.Client.TMQ.Operators
         {
             TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.Leave;
+            message.ContentType = KnownContentTypes.Unsubscribe;
             message.SetTarget(channel);
             message.WaitResponse = verifyResponse;
 
@@ -576,7 +576,7 @@ namespace Twino.Client.TMQ.Operators
             TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.SetTarget(channel);
-            message.ContentType = KnownContentTypes.ChannelConsumers;
+            message.ContentType = KnownContentTypes.QueueConsumers;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
 
             message.AddHeader(TwinoHeaders.CHANNEL_NAME, channel);

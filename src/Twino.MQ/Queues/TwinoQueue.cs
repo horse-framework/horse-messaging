@@ -1060,17 +1060,17 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Adds the client to the channel
         /// </summary>
-        public async Task<ClientJoinResult> AddClient(MqClient client)
+        public async Task<QueueSubscriptionResult> AddClient(MqClient client)
         {
             if (Server.QueueAuthenticator != null)
             {
                 bool allowed = await Server.QueueAuthenticator.Authenticate(this, client);
                 if (!allowed)
-                    return ClientJoinResult.Unauthorized;
+                    return QueueSubscriptionResult.Unauthorized;
             }
 
             if (Options.ClientLimit > 0 && _clients.Count >= Options.ClientLimit)
-                return ClientJoinResult.Full;
+                return QueueSubscriptionResult.Full;
 
             QueueClient cc = new QueueClient(this, client);
             _clients.Add(cc);
@@ -1081,7 +1081,7 @@ namespace Twino.MQ.Queues
 
             _ = Trigger();
             OnConsumerSubscribed.Trigger(cc);
-            return ClientJoinResult.Success;
+            return QueueSubscriptionResult.Success;
         }
 
         /// <summary>

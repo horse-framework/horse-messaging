@@ -61,39 +61,19 @@ namespace Twino.Protocols.TMQ
         public const ushort Busy = 503;
 
         /// <summary>
-        /// "601" Join to channel
+        /// "601" Subscribe to a queue
         /// </summary>
-        public const ushort Join = 601;
+        public const ushort Subscribe = 601;
 
         /// <summary>
-        /// "602" Leave from channel
+        /// "602" Unsubscribe from a queue
         /// </summary>
-        public const ushort Leave = 602;
+        public const ushort Unsubscribe = 602;
 
         /// <summary>
-        /// "603" Create new channel
+        /// "607" Gets all consumers of a queue
         /// </summary>
-        public const ushort CreateChannel = 603;
-
-        /// <summary>
-        /// "604" Delete channel with it's queues
-        /// </summary>
-        public const ushort RemoveChannel = 604;
-
-        /// <summary>
-        /// "605" Gets channel information
-        /// </summary>
-        public const ushort ChannelInformation = 605;
-
-        /// <summary>
-        /// "606" Gets active channel list in server
-        /// </summary>
-        public const ushort ChannelList = 606;
-
-        /// <summary>
-        /// "607" Gets all consumers of a channel
-        /// </summary>
-        public const ushort ChannelConsumers = 607;
+        public const ushort QueueConsumers = 607;
 
         /// <summary>
         /// "610" Creates new queue

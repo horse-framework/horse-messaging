@@ -1,12 +1,12 @@
 namespace Twino.MQ
 {
     /// <summary>
-    /// Joining channel result
+    /// Subscribing to queue result
     /// </summary>
-    public enum ClientJoinResult
+    public enum QueueSubscriptionResult
     {
         /// <summary>
-        /// Client has joined to channel
+        /// Client has subscribed to the queue
         /// </summary>
         Success,
 
@@ -16,7 +16,7 @@ namespace Twino.MQ
         Unauthorized,
 
         /// <summary>
-        /// Channel is full
+        /// Queue is full
         /// </summary>
         Full
     }

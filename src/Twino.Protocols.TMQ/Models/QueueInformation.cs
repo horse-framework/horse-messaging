@@ -9,25 +9,18 @@ namespace Twino.Protocols.TMQ.Models
     public class QueueInformation
     {
         /// <summary>
-        /// Queue channel name
+        /// Queue name
         /// </summary>
-        [JsonProperty("Channel")]
-        [JsonPropertyName("Channel")]
-        public string Channel { get; set; }
+        [JsonProperty("Name")]
+        [JsonPropertyName("Nmae")]
+        public string Name { get; set; }
 
         /// <summary>
-        /// Queue tag name
+        /// Queue topic
         /// </summary>
-        [JsonProperty("TagName")]
-        [JsonPropertyName("TagName")]
-        public string TagName { get; set; }
-
-        /// <summary>
-        /// Queue id
-        /// </summary>
-        [JsonProperty("Id")]
-        [JsonPropertyName("Id")]
-        public ushort Id { get; set; }
+        [JsonProperty("Topic")]
+        [JsonPropertyName("Topic")]
+        public string Topic { get; set; }
 
         /// <summary>
         /// Pending high priority messages in the queue
@@ -51,18 +44,11 @@ namespace Twino.Protocols.TMQ.Models
         public string Status { get; set; }
 
         /// <summary>
-        /// If true, messages will send to only first acquirers
+        /// Queue acknowledge type
         /// </summary>
-        [JsonProperty("OnlyFirstAcquirer")]
-        [JsonPropertyName("OnlyFirstAcquirer")]
-        public bool OnlyFirstAcquirer { get; set; }
-
-        /// <summary>
-        /// If true, messages will request acknowledge from receivers
-        /// </summary>
-        [JsonProperty("RequestAcknowledge")]
-        [JsonPropertyName("RequestAcknowledge")]
-        public bool RequestAcknowledge { get; set; }
+        [JsonProperty("Acknowledge")]
+        [JsonPropertyName("Acknowledge")]
+        public string Acknowledge { get; set; }
 
         /// <summary>
         /// When acknowledge is required, maximum duration for waiting acknowledge message
@@ -84,13 +70,6 @@ namespace Twino.Protocols.TMQ.Models
         [JsonProperty("UseMessageId")]
         [JsonPropertyName("UseMessageId")]
         public bool UseMessageId { get; set; } = true;
-
-        /// <summary>
-        /// If true, queue does not send next message to receivers until acknowledge message received
-        /// </summary>
-        [JsonProperty("WaitForAcknowledge")]
-        [JsonPropertyName("WaitForAcknowledge")]
-        public bool WaitForAcknowledge { get; set; }
 
         /// <summary>
         /// If true, server doesn't send client name to receivers in queueus.

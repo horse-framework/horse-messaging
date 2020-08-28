@@ -315,27 +315,6 @@ namespace Twino.MQ
             return queue;
         }
 
-
-        /// <summary>
-        /// Searches the queue, if queue could not be found, it will be created
-        /// </summary>
-        public async Task<TwinoQueue> FindOrCreateQueue(string name)
-        {
-            await _findOrCreateQueueLocker.WaitAsync();
-            try
-            {
-                TwinoQueue queue = FindQueue(name);
-                if (queue == null)
-                    queue = await CreateQueue(name);
-
-                return queue;
-            }
-            finally
-            {
-                _findOrCreateQueueLocker.Release();
-            }
-        }
-
         /// <summary>
         /// Removes a queue from the channel
         /// </summary>

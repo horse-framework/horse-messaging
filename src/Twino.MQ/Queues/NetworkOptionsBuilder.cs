@@ -73,7 +73,7 @@ namespace Twino.MQ.Queues
         /// Queue auto destroy options
         /// </summary>
         [JsonPropertyName("AutoDestroy")]
-        public string? AutoDestroy { get; set; }
+        public string AutoDestroy { get; set; }
 
         #endregion
 

@@ -24,6 +24,6 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Messages are pushed to queues with specified tag name
         /// </summary>
-        Tag = 3
+        Topic = 3
     }
 }
