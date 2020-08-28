@@ -76,7 +76,6 @@ namespace Twino.MQ.Queues.States
             //if we need acknowledge, we are sending this information to receivers that we require response
             message.Message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
             message.IsInQueue = true;
-            message.Message.Type = MessageType.Response;
 
             _queue.ClearAllMessages();
             return true;

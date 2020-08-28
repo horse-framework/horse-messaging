@@ -43,21 +43,10 @@ namespace Twino.Client.TMQ
         public bool AutoAcknowledge { get; set; }
 
         /// <summary>
-        /// If true, acknowledge messages will trigger on message received events.
-        /// If false, acknowledge messages are proceed silently.
-        /// </summary>
-        public bool CatchAcknowledgeMessages { get; set; }
-
-        /// <summary>
         /// If true, response messages will trigger on message received events.
         /// If false, response messages are proceed silently.
         /// </summary>
         public bool CatchResponseMessages { get; set; }
-
-        /// <summary>
-        /// Maximum time to wait acknowledge message
-        /// </summary>
-        public TimeSpan AcknowledgeTimeout { get; set; } = TimeSpan.FromSeconds(15);
 
         /// <summary>
         /// Maximum time to wait response message
@@ -92,19 +81,14 @@ namespace Twino.Client.TMQ
         }
 
         /// <summary>
-        /// Acknowledge and Response message follower of the client
+        /// Response message tracker of the client
         /// </summary>
-        private readonly MessageFollower _follower;
+        private readonly MessageTracker _tracker;
 
         /// <summary>
         /// TMQ Client Direct message management object
         /// </summary>
         public DirectOperator Direct { get; }
-
-        /// <summary>
-        /// TMQ Client Channel Management object
-        /// </summary>
-        public ChannelOperator Channels { get; }
 
         /// <summary>
         /// TMQ Client Queue Management object
@@ -149,7 +133,6 @@ namespace Twino.Client.TMQ
             Data.Path = "/";
 
             Direct = new DirectOperator(this);
-            Channels = new ChannelOperator(this);
             Queues = new QueueOperator(this);
             Connections = new ConnectionOperator(this);
             Routers = new RouterOperator(this);
@@ -157,8 +140,8 @@ namespace Twino.Client.TMQ
             Events = new EventManager();
             DeliveryContainer = new TypeDeliveryContainer(new TypeDeliveryResolver());
 
-            _follower = new MessageFollower(this);
-            _follower.Run();
+            _tracker = new MessageTracker(this);
+            _tracker.Run();
         }
 
         /// <summary>
@@ -166,7 +149,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         public void Dispose()
         {
-            _follower?.Dispose();
+            _tracker?.Dispose();
             Queues.Dispose();
         }
 
@@ -372,7 +355,6 @@ namespace Twino.Client.TMQ
                 return;
 
             TwinoMessage message = new TwinoMessage();
-            message.FirstAcquirer = true;
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.Hello;
 
@@ -415,9 +397,6 @@ namespace Twino.Client.TMQ
                 return;
             }
 
-            if (message.Ttl < 0)
-                return;
-
             if (SmartHealthCheck)
                 KeepAlive();
 
@@ -440,15 +419,8 @@ namespace Twino.Client.TMQ
                     Pong();
                     break;
 
-                case MessageType.Acknowledge:
-                    _follower.ProcessAcknowledge(message);
-
-                    if (CatchAcknowledgeMessages)
-                        SetOnMessageReceived(message);
-                    break;
-
                 case MessageType.Response:
-                    _follower.ProcessResponse(message);
+                    _tracker.Process(message);
 
                     if (CatchResponseMessages)
                         SetOnMessageReceived(message);
@@ -460,7 +432,7 @@ namespace Twino.Client.TMQ
 
                 case MessageType.QueueMessage:
 
-                    if (message.PendingAcknowledge && AutoAcknowledge)
+                    if (message.WaitResponse && AutoAcknowledge)
                         await SendAsync(message.CreateAcknowledge());
 
                     //if message is response for pull request, process pull container
@@ -484,11 +456,7 @@ namespace Twino.Client.TMQ
                     SetOnMessageReceived(message);
                     break;
 
-
                 case MessageType.DirectMessage:
-                    if (message.PendingAcknowledge && AutoAcknowledge)
-                        await SendAsync(message.CreateAcknowledge());
-
                     SetOnMessageReceived(message);
                     break;
             }
@@ -522,7 +490,7 @@ namespace Twino.Client.TMQ
         protected override void OnDisconnected()
         {
             base.OnDisconnected();
-            _follower.MarkAllMessagesExpired();
+            _tracker.MarkAllMessagesExpired();
         }
 
         #endregion
@@ -587,11 +555,11 @@ namespace Twino.Client.TMQ
             message.PendingAcknowledge = true;
             message.WaitResponse = false;
             message.SetMessageId(UniqueIdGenerator.Create());
-            
-            if (additionalHeaders!=null)
+
+            if (additionalHeaders != null)
                 foreach (KeyValuePair<string, string> pair in additionalHeaders)
                     message.AddHeader(pair.Key, pair.Value);
-                    
+
             if (string.IsNullOrEmpty(message.MessageId))
                 throw new ArgumentNullException("Messages without unique id cannot be acknowledged");
 
@@ -608,7 +576,7 @@ namespace Twino.Client.TMQ
             if (string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(UniqueIdGenerator.Create());
 
-            Task<TwinoMessage> task = _follower.FollowResponse(message);
+            Task<TwinoMessage> task = _tracker.Track(message);
             TwinoResult sent = await SendAsync(message);
             if (sent.Code != TwinoResultCode.Ok)
                 return new TmqModelResult<T>(new TwinoResult(TwinoResultCode.SendError));
@@ -661,19 +629,19 @@ namespace Twino.Client.TMQ
             message.PendingAcknowledge = false;
             message.SetMessageId(UniqueIdGenerator.Create());
 
-            Task<TwinoMessage> task = _follower.FollowResponse(message);
+            Task<TwinoMessage> task = _tracker.Track(message);
 
             TwinoResult sent = await SendAsync(message);
             if (sent.Code != TwinoResultCode.Ok)
             {
-                _follower.UnfollowMessage(message);
+                _tracker.Forget(message);
                 return message.CreateResponse(sent.Code);
             }
 
             TwinoMessage response = await task;
             if (response == null)
                 response = message.CreateResponse(TwinoResultCode.RequestTimeout);
-            
+
             return response;
         }
 
@@ -717,13 +685,13 @@ namespace Twino.Client.TMQ
         {
             Task<TwinoMessage> task = null;
             if (waitForResponse)
-                task = _follower.FollowResponse(message);
+                task = _tracker.Track(message);
 
             TwinoResult sent = await SendAsync(message);
             if (sent.Code != TwinoResultCode.Ok)
             {
                 if (waitForResponse)
-                    _follower.UnfollowMessage(message);
+                    _tracker.Forget(message);
 
                 return new TwinoResult(TwinoResultCode.SendError);
             }
@@ -748,13 +716,13 @@ namespace Twino.Client.TMQ
         {
             Task<TwinoResult> task = null;
             if (waitAcknowledge)
-                task = _follower.FollowAcknowledge(message);
+                task = _tracker.FollowAcknowledge(message);
 
             TwinoResult sent = await SendAsync(message);
             if (sent.Code != TwinoResultCode.Ok)
             {
                 if (waitAcknowledge)
-                    _follower.UnfollowMessage(message);
+                    _tracker.Forget(message);
 
                 return new TwinoResult(TwinoResultCode.SendError);
             }
@@ -782,12 +750,12 @@ namespace Twino.Client.TMQ
             if (queueId.HasValue)
                 message.AddHeader(TwinoHeaders.QUEUE_ID, queueId.Value.ToString());
 
-            Task<TwinoMessage> task = _follower.FollowResponse(message);
+            Task<TwinoMessage> task = _tracker.Track(message);
 
             TwinoResult sent = await SendAsync(message);
             if (sent.Code != TwinoResultCode.Ok)
             {
-                _follower.UnfollowMessage(message);
+                _tracker.Forget(message);
                 return false;
             }
 

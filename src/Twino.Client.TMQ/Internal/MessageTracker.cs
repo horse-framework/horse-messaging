@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.Core;
@@ -9,10 +8,10 @@ using Twino.Protocols.TMQ;
 namespace Twino.Client.TMQ.Internal
 {
     /// <summary>
-    /// Message follower, follows the messages which required acknowledge or response.
-    /// If their acknowledge or response messages isn't received, fires timeout actions.
+    /// Message tracker, tracker the messages which required response.
+    /// If their response messages isn't received, fires timeout actions.
     /// </summary>
-    internal class MessageFollower : IDisposable
+    internal class MessageTracker : IDisposable
     {
         /// <summary>
         /// Sent messages
@@ -34,7 +33,7 @@ namespace Twino.Client.TMQ.Internal
         /// </summary>
         private readonly TmqClient _client;
 
-        public MessageFollower(TmqClient client)
+        public MessageTracker(TmqClient client)
         {
             _client = client;
         }
@@ -107,35 +106,9 @@ namespace Twino.Client.TMQ.Internal
         }
 
         /// <summary>
-        /// This method process the ack message, when it is received
-        /// </summary>
-        public void ProcessAcknowledge(TwinoMessage message)
-        {
-            if (message.Type != MessageType.Acknowledge || string.IsNullOrEmpty(message.MessageId))
-                return;
-
-            MessageDescriptor descriptor;
-            lock (_descriptors)
-                descriptor = _descriptors.Find(x => x.Message.PendingAcknowledge && x.Message.MessageId == message.MessageId);
-
-            if (descriptor == null)
-                return;
-
-            descriptor.Completed = true;
-            if (!message.HasHeader || !message.Headers.Any(x => x.Key.Equals(TwinoHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)))
-            {
-                descriptor.Set(true, TwinoResult.Ok());
-                return;
-            }
-
-            var nackReason = message.Headers.FirstOrDefault(x => x.Key.Equals(TwinoHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase));
-            descriptor.Set(false, TwinoResult.Failed(nackReason.Value));
-        }
-
-        /// <summary>
         /// This method process the response message, when it is received
         /// </summary>
-        public void ProcessResponse(TwinoMessage message)
+        public void Process(TwinoMessage message)
         {
             if (message.Type != MessageType.Response || string.IsNullOrEmpty(message.MessageId))
                 return;
@@ -152,26 +125,9 @@ namespace Twino.Client.TMQ.Internal
         }
 
         /// <summary>
-        /// Starts to follow message acknowledge
-        /// </summary>
-        public Task<TwinoResult> FollowAcknowledge(TwinoMessage message)
-        {
-            if (!message.PendingAcknowledge || string.IsNullOrEmpty(message.MessageId))
-                return Task.FromResult(TwinoResult.Failed());
-
-            DateTime expiration = DateTime.UtcNow + _client.AcknowledgeTimeout;
-            AcknowledgeMessageDescriptor descriptor = new AcknowledgeMessageDescriptor(message, expiration);
-
-            lock (_descriptors)
-                _descriptors.Add(descriptor);
-
-            return descriptor.Source.Task;
-        }
-
-        /// <summary>
         /// Starts to follow message response
         /// </summary>
-        public async Task<TwinoMessage> FollowResponse(TwinoMessage message)
+        public async Task<TwinoMessage> Track(TwinoMessage message)
         {
             if (!message.WaitResponse || string.IsNullOrEmpty(message.MessageId))
                 return default;
@@ -188,7 +144,7 @@ namespace Twino.Client.TMQ.Internal
         /// <summary>
         /// Cancels following response of the message
         /// </summary>
-        public void UnfollowMessage(TwinoMessage message)
+        public void Forget(TwinoMessage message)
         {
             lock (_descriptors)
             {
