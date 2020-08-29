@@ -280,7 +280,7 @@ namespace Twino.Client.TMQ.Operators
             if (waitAcknowledge)
                 message.SetMessageId(_client.UniqueIdGenerator.Create());
 
-            return await _client.SendAndWaitForAcknowledge(message, waitAcknowledge);
+            return await _client.WaitResponse(message, waitAcknowledge);
         }
 
         /// <summary>
@@ -309,7 +309,7 @@ namespace Twino.Client.TMQ.Operators
             if (waitAcknowledge)
                 message.SetMessageId(_client.UniqueIdGenerator.Create());
 
-            return await _client.SendAndWaitForAcknowledge(message, waitAcknowledge);
+            return await _client.WaitResponse(message, waitAcknowledge);
         }
 
         /// <summary>
@@ -358,97 +358,97 @@ namespace Twino.Client.TMQ.Operators
         #region Events
 
         /// <summary> 
-        /// Triggers the action when a message is produced to a queue in a channel
+        /// Triggers the action when a message is produced to a queue
         /// </summary>
-        public async Task<bool> OnMessageProduced(string channel, ushort queue, Action<MessageEvent> action)
+        public async Task<bool> OnMessageProduced(string queue, Action<MessageEvent> action)
         {
-            bool ok = await _client.EventSubscription(EventNames.MessageProduced, true, channel, queue);
+            bool ok = await _client.EventSubscription(EventNames.MessageProduced, true, queue);
             if (ok)
-                _client.Events.Add(EventNames.MessageProduced, channel, queue, action, typeof(MessageEvent));
+                _client.Events.Add(EventNames.MessageProduced, queue, action, typeof(MessageEvent));
 
             return ok;
         }
 
         /// <summary>
-        /// Unsubscribes from all message produced events in a queue in a channel 
+        /// Unsubscribes from all message produced events in a queue
         /// </summary>
-        public async Task<bool> OffMessageProduced(string channel, ushort queue)
+        public async Task<bool> OffMessageProduced(string queue)
         {
-            bool ok = await _client.EventSubscription(EventNames.MessageProduced, false, channel, queue);
+            bool ok = await _client.EventSubscription(EventNames.MessageProduced, false, queue);
             if (ok)
-                _client.Events.Remove(EventNames.MessageProduced, channel, queue);
+                _client.Events.Remove(EventNames.MessageProduced, queue);
 
             return ok;
         }
 
         /// <summary>
-        /// Triggers the action when a queue is created in a channel
+        /// Triggers the action when a queue is created
         /// </summary>
-        public async Task<bool> OnCreated(string channel, Action<QueueEvent> action)
+        public async Task<bool> OnCreated(Action<QueueEvent> action)
         {
-            bool ok = await _client.EventSubscription(EventNames.QueueCreated, true, channel, null);
+            bool ok = await _client.EventSubscription(EventNames.QueueCreated, true, null);
             if (ok)
-                _client.Events.Add(EventNames.QueueCreated, channel, 0, action, typeof(QueueEvent));
+                _client.Events.Add(EventNames.QueueCreated, null, action, typeof(QueueEvent));
 
             return ok;
         }
 
         /// <summary>
-        /// Unsubscribes from all queue created events in a channel 
+        /// Unsubscribes from all queue created events
         /// </summary>
-        public async Task<bool> OffCreated(string channel)
+        public async Task<bool> OffCreated()
         {
-            bool ok = await _client.EventSubscription(EventNames.QueueCreated, false, channel, null);
+            bool ok = await _client.EventSubscription(EventNames.QueueCreated, false, null);
             if (ok)
-                _client.Events.Remove(EventNames.QueueCreated, channel, 0);
+                _client.Events.Remove(EventNames.QueueCreated, null);
 
             return ok;
         }
 
         /// <summary>
-        /// Triggers the action when a queue is updated in a channel
+        /// Triggers the action when a queue is updated
         /// </summary>
-        public async Task<bool> OnUpdated(string channel, Action<QueueEvent> action)
+        public async Task<bool> OnUpdated(Action<QueueEvent> action)
         {
-            bool ok = await _client.EventSubscription(EventNames.QueueUpdated, true, channel, null);
+            bool ok = await _client.EventSubscription(EventNames.QueueUpdated, true, null);
             if (ok)
-                _client.Events.Add(EventNames.QueueUpdated, channel, 0, action, typeof(QueueEvent));
+                _client.Events.Add(EventNames.QueueUpdated, null, action, typeof(QueueEvent));
 
             return ok;
         }
 
         /// <summary>
-        /// Unsubscribes from all queue updated events in a channel 
+        /// Unsubscribes from all queue updated events
         /// </summary>
-        public async Task<bool> OffUpdated(string channel)
+        public async Task<bool> OffUpdated()
         {
-            bool ok = await _client.EventSubscription(EventNames.QueueUpdated, false, channel, null);
+            bool ok = await _client.EventSubscription(EventNames.QueueUpdated, false, null);
             if (ok)
-                _client.Events.Remove(EventNames.QueueUpdated, channel, 0);
+                _client.Events.Remove(EventNames.QueueUpdated, null);
 
             return ok;
         }
 
         /// <summary>
-        /// Triggers the action when a queue is removed in a channel
+        /// Triggers the action when a queue is removed
         /// </summary>
-        public async Task<bool> OnRemoved(string channel, Action<QueueEvent> action)
+        public async Task<bool> OnRemoved(Action<QueueEvent> action)
         {
-            bool ok = await _client.EventSubscription(EventNames.QueueRemoved, true, channel, null);
+            bool ok = await _client.EventSubscription(EventNames.QueueRemoved, true, null);
             if (ok)
-                _client.Events.Add(EventNames.QueueRemoved, channel, 0, action, typeof(QueueEvent));
+                _client.Events.Add(EventNames.QueueRemoved, null, action, typeof(QueueEvent));
 
             return ok;
         }
 
         /// <summary>
-        /// Unsubscribes from all queue removed events in a channel 
+        /// Unsubscribes from all queue removed events
         /// </summary>
-        public async Task<bool> OffRemoved(string channel)
+        public async Task<bool> OffRemoved()
         {
-            bool ok = await _client.EventSubscription(EventNames.QueueRemoved, false, channel, null);
+            bool ok = await _client.EventSubscription(EventNames.QueueRemoved, false, null);
             if (ok)
-                _client.Events.Remove(EventNames.QueueRemoved, channel, 0);
+                _client.Events.Remove(EventNames.QueueRemoved, null);
 
             return ok;
         }
@@ -458,9 +458,9 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OnSubscribed(string queue, Action<SubscriptionEvent> action)
         {
-            bool ok = await _client.EventSubscription(EventNames.Subscribe, true, queue, null);
+            bool ok = await _client.EventSubscription(EventNames.Subscribe, true, queue);
             if (ok)
-                _client.Events.Add(EventNames.Subscribe, queue, 0, action, typeof(SubscriptionEvent));
+                _client.Events.Add(EventNames.Subscribe, queue, action, typeof(SubscriptionEvent));
 
             return ok;
         }
@@ -470,9 +470,9 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OffSubscribed(string queue)
         {
-            bool ok = await _client.EventSubscription(EventNames.Subscribe, false, queue, null);
+            bool ok = await _client.EventSubscription(EventNames.Subscribe, false, queue);
             if (ok)
-                _client.Events.Remove(EventNames.Subscribe, queue, 0);
+                _client.Events.Remove(EventNames.Subscribe, queue);
 
             return ok;
         }
@@ -482,9 +482,9 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OnUnsubscribed(string queue, Action<SubscriptionEvent> action)
         {
-            bool ok = await _client.EventSubscription(EventNames.Unsubscribe, true, queue, null);
+            bool ok = await _client.EventSubscription(EventNames.Unsubscribe, true, queue);
             if (ok)
-                _client.Events.Add(EventNames.Unsubscribe, queue, 0, action, typeof(SubscriptionEvent));
+                _client.Events.Add(EventNames.Unsubscribe, queue, action, typeof(SubscriptionEvent));
 
             return ok;
         }
@@ -494,9 +494,9 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OffUnsubscribed(string queue)
         {
-            bool ok = await _client.EventSubscription(EventNames.Unsubscribe, false, queue, null);
+            bool ok = await _client.EventSubscription(EventNames.Unsubscribe, false, queue);
             if (ok)
-                _client.Events.Remove(EventNames.Unsubscribe, queue, 0);
+                _client.Events.Remove(EventNames.Unsubscribe, queue);
 
             return ok;
         }

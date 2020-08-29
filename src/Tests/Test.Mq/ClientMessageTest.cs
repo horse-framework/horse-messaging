@@ -73,7 +73,7 @@ namespace Test.Mq
             TwinoMessage message = new TwinoMessage(MessageType.DirectMessage, "client-2");
             message.SetStringContent("Hello, World!");
 
-            TwinoResult sent = await client1.SendWithAcknowledge(message);
+            TwinoResult sent = await client1.SendAndGetAck(message);
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
             Assert.True(received);
         }

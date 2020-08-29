@@ -36,7 +36,7 @@ namespace Twino.Client.TMQ.Operators
                     message.AddHeader(pair.Key, pair.Value);
 
             if (waitAcknowledge)
-                return await _client.SendWithAcknowledge(message);
+                return await _client.SendAndGetAck(message);
 
             return await _client.SendAsync(message);
         }
@@ -76,7 +76,7 @@ namespace Twino.Client.TMQ.Operators
                     message.AddHeader(pair.Key, pair.Value);
 
             if (waitAcknowledge)
-                return await _client.SendWithAcknowledge(message);
+                return await _client.SendAndGetAck(message);
 
             return await _client.SendAsync(message);
         }
@@ -99,7 +99,7 @@ namespace Twino.Client.TMQ.Operators
                     message.AddHeader(pair.Key, pair.Value);
 
             if (waitAcknowledge)
-                return await _client.SendWithAcknowledge(message);
+                return await _client.SendAndGetAck(message);
 
             return await _client.SendAsync(message);
         }
@@ -139,7 +139,7 @@ namespace Twino.Client.TMQ.Operators
                     message.AddHeader(pair.Key, pair.Value);
 
             if (waitAcknowledge)
-                return await _client.SendWithAcknowledge(message);
+                return await _client.SendAndGetAck(message);
 
             return await _client.SendAsync(message);
         }

@@ -156,7 +156,7 @@ namespace Twino.Client.TMQ.Operators
                 foreach (KeyValuePair<string, string> pair in messageHeaders)
                     msg.AddHeader(pair.Key, pair.Value);
 
-            return await _client.SendAndWaitForAcknowledge(msg, waitForAcknowledge);
+            return await _client.WaitResponse(msg, waitForAcknowledge);
         }
 
         /// <summary>
@@ -177,7 +177,7 @@ namespace Twino.Client.TMQ.Operators
                 foreach (KeyValuePair<string, string> pair in messageHeaders)
                     msg.AddHeader(pair.Key, pair.Value);
 
-            return await _client.SendAndWaitForAcknowledge(msg, waitForAcknowledge);
+            return await _client.WaitResponse(msg, waitForAcknowledge);
         }
 
         /// <summary>
@@ -209,7 +209,7 @@ namespace Twino.Client.TMQ.Operators
                 foreach (KeyValuePair<string, string> pair in messageHeaders)
                     message.AddHeader(pair.Key, pair.Value);
 
-            return await _client.SendAndWaitForAcknowledge(message, waitForAcknowledge);
+            return await _client.WaitResponse(message, waitForAcknowledge);
         }
 
         /// <summary>

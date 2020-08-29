@@ -49,7 +49,7 @@ namespace Test.Mq
             message.SetTarget(client2.ClientId);
             message.SetStringContent("Hello, World!");
 
-            TwinoResult acknowledge = await client1.SendWithAcknowledge(message);
+            TwinoResult acknowledge = await client1.SendAndGetAck(message);
             Assert.Equal(TwinoResultCode.Ok, acknowledge.Code);
         }
 
@@ -91,7 +91,7 @@ namespace Test.Mq
             message.SetTarget(client2.ClientId);
             message.SetStringContent("Hello, World!");
 
-            TwinoResult acknowledge = await client1.SendWithAcknowledge(message);
+            TwinoResult acknowledge = await client1.SendAndGetAck(message);
             Assert.Equal(TwinoResultCode.Ok, acknowledge.Code);
         }
 
@@ -129,7 +129,7 @@ namespace Test.Mq
             message.SetTarget(client2.ClientId);
             message.SetStringContent("Hello, World!");
 
-            TwinoResult acknowledge = await client1.SendWithAcknowledge(message);
+            TwinoResult acknowledge = await client1.SendAndGetAck(message);
             Assert.NotEqual(TwinoResultCode.Ok, acknowledge.Code);
         }
 

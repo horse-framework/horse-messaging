@@ -549,12 +549,13 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a TMQ message and waits for acknowledge
         /// </summary>
-        public async Task<TwinoResult> SendWithAcknowledge(TwinoMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
+        public async Task<TwinoResult> SendAndGetAck(TwinoMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
             message.SetSource(_clientId);
-            message.PendingAcknowledge = true;
-            message.WaitResponse = false;
+            message.WaitResponse = true;
             message.SetMessageId(UniqueIdGenerator.Create());
+            if (message.Type == MessageType.DirectMessage)
+                message.HighPriority = true;
 
             if (additionalHeaders != null)
                 foreach (KeyValuePair<string, string> pair in additionalHeaders)
@@ -563,7 +564,7 @@ namespace Twino.Client.TMQ
             if (string.IsNullOrEmpty(message.MessageId))
                 throw new ArgumentNullException("Messages without unique id cannot be acknowledged");
 
-            return await SendAndWaitForAcknowledge(message, true);
+            return await WaitResponse(message, true);
         }
 
         /// <summary>
@@ -626,7 +627,7 @@ namespace Twino.Client.TMQ
         public async Task<TwinoMessage> Request(TwinoMessage message)
         {
             message.WaitResponse = true;
-            message.PendingAcknowledge = false;
+            message.HighPriority = false;
             message.SetMessageId(UniqueIdGenerator.Create());
 
             Task<TwinoMessage> task = _tracker.Track(message);
@@ -654,9 +655,6 @@ namespace Twino.Client.TMQ
         /// </summary>
         public async Task<TwinoResult> SendNegativeAck(TwinoMessage message, string reason = null)
         {
-            if (!message.PendingAcknowledge)
-                return new TwinoResult(TwinoResultCode.Unacceptable);
-
             if (string.IsNullOrEmpty(reason))
                 reason = TwinoHeaders.NACK_REASON_NONE;
 
@@ -669,9 +667,6 @@ namespace Twino.Client.TMQ
         /// </summary>
         public async Task<TwinoResult> SendAck(TwinoMessage message)
         {
-            if (!message.PendingAcknowledge)
-                return new TwinoResult(TwinoResultCode.Unacceptable);
-
             TwinoMessage ack = message.CreateAcknowledge();
             return await SendAsync(ack);
         }
@@ -699,36 +694,12 @@ namespace Twino.Client.TMQ
             if (waitForResponse)
             {
                 TwinoMessage response = await task;
-                return response == null
-                           ? TwinoResult.Failed()
-                           : new TwinoResult((TwinoResultCode) response.ContentType);
+                if (response == null)
+                    return TwinoResult.Timeout();
+
+                TwinoResult result = new TwinoResult((TwinoResultCode) response.ContentType);
+                result.Message = response;
             }
-
-            return TwinoResult.Ok();
-        }
-
-        /// <summary>
-        /// Sends message.
-        /// if acknowledge is pending, waits for acknowledge.
-        /// returns true if received.
-        /// </summary>
-        internal async Task<TwinoResult> SendAndWaitForAcknowledge(TwinoMessage message, bool waitAcknowledge)
-        {
-            Task<TwinoResult> task = null;
-            if (waitAcknowledge)
-                task = _tracker.FollowAcknowledge(message);
-
-            TwinoResult sent = await SendAsync(message);
-            if (sent.Code != TwinoResultCode.Ok)
-            {
-                if (waitAcknowledge)
-                    _tracker.Forget(message);
-
-                return new TwinoResult(TwinoResultCode.SendError);
-            }
-
-            if (waitAcknowledge)
-                return await task;
 
             return TwinoResult.Ok();
         }
@@ -737,18 +708,15 @@ namespace Twino.Client.TMQ
 
         #region Events
 
-        internal async Task<bool> EventSubscription(string eventName, bool subscribe, string channelName, ushort? queueId)
+        internal async Task<bool> EventSubscription(string eventName, bool subscribe, string queueName)
         {
             ushort ct = subscribe ? (ushort) 1 : (ushort) 0;
             TwinoMessage message = new TwinoMessage(MessageType.Event, eventName, ct);
             message.SetMessageId(UniqueIdGenerator.Create());
             message.WaitResponse = true;
 
-            if (!string.IsNullOrEmpty(channelName))
-                message.AddHeader(TwinoHeaders.CHANNEL_NAME, channelName);
-
-            if (queueId.HasValue)
-                message.AddHeader(TwinoHeaders.QUEUE_ID, queueId.Value.ToString());
+            if (!string.IsNullOrEmpty(queueName))
+                message.AddHeader(TwinoHeaders.QUEUE_NAME, queueName);
 
             Task<TwinoMessage> task = _tracker.Track(message);
 
