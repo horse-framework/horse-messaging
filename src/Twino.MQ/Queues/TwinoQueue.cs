@@ -143,7 +143,6 @@ namespace Twino.MQ.Queues
         /// </summary>
         public event QueueEventHandler OnDestroyed;
 
-
         /// <summary>
         /// Clients in the queue as thread-unsafe list
         /// </summary>
@@ -165,6 +164,11 @@ namespace Twino.MQ.Queues
         /// Triggered when a client is unsubscribed 
         /// </summary>
         public SubscriptionEventManager OnConsumerUnsubscribed { get; }
+
+        /// <summary>
+        /// True if queue is destroyed
+        /// </summary>
+        public bool IsDestroyed { get; private set; }
 
         #endregion
 
@@ -215,6 +219,8 @@ namespace Twino.MQ.Queues
             {
                 if (!_triggering && State.TriggerSupported)
                     _ = Trigger();
+
+                _ = CheckAutoDestroy();
             }, null, TimeSpan.FromSeconds(5000), TimeSpan.FromSeconds(5000));
         }
 
@@ -235,6 +241,7 @@ namespace Twino.MQ.Queues
         /// </summary>
         public async Task Destroy()
         {
+            IsDestroyed = true;
             try
             {
                 await TimeKeeper.Destroy();
@@ -275,20 +282,33 @@ namespace Twino.MQ.Queues
         }
 
         /// <summary>
-        /// 
+        /// If auto destroy is enabled, checks and removes queue if it should be removed
         /// </summary>
-        private async Task CheckAutoDestroy()
+        internal async Task CheckAutoDestroy()
         {
-            /* todo: !!
-            List<ChannelQueue> list = _queues.GetAsClone();
+            if (IsDestroyed || Options.AutoDestroy == QueueDestroy.Disabled)
+                return;
 
-            foreach (ChannelQueue queue in list)
+            switch (Options.AutoDestroy)
             {
-                if (!queue.IsEmpty())
-                    return;
-            }
+                case QueueDestroy.NoConsumers:
+                    if (_clients.Count == 0)
+                        await Server.RemoveQueue(this);
 
-            await Server.RemoveChannel(this);*/
+                    break;
+
+                case QueueDestroy.NoMessages:
+                    if (MessagesList.Count == 0 && PriorityMessagesList.Count == 0 && !TimeKeeper.HasPendingDelivery())
+                        await Server.RemoveQueue(this);
+
+                    break;
+
+                case QueueDestroy.Empty:
+                    if (_clients.Count == 0 && MessagesList.Count == 0 && PriorityMessagesList.Count == 0 && !TimeKeeper.HasPendingDelivery())
+                        await Server.RemoveQueue(this);
+
+                    break;
+            }
         }
 
         #endregion

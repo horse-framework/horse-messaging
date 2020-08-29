@@ -192,6 +192,8 @@ namespace Twino.MQ.Queues
             IEnumerable<MessageDelivery> rdm = rdlist.Select(x => x.Item2);
             lock (_deliveries)
                 _deliveries.RemoveAll(x => rdm.Contains(x));
+
+            await _queue.CheckAutoDestroy();
         }
 
         /// <summary>
@@ -241,6 +243,7 @@ namespace Twino.MQ.Queues
                 _deliveries.RemoveAt(index);
             }
 
+            _ = _queue.CheckAutoDestroy();
             return delivery;
         }
 
@@ -251,6 +254,17 @@ namespace Twino.MQ.Queues
         {
             lock (_deliveries)
                 _deliveries.Remove(delivery);
+
+            _ = _queue.CheckAutoDestroy();
+        }
+
+        /// <summary>
+        /// Returns true, if there are pending messages waiting for acknowledge
+        /// </summary>
+        /// <returns></returns>
+        public bool HasPendingDelivery()
+        {
+            return _deliveries.Count > 0;
         }
 
         #endregion
