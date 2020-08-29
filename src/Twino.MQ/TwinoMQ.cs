@@ -115,7 +115,7 @@ namespace Twino.MQ
         /// <summary>
         /// Locker object for preventing to create duplicated queues when requests are concurrent and auto queue creation is enabled
         /// </summary>
-        private readonly SemaphoreSlim _findOrCreateQueueLocker = new SemaphoreSlim(1, 1); //todo: use it!
+        private readonly SemaphoreSlim _createQueueLocker = new SemaphoreSlim(1, 1);
 
         internal IMessageContentSerializer MessageContentSerializer { get; } = new NewtonsoftContentSerializer();
 
@@ -244,75 +244,103 @@ namespace Twino.MQ
                                             QueueOptions options,
                                             Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> asyncHandler)
         {
-            return CreateQueue(queueName, options, null, asyncHandler);
+            return CreateQueue(queueName, options, null, asyncHandler, false, false);
         }
 
         internal async Task<TwinoQueue> CreateQueue(string queueName,
                                                     QueueOptions options,
                                                     TwinoMessage requestMessage,
-                                                    Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> asyncHandler)
+                                                    Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> asyncHandler,
+                                                    bool hideException,
+                                                    bool returnIfExists)
         {
-            if (!Filter.CheckNameEligibility(queueName))
-                throw new InvalidOperationException("Invalid queue name");
-
-            if (Options.QueueLimit > 0 && Options.QueueLimit >= _queues.Count)
-                throw new OperationCanceledException("Queue limit is exceeded for the server");
-
-            TwinoQueue queue = _queues.Find(x => x.Name == queueName);
-
-            if (queue != null)
-                throw new DuplicateNameException($"The server has already a queue with same name: {queueName}");
-
-            string topic = null;
-            if (requestMessage != null)
+            await _createQueueLocker.WaitAsync();
+            try
             {
-                string waitForAck = requestMessage.FindHeader(TwinoHeaders.ACKNOWLEDGE);
-                if (!string.IsNullOrEmpty(waitForAck))
-                    switch (waitForAck.Trim().ToLower())
-                    {
-                        case "none":
-                            options.Acknowledge = QueueAckDecision.None;
-                            break;
-                        case "request":
-                            options.Acknowledge = QueueAckDecision.JustRequest;
-                            break;
-                        case "wait":
-                            options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-                            break;
-                    }
+                if (!Filter.CheckNameEligibility(queueName))
+                    throw new InvalidOperationException("Invalid queue name");
 
-                string queueStatus = requestMessage.FindHeader(TwinoHeaders.QUEUE_STATUS);
-                if (queueStatus != null)
-                    options.Status = QueueStatusHelper.FindStatus(queueStatus);
+                if (Options.QueueLimit > 0 && Options.QueueLimit >= _queues.Count)
+                    throw new OperationCanceledException("Queue limit is exceeded for the server");
 
-                topic = requestMessage.FindHeader(TwinoHeaders.QUEUE_TOPIC);
+                TwinoQueue queue = _queues.Find(x => x.Name == queueName);
+
+                if (queue != null)
+                {
+                    if (returnIfExists)
+                        return queue;
+
+                    throw new DuplicateNameException($"The server has already a queue with same name: {queueName}");
+                }
+
+                string topic = null;
+                if (requestMessage != null)
+                {
+                    string waitForAck = requestMessage.FindHeader(TwinoHeaders.ACKNOWLEDGE);
+                    if (!string.IsNullOrEmpty(waitForAck))
+                        switch (waitForAck.Trim().ToLower())
+                        {
+                            case "none":
+                                options.Acknowledge = QueueAckDecision.None;
+                                break;
+                            case "request":
+                                options.Acknowledge = QueueAckDecision.JustRequest;
+                                break;
+                            case "wait":
+                                options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                                break;
+                        }
+
+                    string queueStatus = requestMessage.FindHeader(TwinoHeaders.QUEUE_STATUS);
+                    if (queueStatus != null)
+                        options.Status = QueueStatusHelper.FindStatus(queueStatus);
+
+                    topic = requestMessage.FindHeader(TwinoHeaders.QUEUE_TOPIC);
+                }
+
+                queue = new TwinoQueue(this, queueName, options);
+                if (!string.IsNullOrEmpty(topic))
+                    queue.Topic = topic;
+
+                DeliveryHandlerBuilder handlerBuilder = new DeliveryHandlerBuilder
+                                                        {
+                                                            Server = this,
+                                                            Queue = queue
+                                                        };
+                if (requestMessage != null)
+                {
+                    handlerBuilder.DeliveryHandlerHeader = requestMessage.FindHeader(TwinoHeaders.DELIVERY_HANDLER);
+                    handlerBuilder.Headers = requestMessage.Headers;
+                }
+
+                IMessageDeliveryHandler deliveryHandler = await asyncHandler(handlerBuilder);
+                queue.SetMessageDeliveryHandler(deliveryHandler);
+                _queues.Add(queue);
+
+                if (QueueEventHandler != null)
+                    await QueueEventHandler.OnCreated(queue);
+
+                handlerBuilder.TriggerAfterCompleted();
+                OnQueueCreated.Trigger(queue);
+                return queue;
             }
-
-            queue = new TwinoQueue(this, queueName, options);
-            if (!string.IsNullOrEmpty(topic))
-                queue.Topic = topic;
-            
-            DeliveryHandlerBuilder handlerBuilder = new DeliveryHandlerBuilder
-                                                    {
-                                                        Server = this,
-                                                        Queue = queue
-                                                    };
-            if (requestMessage != null)
+            catch
             {
-                handlerBuilder.DeliveryHandlerHeader = requestMessage.FindHeader(TwinoHeaders.DELIVERY_HANDLER);
-                handlerBuilder.Headers = requestMessage.Headers;
+                if (!hideException)
+                    throw;
+
+                return null;
             }
-
-            IMessageDeliveryHandler deliveryHandler = await asyncHandler(handlerBuilder);
-            queue.SetMessageDeliveryHandler(deliveryHandler);
-            _queues.Add(queue);
-
-            if (QueueEventHandler != null)
-                await QueueEventHandler.OnCreated(queue);
-
-            handlerBuilder.TriggerAfterCompleted();
-            //todo: ! OnQueueCreated.Trigger(queue);
-            return queue;
+            finally
+            {
+                try
+                {
+                    _createQueueLocker.Release();
+                }
+                catch
+                {
+                }
+            }
         }
 
         /// <summary>

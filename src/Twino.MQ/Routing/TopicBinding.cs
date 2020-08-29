@@ -108,7 +108,7 @@ namespace Twino.MQ.Routing
                 if (!Router.Server.Options.AutoQueueCreation)
                     return false;
 
-                queue = await Router.Server.CreateQueue(message.Target, Router.Server.Options, message, Router.Server.DeliveryHandlerFactory);
+                queue = await Router.Server.CreateQueue(message.Target, Router.Server.Options, message, Router.Server.DeliveryHandlerFactory, true, true);
             }
 
             QueueMessage queueMessage = new QueueMessage(message);
@@ -127,7 +127,7 @@ namespace Twino.MQ.Routing
                 if (!Router.Server.Options.AutoQueueCreation)
                     return false;
 
-                queue = await Router.Server.CreateQueue(message.Target, Router.Server.Options, message, Router.Server.DeliveryHandlerFactory);
+                queue = await Router.Server.CreateQueue(message.Target, Router.Server.Options, message, Router.Server.DeliveryHandlerFactory, true, true);
             }
 
             QueueMessage queueMessage = new QueueMessage(message);

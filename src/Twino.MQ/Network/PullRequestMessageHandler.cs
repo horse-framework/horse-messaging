@@ -31,7 +31,7 @@ namespace Twino.MQ.Network
             if (queue == null && _server.Options.AutoQueueCreation)
             {
                 QueueOptions options = QueueOptions.CloneFrom(_server.Options);
-                queue = await _server.CreateQueue(message.Target, options, message, _server.DeliveryHandlerFactory);
+                queue = await _server.CreateQueue(message.Target, options, message, _server.DeliveryHandlerFactory, true, true);
             }
 
             if (queue == null)
@@ -56,7 +56,7 @@ namespace Twino.MQ.Network
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
                     await client.SendAsync(MessageBuilder.CreateNoContentPullResponse(message, TwinoHeaders.UNACCEPTABLE));
-                
+
                 return;
             }
 
@@ -66,7 +66,7 @@ namespace Twino.MQ.Network
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
                     await client.SendAsync(MessageBuilder.CreateNoContentPullResponse(message, TwinoHeaders.UNACCEPTABLE));
-                
+
                 return;
             }
 

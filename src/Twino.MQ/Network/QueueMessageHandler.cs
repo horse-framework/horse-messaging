@@ -33,7 +33,7 @@ namespace Twino.MQ.Network
             if (queue == null && _server.Options.AutoQueueCreation)
             {
                 QueueOptions options = QueueOptions.CloneFrom(_server.Options);
-                queue = await _server.CreateQueue(name, options, message, _server.DeliveryHandlerFactory);
+                queue = await _server.CreateQueue(name, options, message, _server.DeliveryHandlerFactory, true, true);
             }
 
             if (queue == null)
