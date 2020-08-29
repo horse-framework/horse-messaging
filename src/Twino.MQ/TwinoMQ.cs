@@ -314,7 +314,7 @@ namespace Twino.MQ
                 }
 
                 IMessageDeliveryHandler deliveryHandler = await asyncHandler(handlerBuilder);
-                queue.SetMessageDeliveryHandler(deliveryHandler);
+                queue.InitializeQueue(deliveryHandler);
                 _queues.Add(queue);
 
                 if (QueueEventHandler != null)

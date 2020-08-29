@@ -68,7 +68,7 @@ namespace Twino.MQ.Queues
         /// Queue messaging handler.
         /// If null, server's default delivery will be used.
         /// </summary>
-        public IMessageDeliveryHandler DeliveryHandler { get; private set; }
+        public IMessageDeliveryHandler DeliveryHandler { get; set; }
 
         /// <summary>
         /// Queue statistics and information
@@ -158,56 +158,55 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Triggered when a client is subscribed 
         /// </summary>
-        public SubscriptionEventManager OnConsumerSubscribed { get; }
+        public SubscriptionEventManager OnConsumerSubscribed { get; private set; }
 
         /// <summary>
         /// Triggered when a client is unsubscribed 
         /// </summary>
-        public SubscriptionEventManager OnConsumerUnsubscribed { get; }
+        public SubscriptionEventManager OnConsumerUnsubscribed { get; private set; }
 
         /// <summary>
         /// True if queue is destroyed
         /// </summary>
         public bool IsDestroyed { get; private set; }
 
+        /// <summary>
+        /// True if queue is initialized
+        /// </summary>
+        public bool IsInitialized { get; private set; }
+
         #endregion
 
         #region Constructors - Destroy
 
-        internal TwinoQueue(TwinoMQ server,
-                            string name,
-                            QueueOptions options,
-                            IMessageDeliveryHandler deliveryHandler)
+        internal TwinoQueue(TwinoMQ server, string name, QueueOptions options)
         {
             Server = server;
             Name = name;
             Options = options;
             Status = options.Status;
-            DeliveryHandler = deliveryHandler;
             _clients = new SafeList<QueueClient>(256);
-
-            OnConsumerSubscribed = new SubscriptionEventManager(server, EventNames.Subscribe, this);
-            OnConsumerUnsubscribed = new SubscriptionEventManager(server, EventNames.Unsubscribe, this);
-
-            InitializeQueue();
-        }
-
-        internal TwinoQueue(TwinoMQ server,
-                            string name,
-                            QueueOptions options)
-        {
-            Server = server;
-            Name = name;
-            Options = options;
-            Status = options.Status;
         }
 
         /// <summary>
         /// Initializes queue to first use
         /// </summary>
-        private void InitializeQueue()
+        internal void InitializeQueue(IMessageDeliveryHandler deliveryHandler = null)
         {
+            if (IsInitialized)
+                return;
+
+            IsInitialized = true;
+            if (deliveryHandler != null)
+                DeliveryHandler = deliveryHandler;
+
+            if (DeliveryHandler == null)
+                throw new ArgumentNullException("Queue has no delivery handler: " + Name);
+
             State = QueueStateFactory.Create(this, Options.Status);
+
+            OnConsumerSubscribed = new SubscriptionEventManager(Server, EventNames.Subscribe, this);
+            OnConsumerUnsubscribed = new SubscriptionEventManager(Server, EventNames.Unsubscribe, this);
             OnMessageProduced = new MessageEventManager(Server, EventNames.MessageProduced, this);
 
             TimeKeeper = new QueueTimeKeeper(this);
@@ -225,23 +224,12 @@ namespace Twino.MQ.Queues
         }
 
         /// <summary>
-        /// Sets message delivery handler and initializes queue
-        /// </summary>
-        internal void SetMessageDeliveryHandler(IMessageDeliveryHandler deliveryHandler)
-        {
-            if (DeliveryHandler != null)
-                throw new InvalidOperationException("Queue has already a delivery handler");
-
-            DeliveryHandler = deliveryHandler;
-            InitializeQueue();
-        }
-
-        /// <summary>
         /// Destorys the queue
         /// </summary>
         public async Task Destroy()
         {
             IsDestroyed = true;
+
             try
             {
                 await TimeKeeper.Destroy();
