@@ -44,8 +44,6 @@ namespace Twino.MQ.Queues.States
             if (clients.Count == 0)
             {
                 _queue.Info.AddMessageRemove();
-                _ = _queue.DeliveryHandler.MessageDequeued(_queue, message);
-
                 return PushResult.NoConsumers;
             }
 
@@ -56,7 +54,6 @@ namespace Twino.MQ.Queues.States
             //create prepared message data
             byte[] messageData = TmqWriter.Create(message.Message);
 
-            Decision final = new Decision(false, false, PutBackDecision.No, DeliveryAcknowledgeDecision.None);
             bool messageIsSent = false;
 
             //to all receivers
@@ -68,7 +65,6 @@ namespace Twino.MQ.Queues.States
 
                 //call before send and check decision
                 Decision ccrd = await _queue.DeliveryHandler.CanConsumerReceive(_queue, message, client.Client);
-                final = TwinoQueue.CreateFinalDecision(final, ccrd);
 
                 if (!ccrd.Allow)
                     continue;
@@ -85,13 +81,7 @@ namespace Twino.MQ.Queues.States
 
                 //do after send operations for per message
                 _queue.Info.AddDelivery();
-                Decision d = await _queue.DeliveryHandler.ConsumerReceived(_queue, delivery, client.Client);
-                final = TwinoQueue.CreateFinalDecision(final, d);
             }
-
-            message.Decision = final;
-            if (!await _queue.ApplyDecision(final, message))
-                return PushResult.Success;
 
             //after all sending operations completed, calls implementation send completed method and complete the operation
             if (messageIsSent)
@@ -101,10 +91,7 @@ namespace Twino.MQ.Queues.States
             await _queue.ApplyDecision(message.Decision, message);
 
             if (message.Decision.Allow && message.Decision.PutBack == PutBackDecision.No)
-            {
                 _queue.Info.AddMessageRemove();
-                _ = _queue.DeliveryHandler.MessageDequeued(_queue, message);
-            }
 
             return PushResult.Success;
         }
