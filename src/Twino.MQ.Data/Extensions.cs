@@ -118,7 +118,7 @@ namespace Twino.MQ.Data
         }
 
         /// <summary>
-        /// Creates new persistent queue in the channel
+        /// Creates new persistent queue
         /// </summary>
         /// <param name="mq">Twino MQ</param>
         /// <param name="queue">Queue Name</param>
@@ -135,13 +135,13 @@ namespace Twino.MQ.Data
         }
 
         /// <summary>
-        /// Creates new persistent queue in the channel
+        /// Creates new persistent queue
         /// </summary>
         /// <param name="mq">Twino MQ Server</param>
         /// <param name="queue">Queue name</param>
         /// <param name="deleteWhen">Decision, when messages will be removed from disk</param>
         /// <param name="producerAckDecision">Decision, when ack will be sent to producer</param>
-        /// <param name="optionsAction">Channel Queue Options builder action</param>
+        /// <param name="optionsAction">Queue Options builder action</param>
         /// <returns></returns>
         public static Task<TwinoQueue> CreatePersistentQueue(this TwinoMQ mq,
                                                              string queue,
@@ -155,13 +155,13 @@ namespace Twino.MQ.Data
         }
 
         /// <summary>
-        /// Creates new persistent queue in the channel
+        /// Creates new persistent queue
         /// </summary>
         /// <param name="mq">Twino MQ Server</param>
         /// <param name="queueName">Queue name</param>
         /// <param name="deleteWhen">Decision, when messages will be removed from disk</param>
         /// <param name="producerAckDecision">Decision, when ack will be sent to producer</param>
-        /// <param name="options">Channel Queue Options</param>
+        /// <param name="options">Queue Options</param>
         /// <returns></returns>
         public static async Task<TwinoQueue> CreatePersistentQueue(this TwinoMQ mq,
                                                                    string queueName,
