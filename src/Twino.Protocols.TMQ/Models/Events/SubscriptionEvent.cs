@@ -3,12 +3,12 @@ using System.Text.Json.Serialization;
 namespace Twino.Protocols.TMQ.Models.Events
 {
     /// <summary>
-    /// Client channel join/leave info model
+    /// Client queue subscription/unsubscription info model
     /// </summary>
     public class SubscriptionEvent
     {
         /// <summary>
-        /// Channel name
+        /// Queue name
         /// </summary>
         [JsonPropertyName("Queue")]
         public string Queue { get; set; }

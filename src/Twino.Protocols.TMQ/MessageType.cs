@@ -32,7 +32,7 @@ namespace Twino.Protocols.TMQ
         Server = 0x10,
 
         /// <summary>
-        /// A message to a channel
+        /// A message to a queue
         /// </summary>
         QueueMessage = 0x11,
 

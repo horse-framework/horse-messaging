@@ -41,12 +41,12 @@ namespace Twino.Protocols.TMQ
         public const ushort Unacceptable = 406;
 
         /// <summary>
-        /// "481" Duplicate record, such as, you might send create channel operation when client is already created
+        /// "481" Duplicate record, such as, you might send create queue operation when client is already created
         /// </summary>
         public const ushort Duplicate = 481;
 
         /// <summary>
-        /// "482" Limit exceeded, such as, maximum queue limit of a channel
+        /// "482" Limit exceeded, such as, maximum queue limit of the server
         /// </summary>
         public const ushort LimitExceeded = 482;
 
@@ -101,7 +101,7 @@ namespace Twino.Protocols.TMQ
         public const ushort QueueInformation = 615;
 
         /// <summary>
-        /// "616" Gets queue information list of a channel
+        /// "616" Gets queue information list
         /// </summary>
         public const ushort QueueList = 616;
 

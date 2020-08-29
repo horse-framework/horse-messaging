@@ -54,7 +54,7 @@ namespace Twino.Protocols.TMQ
         internal int TargetLength { get; set; }
 
         /// <summary>
-        /// Message target (channel name, client name or server)
+        /// Message target (queue name, client name or server)
         /// </summary>
         public string Target { get; internal set; }
 
@@ -64,7 +64,7 @@ namespace Twino.Protocols.TMQ
         internal int SourceLength { get; set; }
 
         /// <summary>
-        /// Message source client unique id, channel unique id or server
+        /// Message source client unique id, queue unique id or server
         /// </summary>
         public string Source { get; internal set; }
 
@@ -347,7 +347,7 @@ namespace Twino.Protocols.TMQ
             else
             {
                 message.HighPriority = false;
-                //target will be channel name
+                //target will be queue name
                 message.SetTarget(Target);
             }
 

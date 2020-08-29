@@ -17,7 +17,7 @@ namespace Twino.Protocols.TMQ.Models
 
         /// <summary>
         /// Binding target name.
-        /// For queue bindings, channel name.
+        /// For queue bindings, queue name.
         /// For direct bindings client id, type or name.
         /// </summary>
         [JsonProperty("Target")]
