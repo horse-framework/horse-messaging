@@ -221,7 +221,7 @@ namespace Twino.MQ.Queues
                     _ = Trigger();
 
                 _ = CheckAutoDestroy();
-            }, null, TimeSpan.FromSeconds(5000), TimeSpan.FromSeconds(5000));
+            }, null, TimeSpan.FromMilliseconds(5000), TimeSpan.FromMilliseconds(5000));
         }
 
         /// <summary>
@@ -1115,9 +1115,6 @@ namespace Twino.MQ.Queues
             if (Server.QueueEventHandler != null)
                 await Server.QueueEventHandler.OnConsumerUnsubscribed(client);
 
-            if (_clients.Count == 0 && (Options.AutoDestroy == QueueDestroy.NoConsumers || Options.AutoDestroy == QueueDestroy.Empty))
-                await CheckAutoDestroy();
-
             OnConsumerUnsubscribed.Trigger(client);
         }
 
@@ -1130,9 +1127,6 @@ namespace Twino.MQ.Queues
 
             if (Server.QueueEventHandler != null)
                 await Server.QueueEventHandler.OnConsumerUnsubscribed(client);
-
-            if (_clients.Count == 0 && (Options.AutoDestroy == QueueDestroy.NoConsumers || Options.AutoDestroy == QueueDestroy.Empty))
-                await CheckAutoDestroy();
 
             OnConsumerUnsubscribed.Trigger(client);
         }
@@ -1151,9 +1145,6 @@ namespace Twino.MQ.Queues
 
             if (Server.QueueEventHandler != null)
                 await Server.QueueEventHandler.OnConsumerUnsubscribed(cc);
-
-            if (_clients.Count == 0 && (Options.AutoDestroy == QueueDestroy.NoConsumers || Options.AutoDestroy == QueueDestroy.Empty))
-                await CheckAutoDestroy();
 
             OnConsumerUnsubscribed.Trigger(cc);
             return true;
