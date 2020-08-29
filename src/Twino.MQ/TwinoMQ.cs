@@ -313,14 +313,26 @@ namespace Twino.MQ
                     handlerBuilder.Headers = requestMessage.Headers;
                 }
 
-                IMessageDeliveryHandler deliveryHandler = await asyncHandler(handlerBuilder);
-                queue.InitializeQueue(deliveryHandler);
-                _queues.Add(queue);
+                bool initialize;
+                //if queue creation is triggered by consumer subscription, we might skip initialization
+                if (requestMessage != null && requestMessage.Type == MessageType.Server && requestMessage.ContentType == KnownContentTypes.Subscribe)
+                    initialize = !string.IsNullOrEmpty(requestMessage.FindHeader(TwinoHeaders.INIT_QUEUE));
+                else
+                    initialize = true;
 
+                if (initialize)
+                {
+                    IMessageDeliveryHandler deliveryHandler = await asyncHandler(handlerBuilder);
+                    queue.InitializeQueue(deliveryHandler);
+                }
+
+                _queues.Add(queue);
                 if (QueueEventHandler != null)
                     await QueueEventHandler.OnCreated(queue);
 
-                handlerBuilder.TriggerAfterCompleted();
+                if (initialize)
+                    handlerBuilder.TriggerAfterCompleted();
+
                 OnQueueCreated.Trigger(queue);
                 return queue;
             }

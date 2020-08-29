@@ -194,6 +194,11 @@ namespace Twino.Protocols.TMQ
         /// "Filter"
         /// </summary>
         public const string FILTER = "Filter";
+        
+        /// <summary>
+        /// "Init-Queue"
+        /// </summary>
+        public const string INIT_QUEUE = "Init-Queue";
 
     }
 }
