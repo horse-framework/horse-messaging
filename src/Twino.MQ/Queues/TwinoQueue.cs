@@ -616,6 +616,30 @@ namespace Twino.MQ.Queues
             await SetStatus(prev);
         }
 
+        private void UpdateOptionsByMessage(TwinoMessage message)
+        {
+            string waitForAck = message.FindHeader(TwinoHeaders.ACKNOWLEDGE);
+            if (!string.IsNullOrEmpty(waitForAck))
+                switch (waitForAck.Trim().ToLower())
+                {
+                    case "none":
+                        Options.Acknowledge = QueueAckDecision.None;
+                        break;
+                    case "request":
+                        Options.Acknowledge = QueueAckDecision.JustRequest;
+                        break;
+                    case "wait":
+                        Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                        break;
+                }
+
+            string queueStatus = message.FindHeader(TwinoHeaders.QUEUE_STATUS);
+            if (queueStatus != null)
+                Options.Status = QueueStatusHelper.FindStatus(queueStatus);
+
+            Topic = message.FindHeader(TwinoHeaders.QUEUE_TOPIC);
+        }
+
         #endregion
 
         #region Delivery
@@ -625,6 +649,21 @@ namespace Twino.MQ.Queues
         /// </summary>
         internal async Task<PushResult> Push(QueueMessage message, MqClient sender)
         {
+            if (!IsInitialized)
+            {
+                UpdateOptionsByMessage(message.Message);
+                DeliveryHandlerBuilder handlerBuilder = new DeliveryHandlerBuilder
+                                                        {
+                                                            Server = Server,
+                                                            Queue = this,
+                                                            Headers = message.Message.Headers,
+                                                            DeliveryHandlerHeader = message.Message.FindHeader(TwinoHeaders.DELIVERY_HANDLER)
+                                                        };
+                
+                IMessageDeliveryHandler deliveryHandler = await Server.DeliveryHandlerFactory(handlerBuilder);
+                InitializeQueue(deliveryHandler);
+            }
+
             if (Status == QueueStatus.Stopped)
                 return PushResult.StatusNotSupported;
 
@@ -896,7 +935,8 @@ namespace Twino.MQ.Queues
             if (message.IsSaved)
                 return false;
 
-            message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
+            if (IsInitialized)
+                message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
 
             if (message.IsSaved)
                 Info.AddMessageSave();
@@ -993,6 +1033,9 @@ namespace Twino.MQ.Queues
         /// </summary>
         internal async Task AcknowledgeDelivered(MqClient from, TwinoMessage deliveryMessage)
         {
+            if (!IsInitialized)
+                return;
+
             MessageDelivery delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
 
             //when server and consumer are in pc,

@@ -53,6 +53,9 @@ namespace Twino.MQ.Queues
         {
             try
             {
+                if (!_queue.IsInitialized)
+                    return;
+
                 if (_queue.Options.Status != QueueStatus.Broadcast && _queue.Options.MessageTimeout > TimeSpan.Zero)
                     await ProcessReceiveTimeup();
 
@@ -94,6 +97,9 @@ namespace Twino.MQ.Queues
         /// </summary>
         private async Task ProcessReceiveTimeup()
         {
+            if (_queue.IsInitialized)
+                return;
+
             List<QueueMessage> temp = new List<QueueMessage>();
             lock (_queue.PriorityMessagesList)
                 ProcessReceiveTimeupOnList(_queue.PriorityMessagesList, temp);
