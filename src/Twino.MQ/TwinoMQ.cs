@@ -274,6 +274,7 @@ namespace Twino.MQ
                 }
 
                 string topic = null;
+                bool statusSpecified = false; //when queue is created by subscriber, it will be initialized if status is specified
                 if (requestMessage != null)
                 {
                     string waitForAck = requestMessage.FindHeader(TwinoHeaders.ACKNOWLEDGE);
@@ -293,7 +294,10 @@ namespace Twino.MQ
 
                     string queueStatus = requestMessage.FindHeader(TwinoHeaders.QUEUE_STATUS);
                     if (queueStatus != null)
+                    {
+                        statusSpecified = true;
                         options.Status = QueueStatusHelper.FindStatus(queueStatus);
+                    }
 
                     topic = requestMessage.FindHeader(TwinoHeaders.QUEUE_TOPIC);
                 }
@@ -316,7 +320,7 @@ namespace Twino.MQ
                 bool initialize;
                 //if queue creation is triggered by consumer subscription, we might skip initialization
                 if (requestMessage != null && requestMessage.Type == MessageType.Server && requestMessage.ContentType == KnownContentTypes.Subscribe)
-                    initialize = !string.IsNullOrEmpty(requestMessage.FindHeader(TwinoHeaders.INIT_QUEUE));
+                    initialize = statusSpecified;
                 else
                     initialize = true;
 
