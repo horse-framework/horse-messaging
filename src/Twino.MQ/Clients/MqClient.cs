@@ -73,6 +73,11 @@ namespace Twino.MQ.Clients
         /// </summary>
         public string RemoteHost { get; set; }
 
+        /// <summary>
+        /// Custom protocol for the client
+        /// </summary>
+        public IClientCustomProtocol CustomProtocol { get; set; }
+
         #endregion
 
         #region Constructors
@@ -146,6 +151,54 @@ namespace Twino.MQ.Clients
             foreach (QueueClient cc in list)
                 if (cc.Queue != null)
                     await cc.Queue.RemoveClientSilent(cc);
+        }
+
+        #endregion
+
+        #region Protocol Implementation
+
+        /// <summary>
+        /// Sends PING Message to the client
+        /// </summary>
+        public override void Ping()
+        {
+            if (CustomProtocol != null)
+                CustomProtocol.Ping();
+            else
+                base.Ping();
+        }
+
+        /// <summary>
+        /// Sends PONG Message to the client
+        /// </summary>
+        public override void Pong()
+        {
+            if (CustomProtocol != null)
+                CustomProtocol.Pong();
+            else
+                base.Pong();
+        }
+
+        /// <summary>
+        /// Sends Twino Message to the client
+        /// </summary>
+        public override bool Send(TwinoMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
+        {
+            if (CustomProtocol != null)
+                return CustomProtocol.Send(message, additionalHeaders);
+
+            return base.Send(message, additionalHeaders);
+        }
+
+        /// <summary>
+        /// Sends Twino Message to the client
+        /// </summary>
+        public override Task<bool> SendAsync(TwinoMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
+        {
+            if (CustomProtocol != null)
+                return CustomProtocol.SendAsync(message, additionalHeaders);
+
+            return base.SendAsync(message, additionalHeaders);
         }
 
         #endregion
