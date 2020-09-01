@@ -30,8 +30,7 @@ namespace Twino.Client.TMQ.Bus
         }
 
         /// <inheritdoc />
-        public Task<TwinoResult> Push(string channel,
-                                      ushort queueId,
+        public Task<TwinoResult> Push(string queue,
                                       MemoryStream content,
                                       bool waitAcknowledge = false,
                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
@@ -40,12 +39,11 @@ namespace Twino.Client.TMQ.Bus
             if (client == null)
                 return Task.FromResult(new TwinoResult(TwinoResultCode.SendError));
 
-            return client.Queues.Push(channel, queueId, content, waitAcknowledge, messageHeaders);
+            return client.Queues.Push(queue, content, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />
-        public Task<TwinoResult> Push(string channel,
-                                      ushort queueId,
+        public Task<TwinoResult> Push(string queue,
                                       string content,
                                       bool waitAcknowledge = false,
                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
@@ -54,7 +52,7 @@ namespace Twino.Client.TMQ.Bus
             if (client == null)
                 return Task.FromResult(new TwinoResult(TwinoResultCode.SendError));
 
-            return client.Queues.Push(channel, queueId, content, waitAcknowledge, messageHeaders);
+            return client.Queues.Push(queue, content, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -70,8 +68,7 @@ namespace Twino.Client.TMQ.Bus
         }
 
         /// <inheritdoc />
-        public Task<TwinoResult> PushJson(string channel,
-                                          ushort queueId,
+        public Task<TwinoResult> PushJson(string queue,
                                           object jsonObject,
                                           bool waitAcknowledge = false,
                                           IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
@@ -80,7 +77,7 @@ namespace Twino.Client.TMQ.Bus
             if (client == null)
                 return Task.FromResult(new TwinoResult(TwinoResultCode.SendError));
 
-            return client.Queues.PushJson(channel, queueId, jsonObject, waitAcknowledge, messageHeaders);
+            return client.Queues.PushJson(queue, jsonObject, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />

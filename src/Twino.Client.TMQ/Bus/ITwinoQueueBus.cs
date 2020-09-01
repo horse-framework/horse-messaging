@@ -15,25 +15,23 @@ namespace Twino.Client.TMQ.Bus
         /// <summary>
         /// Pushes a message into a queue
         /// </summary>
-        /// <param name="channel">Target channel name</param>
-        /// <param name="queueId">Target Queue Id</param>
+        /// <param name="queue">Target queue name</param>
         /// <param name="content">Message content</param>
         /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
-        Task<TwinoResult> Push(string channel, ushort queueId, MemoryStream content, bool waitAcknowledge = false,
+        Task<TwinoResult> Push(string queue, MemoryStream content, bool waitAcknowledge = false,
                                IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Pushes a message into a queue
         /// </summary>
-        /// <param name="channel">Target channel name</param>
-        /// <param name="queueId">Target Queue Id</param>
+        /// <param name="queue">Target queue name</param>
         /// <param name="content">Message content</param>
         /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
-        Task<TwinoResult> Push(string channel, ushort queueId, string content, bool waitAcknowledge = false,
+        Task<TwinoResult> Push(string queue, string content, bool waitAcknowledge = false,
                                IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
@@ -49,13 +47,12 @@ namespace Twino.Client.TMQ.Bus
         /// <summary>
         /// Pushes a JSON message into a specified queue
         /// </summary>
-        /// <param name="channel">Target channel name</param>
-        /// <param name="queueId">Target Queue Id</param>
+        /// <param name="queue">Target queue name</param>
         /// <param name="jsonObject">The object that will be serialized to JSON string</param>
         /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
-        Task<TwinoResult> PushJson(string channel, ushort queueId, object jsonObject, bool waitAcknowledge = false,
+        Task<TwinoResult> PushJson(string queue, object jsonObject, bool waitAcknowledge = false,
                                    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>

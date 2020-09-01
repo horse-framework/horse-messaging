@@ -68,5 +68,19 @@ namespace Twino.Client.TMQ.Models
         /// </summary>
         [JsonPropertyName("MessageLimit")]
         public int? MessageLimit { get; set; }
+        
+        /// <summary>
+        /// Maximum client limit of the queue.
+        /// Zero is unlimited
+        /// </summary>
+        [JsonPropertyName("ClientLimit")]
+        public int? ClientLimit { get; set; }
+        
+        /// <summary>
+        /// Auto destroy options for the queue
+        /// </summary>
+        [JsonPropertyName("AutoDestroy")]
+        public string AutoDestroy { get; set; }
+
     }
 }

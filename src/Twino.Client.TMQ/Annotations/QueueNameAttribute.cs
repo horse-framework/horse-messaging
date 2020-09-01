@@ -14,7 +14,7 @@ namespace Twino.Client.TMQ.Annotations
         public string Name { get; }
 
         /// <summary>
-        /// Creates new channel name attribute
+        /// Creates new queue name attribute
         /// </summary>
         public QueueNameAttribute(string name)
         {

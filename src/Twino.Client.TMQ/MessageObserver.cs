@@ -222,7 +222,7 @@ namespace Twino.Client.TMQ
         #region Queue Subscriptions
 
         /// <summary>
-        /// Subscribe to messages in a queue in a channel
+        /// Subscribe to messages of a queue
         /// </summary>
         public void On<T>(Action<T> action)
         {
@@ -273,7 +273,7 @@ namespace Twino.Client.TMQ
         }
 
         /// <summary>
-        /// Subscribe to messages in a queue in a channel
+        /// Subscribe to messages of a queue
         /// </summary>
         public void On<T>(Action<T, TwinoMessage> action)
         {
@@ -289,7 +289,7 @@ namespace Twino.Client.TMQ
         }
 
         /// <summary>
-        /// Subscribe to messages in a queue in a channel
+        /// Subscribe to messages of a queue
         /// </summary>
         public void On<T>(string queueName, Action<T, TwinoMessage> action)
         {
@@ -307,7 +307,7 @@ namespace Twino.Client.TMQ
         }
 
         /// <summary>
-        /// Unsubscribe from messages in a queue in a channel 
+        /// Unsubscribe from messages of a queue
         /// </summary>
         public void Off<T>()
         {
@@ -317,13 +317,13 @@ namespace Twino.Client.TMQ
                 throw new ArgumentNullException("Can't resolve TypeDeliveryDescriptor. Use overload method On(string,ushort,T)");
 
             if (string.IsNullOrEmpty(descriptor.QueueName))
-                throw new NullReferenceException("Type doesn't have ChannelNameAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
+                throw new NullReferenceException("Type doesn't have QueueNameAttribute. Add that attribute to type or use overload method On(string,ushort,T)");
 
             Off(descriptor.QueueName);
         }
 
         /// <summary>
-        /// Unsubscribe from messages in a queue in a channel 
+        /// Unsubscribe from messages of a queue
         /// </summary>
         public void Off(string queueName)
         {
@@ -498,7 +498,7 @@ namespace Twino.Client.TMQ
         /// </summary>
         public string[] GetSubscribedQueues()
         {
-            List<string> channels = new List<string>();
+            List<string> queues = new List<string>();
 
             lock (_subscriptions)
             {
@@ -507,11 +507,11 @@ namespace Twino.Client.TMQ
                     if (subscription.Source != ReadSource.Queue)
                         continue;
 
-                    channels.Add(subscription.Queue);
+                    queues.Add(subscription.Queue);
                 }
             }
 
-            return channels.Distinct().ToArray();
+            return queues.Distinct().ToArray();
         }
 
         #endregion

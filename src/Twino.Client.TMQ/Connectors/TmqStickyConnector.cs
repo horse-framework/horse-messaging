@@ -22,9 +22,9 @@ namespace Twino.Client.TMQ.Connectors
         public MessageObserver Observer => _observer;
 
         /// <summary>
-        /// If true, automatically joins all subscribed channels
+        /// If true, automatically subscribes all implemented IQueueConsumer queues
         /// </summary>
-        public bool AutoJoinConsumerChannels { get; set; }
+        public bool AutoSubscribe { get; set; }
 
         /// <summary>
         /// If true, disconnected from server when auto join fails
@@ -86,20 +86,20 @@ namespace Twino.Client.TMQ.Connectors
 
             base.ClientConnected(client);
 
-            if (AutoJoinConsumerChannels)
-                _ = JoinAllSubscribedChannels(true, DisconnectionOnAutoJoinFailure);
+            if (AutoSubscribe)
+                _ = SubscribeToAllImplementedQueues(true, DisconnectionOnAutoJoinFailure);
         }
 
         /// <summary>
-        /// Joins all subscribed channels
+        /// Subscribes to all implemenetd queues (Implemented with IQueueConsumer interface)
         /// </summary>
         /// <param name="verify">If true, waits response from server for each join operation</param>
-        /// <param name="disconnectOnFail">If any of channels fails to join, disconnected from server</param>
+        /// <param name="disconnectOnFail">If any of queues fails to subscribe, disconnected from server</param>
         /// <param name="silent">If true, errors are hidden, no exception thrown</param>
         /// <returns></returns>
         /// <exception cref="NullReferenceException">Thrown if there is no consumer initialized</exception>
         /// <exception cref="TwinoSocketException">Thrown if not connected to server</exception>
-        public async Task<bool> JoinAllSubscribedChannels(bool verify, bool disconnectOnFail = true, bool silent = true)
+        public async Task<bool> SubscribeToAllImplementedQueues(bool verify, bool disconnectOnFail = true, bool silent = true)
         {
             if (_observer == null)
             {
@@ -118,10 +118,10 @@ namespace Twino.Client.TMQ.Connectors
                 throw new TwinoSocketException("There is no active connection");
             }
 
-            string[] channels = _observer.GetSubscribedQueues();
-            foreach (string channel in channels)
+            string[] queues = _observer.GetSubscribedQueues();
+            foreach (string queue in queues)
             {
-                TwinoResult joinResult = await client.Queues.Subscribe(channel, verify);
+                TwinoResult joinResult = await client.Queues.Subscribe(queue, verify);
                 if (joinResult.Code == TwinoResultCode.Ok)
                     continue;
 
@@ -129,7 +129,7 @@ namespace Twino.Client.TMQ.Connectors
                     client.Disconnect();
 
                 if (!silent)
-                    throw new TwinoChannelException($"Can't join to {channel} channel: {joinResult.Reason} ({joinResult.Code})");
+                    throw new TwinoQueueException($"Can't subscribe to {queue} queue: {joinResult.Reason} ({joinResult.Code})");
 
                 return false;
             }

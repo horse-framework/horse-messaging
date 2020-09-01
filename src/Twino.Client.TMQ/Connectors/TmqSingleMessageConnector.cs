@@ -20,9 +20,9 @@ namespace Twino.Client.TMQ.Connectors
         public MessageObserver Observer => _observer;
 
         /// <summary>
-        /// If true, automatically joins all subscribed channels
+        /// If true, automatically subscribes all implemented IQueueConsumer queues
         /// </summary>
-        public bool AutoJoinConsumerChannels { get; set; }
+        public bool AutoSubscribe { get; set; }
 
         /// <summary>
         /// Content Serializer for clients in this connector.
@@ -286,11 +286,11 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Pushes a message to the queue
         /// </summary>
-        public Task<TwinoResult> Push(string channel, ushort contentType, MemoryStream content, bool waitAcknowledge)
+        public Task<TwinoResult> Push(string queue, MemoryStream content, bool waitAcknowledge)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
-                return client.Queues.Push(channel, contentType, content, waitAcknowledge);
+                return client.Queues.Push(queue, content, waitAcknowledge);
 
             return Task.FromResult(TwinoResult.Failed());
         }
@@ -310,11 +310,11 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Pushes a message to the queue
         /// </summary>
-        public Task<TwinoResult> PushJson(string channel, ushort contentType, object jsonObject, bool waitAcknowledge)
+        public Task<TwinoResult> PushJson(string queue, object jsonObject, bool waitAcknowledge)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
-                return client.Queues.PushJson(channel, contentType, jsonObject, waitAcknowledge);
+                return client.Queues.PushJson(queue, jsonObject, waitAcknowledge);
 
             return Task.FromResult(TwinoResult.Failed());
         }

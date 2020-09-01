@@ -14,32 +14,25 @@ namespace Twino.Client.TMQ.Annotations
         public Type ExceptionType { get; }
         
         /// <summary>
-        /// Channel name
+        /// Queue name
         /// </summary>
-        public string ChannelName { get; }
+        public string QueueName { get; }
         
-        /// <summary>
-        /// Queue Id
-        /// </summary>
-        public ushort QueueId { get; }
-
         /// <summary>
         /// Pushes all exceptions
         /// </summary>
-        public PushExceptionsAttribute(string channel, ushort queue)
+        public PushExceptionsAttribute(string queue)
         {
-            ChannelName = channel;
-            QueueId = queue;
+            QueueName = queue;
         }
 
         /// <summary>
         /// Pushes specified type of exceptions
         /// </summary>
-        public PushExceptionsAttribute(Type exceptionType, string channel, ushort queue)
+        public PushExceptionsAttribute(Type exceptionType, string queue)
         {
             ExceptionType = exceptionType;
-            ChannelName = channel;
-            QueueId = queue;
+            QueueName = queue;
         }
     }
 }

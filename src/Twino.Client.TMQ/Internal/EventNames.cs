@@ -26,7 +26,7 @@ namespace Twino.Client.TMQ.Internal
         public const string Unsubscribe = "Unsubscribe";
 
         /// <summary>
-        /// When a queue is created in a channel.
+        /// When a queue is created.
         /// </summary>
         public const string QueueCreated = "QueueCreated";
 

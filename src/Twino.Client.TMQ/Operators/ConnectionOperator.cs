@@ -36,7 +36,7 @@ namespace Twino.Client.TMQ.Operators
         }
 
         /// <summary>
-        /// Gets all consumers of channel
+        /// Gets all consumers of queue
         /// </summary>
         public Task<TmqModelResult<List<ClientInformation>>> GetConnectedClients(string typeFilter = null)
         {
