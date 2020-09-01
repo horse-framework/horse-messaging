@@ -1,8 +1,8 @@
-using System;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Events;
 using Twino.MQ.Queues;
+using Twino.MQ.Security;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Network
@@ -40,9 +40,9 @@ namespace Twino.MQ.Network
             TwinoQueue queue = !string.IsNullOrEmpty(queueName) ? _server.FindQueue(queueName) : null;
             if (subscribe)
             {
-                if (_server.Authorization != null)
+                foreach (IClientAuthorization authorization in _server.Authorizations)
                 {
-                    if (!_server.Authorization.CanSubscribeEvent(client, queue))
+                    if (!authorization.CanSubscribeEvent(client, queue))
                         return SendResponse(client, message, false);
                 }
             }

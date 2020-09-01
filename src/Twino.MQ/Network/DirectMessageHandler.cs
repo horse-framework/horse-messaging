@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
+using Twino.MQ.Security;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Network
@@ -80,9 +81,9 @@ namespace Twino.MQ.Network
             foreach (MqClient receiver in receivers)
             {
                 //check sending message authority
-                if (_server.Authorization != null)
+                foreach (IClientAuthorization authorization in _server.Authorizations)
                 {
-                    bool grant = await _server.Authorization.CanDirectMessage(sender, message, receiver);
+                    bool grant = await authorization.CanDirectMessage(sender, message, receiver);
                     if (!grant)
                     {
                         await sender.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
@@ -109,9 +110,9 @@ namespace Twino.MQ.Network
             }
 
             //check sending message authority
-            if (_server.Authorization != null)
+            foreach (IClientAuthorization authorization in _server.Authorizations)
             {
-                bool grant = await _server.Authorization.CanDirectMessage(client, message, other);
+                bool grant = await authorization.CanDirectMessage(client, message, other);
                 if (!grant)
                 {
                     await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));

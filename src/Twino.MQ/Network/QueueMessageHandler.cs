@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Options;
 using Twino.MQ.Queues;
+using Twino.MQ.Security;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Network
@@ -79,9 +80,9 @@ namespace Twino.MQ.Network
         private async Task HandlePush(MqClient client, TwinoMessage message, TwinoQueue queue, bool answerSender)
         {
             //check authority
-            if (_server.Authorization != null)
+            foreach (IClientAuthorization authorization in _server.Authorizations)
             {
-                bool grant = await _server.Authorization.CanMessageToQueue(client, queue, message);
+                bool grant = await authorization.CanMessageToQueue(client, queue, message);
                 if (!grant)
                 {
                     if (answerSender && !string.IsNullOrEmpty(message.MessageId))

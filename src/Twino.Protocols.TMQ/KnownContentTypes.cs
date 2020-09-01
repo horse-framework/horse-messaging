@@ -96,11 +96,6 @@ namespace Twino.Protocols.TMQ
         public const ushort ClearMessages = 613;
 
         /// <summary>
-        /// "615" Gets queue information
-        /// </summary>
-        public const ushort QueueInformation = 615;
-
-        /// <summary>
         /// "616" Gets queue information list
         /// </summary>
         public const ushort QueueList = 616;

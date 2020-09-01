@@ -3,6 +3,7 @@ using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
 using Twino.MQ.Queues;
+using Twino.MQ.Security;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Network
@@ -71,9 +72,9 @@ namespace Twino.MQ.Network
             }
 
             //check authorization
-            if (_server.Authorization != null)
+            foreach (IClientAuthorization authorization in _server.Authorizations)
             {
-                bool grant = await _server.Authorization.CanPullFromQueue(queueClient, queue);
+                bool grant = await authorization.CanPullFromQueue(queueClient, queue);
                 if (!grant)
                 {
                     if (!string.IsNullOrEmpty(message.MessageId))

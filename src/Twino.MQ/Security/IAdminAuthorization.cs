@@ -38,7 +38,7 @@ namespace Twino.MQ.Security
         /// <summary>
         /// Returns true, if client can receive queue info
         /// </summary>
-        Task<bool> CanReceiveQueueInfo(MqClient client, TwinoQueue queue);
+        Task<bool> CanReceiveQueues(MqClient client);
 
         /// <summary>
         /// Returns true, if client can receive all consumers of queue

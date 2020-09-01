@@ -75,7 +75,7 @@ namespace Twino.MQ
         {
             if (builder.Server.Options == null)
                 builder.Server.Options = new TwinoMqOptions();
-            
+
             options(builder.Server.Options);
             return builder;
         }
@@ -129,76 +129,76 @@ namespace Twino.MQ
         /// <summary>
         /// Uses client authentication
         /// </summary>
-        public static TwinoMqBuilder UseAuthentication<TClientAuthenticator>(this TwinoMqBuilder builder)
+        public static TwinoMqBuilder AddClientAuthenticator<TClientAuthenticator>(this TwinoMqBuilder builder)
             where TClientAuthenticator : IClientAuthenticator, new()
         {
-            builder.Server.Authenticator = new TClientAuthenticator();
+            builder.Server.AddClientAuthenticator(new TClientAuthenticator());
             return builder;
         }
 
         /// <summary>
         /// Uses client authentication
         /// </summary>
-        public static TwinoMqBuilder UseAuthentication(this TwinoMqBuilder builder, IClientAuthenticator authenticator)
+        public static TwinoMqBuilder AddClientAuthenticator(this TwinoMqBuilder builder, IClientAuthenticator authenticator)
         {
-            builder.Server.Authenticator = authenticator;
+            builder.Server.AddClientAuthenticator(authenticator);
             return builder;
         }
 
         /// <summary>
         /// Uses client authorization
         /// </summary>
-        public static TwinoMqBuilder UseAuthorization<TClientAuthorization>(this TwinoMqBuilder builder)
+        public static TwinoMqBuilder AddClientAuthorization<TClientAuthorization>(this TwinoMqBuilder builder)
             where TClientAuthorization : IClientAuthorization, new()
         {
-            builder.Server.Authorization = new TClientAuthorization();
+            builder.Server.AddClientAuthorization(new TClientAuthorization());
             return builder;
         }
 
         /// <summary>
         /// Uses client authorization
         /// </summary>
-        public static TwinoMqBuilder UseAuthorization(this TwinoMqBuilder builder, IClientAuthorization authorization)
+        public static TwinoMqBuilder AddClientAuthorization(this TwinoMqBuilder builder, IClientAuthorization authorization)
         {
-            builder.Server.Authorization = authorization;
+            builder.Server.AddClientAuthorization(authorization);
             return builder;
         }
 
         /// <summary>
         /// Uses queue authentication
         /// </summary>
-        public static TwinoMqBuilder UseQueueAuthentication<TQueueAuthenticator>(this TwinoMqBuilder builder)
+        public static TwinoMqBuilder AddQueueAuthentication<TQueueAuthenticator>(this TwinoMqBuilder builder)
             where TQueueAuthenticator : IQueueAuthenticator, new()
         {
-            builder.Server.QueueAuthenticator = new TQueueAuthenticator();
+            builder.Server.AddQueueAuthenticator(new TQueueAuthenticator());
             return builder;
         }
 
         /// <summary>
         /// Uses queue authentication
         /// </summary>
-        public static TwinoMqBuilder UseQueueAuthentication(this TwinoMqBuilder builder, IQueueAuthenticator authenticator)
+        public static TwinoMqBuilder AddQueueAuthentication(this TwinoMqBuilder builder, IQueueAuthenticator authenticator)
         {
-            builder.Server.QueueAuthenticator = authenticator;
+            builder.Server.AddQueueAuthenticator(authenticator);
             return builder;
         }
 
         /// <summary>
         /// Activates admin operations and uses admin authorization
         /// </summary>
-        public static TwinoMqBuilder UseAdminAuthorization<TAdminAuthorization>(this TwinoMqBuilder builder)
+        public static TwinoMqBuilder AddAdminAuthorization<TAdminAuthorization>(this TwinoMqBuilder builder)
             where TAdminAuthorization : IAdminAuthorization, new()
         {
-            builder.Server.AdminAuthorization = new TAdminAuthorization();
+            builder.Server.AddAdminAuthorization(new TAdminAuthorization());
             return builder;
         }
 
         /// <summary>
         /// Activates admin operations and uses admin authorization
         /// </summary>
-        public static TwinoMqBuilder UseAdminAuthorization(this TwinoMqBuilder builder, IAdminAuthorization authorization)
+        public static TwinoMqBuilder AddAdminAuthorization(this TwinoMqBuilder builder, IAdminAuthorization authorization)
         {
-            builder.Server.AdminAuthorization = authorization;
+            builder.Server.AddAdminAuthorization(authorization);
             return builder;
         }
 
@@ -247,10 +247,10 @@ namespace Twino.MQ
         /// <summary>
         /// Uses server type message event handler
         /// </summary>
-        public static TwinoMqBuilder UseServerMessageHandler<TServerMessageHandler>(this TwinoMqBuilder builder)
+        public static TwinoMqBuilder AddServerMessageHandler<TServerMessageHandler>(this TwinoMqBuilder builder)
             where TServerMessageHandler : IServerMessageHandler, new()
         {
-            builder.Server.ServerMessageHandler = new TServerMessageHandler();
+            builder.Server.AddMessageHandler(new TServerMessageHandler());
             return builder;
         }
 
@@ -259,7 +259,7 @@ namespace Twino.MQ
         /// </summary>
         public static TwinoMqBuilder UseServerMessageHandler(this TwinoMqBuilder builder, IServerMessageHandler messageHandler)
         {
-            builder.Server.ServerMessageHandler = messageHandler;
+            builder.Server.AddMessageHandler(messageHandler);
             return builder;
         }
 

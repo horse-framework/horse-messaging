@@ -3,6 +3,7 @@ using Twino.Core;
 using Twino.Core.Protocols;
 using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
+using Twino.MQ.Security;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Network
@@ -75,9 +76,9 @@ namespace Twino.MQ.Network
             client.Type = data.Properties.GetStringValue(TwinoHeaders.CLIENT_TYPE);
 
             //authenticates client
-            if (_server.Authenticator != null)
+            foreach (IClientAuthenticator authenticator in _server.Authenticators)
             {
-                client.IsAuthenticated = await _server.Authenticator.Authenticate(_server, client);
+                client.IsAuthenticated = await authenticator.Authenticate(_server, client);
                 if (!client.IsAuthenticated)
                 {
                     await client.SendAsync(MessageBuilder.Unauthorized());

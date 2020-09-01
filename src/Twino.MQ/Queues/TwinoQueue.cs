@@ -11,6 +11,7 @@ using Twino.MQ.Events;
 using Twino.MQ.Helpers;
 using Twino.MQ.Options;
 using Twino.MQ.Queues.States;
+using Twino.MQ.Security;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Queues
@@ -1113,9 +1114,9 @@ namespace Twino.MQ.Queues
         /// </summary>
         public async Task<QueueSubscriptionResult> AddClient(MqClient client)
         {
-            if (Server.QueueAuthenticator != null)
+            foreach (IQueueAuthenticator authenticator in Server.QueueAuthenticators)
             {
-                bool allowed = await Server.QueueAuthenticator.Authenticate(this, client);
+                bool allowed = await authenticator.Authenticate(this, client);
                 if (!allowed)
                     return QueueSubscriptionResult.Unauthorized;
             }

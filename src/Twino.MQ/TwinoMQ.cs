@@ -22,6 +22,26 @@ namespace Twino.MQ
     /// </summary>
     public class TwinoMQ
     {
+        #region Fields
+
+        private readonly SafeList<TwinoQueue> _queues;
+        private readonly SafeList<MqClient> _clients;
+        private readonly SafeList<IRouter> _routers;
+        private IClientHandler[] _clientHandlers = new IClientHandler[0];
+        private IQueueEventHandler[] _queueEventHandlers = new IQueueEventHandler[0];
+        private IServerMessageHandler[] _messageHandlers = new IServerMessageHandler[0];
+        private IQueueAuthenticator[] _queueAuthenticators = new IQueueAuthenticator[0];
+        private IClientAuthenticator[] _authenticators = new IClientAuthenticator[0];
+        private IClientAuthorization[] _authorizations = new IClientAuthorization[0];
+        private IAdminAuthorization[] _adminAuthorizations = new IAdminAuthorization[0];
+
+        /// <summary>
+        /// Locker object for preventing to create duplicated queues when requests are concurrent and auto queue creation is enabled
+        /// </summary>
+        private readonly SemaphoreSlim _createQueueLocker = new SemaphoreSlim(1, 1);
+
+        #endregion
+
         #region Properties
 
         /// <summary>
@@ -29,21 +49,15 @@ namespace Twino.MQ
         /// </summary>
         public TwinoMqOptions Options { get; internal set; }
 
-        private readonly SafeList<TwinoQueue> _queues;
-
         /// <summary>
         /// All Queues of the server
         /// </summary>
         public IEnumerable<TwinoQueue> Queues => _queues.GetAsClone();
 
-        private readonly SafeList<MqClient> _clients;
-
         /// <summary>
         /// All connected clients in the server
         /// </summary>
         public IEnumerable<MqClient> Clients => _clients.GetAsClone();
-
-        private readonly SafeList<IRouter> _routers;
 
         /// <summary>
         /// All Queues of the server
@@ -61,46 +75,40 @@ namespace Twino.MQ
         public NodeManager NodeManager { get; }
 
         /// <summary>
-        /// Client authenticator implementation.
+        /// Client authenticator implementations.
         /// If null, all clients will be accepted.
         /// </summary>
-        public IClientAuthenticator Authenticator { get; internal set; }
+        public IEnumerable<IClientAuthenticator> Authenticators => _authenticators;
 
         /// <summary>
-        /// Authorization implementation for client operations
+        /// Authorization implementations for client operations
         /// </summary>
-        public IClientAuthorization Authorization { get; internal set; }
+        public IEnumerable<IClientAuthorization> Authorizations => _authorizations;
 
         /// <summary>
-        /// Authorization implementation for administration operations
+        /// Authorization implementations for administration operations
         /// </summary>
-        public IAdminAuthorization AdminAuthorization { get; internal set; }
+        public IEnumerable<IAdminAuthorization> AdminAuthorizations => _adminAuthorizations;
 
         /// <summary>
         /// Client connect and disconnect operations
         /// </summary>
         public IEnumerable<IClientHandler> ClientHandlers => _clientHandlers;
 
-        private IClientHandler[] _clientHandlers = new IClientHandler[0];
-
         /// <summary>
         /// Client message received handler (for only server-type messages)
         /// </summary>
-        public IServerMessageHandler ServerMessageHandler { get; internal set; }
+        public IEnumerable<IServerMessageHandler> ServerMessageHandlers => _messageHandlers;
 
         /// <summary>
         /// Queue event handlers
         /// </summary>
         public IEnumerable<IQueueEventHandler> QueueEventHandlers => _queueEventHandlers;
 
-        private IQueueEventHandler[] _queueEventHandlers = new IQueueEventHandler[0];
-
         /// <summary>
-        /// Default queue authenticatır
-        /// If queues do not have their own custom authenticator and this value is not null,
-        /// this authenticator will authenticate the clients
+        /// Queue authenticators
         /// </summary>
-        public IQueueAuthenticator QueueAuthenticator { get; internal set; }
+        public IEnumerable<IQueueAuthenticator> QueueAuthenticators => _queueAuthenticators;
 
         /// <summary>
         /// Delivery handler creator method
@@ -116,11 +124,6 @@ namespace Twino.MQ
         /// Id generator for clients which has no specified unique id 
         /// </summary>
         public IUniqueIdGenerator ClientIdGenerator { get; internal set; } = new DefaultUniqueIdGenerator();
-
-        /// <summary>
-        /// Locker object for preventing to create duplicated queues when requests are concurrent and auto queue creation is enabled
-        /// </summary>
-        private readonly SemaphoreSlim _createQueueLocker = new SemaphoreSlim(1, 1);
 
         internal IMessageContentSerializer MessageContentSerializer { get; } = new NewtonsoftContentSerializer();
 
@@ -160,21 +163,16 @@ namespace Twino.MQ
         /// <summary>
         /// Creates new Messaging Queue Server
         /// </summary>
-        public TwinoMQ(IClientAuthenticator authenticator = null, IClientAuthorization authorization = null)
-            : this(null, authenticator, authorization)
+        public TwinoMQ() : this(null)
         {
         }
 
         /// <summary>
         /// Creates new Messaging Queue Server
         /// </summary>
-        public TwinoMQ(TwinoMqOptions options,
-                       IClientAuthenticator authenticator = null,
-                       IClientAuthorization authorization = null)
+        public TwinoMQ(TwinoMqOptions options)
         {
             Options = options ?? new TwinoMqOptions();
-            Authenticator = authenticator;
-            Authorization = authorization;
 
             _routers = new SafeList<IRouter>(256);
             _queues = new SafeList<TwinoQueue>(256);
@@ -190,6 +188,10 @@ namespace Twino.MQ
             OnQueueUpdated = new QueueEventManager(this, EventNames.QueueUpdated);
             OnQueueRemoved = new QueueEventManager(this, EventNames.QueueRemoved);
         }
+
+        #endregion
+
+        #region Event Handlers
 
         /// <summary>
         /// Adds queue event handler
@@ -229,6 +231,106 @@ namespace Twino.MQ
             List<IClientHandler> list = _clientHandlers.ToList();
             list.Remove(handler);
             _clientHandlers = list.ToArray();
+        }
+
+        /// <summary>
+        /// Adds Message handler
+        /// </summary>
+        public void AddMessageHandler(IServerMessageHandler handler)
+        {
+            List<IServerMessageHandler> list = _messageHandlers.ToList();
+            list.Add(handler);
+            _messageHandlers = list.ToArray();
+        }
+
+        /// <summary>
+        /// Removes Message handler
+        /// </summary>
+        public void RemoveMessageHandler(IServerMessageHandler handler)
+        {
+            List<IServerMessageHandler> list = _messageHandlers.ToList();
+            list.Remove(handler);
+            _messageHandlers = list.ToArray();
+        }
+
+        /// <summary>
+        /// Adds Queue authenticator
+        /// </summary>
+        public void AddQueueAuthenticator(IQueueAuthenticator handler)
+        {
+            List<IQueueAuthenticator> list = _queueAuthenticators.ToList();
+            list.Add(handler);
+            _queueAuthenticators = list.ToArray();
+        }
+
+        /// <summary>
+        /// Removes Queue authenticator
+        /// </summary>
+        public void RemoveQueueAuthenticator(IQueueAuthenticator handler)
+        {
+            List<IQueueAuthenticator> list = _queueAuthenticators.ToList();
+            list.Remove(handler);
+            _queueAuthenticators = list.ToArray();
+        }
+
+        /// <summary>
+        /// Adds Client authenticator
+        /// </summary>
+        public void AddClientAuthenticator(IClientAuthenticator handler)
+        {
+            List<IClientAuthenticator> list = _authenticators.ToList();
+            list.Add(handler);
+            _authenticators = list.ToArray();
+        }
+
+        /// <summary>
+        /// Removes Client authenticator
+        /// </summary>
+        public void RemoveClientAuthenticator(IClientAuthenticator handler)
+        {
+            List<IClientAuthenticator> list = _authenticators.ToList();
+            list.Remove(handler);
+            _authenticators = list.ToArray();
+        }
+
+        /// <summary>
+        /// Adds Client authorization
+        /// </summary>
+        public void AddClientAuthorization(IClientAuthorization handler)
+        {
+            List<IClientAuthorization> list = _authorizations.ToList();
+            list.Add(handler);
+            _authorizations = list.ToArray();
+        }
+
+        /// <summary>
+        /// Removes Client authorization
+        /// </summary>
+        public void RemoveClientAuthorization(IClientAuthorization handler)
+        {
+            List<IClientAuthorization> list = _authorizations.ToList();
+            list.Remove(handler);
+            _authorizations = list.ToArray();
+        }
+
+        /// <summary>
+        /// Adds Admin authorization
+        /// </summary>
+        public void AddAdminAuthorization(IAdminAuthorization handler)
+        {
+            List<IAdminAuthorization> list = _adminAuthorizations.ToList();
+            list.Add(handler);
+            _adminAuthorizations = list.ToArray();
+        }
+
+        /// <summary>
+        /// Removes Admin authorization
+        /// </summary>
+        public void RemoveAdminAuthorization(IAdminAuthorization handler)
+        {
+            List<IAdminAuthorization> list = _adminAuthorizations.ToList();
+            list.Remove(handler);
+            _adminAuthorizations = list.ToArray();
         }
 
         #endregion
