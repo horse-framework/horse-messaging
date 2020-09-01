@@ -21,7 +21,7 @@ namespace Twino.MQ
         /// </summary>
         public static TwinoServer UseTwinoMQ(this TwinoServer server, TwinoMQ twinoMq)
         {
-            NetworkMessageHandler handler = new NetworkMessageHandler(twinoMq);
+            TmqNetworkHandler handler = new TmqNetworkHandler(twinoMq);
             twinoMq.Server = server;
 
             twinoMq.NodeManager.ConnectionHandler = new NodeConnectionHandler(twinoMq.NodeManager, handler);
@@ -39,7 +39,7 @@ namespace Twino.MQ
         public static TwinoMQ UseTwinoMQ(this TwinoServer server, Action<TwinoMqBuilder> cfg)
         {
             TwinoMQ mq = new TwinoMQ();
-            NetworkMessageHandler handler = new NetworkMessageHandler(mq);
+            TmqNetworkHandler handler = new TmqNetworkHandler(mq);
             mq.Server = server;
 
             mq.NodeManager.ConnectionHandler = new NodeConnectionHandler(mq.NodeManager, handler);

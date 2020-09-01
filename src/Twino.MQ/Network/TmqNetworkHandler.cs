@@ -11,7 +11,7 @@ namespace Twino.MQ.Network
     /// <summary>
     /// Message queue server handler
     /// </summary>
-    internal class NetworkMessageHandler : IProtocolConnectionHandler<TmqServerSocket, TwinoMessage>
+    internal class TmqNetworkHandler : IProtocolConnectionHandler<TmqServerSocket, TwinoMessage>
     {
         #region Fields
 
@@ -29,7 +29,7 @@ namespace Twino.MQ.Network
         private readonly INetworkMessageHandler _instanceHandler;
         private readonly INetworkMessageHandler _eventHandler;
 
-        public NetworkMessageHandler(TwinoMQ server)
+        public TmqNetworkHandler(TwinoMQ server)
         {
             _server = server;
             _serverHandler = new ServerMessageHandler(server);
