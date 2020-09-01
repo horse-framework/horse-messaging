@@ -1126,7 +1126,7 @@ namespace Twino.MQ.Queues
 
             QueueClient cc = new QueueClient(this, client);
             _clients.Add(cc);
-            client.Join(cc);
+            client.AddSubscription(cc);
 
             foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
                 await handler.OnConsumerSubscribed(cc);
@@ -1142,7 +1142,7 @@ namespace Twino.MQ.Queues
         public async Task RemoveClient(QueueClient client)
         {
             _clients.Remove(client);
-            client.Client.Leave(client);
+            client.Client.RemoveSubscription(client);
 
             foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
                 await handler.OnConsumerUnsubscribed(client);
@@ -1173,7 +1173,7 @@ namespace Twino.MQ.Queues
             if (cc == null)
                 return false;
 
-            client.Leave(cc);
+            client.RemoveSubscription(cc);
 
             foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
                 await handler.OnConsumerUnsubscribed(cc);

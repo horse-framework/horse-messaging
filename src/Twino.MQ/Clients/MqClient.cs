@@ -121,7 +121,7 @@ namespace Twino.MQ.Clients
         /// <summary>
         /// Adds queue into client's subscription list
         /// </summary>
-        internal void Join(QueueClient queue)
+        internal void AddSubscription(QueueClient queue)
         {
             lock (_queues)
                 _queues.Add(queue);
@@ -130,7 +130,7 @@ namespace Twino.MQ.Clients
         /// <summary>
         /// Removes queue from client's subscription list
         /// </summary>
-        internal void Leave(QueueClient queue)
+        internal void RemoveSubscription(QueueClient queue)
         {
             lock (_queues)
                 _queues.Remove(queue);
