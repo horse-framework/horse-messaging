@@ -153,20 +153,6 @@ namespace Twino.Client.TMQ.Operators
         }
 
         /// <summary>
-        /// Finds the queue and gets information if exists
-        /// </summary>
-        public async Task<TmqModelResult<QueueInformation>> GetInfo(string channel, ushort id)
-        {
-            TwinoMessage message = new TwinoMessage();
-            message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.QueueInformation;
-            message.SetTarget(channel);
-            message.Content = new MemoryStream(BitConverter.GetBytes(id));
-
-            return await _client.SendAndGetJson<QueueInformation>(message);
-        }
-
-        /// <summary>
         /// Removes a queue in server.
         /// Required administration permission.
         /// If server has no implementation for administration authorization, request is not allowed.
