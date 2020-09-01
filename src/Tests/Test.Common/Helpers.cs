@@ -1,12 +1,12 @@
 using System;
 
-namespace Test.Mq.Internal
+namespace Test.Common
 {
-    internal static class Helpers
+    public static class Helpers
     {
         private static readonly Random _random = new Random();
 
-        internal static int GetRandom()
+        public static int GetRandom()
         {
             return _random.Next(100, 5000000);
         }

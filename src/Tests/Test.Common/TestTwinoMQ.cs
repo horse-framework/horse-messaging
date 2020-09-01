@@ -1,24 +1,23 @@
 using System;
 using System.Threading;
-using Test.Mq.Models;
+using System.Threading.Tasks;
+using Test.Common.Handlers;
 using Twino.MQ;
 using Twino.MQ.Options;
 using Twino.MQ.Queues;
 using Twino.Server;
 
-namespace Test.Mq.Internal
+namespace Test.Common
 {
-    public class TestMqServer
+    public class TestTwinoMQ
     {
         public TwinoMQ Server { get; private set; }
 
         public int OnQueueCreated { get; set; }
         public int OnQueueRemoved { get; set; }
-        public int ClientJoined { get; set; }
-        public int ClientLeft { get; set; }
-        public int OnChannelStatusChanged { get; set; }
+        public int OnSubscribed { get; set; }
+        public int OnUnsubscribed { get; set; }
         public int OnQueueStatusChanged { get; set; }
-        public int OnChannelRemoved { get; set; }
 
         public int OnReceived { get; set; }
         public int OnSendStarting { get; set; }
@@ -39,49 +38,28 @@ namespace Test.Mq.Internal
 
         public bool SendAcknowledgeFromMQ { get; set; }
 
-        public void Initialize()
+
+        public async Task Initialize()
         {
             TwinoMqOptions twinoMqOptions = new TwinoMqOptions();
-            twinoMqOptions.AllowedQueues = new[] {MessageA.ContentType, MessageB.ContentType, MessageC.ContentType};
-            twinoMqOptions.AllowMultipleQueues = true;
+            twinoMqOptions.AutoQueueCreation = true;
             twinoMqOptions.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
             twinoMqOptions.MessageTimeout = TimeSpan.FromSeconds(12);
             twinoMqOptions.Status = QueueStatus.Broadcast;
 
             Server = TwinoMqBuilder.Create()
                                    .AddOptions(twinoMqOptions)
-                                   .UseQueueEventHandler(new TestQueueHandler(this))
-                                   .UseDeliveryHandler(async d => new TestDeliveryHandler(this))
-                                   .UseClientHandler(new TestClientHandler(this))
-                                   .UseAdminAuthorization<TestAdminAuthorization>()
+                                   .AddQueueEventHandler(new TestQueueHandler(this))
+                                   .UseDeliveryHandler(d => Task.FromResult<IMessageDeliveryHandler>(new TestDeliveryHandler(this)))
+                                   .AddClientHandler(new TestClientHandler(this))
+                                   .AddAdminAuthorization<TestAdminAuthorization>()
                                    .Build();
 
-            Channel channel = Server.CreateChannel("ch-1");
-            channel.CreateQueue(MessageA.ContentType).Wait();
-            channel.CreateQueue(MessageC.ContentType).Wait();
-
-            Channel channel0 = Server.CreateChannel("ch-0");
-            channel0.CreateQueue(MessageA.ContentType).Wait();
-
-            Channel croute = Server.CreateChannel("ch-route");
-            croute.Options.Status = QueueStatus.Broadcast;
-            croute.CreateQueue(MessageA.ContentType).Wait();
-
-            Channel cpush1 = Server.CreateChannel("ch-push");
-            cpush1.Options.Status = QueueStatus.Push;
-            cpush1.CreateQueue(MessageA.ContentType).Wait();
-
-            Channel cpush2 = Server.CreateChannel("ch-push-cc");
-            cpush2.Options.Status = QueueStatus.Push;
-            cpush2.CreateQueue(MessageA.ContentType).Wait();
-
-            Channel cpull = Server.CreateChannel("ch-pull");
-            cpull.Options.Status = QueueStatus.Pull;
-            cpull.CreateQueue(MessageA.ContentType).Wait();
-
-            Channel cround = Server.CreateChannel("ch-round");
-            cround.Options.Status = QueueStatus.RoundRobin;
-            cround.CreateQueue(MessageA.ContentType).Wait();
+            await Server.CreateQueue("broadcast-a", o => o.Status = QueueStatus.Broadcast);
+            await Server.CreateQueue("push-a", o => o.Status = QueueStatus.Push);
+            await Server.CreateQueue("rr-a", o => o.Status = QueueStatus.RoundRobin);
+            await Server.CreateQueue("pull-a", o => o.Status = QueueStatus.Pull);
+            await Server.CreateQueue("cache-a", o => o.Status = QueueStatus.Cache);
         }
 
         public int Start(int pingInterval = 3, int requestTimeout = 4)
