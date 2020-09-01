@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.Client.TMQ;
@@ -78,7 +79,9 @@ namespace Twino.MQ
         /// <summary>
         /// Client connect and disconnect operations
         /// </summary>
-        public IClientHandler ClientHandler { get; internal set; }
+        public IEnumerable<IClientHandler> ClientHandlers => _clientHandlers;
+
+        private IClientHandler[] _clientHandlers = new IClientHandler[0];
 
         /// <summary>
         /// Client message received handler (for only server-type messages)
@@ -86,9 +89,11 @@ namespace Twino.MQ
         public IServerMessageHandler ServerMessageHandler { get; internal set; }
 
         /// <summary>
-        /// Queue event handler
+        /// Queue event handlers
         /// </summary>
-        public IQueueEventHandler QueueEventHandler { get; internal set; }
+        public IEnumerable<IQueueEventHandler> QueueEventHandlers => _queueEventHandlers;
+
+        private IQueueEventHandler[] _queueEventHandlers = new IQueueEventHandler[0];
 
         /// <summary>
         /// Default queue authenticatır
@@ -184,6 +189,46 @@ namespace Twino.MQ
             OnQueueCreated = new QueueEventManager(this, EventNames.QueueCreated);
             OnQueueUpdated = new QueueEventManager(this, EventNames.QueueUpdated);
             OnQueueRemoved = new QueueEventManager(this, EventNames.QueueRemoved);
+        }
+
+        /// <summary>
+        /// Adds queue event handler
+        /// </summary>
+        public void AddQueueEventHandler(IQueueEventHandler handler)
+        {
+            List<IQueueEventHandler> list = _queueEventHandlers.ToList();
+            list.Add(handler);
+            _queueEventHandlers = list.ToArray();
+        }
+
+        /// <summary>
+        /// Removes queue event handler
+        /// </summary>
+        public void RemoveQueueEventHandler(IQueueEventHandler handler)
+        {
+            List<IQueueEventHandler> list = _queueEventHandlers.ToList();
+            list.Remove(handler);
+            _queueEventHandlers = list.ToArray();
+        }
+
+        /// <summary>
+        /// Adds client handler
+        /// </summary>
+        public void AddClientHandler(IClientHandler handler)
+        {
+            List<IClientHandler> list = _clientHandlers.ToList();
+            list.Add(handler);
+            _clientHandlers = list.ToArray();
+        }
+
+        /// <summary>
+        /// Removes client handler
+        /// </summary>
+        public void RemoveClientHandler(IClientHandler handler)
+        {
+            List<IClientHandler> list = _clientHandlers.ToList();
+            list.Remove(handler);
+            _clientHandlers = list.ToArray();
         }
 
         #endregion
@@ -331,8 +376,8 @@ namespace Twino.MQ
                 }
 
                 _queues.Add(queue);
-                if (QueueEventHandler != null)
-                    await QueueEventHandler.OnCreated(queue);
+                foreach (IQueueEventHandler handler in _queueEventHandlers)
+                    await handler.OnCreated(queue);
 
                 if (initialize)
                     handlerBuilder.TriggerAfterCompleted();
@@ -379,8 +424,8 @@ namespace Twino.MQ
             _queues.Remove(queue);
             await queue.SetStatus(QueueStatus.Stopped);
 
-            if (QueueEventHandler != null)
-                await QueueEventHandler.OnRemoved(queue);
+            foreach (IQueueEventHandler handler in _queueEventHandlers)
+                await handler.OnRemoved(queue);
 
             OnQueueRemoved.Trigger(queue);
             await queue.Destroy();

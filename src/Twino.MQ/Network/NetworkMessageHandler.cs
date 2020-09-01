@@ -92,8 +92,8 @@ namespace Twino.MQ.Network
             //if client's unique id isn't permitted, server will create new id for client and send it as response
             await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
 
-            if (_server.ClientHandler != null)
-                await _server.ClientHandler.Connected(_server, client);
+            foreach (IClientHandler handler in _server.ClientHandlers)
+                await handler.Connected(_server, client);
 
             return client;
         }
@@ -113,8 +113,8 @@ namespace Twino.MQ.Network
         {
             MqClient mqClient = (MqClient) client;
             await _server.RemoveClient(mqClient);
-            if (_server.ClientHandler != null)
-                await _server.ClientHandler.Disconnected(_server, mqClient);
+            foreach (IClientHandler handler in _server.ClientHandlers)
+                await handler.Disconnected(_server, mqClient);
         }
 
         #endregion

@@ -207,40 +207,40 @@ namespace Twino.MQ
         #region Events
 
         /// <summary>
-        /// Uses queue event handler
+        /// Adds queue event handler
         /// </summary>
-        public static TwinoMqBuilder UseQueueEventHandler<TQueueAuthenticator>(this TwinoMqBuilder builder)
+        public static TwinoMqBuilder AddQueueEventHandler<TQueueAuthenticator>(this TwinoMqBuilder builder)
             where TQueueAuthenticator : IQueueEventHandler, new()
         {
-            builder.Server.QueueEventHandler = new TQueueAuthenticator();
+            builder.Server.AddQueueEventHandler(new TQueueAuthenticator());
             return builder;
         }
 
         /// <summary>
-        /// Uses queue event handler
+        /// Adds queue event handler
         /// </summary>
-        public static TwinoMqBuilder UseQueueEventHandler(this TwinoMqBuilder builder, IQueueEventHandler queueEventHandler)
+        public static TwinoMqBuilder AddQueueEventHandler(this TwinoMqBuilder builder, IQueueEventHandler queueEventHandler)
         {
-            builder.Server.QueueEventHandler = queueEventHandler;
+            builder.Server.AddQueueEventHandler(queueEventHandler);
             return builder;
         }
 
         /// <summary>
-        /// Uses client event handler
+        /// Adds client event handler
         /// </summary>
-        public static TwinoMqBuilder UseClientHandler<TClientHandler>(this TwinoMqBuilder builder)
+        public static TwinoMqBuilder AddClientHandler<TClientHandler>(this TwinoMqBuilder builder)
             where TClientHandler : IClientHandler, new()
         {
-            builder.Server.ClientHandler = new TClientHandler();
+            builder.Server.AddClientHandler(new TClientHandler());
             return builder;
         }
 
         /// <summary>
-        /// Uses client event handler
+        /// Adds client event handler
         /// </summary>
-        public static TwinoMqBuilder UseClientHandler(this TwinoMqBuilder builder, IClientHandler clientHandler)
+        public static TwinoMqBuilder AddClientHandler(this TwinoMqBuilder builder, IClientHandler clientHandler)
         {
-            builder.Server.ClientHandler = clientHandler;
+            builder.Server.AddClientHandler(clientHandler);
             return builder;
         }
 

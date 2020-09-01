@@ -598,8 +598,8 @@ namespace Twino.MQ.Queues
             if (newDeliveryHandler != null)
                 DeliveryHandler = newDeliveryHandler;
 
-            if (Server.QueueEventHandler != null)
-                await Server.QueueEventHandler.OnStatusChanged(this, prevStatus, status);
+            foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
+                await handler.OnStatusChanged(this, prevStatus, status);
 
             if (enter == QueueStatusAction.AllowAndTrigger)
                 _ = Trigger();
@@ -659,7 +659,7 @@ namespace Twino.MQ.Queues
                                                             Headers = message.Message.Headers,
                                                             DeliveryHandlerHeader = message.Message.FindHeader(TwinoHeaders.DELIVERY_HANDLER)
                                                         };
-                
+
                 IMessageDeliveryHandler deliveryHandler = await Server.DeliveryHandlerFactory(handlerBuilder);
                 InitializeQueue(deliveryHandler);
             }
@@ -1127,8 +1127,8 @@ namespace Twino.MQ.Queues
             _clients.Add(cc);
             client.Join(cc);
 
-            if (Server.QueueEventHandler != null)
-                await Server.QueueEventHandler.OnConsumerSubscribed(cc);
+            foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
+                await handler.OnConsumerSubscribed(cc);
 
             _ = Trigger();
             OnConsumerSubscribed.Trigger(cc);
@@ -1143,8 +1143,8 @@ namespace Twino.MQ.Queues
             _clients.Remove(client);
             client.Client.Leave(client);
 
-            if (Server.QueueEventHandler != null)
-                await Server.QueueEventHandler.OnConsumerUnsubscribed(client);
+            foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
+                await handler.OnConsumerUnsubscribed(client);
 
             OnConsumerUnsubscribed.Trigger(client);
         }
@@ -1156,8 +1156,8 @@ namespace Twino.MQ.Queues
         {
             _clients.Remove(client);
 
-            if (Server.QueueEventHandler != null)
-                await Server.QueueEventHandler.OnConsumerUnsubscribed(client);
+            foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
+                await handler.OnConsumerUnsubscribed(client);
 
             OnConsumerUnsubscribed.Trigger(client);
         }
@@ -1174,8 +1174,8 @@ namespace Twino.MQ.Queues
 
             client.Leave(cc);
 
-            if (Server.QueueEventHandler != null)
-                await Server.QueueEventHandler.OnConsumerUnsubscribed(cc);
+            foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
+                await handler.OnConsumerUnsubscribed(cc);
 
             OnConsumerUnsubscribed.Trigger(cc);
             return true;
