@@ -1,5 +1,6 @@
 ﻿using System;
-using Twino.Extensions.ConsumerFactory;
+using Twino.Client.TMQ;
+using Twino.Client.TMQ.Connectors;
 using Twino.Ioc;
 
 namespace Sample.Consumer
@@ -10,12 +11,12 @@ namespace Sample.Consumer
 
         static void Main(string[] args)
         {
-            Services.UseTwinoBus(t => t.AddHost("tmq://localhost:26222")
-                                       .SetClientName("consumer")
-                                       .SetClientType("sample")
-                                       //.AddTransientConsumers(typeof(Program))
-                                       .AddTransientConsumer<ModelAConsumer>()
-                                       .UseNewtonsoftJsonSerializer());
+            TmqStickyConnector connector = new TmqStickyConnector(TimeSpan.FromSeconds(2));
+            connector.AddHost("tmq://localhost:26222");
+            connector.ContentSerializer = new NewtonsoftContentSerializer();
+            connector.Observer.RegisterConsumer<ModelAConsumer>();
+            connector.Connected += (c) => { _ = connector.GetClient().Queues.Subscribe("model-a", false); };
+            connector.Run();
 
             while (true)
                 Console.ReadLine();

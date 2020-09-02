@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Twino.Client.TMQ;
 using Twino.Client.TMQ.Bus;
-using Twino.Extensions.ConsumerFactory;
+using Twino.Client.TMQ.Connectors;
 using Twino.Ioc;
 using Twino.Protocols.TMQ;
 
@@ -13,12 +14,12 @@ namespace Sample.Producer
 
         static async Task Main(string[] args)
         {
-            Services.UseTwinoBus(t => t.AddHost("tmq://localhost:26222")
-                                       .SetClientName("producer")
-                                       .SetClientType("sample")
-                                       .UseNewtonsoftJsonSerializer());
-
-            ITwinoQueueBus queueBus = Services.Get<ITwinoQueueBus>();
+            TmqStickyConnector connector = new TmqStickyConnector(TimeSpan.FromSeconds(2));
+            connector.AddHost("tmq://localhost:26222");
+            connector.ContentSerializer = new NewtonsoftContentSerializer();
+            connector.Run();
+            
+            ITwinoQueueBus queueBus = connector.Bus.Queue;
 
             ModelA a = new ModelA();
             a.Foo = "foo";
