@@ -12,4 +12,9 @@
       <ProjectReference Include="..\..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Twino.Extensions.ConsumerFactory" Version="3.7.0" />
+      <PackageReference Include="Twino.Ioc" Version="3.4.2" />
+    </ItemGroup>
+
 </Project>

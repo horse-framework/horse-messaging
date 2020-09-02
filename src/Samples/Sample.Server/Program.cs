@@ -1,12 +1,20 @@
-﻿using System;
+﻿using System.Threading.Tasks;
+using Twino.MQ;
+using Twino.Server;
 
 namespace Sample.Server
 {
     class Program
     {
-        static void Main(string[] args)
+        static Task Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            TwinoMQ mq = TwinoMqBuilder.Create()
+                                       .UseJustAllowDeliveryHandler()
+                                       .Build();
+            TwinoServer server = new TwinoServer();
+            server.UseTwinoMQ(mq);
+            server.Start(26222);
+            return server.BlockWhileRunningAsync();
         }
     }
 }
