@@ -1,9 +1,9 @@
 using System;
 using Xunit;
 
-namespace Test.Nodes
+namespace Test.Events
 {
-    public class UnitTest1
+    public class ClientEventTest
     {
         [Fact]
         public void Test1()

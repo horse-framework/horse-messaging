@@ -1,9 +1,9 @@
 using System;
 using Xunit;
 
-namespace Test.Queues
+namespace Test.Direct
 {
-    public class UnitTest1
+    public class DirectMessageTest
     {
         [Fact]
         public void Test1()
