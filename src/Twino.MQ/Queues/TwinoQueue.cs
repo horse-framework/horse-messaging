@@ -187,6 +187,10 @@ namespace Twino.MQ.Queues
             Options = options;
             Status = options.Status;
             _clients = new SafeList<QueueClient>(256);
+
+            OnConsumerSubscribed = new SubscriptionEventManager(Server, EventNames.Subscribe, this);
+            OnConsumerUnsubscribed = new SubscriptionEventManager(Server, EventNames.Unsubscribe, this);
+            OnMessageProduced = new MessageEventManager(Server, EventNames.MessageProduced, this);
         }
 
         /// <summary>
@@ -205,10 +209,6 @@ namespace Twino.MQ.Queues
                 throw new ArgumentNullException("Queue has no delivery handler: " + Name);
 
             State = QueueStateFactory.Create(this, Options.Status);
-
-            OnConsumerSubscribed = new SubscriptionEventManager(Server, EventNames.Subscribe, this);
-            OnConsumerUnsubscribed = new SubscriptionEventManager(Server, EventNames.Unsubscribe, this);
-            OnMessageProduced = new MessageEventManager(Server, EventNames.MessageProduced, this);
 
             TimeKeeper = new QueueTimeKeeper(this);
             TimeKeeper.Run();
