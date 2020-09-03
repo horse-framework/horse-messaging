@@ -60,7 +60,7 @@ namespace Twino.MQ.Options
         /// <summary>
         /// Queue auto destroy options. Default value is NoMessagesAndConsumers.
         /// </summary>
-        public QueueDestroy AutoDestroy { get; set; } = QueueDestroy.Empty;
+        public QueueDestroy AutoDestroy { get; set; } = QueueDestroy.Disabled;
 
         /// <summary>
         /// Creates clone of the object
