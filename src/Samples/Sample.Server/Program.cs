@@ -9,8 +9,11 @@ namespace Sample.Server
         static Task Main(string[] args)
         {
             TwinoMQ mq = TwinoMqBuilder.Create()
+                                       .AddClientHandler<ClientHandler>()
+                                       .AddQueueEventHandler<QueueEventHandler>()
                                        .UseJustAllowDeliveryHandler()
                                        .Build();
+            
             TwinoServer server = new TwinoServer();
             server.UseTwinoMQ(mq);
             server.Start(26222);
