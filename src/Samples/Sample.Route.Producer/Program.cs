@@ -25,19 +25,28 @@ namespace Sample.Route.Producer
 
 			var provider = services.BuildServiceProvider();
 			provider.UseTwinoBus();
+			await Task.Delay(1000);
+			var bus = provider.GetService<ITwinoRouteBus>();
 
-			var bus = provider.GetService<ITwinoQueueBus>();
 
-			int messageCount = 0;
-			while (messageCount < 4)
+			ManualResetEventSlim re = new ManualResetEventSlim(false);
+			Task t1 = Task.Run(async () =>
 			{
-				if (!bus.GetClient().IsConnected) continue;
-				var pushed = await bus.PushJson(new ProduceRequestA());
-				messageCount++;
-			}
+				Console.WriteLine("t1 waiting");
+				re.Wait();
+				Console.WriteLine("t1 run");
+				var result = await bus.PublishRequestJson<SampleARequest, List<SampleResult>>(new SampleARequest {Name = "A1"});
+			});
+			Task t2 = Task.Run(async () =>
+			{
+				Console.WriteLine("t2 waiting");
+				re.Wait();
+				Console.WriteLine("t2 run");
+				var result = await bus.PublishRequestJson<SampleARequest, List<SampleResult>>(new SampleARequest {Name = "A2"});
+			});
 
-			while (true)
-				await Task.Delay(500);
+			re.Set();
+			Console.ReadLine();
 		}
 	}
 }

@@ -6,6 +6,8 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.7" />
+      <PackageReference Include="Twino.Extensions.ConsumerFactory" Version="3.7.0" />
       <PackageReference Include="Twino.Server" Version="3.2.0" />
     </ItemGroup>
 

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Twino.Extensions.ConsumerFactory;
 using Twino.MQ;
 using Twino.MQ.Clients;
 using Twino.MQ.Data;
@@ -29,6 +31,7 @@ namespace Sample.Route.Server
 	{
 		static void Main(string[] args)
 		{
+		
 			TwinoServer server = new TwinoServer();
 			TwinoMQ mq = server.UseTwinoMQ(cfg =>
 			{
