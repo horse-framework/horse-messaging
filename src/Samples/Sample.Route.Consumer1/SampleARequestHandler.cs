@@ -8,7 +8,7 @@ using Twino.Protocols.TMQ;
 
 namespace Sample.Route.Consumer1
 {
-	public class SampleARequestHandler: ITwinoRequestHandler<SampleARequest, List<SampleResult>>
+	public class SampleARequestHandler : ITwinoRequestHandler<SampleARequest, List<SampleResult>>
 	{
 		private readonly ITwinoRouteBus _bus;
 
@@ -17,15 +17,10 @@ namespace Sample.Route.Consumer1
 			_bus = bus;
 		}
 
-		public async Task<List<SampleResult>> Handle(SampleARequest request, TmqMessage rawMessage, TmqClient client)
+		public Task<List<SampleResult>> Handle(SampleARequest request, TmqMessage rawMessage, TmqClient client)
 		{
-			var requestB = new SampleBRequest
-			{
-				Name = "B-REQUEST",
-				Guid = request.Guid
-			};
-			var result = await _bus.Execute<SampleBRequest, List<SampleResult>>(requestB);
-			return result;
+			Console.Write(request.Name);
+			return Task.FromResult(new List<SampleResult> {new SampleResult {Message = "rmessage"}});
 		}
 
 		public Task<ErrorResponse> OnError(Exception exception, SampleARequest request, TmqMessage rawMessage, TmqClient client)
