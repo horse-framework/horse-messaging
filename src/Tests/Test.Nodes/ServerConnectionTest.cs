@@ -4,13 +4,12 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Test.Mq.Internal;
+using Test.Common;
 using Twino.Client.TMQ;
-using Twino.Client.WebSocket;
 using Twino.Protocols.TMQ;
 using Xunit;
 
-namespace Test.Mq
+namespace Test.Nodes
 {
     public class ServerConnectionTest
     {
@@ -18,10 +17,10 @@ namespace Test.Mq
         /// Connects to TMQ Server and sends info message
         /// </summary>
         [Fact]
-        public void ConnectWithInfo()
+        public async Task ConnectWithInfo()
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start();
 
             TmqClient client = new TmqClient();
@@ -40,8 +39,8 @@ namespace Test.Mq
         [Fact]
         public async Task ConnectWithoutInfo()
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start();
 
             List<TcpClient> clients = new List<TcpClient>();
@@ -90,40 +89,13 @@ namespace Test.Mq
         }
 
         /// <summary>
-        /// Connects to TMQ Server and sends another protocol message
-        /// </summary>
-        [Fact]
-        public void ConnectAsOtherProtocol()
-        {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
-            int port = server.Start();
-
-            TwinoWebSocket webSocket = null;
-            try
-            {
-                webSocket = new TwinoWebSocket();
-                webSocket.Connect("ws://localhost:" + port + "/path");
-            }
-            catch
-            {
-            }
-
-            Thread.Sleep(150);
-
-            Assert.NotNull(webSocket);
-            Assert.False(webSocket.IsConnected);
-            Assert.Equal(0, server.ClientConnected);
-        }
-
-        /// <summary>
         /// Connects to TMQ Server and stays alive with PING and PONG messages
         /// </summary>
         [Fact]
-        public void KeepAliveWithPingPong()
+        public async Task KeepAliveWithPingPong()
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start();
 
             TmqClient client = new TmqClient();
@@ -142,8 +114,8 @@ namespace Test.Mq
         [Fact]
         public async Task DisconnectDueToPingTimeout()
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start();
 
             TcpClient client = new TcpClient();
@@ -192,10 +164,9 @@ namespace Test.Mq
             int connected = 0;
             int disconnected = 0;
 
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start();
-
 
             for (int i = 0; i < concurrentClients; i++)
             {
@@ -235,6 +206,28 @@ namespace Test.Mq
             await Task.Delay(3000);
             Assert.Equal(connected, concurrentClients * connectionCount);
             Assert.Equal(disconnected, concurrentClients * connectionCount);
+        }
+        
+        [Theory]
+        [InlineData(null)]
+        [InlineData("*client*")]
+        public async Task GetOnlineClients(string filter)
+        {
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
+            int port = server.Start();
+
+            TmqClient client = new TmqClient();
+            client.SetClientType("client-test");
+            client.SetClientName("client-test");
+            await client.ConnectAsync("tmq://localhost:" + port);
+
+            var result = await client.Connections.GetConnectedClients(filter);
+            Assert.Equal(TwinoResultCode.Ok, result.Result.Code);
+            Assert.NotNull(result.Model);
+            var c = result.Model.FirstOrDefault();
+            Assert.NotNull(c);
+            Assert.Equal("client-test", c.Type);
         }
     }
 }

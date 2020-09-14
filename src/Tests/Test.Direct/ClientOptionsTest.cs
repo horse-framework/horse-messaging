@@ -1,13 +1,13 @@
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Test.Mq.Internal;
-using Test.Mq.Models;
+using Test.Common;
+using Test.Common.Models;
 using Twino.Client.TMQ;
 using Twino.Protocols.TMQ;
 using Xunit;
 
-namespace Test.Mq
+namespace Test.Direct
 {
     public class ClientOptionsTest
     {
@@ -19,10 +19,10 @@ namespace Test.Mq
         [InlineData(false)]
         public async Task UseUniqueMessageId(bool enabled)
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             server.Server.Options.UseMessageId = enabled;
-            server.Server.FindChannel("ch-1").FindQueue(MessageA.ContentType).Options.UseMessageId = false;
+            server.Server.FindQueue("queue-1").Options.UseMessageId = false;
             int port = server.Start();
 
             TmqClient client = new TmqClient();
@@ -31,17 +31,17 @@ namespace Test.Mq
             await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            TwinoResult joined = await client.Channels.Join("ch-1", true);
+            TwinoResult joined = await client.Queues.Subscribe("queue-1", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(250);
 
             TwinoMessage received = null;
             client.MessageReceived += (c, m) => received = m;
 
-            MessageA a = new MessageA("A");
+            QueueMessageA a = new QueueMessageA("A");
             string serialized = Newtonsoft.Json.JsonConvert.SerializeObject(a);
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(serialized));
-            TwinoResult sent = await client.Queues.Push("ch-1", MessageA.ContentType, ms, false);
+            TwinoResult sent = await client.Queues.Push("queue-1", ms, false);
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1000);
@@ -64,8 +64,8 @@ namespace Test.Mq
         [InlineData(false)]
         public async Task CatchResponseMessages(bool enabled)
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start();
 
             TmqClient client1 = new TmqClient();

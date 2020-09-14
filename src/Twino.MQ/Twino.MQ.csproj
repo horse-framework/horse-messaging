@@ -8,7 +8,7 @@
         <PackageTags>twino,server,tmq,messaging,queue,mq</PackageTags>
         <AssemblyVersion>4.0.1</AssemblyVersion>
         <FileVersion>4.0.1</FileVersion>
-        <PackageVersion>4.0.1</PackageVersion>
+        <PackageVersion>4.0.1-beta</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/twino-framework/twino-mq</PackageProjectUrl>

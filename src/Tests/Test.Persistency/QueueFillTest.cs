@@ -1,46 +1,40 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using Test.Mq.Internal;
-using Test.Mq.Models;
-using Twino.MQ;
+using Test.Common;
+using Test.Common.Models;
 using Twino.MQ.Queues;
 using Xunit;
 
-namespace Test.Mq
+namespace Test.Persistency
 {
     public class QueueFillTest
     {
         [Fact]
         public async Task FillJson()
         {
-            List<MessageA> items = new List<MessageA>();
+            List<QueueMessageA> items = new List<QueueMessageA>();
             for (int i = 0; i < 10; i++)
-                items.Add(new MessageA("No #" + i));
+                items.Add(new QueueMessageA("No #" + i));
 
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             server.Start(300, 300);
 
-            Channel route = server.Server.FindChannel("ch-route");
-            Channel push = server.Server.FindChannel("ch-push");
+            TwinoQueue route = server.Server.FindQueue("broadcast-a");
+            TwinoQueue push = server.Server.FindQueue("push-a");
             Assert.NotNull(route);
             Assert.NotNull(push);
 
-            TwinoQueue routeA = route.FindQueue(MessageA.ContentType);
-            TwinoQueue pushA = push.FindQueue(MessageA.ContentType);
-            Assert.NotNull(routeA);
-            Assert.NotNull(pushA);
-
-            QueueFiller fillerRouteA = new QueueFiller(routeA);
-            QueueFiller fillerPushA = new QueueFiller(pushA);
+            QueueFiller fillerRouteA = new QueueFiller(route);
+            QueueFiller fillerPushA = new QueueFiller(push);
 
             fillerRouteA.FillJson(items, false, false);
             fillerPushA.FillJson(items, false, false);
 
             await Task.Delay(500);
-            Assert.NotEmpty(routeA.Messages);
-            Assert.NotEmpty(pushA.Messages);
+            Assert.NotEmpty(route.Messages);
+            Assert.NotEmpty(push.Messages);
         }
 
         [Fact]
@@ -50,14 +44,11 @@ namespace Test.Mq
             for (int i = 0; i < 10; i++)
                 items.Add("No #" + i);
 
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             server.Start(300, 300);
 
-            Channel channel = server.Server.FindChannel("ch-push");
-            Assert.NotNull(channel);
-
-            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = server.Server.FindQueue("push-a");
             Assert.NotNull(queue);
 
             QueueFiller filler = new QueueFiller(queue);
@@ -76,14 +67,11 @@ namespace Test.Mq
             for (int i = 0; i < 10; i++)
                 items.Add(Encoding.UTF8.GetBytes("No #" + i));
 
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             server.Start(300, 300);
 
-            Channel channel = server.Server.FindChannel("ch-push");
-            Assert.NotNull(channel);
-
-            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = server.Server.FindQueue("push-a");
             Assert.NotNull(queue);
 
             QueueFiller filler = new QueueFiller(queue);
