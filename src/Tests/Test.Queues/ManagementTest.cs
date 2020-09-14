@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using Test.Common;
 using Test.Mq.Internal;
-using Test.Mq.Models;
 using Twino.Client.TMQ;
 using Twino.Client.TMQ.Models;
 using Twino.MQ.Clients;
@@ -120,30 +118,18 @@ namespace Test.Queues
             await server.Initialize();
             int port = server.Start();
 
-            Channel channel = server.Server.FindChannel("broadcast-a");
-            Assert.NotNull(channel);
-
-            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = server.Server.FindQueue("broadcast-a");
             Assert.NotNull(queue);
 
-            Assert.False(queue.Options.WaitForAcknowledge);
-            Assert.False(queue.Options.SendOnlyFirstAcquirer);
             Assert.Equal(TimeSpan.FromSeconds(12), queue.Options.MessageTimeout);
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            TwinoResult updated = await client.Queues.SetOptions("broadcast-a", MessageA.ContentType, o =>
-            {
-                o.WaitForAcknowledge = true;
-                o.MessageTimeout = 666000;
-                o.SendOnlyFirstAcquirer = true;
-            });
+            TwinoResult updated = await client.Queues.SetOptions("broadcast-a", o => o.MessageTimeout = 666000);
             Assert.Equal(TwinoResultCode.Ok, updated.Code);
 
-            Assert.True(queue.Options.WaitForAcknowledge);
-            Assert.True(queue.Options.SendOnlyFirstAcquirer);
             Assert.Equal(TimeSpan.FromSeconds(666), queue.Options.MessageTimeout);
         }
 
@@ -154,20 +140,17 @@ namespace Test.Queues
             await server.Initialize();
             int port = server.Start();
 
-            Channel channel = server.Server.FindChannel("broadcast-a");
-            Assert.NotNull(channel);
-
-            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = server.Server.FindQueue("broadcast-a");
             Assert.NotNull(queue);
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            TwinoResult done = await client.Queues.Remove("broadcast-a", MessageA.ContentType);
+            TwinoResult done = await client.Queues.Remove("broadcast-a");
             Assert.Equal(TwinoResultCode.Ok, done.Code);
 
-            queue = channel.FindQueue(MessageA.ContentType);
+            queue = server.Server.FindQueue("broadcast-a");
             Assert.Null(queue);
         }
 
@@ -181,7 +164,7 @@ namespace Test.Queues
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
 
-            var queues = await client.Queues.List();
+            var queues = await client.Queues.List("push-a");
             Assert.Equal(TwinoResultCode.Ok, queues.Result.Code);
             Assert.NotNull(queues.Model);
             var pushQueue = queues.Model.FirstOrDefault(x => x.Name == "push-a");
@@ -198,7 +181,7 @@ namespace Test.Queues
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
 
-            var result = await client.Queues.List("push-a");
+            var result = await client.Queues.List();
             Assert.Equal(TwinoResultCode.Ok, result.Result.Code);
             Assert.NotNull(result.Model);
             var queue = result.Model.FirstOrDefault();
@@ -225,7 +208,7 @@ namespace Test.Queues
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
 
-            var result = await client.Queues.ClearMessages("push-a", MessageA.ContentType, priorityMessages, messages);
+            var result = await client.Queues.ClearMessages("push-a", priorityMessages, messages);
             Assert.Equal(TwinoResultCode.Ok, result.Code);
 
             if (priorityMessages)
