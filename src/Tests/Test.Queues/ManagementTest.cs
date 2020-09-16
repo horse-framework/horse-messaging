@@ -16,10 +16,10 @@ namespace Test.Queues
     public class ManagementTest
     {
         /// <summary>
-        /// Client sends a channel join message to server
+        /// Client sends a queue subscription message to server
         /// </summary>
         [Fact]
-        public async Task JoinChannel()
+        public async Task SubscribeToQueue()
         {
             TestTwinoMQ server = new TestTwinoMQ();
             await server.Initialize();
@@ -39,10 +39,10 @@ namespace Test.Queues
         }
 
         /// <summary>
-        /// Client sends a channel leave message to server
+        /// Client sends a queue unsubscription message to server
         /// </summary>
         [Fact]
-        public async Task LeaveChannel()
+        public async Task UnsubscribeToQueue()
         {
             TestTwinoMQ server = new TestTwinoMQ();
             await server.Initialize();
