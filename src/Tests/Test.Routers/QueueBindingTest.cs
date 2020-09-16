@@ -1,7 +1,7 @@
 using System;
 using Xunit;
 
-namespace Test.Router
+namespace Test.Routers
 {
     public class QueueBindingTest
     {

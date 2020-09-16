@@ -1,4 +1,4 @@
-namespace Test.Router
+namespace Test.Routers
 {
     public class TopicBindingTest
     {

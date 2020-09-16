@@ -2,15 +2,13 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Test.Mq.Internal;
-using Test.Mq.Models;
 using Twino.Client.TMQ;
 using Twino.Client.TMQ.Models;
-using Twino.MQ;
 using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
 using Xunit;
 
-namespace Test.Mq.Statuses
+namespace Test.Queues.Statuses
 {
     public class PullStatusTest
     {
@@ -25,25 +23,22 @@ namespace Test.Mq.Statuses
             consumer.ClientId = "consumer";
             await consumer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
-            TwinoResult joined = await consumer.Channels.Join("pull-a", true);
+            TwinoResult joined = await consumer.Queues.Subscribe("pull-a", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             TmqClient producer = new TmqClient();
             await producer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            await producer.Queues.Push("pull-a", MessageA.ContentType, "Hello, World!", false);
+            await producer.Queues.Push("pull-a", "Hello, World!", false);
             await Task.Delay(700);
 
-            Channel channel = server.Server.FindChannel("pull-a");
-            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
-            Assert.NotNull(channel);
+            TwinoQueue queue = server.Server.FindQueue("pull-a");
             Assert.NotNull(queue);
             Assert.Single(queue.Messages);
 
             PullRequest request = new PullRequest();
-            request.Channel = "pull-a";
-            request.QueueId = MessageA.ContentType;
+            request.Queue = "pull-a";
             request.Count = 1;
             request.ClearAfter = ClearDecision.None;
             request.GetQueueMessageCounts = false;
@@ -65,11 +60,9 @@ namespace Test.Mq.Statuses
             server.Initialize();
             int port = server.Start(300, 300);
 
-            Channel channel = server.Server.FindChannel("pull-a");
-            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
-            Assert.NotNull(channel);
+            TwinoQueue queue = server.Server.FindQueue("pull-a");
             Assert.NotNull(queue);
-            queue.Options.RequestAcknowledge = true;
+            queue.Options.Acknowledge = QueueAckDecision.JustRequest;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
 
             TmqClient consumer = new TmqClient();
@@ -81,15 +74,15 @@ namespace Test.Mq.Statuses
 
             bool msgReceived = false;
             consumer.MessageReceived += (c, m) => msgReceived = true;
-            TwinoResult joined = await consumer.Channels.Join("pull-a", true);
+            TwinoResult joined = await consumer.Queues.Subscribe("pull-a", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             TmqClient producer = new TmqClient();
-            producer.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
+            producer.ResponseTimeout = TimeSpan.FromSeconds(15);
             await producer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            Task<TwinoResult> taskAck = producer.Queues.Push("pull-a", MessageA.ContentType, "Hello, World!", true);
+            Task<TwinoResult> taskAck = producer.Queues.Push("pull-a", "Hello, World!", true);
 
             await Task.Delay(500);
             Assert.False(taskAck.IsCompleted);
@@ -98,7 +91,7 @@ namespace Test.Mq.Statuses
 
             consumer.PullTimeout = TimeSpan.FromDays(1);
 
-            PullContainer pull = await consumer.Queues.Pull(PullRequest.Single("pull-a", MessageA.ContentType));
+            PullContainer pull = await consumer.Queues.Pull(PullRequest.Single("pull-a"));
             Assert.Equal(PullProcess.Completed, pull.Status);
             Assert.Equal(1, pull.ReceivedCount);
             Assert.NotEmpty(pull.ReceivedMessages);
@@ -117,20 +110,18 @@ namespace Test.Mq.Statuses
             server.Initialize();
             int port = server.Start();
 
-            var channel = server.Server.FindChannel("pull-a");
-            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = server.Server.FindQueue("pull-a");
             queue.AddStringMessageWithId("First Message");
             queue.AddStringMessageWithId("Second Message");
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
-            TwinoResult joined = await client.Channels.Join("pull-a", true);
+            TwinoResult joined = await client.Queues.Subscribe("pull-a", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             PullRequest request = new PullRequest
                                   {
-                                      Channel = "pull-a",
-                                      QueueId = MessageA.ContentType,
+                                      Queue = "pull-a",
                                       Count = 1,
                                       Order = !fifo.HasValue || fifo.Value ? MessageOrder.FIFO : MessageOrder.LIFO
                                   };
@@ -161,20 +152,18 @@ namespace Test.Mq.Statuses
             server.Initialize();
             int port = server.Start();
 
-            var channel = server.Server.FindChannel("pull-a");
-            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = server.Server.FindQueue("pull-a");
             for (int i = 0; i < 25; i++)
                 queue.AddStringMessageWithId("Hello, World");
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
-            TwinoResult joined = await client.Channels.Join("pull-a", true);
+            TwinoResult joined = await client.Queues.Subscribe("pull-a", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             PullRequest request = new PullRequest
                                   {
-                                      Channel = "pull-a",
-                                      QueueId = MessageA.ContentType,
+                                      Queue = "pull-a",
                                       Count = count
                                   };
 
@@ -196,8 +185,7 @@ namespace Test.Mq.Statuses
             server.Initialize();
             int port = server.Start();
 
-            var channel = server.Server.FindChannel("pull-a");
-            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
+            TwinoQueue queue = server.Server.FindQueue("pull-a");
             for (int i = 0; i < 5; i++)
             {
                 queue.AddStringMessageWithId("Hello, World");
@@ -206,7 +194,7 @@ namespace Test.Mq.Statuses
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
-            TwinoResult joined = await client.Channels.Join("pull-a", true);
+            TwinoResult joined = await client.Queues.Subscribe("pull-a", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             ClearDecision clearDecision = ClearDecision.None;
@@ -219,8 +207,7 @@ namespace Test.Mq.Statuses
 
             PullRequest request = new PullRequest
                                   {
-                                      Channel = "pull-a",
-                                      QueueId = MessageA.ContentType,
+                                      Queue = "pull-a",
                                       Count = count,
                                       ClearAfter = clearDecision
                                   };

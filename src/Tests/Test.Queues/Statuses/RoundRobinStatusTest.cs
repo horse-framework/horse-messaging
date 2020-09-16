@@ -1,16 +1,13 @@
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Test.Mq.Internal;
-using Test.Mq.Models;
 using Twino.Client.TMQ;
-using Twino.MQ;
 using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
 using Xunit;
 
-namespace Test.Mq.Statuses
+namespace Test.Queues.Statuses
 {
     public class RoundRobinStatusTest
     {
@@ -39,13 +36,13 @@ namespace Test.Mq.Statuses
                 await consumer.ConnectAsync("tmq://localhost:" + port);
                 Assert.True(consumer.IsConnected);
                 consumer.MessageReceived += (c, m) => Interlocked.Increment(ref msgReceived);
-                TwinoResult joined = await consumer.Channels.Join("rr-a", true);
+                TwinoResult joined = await consumer.Queues.Subscribe("rr-a", true);
                 Assert.Equal(TwinoResultCode.Ok, joined.Code);
             }
 
             for (int i = 0; i < 50; i++)
             {
-                await producer.Queues.Push("rr-a", MessageA.ContentType, "Hello, World!", false);
+                await producer.Queues.Push("rr-a", "Hello, World!", false);
                 msgSent++;
             }
 
@@ -64,12 +61,10 @@ namespace Test.Mq.Statuses
             await producer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            await producer.Queues.Push("rr-a", MessageA.ContentType, "Hello, World!", false);
+            await producer.Queues.Push("rr-a", "Hello, World!", false);
             await Task.Delay(700);
 
-            Channel channel = server.Server.FindChannel("rr-a");
-            TwinoQueue queue = channel.FindQueue(MessageA.ContentType);
-            Assert.NotNull(channel);
+            TwinoQueue queue = server.Server.FindQueue("rr-a");
             Assert.NotNull(queue);
             Assert.Single(queue.Messages);
 
@@ -79,7 +74,7 @@ namespace Test.Mq.Statuses
             await consumer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
             consumer.MessageReceived += (c, m) => msgReceived = true;
-            TwinoResult joined = await consumer.Channels.Join("rr-a", true);
+            TwinoResult joined = await consumer.Queues.Subscribe("rr-a", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
             await Task.Delay(800);
@@ -95,11 +90,10 @@ namespace Test.Mq.Statuses
             server.Initialize();
             int port = server.Start(300, 300);
 
-            Channel ch = server.Server.FindChannel("rr-a");
-            TwinoQueue queue = ch.Queues.FirstOrDefault();
+            TwinoQueue queue = server.Server.FindQueue("rr-a");
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
-            queue.Options.RequestAcknowledge = queueAckIsActive;
+            queue.Options.Acknowledge = queueAckIsActive ? QueueAckDecision.JustRequest : QueueAckDecision.None;
 
             TmqClient producer = new TmqClient();
             await producer.ConnectAsync("tmq://localhost:" + port);
@@ -107,14 +101,14 @@ namespace Test.Mq.Statuses
 
             TmqClient consumer = new TmqClient();
             consumer.AutoAcknowledge = true;
-            consumer.AcknowledgeTimeout = TimeSpan.FromSeconds(4);
+            consumer.ResponseTimeout = TimeSpan.FromSeconds(4);
             consumer.ClientId = "consumer";
             await consumer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
-            TwinoResult joined = await consumer.Channels.Join("rr-a", true);
+            TwinoResult joined = await consumer.Queues.Subscribe("rr-a", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
-            TwinoResult ack = await producer.Queues.Push("rr-a", MessageA.ContentType, "Hello, World!", true);
+            TwinoResult ack = await producer.Queues.Push("rr-a", "Hello, World!", true);
             Assert.Equal(queueAckIsActive, ack.Code == TwinoResultCode.Ok);
         }
     }

@@ -699,7 +699,7 @@ namespace Twino.MQ.Network
                     break;
 
                 case BindingType.Queue:
-                    router.AddBinding(new QueueBinding(info.Name, info.Target, info.ContentType ?? 0, info.Priority, info.Interaction));
+                    router.AddBinding(new QueueBinding(info.Name, info.Target, info.Priority, info.Interaction));
                     break;
 
                 case BindingType.Http:

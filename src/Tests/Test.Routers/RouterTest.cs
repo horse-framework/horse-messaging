@@ -1,29 +1,27 @@
 using System.Threading.Tasks;
-using Test.Mq.Internal;
-using Test.Mq.Models;
+using Test.Common;
 using Twino.Client.TMQ;
-using Twino.MQ;
 using Twino.MQ.Queues;
 using Twino.MQ.Routing;
 using Twino.Protocols.TMQ;
 using Xunit;
 
-namespace Test.Mq
+namespace Test.Routers
 {
     public class RouterTest
     {
         [Fact]
         public async Task Distribute()
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start(300, 300);
 
             Router router = new Router(server.Server, "router", RouteMethod.Distribute);
-            router.AddBinding(new QueueBinding("qbind-1", "push-a", MessageA.ContentType, 5, BindingInteraction.None));
-            router.AddBinding(new QueueBinding("qbind-2", "push-a-cc", MessageA.ContentType, 10, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-1", "client-1", MessageA.ContentType, 20, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-2", "client-2", MessageA.ContentType, 0, BindingInteraction.None));
+            router.AddBinding(new QueueBinding("qbind-1", "push-a", 5, BindingInteraction.None));
+            router.AddBinding(new QueueBinding("qbind-2", "push-a-cc", 10, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-1", "client-1", 20, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-2", "client-2", 0, BindingInteraction.None));
             server.Server.AddRouter(router);
 
             TmqClient producer = new TmqClient();
@@ -47,17 +45,14 @@ namespace Test.Mq
 
             for (int i = 0; i < 4; i++)
             {
-                TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
+                TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
                 Assert.Equal(TwinoResultCode.Ok, result.Code);
             }
 
             await Task.Delay(500);
 
-            Channel channel1 = server.Server.FindChannel("push-a");
-            Channel channel2 = server.Server.FindChannel("push-a-cc");
-
-            TwinoQueue queue1 = channel1.FindQueue(MessageA.ContentType);
-            TwinoQueue queue2 = channel2.FindQueue(MessageA.ContentType);
+            TwinoQueue queue1 = server.Server.FindQueue("push-a");
+            TwinoQueue queue2 = server.Server.FindQueue("push-a-cc");
 
             Assert.Equal(4, queue1.MessageCount());
             Assert.Equal(4, queue2.MessageCount());
@@ -69,15 +64,15 @@ namespace Test.Mq
         [Fact]
         public async Task RoundRobin()
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start(300, 300);
 
             Router router = new Router(server.Server, "router", RouteMethod.RoundRobin);
-            router.AddBinding(new QueueBinding("qbind-1", "push-a", MessageA.ContentType, 5, BindingInteraction.None));
-            router.AddBinding(new QueueBinding("qbind-2", "push-a-cc", MessageA.ContentType, 10, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-1", "client-1", MessageA.ContentType, 20, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-2", "client-2", MessageA.ContentType, 0, BindingInteraction.None));
+            router.AddBinding(new QueueBinding("qbind-1", "push-a", 5, BindingInteraction.None));
+            router.AddBinding(new QueueBinding("qbind-2", "push-a-cc", 10, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-1", "client-1", 20, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-2", "client-2", 0, BindingInteraction.None));
             server.Server.AddRouter(router);
 
             TmqClient producer = new TmqClient();
@@ -101,17 +96,14 @@ namespace Test.Mq
 
             for (int i = 0; i < 5; i++)
             {
-                TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
+                TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
                 Assert.Equal(TwinoResultCode.Ok, result.Code);
             }
 
             await Task.Delay(500);
 
-            Channel channel1 = server.Server.FindChannel("push-a");
-            Channel channel2 = server.Server.FindChannel("push-a-cc");
-
-            TwinoQueue queue1 = channel1.FindQueue(MessageA.ContentType);
-            TwinoQueue queue2 = channel2.FindQueue(MessageA.ContentType);
+            TwinoQueue queue1 = server.Server.FindQueue("push-a");
+            TwinoQueue queue2 = server.Server.FindQueue("push-a-cc");
 
             Assert.Equal(1, queue1.MessageCount());
             Assert.Equal(1, queue2.MessageCount());
@@ -123,15 +115,15 @@ namespace Test.Mq
         [Fact]
         public async Task OnlyFirst()
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start(300, 300);
 
             Router router = new Router(server.Server, "router", RouteMethod.OnlyFirst);
-            router.AddBinding(new QueueBinding("qbind-1", "push-a", MessageA.ContentType, 5, BindingInteraction.None));
-            router.AddBinding(new QueueBinding("qbind-2", "push-a-cc", MessageA.ContentType, 10, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-1", "client-1", MessageA.ContentType, 2, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-2", "client-2", MessageA.ContentType, 8, BindingInteraction.None));
+            router.AddBinding(new QueueBinding("qbind-1", "push-a", 5, BindingInteraction.None));
+            router.AddBinding(new QueueBinding("qbind-2", "push-a-cc", 10, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-1", "client-1", 2, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-2", "client-2", 8, BindingInteraction.None));
             server.Server.AddRouter(router);
 
             TmqClient producer = new TmqClient();
@@ -155,17 +147,14 @@ namespace Test.Mq
 
             for (int i = 0; i < 4; i++)
             {
-                TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
+                TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
                 Assert.Equal(TwinoResultCode.Ok, result.Code);
             }
 
             await Task.Delay(500);
 
-            Channel channel1 = server.Server.FindChannel("push-a");
-            Channel channel2 = server.Server.FindChannel("push-a-cc");
-
-            TwinoQueue queue1 = channel1.FindQueue(MessageA.ContentType);
-            TwinoQueue queue2 = channel2.FindQueue(MessageA.ContentType);
+            TwinoQueue queue1 = server.Server.FindQueue("push-a");
+            TwinoQueue queue2 = server.Server.FindQueue("push-a-cc");
 
             Assert.Equal(0, queue1.MessageCount());
             Assert.Equal(4, queue2.MessageCount());
@@ -177,27 +166,24 @@ namespace Test.Mq
         [Fact]
         public async Task MultipleQueue()
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start(300, 300);
 
             Router router = new Router(server.Server, "router", RouteMethod.Distribute);
-            router.AddBinding(new QueueBinding("qbind-1", "push-a", MessageA.ContentType, 0, BindingInteraction.None));
-            router.AddBinding(new QueueBinding("qbind-2", "push-a-cc", MessageA.ContentType, 0, BindingInteraction.None));
+            router.AddBinding(new QueueBinding("qbind-1", "push-a", 0, BindingInteraction.None));
+            router.AddBinding(new QueueBinding("qbind-2", "push-a-cc", 0, BindingInteraction.None));
             server.Server.AddRouter(router);
 
             TmqClient producer = new TmqClient();
             await producer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
+            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
             Assert.Equal(TwinoResultCode.Ok, result.Code);
 
-            Channel channel1 = server.Server.FindChannel("push-a");
-            Channel channel2 = server.Server.FindChannel("push-a-cc");
-
-            TwinoQueue queue1 = channel1.FindQueue(MessageA.ContentType);
-            TwinoQueue queue2 = channel2.FindQueue(MessageA.ContentType);
+            TwinoQueue queue1 = server.Server.FindQueue("push-a");
+            TwinoQueue queue2 = server.Server.FindQueue("push-a-cc");
 
             Assert.Equal(1, queue1.MessageCount());
             Assert.Equal(1, queue2.MessageCount());
@@ -206,13 +192,13 @@ namespace Test.Mq
         [Fact]
         public async Task MultipleDirect()
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start(300, 300);
 
             Router router = new Router(server.Server, "router", RouteMethod.Distribute);
-            router.AddBinding(new DirectBinding("dbind-1", "client-1", MessageA.ContentType, 0, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-2", "client-2", MessageA.ContentType, 0, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-1", "client-1", 0, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-2", "client-2", 0, BindingInteraction.None));
             server.Server.AddRouter(router);
 
             TmqClient producer = new TmqClient();
@@ -234,7 +220,7 @@ namespace Test.Mq
             client1.MessageReceived += (c, m) => client1Received = true;
             client2.MessageReceived += (c, m) => client2Received = true;
 
-            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
+            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
             Assert.Equal(TwinoResultCode.Ok, result.Code);
             await Task.Delay(500);
 
@@ -245,33 +231,33 @@ namespace Test.Mq
         [Fact]
         public async Task MultipleOfflineDirect()
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start(300, 300);
 
             Router router = new Router(server.Server, "router", RouteMethod.Distribute);
-            router.AddBinding(new DirectBinding("dbind-1", "client-1", MessageA.ContentType, 0, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-2", "client-2", MessageA.ContentType, 0, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-1", "client-1", 0, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-2", "client-2", 0, BindingInteraction.None));
             server.Server.AddRouter(router);
 
             TmqClient producer = new TmqClient();
             await producer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
+            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
             Assert.Equal(TwinoResultCode.Failed, result.Code);
         }
 
         [Fact]
         public async Task SingleQueueSingleDirect()
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start(300, 300);
 
             Router router = new Router(server.Server, "router", RouteMethod.Distribute);
-            router.AddBinding(new QueueBinding("qbind-1", "push-a", MessageA.ContentType, 0, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-1", "client-1", MessageA.ContentType, 0, BindingInteraction.None));
+            router.AddBinding(new QueueBinding("qbind-1", "push-a", 0, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-1", "client-1", 0, BindingInteraction.None));
             server.Server.AddRouter(router);
 
             TmqClient producer = new TmqClient();
@@ -285,12 +271,11 @@ namespace Test.Mq
             client1.MessageReceived += (c, m) => client1Received = true;
             Assert.True(client1.IsConnected);
 
-            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
+            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
             Assert.Equal(TwinoResultCode.Ok, result.Code);
             await Task.Delay(500);
 
-            Channel channel1 = server.Server.FindChannel("push-a");
-            TwinoQueue queue1 = channel1.FindQueue(MessageA.ContentType);
+            TwinoQueue queue1 = server.Server.FindQueue("push-a");
 
             Assert.Equal(1, queue1.MessageCount());
             Assert.True(client1Received);
@@ -299,15 +284,15 @@ namespace Test.Mq
         [Fact]
         public async Task MultipleQueueMultipleDirect()
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start(300, 300);
 
             Router router = new Router(server.Server, "router", RouteMethod.Distribute);
-            router.AddBinding(new QueueBinding("qbind-1", "push-a", MessageA.ContentType, 0, BindingInteraction.None));
-            router.AddBinding(new QueueBinding("qbind-2", "push-a-cc", MessageA.ContentType, 0, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-1", "client-1", MessageA.ContentType, 0, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-2", "client-2", MessageA.ContentType, 0, BindingInteraction.None));
+            router.AddBinding(new QueueBinding("qbind-1", "push-a", 0, BindingInteraction.None));
+            router.AddBinding(new QueueBinding("qbind-2", "push-a-cc", 0, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-1", "client-1", 0, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-2", "client-2", 0, BindingInteraction.None));
             server.Server.AddRouter(router);
 
             TmqClient producer = new TmqClient();
@@ -329,15 +314,12 @@ namespace Test.Mq
             client1.MessageReceived += (c, m) => client1Received = true;
             client2.MessageReceived += (c, m) => client2Received = true;
 
-            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
+            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
             Assert.Equal(TwinoResultCode.Ok, result.Code);
             await Task.Delay(500);
 
-            Channel channel1 = server.Server.FindChannel("push-a");
-            Channel channel2 = server.Server.FindChannel("push-a-cc");
-
-            TwinoQueue queue1 = channel1.FindQueue(MessageA.ContentType);
-            TwinoQueue queue2 = channel2.FindQueue(MessageA.ContentType);
+            TwinoQueue queue1 = server.Server.FindQueue("push-a");
+            TwinoQueue queue2 = server.Server.FindQueue("push-a-cc");
 
             Assert.Equal(1, queue1.MessageCount());
             Assert.Equal(1, queue2.MessageCount());
@@ -349,14 +331,14 @@ namespace Test.Mq
         [Fact]
         public async Task SingleQueueSingleDirectAckFromQueue()
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start(300, 300);
             server.SendAcknowledgeFromMQ = true;
 
             Router router = new Router(server.Server, "router", RouteMethod.Distribute);
-            router.AddBinding(new QueueBinding("qbind-1", "push-a", MessageA.ContentType, 0, BindingInteraction.Acknowledge));
-            router.AddBinding(new DirectBinding("dbind-1", "client-1", MessageA.ContentType, 0, BindingInteraction.None));
+            router.AddBinding(new QueueBinding("qbind-1", "push-a", 0, BindingInteraction.Response));
+            router.AddBinding(new DirectBinding("dbind-1", "client-1", 0, BindingInteraction.None));
             server.Server.AddRouter(router);
 
             TmqClient producer = new TmqClient();
@@ -370,10 +352,9 @@ namespace Test.Mq
             client1.MessageReceived += (c, m) => client1Received = true;
             Assert.True(client1.IsConnected);
 
-            Channel channel1 = server.Server.FindChannel("push-a");
-            TwinoQueue queue1 = channel1.FindQueue(MessageA.ContentType);
+            TwinoQueue queue1 = server.Server.FindQueue("push-a");
 
-            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true, MessageA.ContentType);
+            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
             Assert.Equal(TwinoResultCode.Ok, result.Code);
 
             await Task.Delay(500);
@@ -384,13 +365,13 @@ namespace Test.Mq
         [Fact]
         public async Task SingleQueueSingleDirectResponseFromDirect()
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start(300, 300);
 
             Router router = new Router(server.Server, "router", RouteMethod.Distribute);
-            router.AddBinding(new QueueBinding("qbind-1", "push-a", MessageA.ContentType, 0, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-1", "client-1", MessageA.ContentType, 0, BindingInteraction.Response));
+            router.AddBinding(new QueueBinding("qbind-1", "push-a", 0, BindingInteraction.None));
+            router.AddBinding(new DirectBinding("dbind-1", "client-1", 0, BindingInteraction.Response));
             server.Server.AddRouter(router);
 
             TmqClient producer = new TmqClient();
@@ -408,10 +389,9 @@ namespace Test.Mq
             };
             Assert.True(client1.IsConnected);
 
-            Channel channel1 = server.Server.FindChannel("push-a");
-            TwinoQueue queue1 = channel1.FindQueue(MessageA.ContentType);
+            TwinoQueue queue1 = server.Server.FindQueue("push-a");
 
-            TwinoMessage message = await producer.Routers.PublishRequest("router", "Hello, World!", MessageA.ContentType);
+            TwinoMessage message = await producer.Routers.PublishRequest("router", "Hello, World!");
             Assert.NotNull(message);
             Assert.Equal("Response", message.GetStringContent());
             Assert.Equal(1, queue1.MessageCount());

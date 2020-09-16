@@ -29,7 +29,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Nodes", "Tests\Test.No
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Direct", "Tests\Test.Direct\Test.Direct.csproj", "{0D589E82-42FA-4970-A1FA-C5D2C921CD35}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Router", "Tests\Test.Router\Test.Router.csproj", "{EABE1565-9513-4704-872E-F801AF29C456}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Routers", "Tests\Test.Routers\Test.Routers.csproj", "{EABE1565-9513-4704-872E-F801AF29C456}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Server", "Samples\Sample.Server\Sample.Server.csproj", "{407CA4E7-57AF-4AF7-92CA-44DFA26CCC6C}"
 EndProject

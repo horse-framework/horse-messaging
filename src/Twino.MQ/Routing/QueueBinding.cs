@@ -23,8 +23,8 @@ namespace Twino.MQ.Routing
         /// Content Type should be Queue Id.
         /// Priority for router binding.
         /// </summary>
-        public QueueBinding(string name, string target, ushort contentType, int priority, BindingInteraction interaction)
-            : base(name, target, contentType, priority, interaction)
+        public QueueBinding(string name, string target, int priority, BindingInteraction interaction)
+            : base(name, target, null, priority, interaction)
         {
         }
 
