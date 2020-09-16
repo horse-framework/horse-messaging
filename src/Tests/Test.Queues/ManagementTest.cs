@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Test.Common;
-using Test.Mq.Internal;
 using Twino.Client.TMQ;
 using Twino.Client.TMQ.Models;
 using Twino.MQ.Clients;
@@ -89,8 +88,8 @@ namespace Test.Queues
         [Fact]
         public async Task CreateWithProperties()
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start();
 
             TmqClient client = new TmqClient();

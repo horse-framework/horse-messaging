@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Test.Mq.Internal;
+using Test.Common;
 using Twino.Client.TMQ;
 using Twino.Client.TMQ.Models;
 using Twino.MQ.Queues;
@@ -15,8 +15,8 @@ namespace Test.Queues.Statuses
         [Fact]
         public async Task SendAndPull()
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start(300, 300);
 
             TmqClient consumer = new TmqClient();
@@ -56,8 +56,8 @@ namespace Test.Queues.Statuses
         [Fact]
         public async Task RequestAcknowledge()
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start(300, 300);
 
             TwinoQueue queue = server.Server.FindQueue("pull-a");
@@ -106,8 +106,8 @@ namespace Test.Queues.Statuses
         [InlineData(false)]
         public async Task PullOrder(bool? fifo)
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start();
 
             TwinoQueue queue = server.Server.FindQueue("pull-a");
@@ -148,8 +148,8 @@ namespace Test.Queues.Statuses
         [InlineData(10)]
         public async Task PullCount(int count)
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start();
 
             TwinoQueue queue = server.Server.FindQueue("pull-a");
@@ -181,8 +181,8 @@ namespace Test.Queues.Statuses
         [InlineData(4, false, true)]
         public async Task PullClearAfter(int count, bool priorityMessages, bool messages)
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start();
 
             TwinoQueue queue = server.Server.FindQueue("pull-a");

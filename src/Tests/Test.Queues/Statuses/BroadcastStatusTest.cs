@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Test.Mq.Internal;
+using Test.Common;
 using Twino.Client.TMQ;
 using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
@@ -18,8 +18,8 @@ namespace Test.Queues.Statuses
         [InlineData(20)]
         public async Task SendToOnlineConsumers(int onlineConsumerCount)
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start(300, 300);
 
             TmqClient producer = new TmqClient();
@@ -47,8 +47,8 @@ namespace Test.Queues.Statuses
         [Fact]
         public async Task SendToOfflineConsumers()
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start(300, 300);
 
             TmqClient producer = new TmqClient();
@@ -76,8 +76,8 @@ namespace Test.Queues.Statuses
         [InlineData(false)]
         public async Task RequestAcknowledge(bool queueAckIsActive)
         {
-            TestMqServer server = new TestMqServer();
-            server.Initialize();
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
             int port = server.Start(300, 300);
             TwinoQueue queue = server.Server.FindQueue("broadcast-a");
             Assert.NotNull(queue);
