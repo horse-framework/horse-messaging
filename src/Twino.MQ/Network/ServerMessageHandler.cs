@@ -280,6 +280,9 @@ namespace Twino.MQ.Network
 
             //creates new queue
             QueueOptions options = QueueOptions.CloneFrom(_server.Options);
+            if (builder != null)
+                builder.ApplyToQueue(options);
+            
             queue = await _server.CreateQueue(message.Target, options, message, _server.DeliveryHandlerFactory, true, false);
 
             //if creation successful, sends response
