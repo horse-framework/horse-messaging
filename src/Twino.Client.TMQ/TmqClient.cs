@@ -457,6 +457,10 @@ namespace Twino.Client.TMQ
                     break;
 
                 case MessageType.DirectMessage:
+
+                    if (message.WaitResponse && AutoAcknowledge)
+                        await SendAsync(message.CreateAcknowledge());
+
                     SetOnMessageReceived(message);
                     break;
             }

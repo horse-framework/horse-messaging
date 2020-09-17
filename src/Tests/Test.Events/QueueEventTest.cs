@@ -21,12 +21,12 @@ namespace Test.Events
             bool received = false;
             bool subscribed = await client.Queues.OnCreated(q =>
             {
-                Assert.Equal("pull-a", q.Name);
+                Assert.Equal("pull-b", q.Name);
                 received = true;
             });
             Assert.True(subscribed);
 
-            var result = await client.Queues.Create("pull-a");
+            var result = await client.Queues.Create("pull-b");
             Assert.Equal(TwinoResultCode.Ok, result.Code);
             await Task.Delay(250);
             Assert.True(received);
@@ -35,7 +35,7 @@ namespace Test.Events
             bool unsubscribed = await client.Queues.OffCreated();
             Assert.True(unsubscribed);
 
-            result = await client.Queues.Create("pull-a");
+            result = await client.Queues.Create("pull-c");
             Assert.Equal(TwinoResultCode.Ok, result.Code);
             await Task.Delay(250);
             Assert.False(received);

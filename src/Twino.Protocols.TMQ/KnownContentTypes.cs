@@ -11,14 +11,14 @@ namespace Twino.Protocols.TMQ
         public const ushort Hello = 101;
 
         /// <summary>
-        /// "200" Operation successful
-        /// </summary>
-        public const ushort Ok = 200;
-
-        /// <summary>
         /// "202" Message is accepted
         /// </summary>
         public const ushort Accepted = 202;
+
+        /// <summary>
+        /// "204" No content
+        /// </summary>
+        public const ushort NoContent = 204;
 
         /// <summary>
         /// "400" Message has invalid content

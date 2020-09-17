@@ -59,7 +59,7 @@ namespace Test.Direct
             client1.ClientId = "client-1";
             client2.ClientId = "client-2";
             client2.AutoAcknowledge = true;
-            client1.ResponseTimeout = TimeSpan.FromMinutes(14);
+            client1.ResponseTimeout = TimeSpan.FromSeconds(14);
 
             await client1.ConnectAsync("tmq://localhost:" + port);
             await client2.ConnectAsync("tmq://localhost:" + port);

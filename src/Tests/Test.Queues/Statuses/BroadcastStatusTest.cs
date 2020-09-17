@@ -79,7 +79,7 @@ namespace Test.Queues.Statuses
             TestTwinoMQ server = new TestTwinoMQ();
             await server.Initialize();
             int port = server.Start(300, 300);
-            TwinoQueue queue = server.Server.FindQueue("broadcast-a");
+            TwinoQueue queue = server.Server.FindQueue("push-a");
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
             queue.Options.Acknowledge = queueAckIsActive ? QueueAckDecision.JustRequest : QueueAckDecision.None;
@@ -94,10 +94,10 @@ namespace Test.Queues.Statuses
             consumer.ClientId = "consumer";
             await consumer.ConnectAsync("tmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
-            TwinoResult joined = await consumer.Queues.Subscribe("broadcast-a", true);
+            TwinoResult joined = await consumer.Queues.Subscribe("push-a", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
 
-            TwinoResult ack = await producer.Queues.Push("broadcast-a", "Hello, World!", true);
+            TwinoResult ack = await producer.Queues.Push("push-a", "Hello, World!", true);
             Assert.Equal(queueAckIsActive, ack.Code == TwinoResultCode.Ok);
         }
     }

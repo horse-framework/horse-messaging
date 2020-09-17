@@ -22,7 +22,7 @@ namespace Test.Direct
             TestTwinoMQ server = new TestTwinoMQ();
             await server.Initialize();
             server.Server.Options.UseMessageId = enabled;
-            server.Server.FindQueue("queue-1").Options.UseMessageId = false;
+            server.Server.FindQueue("push-a").Options.UseMessageId = false;
             int port = server.Start();
 
             TmqClient client = new TmqClient();
@@ -31,7 +31,7 @@ namespace Test.Direct
             await client.ConnectAsync("tmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            TwinoResult joined = await client.Queues.Subscribe("queue-1", true);
+            TwinoResult joined = await client.Queues.Subscribe("push-a", true);
             Assert.Equal(TwinoResultCode.Ok, joined.Code);
             await Task.Delay(250);
 
@@ -41,7 +41,7 @@ namespace Test.Direct
             QueueMessageA a = new QueueMessageA("A");
             string serialized = Newtonsoft.Json.JsonConvert.SerializeObject(a);
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(serialized));
-            TwinoResult sent = await client.Queues.Push("queue-1", ms, false);
+            TwinoResult sent = await client.Queues.Push("push-a", ms, false);
             Assert.Equal(TwinoResultCode.Ok, sent.Code);
 
             await Task.Delay(1000);
@@ -95,7 +95,7 @@ namespace Test.Direct
             msg.SetStringContent("Hello, World!");
 
             TwinoMessage response = await client1.Request(msg);
-
+            await Task.Delay(500);
             Assert.NotNull(response);
             Assert.Equal(msg.MessageId, response.MessageId);
             Assert.Equal(enabled, responseCaught);

@@ -363,7 +363,7 @@ namespace Twino.Protocols.TMQ
                 message.HeadersList.Add(new KeyValuePair<string, string>(TwinoHeaders.NEGATIVE_ACKNOWLEDGE_REASON, negativeReason));
             }
             else
-                message.ContentType = KnownContentTypes.Ok;
+                message.ContentType = Convert.ToUInt16(TwinoResultCode.Ok);
 
             return message;
         }
