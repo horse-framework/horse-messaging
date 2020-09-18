@@ -703,6 +703,7 @@ namespace Twino.Client.TMQ
 
                 TwinoResult result = new TwinoResult((TwinoResultCode) response.ContentType);
                 result.Message = response;
+                return result;
             }
 
             return TwinoResult.Ok();

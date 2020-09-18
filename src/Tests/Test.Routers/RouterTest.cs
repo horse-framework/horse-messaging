@@ -245,7 +245,7 @@ namespace Test.Routers
             Assert.True(producer.IsConnected);
 
             TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
-            Assert.Equal(TwinoResultCode.Failed, result.Code);
+            Assert.Equal(TwinoResultCode.NotFound, result.Code);
         }
 
         [Fact]

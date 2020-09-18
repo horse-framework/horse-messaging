@@ -45,14 +45,9 @@ namespace Twino.MQ.Network
             bool positive = result == RouterPublishResult.OkWillNotRespond;
             if (message.WaitResponse)
             {
-                TwinoMessage response;
-                if (positive)
-                    response = message.CreateAcknowledge();
-                else
-                {
-                    response = message.CreateAcknowledge(TwinoHeaders.NACK_REASON_NO_CONSUMERS);
-                    response.ContentType = KnownContentTypes.NotFound;
-                }
+                TwinoMessage response = positive
+                                            ? message.CreateAcknowledge()
+                                            : message.CreateResponse(TwinoResultCode.NotFound);
 
                 return client.SendAsync(response);
             }
