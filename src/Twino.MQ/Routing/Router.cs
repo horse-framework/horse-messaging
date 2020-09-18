@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.Protocols.TMQ;
@@ -46,7 +47,7 @@ namespace Twino.MQ.Routing
         /// Used for round robin routing.
         /// The index value of the binding received last message.
         /// </summary>
-        private volatile int _lastRoutedIndex = -1;
+        private int _lastRoutedIndex = -1;
 
         #endregion
 
@@ -211,14 +212,17 @@ namespace Twino.MQ.Routing
         /// </summary>
         private async Task<RouterPublishResult> RoundRobin(MqClient sender, TwinoMessage message)
         {
-            for (int i = 0; i < Bindings.Length; i++)
+            int len = Bindings.Length;
+            for (int i = 0; i < len; i++)
             {
-                _lastRoutedIndex++;
+                Interlocked.Increment(ref _lastRoutedIndex);
                 if (_lastRoutedIndex >= Bindings.Length)
-                    _lastRoutedIndex = 0;
+                    Interlocked.Exchange(ref _lastRoutedIndex, 0);
 
                 Binding binding = Bindings[_lastRoutedIndex];
+                bool waitResponse = message.WaitResponse;
                 bool sent = await binding.Send(sender, message);
+                message.WaitResponse = waitResponse;
                 if (sent)
                     return binding.Interaction != BindingInteraction.None
                                ? RouterPublishResult.OkAndWillBeRespond
