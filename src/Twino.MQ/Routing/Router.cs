@@ -188,10 +188,11 @@ namespace Twino.MQ.Routing
         private async Task<RouterPublishResult> Distribute(MqClient sender, TwinoMessage message)
         {
             RouterPublishResult result = RouterPublishResult.NoReceivers;
-
             foreach (Binding binding in Bindings)
             {
+                bool oldWaitResponse = message.WaitResponse;
                 bool sent = await binding.Send(sender, message);
+                message.WaitResponse = oldWaitResponse;
                 if (sent)
                 {
                     if (binding.Interaction != BindingInteraction.None)

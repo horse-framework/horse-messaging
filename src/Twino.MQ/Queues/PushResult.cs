@@ -28,6 +28,11 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Queue status does not support pushing messages 
         /// </summary>
-        StatusNotSupported
+        StatusNotSupported,
+
+        /// <summary>
+        /// An error has occured
+        /// </summary>
+        Error
     }
 }

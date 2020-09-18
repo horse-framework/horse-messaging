@@ -57,6 +57,7 @@ namespace Test.Common
 
             await Server.CreateQueue("broadcast-a", o => o.Status = QueueStatus.Broadcast);
             await Server.CreateQueue("push-a", o => o.Status = QueueStatus.Push);
+            await Server.CreateQueue("push-a-cc", o => o.Status = QueueStatus.Push);
             await Server.CreateQueue("rr-a", o => o.Status = QueueStatus.RoundRobin);
             await Server.CreateQueue("pull-a", o => o.Status = QueueStatus.Pull);
             await Server.CreateQueue("cache-a", o => o.Status = QueueStatus.Cache);

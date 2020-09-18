@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Test.Common;
@@ -21,6 +22,7 @@ namespace Test.Queues.Statuses
             TestTwinoMQ server = new TestTwinoMQ();
             await server.Initialize();
             int port = server.Start(300, 300);
+            server.Server.Options.Acknowledge = QueueAckDecision.None;
 
             TmqClient producer = new TmqClient();
             await producer.ConnectAsync("tmq://localhost:" + port);
@@ -40,6 +42,7 @@ namespace Test.Queues.Statuses
                 Assert.Equal(TwinoResultCode.Ok, joined.Code);
             }
 
+            await Task.Delay(500);
             for (int i = 0; i < 50; i++)
             {
                 await producer.Queues.Push("rr-a", "Hello, World!", false);
