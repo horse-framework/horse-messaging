@@ -83,7 +83,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Sends TMQ pong message
         /// </summary>
-        public override void Pong()
+        public override void Pong(object pingMessage = null)
         {
             Send(PredefinedMessages.PONG);
         }

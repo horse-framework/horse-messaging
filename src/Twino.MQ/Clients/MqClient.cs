@@ -171,12 +171,12 @@ namespace Twino.MQ.Clients
         /// <summary>
         /// Sends PONG Message to the client
         /// </summary>
-        public override void Pong()
+        public override void Pong(object pingMessage = null)
         {
             if (CustomProtocol != null)
-                CustomProtocol.Pong();
+                CustomProtocol.Pong(pingMessage);
             else
-                base.Pong();
+                base.Pong(pingMessage);
         }
 
         /// <summary>

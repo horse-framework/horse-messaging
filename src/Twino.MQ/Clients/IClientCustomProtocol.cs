@@ -18,7 +18,7 @@ namespace Twino.MQ.Clients
         /// <summary>
         /// Sends PONG over custom protocol
         /// </summary>
-        void Pong();
+        void Pong(object pingMessage = null);
 
         /// <summary>
         /// Sends a TwinoMessage over custom protocol

@@ -512,7 +512,7 @@ namespace Twino.Client.TMQ
         /// <summary>
         /// Sends a PONG message
         /// </summary>
-        public override void Pong()
+        public override void Pong(object pingMessage = null)
         {
             Send(PredefinedMessages.PONG);
         }

@@ -26,7 +26,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Twino.Core" Version="3.2.0" />
+        <PackageReference Include="Twino.Core" Version="4.0.1-beta" />
     </ItemGroup>
 
 </Project>
