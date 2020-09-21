@@ -93,6 +93,8 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
                 descriptor.HasRouterName = true;
                 descriptor.RouterName = routerNameAttribute.Name;
             }
+            else
+                descriptor.RouterName = type.FullName;
         }
 
         /// <summary>
