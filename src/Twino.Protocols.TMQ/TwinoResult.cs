@@ -11,11 +11,6 @@ namespace Twino.Protocols.TMQ
 		public TModel Model { get; }
 
 		/// <summary>
-		/// Response raw message
-		/// </summary>
-		public TwinoMessage Message { get; }
-
-		/// <summary>
 		/// Creates new TwinoResult with a model
 		/// </summary>
 		public TwinoResult(TModel model, TwinoMessage message, TwinoResultCode code): base(code)

@@ -67,9 +67,8 @@ namespace Twino.MQ.Routing
             }
         }
 
-        private async Task<bool> SendDistribute(TwinoMessage message)
+        private Task<bool> SendDistribute(TwinoMessage message)
         {
-            ushort queueId = ContentType.HasValue ? ContentType.Value : message.ContentType;
             bool sent = false;
             foreach (TwinoQueue queue in _queues)
             {
@@ -85,7 +84,7 @@ namespace Twino.MQ.Routing
                 queue.AddMessage(queueMessage);
             }
 
-            return sent;
+            return Task.FromResult(sent);
         }
 
         private async Task<bool> SendRoundRobin(TwinoMessage message)
