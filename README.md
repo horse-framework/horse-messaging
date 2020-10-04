@@ -48,9 +48,9 @@ Implementation
         static async Task Main(string[] args)
         {
             TmqStickyConnector connector = new TmqStickyConnector(TimeSpan.FromSeconds(1));
-            connector.AutoJoinConsumerChannels = true;
-            connector.InitJsonReader();
-            connector.Consumer.RegisterAssemblyConsumers(typeof(Program));
+            connector.AutoSubscribe = true;
+            connector.ContentSerializer = new NewtonsoftContentSerializer();
+            connector.Observer.RegisterAssemblyConsumers(typeof(Program));
             connector.AddHost("tmq://127.0.0.1:22200");
             connector.Run();
             while (true)
@@ -59,8 +59,7 @@ Implementation
 
 Model
 
-    [QueueId(100)]
-    [ChannelName("model-a")]
+    [QueueName("model-a")]
     public class ModelA
     {
         public string Foo { get; set; }
@@ -72,7 +71,7 @@ Consumer
     [AutoNack]
     public class QueueConsumerA : IQueueConsumer<ModelA>
     {
-        public Task Consume(TmqMessage message, ModelA model, TmqClient client)
+        public Task Consume(TwinoMessage message, ModelA model, TmqClient client)
         {
             Console.WriteLine("Model A Consumed");
             return Task.CompletedTask;
@@ -95,17 +94,19 @@ If you use a service provider, you can inject other services to consumer objects
 
 Twino accepts producers and consumers as client. Each client can be producer and consumer at same time. With ConsumerFactory implementation, you can inject ITwinoBus interface for being producer at same time. If you want to create only producer, you can skip Add..Consumers methods.
 
-     ITwinoBus bus; //injected from somewhere
-     //or you can do it with TmqStickyConnector object
+     ITwinoQueueBus queueBus;   //injected
+     ITwinoRouteBus routeBus;   //injected
+     ITwinoDirectBus directBus; //injected
 
      //push to a queue
-     await bus.PushJson(new ModelA(), false);
+     await queueBus.PushJson(new ModelA());
 
      //publish to a router
-     await bus.PublishJson(new ModelA(), false);
+     await routeBus.PublishJson(new ModelA());
 
-     //to a direct target, ModelA required DirectTarget attribute
-     await bus.SendDirectJsonAsync(new ModelA(), false);
+     //to a direct target, ModelA requires DirectTarget attribute
+     //and ContentType attribute will be useful to recognize message type by receiver
+     directBus.SendJson(new ModelA());
 
 
 
