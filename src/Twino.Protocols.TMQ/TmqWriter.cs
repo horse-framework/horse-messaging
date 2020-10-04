@@ -14,7 +14,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Writes a TMQ message to stream
         /// </summary>
-        public static void Write(TmqMessage value, Stream stream, IList<KeyValuePair<string, string>> additionalHeaders = null)
+        public static void Write(TwinoMessage value, Stream stream, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
             bool hasAdditionalHeader = additionalHeaders != null && additionalHeaders.Count > 0;
 
@@ -33,7 +33,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Creates byte array of TMQ message
         /// </summary>
-        public static byte[] Create(TmqMessage value, IList<KeyValuePair<string, string>> additionalHeaders = null)
+        public static byte[] Create(TwinoMessage value, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
             bool hasAdditionalHeader = additionalHeaders != null && additionalHeaders.Count > 0;
             using MemoryStream ms = new MemoryStream();
@@ -51,7 +51,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Creates byte array of only TMQ message frame
         /// </summary>
-        public static byte[] CreateFrame(TmqMessage value)
+        public static byte[] CreateFrame(TwinoMessage value)
         {
             using MemoryStream ms = new MemoryStream();
             WriteFrame(ms, value, false);
@@ -61,7 +61,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Creates byte array of only TMQ message content
         /// </summary>
-        public static byte[] CreateContent(TmqMessage value)
+        public static byte[] CreateContent(TwinoMessage value)
         {
             using MemoryStream ms = new MemoryStream();
             WriteContent(ms, value);
@@ -72,30 +72,22 @@ namespace Twino.Protocols.TMQ
         /// Writes frame to stream
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteFrame(MemoryStream ms, TmqMessage message, bool hasAdditionalHeaders)
+        private static void WriteFrame(MemoryStream ms, TwinoMessage message, bool hasAdditionalHeaders)
         {
-            byte first = (byte) message.Type;
-            if (message.FirstAcquirer)
-                first += 128;
+            byte proto = (byte) message.Type;
+
+            if (message.WaitResponse)
+                proto += 128;
+
             if (message.HighPriority)
-                first += 64;
-
-            byte second = (byte) message.Ttl;
-            if (second > 31)
-                second = 31;
-
-            if (message.PendingResponse)
-                second += 128;
-
-            if (message.PendingAcknowledge)
-                second += 64;
+                proto += 64;
 
             if (message.HasHeader || hasAdditionalHeaders)
-                second += 32;
+                proto += 32;
 
-            ms.WriteByte(first);
-            ms.WriteByte(second);
-
+            ms.WriteByte(proto);
+            byte reserved = 0;
+            ms.WriteByte(reserved);
             ms.WriteByte((byte) message.MessageIdLength);
             ms.WriteByte((byte) message.SourceLength);
             ms.WriteByte((byte) message.TargetLength);
@@ -146,7 +138,7 @@ namespace Twino.Protocols.TMQ
         /// Writes header length and content to stream
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteHeader(MemoryStream ms, TmqMessage message, IList<KeyValuePair<string, string>> additionalHeaders)
+        private static void WriteHeader(MemoryStream ms, TwinoMessage message, IList<KeyValuePair<string, string>> additionalHeaders)
         {
             using MemoryStream headerStream = new MemoryStream();
 
@@ -167,7 +159,7 @@ namespace Twino.Protocols.TMQ
         /// Writes content to stream
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteContent(MemoryStream ms, TmqMessage message)
+        private static void WriteContent(MemoryStream ms, TwinoMessage message)
         {
             if (message.Length > 0 && message.Content != null)
                 message.Content.WriteTo(ms);

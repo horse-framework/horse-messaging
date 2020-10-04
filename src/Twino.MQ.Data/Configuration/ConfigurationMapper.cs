@@ -1,90 +1,41 @@
 using System;
 using Twino.MQ.Options;
 using Twino.MQ.Queues;
+using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Data.Configuration
 {
     internal static class ConfigurationMapper
     {
-        internal static ChannelOptions ToOptions(this ChannelOptionsConfiguration configuration)
+        internal static QueueOptions ToOptions(this QueueOptionsConfiguration configuration)
         {
-            return new ChannelOptions
+            return new QueueOptions
                    {
-                       Status = configuration.Status.ToQueueStatus(),
-                       AcknowledgeTimeout = TimeSpan.FromMilliseconds(configuration.AcknowledgeTimeout),
-                       MessageTimeout = TimeSpan.FromMilliseconds(configuration.AcknowledgeTimeout),
-                       AllowedQueues = configuration.AllowedQueues,
-                       ClientLimit = configuration.ClientLimit,
-                       MessageLimit = configuration.MessageLimit,
-                       QueueLimit = configuration.QueueLimit,
-                       RequestAcknowledge = configuration.RequestAcknowledge,
-                       TagName = configuration.TagName,
-                       AllowMultipleQueues = configuration.AllowMultipleQueues,
-                       DestroyWhenEmpty = configuration.DestroyWhenEmpty,
-                       HideClientNames = configuration.HideClientNames,
-                       MessageSizeLimit = configuration.MessageSizeLimit,
-                       UseMessageId = configuration.UseMessageId,
-                       WaitForAcknowledge = configuration.WaitForAcknowledge,
-                       SendOnlyFirstAcquirer = configuration.SendOnlyFirstAcquirer
-                   };
-        }
-
-        internal static ChannelQueueOptions ToOptions(this QueueOptionsConfiguration configuration)
-        {
-            return new ChannelQueueOptions
-                   {
+                       Acknowledge = configuration.Acknowledge.ToAckDecision(),
                        Status = configuration.Status.ToQueueStatus(),
                        AcknowledgeTimeout = TimeSpan.FromMilliseconds(configuration.AcknowledgeTimeout),
                        MessageTimeout = TimeSpan.FromMilliseconds(configuration.AcknowledgeTimeout),
                        MessageLimit = configuration.MessageLimit,
-                       RequestAcknowledge = configuration.RequestAcknowledge,
-                       TagName = configuration.TagName,
                        HideClientNames = configuration.HideClientNames,
                        MessageSizeLimit = configuration.MessageSizeLimit,
                        UseMessageId = configuration.UseMessageId,
-                       WaitForAcknowledge = configuration.WaitForAcknowledge,
-                       SendOnlyFirstAcquirer = configuration.SendOnlyFirstAcquirer
+                       ClientLimit = configuration.ClientLimit
                    };
         }
 
-        internal static ChannelOptionsConfiguration ToConfiguration(this ChannelOptions options)
-        {
-            return new ChannelOptionsConfiguration
-                   {
-                       Status = options.Status.ToStatusString(),
-                       AcknowledgeTimeout = Convert.ToInt32(options.AcknowledgeTimeout.TotalMilliseconds),
-                       AllowedQueues = options.AllowedQueues,
-                       ClientLimit = options.ClientLimit,
-                       MessageLimit = options.MessageLimit,
-                       MessageTimeout = Convert.ToInt32(options.MessageTimeout.TotalMilliseconds),
-                       QueueLimit = options.QueueLimit,
-                       RequestAcknowledge = options.RequestAcknowledge,
-                       TagName = options.TagName,
-                       AllowMultipleQueues = options.AllowMultipleQueues,
-                       DestroyWhenEmpty = options.DestroyWhenEmpty,
-                       HideClientNames = options.HideClientNames,
-                       MessageSizeLimit = options.MessageSizeLimit,
-                       UseMessageId = options.UseMessageId,
-                       WaitForAcknowledge = options.WaitForAcknowledge,
-                       SendOnlyFirstAcquirer = options.SendOnlyFirstAcquirer
-                   };
-        }
-
-        internal static QueueOptionsConfiguration ToConfiguration(this ChannelQueueOptions options)
+        internal static QueueOptionsConfiguration ToConfiguration(this QueueOptions options)
         {
             return new QueueOptionsConfiguration
                    {
                        Status = options.Status.ToStatusString(),
+                       Acknowledge = options.Acknowledge.ToQueueAckString(),
                        AcknowledgeTimeout = Convert.ToInt32(options.AcknowledgeTimeout.TotalMilliseconds),
                        MessageLimit = options.MessageLimit,
                        MessageTimeout = Convert.ToInt32(options.MessageTimeout.TotalMilliseconds),
-                       RequestAcknowledge = options.RequestAcknowledge,
-                       TagName = options.TagName,
                        HideClientNames = options.HideClientNames,
                        MessageSizeLimit = options.MessageSizeLimit,
                        UseMessageId = options.UseMessageId,
-                       WaitForAcknowledge = options.WaitForAcknowledge,
-                       SendOnlyFirstAcquirer = options.SendOnlyFirstAcquirer
+                       ClientLimit = options.ClientLimit
                    };
         }
 
@@ -95,7 +46,7 @@ namespace Twino.MQ.Data.Configuration
 
         private static QueueStatus ToQueueStatus(this string text)
         {
-            switch (text.ToLowerInvariant())
+            switch (text.Trim().ToLowerInvariant())
             {
                 case "broadcast": return QueueStatus.Broadcast;
                 case "push": return QueueStatus.Push;
@@ -104,6 +55,26 @@ namespace Twino.MQ.Data.Configuration
                 case "cache": return QueueStatus.Cache;
                 case "paused": return QueueStatus.Paused;
                 default: return QueueStatus.Stopped;
+            }
+        }
+
+        private static string ToQueueAckString(this QueueAckDecision status)
+        {
+            switch (status)
+            {
+                case QueueAckDecision.JustRequest: return "just";
+                case QueueAckDecision.WaitForAcknowledge: return "wait";
+                default: return "none";
+            }
+        }
+
+        private static QueueAckDecision ToAckDecision(this string text)
+        {
+            switch (text.Trim().ToLowerInvariant())
+            {
+                case "just": return QueueAckDecision.JustRequest;
+                case "wait": return QueueAckDecision.WaitForAcknowledge;
+                default: return QueueAckDecision.None;
             }
         }
     }

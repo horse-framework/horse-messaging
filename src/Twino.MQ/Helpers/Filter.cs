@@ -22,7 +22,7 @@ namespace Twino.MQ.Helpers
         }
 
         /// <summary>
-        /// Checks channel, router or client name if it's eligible
+        /// Checks queue, router or client name if it's eligible
         /// </summary>
         public static bool CheckNameEligibility(string name)
         {

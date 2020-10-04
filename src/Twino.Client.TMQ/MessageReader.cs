@@ -14,7 +14,7 @@ namespace Twino.Client.TMQ
         /// MessageReader name is changed to MessageConsumer.
         /// Use MessageConsumer directly
         /// </summary>
-        public MessageReader(Func<TmqMessage, Type, object> func) : base(func)
+        public MessageReader(Func<TwinoMessage, Type, object> func) : base(func)
         {
         }
     }

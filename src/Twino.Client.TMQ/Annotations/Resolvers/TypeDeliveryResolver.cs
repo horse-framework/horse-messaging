@@ -72,21 +72,14 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         /// </summary>
         private void ResolveQueue(Type type, TypeDeliveryDescriptor descriptor)
         {
-            ChannelNameAttribute channelNameAttribute = type.GetCustomAttribute<ChannelNameAttribute>(true);
-            if (channelNameAttribute != null)
+            QueueNameAttribute queueNameAttribute = type.GetCustomAttribute<QueueNameAttribute>(true);
+            if (queueNameAttribute != null)
             {
-                descriptor.HasChannelName = true;
-                descriptor.ChannelName = channelNameAttribute.Channel;
+                descriptor.HasQueueName = true;
+                descriptor.QueueName = queueNameAttribute.Name;
             }
             else
-                descriptor.ChannelName = type.FullName;
-
-            QueueIdAttribute queueIdAttribute = type.GetCustomAttribute<QueueIdAttribute>(false);
-            if (queueIdAttribute != null)
-            {
-                descriptor.HasQueueId = true;
-                descriptor.QueueId = queueIdAttribute.QueueId;
-            }
+                descriptor.QueueName = type.FullName;
         }
 
         /// <summary>
@@ -100,6 +93,8 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
                 descriptor.HasRouterName = true;
                 descriptor.RouterName = routerNameAttribute.Name;
             }
+            else
+                descriptor.RouterName = type.FullName;
         }
 
         /// <summary>
@@ -109,29 +104,21 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         {
             descriptor.Type = type;
 
-            HighPriorityMessageAttribute hp = type.GetCustomAttribute<HighPriorityMessageAttribute>(true);
-            if (hp != null)
+            HighPriorityMessageAttribute prioAttr = type.GetCustomAttribute<HighPriorityMessageAttribute>(true);
+            if (prioAttr != null)
                 descriptor.HighPriority = true;
 
-            OnlyFirstAcquirerAttribute of = type.GetCustomAttribute<OnlyFirstAcquirerAttribute>(true);
-            if (of != null)
-                descriptor.OnlyFirstAcquirer = true;
-            
-            WaitForAcknowledgeAttribute wfa = type.GetCustomAttribute<WaitForAcknowledgeAttribute>(true);
-            if (wfa != null)
-                descriptor.WaitForAcknowledge = wfa.Value;
+            AcknowledgeAttribute ackAttr = type.GetCustomAttribute<AcknowledgeAttribute>(true);
+            if (ackAttr != null)
+                descriptor.Acknowledge = ackAttr.Value;
 
-            QueueStatusAttribute qsa = type.GetCustomAttribute<QueueStatusAttribute>(true);
-            if (qsa != null)
-                descriptor.QueueStatus = qsa.Status;
+            QueueStatusAttribute statusAttr = type.GetCustomAttribute<QueueStatusAttribute>(true);
+            if (statusAttr != null)
+                descriptor.QueueStatus = statusAttr.Status;
 
-            QueueTagAttribute qta = type.GetCustomAttribute<QueueTagAttribute>(true);
-            if (qta != null)
-                descriptor.Tag = qta.Tag;
-
-            ChannelTopicAttribute cta = type.GetCustomAttribute<ChannelTopicAttribute>(true);
-            if (cta != null)
-                descriptor.Topic = cta.Topic;
+            QueueTopicAttribute topicAttr = type.GetCustomAttribute<QueueTopicAttribute>(true);
+            if (topicAttr != null)
+                descriptor.Topic = topicAttr.Topic;
 
             IEnumerable<MessageHeaderAttribute> headerAttributes = type.GetCustomAttributes<MessageHeaderAttribute>(true);
             foreach (MessageHeaderAttribute headerAttribute in headerAttributes)

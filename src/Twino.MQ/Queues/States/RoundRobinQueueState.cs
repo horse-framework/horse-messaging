@@ -11,20 +11,19 @@ namespace Twino.MQ.Queues.States
         public QueueMessage ProcessingMessage { get; private set; }
         public bool TriggerSupported => true;
 
-        private static readonly TmqWriter _writer = new TmqWriter();
-        private readonly ChannelQueue _queue;
+        private readonly TwinoQueue _queue;
 
         /// <summary>
         /// Round robin client list index
         /// </summary>
         private int _roundRobinIndex = -1;
 
-        public RoundRobinQueueState(ChannelQueue queue)
+        public RoundRobinQueueState(TwinoQueue queue)
         {
             _queue = queue;
         }
 
-        public Task<PullResult> Pull(ChannelClient client, TmqMessage request)
+        public Task<PullResult> Pull(QueueClient client, TwinoMessage request)
         {
             return Task.FromResult(PullResult.StatusNotSupported);
         }
@@ -41,7 +40,7 @@ namespace Twino.MQ.Queues.States
 
         public async Task<PushResult> Push(QueueMessage message)
         {
-            ChannelClient cc = _queue.Channel.GetNextRRClient(ref _roundRobinIndex);
+            QueueClient cc = _queue.GetNextRRClient(ref _roundRobinIndex);
             if (cc == null)
             {
                 _queue.AddMessage(message, false);
@@ -55,15 +54,15 @@ namespace Twino.MQ.Queues.States
             return result;
         }
 
-        private async Task<PushResult> ProcessMessage(QueueMessage message, ChannelClient receiver)
+        private async Task<PushResult> ProcessMessage(QueueMessage message, QueueClient receiver)
         {
             //if we need acknowledge from receiver, it has a deadline.
             DateTime? deadline = null;
-            if (_queue.Options.RequestAcknowledge)
+            if (_queue.Options.Acknowledge != QueueAckDecision.None)
                 deadline = DateTime.UtcNow.Add(_queue.Options.AcknowledgeTimeout);
 
             //if to process next message is requires previous message acknowledge, wait here
-            if (_queue.Options.RequestAcknowledge && _queue.Options.WaitForAcknowledge)
+            if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
                 await _queue.WaitForAcknowledge(message);
 
             message.Decision = await _queue.DeliveryHandler.BeginSend(_queue, message);
@@ -80,7 +79,6 @@ namespace Twino.MQ.Queues.States
 
             //create delivery object
             MessageDelivery delivery = new MessageDelivery(message, receiver, deadline);
-            delivery.FirstAcquirer = message.Message.FirstAcquirer;
 
             //send the message
             bool sent = await receiver.Client.SendAsync(messageData);

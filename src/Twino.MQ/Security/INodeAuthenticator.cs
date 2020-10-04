@@ -19,6 +19,6 @@ namespace Twino.MQ.Security
         /// <summary>
         /// Checks if the messsage should be sent to the node
         /// </summary>
-        Task<bool> CanReceive(TmqClient node, TmqMessage message);
+        Task<bool> CanReceive(TmqClient node, TwinoMessage message);
     }
 }

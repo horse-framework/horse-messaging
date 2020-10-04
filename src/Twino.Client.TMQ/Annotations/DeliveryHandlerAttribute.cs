@@ -14,7 +14,7 @@ namespace Twino.Client.TMQ.Annotations
         /// <summary>
         /// Creates new Delivery Handler Attribute
         /// </summary>
-        public DeliveryHandlerAttribute(string value) : base(TmqHeaders.DELIVERY_HANDLER, value)
+        public DeliveryHandlerAttribute(string value) : base(TwinoHeaders.DELIVERY_HANDLER, value)
         {
         }
     }

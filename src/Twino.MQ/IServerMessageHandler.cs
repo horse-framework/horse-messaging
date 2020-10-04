@@ -12,6 +12,6 @@ namespace Twino.MQ
         /// <summary>
         /// when a client sends a message to server
         /// </summary>
-        Task Received(MqClient client, TmqMessage message);
+        Task Received(MqClient client, TwinoMessage message);
     }
 }

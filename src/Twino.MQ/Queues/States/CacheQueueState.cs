@@ -10,14 +10,14 @@ namespace Twino.MQ.Queues.States
         public QueueMessage ProcessingMessage { get; private set; }
         public bool TriggerSupported => false;
 
-        private readonly ChannelQueue _queue;
+        private readonly TwinoQueue _queue;
 
-        public CacheQueueState(ChannelQueue queue)
+        public CacheQueueState(TwinoQueue queue)
         {
             _queue = queue;
         }
 
-        public async Task<PullResult> Pull(ChannelClient client, TmqMessage request)
+        public async Task<PullResult> Pull(QueueClient client, TwinoMessage request)
         {
             QueueMessage message = _queue.FindNextMessage();
             if (message == null)
@@ -40,7 +40,7 @@ namespace Twino.MQ.Queues.States
             //create delivery object
             MessageDelivery delivery = new MessageDelivery(message, client);
 
-            //change to response message, send, change back to channel message
+            //change to response message, send, change back to queue message
             message.Message.SetMessageId(request.MessageId);
             bool sent = await client.Client.SendAsync(message.Message);
 
@@ -74,9 +74,8 @@ namespace Twino.MQ.Queues.States
         public bool CanEnqueue(QueueMessage message)
         {
             //if we need acknowledge, we are sending this information to receivers that we require response
-            message.Message.PendingAcknowledge = _queue.Options.RequestAcknowledge;
+            message.Message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
             message.IsInQueue = true;
-            message.Message.Type = MessageType.Response;
 
             _queue.ClearAllMessages();
             return true;

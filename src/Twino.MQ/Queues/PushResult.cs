@@ -16,7 +16,7 @@ namespace Twino.MQ.Queues
         Empty,
 
         /// <summary>
-        /// There are no consumers in channel
+        /// There are no consumers in queue
         /// </summary>
         NoConsumers,
 
@@ -28,6 +28,11 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Queue status does not support pushing messages 
         /// </summary>
-        StatusNotSupported
+        StatusNotSupported,
+
+        /// <summary>
+        /// An error has occured
+        /// </summary>
+        Error
     }
 }

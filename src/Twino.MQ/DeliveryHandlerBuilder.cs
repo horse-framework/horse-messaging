@@ -15,14 +15,9 @@ namespace Twino.MQ
         public TwinoMQ Server { get; internal set; }
         
         /// <summary>
-        /// Channel of the queue
-        /// </summary>
-        public Channel Channel { get; internal set; }
-        
-        /// <summary>
         /// The queue that will use delivery handler
         /// </summary>
-        public ChannelQueue Queue { get; internal set; }
+        public TwinoQueue Queue { get; internal set; }
 
         /// <summary>
         /// Header information for delivery handler.

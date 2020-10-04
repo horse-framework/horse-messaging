@@ -18,7 +18,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Protocol connection handler
         /// </summary>
-        private readonly IProtocolConnectionHandler<TmqServerSocket, TmqMessage> _handler;
+        private readonly IProtocolConnectionHandler<TmqServerSocket, TwinoMessage> _handler;
 
         /// <summary>
         /// Server object
@@ -28,7 +28,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Creates new TMQ Protocol handler
         /// </summary>
-        public TwinoTmqProtocol(ITwinoServer server, IProtocolConnectionHandler<TmqServerSocket, TmqMessage> handler)
+        public TwinoTmqProtocol(ITwinoServer server, IProtocolConnectionHandler<TmqServerSocket, TwinoMessage> handler)
         {
             _server = server;
             _handler = handler;
@@ -50,7 +50,7 @@ namespace Twino.Protocols.TMQ
                 return result;
 
             TmqReader reader = new TmqReader();
-            TmqMessage message = await reader.Read(info.GetStream());
+            TwinoMessage message = await reader.Read(info.GetStream());
 
             //sends protocol message
             await info.GetStream().WriteAsync(version == ProtocolVersion.Version1 ? PredefinedMessages.PROTOCOL_BYTES_V1 : PredefinedMessages.PROTOCOL_BYTES_V2);
@@ -69,7 +69,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Reads first Hello message from client
         /// </summary>
-        private async Task<bool> ProcessFirstMessage(TmqMessage message, IConnectionInfo info, ProtocolHandshakeResult handshakeResult)
+        private async Task<bool> ProcessFirstMessage(TwinoMessage message, IConnectionInfo info, ProtocolHandshakeResult handshakeResult)
         {
             if (message.Type != MessageType.Server || message.ContentType != KnownContentTypes.Hello)
                 return false;
@@ -126,21 +126,18 @@ namespace Twino.Protocols.TMQ
 
             while (info.Client != null && info.Client.Connected)
             {
-                TmqMessage message = await reader.Read(info.GetStream());
+                TwinoMessage message = await reader.Read(info.GetStream());
                 if (message == null)
                 {
                     info.Close();
                     return;
                 }
 
-                if (message.Ttl < 0)
-                    continue;
-
                 await ProcessMessage(info, message, (TmqServerSocket) handshakeResult.Socket);
             }
         }
 
-        private Task ProcessMessage(IConnectionInfo info, TmqMessage message, TmqServerSocket socket)
+        private Task ProcessMessage(IConnectionInfo info, TwinoMessage message, TmqServerSocket socket)
         {
             //if user makes a mistake in received method, we should not interrupt connection handling
             try

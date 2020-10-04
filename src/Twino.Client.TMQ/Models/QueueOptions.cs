@@ -1,4 +1,3 @@
-using System;
 using System.Text.Json.Serialization;
 
 namespace Twino.Client.TMQ.Models
@@ -9,16 +8,13 @@ namespace Twino.Client.TMQ.Models
     public class QueueOptions
     {
         /// <summary>
-        /// If true, messages will send to only first acquirers
+        /// Acknowledge decisions:
+        /// "none": Acknowledge is disabled
+        /// "request": Requests acknowledge but doesn't wait until ack is received
+        /// "wait": Requests ack and waits until acknowledge is received
         /// </summary>
-        [JsonPropertyName("SendOnlyFirstAcquirer")]
-        public bool? SendOnlyFirstAcquirer { get; set; }
-
-        /// <summary>
-        /// If true, messages will request acknowledge from receivers
-        /// </summary>
-        [JsonPropertyName("RequestAcknowledge")]
-        public bool? RequestAcknowledge { get; set; }
+        [JsonPropertyName("Acknowledge")]
+        public string Acknowledge { get; set; }
 
         /// <summary>
         /// Used for serializing timespan as integer value in milliseconds
@@ -37,12 +33,6 @@ namespace Twino.Client.TMQ.Models
         /// </summary>
         [JsonPropertyName("UseMessageId")]
         public bool? UseMessageId { get; set; } = true;
-
-        /// <summary>
-        /// If true, queue does not send next message to receivers until acknowledge message received
-        /// </summary>
-        [JsonPropertyName("WaitForAcknowledge")]
-        public bool? WaitForAcknowledge { get; set; }
 
         /// <summary>
         /// If true, server doesn't send client name to receivers in queueus.
@@ -68,5 +58,22 @@ namespace Twino.Client.TMQ.Models
         /// </summary>
         [JsonPropertyName("MessageLimit")]
         public int? MessageLimit { get; set; }
+
+        /// <summary>
+        /// Maximum client limit of the queue.
+        /// Zero is unlimited
+        /// </summary>
+        [JsonPropertyName("ClientLimit")]
+        public int? ClientLimit { get; set; }
+
+        /// <summary>
+        /// Auto destroy options for the queue:
+        /// "disabled": Auto destroy is disabled
+        /// "no-message": Queue is destroyed when there is no message (even there are consumers)
+        /// "no-consumer": Queue is destroyed when there is no consumer (even there are messages)
+        /// "empty": Queue is destroyed when there is no message and no consumer
+        /// </summary>
+        [JsonPropertyName("AutoDestroy")]
+        public string AutoDestroy { get; set; }
     }
 }

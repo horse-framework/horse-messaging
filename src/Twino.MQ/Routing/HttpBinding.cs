@@ -30,7 +30,7 @@ namespace Twino.MQ.Routing
         /// Sends message to target as HTTP request and waits for response.
         /// Ok Accepted and Created responses return true, others return false
         /// </summary>
-        public override Task<bool> Send(MqClient sender, TmqMessage message)
+        public override Task<bool> Send(MqClient sender, TwinoMessage message)
         {
             HttpClient client = new HttpClient();
 

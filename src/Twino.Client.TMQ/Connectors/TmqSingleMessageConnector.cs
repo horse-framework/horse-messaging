@@ -10,7 +10,7 @@ namespace Twino.Client.TMQ.Connectors
     /// <summary>
     /// Single message connector for TMQ protocol.
     /// </summary>
-    public class TmqSingleMessageConnector : SingleMessageConnector<TmqClient, TmqMessage>
+    public class TmqSingleMessageConnector : SingleMessageConnector<TmqClient, TwinoMessage>
     {
         private readonly MessageObserver _observer;
 
@@ -20,9 +20,9 @@ namespace Twino.Client.TMQ.Connectors
         public MessageObserver Observer => _observer;
 
         /// <summary>
-        /// If true, automatically joins all subscribed channels
+        /// If true, automatically subscribes all implemented IQueueConsumer queues
         /// </summary>
-        public bool AutoJoinConsumerChannels { get; set; }
+        public bool AutoSubscribe { get; set; }
 
         /// <summary>
         /// Content Serializer for clients in this connector.
@@ -38,7 +38,7 @@ namespace Twino.Client.TMQ.Connectors
             _observer = new MessageObserver(ReadMessage);
         }
 
-        private object ReadMessage(TmqMessage message, Type type)
+        private object ReadMessage(TwinoMessage message, Type type)
         {
             if (ContentSerializer == null)
                 ContentSerializer = new NewtonsoftContentSerializer();
@@ -59,7 +59,7 @@ namespace Twino.Client.TMQ.Connectors
         }
 
         /// <inheritdoc />
-        protected override void ClientMessageReceived(ClientSocketBase<TmqMessage> client, TmqMessage payload)
+        protected override void ClientMessageReceived(ClientSocketBase<TwinoMessage> client, TwinoMessage payload)
         {
             base.ClientMessageReceived(client, payload);
 
@@ -84,18 +84,18 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Subscribes from reading messages in a queue
         /// </summary>
-        public void On<T>(string channel, ushort content, Action<T> action)
+        public void On<T>(string queue, Action<T> action)
         {
             if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
-            _observer.On(channel, content, action);
+            _observer.On(queue, action);
         }
 
         /// <summary>
         /// Subscribes from reading messages in a queue
         /// </summary>
-        public void On<T>(Action<T, TmqMessage> action)
+        public void On<T>(Action<T, TwinoMessage> action)
         {
             if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
@@ -107,12 +107,12 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Subscribes from reading messages in a queue
         /// </summary>
-        public void On<T>(string channel, ushort content, Action<T, TmqMessage> action)
+        public void On<T>(string queue, ushort content, Action<T, TwinoMessage> action)
         {
             if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
-            _observer.On(channel, content, action);
+            _observer.On(queue, action);
         }
 
         #endregion
@@ -144,7 +144,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Subscribes for reading direct messages
         /// </summary>
-        public void OnDirect<T>(Action<T, TmqMessage> action)
+        public void OnDirect<T>(Action<T, TwinoMessage> action)
         {
             if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
@@ -155,7 +155,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Subscribes for reading direct messages
         /// </summary>
-        public void OnDirect<T>(ushort content, Action<T, TmqMessage> action)
+        public void OnDirect<T>(ushort content, Action<T, TwinoMessage> action)
         {
             if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
@@ -181,12 +181,12 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Unsubscribes from reading messages in a queue
         /// </summary>
-        public void Off(string channel, ushort content)
+        public void Off(string queue)
         {
             if (_observer == null)
                 throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
 
-            _observer.Off(channel, content);
+            _observer.Off(queue);
         }
 
         /// <summary>
@@ -218,7 +218,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Sends a message
         /// </summary>
-        public bool Send(TmqMessage message)
+        public bool Send(TwinoMessage message)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
@@ -230,7 +230,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Sends a message
         /// </summary>
-        public Task<TwinoResult> SendAsync(TmqMessage message)
+        public Task<TwinoResult> SendAsync(TwinoMessage message)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
@@ -246,7 +246,7 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Sends a message
         /// </summary>
-        public Task<TmqMessage> RequestAsync(TmqMessage message)
+        public Task<TwinoMessage> RequestAsync(TwinoMessage message)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
@@ -286,11 +286,11 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Pushes a message to the queue
         /// </summary>
-        public Task<TwinoResult> Push(string channel, ushort contentType, MemoryStream content, bool waitAcknowledge)
+        public Task<TwinoResult> Push(string queue, MemoryStream content, bool waitAcknowledge)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
-                return client.Queues.Push(channel, contentType, content, waitAcknowledge);
+                return client.Queues.Push(queue, content, waitAcknowledge);
 
             return Task.FromResult(TwinoResult.Failed());
         }
@@ -310,11 +310,11 @@ namespace Twino.Client.TMQ.Connectors
         /// <summary>
         /// Pushes a message to the queue
         /// </summary>
-        public Task<TwinoResult> PushJson(string channel, ushort contentType, object jsonObject, bool waitAcknowledge)
+        public Task<TwinoResult> PushJson(string queue, object jsonObject, bool waitAcknowledge)
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
-                return client.Queues.PushJson(channel, contentType, jsonObject, waitAcknowledge);
+                return client.Queues.PushJson(queue, jsonObject, waitAcknowledge);
 
             return Task.FromResult(TwinoResult.Failed());
         }

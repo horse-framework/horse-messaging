@@ -83,7 +83,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Sends TMQ pong message
         /// </summary>
-        public override void Pong()
+        public override void Pong(object pingMessage = null)
         {
             Send(PredefinedMessages.PONG);
         }
@@ -91,7 +91,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Sends TMQ message to client
         /// </summary>
-        public bool Send(TmqMessage message, IList<KeyValuePair<string,string>> additionalHeaders = null)
+        public virtual bool Send(TwinoMessage message, IList<KeyValuePair<string,string>> additionalHeaders = null)
         {
             if (UseUniqueMessageId && string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(_uniqueIdGenerator.Create());
@@ -103,7 +103,7 @@ namespace Twino.Protocols.TMQ
         /// <summary>
         /// Sends TMQ message to client
         /// </summary>
-        public Task<bool> SendAsync(TmqMessage message, IList<KeyValuePair<string,string>> additionalHeaders = null)
+        public virtual Task<bool> SendAsync(TwinoMessage message, IList<KeyValuePair<string,string>> additionalHeaders = null)
         {
             if (UseUniqueMessageId && string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(_uniqueIdGenerator.Create());

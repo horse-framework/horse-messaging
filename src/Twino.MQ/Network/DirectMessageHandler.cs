@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
+using Twino.MQ.Security;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Network
@@ -22,7 +23,7 @@ namespace Twino.MQ.Network
 
         #endregion
 
-        public async Task Handle(MqClient client, TmqMessage message, bool fromNode)
+        public async Task Handle(MqClient client, TwinoMessage message, bool fromNode)
         {
             if (string.IsNullOrEmpty(message.Target))
                 return;
@@ -32,7 +33,7 @@ namespace Twino.MQ.Network
                 List<MqClient> receivers = _server.FindClientByName(message.Target.Substring(6));
                 if (receivers.Count > 0)
                 {
-                    if (message.FirstAcquirer && receivers.Count > 1)
+                    if (message.HighPriority && receivers.Count > 1)
                     {
                         MqClient first = receivers.FirstOrDefault();
                         receivers.Clear();
@@ -41,7 +42,7 @@ namespace Twino.MQ.Network
 
                     await ProcessMultipleReceiverClientMessage(client, receivers, message);
                 }
-                else if (message.PendingResponse)
+                else if (message.WaitResponse)
                     await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
             }
             else if (message.Target.StartsWith("@type:"))
@@ -49,7 +50,7 @@ namespace Twino.MQ.Network
                 List<MqClient> receivers = _server.FindClientByType(message.Target.Substring(6));
                 if (receivers.Count > 0)
                 {
-                    if (message.FirstAcquirer)
+                    if (message.HighPriority)
                     {
                         MqClient first = receivers.FirstOrDefault();
                         receivers.Clear();
@@ -58,7 +59,7 @@ namespace Twino.MQ.Network
 
                     await ProcessMultipleReceiverClientMessage(client, receivers, message);
                 }
-                else if (message.PendingResponse)
+                else if (message.WaitResponse)
                     await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
             }
             else
@@ -69,7 +70,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Processes the client message which has multiple receivers (message by name or type)
         /// </summary>
-        private async Task ProcessMultipleReceiverClientMessage(MqClient sender, List<MqClient> receivers, TmqMessage message)
+        private async Task ProcessMultipleReceiverClientMessage(MqClient sender, List<MqClient> receivers, TwinoMessage message)
         {
             if (receivers.Count < 1)
             {
@@ -80,9 +81,9 @@ namespace Twino.MQ.Network
             foreach (MqClient receiver in receivers)
             {
                 //check sending message authority
-                if (_server.Authorization != null)
+                foreach (IClientAuthorization authorization in _server.Authorizations)
                 {
-                    bool grant = await _server.Authorization.CanDirectMessage(sender, message, receiver);
+                    bool grant = await authorization.CanDirectMessage(sender, message, receiver);
                     if (!grant)
                     {
                         await sender.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));
@@ -98,7 +99,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Processes the client message which has single receiver (message by unique id)
         /// </summary>
-        private async Task ProcessSingleReceiverClientMessage(MqClient client, TmqMessage message)
+        private async Task ProcessSingleReceiverClientMessage(MqClient client, TwinoMessage message)
         {
             //find the receiver
             MqClient other = _server.FindClient(message.Target);
@@ -109,9 +110,9 @@ namespace Twino.MQ.Network
             }
 
             //check sending message authority
-            if (_server.Authorization != null)
+            foreach (IClientAuthorization authorization in _server.Authorizations)
             {
-                bool grant = await _server.Authorization.CanDirectMessage(client, message, other);
+                bool grant = await authorization.CanDirectMessage(client, message, other);
                 if (!grant)
                 {
                     await client.SendAsync(message.CreateResponse(TwinoResultCode.Unauthorized));

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Twino.Client.TMQ\Twino.Client.TMQ.csproj" />
+      <ProjectReference Include="..\..\Twino.MQ.Data\Twino.MQ.Data.csproj" />
+      <ProjectReference Include="..\..\Twino.MQ\Twino.MQ.csproj" />
+      <ProjectReference Include="..\..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
+    </ItemGroup>
+
+</Project>

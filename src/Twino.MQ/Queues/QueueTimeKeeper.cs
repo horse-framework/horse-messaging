@@ -18,7 +18,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Queue of the keeper
         /// </summary>
-        private readonly ChannelQueue _queue;
+        private readonly TwinoQueue _queue;
 
         /// <summary>
         /// Timeout checker timer
@@ -32,7 +32,7 @@ namespace Twino.MQ.Queues
 
         #endregion
 
-        public QueueTimeKeeper(ChannelQueue queue)
+        public QueueTimeKeeper(TwinoQueue queue)
         {
             _queue = queue;
         }
@@ -53,6 +53,9 @@ namespace Twino.MQ.Queues
         {
             try
             {
+                if (!_queue.IsInitialized)
+                    return;
+
                 if (_queue.Options.Status != QueueStatus.Broadcast && _queue.Options.MessageTimeout > TimeSpan.Zero)
                     await ProcessReceiveTimeup();
 
@@ -94,6 +97,9 @@ namespace Twino.MQ.Queues
         /// </summary>
         private async Task ProcessReceiveTimeup()
         {
+            if (_queue.IsInitialized)
+                return;
+
             List<QueueMessage> temp = new List<QueueMessage>();
             lock (_queue.PriorityMessagesList)
                 ProcessReceiveTimeupOnList(_queue.PriorityMessagesList, temp);
@@ -199,7 +205,7 @@ namespace Twino.MQ.Queues
         /// </summary>
         public void AddAcknowledgeCheck(MessageDelivery delivery)
         {
-            if (!delivery.Message.Message.PendingAcknowledge || !delivery.AcknowledgeDeadline.HasValue)
+            if (!delivery.Message.Message.WaitResponse || !delivery.AcknowledgeDeadline.HasValue)
                 return;
 
             lock (_deliveries)
@@ -251,6 +257,15 @@ namespace Twino.MQ.Queues
         {
             lock (_deliveries)
                 _deliveries.Remove(delivery);
+        }
+
+        /// <summary>
+        /// Returns true, if there are pending messages waiting for acknowledge
+        /// </summary>
+        /// <returns></returns>
+        public bool HasPendingDelivery()
+        {
+            return _deliveries.Count > 0;
         }
 
         #endregion

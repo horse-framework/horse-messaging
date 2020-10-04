@@ -18,9 +18,9 @@ namespace Twino.MQ.Data.Configuration
         private TimeSpan _shrinkInteval = TimeSpan.FromMinutes(15);
 
         internal string ConfigFile { get; private set; } = "data/config.json";
-        internal Func<ChannelQueue, string> GenerateQueueFilename { get; set; }
+        internal Func<TwinoQueue, string> GenerateQueueFilename { get; set; }
         
-        internal Action<ChannelQueue, QueueMessage, Exception> ErrorAction { get; set; }
+        internal Action<TwinoQueue, QueueMessage, Exception> ErrorAction { get; set; }
 
         #endregion
 
@@ -109,7 +109,7 @@ namespace Twino.MQ.Data.Configuration
         /// <summary>
         /// Sets database fullpath generater action. Executed for each queue.
         /// </summary>
-        public DataConfigurationBuilder SetPhysicalPath(Func<ChannelQueue, string> func)
+        public DataConfigurationBuilder SetPhysicalPath(Func<TwinoQueue, string> func)
         {
             GenerateQueueFilename = func;
             return this;
@@ -118,7 +118,7 @@ namespace Twino.MQ.Data.Configuration
         /// <summary>
         /// Creates new DatabaseOptions using predefined options
         /// </summary>
-        internal DatabaseOptions CreateOptions(ChannelQueue queue)
+        internal DatabaseOptions CreateOptions(TwinoQueue queue)
         {
             return new DatabaseOptions
                    {

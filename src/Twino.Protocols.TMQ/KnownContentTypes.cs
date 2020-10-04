@@ -11,14 +11,14 @@ namespace Twino.Protocols.TMQ
         public const ushort Hello = 101;
 
         /// <summary>
-        /// "200" Operation successful
-        /// </summary>
-        public const ushort Ok = 200;
-
-        /// <summary>
         /// "202" Message is accepted
         /// </summary>
         public const ushort Accepted = 202;
+
+        /// <summary>
+        /// "204" No content
+        /// </summary>
+        public const ushort NoContent = 204;
 
         /// <summary>
         /// "400" Message has invalid content
@@ -41,12 +41,12 @@ namespace Twino.Protocols.TMQ
         public const ushort Unacceptable = 406;
 
         /// <summary>
-        /// "481" Duplicate record, such as, you might send create channel operation when client is already created
+        /// "481" Duplicate record, such as, you might send create queue operation when client is already created
         /// </summary>
         public const ushort Duplicate = 481;
 
         /// <summary>
-        /// "482" Limit exceeded, such as, maximum queue limit of a channel
+        /// "482" Limit exceeded, such as, maximum queue limit of the server
         /// </summary>
         public const ushort LimitExceeded = 482;
 
@@ -61,39 +61,19 @@ namespace Twino.Protocols.TMQ
         public const ushort Busy = 503;
 
         /// <summary>
-        /// "601" Join to channel
+        /// "601" Subscribe to a queue
         /// </summary>
-        public const ushort Join = 601;
+        public const ushort Subscribe = 601;
 
         /// <summary>
-        /// "602" Leave from channel
+        /// "602" Unsubscribe from a queue
         /// </summary>
-        public const ushort Leave = 602;
+        public const ushort Unsubscribe = 602;
 
         /// <summary>
-        /// "603" Create new channel
+        /// "607" Gets all consumers of a queue
         /// </summary>
-        public const ushort CreateChannel = 603;
-
-        /// <summary>
-        /// "604" Delete channel with it's queues
-        /// </summary>
-        public const ushort RemoveChannel = 604;
-
-        /// <summary>
-        /// "605" Gets channel information
-        /// </summary>
-        public const ushort ChannelInformation = 605;
-
-        /// <summary>
-        /// "606" Gets active channel list in server
-        /// </summary>
-        public const ushort ChannelList = 606;
-
-        /// <summary>
-        /// "607" Gets all consumers of a channel
-        /// </summary>
-        public const ushort ChannelConsumers = 607;
+        public const ushort QueueConsumers = 607;
 
         /// <summary>
         /// "610" Creates new queue
@@ -116,12 +96,7 @@ namespace Twino.Protocols.TMQ
         public const ushort ClearMessages = 613;
 
         /// <summary>
-        /// "615" Gets queue information
-        /// </summary>
-        public const ushort QueueInformation = 615;
-
-        /// <summary>
-        /// "616" Gets queue information list of a channel
+        /// "616" Gets queue information list
         /// </summary>
         public const ushort QueueList = 616;
 

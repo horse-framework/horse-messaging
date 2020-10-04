@@ -21,41 +21,34 @@ namespace Twino.MQ.Network
 
         #endregion
 
-        public async Task Handle(MqClient client, TmqMessage message, bool fromNode)
+        public async Task Handle(MqClient client, TwinoMessage message, bool fromNode)
         {
-            bool pendingAck = message.PendingAcknowledge;
-            bool pendingResponse = message.PendingResponse;
-
             IRouter router = _server.FindRouter(message.Target);
             if (router == null)
             {
-                await SendResponse(RouterPublishResult.Disabled, client, message, pendingAck, pendingResponse);
+                await SendResponse(RouterPublishResult.Disabled, client, message);
                 return;
             }
 
             RouterPublishResult result = await router.Publish(client, message);
-            await SendResponse(result, client, message, pendingAck, pendingResponse);
+            await SendResponse(result, client, message);
         }
 
         /// <summary>
         /// Sends negative ack or failed response if client is pending ack or response
         /// </summary>
-        private static Task SendResponse(RouterPublishResult result, MqClient client, TmqMessage message, bool pendingAck, bool pendingResponse)
+        private static Task SendResponse(RouterPublishResult result, MqClient client, TwinoMessage message)
         {
             if (result == RouterPublishResult.OkAndWillBeRespond)
                 return Task.CompletedTask;
 
             bool positive = result == RouterPublishResult.OkWillNotRespond;
-            
-            if (pendingAck)
+            if (message.WaitResponse)
             {
-                TmqMessage ack = positive ? message.CreateAcknowledge() : message.CreateAcknowledge(TmqHeaders.NACK_REASON_NO_CONSUMERS);
-                return client.SendAsync(ack);
-            }
+                TwinoMessage response = positive
+                                            ? message.CreateAcknowledge()
+                                            : message.CreateResponse(TwinoResultCode.NotFound);
 
-            if (pendingResponse)
-            {
-                TmqMessage response = positive ? message.CreateResponse(TwinoResultCode.Ok) : message.CreateResponse(TwinoResultCode.NotFound);
                 return client.SendAsync(response);
             }
 

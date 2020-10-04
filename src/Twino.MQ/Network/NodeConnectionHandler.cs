@@ -12,15 +12,15 @@ namespace Twino.MQ.Network
     /// <summary>
     /// Messaging queue node handler
     /// </summary>
-    internal class NodeConnectionHandler : IProtocolConnectionHandler<TmqServerSocket, TmqMessage>
+    internal class NodeConnectionHandler : IProtocolConnectionHandler<TmqServerSocket, TwinoMessage>
     {
         private readonly NodeManager _server;
-        private readonly NetworkMessageHandler _connectionHandler;
+        private readonly TmqNetworkHandler _connectionHandler;
 
         /// <summary>
         /// 
         /// </summary>
-        internal NodeConnectionHandler(NodeManager server, NetworkMessageHandler connectionHandler)
+        internal NodeConnectionHandler(NodeManager server, TmqNetworkHandler connectionHandler)
         {
             _server = server;
             _connectionHandler = connectionHandler;
@@ -32,7 +32,7 @@ namespace Twino.MQ.Network
         public async Task<TmqServerSocket> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
             string clientId;
-            bool found = data.Properties.TryGetValue(TmqHeaders.CLIENT_ID, out clientId);
+            bool found = data.Properties.TryGetValue(TwinoHeaders.CLIENT_ID, out clientId);
             if (!found || string.IsNullOrEmpty(clientId))
                 clientId = _server.Server.ClientIdGenerator.Create();
 
@@ -48,9 +48,9 @@ namespace Twino.MQ.Network
             MqClient client = new MqClient(_server.Server, connection);
             client.Data = data;
             client.UniqueId = clientId.Trim();
-            client.Token = data.Properties.GetStringValue(TmqHeaders.CLIENT_TOKEN);
-            client.Name = data.Properties.GetStringValue(TmqHeaders.CLIENT_NAME);
-            client.Type = data.Properties.GetStringValue(TmqHeaders.CLIENT_TYPE);
+            client.Token = data.Properties.GetStringValue(TwinoHeaders.CLIENT_TOKEN);
+            client.Name = data.Properties.GetStringValue(TwinoHeaders.CLIENT_NAME);
+            client.Type = data.Properties.GetStringValue(TwinoHeaders.CLIENT_TYPE);
 
             if (_server.Authenticator != null)
             {
@@ -78,7 +78,7 @@ namespace Twino.MQ.Network
         /// <summary>
         /// 
         /// </summary>
-        public Task Received(ITwinoServer server, IConnectionInfo info, TmqServerSocket client, TmqMessage message)
+        public Task Received(ITwinoServer server, IConnectionInfo info, TmqServerSocket client, TwinoMessage message)
         {
             MqClient mc = (MqClient) client;
             if (message.Type == MessageType.Server)
@@ -107,17 +107,13 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Reads decision and applies it
         /// </summary>
-        private void DecisionOverNode(TmqMessage message)
+        private void DecisionOverNode(TwinoMessage message)
         {
             DecisionOverNode model = message.Deserialize<DecisionOverNode>(_server.Server.MessageContentSerializer);
             if (model == null)
                 return;
 
-            Channel channel = _server.Server.FindChannel(model.Channel);
-            if (channel == null)
-                return;
-
-            ChannelQueue queue = channel.FindQueue(model.Queue);
+            TwinoQueue queue = _server.Server.FindQueue(model.Queue);
             if (queue == null)
                 return;
 

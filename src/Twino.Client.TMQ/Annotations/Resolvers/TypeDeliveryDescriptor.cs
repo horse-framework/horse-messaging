@@ -22,14 +22,9 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         public bool HighPriority { get; set; }
 
         /// <summary>
-        /// If true, message is consumed by only first consumer
+        /// If queue is created with a message push and that value is not null, that option will be used
         /// </summary>
-        public bool OnlyFirstAcquirer { get; set; }
-
-        /// <summary>
-        /// If queue is created with a message push and that value is not null, wait for acknowledge option will be used
-        /// </summary>
-        public bool? WaitForAcknowledge { get; set; }
+        public QueueAckDecision? Acknowledge { get; set; }
 
         /// <summary>
         /// If queue is created with a message push and that value is not null, queue will be created with that status
@@ -37,12 +32,7 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         public MessagingQueueStatus? QueueStatus { get; set; }
 
         /// <summary>
-        /// If queue is created with a message push and that value is not null, queue will be created with that Tag
-        /// </summary>
-        public string Tag { get; set; }
-
-        /// <summary>
-        /// If channel is created with a message push and that value is not null, channel topic.
+        /// If queue is created with a message push and that value is not null, queue topic.
         /// </summary>
         public string Topic { get; set; }
 
@@ -72,14 +62,9 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         public string DirectTarget { get; set; }
 
         /// <summary>
-        /// Queue messages channel name
+        /// Queue name for queue messages
         /// </summary>
-        public string ChannelName { get; set; }
-
-        /// <summary>
-        /// Queue messages queue Id
-        /// </summary>
-        public ushort? QueueId { get; set; }
+        public string QueueName { get; set; }
 
         /// <summary>
         /// Router messages router name
@@ -87,14 +72,9 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         public string RouterName { get; set; }
 
         /// <summary>
-        /// True if type has ChannelNameAttribute
+        /// True if type has QueueNameAttribute
         /// </summary>
-        public bool HasChannelName { get; set; }
-
-        /// <summary>
-        /// True if type has QueueIdAttribute
-        /// </summary>
-        public bool HasQueueId { get; set; }
+        public bool HasQueueName { get; set; }
 
         /// <summary>
         /// True if type has ContentTypeAttribute
@@ -122,7 +102,7 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         /// <summary>
         /// Applies descriptor information to the message
         /// </summary>
-        public TmqMessage CreateMessage(MessageType type, string overrideTargetName, ushort? overrideContentType)
+        public TwinoMessage CreateMessage(MessageType type, string overrideTargetName, ushort? overrideContentType)
         {
             string target = overrideTargetName;
             ushort? contentType = overrideContentType;
@@ -131,10 +111,7 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
             {
                 case MessageType.QueueMessage:
                     if (string.IsNullOrEmpty(target))
-                        target = ChannelName;
-
-                    if (!contentType.HasValue)
-                        contentType = QueueId;
+                        target = QueueName;
                     break;
 
                 case MessageType.DirectMessage:
@@ -154,24 +131,33 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
                     break;
             }
 
-            TmqMessage message = new TmqMessage(type, target, contentType ?? 0);
+            TwinoMessage message = new TwinoMessage(type, target, contentType ?? 0);
             if (HighPriority)
                 message.HighPriority = HighPriority;
 
-            if (OnlyFirstAcquirer)
-                message.FirstAcquirer = true;
+            if (Acknowledge.HasValue)
+            {
+                switch (Acknowledge.Value)
+                {
+                    case QueueAckDecision.None:
+                        message.AddHeader(TwinoHeaders.ACKNOWLEDGE, "none");
+                        break;
 
-            if (WaitForAcknowledge.HasValue)
-                message.AddHeader(TmqHeaders.WAIT_FOR_ACKNOWLEDGE, WaitForAcknowledge.Value ? "1" : "0");
-            
+                    case QueueAckDecision.JustRequest:
+                        message.AddHeader(TwinoHeaders.ACKNOWLEDGE, "request");
+                        break;
+
+                    case QueueAckDecision.WaitForAcknowledge:
+                        message.AddHeader(TwinoHeaders.ACKNOWLEDGE, "wait");
+                        break;
+                }
+            }
+
             if (QueueStatus.HasValue)
-                message.AddHeader(TmqHeaders.QUEUE_STATUS, QueueStatus.Value.ToString().ToLower());
-
-            if (!string.IsNullOrEmpty(Tag))
-                message.AddHeader(TmqHeaders.QUEUE_TAG, Tag);
+                message.AddHeader(TwinoHeaders.QUEUE_STATUS, QueueStatus.Value.ToString().Trim().ToLower());
 
             if (!string.IsNullOrEmpty(Topic))
-                message.AddHeader(TmqHeaders.CHANNEL_TOPIC, Topic);
+                message.AddHeader(TwinoHeaders.QUEUE_TOPIC, Topic);
 
             foreach (KeyValuePair<string, string> pair in Headers)
                 message.AddHeader(pair.Key, pair.Value);

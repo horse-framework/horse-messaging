@@ -8,32 +8,32 @@ namespace Twino.MQ.Routing
 {
     /// <summary>
     /// Queue message binding.
-    /// Targets channel queues.
+    /// Targets queues.
     /// Binding receivers are received messages as QueueMessage.
     /// </summary>
     public class QueueBinding : Binding
     {
-        private ChannelQueue _targetQueue;
+        private TwinoQueue _targetQueue;
         private DateTime _queueUpdateTime;
 
         /// <summary>
         /// Creates new direct binding.
         /// Name is the name of the binding.
-        /// Target should be channel name.
+        /// Target should be queue name.
         /// Content Type should be Queue Id.
         /// Priority for router binding.
         /// </summary>
-        public QueueBinding(string name, string target, ushort contentType, int priority, BindingInteraction interaction)
-            : base(name, target, contentType, priority, interaction)
+        public QueueBinding(string name, string target, int priority, BindingInteraction interaction)
+            : base(name, target, null, priority, interaction)
         {
         }
 
         /// <summary>
         /// Sends the message to binding receivers
         /// </summary>
-        public override async Task<bool> Send(MqClient sender, TmqMessage message)
+        public override async Task<bool> Send(MqClient sender, TwinoMessage message)
         {
-            ChannelQueue queue = GetQueue();
+            TwinoQueue queue = GetQueue();
             if (queue == null)
                 return false;
 
@@ -41,20 +41,11 @@ namespace Twino.MQ.Routing
                                    ? Router.Server.MessageIdGenerator.Create()
                                    : message.MessageId;
 
-            TmqMessage msg = message.Clone(true, true, messageId);
+            TwinoMessage msg = message.Clone(true, true, messageId);
 
             msg.Type = MessageType.QueueMessage;
             msg.SetTarget(Target);
-            
-            // ReSharper disable once PossibleInvalidOperationException
-            msg.ContentType = ContentType.Value;
-            msg.PendingAcknowledge = false;
-            msg.PendingResponse = false;
-
-            if (Interaction == BindingInteraction.Acknowledge)
-                msg.PendingAcknowledge = true;
-            else if (Interaction == BindingInteraction.Response)
-                msg.PendingResponse = true;
+            msg.WaitResponse = Interaction == BindingInteraction.Response;
 
             QueueMessage queueMessage = new QueueMessage(msg);
             queueMessage.Source = sender;
@@ -68,17 +59,12 @@ namespace Twino.MQ.Routing
         /// If it's not cached, finds and caches it before returns.
         /// </summary>
         /// <returns></returns>
-        private ChannelQueue GetQueue()
+        private TwinoQueue GetQueue()
         {
             if (_targetQueue != null && DateTime.UtcNow - _queueUpdateTime < TimeSpan.FromMinutes(1))
                 return _targetQueue;
 
-            Channel channel = Router.Server.FindChannel(Target);
-            if (channel == null)
-                return null;
-
-            // ReSharper disable once PossibleInvalidOperationException
-            ChannelQueue queue = channel.FindQueue(ContentType.Value);
+            TwinoQueue queue = Router.Server.FindQueue(Target);
             if (queue == null)
                 return null;
 

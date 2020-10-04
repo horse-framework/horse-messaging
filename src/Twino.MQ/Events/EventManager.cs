@@ -19,14 +19,9 @@ namespace Twino.MQ.Events
         public string Name { get; }
 
         /// <summary>
-        /// Event target name (Channel name)
+        /// Event target name (Queue name)
         /// </summary>
         public string Target { get; }
-
-        /// <summary>
-        /// Event Content Type (Queue Id)
-        /// </summary>
-        public ushort ContentType { get; }
 
         /// <summary>
         /// Cleanup timer for disconnected subscribers
@@ -37,15 +32,14 @@ namespace Twino.MQ.Events
 
         /// <summary>
         /// Name is definition of the event.
-        /// Target is the channel name of the event.
+        /// Target is the queue name of the event.
         /// Content Type is the Queue Id of the event.
         /// </summary>
-        protected EventManager(TwinoMQ server, string name, string target, ushort contentType)
+        protected EventManager(TwinoMQ server, string name, string target)
         {
             _server = server;
             Name = name;
             Target = target;
-            ContentType = contentType;
             _cleanup = new Timer(s => CheckCleanup(), null, 60000, 60000);
         }
 
@@ -119,7 +113,7 @@ namespace Twino.MQ.Events
             if (_subscribers.Count == 0)
                 return;
 
-            TmqMessage message = new TmqMessage(MessageType.Event, Target, ContentType);
+            TwinoMessage message = new TwinoMessage(MessageType.Event, Target);
             message.SetSource(Name);
 
             if (model != null)

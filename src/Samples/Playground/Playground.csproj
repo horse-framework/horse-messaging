@@ -6,7 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Twino.Server" Version="3.2.0" />
+        <PackageReference Include="Twino.Server" Version="4.0.2" />
     </ItemGroup>
     
     <ItemGroup>

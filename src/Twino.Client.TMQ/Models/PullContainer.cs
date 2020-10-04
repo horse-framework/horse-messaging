@@ -39,16 +39,16 @@ namespace Twino.Client.TMQ.Models
         /// <summary>
         /// Received messages
         /// </summary>
-        public IEnumerable<TmqMessage> ReceivedMessages => _messages;
+        public IEnumerable<TwinoMessage> ReceivedMessages => _messages;
 
-        private readonly List<TmqMessage> _messages;
+        private readonly List<TwinoMessage> _messages;
         private readonly TaskCompletionSource<PullContainer> _source;
-        private readonly Func<int, TmqMessage, Task> _cycleAction;
+        private readonly Func<int, TwinoMessage, Task> _cycleAction;
 
-        internal PullContainer(string requestId, int requestCount, Func<int, TmqMessage, Task> cycleAction)
+        internal PullContainer(string requestId, int requestCount, Func<int, TwinoMessage, Task> cycleAction)
         {
             _source = new TaskCompletionSource<PullContainer>();
-            _messages = new List<TmqMessage>();
+            _messages = new List<TwinoMessage>();
 
             RequestId = requestId;
             RequestCount = requestCount;
@@ -57,7 +57,7 @@ namespace Twino.Client.TMQ.Models
             LastReceived = DateTime.UtcNow;
         }
 
-        internal void AddMessage(TmqMessage message)
+        internal void AddMessage(TwinoMessage message)
         {
             LastReceived = DateTime.UtcNow;
 
@@ -75,15 +75,15 @@ namespace Twino.Client.TMQ.Models
         {
             if (string.IsNullOrEmpty(noContentReason))
                 Status = PullProcess.Timeout;
-            else if (noContentReason.Equals(TmqHeaders.END, StringComparison.InvariantCultureIgnoreCase))
+            else if (noContentReason.Equals(TwinoHeaders.END, StringComparison.InvariantCultureIgnoreCase))
                 Status = PullProcess.Completed;
-            else if (noContentReason.Equals(TmqHeaders.EMPTY, StringComparison.InvariantCultureIgnoreCase))
+            else if (noContentReason.Equals(TwinoHeaders.EMPTY, StringComparison.InvariantCultureIgnoreCase))
                 Status = PullProcess.Empty;
             else if (noContentReason.Equals("Error", StringComparison.InvariantCultureIgnoreCase))
                 Status = PullProcess.NetworkError;
-            else if (noContentReason.Equals(TmqHeaders.UNACCEPTABLE, StringComparison.InvariantCultureIgnoreCase))
+            else if (noContentReason.Equals(TwinoHeaders.UNACCEPTABLE, StringComparison.InvariantCultureIgnoreCase))
                 Status = PullProcess.Unacceptable;
-            else if (noContentReason.Equals(TmqHeaders.UNAUTHORIZED, StringComparison.InvariantCultureIgnoreCase))
+            else if (noContentReason.Equals(TwinoHeaders.UNAUTHORIZED, StringComparison.InvariantCultureIgnoreCase))
                 Status = PullProcess.Unauthorized;
             else
                 Status = PullProcess.Completed;

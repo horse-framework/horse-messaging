@@ -156,7 +156,7 @@ namespace Twino.Protocols.TMQ
         Duplicate = 481,
 
         /// <summary>
-        /// Client, channel, consumer, queue or message limit is exceeded
+        /// Client, consumer, queue or message limit is exceeded
         /// </summary>
         LimitExceeded = 482,
 

@@ -32,7 +32,7 @@ namespace Twino.Protocols.TMQ
         Server = 0x10,
 
         /// <summary>
-        /// A message to a channel
+        /// A message to a queue
         /// </summary>
         QueueMessage = 0x11,
 
@@ -40,11 +40,6 @@ namespace Twino.Protocols.TMQ
         /// Direct message, by Id, @type or @name
         /// </summary>
         DirectMessage = 0x12,
-
-        /// <summary>
-        /// A acknowledge message, points to a message received before.
-        /// </summary>
-        Acknowledge = 0x13,
 
         /// <summary>
         /// A response message, point to a message received before.

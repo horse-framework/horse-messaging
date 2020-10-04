@@ -18,7 +18,7 @@ namespace Twino.Client.TMQ.Internal
             ResolveAttributes(consumerType, typeof(TModel));
         }
 
-        public override async Task Execute(TmqClient client, TmqMessage message, object model)
+        public override async Task Execute(TmqClient client, TwinoMessage message, object model)
         {
             TModel t = (TModel) model;
             Exception exception = null;

@@ -7,14 +7,9 @@ namespace Twino.MQ.Delivery
     internal class DecisionOverNode
     {
         /// <summary>
-        /// Channel Name
+        /// Queue
         /// </summary>
-        public string Channel { get; set; }
-
-        /// <summary>
-        /// Queue Id
-        /// </summary>
-        public ushort Queue { get; set; }
+        public string Queue { get; set; }
 
         /// <summary>
         /// Message Id

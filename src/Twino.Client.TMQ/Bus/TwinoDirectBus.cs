@@ -38,23 +38,23 @@ namespace Twino.Client.TMQ.Bus
         }
 
         /// <inheritdoc />
-        public Task<TwinoResult> SendByName(string name, ushort contentType, MemoryStream content, bool toOnlyFirstReceiver, bool waitAcknowledge, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        public Task<TwinoResult> SendByName(string name, ushort contentType, MemoryStream content, bool waitAcknowledge, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TmqClient client = _connector.GetClient();
             if (client == null)
                 return Task.FromResult(new TwinoResult(TwinoResultCode.SendError));
 
-            return client.Direct.SendByName(name, contentType, content, toOnlyFirstReceiver, waitAcknowledge, messageHeaders);
+            return client.Direct.SendByName(name, contentType, content, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />
-        public Task<TwinoResult> SendByType(string type, ushort contentType, MemoryStream content, bool toOnlyFirstReceiver, bool waitAcknowledge, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        public Task<TwinoResult> SendByType(string type, ushort contentType, MemoryStream content, bool waitAcknowledge, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TmqClient client = _connector.GetClient();
             if (client == null)
                 return Task.FromResult(new TwinoResult(TwinoResultCode.SendError));
 
-            return client.Direct.SendByType(type, contentType, content, toOnlyFirstReceiver, waitAcknowledge, messageHeaders);
+            return client.Direct.SendByType(type, contentType, content, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -68,23 +68,23 @@ namespace Twino.Client.TMQ.Bus
         }
 
         /// <inheritdoc />
-        public Task<TwinoResult> SendJsonByName<T>(string name, ushort contentType, T model, bool toOnlyFirstReceiver, bool waitAcknowledge, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        public Task<TwinoResult> SendJsonByName<T>(string name, ushort contentType, T model, bool waitAcknowledge, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TmqClient client = _connector.GetClient();
             if (client == null)
                 return Task.FromResult(new TwinoResult(TwinoResultCode.SendError));
 
-            return client.Direct.SendJsonByName(name, contentType, model, toOnlyFirstReceiver, waitAcknowledge, messageHeaders);
+            return client.Direct.SendJsonByName(name, contentType, model, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />
-        public Task<TwinoResult> SendJsonByType<T>(string type, ushort contentType, T model, bool toOnlyFirstReceiver, bool waitAcknowledge, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        public Task<TwinoResult> SendJsonByType<T>(string type, ushort contentType, T model, bool waitAcknowledge, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TmqClient client = _connector.GetClient();
             if (client == null)
                 return Task.FromResult(new TwinoResult(TwinoResultCode.SendError));
 
-            return client.Direct.SendJsonByType(type, contentType, model, toOnlyFirstReceiver, waitAcknowledge, messageHeaders);
+            return client.Direct.SendJsonByType(type, contentType, model, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -94,7 +94,7 @@ namespace Twino.Client.TMQ.Bus
             if (client == null)
                 return Task.FromResult(new TwinoResult(TwinoResultCode.SendError));
 
-            return client.Direct.SendJsonById(id, contentType, model, true, waitAcknowledge, messageHeaders);
+            return client.Direct.SendJsonById(id, contentType, model, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -108,31 +108,31 @@ namespace Twino.Client.TMQ.Bus
         }
 
         /// <inheritdoc />
-        public Task<TmqMessage> Request(string target, ushort contentType, MemoryStream content, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        public Task<TwinoMessage> Request(string target, ushort contentType, MemoryStream content, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TmqClient client = _connector.GetClient();
             if (client == null)
-                return Task.FromResult<TmqMessage>(null);
+                return Task.FromResult<TwinoMessage>(null);
 
             return client.Direct.Request(target, contentType, content, messageHeaders);
         }
 
         /// <inheritdoc />
-        public Task<TmqMessage> Request(string target, ushort contentType, string content, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        public Task<TwinoMessage> Request(string target, ushort contentType, string content, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TmqClient client = _connector.GetClient();
             if (client == null)
-                return Task.FromResult<TmqMessage>(null);
+                return Task.FromResult<TwinoMessage>(null);
 
             return client.Direct.Request(target, contentType, content, messageHeaders);
         }
 
         /// <inheritdoc />
-        public Task<TmqMessage> Request(string target, ushort contentType, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        public Task<TwinoMessage> Request(string target, ushort contentType, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TmqClient client = _connector.GetClient();
             if (client == null)
-                return Task.FromResult<TmqMessage>(null);
+                return Task.FromResult<TwinoMessage>(null);
 
             return client.Direct.Request(target, contentType, messageHeaders);
         }
@@ -144,7 +144,7 @@ namespace Twino.Client.TMQ.Bus
             if (client == null)
                 return Task.FromResult(new TwinoResult(TwinoResultCode.SendError));
 
-            return client.Direct.SendJsonById(target, contentType, model, false, waitForAcknowledge, messageHeaders);
+            return client.Direct.SendJsonById(target, contentType, model, waitForAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />

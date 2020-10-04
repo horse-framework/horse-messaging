@@ -13,39 +13,29 @@ namespace Twino.MQ.Security
     public interface IClientAuthorization
     {
         /// <summary>
-        /// Returns true, if user can create the channel
+        /// Returns true, if client can create new queue
         /// </summary>
-        Task<bool> CanCreateChannel(MqClient client, TwinoMQ server, string channelName);
-
-        /// <summary>
-        /// Returns true, if client can create new queue in the channel
-        /// </summary>
-        Task<bool> CanCreateQueue(MqClient client, Channel channel, ushort contentType, NetworkOptionsBuilder options);
+        Task<bool> CanCreateQueue(MqClient client, string name, NetworkOptionsBuilder options);
 
         /// <summary>
         /// Returns true, if client can send a peer message
         /// </summary>
-        Task<bool> CanDirectMessage(MqClient sender, TmqMessage message, MqClient receiver);
-
-        /// <summary>
-        /// Returns true, if client can send a peer message
-        /// </summary>
-        Task<bool> CanResponseMessage(MqClient sender, TmqMessage message, MqClient receiver);
+        Task<bool> CanDirectMessage(MqClient sender, TwinoMessage message, MqClient receiver);
 
         /// <summary>
         /// Returns true, if client can send a message to the queue
         /// </summary>
-        Task<bool> CanMessageToQueue(MqClient client, ChannelQueue queue, TmqMessage message);
+        Task<bool> CanMessageToQueue(MqClient client, TwinoQueue queue, TwinoMessage message);
 
         /// <summary>
         /// Returns true, if client can pull a message from the queue
         /// </summary>
-        Task<bool> CanPullFromQueue(ChannelClient client, ChannelQueue queue);
+        Task<bool> CanPullFromQueue(QueueClient client, TwinoQueue queue);
 
         /// <summary>
         /// Returns true, if client can subscribe to the event
         /// </summary>
-        bool CanSubscribeEvent(MqClient client, string eventName, string channelName, ushort queueId);
+        bool CanSubscribeEvent(MqClient client, TwinoQueue queue);
 
         /// <summary>
         /// Returns true, if client can create a router

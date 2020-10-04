@@ -11,14 +11,9 @@ namespace Twino.Protocols.TMQ
 		public TModel Model { get; }
 
 		/// <summary>
-		/// Response raw message
-		/// </summary>
-		public TmqMessage Message { get; }
-
-		/// <summary>
 		/// Creates new TwinoResult with a model
 		/// </summary>
-		public TwinoResult(TModel model, TmqMessage message, TwinoResultCode code): base(code)
+		public TwinoResult(TModel model, TwinoMessage message, TwinoResultCode code): base(code)
 		{
 			Model = model;
 			Message = message;
@@ -56,6 +51,11 @@ namespace Twino.Protocols.TMQ
 		public string Reason { get; protected set; }
 
 		/// <summary>
+		/// Response message
+		/// </summary>
+		public TwinoMessage Message { get; set; }
+
+		/// <summary>
 		/// Creates new result without reason
 		/// </summary>
 		public TwinoResult(TwinoResultCode code)
@@ -87,6 +87,14 @@ namespace Twino.Protocols.TMQ
 		public static TwinoResult Failed()
 		{
 			return new TwinoResult(TwinoResultCode.Failed);
+		}
+
+		/// <summary>
+		/// Creates timeout failed result
+		/// </summary>
+		public static TwinoResult Timeout()
+		{
+			return new TwinoResult(TwinoResultCode.RequestTimeout);
 		}
 
 		/// <summary>

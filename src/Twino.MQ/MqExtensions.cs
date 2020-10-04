@@ -21,7 +21,7 @@ namespace Twino.MQ
         /// </summary>
         public static TwinoServer UseTwinoMQ(this TwinoServer server, TwinoMQ twinoMq)
         {
-            NetworkMessageHandler handler = new NetworkMessageHandler(twinoMq);
+            TmqNetworkHandler handler = new TmqNetworkHandler(twinoMq);
             twinoMq.Server = server;
 
             twinoMq.NodeManager.ConnectionHandler = new NodeConnectionHandler(twinoMq.NodeManager, handler);
@@ -39,7 +39,7 @@ namespace Twino.MQ
         public static TwinoMQ UseTwinoMQ(this TwinoServer server, Action<TwinoMqBuilder> cfg)
         {
             TwinoMQ mq = new TwinoMQ();
-            NetworkMessageHandler handler = new NetworkMessageHandler(mq);
+            TmqNetworkHandler handler = new TmqNetworkHandler(mq);
             mq.Server = server;
 
             mq.NodeManager.ConnectionHandler = new NodeConnectionHandler(mq.NodeManager, handler);
@@ -75,7 +75,7 @@ namespace Twino.MQ
         {
             if (builder.Server.Options == null)
                 builder.Server.Options = new TwinoMqOptions();
-            
+
             options(builder.Server.Options);
             return builder;
         }
@@ -129,76 +129,76 @@ namespace Twino.MQ
         /// <summary>
         /// Uses client authentication
         /// </summary>
-        public static TwinoMqBuilder UseAuthentication<TClientAuthenticator>(this TwinoMqBuilder builder)
+        public static TwinoMqBuilder AddClientAuthenticator<TClientAuthenticator>(this TwinoMqBuilder builder)
             where TClientAuthenticator : IClientAuthenticator, new()
         {
-            builder.Server.Authenticator = new TClientAuthenticator();
+            builder.Server.AddClientAuthenticator(new TClientAuthenticator());
             return builder;
         }
 
         /// <summary>
         /// Uses client authentication
         /// </summary>
-        public static TwinoMqBuilder UseAuthentication(this TwinoMqBuilder builder, IClientAuthenticator authenticator)
+        public static TwinoMqBuilder AddClientAuthenticator(this TwinoMqBuilder builder, IClientAuthenticator authenticator)
         {
-            builder.Server.Authenticator = authenticator;
+            builder.Server.AddClientAuthenticator(authenticator);
             return builder;
         }
 
         /// <summary>
         /// Uses client authorization
         /// </summary>
-        public static TwinoMqBuilder UseAuthorization<TClientAuthorization>(this TwinoMqBuilder builder)
+        public static TwinoMqBuilder AddClientAuthorization<TClientAuthorization>(this TwinoMqBuilder builder)
             where TClientAuthorization : IClientAuthorization, new()
         {
-            builder.Server.Authorization = new TClientAuthorization();
+            builder.Server.AddClientAuthorization(new TClientAuthorization());
             return builder;
         }
 
         /// <summary>
         /// Uses client authorization
         /// </summary>
-        public static TwinoMqBuilder UseAuthorization(this TwinoMqBuilder builder, IClientAuthorization authorization)
+        public static TwinoMqBuilder AddClientAuthorization(this TwinoMqBuilder builder, IClientAuthorization authorization)
         {
-            builder.Server.Authorization = authorization;
+            builder.Server.AddClientAuthorization(authorization);
             return builder;
         }
 
         /// <summary>
-        /// Uses channel authentication
+        /// Uses queue authentication
         /// </summary>
-        public static TwinoMqBuilder UseChannelAuthentication<TChannelAuthenticator>(this TwinoMqBuilder builder)
-            where TChannelAuthenticator : IChannelAuthenticator, new()
+        public static TwinoMqBuilder AddQueueAuthentication<TQueueAuthenticator>(this TwinoMqBuilder builder)
+            where TQueueAuthenticator : IQueueAuthenticator, new()
         {
-            builder.Server.ChannelAuthenticator = new TChannelAuthenticator();
+            builder.Server.AddQueueAuthenticator(new TQueueAuthenticator());
             return builder;
         }
 
         /// <summary>
-        /// Uses channel authentication
+        /// Uses queue authentication
         /// </summary>
-        public static TwinoMqBuilder UseChannelAuthentication(this TwinoMqBuilder builder, IChannelAuthenticator authenticator)
+        public static TwinoMqBuilder AddQueueAuthentication(this TwinoMqBuilder builder, IQueueAuthenticator authenticator)
         {
-            builder.Server.ChannelAuthenticator = authenticator;
+            builder.Server.AddQueueAuthenticator(authenticator);
             return builder;
         }
 
         /// <summary>
         /// Activates admin operations and uses admin authorization
         /// </summary>
-        public static TwinoMqBuilder UseAdminAuthorization<TAdminAuthorization>(this TwinoMqBuilder builder)
+        public static TwinoMqBuilder AddAdminAuthorization<TAdminAuthorization>(this TwinoMqBuilder builder)
             where TAdminAuthorization : IAdminAuthorization, new()
         {
-            builder.Server.AdminAuthorization = new TAdminAuthorization();
+            builder.Server.AddAdminAuthorization(new TAdminAuthorization());
             return builder;
         }
 
         /// <summary>
         /// Activates admin operations and uses admin authorization
         /// </summary>
-        public static TwinoMqBuilder UseAdminAuthorization(this TwinoMqBuilder builder, IAdminAuthorization authorization)
+        public static TwinoMqBuilder AddAdminAuthorization(this TwinoMqBuilder builder, IAdminAuthorization authorization)
         {
-            builder.Server.AdminAuthorization = authorization;
+            builder.Server.AddAdminAuthorization(authorization);
             return builder;
         }
 
@@ -207,50 +207,50 @@ namespace Twino.MQ
         #region Events
 
         /// <summary>
-        /// Uses channel event handler
+        /// Adds queue event handler
         /// </summary>
-        public static TwinoMqBuilder UseChannelEventHandler<TChannelEventHandler>(this TwinoMqBuilder builder)
-            where TChannelEventHandler : IChannelEventHandler, new()
+        public static TwinoMqBuilder AddQueueEventHandler<TQueueAuthenticator>(this TwinoMqBuilder builder)
+            where TQueueAuthenticator : IQueueEventHandler, new()
         {
-            builder.Server.ChannelEventHandler = new TChannelEventHandler();
+            builder.Server.AddQueueEventHandler(new TQueueAuthenticator());
             return builder;
         }
 
         /// <summary>
-        /// Uses channel event handler
+        /// Adds queue event handler
         /// </summary>
-        public static TwinoMqBuilder UseChannelEventHandler(this TwinoMqBuilder builder, IChannelEventHandler channelEventHandler)
+        public static TwinoMqBuilder AddQueueEventHandler(this TwinoMqBuilder builder, IQueueEventHandler queueEventHandler)
         {
-            builder.Server.ChannelEventHandler = channelEventHandler;
+            builder.Server.AddQueueEventHandler(queueEventHandler);
             return builder;
         }
 
         /// <summary>
-        /// Uses client event handler
+        /// Adds client event handler
         /// </summary>
-        public static TwinoMqBuilder UseClientHandler<TClientHandler>(this TwinoMqBuilder builder)
+        public static TwinoMqBuilder AddClientHandler<TClientHandler>(this TwinoMqBuilder builder)
             where TClientHandler : IClientHandler, new()
         {
-            builder.Server.ClientHandler = new TClientHandler();
+            builder.Server.AddClientHandler(new TClientHandler());
             return builder;
         }
 
         /// <summary>
-        /// Uses client event handler
+        /// Adds client event handler
         /// </summary>
-        public static TwinoMqBuilder UseClientHandler(this TwinoMqBuilder builder, IClientHandler clientHandler)
+        public static TwinoMqBuilder AddClientHandler(this TwinoMqBuilder builder, IClientHandler clientHandler)
         {
-            builder.Server.ClientHandler = clientHandler;
+            builder.Server.AddClientHandler(clientHandler);
             return builder;
         }
 
         /// <summary>
         /// Uses server type message event handler
         /// </summary>
-        public static TwinoMqBuilder UseServerMessageHandler<TServerMessageHandler>(this TwinoMqBuilder builder)
+        public static TwinoMqBuilder AddServerMessageHandler<TServerMessageHandler>(this TwinoMqBuilder builder)
             where TServerMessageHandler : IServerMessageHandler, new()
         {
-            builder.Server.ServerMessageHandler = new TServerMessageHandler();
+            builder.Server.AddMessageHandler(new TServerMessageHandler());
             return builder;
         }
 
@@ -259,7 +259,7 @@ namespace Twino.MQ
         /// </summary>
         public static TwinoMqBuilder UseServerMessageHandler(this TwinoMqBuilder builder, IServerMessageHandler messageHandler)
         {
-            builder.Server.ServerMessageHandler = messageHandler;
+            builder.Server.AddMessageHandler(messageHandler);
             return builder;
         }
 

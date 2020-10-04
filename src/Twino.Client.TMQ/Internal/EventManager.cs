@@ -8,8 +8,7 @@ namespace Twino.Client.TMQ.Internal
 {
     internal class EventDescriptor
     {
-        public string Channel { get; set; }
-        public ushort Queue { get; set; }
+        public string Queue { get; set; }
 
         public List<Delegate> Methods { get; set; }
 
@@ -22,8 +21,9 @@ namespace Twino.Client.TMQ.Internal
 
         private static readonly string[] EventNames =
         {
-            "MessageProduced", "ClientConnected", "ClientDisconnected", "ClientJoined", "ClientLeft", "NodeConnected", "NodeDisconnected",
-            "ChannelCreated", "ChannelRemoved", "QueueCreated", "QueueUpdated", "QueueRemoved"
+            "MessageProduced", "ClientConnected", "ClientDisconnected",
+            "Subscribe", "Unsubscribe", "NodeConnected", "NodeDisconnected",
+            "QueueCreated", "QueueUpdated", "QueueRemoved"
         };
 
         public EventManager()
@@ -32,17 +32,16 @@ namespace Twino.Client.TMQ.Internal
                 _descriptors.Add(eventName, new List<EventDescriptor>());
         }
 
-        internal void Add(string eventName, string channel, ushort queue, Delegate method, Type type)
+        internal void Add(string eventName, string queue, Delegate method, Type type)
         {
             List<EventDescriptor> list = _descriptors[eventName];
             lock (list)
             {
-                EventDescriptor descriptor = list.FirstOrDefault(x => x.Channel == channel && x.Queue == queue);
+                EventDescriptor descriptor = list.FirstOrDefault(x => x.Queue == queue);
                 if (descriptor == null)
                 {
                     descriptor = new EventDescriptor
                                  {
-                                     Channel = channel,
                                      Queue = queue,
                                      ParameterType = type,
                                      Methods = new List<Delegate> {method}
@@ -56,12 +55,12 @@ namespace Twino.Client.TMQ.Internal
             }
         }
 
-        internal void Remove(string eventName, string channel, ushort queue)
+        internal void Remove(string eventName, string queue)
         {
             List<EventDescriptor> list = _descriptors[eventName];
             lock (list)
             {
-                EventDescriptor descriptor = list.FirstOrDefault(x => x.Channel == channel && x.Queue == queue);
+                EventDescriptor descriptor = list.FirstOrDefault(x => x.Queue == queue);
                 if (descriptor == null)
                     return;
 
@@ -69,17 +68,16 @@ namespace Twino.Client.TMQ.Internal
             }
         }
 
-        internal Task TriggerEvents(TmqClient client, TmqMessage message)
+        internal Task TriggerEvents(TmqClient client, TwinoMessage message)
         {
             string eventName = message.Source;
-            string channelName = message.Target;
-            ushort queueId = message.ContentType;
+            string queue = message.Target;
 
             List<EventDescriptor> list = _descriptors[eventName];
             EventDescriptor descriptor;
 
             lock (list)
-                descriptor = list.FirstOrDefault(x => x.Channel == channelName && x.Queue == queueId);
+                descriptor = list.FirstOrDefault(x => x.Queue == queue);
 
             if (descriptor == null)
                 return Task.CompletedTask;

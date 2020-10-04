@@ -28,7 +28,7 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public Task<TmqModelResult<List<NodeInformation>>> GetInstances()
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.InstanceList;
 
@@ -36,11 +36,11 @@ namespace Twino.Client.TMQ.Operators
         }
 
         /// <summary>
-        /// Gets all consumers of channel
+        /// Gets all consumers of queue
         /// </summary>
         public Task<TmqModelResult<List<ClientInformation>>> GetConnectedClients(string typeFilter = null)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.ClientList;
             message.SetTarget(typeFilter);
@@ -57,9 +57,9 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OnClientConnected(Action<ClientEvent> action)
         {
-            bool ok = await _client.EventSubscription(EventNames.ClientConnected, true, null, null);
+            bool ok = await _client.EventSubscription(EventNames.ClientConnected, true, null);
             if (ok)
-                _client.Events.Add(EventNames.ClientConnected, null, 0, action, typeof(ClientEvent));
+                _client.Events.Add(EventNames.ClientConnected, null, action, typeof(ClientEvent));
 
             return ok;
         }
@@ -69,9 +69,9 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OffClientConnected()
         {
-            bool ok = await _client.EventSubscription(EventNames.ClientConnected, false, null, null);
+            bool ok = await _client.EventSubscription(EventNames.ClientConnected, false, null);
             if (ok)
-                _client.Events.Remove(EventNames.ClientConnected, null, 0);
+                _client.Events.Remove(EventNames.ClientConnected, null);
 
             return ok;
         }
@@ -81,9 +81,9 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OnClientDisconnected(Action<ClientEvent> action)
         {
-            bool ok = await _client.EventSubscription(EventNames.ClientDisconnected, true, null, null);
+            bool ok = await _client.EventSubscription(EventNames.ClientDisconnected, true, null);
             if (ok)
-                _client.Events.Add(EventNames.ClientDisconnected, null, 0, action, typeof(ClientEvent));
+                _client.Events.Add(EventNames.ClientDisconnected, null, action, typeof(ClientEvent));
 
             return ok;
         }
@@ -93,9 +93,9 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<bool> OffClientDisconnected()
         {
-            bool ok = await _client.EventSubscription(EventNames.ClientDisconnected, false, null, null);
+            bool ok = await _client.EventSubscription(EventNames.ClientDisconnected, false, null);
             if (ok)
-                _client.Events.Remove(EventNames.ClientDisconnected, null, 0);
+                _client.Events.Remove(EventNames.ClientDisconnected, null);
 
             return ok;
         }

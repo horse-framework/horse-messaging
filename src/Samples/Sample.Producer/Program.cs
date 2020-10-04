@@ -1,32 +1,36 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Sample.Producer.Models;
 using Twino.Client.TMQ;
 using Twino.Client.TMQ.Bus;
-using Twino.Extensions.ConsumerFactory;
+using Twino.Client.TMQ.Connectors;
+using Twino.Ioc;
 using Twino.Protocols.TMQ;
 
 namespace Sample.Producer
 {
-	class Program
-	{
-		static async Task Main(string[] args)
-		{
-			var services = new ServiceCollection();
-			services.AddTwinoBus(tmq => { tmq.AddHost("tmq://127.0.0.1:22200"); });
-			var provider = services.BuildServiceProvider();
-			provider.UseTwinoBus();
-			var bus = provider.GetService<ITwinoRouteBus>();
+    class Program
+    {
+        public static IServiceContainer Services { get; } = new ServiceContainer();
 
-			while (true)
-			{
-				ModelC c = new ModelC();
-				c.Value = "Hello";
-				var result = await bus.PublishRequestJson<ModelC, ModelA>(c);
+        static async Task Main(string[] args)
+        {
+            TmqStickyConnector connector = new TmqStickyConnector(TimeSpan.FromSeconds(2));
+            connector.AddHost("tmq://localhost:26222");
+            connector.ContentSerializer = new NewtonsoftContentSerializer();
+            connector.Run();
+            
+            ITwinoQueueBus queueBus = connector.Bus.Queue;
 
-				await Task.Delay(500);
-			}
-		}
-	}
+            ModelA a = new ModelA();
+            a.Foo = "foo";
+            a.No = 123;
+
+            while (true)
+            {
+                TwinoResult result = await queueBus.PushJson(a);
+                Console.WriteLine($"Push: {result.Code}");
+                await Task.Delay(5000);
+            }
+        }
+    }
 }

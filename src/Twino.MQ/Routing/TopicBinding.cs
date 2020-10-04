@@ -10,15 +10,15 @@ using Twino.Protocols.TMQ;
 namespace Twino.MQ.Routing
 {
     /// <summary>
-    /// Topic binding targets channels with topics.
-    /// Messages are pushed to queues in channels with topic.
+    /// Topic binding targets queues with topics.
+    /// Messages are pushed to queues with topic.
     /// Binding receivers are received messages as QueueMessage.
     /// </summary>
     public class TopicBinding : Binding
     {
-        private Channel[] _channels;
-        private DateTime _channelUpdateTime;
-        private readonly TimeSpan _channelCacheDuration = TimeSpan.FromMilliseconds(250);
+        private TwinoQueue[] _queues;
+        private DateTime _queueUpdateTime;
+        private readonly TimeSpan _queueCacheDuration = TimeSpan.FromMilliseconds(250);
         private readonly IUniqueIdGenerator _idGenerator = new DefaultUniqueIdGenerator();
         private int _roundRobinIndex = -1;
 
@@ -30,7 +30,7 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Creates new direct binding.
         /// Name is the name of the binding.
-        /// Target is the topic of channels.
+        /// Target is the topic of queues.
         /// Content Type should be Queue Id.
         /// Priority for router binding.
         /// </summary>
@@ -44,17 +44,12 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Sends the message to binding receivers
         /// </summary>
-        public override Task<bool> Send(MqClient sender, TmqMessage message)
+        public override Task<bool> Send(MqClient sender, TwinoMessage message)
         {
-            if (DateTime.UtcNow - _channelUpdateTime > _channelCacheDuration)
-                RefreshChannelCache();
+            if (DateTime.UtcNow - _queueUpdateTime > _queueCacheDuration)
+                RefreshQueueCache();
 
-            message.PendingAcknowledge = false;
-            message.PendingResponse = false;
-            if (Interaction == BindingInteraction.Acknowledge)
-                message.PendingAcknowledge = true;
-            else if (Interaction == BindingInteraction.Response)
-                message.PendingResponse = true;
+            message.WaitResponse = Interaction == BindingInteraction.Response;
 
             switch (RouteMethod)
             {
@@ -72,21 +67,11 @@ namespace Twino.MQ.Routing
             }
         }
 
-        private async Task<bool> SendDistribute(TmqMessage message)
+        private Task<bool> SendDistribute(TwinoMessage message)
         {
-            ushort queueId = ContentType.HasValue ? ContentType.Value : message.ContentType;
             bool sent = false;
-            foreach (Channel channel in _channels)
+            foreach (TwinoQueue queue in _queues)
             {
-                ChannelQueue queue = channel.FindQueue(queueId);
-                if (queue == null)
-                {
-                    if (!Router.Server.Options.AutoQueueCreation)
-                        continue;
-
-                    queue = await channel.CreateQueue(queueId, channel.Options, message, Router.Server.DeliveryHandlerFactory);
-                }
-
                 string messageId = sent || Interaction == BindingInteraction.None
                                        ? message.MessageId
                                        : _idGenerator.Create();
@@ -94,38 +79,35 @@ namespace Twino.MQ.Routing
                 if (!sent)
                     sent = true;
 
-                TmqMessage msg = message.Clone(true, true, messageId);
+                TwinoMessage msg = message.Clone(true, true, messageId);
                 QueueMessage queueMessage = new QueueMessage(msg);
                 queue.AddMessage(queueMessage);
             }
 
-            return sent;
+            return Task.FromResult(sent);
         }
 
-        private async Task<bool> SendRoundRobin(TmqMessage message)
+        private async Task<bool> SendRoundRobin(TwinoMessage message)
         {
             Interlocked.Increment(ref _roundRobinIndex);
             int i = _roundRobinIndex;
 
-            if (i >= _channels.Length)
+            if (i >= _queues.Length)
             {
                 _roundRobinIndex = 0;
                 i = 0;
             }
 
-            if (_channels.Length == 0)
+            if (_queues.Length == 0)
                 return false;
 
-            Channel channel = _channels[i];
-
-            ushort queueId = ContentType.HasValue ? ContentType.Value : message.ContentType;
-            ChannelQueue queue = channel.FindQueue(queueId);
+            TwinoQueue queue = Router.Server.FindQueue(message.Target);
             if (queue == null)
             {
                 if (!Router.Server.Options.AutoQueueCreation)
                     return false;
 
-                queue = await channel.CreateQueue(queueId, channel.Options, message, Router.Server.DeliveryHandlerFactory);
+                queue = await Router.Server.CreateQueue(message.Target, Router.Server.Options, message, Router.Server.DeliveryHandlerFactory, true, true);
             }
 
             QueueMessage queueMessage = new QueueMessage(message);
@@ -133,21 +115,18 @@ namespace Twino.MQ.Routing
             return true;
         }
 
-        private async Task<bool> SendOnlyFirst(TmqMessage message)
+        private async Task<bool> SendOnlyFirst(TwinoMessage message)
         {
-            if (_channels.Length < 1)
+            if (_queues.Length < 1)
                 return false;
 
-            Channel channel = _channels[0];
-
-            ushort queueId = ContentType.HasValue ? ContentType.Value : message.ContentType;
-            ChannelQueue queue = channel.FindQueue(queueId);
+            TwinoQueue queue = Router.Server.FindQueue(message.Target);
             if (queue == null)
             {
                 if (!Router.Server.Options.AutoQueueCreation)
                     return false;
 
-                queue = await channel.CreateQueue(queueId, channel.Options, message, Router.Server.DeliveryHandlerFactory);
+                queue = await Router.Server.CreateQueue(message.Target, Router.Server.Options, message, Router.Server.DeliveryHandlerFactory, true, true);
             }
 
             QueueMessage queueMessage = new QueueMessage(message);
@@ -155,10 +134,10 @@ namespace Twino.MQ.Routing
             return true;
         }
 
-        private void RefreshChannelCache()
+        private void RefreshQueueCache()
         {
-            _channelUpdateTime = DateTime.UtcNow;
-            _channels = Router.Server.Channels.Where(x => x.Topic != null && Filter.CheckMatch(x.Topic, Target)).ToArray();
+            _queueUpdateTime = DateTime.UtcNow;
+            _queues = Router.Server.Queues.Where(x => x.Topic != null && Filter.CheckMatch(x.Topic, Target)).ToArray();
         }
     }
 }

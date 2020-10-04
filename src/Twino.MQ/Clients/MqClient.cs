@@ -14,9 +14,9 @@ namespace Twino.MQ.Clients
         #region Properties
 
         /// <summary>
-        /// Channels that client is in
+        /// Queues that client subscribed
         /// </summary>
-        private readonly List<ChannelClient> _channels = new List<ChannelClient>();
+        private readonly List<QueueClient> _queues = new List<QueueClient>();
 
         /// <summary>
         /// Connection data of the client.
@@ -73,6 +73,11 @@ namespace Twino.MQ.Clients
         /// </summary>
         public string RemoteHost { get; set; }
 
+        /// <summary>
+        /// Custom protocol for the client
+        /// </summary>
+        public IClientCustomProtocol CustomProtocol { get; set; }
+
         #endregion
 
         #region Constructors
@@ -101,51 +106,99 @@ namespace Twino.MQ.Clients
         #region Actions
 
         /// <summary>
-        /// Gets all channels of the client
+        /// Gets all queues of the server
         /// </summary>
-        public IEnumerable<ChannelClient> GetChannels()
+        public IEnumerable<QueueClient> GetQueues()
         {
-            List<ChannelClient> list;
+            List<QueueClient> list;
 
-            lock (_channels)
-                list = new List<ChannelClient>(_channels);
+            lock (_queues)
+                list = new List<QueueClient>(_queues);
 
             return list;
         }
 
         /// <summary>
-        /// Adds channel into client's channel list
+        /// Adds queue into client's subscription list
         /// </summary>
-        internal void Join(ChannelClient channel)
+        internal void AddSubscription(QueueClient queue)
         {
-            lock (_channels)
-                _channels.Add(channel);
+            lock (_queues)
+                _queues.Add(queue);
         }
 
         /// <summary>
-        /// Removes channel from client's channel list
+        /// Removes queue from client's subscription list
         /// </summary>
-        internal void Leave(ChannelClient channel)
+        internal void RemoveSubscription(QueueClient queue)
         {
-            lock (_channels)
-                _channels.Remove(channel);
+            lock (_queues)
+                _queues.Remove(queue);
         }
 
         /// <summary>
-        /// Leaves client from all channels
+        /// Unsubscribes from all queues
         /// </summary>
-        internal async Task LeaveFromAllChannels()
+        internal async Task UnsubscribeFromAllQueues()
         {
-            List<ChannelClient> list;
-            lock (_channels)
+            List<QueueClient> list;
+            lock (_queues)
             {
-                list = new List<ChannelClient>(_channels);
-                _channels.Clear();
+                list = new List<QueueClient>(_queues);
+                _queues.Clear();
             }
 
-            foreach (ChannelClient cc in list)
-                if (cc.Channel != null)
-                    await cc.Channel.RemoveClientSilent(cc);
+            foreach (QueueClient cc in list)
+                if (cc.Queue != null)
+                    await cc.Queue.RemoveClientSilent(cc);
+        }
+
+        #endregion
+
+        #region Protocol Implementation
+
+        /// <summary>
+        /// Sends PING Message to the client
+        /// </summary>
+        public override void Ping()
+        {
+            if (CustomProtocol != null)
+                CustomProtocol.Ping();
+            else
+                base.Ping();
+        }
+
+        /// <summary>
+        /// Sends PONG Message to the client
+        /// </summary>
+        public override void Pong(object pingMessage = null)
+        {
+            if (CustomProtocol != null)
+                CustomProtocol.Pong(pingMessage);
+            else
+                base.Pong(pingMessage);
+        }
+
+        /// <summary>
+        /// Sends Twino Message to the client
+        /// </summary>
+        public override bool Send(TwinoMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
+        {
+            if (CustomProtocol != null)
+                return CustomProtocol.Send(message, additionalHeaders);
+
+            return base.Send(message, additionalHeaders);
+        }
+
+        /// <summary>
+        /// Sends Twino Message to the client
+        /// </summary>
+        public override Task<bool> SendAsync(TwinoMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
+        {
+            if (CustomProtocol != null)
+                return CustomProtocol.SendAsync(message, additionalHeaders);
+
+            return base.SendAsync(message, additionalHeaders);
         }
 
         #endregion

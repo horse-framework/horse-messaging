@@ -30,12 +30,12 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<TwinoResult> Create(string name, RouteMethod method)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.CreateRouter;
             message.SetTarget(name);
-            message.PendingResponse = true;
-            message.AddHeader(TmqHeaders.ROUTE_METHOD, Convert.ToInt32(method).ToString());
+            message.WaitResponse = true;
+            message.AddHeader(TwinoHeaders.ROUTE_METHOD, Convert.ToInt32(method).ToString());
             message.SetMessageId(_client.UniqueIdGenerator.Create());
             return await _client.WaitResponse(message, true);
         }
@@ -45,7 +45,7 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<TmqModelResult<List<RouterInformation>>> List()
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.ListRouters;
             return await _client.SendAndGetJson<List<RouterInformation>>(message);
@@ -57,11 +57,11 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<TwinoResult> Remove(string name)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.RemoveRouter;
             message.SetTarget(name);
-            message.PendingResponse = true;
+            message.WaitResponse = true;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
             return await _client.WaitResponse(message, true);
         }
@@ -87,11 +87,11 @@ namespace Twino.Client.TMQ.Operators
                                                   ushort? contentType = null,
                                                   int priority = 1)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.AddBinding;
             message.SetTarget(routerName);
-            message.PendingResponse = true;
+            message.WaitResponse = true;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
             BindingInformation info = new BindingInformation
                                       {
@@ -112,7 +112,7 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<TmqModelResult<List<BindingInformation>>> GetBindings(string routerName)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.ListBindings;
             message.SetTarget(routerName);
@@ -124,13 +124,13 @@ namespace Twino.Client.TMQ.Operators
         /// </summary>
         public async Task<TwinoResult> RemoveBinding(string routerName, string bindingName)
         {
-            TmqMessage message = new TmqMessage();
+            TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.RemoveBinding;
             message.SetTarget(routerName);
-            message.PendingResponse = true;
+            message.WaitResponse = true;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
-            message.AddHeader(TmqHeaders.BINDING_NAME, bindingName);
+            message.AddHeader(TwinoHeaders.BINDING_NAME, bindingName);
             return await _client.WaitResponse(message, true);
         }
 
@@ -147,8 +147,8 @@ namespace Twino.Client.TMQ.Operators
                                                ushort contentType = 0,
                                                IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            TmqMessage msg = new TmqMessage(MessageType.Router, routerName, contentType);
-            msg.PendingAcknowledge = waitForAcknowledge;
+            TwinoMessage msg = new TwinoMessage(MessageType.Router, routerName, contentType);
+            msg.WaitResponse = waitForAcknowledge;
             msg.SetMessageId(_client.UniqueIdGenerator.Create());
             msg.Content = new MemoryStream(Encoding.UTF8.GetBytes(message));
 
@@ -156,7 +156,7 @@ namespace Twino.Client.TMQ.Operators
                 foreach (KeyValuePair<string, string> pair in messageHeaders)
                     msg.AddHeader(pair.Key, pair.Value);
 
-            return await _client.SendAndWaitForAcknowledge(msg, waitForAcknowledge);
+            return await _client.WaitResponse(msg, waitForAcknowledge);
         }
 
         /// <summary>
@@ -168,8 +168,8 @@ namespace Twino.Client.TMQ.Operators
                                                ushort contentType = 0,
                                                IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            TmqMessage msg = new TmqMessage(MessageType.Router, routerName, contentType);
-            msg.PendingAcknowledge = waitForAcknowledge;
+            TwinoMessage msg = new TwinoMessage(MessageType.Router, routerName, contentType);
+            msg.WaitResponse = waitForAcknowledge;
             msg.SetMessageId(_client.UniqueIdGenerator.Create());
             msg.Content = new MemoryStream(data);
 
@@ -177,7 +177,7 @@ namespace Twino.Client.TMQ.Operators
                 foreach (KeyValuePair<string, string> pair in messageHeaders)
                     msg.AddHeader(pair.Key, pair.Value);
 
-            return await _client.SendAndWaitForAcknowledge(msg, waitForAcknowledge);
+            return await _client.WaitResponse(msg, waitForAcknowledge);
         }
 
         /// <summary>
@@ -199,9 +199,9 @@ namespace Twino.Client.TMQ.Operators
                                                    IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor(model.GetType());
-            TmqMessage message = descriptor.CreateMessage(MessageType.Router, routerName, contentType);
+            TwinoMessage message = descriptor.CreateMessage(MessageType.Router, routerName, contentType);
 
-            message.PendingAcknowledge = waitForAcknowledge;
+            message.WaitResponse = waitForAcknowledge;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
             message.Serialize(model, _client.JsonSerializer);
 
@@ -209,18 +209,18 @@ namespace Twino.Client.TMQ.Operators
                 foreach (KeyValuePair<string, string> pair in messageHeaders)
                     message.AddHeader(pair.Key, pair.Value);
 
-            return await _client.SendAndWaitForAcknowledge(message, waitForAcknowledge);
+            return await _client.WaitResponse(message, waitForAcknowledge);
         }
 
         /// <summary>
         /// Sends a string request to router.
         /// Waits response from at least one binding.
         /// </summary>
-        public async Task<TmqMessage> PublishRequest(string routerName, string message, ushort contentType = 0,
+        public async Task<TwinoMessage> PublishRequest(string routerName, string message, ushort contentType = 0,
                                                      IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            TmqMessage msg = new TmqMessage(MessageType.Router, routerName, contentType);
-            msg.PendingResponse = true;
+            TwinoMessage msg = new TwinoMessage(MessageType.Router, routerName, contentType);
+            msg.WaitResponse = true;
             msg.Content = new MemoryStream(Encoding.UTF8.GetBytes(message));
 
             if (messageHeaders != null)
@@ -248,15 +248,15 @@ namespace Twino.Client.TMQ.Operators
                                                                                           IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor(request.GetType());
-            TmqMessage message = descriptor.CreateMessage(MessageType.Router, routerName, contentType);
-            message.PendingResponse = true;
+            TwinoMessage message = descriptor.CreateMessage(MessageType.Router, routerName, contentType);
+            message.WaitResponse = true;
             message.Serialize(request, _client.JsonSerializer);
 
             if (messageHeaders != null)
                 foreach (KeyValuePair<string, string> pair in messageHeaders)
                     message.AddHeader(pair.Key, pair.Value);
 
-            TmqMessage responseMessage = await _client.Request(message);
+            TwinoMessage responseMessage = await _client.Request(message);
             if (responseMessage.ContentType == 0)
             {
                 TResponse response = responseMessage.Deserialize<TResponse>(_client.JsonSerializer);

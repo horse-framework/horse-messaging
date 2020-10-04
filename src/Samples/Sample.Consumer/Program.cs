@@ -1,28 +1,25 @@
 ﻿using System;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Twino.Client.TMQ.Bus;
+using Twino.Client.TMQ;
 using Twino.Client.TMQ.Connectors;
-using Twino.Extensions.ConsumerFactory;
-using Twino.Protocols.TMQ;
+using Twino.Ioc;
 
 namespace Sample.Consumer
 {
     class Program
     {
-        static async Task Main(string[] args)
+        public static IServiceContainer Services { get; } = new ServiceContainer();
+
+        static void Main(string[] args)
         {
-            var services = new ServiceCollection();
-            services.AddTwinoBus(tmq =>
-            {
-                tmq.AddHost("tmq://127.0.0.1:22200");
-                tmq.SetClientName("consumer");
-                tmq.AddTransientConsumers(typeof(Program));
-            });
-            var provider = services.BuildServiceProvider();
-            provider.UseTwinoBus();
+            TmqStickyConnector connector = new TmqStickyConnector(TimeSpan.FromSeconds(2));
+            connector.AddHost("tmq://localhost:26222");
+            connector.ContentSerializer = new NewtonsoftContentSerializer();
+            connector.Observer.RegisterConsumer<ModelAConsumer>();
+            connector.Connected += (c) => { _ = connector.GetClient().Queues.Subscribe("model-a", false); };
+            connector.Run();
+
             while (true)
-                await Task.Delay(1000);
+                Console.ReadLine();
         }
     }
 }

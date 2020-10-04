@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
 using Twino.Client.TMQ.Annotations;
-using Twino.Client.TMQ.Exceptions;
 using Twino.Protocols.TMQ;
 
 namespace Twino.Client.TMQ.Internal
@@ -14,13 +13,13 @@ namespace Twino.Client.TMQ.Internal
         protected bool SendNack { get; private set; }
         protected NackReason NackReason { get; private set; }
 
-        protected KeyValuePair<string, ushort> DefaultPushException { get; private set; }
-        protected List<Tuple<Type, KeyValuePair<string, ushort>>> PushExceptions { get; private set; }
+        protected string DefaultPushException { get; private set; }
+        protected List<Tuple<Type, string>> PushExceptions { get; private set; }
 
         protected KeyValuePair<string, ushort> DefaultPublishException { get; private set; }
         protected List<Tuple<Type, KeyValuePair<string, ushort>>> PublishExceptions { get; private set; }
 
-        public abstract Task Execute(TmqClient client, TmqMessage message, object model);
+        public abstract Task Execute(TmqClient client, TwinoMessage message, object model);
 
         protected void ResolveAttributes(Type type, Type modelType)
         {
@@ -31,15 +30,14 @@ namespace Twino.Client.TMQ.Internal
             SendNack = nackAttribute != null;
             NackReason = nackAttribute != null ? nackAttribute.Reason : NackReason.None;
 
-            PushExceptions = new List<Tuple<Type, KeyValuePair<string, ushort>>>();
+            PushExceptions = new List<Tuple<Type, string>>();
             IEnumerable<PushExceptionsAttribute> pushAttributes = type.GetCustomAttributes<PushExceptionsAttribute>(true);
             foreach (PushExceptionsAttribute attribute in pushAttributes)
             {
                 if (attribute.ExceptionType == null)
-                    DefaultPushException = new KeyValuePair<string, ushort>(attribute.ChannelName, attribute.QueueId);
+                    DefaultPushException = attribute.QueueName;
                 else
-                    PushExceptions.Add(new Tuple<Type, KeyValuePair<string, ushort>>(attribute.ExceptionType,
-                                                                                     new KeyValuePair<string, ushort>(attribute.ChannelName, attribute.QueueId)));
+                    PushExceptions.Add(new Tuple<Type, string>(attribute.ExceptionType, attribute.QueueName));
             }
 
             PublishExceptions = new List<Tuple<Type, KeyValuePair<string, ushort>>>();
@@ -57,13 +55,13 @@ namespace Twino.Client.TMQ.Internal
         /// <summary>
         /// Sends negative ack
         /// </summary>
-        protected Task SendNegativeAck(TmqMessage message, TmqClient client, Exception exception)
+        protected Task SendNegativeAck(TwinoMessage message, TmqClient client, Exception exception)
         {
             string reason;
             switch (NackReason)
             {
                 case NackReason.Error:
-                    reason = TmqHeaders.NACK_REASON_ERROR;
+                    reason = TwinoHeaders.NACK_REASON_ERROR;
                     break;
 
                 case NackReason.ExceptionType:
@@ -75,7 +73,7 @@ namespace Twino.Client.TMQ.Internal
                     break;
 
                 default:
-                    reason = TmqHeaders.NACK_REASON_NONE;
+                    reason = TwinoHeaders.NACK_REASON_NONE;
                     break;
             }
 
@@ -86,7 +84,7 @@ namespace Twino.Client.TMQ.Internal
         {
             if (PushExceptions.Count == 0 &&
                 PublishExceptions.Count == 0 &&
-                string.IsNullOrEmpty(DefaultPushException.Key) &&
+                string.IsNullOrEmpty(DefaultPushException) &&
                 string.IsNullOrEmpty(DefaultPublishException.Key))
                 return;
 
@@ -94,17 +92,17 @@ namespace Twino.Client.TMQ.Internal
             string serialized = Newtonsoft.Json.JsonConvert.SerializeObject(exception);
 
             bool pushFound = false;
-            foreach (Tuple<Type, KeyValuePair<string, ushort>> tuple in PushExceptions)
+            foreach (Tuple<Type, string> tuple in PushExceptions)
             {
                 if (tuple.Item1.IsAssignableFrom(type))
                 {
-                    await client.Queues.Push(tuple.Item2.Key, tuple.Item2.Value, serialized, false);
+                    await client.Queues.Push(tuple.Item2, serialized, false);
                     pushFound = true;
                 }
             }
 
-            if (!pushFound && !string.IsNullOrEmpty(DefaultPushException.Key))
-                await client.Queues.Push(DefaultPushException.Key, DefaultPushException.Value, serialized, false);
+            if (!pushFound && !string.IsNullOrEmpty(DefaultPushException))
+                await client.Queues.Push(DefaultPushException, serialized, false);
 
             bool publishFound = false;
             foreach (Tuple<Type, KeyValuePair<string, ushort>> tuple in PublishExceptions)

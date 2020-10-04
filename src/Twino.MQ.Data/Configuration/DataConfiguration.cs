@@ -9,14 +9,14 @@ namespace Twino.MQ.Data.Configuration
     /// </summary>
     internal class DataConfiguration
     {
-        [JsonProperty("Channels")]
-        [JsonPropertyName("Channels")]
-        internal List<ChannelConfiguration> Channels { get; set; }
+        [JsonProperty("Queues")]
+        [JsonPropertyName("Queues")]
+        internal List<QueueConfiguration> Queues { get; set; }
 
         public static DataConfiguration Empty()
         {
             DataConfiguration configuration = new DataConfiguration();
-            configuration.Channels = new List<ChannelConfiguration>();
+            configuration.Queues = new List<QueueConfiguration>();
             return configuration;
         }
     }

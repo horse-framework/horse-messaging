@@ -29,14 +29,9 @@ namespace Twino.Client.TMQ.Models
     public class PullRequest
     {
         /// <summary>
-        /// Channel name
+        /// Queue name
         /// </summary>
-        public string Channel { get; set; }
-
-        /// <summary>
-        /// Queue Id
-        /// </summary>
-        public ushort QueueId { get; set; }
+        public string Queue { get; set; }
 
         /// <summary>
         /// Maximum message count wanted received 
@@ -75,12 +70,11 @@ namespace Twino.Client.TMQ.Models
         /// <summary>
         /// Creates request for pulling single message with default options
         /// </summary>
-        public static PullRequest Single(string channel, ushort queue)
+        public static PullRequest Single(string queue)
         {
             return new PullRequest
                    {
-                       Channel = channel,
-                       QueueId = queue,
+                       Queue = queue,
                        Count = 1,
                        Order = MessageOrder.Default,
                        ClearAfter = ClearDecision.None,

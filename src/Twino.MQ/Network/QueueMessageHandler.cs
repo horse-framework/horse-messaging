@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Options;
 using Twino.MQ.Queues;
+using Twino.MQ.Security;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Network
@@ -25,30 +26,15 @@ namespace Twino.MQ.Network
 
         #endregion
 
-        private async Task<ChannelQueue> FindQueue(MqClient client, string channelName, ushort contentType, TmqMessage message)
+        private async Task<TwinoQueue> FindQueue(MqClient client, string name, TwinoMessage message)
         {
-            //find channel and queue
-            Channel channel = _server.FindChannel(channelName);
-
-            //if auto creation active, try to create channel
-            if (channel == null && _server.Options.AutoChannelCreation)
-                channel = _server.FindOrCreateChannel(channelName);
-
-            if (channel == null)
-            {
-                if (client != null && message != null && !string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
-
-                return null;
-            }
-
-            ChannelQueue queue = channel.FindQueue(contentType);
+            TwinoQueue queue = _server.FindQueue(name);
 
             //if auto creation active, try to create queue
             if (queue == null && _server.Options.AutoQueueCreation)
             {
-                ChannelQueueOptions options = ChannelQueueOptions.CloneFrom(channel.Options);
-                queue = await channel.CreateQueue(contentType, options, message, channel.Server.DeliveryHandlerFactory);
+                QueueOptions options = QueueOptions.CloneFrom(_server.Options);
+                queue = await _server.CreateQueue(name, options, message, _server.DeliveryHandlerFactory, true, true);
             }
 
             if (queue == null)
@@ -62,22 +48,22 @@ namespace Twino.MQ.Network
             return queue;
         }
 
-        public async Task Handle(MqClient client, TmqMessage message, bool fromNode)
+        public async Task Handle(MqClient client, TwinoMessage message, bool fromNode)
         {
-            ChannelQueue queue = await FindQueue(client, message.Target, message.ContentType, message);
+            TwinoQueue queue = await FindQueue(client, message.Target, message);
             if (queue == null)
                 return;
 
             //if there is at least one cc header
             //we need to create a clone of the message
             //clone does not have cc headers but others
-            TmqMessage clone = null;
+            TwinoMessage clone = null;
             List<string> ccList = null;
             List<KeyValuePair<string, string>> additionalHeaders = null;
             if (message.HasHeader)
             {
-                additionalHeaders = message.Headers.Where(x => !x.Key.Equals(TmqHeaders.CC, StringComparison.InvariantCultureIgnoreCase)).ToList();
-                ccList = new List<string>(message.Headers.Where(x => x.Key.Equals(TmqHeaders.CC, StringComparison.InvariantCultureIgnoreCase)).Select(x => x.Value));
+                additionalHeaders = message.Headers.Where(x => !x.Key.Equals(TwinoHeaders.CC, StringComparison.InvariantCultureIgnoreCase)).ToList();
+                ccList = new List<string>(message.Headers.Where(x => x.Key.Equals(TwinoHeaders.CC, StringComparison.InvariantCultureIgnoreCase)).Select(x => x.Value));
                 clone = message.Clone(false, true, _server.MessageIdGenerator.Create(), additionalHeaders);
             }
 
@@ -85,18 +71,18 @@ namespace Twino.MQ.Network
 
             //if there are cc headers, we will push the message to other queues
             if (clone != null)
-                await PushOtherChannels(client, clone, ccList, additionalHeaders);
+                await PushOtherQueues(client, clone, ccList, additionalHeaders);
         }
 
         /// <summary>
         /// Handles pushing a message into a queue
         /// </summary>
-        private async Task HandlePush(MqClient client, TmqMessage message, ChannelQueue queue, bool answerSender)
+        private async Task HandlePush(MqClient client, TwinoMessage message, TwinoQueue queue, bool answerSender)
         {
             //check authority
-            if (_server.Authorization != null)
+            foreach (IClientAuthorization authorization in _server.Authorizations)
             {
-                bool grant = await _server.Authorization.CanMessageToQueue(client, queue, message);
+                bool grant = await authorization.CanMessageToQueue(client, queue, message);
                 if (!grant)
                 {
                     if (answerSender && !string.IsNullOrEmpty(message.MessageId))
@@ -124,9 +110,9 @@ namespace Twino.MQ.Network
         }
 
         /// <summary>
-        /// Pushes clones of the message to cc channel queues
+        /// Pushes clones of the message to cc queues
         /// </summary>
-        private async Task PushOtherChannels(MqClient client, TmqMessage clone, List<string> ccList, List<KeyValuePair<string, string>> additionalHeaders)
+        private async Task PushOtherQueues(MqClient client, TwinoMessage clone, List<string> ccList, List<KeyValuePair<string, string>> additionalHeaders)
         {
             for (int i = 0; i < ccList.Count; i++)
             {
@@ -136,15 +122,16 @@ namespace Twino.MQ.Network
                 if (split.Length < 1)
                     continue;
 
-                string channel = split[0].Trim();
-                ushort contentType = split.Length > 1 ? Convert.ToUInt16(split[1].Trim()) : clone.ContentType;
-                string messageId = split.Length > 2 ? split[2].Trim() : null;
+                string queueName = split[0].Trim();
+                string messageId = null;
+                if (split.Length > 1)
+                    messageId = split[1];
 
-                ChannelQueue queue = await FindQueue(null, channel, contentType, null);
+                TwinoQueue queue = await FindQueue(null, queueName, clone);
                 if (queue == null)
                     continue;
 
-                TmqMessage msg = clone;
+                TwinoMessage msg = clone;
                 if (i < ccList.Count - 1)
                     clone = clone.Clone(false, true, _server.MessageIdGenerator.Create(), additionalHeaders);
 

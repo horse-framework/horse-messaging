@@ -48,6 +48,6 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Pushes a message to router
         /// </summary>
-        Task<RouterPublishResult> Publish(MqClient sender, TmqMessage message);
+        Task<RouterPublishResult> Publish(MqClient sender, TwinoMessage message);
     }
 }

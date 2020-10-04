@@ -5,18 +5,6 @@ namespace Twino.MQ.Data.Configuration
 {
     internal class QueueOptionsConfiguration
     {
-        [JsonProperty("TagName")]
-        [JsonPropertyName("TagName")]
-        public string TagName { get; set; }
-
-        [JsonProperty("SendOnlyFirstAcquirer")]
-        [JsonPropertyName("SendOnlyFirstAcquirer")]
-        public bool SendOnlyFirstAcquirer { get; set; }
-
-        [JsonProperty("RequestAcknowledge")]
-        [JsonPropertyName("RequestAcknowledge")]
-        public bool RequestAcknowledge { get; set; }
-
         [JsonProperty("AcknowledgeTimeout")]
         [JsonPropertyName("AcknowledgeTimeout")]
         public int AcknowledgeTimeout { get; set; }
@@ -29,9 +17,9 @@ namespace Twino.MQ.Data.Configuration
         [JsonPropertyName("UseMessageId")]
         public bool UseMessageId { get; set; } = true;
 
-        [JsonProperty("WaitForAcknowledge")]
-        [JsonPropertyName("WaitForAcknowledge")]
-        public bool WaitForAcknowledge { get; set; }
+        [JsonProperty("Acknowledge")]
+        [JsonPropertyName("Acknowledge")]
+        public string Acknowledge { get; set; }
 
         [JsonProperty("HideClientNames")]
         [JsonPropertyName("HideClientNames")]
@@ -48,5 +36,13 @@ namespace Twino.MQ.Data.Configuration
         [JsonProperty("MessageSizeLimit")]
         [JsonPropertyName("MessageSizeLimit")]
         public ulong MessageSizeLimit { get; set; }
+
+        [JsonProperty("ClientLimit")]
+        [JsonPropertyName("ClientLimit")]
+        public int ClientLimit { get; set; }
+
+        [JsonProperty("AutoDestroy")]
+        [JsonPropertyName("AutoDestroy")]
+        public string AutoDestroy { get; set; }
     }
 }

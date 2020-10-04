@@ -8,22 +8,16 @@ namespace Twino.Protocols.TMQ.Models.Events
     public class QueueEvent
     {
         /// <summary>
-        /// Channel name
+        /// Queue name
         /// </summary>
-        [JsonPropertyName("Channel")]
-        public string Channel { get; set; }
+        [JsonPropertyName("Name")]
+        public string Name { get; set; }
 
         /// <summary>
-        /// Queue Id
+        /// Queue Topic
         /// </summary>
-        [JsonPropertyName("Id")]
-        public ushort Id { get; set; }
-
-        /// <summary>
-        /// Queue Tag
-        /// </summary>
-        [JsonPropertyName("Tag")]
-        public string Tag { get; set; }
+        [JsonPropertyName("Topic")]
+        public string Topic { get; set; }
 
         /// <summary>
         /// Queue current status

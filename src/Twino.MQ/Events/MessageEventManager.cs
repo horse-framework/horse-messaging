@@ -13,8 +13,8 @@ namespace Twino.MQ.Events
         /// <summary>
         /// Creates new message event manager
         /// </summary>
-        public MessageEventManager(TwinoMQ server, string eventName, ChannelQueue queue)
-            : base(server, eventName, queue.Channel.Name, queue.Id)
+        public MessageEventManager(TwinoMQ server, string eventName, TwinoQueue queue)
+            : base(server, eventName, queue.Name)
         {
         }
 
@@ -26,8 +26,7 @@ namespace Twino.MQ.Events
             base.Trigger(new MessageEvent
                          {
                              Id = message.Message.MessageId,
-                             Queue = message.Message.ContentType,
-                             Channel = message.Message.Target,
+                             Queue = message.Message.Target,
                              Saved = message.IsSaved,
                              ProducerId = message.Source?.UniqueId,
                              ProducerName = message.Source?.Name,

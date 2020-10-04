@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.Protocols.TMQ;
@@ -46,7 +47,7 @@ namespace Twino.MQ.Routing
         /// Used for round robin routing.
         /// The index value of the binding received last message.
         /// </summary>
-        private volatile int _lastRoutedIndex = -1;
+        private int _lastRoutedIndex = -1;
 
         #endregion
 
@@ -129,7 +130,7 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Pushes a message to router
         /// </summary>
-        public Task<RouterPublishResult> Publish(MqClient sender, TmqMessage message)
+        public Task<RouterPublishResult> Publish(MqClient sender, TwinoMessage message)
         {
             if (!IsEnabled)
                 return Task.FromResult(RouterPublishResult.Disabled);
@@ -156,7 +157,7 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Sends the message to only first binding
         /// </summary>
-        private async Task<RouterPublishResult> OnlyFirst(MqClient sender, TmqMessage message)
+        private async Task<RouterPublishResult> OnlyFirst(MqClient sender, TwinoMessage message)
         {
             int index = 0;
             bool sent;
@@ -185,13 +186,14 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Distributes the message to all bindings
         /// </summary>
-        private async Task<RouterPublishResult> Distribute(MqClient sender, TmqMessage message)
+        private async Task<RouterPublishResult> Distribute(MqClient sender, TwinoMessage message)
         {
             RouterPublishResult result = RouterPublishResult.NoReceivers;
-
             foreach (Binding binding in Bindings)
             {
+                bool oldWaitResponse = message.WaitResponse;
                 bool sent = await binding.Send(sender, message);
+                message.WaitResponse = oldWaitResponse;
                 if (sent)
                 {
                     if (binding.Interaction != BindingInteraction.None)
@@ -208,16 +210,19 @@ namespace Twino.MQ.Routing
         /// <summary>
         /// Sends the message to only one binding within round robin algorithm
         /// </summary>
-        private async Task<RouterPublishResult> RoundRobin(MqClient sender, TmqMessage message)
+        private async Task<RouterPublishResult> RoundRobin(MqClient sender, TwinoMessage message)
         {
-            for (int i = 0; i < Bindings.Length; i++)
+            int len = Bindings.Length;
+            for (int i = 0; i < len; i++)
             {
-                _lastRoutedIndex++;
+                Interlocked.Increment(ref _lastRoutedIndex);
                 if (_lastRoutedIndex >= Bindings.Length)
-                    _lastRoutedIndex = 0;
+                    Interlocked.Exchange(ref _lastRoutedIndex, 0);
 
                 Binding binding = Bindings[_lastRoutedIndex];
+                bool waitResponse = message.WaitResponse;
                 bool sent = await binding.Send(sender, message);
+                message.WaitResponse = waitResponse;
                 if (sent)
                     return binding.Interaction != BindingInteraction.None
                                ? RouterPublishResult.OkAndWillBeRespond

@@ -12,6 +12,6 @@ namespace Twino.MQ.Network
         /// <summary>
         /// Handles the received message
         /// </summary>
-        Task Handle(MqClient client, TmqMessage message, bool fromNode);
+        Task Handle(MqClient client, TwinoMessage message, bool fromNode);
     }
 }

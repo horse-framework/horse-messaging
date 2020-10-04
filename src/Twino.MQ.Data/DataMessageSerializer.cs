@@ -19,14 +19,6 @@ namespace Twino.MQ.Data
         /// </summary>
         private readonly TmqReader _reader = new TmqReader();
 
-        /// <summary>
-        /// Creates new data message serializer
-        /// </summary>
-        public DataMessageSerializer()
-        {
-            _reader.DecreaseTTL = false;
-        }
-
         #region Read
 
         /// <summary>
@@ -47,7 +39,7 @@ namespace Twino.MQ.Data
             if (size == 0)
                 return new DataMessage(DataType.Empty, id);
 
-            TmqMessage msg = await _reader.Read(stream);
+            TwinoMessage msg = await _reader.Read(stream);
             return new DataMessage(DataType.Insert, id, msg);
         }
 
@@ -125,7 +117,7 @@ namespace Twino.MQ.Data
         /// <summary>
         /// Writes a message to a stream
         /// </summary>
-        public async Task Write(Stream stream, TmqMessage message)
+        public async Task Write(Stream stream, TwinoMessage message)
         {
             WriteType(stream, DataType.Insert);
             await WriteId(stream, message.MessageId);
@@ -141,7 +133,7 @@ namespace Twino.MQ.Data
         /// <summary>
         /// Write message delete opereation to the stream
         /// </summary>
-        public async Task WriteDelete(Stream stream, TmqMessage message)
+        public async Task WriteDelete(Stream stream, TwinoMessage message)
         {
             stream.WriteByte((byte) DataType.Delete);
             stream.WriteByte(Convert.ToByte(message.MessageIdLength));

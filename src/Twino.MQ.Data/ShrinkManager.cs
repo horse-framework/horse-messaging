@@ -145,7 +145,7 @@ namespace Twino.MQ.Data
         /// Shrinks whole data in database file.
         /// In this operation, database file will be locked 
         /// </summary>
-        public async Task<bool> FullShrink(Dictionary<string, TmqMessage> messages, List<string> deletedItems)
+        public async Task<bool> FullShrink(Dictionary<string, TwinoMessage> messages, List<string> deletedItems)
         {
             _shrinking = true;
             bool backup = false;
@@ -160,7 +160,7 @@ namespace Twino.MQ.Data
 
                 deletedItems.Clear();
 
-                foreach (KeyValuePair<string, TmqMessage> kv in messages)
+                foreach (KeyValuePair<string, TwinoMessage> kv in messages)
                     await _serializer.Write(ms, kv.Value);
 
                 backup = await _database.File.Backup(BackupOption.Move, false);

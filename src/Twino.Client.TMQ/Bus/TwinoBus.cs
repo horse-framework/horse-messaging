@@ -44,7 +44,7 @@ namespace Twino.Client.TMQ.Bus
         }
 
         /// <inheritdoc />
-        public Task<TwinoResult> SendAsync(TmqMessage message)
+        public Task<TwinoResult> SendAsync(TwinoMessage message)
         {
             TmqClient client = GetClient();
             if (client == null)
@@ -54,11 +54,11 @@ namespace Twino.Client.TMQ.Bus
         }
 
         /// <inheritdoc />
-        public Task<TmqMessage> RequestAsync(TmqMessage message)
+        public Task<TwinoMessage> RequestAsync(TwinoMessage message)
         {
             TmqClient client = GetClient();
             if (client == null)
-                return Task.FromResult<TmqMessage>(null);
+                return Task.FromResult<TwinoMessage>(null);
 
             return client.Request(message);
         }

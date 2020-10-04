@@ -14,7 +14,7 @@ namespace Twino.MQ.Data
     public class PersistentDeliveryHandler : IMessageDeliveryHandler
     {
         internal Database Database { get; set; }
-        internal ChannelQueue Queue { get; }
+        internal TwinoQueue Queue { get; }
         internal DeleteWhen DeleteWhen { get; }
         internal ProducerAckDecision ProducerAckDecision { get; }
 
@@ -23,7 +23,7 @@ namespace Twino.MQ.Data
         /// <summary>
         /// Creates new persistent delivery handler
         /// </summary>
-        public PersistentDeliveryHandler(ChannelQueue queue,
+        public PersistentDeliveryHandler(TwinoQueue queue,
                                          DatabaseOptions options,
                                          DeleteWhen deleteWhen,
                                          ProducerAckDecision producerAckDecision)
@@ -48,14 +48,14 @@ namespace Twino.MQ.Data
                 QueueFiller filler = new QueueFiller(Queue);
                 PushResult result = filler.FillMessage(dict.Values, true);
                 if (result != PushResult.Success)
-                    throw new InvalidOperationException($"Cannot fill messages into {Queue.Id} queue in {Queue.Channel.Name} : {result}");
+                    throw new InvalidOperationException($"Cannot fill messages into {Queue.Name} queue : {result}");
             }
         }
 
         /// <summary>
         /// Removes queue from configuration and deletes all database files
         /// </summary>
-        private async void Destroy(ChannelQueue queue)
+        private async void Destroy(TwinoQueue queue)
         {
             try
             {
@@ -84,7 +84,7 @@ namespace Twino.MQ.Data
         #region Events
 
         /// <inheritdoc />
-        public Task<Decision> ReceivedFromProducer(ChannelQueue queue, QueueMessage message, MqClient sender)
+        public Task<Decision> ReceivedFromProducer(TwinoQueue queue, QueueMessage message, MqClient sender)
         {
             DeliveryAcknowledgeDecision save = DeliveryAcknowledgeDecision.None;
             if (ProducerAckDecision == ProducerAckDecision.AfterReceived)
@@ -94,31 +94,31 @@ namespace Twino.MQ.Data
         }
 
         /// <inheritdoc />
-        public Task<Decision> BeginSend(ChannelQueue queue, QueueMessage message)
+        public Task<Decision> BeginSend(TwinoQueue queue, QueueMessage message)
         {
             return Task.FromResult(new Decision(true, true, PutBackDecision.No, DeliveryAcknowledgeDecision.None));
         }
 
         /// <inheritdoc />
-        public Task<Decision> CanConsumerReceive(ChannelQueue queue, QueueMessage message, MqClient receiver)
+        public Task<Decision> CanConsumerReceive(TwinoQueue queue, QueueMessage message, MqClient receiver)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
         /// <inheritdoc />
-        public Task<Decision> ConsumerReceived(ChannelQueue queue, MessageDelivery delivery, MqClient receiver)
+        public Task<Decision> ConsumerReceived(TwinoQueue queue, MessageDelivery delivery, MqClient receiver)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
         /// <inheritdoc />
-        public Task<Decision> ConsumerReceiveFailed(ChannelQueue queue, MessageDelivery delivery, MqClient receiver)
+        public Task<Decision> ConsumerReceiveFailed(TwinoQueue queue, MessageDelivery delivery, MqClient receiver)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
         /// <inheritdoc />
-        public async Task<Decision> EndSend(ChannelQueue queue, QueueMessage message)
+        public async Task<Decision> EndSend(TwinoQueue queue, QueueMessage message)
         {
             if (message.SendCount == 0)
                 return new Decision(true, true, PutBackDecision.Start, DeliveryAcknowledgeDecision.None);
@@ -130,7 +130,7 @@ namespace Twino.MQ.Data
         }
 
         /// <inheritdoc />
-        public async Task<Decision> AcknowledgeReceived(ChannelQueue queue, TmqMessage acknowledgeMessage, MessageDelivery delivery, bool success)
+        public async Task<Decision> AcknowledgeReceived(TwinoQueue queue, TwinoMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
             if (success && DeleteWhen == DeleteWhen.AfterAcknowledgeReceived)
                 await DeleteMessage(delivery.Message.Message.MessageId);
@@ -144,7 +144,7 @@ namespace Twino.MQ.Data
         }
 
         /// <inheritdoc />
-        public async Task<Decision> MessageTimedOut(ChannelQueue queue, QueueMessage message)
+        public async Task<Decision> MessageTimedOut(TwinoQueue queue, QueueMessage message)
         {
             await DeleteMessage(message.Message.MessageId);
             return Decision.JustAllow();
@@ -163,7 +163,7 @@ namespace Twino.MQ.Data
         }
 
         /// <inheritdoc />
-        public Task<Decision> AcknowledgeTimedOut(ChannelQueue queue, MessageDelivery delivery)
+        public Task<Decision> AcknowledgeTimedOut(TwinoQueue queue, MessageDelivery delivery)
         {
             if (ProducerAckDecision == ProducerAckDecision.AfterConsumerAckReceived)
                 return Task.FromResult(new Decision(true, false, PutBackDecision.Start, DeliveryAcknowledgeDecision.Negative));
@@ -172,13 +172,13 @@ namespace Twino.MQ.Data
         }
 
         /// <inheritdoc />
-        public Task MessageDequeued(ChannelQueue queue, QueueMessage message)
+        public Task MessageDequeued(TwinoQueue queue, QueueMessage message)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
         /// <inheritdoc />
-        public Task<Decision> ExceptionThrown(ChannelQueue queue, QueueMessage message, Exception exception)
+        public Task<Decision> ExceptionThrown(TwinoQueue queue, QueueMessage message, Exception exception)
         {
             if (ConfigurationFactory.Builder.ErrorAction != null)
                 ConfigurationFactory.Builder.ErrorAction(queue, message, exception);
@@ -186,7 +186,7 @@ namespace Twino.MQ.Data
         }
 
         /// <inheritdoc />
-        public Task<bool> SaveMessage(ChannelQueue queue, QueueMessage message)
+        public Task<bool> SaveMessage(TwinoQueue queue, QueueMessage message)
         {
             return Database.Insert(message.Message);
         }
