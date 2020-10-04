@@ -2,7 +2,7 @@
 
 [![NuGet](https://img.shields.io/nuget/v/Twino.MQ?label=server%20nuget)](https://www.nuget.org/packages/Twino.MQ)
 [![NuGet](https://img.shields.io/nuget/v/Twino.Client.TMQ?label=client%20nuget)](https://www.nuget.org/packages/Twino.Client.TMQ)
-[![NuGet](https://img.shields.io/nuget/v/Twino.Extensions.ConsumerFactory?label=extensions%20nuget)](https://www.nuget.org/packages/Twino.Extensions.ConsumerFactory)
+[![NuGet](https://img.shields.io/nuget/v/Twino.Extensions.Bus?label=bus%20nuget)](https://www.nuget.org/packages/Twino.Extensions.Bus)
 
 * Twino MQ is a .NET Core messaging queue and communication framework.
 * Twino MQ is not only queue messaging server. In provides direct messages, requests, responses and getting server and client informations.
