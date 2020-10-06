@@ -88,6 +88,8 @@ namespace Twino.MQ.Data
         {
             DeliveryAcknowledgeDecision save = DeliveryAcknowledgeDecision.None;
             if (ProducerAckDecision == ProducerAckDecision.AfterReceived)
+                save = DeliveryAcknowledgeDecision.Always;
+            else if (ProducerAckDecision == ProducerAckDecision.AfterSaved)
                 save = DeliveryAcknowledgeDecision.IfSaved;
 
             return Task.FromResult(new Decision(true, true, PutBackDecision.No, save));
@@ -122,10 +124,10 @@ namespace Twino.MQ.Data
         {
             if (message.SendCount == 0)
                 return new Decision(true, true, PutBackDecision.Start, DeliveryAcknowledgeDecision.None);
-            
+
             if (DeleteWhen == DeleteWhen.AfterSend)
                 await DeleteMessage(message.Message.MessageId);
-            
+
             return Decision.JustAllow();
         }
 
