@@ -13,6 +13,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Twino.Extensions.Bus" Version="4.0.4" />
       <PackageReference Include="Twino.Ioc" Version="3.4.2" />
     </ItemGroup>
 
