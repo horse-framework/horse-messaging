@@ -41,7 +41,7 @@ If you want to go further about Twino MQ infrastructure you can read specificati
         }
     }
 
-### Consumer without ConsumerFactory Implementation
+### Consumer without Twino.Extensions.Bus
 
 Implementation
 
@@ -79,7 +79,7 @@ Consumer
     }
 
 
-### Consumer with ConsumerFactory Implementation
+### Consumer with Twino.Extensions.Bus
 
 Model and Consumer same with example above. The Implementation change is here:
 
