@@ -245,6 +245,25 @@ namespace Twino.MQ
         }
 
         /// <summary>
+        /// Adds error handler
+        /// </summary>
+        public static TwinoMqBuilder AddErrorHandler<TErrorHandler>(this TwinoMqBuilder builder)
+            where TErrorHandler : IErrorHandler, new()
+        {
+            builder.Server.AddErrorHandler(new TErrorHandler());
+            return builder;
+        }
+
+        /// <summary>
+        /// Adds error handler
+        /// </summary>
+        public static TwinoMqBuilder AddErrorHandler(this TwinoMqBuilder builder, IErrorHandler errorHandler)
+        {
+            builder.Server.AddErrorHandler(errorHandler);
+            return builder;
+        }
+
+        /// <summary>
         /// Uses server type message event handler
         /// </summary>
         public static TwinoMqBuilder AddServerMessageHandler<TServerMessageHandler>(this TwinoMqBuilder builder)
