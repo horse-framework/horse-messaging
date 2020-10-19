@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -77,15 +78,23 @@ namespace Twino.MQ.Routing
         /// </summary>
         public bool AddBinding(Binding binding)
         {
-            if (Bindings.Any(x => x.Name.Equals(binding.Name)))
+            try
+            {
+                if (Bindings.Any(x => x.Name.Equals(binding.Name)))
+                    return false;
+
+                List<Binding> list = Bindings.ToList();
+                list.Add(binding);
+
+                binding.Router = this;
+                Bindings = list.OrderByDescending(x => x.Priority).ToArray();
+                return true;
+            }
+            catch (Exception e)
+            {
+                Server.SendError("ADD_ROUTER_BINDING", e, $"Router:{Name}, Binding:{binding?.Name}");
                 return false;
-
-            List<Binding> list = Bindings.ToList();
-            list.Add(binding);
-
-            binding.Router = this;
-            Bindings = list.OrderByDescending(x => x.Priority).ToArray();
-            return true;
+            }
         }
 
         /// <summary>
@@ -93,18 +102,25 @@ namespace Twino.MQ.Routing
         /// </summary>
         public void RemoveBinding(string bindingName)
         {
-            if (!Bindings.Any(x => x.Name.Equals(bindingName)))
-                return;
+            try
+            {
+                if (!Bindings.Any(x => x.Name.Equals(bindingName)))
+                    return;
 
-            List<Binding> list = Bindings.ToList();
-            Binding binding = list.FirstOrDefault(x => x.Name == bindingName);
-            if (binding == null)
-                return;
+                List<Binding> list = Bindings.ToList();
+                Binding binding = list.FirstOrDefault(x => x.Name == bindingName);
+                if (binding == null)
+                    return;
 
-            list.Remove(binding);
+                list.Remove(binding);
 
-            binding.Router = null;
-            Bindings = list.OrderByDescending(x => x.Priority).ToArray();
+                binding.Router = null;
+                Bindings = list.OrderByDescending(x => x.Priority).ToArray();
+            }
+            catch (Exception e)
+            {
+                Server.SendError("REMOVE_ROUTER_BINDING", e, $"Router:{Name}, Binding:{bindingName}");
+            }
         }
 
         /// <summary>
@@ -112,15 +128,22 @@ namespace Twino.MQ.Routing
         /// </summary>
         public void RemoveBinding(Binding binding)
         {
-            if (!Bindings.Contains(binding))
-                return;
+            try
+            {
+                if (!Bindings.Contains(binding))
+                    return;
 
-            List<Binding> list = Bindings.ToList();
-            if (binding == null)
-                return;
+                List<Binding> list = Bindings.ToList();
+                if (binding == null)
+                    return;
 
-            list.Remove(binding);
-            Bindings = list.OrderByDescending(x => x.Priority).ToArray();
+                list.Remove(binding);
+                Bindings = list.OrderByDescending(x => x.Priority).ToArray();
+            }
+            catch (Exception e)
+            {
+                Server.SendError("REMOVE_ROUTER_BINDING", e, $"Router:{Name}, Binding:{binding?.Name}");
+            }
         }
 
         #endregion
@@ -132,25 +155,33 @@ namespace Twino.MQ.Routing
         /// </summary>
         public Task<RouterPublishResult> Publish(MqClient sender, TwinoMessage message)
         {
-            if (!IsEnabled)
-                return Task.FromResult(RouterPublishResult.Disabled);
-
-            if (Bindings.Length == 0)
-                return Task.FromResult(RouterPublishResult.NoBindings);
-
-            switch (Method)
+            try
             {
-                case RouteMethod.Distribute:
-                    return Distribute(sender, message);
-
-                case RouteMethod.OnlyFirst:
-                    return OnlyFirst(sender, message);
-
-                case RouteMethod.RoundRobin:
-                    return RoundRobin(sender, message);
-
-                default:
+                if (!IsEnabled)
                     return Task.FromResult(RouterPublishResult.Disabled);
+
+                if (Bindings.Length == 0)
+                    return Task.FromResult(RouterPublishResult.NoBindings);
+
+                switch (Method)
+                {
+                    case RouteMethod.Distribute:
+                        return Distribute(sender, message);
+
+                    case RouteMethod.OnlyFirst:
+                        return OnlyFirst(sender, message);
+
+                    case RouteMethod.RoundRobin:
+                        return RoundRobin(sender, message);
+
+                    default:
+                        return Task.FromResult(RouterPublishResult.Disabled);
+                }
+            }
+            catch (Exception e)
+            {
+                Server.SendError("PUBLISH", e, $"Router:{Name}, Binding:{Name}");
+                return Task.FromResult(RouterPublishResult.NoBindings);
             }
         }
 

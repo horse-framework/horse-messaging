@@ -176,7 +176,6 @@ namespace Twino.MQ
 
         #endregion
 
-
         /// <summary>
         /// Sends a message to connected master nodes
         /// </summary>

@@ -33,25 +33,33 @@ namespace Twino.MQ.Routing
         /// </summary>
         public override async Task<bool> Send(MqClient sender, TwinoMessage message)
         {
-            TwinoQueue queue = GetQueue();
-            if (queue == null)
+            try
+            {
+                TwinoQueue queue = GetQueue();
+                if (queue == null)
+                    return false;
+
+                string messageId = Interaction == BindingInteraction.None
+                                       ? Router.Server.MessageIdGenerator.Create()
+                                       : message.MessageId;
+
+                TwinoMessage msg = message.Clone(true, true, messageId);
+
+                msg.Type = MessageType.QueueMessage;
+                msg.SetTarget(Target);
+                msg.WaitResponse = Interaction == BindingInteraction.Response;
+
+                QueueMessage queueMessage = new QueueMessage(msg);
+                queueMessage.Source = sender;
+
+                PushResult result = await _targetQueue.Push(queueMessage, sender);
+                return result == PushResult.Success;
+            }
+            catch (Exception e)
+            {
+                Router.Server.SendError("BINDING_SEND", e, $"Type:Queue, Binding:{Name}");
                 return false;
-
-            string messageId = Interaction == BindingInteraction.None
-                                   ? Router.Server.MessageIdGenerator.Create()
-                                   : message.MessageId;
-
-            TwinoMessage msg = message.Clone(true, true, messageId);
-
-            msg.Type = MessageType.QueueMessage;
-            msg.SetTarget(Target);
-            msg.WaitResponse = Interaction == BindingInteraction.Response;
-
-            QueueMessage queueMessage = new QueueMessage(msg);
-            queueMessage.Source = sender;
-
-            PushResult result = await _targetQueue.Push(queueMessage, sender);
-            return result == PushResult.Success;
+            }
         }
 
         /// <summary>

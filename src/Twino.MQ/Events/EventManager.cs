@@ -110,40 +110,47 @@ namespace Twino.MQ.Events
         /// </summary>
         protected void Trigger(object model)
         {
-            if (_subscribers.Count == 0)
-                return;
+            try
+            {
+                if (_subscribers.Count == 0)
+                    return;
 
-            TwinoMessage message = new TwinoMessage(MessageType.Event, Target);
-            message.SetSource(Name);
+                TwinoMessage message = new TwinoMessage(MessageType.Event, Target);
+                message.SetSource(Name);
 
-            if (model != null)
-                message.Serialize(model, _server.MessageContentSerializer);
+                if (model != null)
+                    message.Serialize(model, _server.MessageContentSerializer);
 
-            byte[] data = TmqWriter.Create(message);
+                byte[] data = TmqWriter.Create(message);
 
-            List<MqClient> removing = null;
+                List<MqClient> removing = null;
 
-            lock (_subscribers)
-                foreach (MqClient subscriber in _subscribers)
-                {
-                    //if client is disconnected, add it into removing list
-                    if (!subscriber.IsConnected)
-                    {
-                        //removing list is created when it's needed
-                        if (removing == null)
-                            removing = new List<MqClient>();
-
-                        removing.Add(subscriber);
-                    }
-                    else
-                        _ = subscriber.SendAsync(data);
-                }
-
-            //if there are some removing clients from subscribers list, remove them
-            if (removing != null)
                 lock (_subscribers)
-                    foreach (MqClient remove in removing)
-                        _subscribers.Remove(remove);
+                    foreach (MqClient subscriber in _subscribers)
+                    {
+                        //if client is disconnected, add it into removing list
+                        if (!subscriber.IsConnected)
+                        {
+                            //removing list is created when it's needed
+                            if (removing == null)
+                                removing = new List<MqClient>();
+
+                            removing.Add(subscriber);
+                        }
+                        else
+                            _ = subscriber.SendAsync(data);
+                    }
+
+                //if there are some removing clients from subscribers list, remove them
+                if (removing != null)
+                    lock (_subscribers)
+                        foreach (MqClient remove in removing)
+                            _subscribers.Remove(remove);
+            }
+            catch (Exception e)
+            {
+                _server.SendError("EVENT_TRIGGER", e, $"Name:{Name}, Type:{GetType().Name}");
+            }
         }
     }
 }

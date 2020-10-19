@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -32,52 +33,60 @@ namespace Twino.MQ.Routing
         /// </summary>
         public override Task<bool> Send(MqClient sender, TwinoMessage message)
         {
-            HttpClient client = new HttpClient();
-
-            // ReSharper disable once PossibleInvalidOperationException
-            HttpBindingMethod method = (HttpBindingMethod) ContentType.Value;
-            string content = message.Length > 0 ? message.ToString() : null;
-            Task<HttpResponseMessage> response = null;
-
-            switch (method)
+            try
             {
-                case HttpBindingMethod.Get:
-                {
-                    string uri = Target;
-                    if (!string.IsNullOrEmpty(content))
-                        uri += "?" + content;
+                HttpClient client = new HttpClient();
 
-                    response = client.GetAsync(uri);
-                    break;
+                // ReSharper disable once PossibleInvalidOperationException
+                HttpBindingMethod method = (HttpBindingMethod) ContentType.Value;
+                string content = message.Length > 0 ? message.ToString() : null;
+                Task<HttpResponseMessage> response = null;
+
+                switch (method)
+                {
+                    case HttpBindingMethod.Get:
+                    {
+                        string uri = Target;
+                        if (!string.IsNullOrEmpty(content))
+                            uri += "?" + content;
+
+                        response = client.GetAsync(uri);
+                        break;
+                    }
+
+                    case HttpBindingMethod.Delete:
+                    {
+                        string uri = Target;
+                        if (!string.IsNullOrEmpty(content))
+                            uri += "?" + content;
+
+                        response = client.DeleteAsync(uri);
+                        break;
+                    }
+
+                    case HttpBindingMethod.Post:
+                        response = client.PostAsync(Target, new StringContent(content, Encoding.UTF8, "application/json"));
+                        break;
+
+                    case HttpBindingMethod.Put:
+                        response = client.PutAsync(Target, new StringContent(content, Encoding.UTF8, "application/json"));
+                        break;
+
+                    case HttpBindingMethod.Patch:
+                        response = client.PatchAsync(Target, new StringContent(content, Encoding.UTF8, "application/json"));
+                        break;
                 }
 
-                case HttpBindingMethod.Delete:
-                {
-                    string uri = Target;
-                    if (!string.IsNullOrEmpty(content))
-                        uri += "?" + content;
+                if (response == null)
+                    return Task.FromResult(false);
 
-                    response = client.DeleteAsync(uri);
-                    break;
-                }
-
-                case HttpBindingMethod.Post:
-                    response = client.PostAsync(Target, new StringContent(content, Encoding.UTF8, "application/json"));
-                    break;
-
-                case HttpBindingMethod.Put:
-                    response = client.PutAsync(Target, new StringContent(content, Encoding.UTF8, "application/json"));
-                    break;
-
-                case HttpBindingMethod.Patch:
-                    response = client.PatchAsync(Target, new StringContent(content, Encoding.UTF8, "application/json"));
-                    break;
+                return ProcessResponse(response);
             }
-
-            if (response == null)
+            catch (Exception e)
+            {
+                Router.Server.SendError("BINDING_SEND", e, $"Type:Http, Binding:{Name}");
                 return Task.FromResult(false);
-
-            return ProcessResponse(response);
+            }
         }
 
         /// <summary>

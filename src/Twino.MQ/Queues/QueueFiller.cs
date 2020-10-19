@@ -28,39 +28,47 @@ namespace Twino.MQ.Queues
         /// </summary>
         public PushResult FillJson<T>(IEnumerable<T> items, bool createAsSaved, bool highPriority) where T : class
         {
-            if (_queue.Status == QueueStatus.Stopped)
-                return PushResult.StatusNotSupported;
-
-            int max = _queue.PriorityMessagesList.Count + _queue.MessagesList.Count + items.Count();
-            if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
-                return PushResult.LimitExceeded;
-
-            foreach (T item in items)
+            try
             {
-                TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, _queue.Name);
-                message.HighPriority = highPriority;
-                message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
+                if (_queue.Status == QueueStatus.Stopped)
+                    return PushResult.StatusNotSupported;
 
-                if (_queue.Options.UseMessageId)
-                    message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
+                int max = _queue.PriorityMessagesList.Count + _queue.MessagesList.Count + items.Count();
+                if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
+                    return PushResult.LimitExceeded;
 
-                message.Serialize(item, _queue.Server.MessageContentSerializer);
-                QueueMessage qm = new QueueMessage(message, createAsSaved);
+                foreach (T item in items)
+                {
+                    TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, _queue.Name);
+                    message.HighPriority = highPriority;
+                    message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
 
-                if (highPriority)
-                    lock (_queue.PriorityMessagesList)
-                        _queue.PriorityMessagesList.AddLast(qm);
-                else
-                    lock (_queue.MessagesList)
-                        _queue.MessagesList.AddLast(qm);
+                    if (_queue.Options.UseMessageId)
+                        message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
+
+                    message.Serialize(item, _queue.Server.MessageContentSerializer);
+                    QueueMessage qm = new QueueMessage(message, createAsSaved);
+
+                    if (highPriority)
+                        lock (_queue.PriorityMessagesList)
+                            _queue.PriorityMessagesList.AddLast(qm);
+                    else
+                        lock (_queue.MessagesList)
+                            _queue.MessagesList.AddLast(qm);
+                }
+
+                _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
+                _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
+
+                _ = _queue.Trigger();
+
+                return PushResult.Success;
             }
-
-            _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
-            _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
-            
-            _ = _queue.Trigger();
-
-            return PushResult.Success;
+            catch (Exception e)
+            {
+                _queue.Server.SendError("FILL_JSON", e, $"QueueName:{_queue.Name}");
+                return PushResult.Error;
+            }
         }
 
         /// <summary>
@@ -69,40 +77,48 @@ namespace Twino.MQ.Queues
         /// </summary>
         public PushResult FillJson<T>(IEnumerable<T> items, bool createAsSaved, Action<TwinoMessage, T> action) where T : class
         {
-            if (_queue.Status == QueueStatus.Stopped)
-                return PushResult.StatusNotSupported;
-
-            int max = _queue.PriorityMessagesList.Count + _queue.MessagesList.Count + items.Count();
-            if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
-                return PushResult.LimitExceeded;
-
-            foreach (T item in items)
+            try
             {
-                TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, _queue.Name);
-                message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
+                if (_queue.Status == QueueStatus.Stopped)
+                    return PushResult.StatusNotSupported;
 
-                if (_queue.Options.UseMessageId)
-                    message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
+                int max = _queue.PriorityMessagesList.Count + _queue.MessagesList.Count + items.Count();
+                if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
+                    return PushResult.LimitExceeded;
 
-                action(message, item);
-                message.Serialize(item, _queue.Server.MessageContentSerializer);
+                foreach (T item in items)
+                {
+                    TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, _queue.Name);
+                    message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
 
-                QueueMessage qm = new QueueMessage(message, createAsSaved);
+                    if (_queue.Options.UseMessageId)
+                        message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
 
-                if (message.HighPriority)
-                    lock (_queue.PriorityMessagesList)
-                        _queue.PriorityMessagesList.AddLast(qm);
-                else
-                    lock (_queue.MessagesList)
-                        _queue.MessagesList.AddLast(qm);
+                    action(message, item);
+                    message.Serialize(item, _queue.Server.MessageContentSerializer);
+
+                    QueueMessage qm = new QueueMessage(message, createAsSaved);
+
+                    if (message.HighPriority)
+                        lock (_queue.PriorityMessagesList)
+                            _queue.PriorityMessagesList.AddLast(qm);
+                    else
+                        lock (_queue.MessagesList)
+                            _queue.MessagesList.AddLast(qm);
+                }
+
+                _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
+                _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
+
+                _ = _queue.Trigger();
+
+                return PushResult.Success;
             }
-
-            _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
-            _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
-            
-            _ = _queue.Trigger();
-
-            return PushResult.Success;
+            catch (Exception e)
+            {
+                _queue.Server.SendError("FILL_JSON", e, $"QueueName:{_queue.Name}");
+                return PushResult.Error;
+            }
         }
 
         /// <summary>
@@ -110,42 +126,50 @@ namespace Twino.MQ.Queues
         /// </summary>
         public PushResult FillString(IEnumerable<string> items, bool createAsSaved, bool highPriority)
         {
-            if (_queue.Status == QueueStatus.Stopped)
-                return PushResult.StatusNotSupported;
-
-            int max = _queue.PriorityMessagesList.Count + _queue.MessagesList.Count + items.Count();
-            if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
-                return PushResult.LimitExceeded;
-
-            foreach (string item in items)
+            try
             {
-                TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, _queue.Name);
-                message.HighPriority = highPriority;
-                message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
+                if (_queue.Status == QueueStatus.Stopped)
+                    return PushResult.StatusNotSupported;
 
-                if (_queue.Options.UseMessageId)
-                    message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
+                int max = _queue.PriorityMessagesList.Count + _queue.MessagesList.Count + items.Count();
+                if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
+                    return PushResult.LimitExceeded;
 
-                message.Content = new MemoryStream(Encoding.UTF8.GetBytes(item));
-                message.Content.Position = 0;
-                message.CalculateLengths();
+                foreach (string item in items)
+                {
+                    TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, _queue.Name);
+                    message.HighPriority = highPriority;
+                    message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
 
-                QueueMessage qm = new QueueMessage(message, createAsSaved);
+                    if (_queue.Options.UseMessageId)
+                        message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
 
-                if (highPriority)
-                    lock (_queue.PriorityMessagesList)
-                        _queue.PriorityMessagesList.AddLast(qm);
-                else
-                    lock (_queue.MessagesList)
-                        _queue.MessagesList.AddLast(qm);
+                    message.Content = new MemoryStream(Encoding.UTF8.GetBytes(item));
+                    message.Content.Position = 0;
+                    message.CalculateLengths();
+
+                    QueueMessage qm = new QueueMessage(message, createAsSaved);
+
+                    if (highPriority)
+                        lock (_queue.PriorityMessagesList)
+                            _queue.PriorityMessagesList.AddLast(qm);
+                    else
+                        lock (_queue.MessagesList)
+                            _queue.MessagesList.AddLast(qm);
+                }
+
+                _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
+                _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
+
+                _ = _queue.Trigger();
+
+                return PushResult.Success;
             }
-
-            _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
-            _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
-            
-            _ = _queue.Trigger();
-
-            return PushResult.Success;
+            catch (Exception e)
+            {
+                _queue.Server.SendError("FILL_STRING", e, $"QueueName:{_queue.Name}");
+                return PushResult.Error;
+            }
         }
 
         /// <summary>
@@ -153,42 +177,50 @@ namespace Twino.MQ.Queues
         /// </summary>
         public PushResult FillData(IEnumerable<byte[]> items, bool createAsSaved, bool highPriority)
         {
-            if (_queue.Status == QueueStatus.Stopped)
-                return PushResult.StatusNotSupported;
-
-            int max = _queue.PriorityMessagesList.Count + _queue.MessagesList.Count + items.Count();
-            if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
-                return PushResult.LimitExceeded;
-
-            foreach (byte[] item in items)
+            try
             {
-                TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, _queue.Name);
-                message.HighPriority = highPriority;
-                message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
+                if (_queue.Status == QueueStatus.Stopped)
+                    return PushResult.StatusNotSupported;
 
-                if (_queue.Options.UseMessageId)
-                    message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
+                int max = _queue.PriorityMessagesList.Count + _queue.MessagesList.Count + items.Count();
+                if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
+                    return PushResult.LimitExceeded;
 
-                message.Content = new MemoryStream(item);
-                message.Content.Position = 0;
-                message.CalculateLengths();
+                foreach (byte[] item in items)
+                {
+                    TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, _queue.Name);
+                    message.HighPriority = highPriority;
+                    message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
 
-                QueueMessage qm = new QueueMessage(message, createAsSaved);
+                    if (_queue.Options.UseMessageId)
+                        message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
 
-                if (highPriority)
-                    lock (_queue.PriorityMessagesList)
-                        _queue.PriorityMessagesList.AddLast(qm);
-                else
-                    lock (_queue.MessagesList)
-                        _queue.MessagesList.AddLast(qm);
+                    message.Content = new MemoryStream(item);
+                    message.Content.Position = 0;
+                    message.CalculateLengths();
+
+                    QueueMessage qm = new QueueMessage(message, createAsSaved);
+
+                    if (highPriority)
+                        lock (_queue.PriorityMessagesList)
+                            _queue.PriorityMessagesList.AddLast(qm);
+                    else
+                        lock (_queue.MessagesList)
+                            _queue.MessagesList.AddLast(qm);
+                }
+
+                _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
+                _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
+
+                _ = _queue.Trigger();
+
+                return PushResult.Success;
             }
-
-            _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
-            _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
-            
-            _ = _queue.Trigger();
-
-            return PushResult.Success;
+            catch (Exception e)
+            {
+                _queue.Server.SendError("FILL_DATA", e, $"QueueName:{_queue.Name}");
+                return PushResult.Error;
+            }
         }
 
         /// <summary>
@@ -196,38 +228,46 @@ namespace Twino.MQ.Queues
         /// </summary>
         public PushResult FillMessage(IEnumerable<TwinoMessage> messages, bool isSaved)
         {
-            if (_queue.Status == QueueStatus.Stopped)
-                return PushResult.StatusNotSupported;
-
-            int max = _queue.PriorityMessagesList.Count + _queue.MessagesList.Count + messages.Count();
-            if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
-                return PushResult.LimitExceeded;
-
-            foreach (TwinoMessage message in messages)
+            try
             {
-                message.SetTarget(_queue.Name);
+                if (_queue.Status == QueueStatus.Stopped)
+                    return PushResult.StatusNotSupported;
 
-                if (_queue.Options.UseMessageId && string.IsNullOrEmpty(message.MessageId))
-                    message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
+                int max = _queue.PriorityMessagesList.Count + _queue.MessagesList.Count + messages.Count();
+                if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
+                    return PushResult.LimitExceeded;
 
-                message.CalculateLengths();
+                foreach (TwinoMessage message in messages)
+                {
+                    message.SetTarget(_queue.Name);
 
-                QueueMessage qm = new QueueMessage(message, isSaved);
+                    if (_queue.Options.UseMessageId && string.IsNullOrEmpty(message.MessageId))
+                        message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
 
-                if (message.HighPriority)
-                    lock (_queue.PriorityMessagesList)
-                        _queue.PriorityMessagesList.AddLast(qm);
-                else
-                    lock (_queue.MessagesList)
-                        _queue.MessagesList.AddLast(qm);
+                    message.CalculateLengths();
+
+                    QueueMessage qm = new QueueMessage(message, isSaved);
+
+                    if (message.HighPriority)
+                        lock (_queue.PriorityMessagesList)
+                            _queue.PriorityMessagesList.AddLast(qm);
+                    else
+                        lock (_queue.MessagesList)
+                            _queue.MessagesList.AddLast(qm);
+                }
+
+                _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
+                _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
+
+                _ = _queue.Trigger();
+
+                return PushResult.Success;
             }
-
-            _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
-            _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
-            
-            _ = _queue.Trigger();
-            
-            return PushResult.Success;
+            catch (Exception e)
+            {
+                _queue.Server.SendError("FILL_MESSAGE", e, $"QueueName:{_queue.Name}");
+                return PushResult.Error;
+            }
         }
     }
 }

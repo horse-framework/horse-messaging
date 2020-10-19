@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Helpers;
@@ -26,24 +27,31 @@ namespace Twino.MQ.Network
 
         public async Task Handle(MqClient client, TwinoMessage message, bool fromNode)
         {
-            TwinoQueue queue = _server.FindQueue(message.Target);
-
-            //if auto creation active, try to create queue
-            if (queue == null && _server.Options.AutoQueueCreation)
+            try
             {
-                QueueOptions options = QueueOptions.CloneFrom(_server.Options);
-                queue = await _server.CreateQueue(message.Target, options, message, _server.DeliveryHandlerFactory, true, true);
-            }
+                TwinoQueue queue = _server.FindQueue(message.Target);
 
-            if (queue == null)
+                //if auto creation active, try to create queue
+                if (queue == null && _server.Options.AutoQueueCreation)
+                {
+                    QueueOptions options = QueueOptions.CloneFrom(_server.Options);
+                    queue = await _server.CreateQueue(message.Target, options, message, _server.DeliveryHandlerFactory, true, true);
+                }
+
+                if (queue == null)
+                {
+                    if (!string.IsNullOrEmpty(message.MessageId))
+                        await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
+
+                    return;
+                }
+
+                await HandlePullRequest(client, message, queue);
+            }
+            catch (Exception e)
             {
-                if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(message.CreateResponse(TwinoResultCode.NotFound));
-
-                return;
+                _server.SendError("PULL_REQUEST", e, $"QueueName:{message.Target}");
             }
-
-            await HandlePullRequest(client, message, queue);
         }
 
 

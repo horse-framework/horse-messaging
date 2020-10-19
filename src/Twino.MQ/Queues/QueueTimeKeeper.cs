@@ -146,58 +146,65 @@ namespace Twino.MQ.Queues
         /// </summary>
         private async Task ProcessDeliveries()
         {
-            var rdlist = new List<Tuple<bool, MessageDelivery>>(16);
-
-            lock (_deliveries)
-                foreach (MessageDelivery delivery in _deliveries)
-                {
-                    //message acknowledge or came here accidently :)
-                    if (delivery.Acknowledge != DeliveryAcknowledge.None || !delivery.AcknowledgeDeadline.HasValue)
-                        rdlist.Add(new Tuple<bool, MessageDelivery>(false, delivery));
-
-                    //expired
-                    else if (DateTime.UtcNow > delivery.AcknowledgeDeadline.Value)
-                        rdlist.Add(new Tuple<bool, MessageDelivery>(true, delivery));
-                }
-
-            if (rdlist.Count == 0)
-                return;
-
-            bool released = false;
-            foreach (Tuple<bool, MessageDelivery> tuple in rdlist)
+            try
             {
-                MessageDelivery delivery = tuple.Item2;
-                if (tuple.Item1)
-                {
-                    bool marked = delivery.MarkAsAcknowledgeTimeout();
-                    if (!marked)
+                var rdlist = new List<Tuple<bool, MessageDelivery>>(16);
+
+                lock (_deliveries)
+                    foreach (MessageDelivery delivery in _deliveries)
                     {
+                        //message acknowledge or came here accidently :)
+                        if (delivery.Acknowledge != DeliveryAcknowledge.None || !delivery.AcknowledgeDeadline.HasValue)
+                            rdlist.Add(new Tuple<bool, MessageDelivery>(false, delivery));
+
+                        //expired
+                        else if (DateTime.UtcNow > delivery.AcknowledgeDeadline.Value)
+                            rdlist.Add(new Tuple<bool, MessageDelivery>(true, delivery));
+                    }
+
+                if (rdlist.Count == 0)
+                    return;
+
+                bool released = false;
+                foreach (Tuple<bool, MessageDelivery> tuple in rdlist)
+                {
+                    MessageDelivery delivery = tuple.Item2;
+                    if (tuple.Item1)
+                    {
+                        bool marked = delivery.MarkAsAcknowledgeTimeout();
+                        if (!marked)
+                        {
+                            if (!released)
+                            {
+                                released = true;
+                                _queue.ReleaseAcknowledgeLock(false);
+                            }
+
+                            continue;
+                        }
+
+                        _queue.Info.AddNegativeAcknowledge();
+                        Decision decision = await _queue.DeliveryHandler.AcknowledgeTimedOut(_queue, delivery);
+
+                        if (delivery.Message != null)
+                            await _queue.ApplyDecision(decision, delivery.Message);
+
                         if (!released)
                         {
                             released = true;
                             _queue.ReleaseAcknowledgeLock(false);
                         }
-
-                        continue;
-                    }
-
-                    _queue.Info.AddNegativeAcknowledge();
-                    Decision decision = await _queue.DeliveryHandler.AcknowledgeTimedOut(_queue, delivery);
-
-                    if (delivery.Message != null)
-                        await _queue.ApplyDecision(decision, delivery.Message);
-
-                    if (!released)
-                    {
-                        released = true;
-                        _queue.ReleaseAcknowledgeLock(false);
                     }
                 }
-            }
 
-            IEnumerable<MessageDelivery> rdm = rdlist.Select(x => x.Item2);
-            lock (_deliveries)
-                _deliveries.RemoveAll(x => rdm.Contains(x));
+                IEnumerable<MessageDelivery> rdm = rdlist.Select(x => x.Item2);
+                lock (_deliveries)
+                    _deliveries.RemoveAll(x => rdm.Contains(x));
+            }
+            catch (Exception e)
+            {
+                _queue.Server.SendError("PROCESS_DELIVERIES", e, $"QueueName:{_queue.Name}");
+            }
         }
 
         /// <summary>

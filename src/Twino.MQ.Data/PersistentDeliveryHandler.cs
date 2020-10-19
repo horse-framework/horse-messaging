@@ -39,6 +39,19 @@ namespace Twino.MQ.Data
         /// </summary>
         public async Task Initialize()
         {
+            if (Queue.Options.Acknowledge == QueueAckDecision.None)
+            {
+                if (DeleteWhen == DeleteWhen.AfterAcknowledgeReceived)
+                    throw new NotSupportedException("Delete option is AfterAcknowledgeReceived but queue Acknowledge option is None. " +
+                                                    "Messages are not deleted from disk with this configuration. " +
+                                                    "Please change queue Acknowledge option or DeleteWhen option");
+
+                if (ProducerAckDecision == ProducerAckDecision.AfterConsumerAckReceived)
+                    throw new NotSupportedException("Producer Ack option is AfterConsumerAckReceived but queue Acknowledge option is None. " +
+                                                    "Messages are not deleted from disk with this configuration. " +
+                                                    "Please change queue Acknowledge option or ProducerAckDecision option");
+            }
+
             await Database.Open();
             Queue.OnDestroyed += Destroy;
 
