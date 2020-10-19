@@ -46,24 +46,32 @@ namespace Twino.MQ.Routing
         /// </summary>
         public override Task<bool> Send(MqClient sender, TwinoMessage message)
         {
-            if (DateTime.UtcNow - _queueUpdateTime > _queueCacheDuration)
-                RefreshQueueCache();
-
-            message.WaitResponse = Interaction == BindingInteraction.Response;
-
-            switch (RouteMethod)
+            try
             {
-                case RouteMethod.Distribute:
-                    return SendDistribute(message);
+                if (DateTime.UtcNow - _queueUpdateTime > _queueCacheDuration)
+                    RefreshQueueCache();
 
-                case RouteMethod.OnlyFirst:
-                    return SendOnlyFirst(message);
+                message.WaitResponse = Interaction == BindingInteraction.Response;
 
-                case RouteMethod.RoundRobin:
-                    return SendRoundRobin(message);
+                switch (RouteMethod)
+                {
+                    case RouteMethod.Distribute:
+                        return SendDistribute(message);
 
-                default:
-                    return Task.FromResult(false);
+                    case RouteMethod.OnlyFirst:
+                        return SendOnlyFirst(message);
+
+                    case RouteMethod.RoundRobin:
+                        return SendRoundRobin(message);
+
+                    default:
+                        return Task.FromResult(false);
+                }
+            }
+            catch (Exception e)
+            {
+                Router.Server.SendError("BINDING_SEND", e, $"Type:Topic, Binding:{Name}");
+                return Task.FromResult(false);
             }
         }
 

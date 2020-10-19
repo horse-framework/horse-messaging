@@ -31,10 +31,18 @@ namespace Twino.MQ.Queues.States
 
         public async Task<PushResult> Push(QueueMessage message)
         {
-            ProcessingMessage = message;
-            PushResult result = await ProcessMessage(message);
-            ProcessingMessage = null;
-            return result;
+            try
+            {
+                ProcessingMessage = message;
+                PushResult result = await ProcessMessage(message);
+                ProcessingMessage = null;
+                return result;
+            }
+            catch (Exception e)
+            {
+                _queue.Server.SendError("PUSH", e, $"QueueName:{_queue.Name}, State:Broadcast");
+                return PushResult.Error;
+            }
         }
 
         private async Task<PushResult> ProcessMessage(QueueMessage message)

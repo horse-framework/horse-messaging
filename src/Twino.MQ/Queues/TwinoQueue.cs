@@ -564,46 +564,53 @@ namespace Twino.MQ.Queues
         public async Task SetStatus(QueueStatus status, IMessageDeliveryHandler newDeliveryHandler = null)
         {
             QueueStatus prevStatus = Status;
-            IQueueState prevState = State;
 
-            if (prevStatus == status)
-                return;
-
-            QueueStatusAction leave = await State.LeaveStatus(status);
-
-            if (leave == QueueStatusAction.Deny)
-                return;
-
-            if (leave == QueueStatusAction.DenyAndTrigger)
+            try
             {
-                await Trigger();
-                return;
-            }
+                IQueueState prevState = State;
+                if (prevStatus == status)
+                    return;
 
-            Status = status;
-            State = QueueStateFactory.Create(this, status);
+                QueueStatusAction leave = await State.LeaveStatus(status);
 
-            QueueStatusAction enter = await State.EnterStatus(prevStatus);
-            if (enter == QueueStatusAction.Deny || enter == QueueStatusAction.DenyAndTrigger)
-            {
-                Status = prevStatus;
-                State = prevState;
-                await prevState.EnterStatus(prevStatus);
+                if (leave == QueueStatusAction.Deny)
+                    return;
 
-                if (enter == QueueStatusAction.DenyAndTrigger)
+                if (leave == QueueStatusAction.DenyAndTrigger)
+                {
                     await Trigger();
+                    return;
+                }
 
-                return;
+                Status = status;
+                State = QueueStateFactory.Create(this, status);
+
+                QueueStatusAction enter = await State.EnterStatus(prevStatus);
+                if (enter == QueueStatusAction.Deny || enter == QueueStatusAction.DenyAndTrigger)
+                {
+                    Status = prevStatus;
+                    State = prevState;
+                    await prevState.EnterStatus(prevStatus);
+
+                    if (enter == QueueStatusAction.DenyAndTrigger)
+                        await Trigger();
+
+                    return;
+                }
+
+                if (newDeliveryHandler != null)
+                    DeliveryHandler = newDeliveryHandler;
+
+                foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
+                    await handler.OnStatusChanged(this, prevStatus, status);
+
+                if (enter == QueueStatusAction.AllowAndTrigger)
+                    _ = Trigger();
             }
-
-            if (newDeliveryHandler != null)
-                DeliveryHandler = newDeliveryHandler;
-
-            foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
-                await handler.OnStatusChanged(this, prevStatus, status);
-
-            if (enter == QueueStatusAction.AllowAndTrigger)
-                _ = Trigger();
+            catch (Exception e)
+            {
+                Server.SendError("SET_QUEUE_STATUS", e, $"QueueName:{Name}, PrevStatus:{prevStatus} NextStatus:{status}");
+            }
         }
 
         /// <summary>
@@ -652,17 +659,25 @@ namespace Twino.MQ.Queues
         {
             if (!IsInitialized)
             {
-                UpdateOptionsByMessage(message.Message);
-                DeliveryHandlerBuilder handlerBuilder = new DeliveryHandlerBuilder
-                                                        {
-                                                            Server = Server,
-                                                            Queue = this,
-                                                            Headers = message.Message.Headers,
-                                                            DeliveryHandlerHeader = message.Message.FindHeader(TwinoHeaders.DELIVERY_HANDLER)
-                                                        };
+                try
+                {
+                    UpdateOptionsByMessage(message.Message);
+                    DeliveryHandlerBuilder handlerBuilder = new DeliveryHandlerBuilder
+                                                            {
+                                                                Server = Server,
+                                                                Queue = this,
+                                                                Headers = message.Message.Headers,
+                                                                DeliveryHandlerHeader = message.Message.FindHeader(TwinoHeaders.DELIVERY_HANDLER)
+                                                            };
 
-                IMessageDeliveryHandler deliveryHandler = await Server.DeliveryHandlerFactory(handlerBuilder);
-                InitializeQueue(deliveryHandler);
+                    IMessageDeliveryHandler deliveryHandler = await Server.DeliveryHandlerFactory(handlerBuilder);
+                    InitializeQueue(deliveryHandler);
+                }
+                catch (Exception e)
+                {
+                    Server.SendError("INITIALIZE_IN_PUSH", e, $"QueueName:{Name}");
+                    throw;
+                }
             }
 
             if (Status == QueueStatus.Stopped)
@@ -717,6 +732,7 @@ namespace Twino.MQ.Queues
             }
             catch (Exception ex)
             {
+                Server.SendError("PUSH", ex, $"QueueName:{Name}");
                 Info.AddError();
                 try
                 {
@@ -790,7 +806,6 @@ namespace Twino.MQ.Queues
             }
         }
 
-
         /// <summary>
         /// Start to process all pending messages.
         /// This method is called after a client is subscribed to the queue.
@@ -840,6 +855,7 @@ namespace Twino.MQ.Queues
                 }
                 catch (Exception ex)
                 {
+                    Server.SendError("PROCESS_MESSAGES", ex, $"QueueName:{Name}");
                     Info.AddError();
                     try
                     {
@@ -894,35 +910,42 @@ namespace Twino.MQ.Queues
         /// </summary>
         internal async Task<bool> ApplyDecision(Decision decision, QueueMessage message, TwinoMessage customAck = null)
         {
-            if (decision.SaveMessage)
-                await SaveMessage(message);
-
-            if (!message.IsProducerAckSent && (decision.Acknowledge == DeliveryAcknowledgeDecision.Always ||
-                                               decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ||
-                                               decision.Acknowledge == DeliveryAcknowledgeDecision.IfSaved && message.IsSaved))
+            try
             {
-                TwinoMessage acknowledge = customAck ?? message.Message.CreateAcknowledge(decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ? "none" : null);
+                if (decision.SaveMessage)
+                    await SaveMessage(message);
 
-                if (message.Source != null && message.Source.IsConnected)
+                if (!message.IsProducerAckSent && (decision.Acknowledge == DeliveryAcknowledgeDecision.Always ||
+                                                   decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ||
+                                                   decision.Acknowledge == DeliveryAcknowledgeDecision.IfSaved && message.IsSaved))
                 {
-                    bool sent = await message.Source.SendAsync(acknowledge);
-                    message.IsProducerAckSent = sent;
-                    if (decision.AcknowledgeDelivery != null)
-                        await decision.AcknowledgeDelivery(message, message.Source, sent);
+                    TwinoMessage acknowledge = customAck ?? message.Message.CreateAcknowledge(decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ? "none" : null);
+
+                    if (message.Source != null && message.Source.IsConnected)
+                    {
+                        bool sent = await message.Source.SendAsync(acknowledge);
+                        message.IsProducerAckSent = sent;
+                        if (decision.AcknowledgeDelivery != null)
+                            await decision.AcknowledgeDelivery(message, message.Source, sent);
+                    }
+                    else if (decision.AcknowledgeDelivery != null)
+                        await decision.AcknowledgeDelivery(message, message.Source, false);
                 }
-                else if (decision.AcknowledgeDelivery != null)
-                    await decision.AcknowledgeDelivery(message, message.Source, false);
+
+                if (decision.PutBack == PutBackDecision.Start)
+                    AddMessage(message, false);
+                else if (decision.PutBack == PutBackDecision.End)
+                    AddMessage(message);
+
+                else if (!decision.Allow)
+                {
+                    Info.AddMessageRemove();
+                    _ = DeliveryHandler.MessageDequeued(this, message);
+                }
             }
-
-            if (decision.PutBack == PutBackDecision.Start)
-                AddMessage(message, false);
-            else if (decision.PutBack == PutBackDecision.End)
-                AddMessage(message);
-
-            else if (!decision.Allow)
+            catch (Exception e)
             {
-                Info.AddMessageRemove();
-                _ = DeliveryHandler.MessageDequeued(this, message);
+                Server.SendError("APPLY_DECISION", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
             }
 
             return decision.Allow;
@@ -933,14 +956,21 @@ namespace Twino.MQ.Queues
         /// </summary>
         public async Task<bool> SaveMessage(QueueMessage message)
         {
-            if (message.IsSaved)
-                return false;
+            try
+            {
+                if (message.IsSaved)
+                    return false;
 
-            if (IsInitialized)
-                message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
+                if (IsInitialized)
+                    message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
 
-            if (message.IsSaved)
-                Info.AddMessageSave();
+                if (message.IsSaved)
+                    Info.AddMessageSave();
+            }
+            catch (Exception e)
+            {
+                Server.SendError("SAVE_MESSAGE", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
+            }
 
             return message.IsSaved;
         }
@@ -1034,53 +1064,60 @@ namespace Twino.MQ.Queues
         /// </summary>
         internal async Task AcknowledgeDelivered(MqClient from, TwinoMessage deliveryMessage)
         {
-            if (!IsInitialized)
-                return;
-
-            MessageDelivery delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
-
-            //when server and consumer are in pc,
-            //sometimes consumer sends ack before server start to follow ack of the message
-            //that happens when ack message is arrived in less than 0.01ms
-            //in that situation, server can't find the delivery with FindAndRemoveDelivery, it returns null
-            //so we need to check it again after a few milliseconds
-            if (delivery == null)
+            try
             {
-                await Task.Delay(1);
-                delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
+                if (!IsInitialized)
+                    return;
 
-                //try again
+                MessageDelivery delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
+
+                //when server and consumer are in pc,
+                //sometimes consumer sends ack before server start to follow ack of the message
+                //that happens when ack message is arrived in less than 0.01ms
+                //in that situation, server can't find the delivery with FindAndRemoveDelivery, it returns null
+                //so we need to check it again after a few milliseconds
                 if (delivery == null)
                 {
-                    await Task.Delay(3);
+                    await Task.Delay(1);
                     delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
+
+                    //try again
+                    if (delivery == null)
+                    {
+                        await Task.Delay(3);
+                        delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
+                    }
                 }
+
+                bool success = !(deliveryMessage.HasHeader &&
+                                 deliveryMessage.Headers.Any(x => x.Key.Equals(TwinoHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)));
+
+                // ReSharper disable once ConditionIsAlwaysTrueOrFalse (it's possible, resharper doesn't work properly in here)
+                if (delivery != null)
+                    delivery.MarkAsAcknowledged(success);
+
+                if (success)
+                    Info.AddAcknowledge();
+                else
+                    Info.AddNegativeAcknowledge();
+
+                Decision decision = await DeliveryHandler.AcknowledgeReceived(this, deliveryMessage, delivery, success);
+
+                // ReSharper disable once ConditionIsAlwaysTrueOrFalse (it's possible, resharper doesn't work properly in here)
+                if (delivery != null)
+                {
+                    if (Options.HideClientNames)
+                        deliveryMessage.SetSource(null);
+
+                    await ApplyDecision(decision, delivery.Message, deliveryMessage);
+                }
+
+                ReleaseAcknowledgeLock(true);
             }
-
-            bool success = !(deliveryMessage.HasHeader &&
-                             deliveryMessage.Headers.Any(x => x.Key.Equals(TwinoHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)));
-
-            // ReSharper disable once ConditionIsAlwaysTrueOrFalse (it's possible, resharper doesn't work properly in here)
-            if (delivery != null)
-                delivery.MarkAsAcknowledged(success);
-
-            if (success)
-                Info.AddAcknowledge();
-            else
-                Info.AddNegativeAcknowledge();
-
-            Decision decision = await DeliveryHandler.AcknowledgeReceived(this, deliveryMessage, delivery, success);
-
-            // ReSharper disable once ConditionIsAlwaysTrueOrFalse (it's possible, resharper doesn't work properly in here)
-            if (delivery != null)
+            catch (Exception e)
             {
-                if (Options.HideClientNames)
-                    deliveryMessage.SetSource(null);
-
-                await ApplyDecision(decision, delivery.Message, deliveryMessage);
+                Server.SendError("QUEUE_ACK_RECEIVED", e, $"QueueName:{Name}, MessageId:{deliveryMessage.MessageId}");
             }
-
-            ReleaseAcknowledgeLock(true);
         }
 
         /// <summary>

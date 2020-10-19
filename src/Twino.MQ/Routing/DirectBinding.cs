@@ -58,42 +58,50 @@ namespace Twino.MQ.Routing
         /// </summary>
         public override async Task<bool> Send(MqClient sender, TwinoMessage message)
         {
-            MqClient[] clients = GetClients();
-            if (clients.Length == 0)
-                return false;
-
-            message.Type = MessageType.DirectMessage;
-            message.SetTarget(Target);
-
-            if (ContentType.HasValue)
-                message.ContentType = ContentType.Value;
-
-            message.WaitResponse = Interaction == BindingInteraction.Response;
-            switch (RouteMethod)
+            try
             {
-                case RouteMethod.OnlyFirst:
-                    var first = clients.FirstOrDefault();
-                    if (first == null)
-                        return false;
-
-                    return await first.SendAsync(message);
-
-                case RouteMethod.Distribute:
-                    bool atLeastOneSent = false;
-                    foreach (MqClient client in clients)
-                    {
-                        bool sent = await client.SendAsync(message);
-                        if (sent && !atLeastOneSent)
-                            atLeastOneSent = true;
-                    }
-
-                    return atLeastOneSent;
-
-                case RouteMethod.RoundRobin:
-                    return await SendRoundRobin(message);
-
-                default:
+                MqClient[] clients = GetClients();
+                if (clients.Length == 0)
                     return false;
+
+                message.Type = MessageType.DirectMessage;
+                message.SetTarget(Target);
+
+                if (ContentType.HasValue)
+                    message.ContentType = ContentType.Value;
+
+                message.WaitResponse = Interaction == BindingInteraction.Response;
+                switch (RouteMethod)
+                {
+                    case RouteMethod.OnlyFirst:
+                        var first = clients.FirstOrDefault();
+                        if (first == null)
+                            return false;
+
+                        return await first.SendAsync(message);
+
+                    case RouteMethod.Distribute:
+                        bool atLeastOneSent = false;
+                        foreach (MqClient client in clients)
+                        {
+                            bool sent = await client.SendAsync(message);
+                            if (sent && !atLeastOneSent)
+                                atLeastOneSent = true;
+                        }
+
+                        return atLeastOneSent;
+
+                    case RouteMethod.RoundRobin:
+                        return await SendRoundRobin(message);
+
+                    default:
+                        return false;
+                }
+            }
+            catch (Exception e)
+            {
+                Router.Server.SendError("BINDING_SEND", e, $"Type:Direct, Binding:{Name}");
+                return false;
             }
         }
 

@@ -28,6 +28,7 @@ namespace Twino.MQ
         private readonly SafeList<MqClient> _clients;
         private readonly SafeList<IRouter> _routers;
         private IClientHandler[] _clientHandlers = new IClientHandler[0];
+        private IErrorHandler[] _errorHandlers = new IErrorHandler[0];
         private IQueueEventHandler[] _queueEventHandlers = new IQueueEventHandler[0];
         private IServerMessageHandler[] _messageHandlers = new IServerMessageHandler[0];
         private IQueueAuthenticator[] _queueAuthenticators = new IQueueAuthenticator[0];
@@ -94,6 +95,11 @@ namespace Twino.MQ
         /// Client connect and disconnect operations
         /// </summary>
         public IEnumerable<IClientHandler> ClientHandlers => _clientHandlers;
+
+        /// <summary>
+        /// Error handlers
+        /// </summary>
+        public IEnumerable<IErrorHandler> ErrorHandlers => _errorHandlers;
 
         /// <summary>
         /// Client message received handler (for only server-type messages)
@@ -234,6 +240,26 @@ namespace Twino.MQ
         }
 
         /// <summary>
+        /// Adds error handler
+        /// </summary>
+        public void AddErrorHandler(IErrorHandler handler)
+        {
+            List<IErrorHandler> list = _errorHandlers.ToList();
+            list.Add(handler);
+            _errorHandlers = list.ToArray();
+        }
+
+        /// <summary>
+        /// Removes error handler
+        /// </summary>
+        public void RemoveErrorHandler(IErrorHandler handler)
+        {
+            List<IErrorHandler> list = _errorHandlers.ToList();
+            list.Remove(handler);
+            _errorHandlers = list.ToArray();
+        }
+
+        /// <summary>
         /// Adds Message handler
         /// </summary>
         public void AddMessageHandler(IServerMessageHandler handler)
@@ -331,6 +357,24 @@ namespace Twino.MQ
             List<IAdminAuthorization> list = _adminAuthorizations.ToList();
             list.Remove(handler);
             _adminAuthorizations = list.ToArray();
+        }
+
+        /// <summary>
+        /// Trigger error handlers
+        /// </summary>
+        internal void SendError(string hint, Exception exception, string payload)
+        {
+            foreach (IErrorHandler handler in _errorHandlers)
+            {
+                //don't crash by end-user exception
+                try
+                {
+                    handler.Error(hint, exception, payload);
+                }
+                catch
+                {
+                }
+            }
         }
 
         #endregion
@@ -487,8 +531,10 @@ namespace Twino.MQ
                 OnQueueCreated.Trigger(queue);
                 return queue;
             }
-            catch
+            catch (Exception e)
             {
+                SendError("CREATE_QUEUE", e, $"QueueName:{queueName}");
+
                 if (!hideException)
                     throw;
 
@@ -523,14 +569,21 @@ namespace Twino.MQ
         /// </summary>
         public async Task RemoveQueue(TwinoQueue queue)
         {
-            _queues.Remove(queue);
-            await queue.SetStatus(QueueStatus.Stopped);
+            try
+            {
+                _queues.Remove(queue);
+                await queue.SetStatus(QueueStatus.Stopped);
 
-            foreach (IQueueEventHandler handler in _queueEventHandlers)
-                await handler.OnRemoved(queue);
+                foreach (IQueueEventHandler handler in _queueEventHandlers)
+                    await handler.OnRemoved(queue);
 
-            OnQueueRemoved.Trigger(queue);
-            await queue.Destroy();
+                OnQueueRemoved.Trigger(queue);
+                await queue.Destroy();
+            }
+            catch (Exception e)
+            {
+                SendError("REMOVE_QUEUE", e, $"QueueName:{queue?.Name}");
+            }
         }
 
         #endregion
@@ -598,15 +651,23 @@ namespace Twino.MQ
         /// </summary>
         public IRouter AddRouter(string name, RouteMethod method)
         {
-            if (!Filter.CheckNameEligibility(name))
-                throw new InvalidOperationException("Invalid router name");
+            try
+            {
+                if (!Filter.CheckNameEligibility(name))
+                    throw new InvalidOperationException("Invalid router name");
 
-            if (_routers.Find(x => x.Name == name) != null)
-                throw new DuplicateNameException();
+                if (_routers.Find(x => x.Name == name) != null)
+                    throw new DuplicateNameException();
 
-            Router router = new Router(this, name, method);
-            _routers.Add(router);
-            return router;
+                Router router = new Router(this, name, method);
+                _routers.Add(router);
+                return router;
+            }
+            catch (Exception e)
+            {
+                SendError("ADD_ROUTER", e, $"RouterName:{name}");
+                throw;
+            }
         }
 
         /// <summary>
@@ -615,13 +676,21 @@ namespace Twino.MQ
         /// </summary>
         public void AddRouter(IRouter router)
         {
-            if (!Filter.CheckNameEligibility(router.Name))
-                throw new InvalidOperationException("Invalid router name");
+            try
+            {
+                if (!Filter.CheckNameEligibility(router.Name))
+                    throw new InvalidOperationException("Invalid router name");
 
-            if (_routers.Find(x => x.Name == router.Name) != null)
-                throw new DuplicateNameException();
+                if (_routers.Find(x => x.Name == router.Name) != null)
+                    throw new DuplicateNameException();
 
-            _routers.Add(router);
+                _routers.Add(router);
+            }
+            catch (Exception e)
+            {
+                SendError("ADD_ROUTER", e, $"RouterName:{router?.Name}");
+                throw;
+            }
         }
 
         /// <summary>

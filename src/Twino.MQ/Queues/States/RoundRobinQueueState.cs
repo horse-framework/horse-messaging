@@ -40,18 +40,26 @@ namespace Twino.MQ.Queues.States
 
         public async Task<PushResult> Push(QueueMessage message)
         {
-            QueueClient cc = _queue.GetNextRRClient(ref _roundRobinIndex);
-            if (cc == null)
+            try
             {
-                _queue.AddMessage(message, false);
-                return PushResult.NoConsumers;
+                QueueClient cc = _queue.GetNextRRClient(ref _roundRobinIndex);
+                if (cc == null)
+                {
+                    _queue.AddMessage(message, false);
+                    return PushResult.NoConsumers;
+                }
+
+                ProcessingMessage = message;
+                PushResult result = await ProcessMessage(message, cc);
+                ProcessingMessage = null;
+
+                return result;
             }
-
-            ProcessingMessage = message;
-            PushResult result = await ProcessMessage(message, cc);
-            ProcessingMessage = null;
-
-            return result;
+            catch (Exception e)
+            {
+                _queue.Server.SendError("PUSH", e, $"QueueName:{_queue.Name}, State:RoundRobin");
+                return PushResult.Error;
+            }
         }
 
         private async Task<PushResult> ProcessMessage(QueueMessage message, QueueClient receiver)
