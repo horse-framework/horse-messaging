@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Twino.Protocols.Http" Version="4.0.2" />
+      <PackageReference Include="Twino.Protocols.WebSocket" Version="4.0.7" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Twino.MQ\Twino.MQ.csproj" />
+    </ItemGroup>
+
+</Project>

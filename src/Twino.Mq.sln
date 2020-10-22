@@ -37,6 +37,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Producer", "Samples\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Consumer", "Samples\Sample.Consumer\Sample.Consumer.csproj", "{2AF41E76-D345-46F9-A783-FF0AEDD2526F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.MQ.WebSocket.Server", "Twino.MQ.WebSocket.Server\Twino.MQ.WebSocket.Server.csproj", "{47F84BA9-242C-4663-84E3-6150DB168F8B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -103,6 +105,10 @@ Global
 		{2AF41E76-D345-46F9-A783-FF0AEDD2526F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2AF41E76-D345-46F9-A783-FF0AEDD2526F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2AF41E76-D345-46F9-A783-FF0AEDD2526F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{47F84BA9-242C-4663-84E3-6150DB168F8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{47F84BA9-242C-4663-84E3-6150DB168F8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{47F84BA9-242C-4663-84E3-6150DB168F8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{47F84BA9-242C-4663-84E3-6150DB168F8B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
