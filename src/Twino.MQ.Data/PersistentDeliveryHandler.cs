@@ -119,7 +119,7 @@ namespace Twino.MQ.Data
         #region Events
 
         /// <inheritdoc />
-        public Task<Decision> ReceivedFromProducer(TwinoQueue queue, QueueMessage message, MqClient sender)
+        public virtual Task<Decision> ReceivedFromProducer(TwinoQueue queue, QueueMessage message, MqClient sender)
         {
             DeliveryAcknowledgeDecision save = DeliveryAcknowledgeDecision.None;
             if (ProducerAckDecision == ProducerAckDecision.AfterReceived)
@@ -131,31 +131,31 @@ namespace Twino.MQ.Data
         }
 
         /// <inheritdoc />
-        public Task<Decision> BeginSend(TwinoQueue queue, QueueMessage message)
+        public virtual Task<Decision> BeginSend(TwinoQueue queue, QueueMessage message)
         {
             return Task.FromResult(new Decision(true, true, PutBackDecision.No, DeliveryAcknowledgeDecision.None));
         }
 
         /// <inheritdoc />
-        public Task<Decision> CanConsumerReceive(TwinoQueue queue, QueueMessage message, MqClient receiver)
+        public virtual Task<Decision> CanConsumerReceive(TwinoQueue queue, QueueMessage message, MqClient receiver)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
         /// <inheritdoc />
-        public Task<Decision> ConsumerReceived(TwinoQueue queue, MessageDelivery delivery, MqClient receiver)
+        public virtual Task<Decision> ConsumerReceived(TwinoQueue queue, MessageDelivery delivery, MqClient receiver)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
         /// <inheritdoc />
-        public Task<Decision> ConsumerReceiveFailed(TwinoQueue queue, MessageDelivery delivery, MqClient receiver)
+        public virtual Task<Decision> ConsumerReceiveFailed(TwinoQueue queue, MessageDelivery delivery, MqClient receiver)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
         /// <inheritdoc />
-        public async Task<Decision> EndSend(TwinoQueue queue, QueueMessage message)
+        public virtual async Task<Decision> EndSend(TwinoQueue queue, QueueMessage message)
         {
             if (message.SendCount == 0)
                 return new Decision(true, true, PutBackDecision.Start, DeliveryAcknowledgeDecision.None);
@@ -167,7 +167,7 @@ namespace Twino.MQ.Data
         }
 
         /// <inheritdoc />
-        public async Task<Decision> AcknowledgeReceived(TwinoQueue queue, TwinoMessage acknowledgeMessage, MessageDelivery delivery, bool success)
+        public virtual async Task<Decision> AcknowledgeReceived(TwinoQueue queue, TwinoMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
             if (success && DeleteWhen == DeleteWhen.AfterAcknowledgeReceived)
                 await DeleteMessage(delivery.Message.Message.MessageId);
@@ -181,7 +181,7 @@ namespace Twino.MQ.Data
         }
 
         /// <inheritdoc />
-        public async Task<Decision> MessageTimedOut(TwinoQueue queue, QueueMessage message)
+        public virtual async Task<Decision> MessageTimedOut(TwinoQueue queue, QueueMessage message)
         {
             await DeleteMessage(message.Message.MessageId);
             return Decision.JustAllow();
@@ -203,7 +203,7 @@ namespace Twino.MQ.Data
         }
 
         /// <inheritdoc />
-        public Task<Decision> AcknowledgeTimedOut(TwinoQueue queue, MessageDelivery delivery)
+        public virtual Task<Decision> AcknowledgeTimedOut(TwinoQueue queue, MessageDelivery delivery)
         {
             if (ProducerAckDecision == ProducerAckDecision.AfterConsumerAckReceived)
                 return Task.FromResult(new Decision(true, false, PutBackDecision.Start, DeliveryAcknowledgeDecision.Negative));
@@ -212,13 +212,13 @@ namespace Twino.MQ.Data
         }
 
         /// <inheritdoc />
-        public Task MessageDequeued(TwinoQueue queue, QueueMessage message)
+        public virtual Task MessageDequeued(TwinoQueue queue, QueueMessage message)
         {
             return Task.FromResult(Decision.JustAllow());
         }
 
         /// <inheritdoc />
-        public Task<Decision> ExceptionThrown(TwinoQueue queue, QueueMessage message, Exception exception)
+        public virtual Task<Decision> ExceptionThrown(TwinoQueue queue, QueueMessage message, Exception exception)
         {
             if (ConfigurationFactory.Builder.ErrorAction != null)
                 ConfigurationFactory.Builder.ErrorAction(queue, message, exception);
