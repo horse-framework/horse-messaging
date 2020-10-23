@@ -107,31 +107,25 @@ namespace Twino.MQ.Data.Configuration
         /// <summary>
         /// Loads messages of queues in configuration
         /// </summary>
-        public async Task LoadQueues(TwinoMQ server, Func<LoadingQueueConfig, IPersistentDeliveryHandler> factory = null)
+        public async Task LoadQueues(TwinoMQ server)
         {
             foreach (QueueConfiguration queueConfiguration in Config.Queues)
             {
                 TwinoQueue queue = server.FindQueue(queueConfiguration.Name);
                 if (queue == null)
                 {
-                    if (factory != null)
+                    if (server.DeliveryHandlerFactory != null)
                         queue = await server.CreateQueue(queueConfiguration.Name,
                                                          queueConfiguration.Configuration.ToOptions(),
                                                          async builder =>
                                                          {
-                                                             DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
-                                                             LoadingQueueConfig config = new LoadingQueueConfig
-                                                                                         {
-                                                                                             DatabaseOptions = databaseOptions,
-                                                                                             DeliveryHandler = queueConfiguration.DeliveryHandler,
-                                                                                             Queue = builder.Queue,
-                                                                                             DeleteWhen = (DeleteWhen) queueConfiguration.DeleteWhen,
-                                                                                             ProducerAck = (ProducerAckDecision) queueConfiguration.ProducerAck
-                                                                                         };
-                                                             IPersistentDeliveryHandler handler = factory(config);
-                                                             await handler.Initialize();
+                                                             builder.DeliveryHandlerHeader = queueConfiguration.DeliveryHandler;
+                                                             IMessageDeliveryHandler handler = await server.DeliveryHandlerFactory(builder);
+                                                             builder.OnAfterCompleted(b => { }); //don't trigger created events, it's already created and reloading
                                                              return handler;
                                                          });
+
+
                     else
                         queue = await Extensions.CreateQueue(server,
                                                              queueConfiguration.Name,

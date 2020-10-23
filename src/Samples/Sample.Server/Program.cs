@@ -19,7 +19,7 @@ namespace Sample.Server
                                        .UseJustAllowDeliveryHandler()
                                        .Build();
 
-            mq.LoadPersistentQueues(cfg => new PersistentDeliveryHandler(cfg.Queue, cfg.DatabaseOptions, cfg.DeleteWhen, cfg.ProducerAck));
+            mq.LoadPersistentQueues();
 
             TwinoServer server = new TwinoServer();
             server.UseTwinoMQ(mq);

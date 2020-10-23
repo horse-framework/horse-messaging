@@ -58,12 +58,12 @@ namespace Twino.MQ.Data
         /// <summary>
         /// Loads all persistent queue messages from databases
         /// </summary>
-        public static Task LoadPersistentQueues(this TwinoMQ server, Func<LoadingQueueConfig, IPersistentDeliveryHandler> factory = null)
+        public static Task LoadPersistentQueues(this TwinoMQ server)
         {
             if (ConfigurationFactory.Builder == null)
                 throw new InvalidOperationException("Before loading queues initialize persistent queues with AddPersistentQueues method");
 
-            return ConfigurationFactory.Manager.LoadQueues(server, factory);
+            return ConfigurationFactory.Manager.LoadQueues(server);
         }
 
         /// <summary>
