@@ -11,12 +11,34 @@ namespace Twino.MQ.Data
     /// <summary>
     /// Delivery handler for persistent queues
     /// </summary>
-    public class PersistentDeliveryHandler : IMessageDeliveryHandler
+    public class PersistentDeliveryHandler : IMessageDeliveryHandler, IPersistentDeliveryHandler
     {
         internal Database Database { get; set; }
-        internal TwinoQueue Queue { get; }
-        internal DeleteWhen DeleteWhen { get; }
-        internal ProducerAckDecision ProducerAckDecision { get; }
+        
+        /// <summary>
+        /// Queue of the delivery handler
+        /// </summary>
+        public TwinoQueue Queue { get; }
+
+        /// <summary>
+        /// Key for delivery handler attribute
+        /// </summary>
+        public string Key { get; protected set; } = "default";
+
+        /// <summary>
+        /// Database Filename
+        /// </summary>
+        public string DbFilename => Database.File.Filename;
+
+        /// <summary>
+        /// Option when to delete messages from disk
+        /// </summary>
+        public DeleteWhen DeleteWhen { get; }
+        
+        /// <summary>
+        /// Option when to send acknowledge to producer
+        /// </summary>
+        public ProducerAckDecision ProducerAckDecision { get; }
 
         #region Init - Destroy
 
@@ -37,7 +59,7 @@ namespace Twino.MQ.Data
         /// <summary>
         /// Initializes queue, opens database files and fills messages into the queue
         /// </summary>
-        public async Task Initialize()
+        public virtual async Task Initialize()
         {
             if (Queue.Options.Acknowledge == QueueAckDecision.None)
             {
@@ -165,7 +187,10 @@ namespace Twino.MQ.Data
             return Decision.JustAllow();
         }
 
-        private async Task DeleteMessage(string id)
+        /// <summary>
+        /// Deletes message from database
+        /// </summary>
+        protected virtual async Task DeleteMessage(string id)
         {
             for (int i = 0; i < 3; i++)
             {
@@ -201,7 +226,7 @@ namespace Twino.MQ.Data
         }
 
         /// <inheritdoc />
-        public Task<bool> SaveMessage(TwinoQueue queue, QueueMessage message)
+        public virtual Task<bool> SaveMessage(TwinoQueue queue, QueueMessage message)
         {
             return Database.Insert(message.Message);
         }

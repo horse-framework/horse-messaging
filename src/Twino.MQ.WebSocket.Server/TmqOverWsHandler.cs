@@ -13,13 +13,13 @@ namespace Twino.MQ.WebSocket.Server
     {
         private readonly TwinoMQ _server;
         private readonly IProtocolConnectionHandler<TmqServerSocket, TwinoMessage> _tmqProtocolHandler;
-        
+
         public TmqOverWsHandler(TwinoMQ server, IProtocolConnectionHandler<TmqServerSocket, TwinoMessage> tmqProtocolHandler)
         {
             _server = server;
             _tmqProtocolHandler = tmqProtocolHandler;
         }
-        
+
         public async Task<WsServerSocket> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
         {
             string clientId;
@@ -40,7 +40,7 @@ namespace Twino.MQ.WebSocket.Server
                 return null;
 
             //creates new mq over websocket client object
-            WsServerSocket socket = new WsServerSocket();
+            WsServerSocket socket = new WsServerSocket(server, connection);
             TmqWebSocketClient client = new TmqWebSocketClient(socket, _server, connection, _server.MessageIdGenerator, _server.Options.UseMessageId);
             client.Data = data;
             client.UniqueId = clientId.Trim();

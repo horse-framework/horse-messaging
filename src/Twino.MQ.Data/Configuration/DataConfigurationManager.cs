@@ -70,15 +70,19 @@ namespace Twino.MQ.Data.Configuration
         public bool Add(TwinoQueue queue, string filename)
         {
             QueueOptionsConfiguration queueOptions = queue.Options.ToConfiguration();
-            PersistentDeliveryHandler deliveryHandler = (PersistentDeliveryHandler) queue.DeliveryHandler;
 
             QueueConfiguration queueConfiguration = new QueueConfiguration();
             queueConfiguration.Configuration = queueOptions;
             queueConfiguration.Name = queue.Name;
             queueConfiguration.File = filename;
             queueConfiguration.Queue = queue;
-            queueConfiguration.DeleteWhen = Convert.ToInt32(deliveryHandler.DeleteWhen);
-            queueConfiguration.ProducerAck = Convert.ToInt32(deliveryHandler.ProducerAckDecision);
+
+            if (queue.DeliveryHandler is IPersistentDeliveryHandler deliveryHandler)
+            {
+                queueConfiguration.DeliveryHandler = deliveryHandler.Key;
+                queueConfiguration.DeleteWhen = Convert.ToInt32(deliveryHandler.DeleteWhen);
+                queueConfiguration.ProducerAck = Convert.ToInt32(deliveryHandler.ProducerAckDecision);
+            }
 
             lock (_optionsLock)
                 Config.Queues.Add(queueConfiguration);
@@ -103,18 +107,29 @@ namespace Twino.MQ.Data.Configuration
         /// <summary>
         /// Loads messages of queues in configuration
         /// </summary>
-        public async Task LoadQueues(TwinoMQ server)
+        public async Task LoadQueues(TwinoMQ server, Func<DatabaseOptions, IPersistentDeliveryHandler> factory = null)
         {
             foreach (QueueConfiguration queueConfiguration in Config.Queues)
             {
                 TwinoQueue queue = server.FindQueue(queueConfiguration.Name);
                 if (queue == null)
                 {
-                    queue = await Extensions.CreateQueue(server,
-                                                         queueConfiguration.Name,
-                                                         (DeleteWhen) queueConfiguration.DeleteWhen,
-                                                         (ProducerAckDecision) queueConfiguration.ProducerAck,
-                                                         queueConfiguration.Configuration.ToOptions());
+                    if (factory != null)
+                        queue = await server.CreateQueue(queueConfiguration.Name,
+                                                         queueConfiguration.Configuration.ToOptions(),
+                                                         async builder =>
+                                                         {
+                                                             DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
+                                                             IPersistentDeliveryHandler handler = factory(databaseOptions);
+                                                             await handler.Initialize();
+                                                             return handler;
+                                                         });
+                    else
+                        queue = await Extensions.CreateQueue(server,
+                                                             queueConfiguration.Name,
+                                                             (DeleteWhen) queueConfiguration.DeleteWhen,
+                                                             (ProducerAckDecision) queueConfiguration.ProducerAck,
+                                                             queueConfiguration.Configuration.ToOptions());
 
                     //queue creation not permitted, skip
                     if (queue == null)
@@ -122,8 +137,8 @@ namespace Twino.MQ.Data.Configuration
                 }
                 else
                 {
-                    PersistentDeliveryHandler deliveryHandler = (PersistentDeliveryHandler) queue.DeliveryHandler;
-                    await deliveryHandler.Initialize();
+                    if (queue.DeliveryHandler is IPersistentDeliveryHandler deliveryHandler)
+                        await deliveryHandler.Initialize();
                 }
 
                 queueConfiguration.Queue = queue;

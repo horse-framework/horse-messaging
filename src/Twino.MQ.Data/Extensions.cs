@@ -106,13 +106,29 @@ namespace Twino.MQ.Data
             return handler;
         }
 
+        /// <summary>
+        /// Creates and initializes new persistent delivery handler for the queue
+        /// </summary>
+        /// <param name="builder">Delivery handler builder</param>
+        /// <param name="factory">Creates new persistent delivery handler instance</param>
+        /// <returns></returns>
+        public static async Task<IMessageDeliveryHandler> CreatePersistentDeliveryHandler(this DeliveryHandlerBuilder builder,
+                                                                                          Func<DatabaseOptions, IPersistentDeliveryHandler> factory)
+        {
+            DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
+            IPersistentDeliveryHandler handler = factory(databaseOptions);
+            await handler.Initialize();
+            builder.OnAfterCompleted(AfterDeliveryHandlerCreated);
+            return handler;
+        }
+
         private static void AfterDeliveryHandlerCreated(DeliveryHandlerBuilder builder)
         {
-            PersistentDeliveryHandler persistentHandler = builder.Queue.DeliveryHandler as PersistentDeliveryHandler;
+            IPersistentDeliveryHandler persistentHandler = builder.Queue.DeliveryHandler as IPersistentDeliveryHandler;
             if (persistentHandler == null)
                 return;
 
-            bool added = ConfigurationFactory.Manager.Add(builder.Queue, persistentHandler.Database.File.Filename);
+            bool added = ConfigurationFactory.Manager.Add(builder.Queue, persistentHandler.DbFilename);
             if (added)
                 ConfigurationFactory.Manager.Save();
         }
@@ -170,14 +186,34 @@ namespace Twino.MQ.Data
                                                                    QueueOptions options)
         {
             TwinoQueue queue = await CreateQueue(mq, queueName, deleteWhen, producerAckDecision, options);
-            PersistentDeliveryHandler deliveryHandler = (PersistentDeliveryHandler) queue.DeliveryHandler;
-            ConfigurationFactory.Manager.Add(queue, deliveryHandler.Database.File.Filename);
+            IPersistentDeliveryHandler deliveryHandler = (IPersistentDeliveryHandler) queue.DeliveryHandler;
+            ConfigurationFactory.Manager.Add(queue, deliveryHandler.DbFilename);
             ConfigurationFactory.Manager.Save();
             return queue;
         }
 
         /// <summary>
-        /// Creates and returns queue
+        /// Creates new persistent queue
+        /// </summary>
+        /// <param name="mq">Twino MQ Server</param>
+        /// <param name="queueName">Queue name</param>
+        /// <param name="options">Queue Options</param>
+        /// <param name="factory">Delivery handler instance creator factory</param>
+        /// <returns></returns>
+        public static async Task<TwinoQueue> CreatePersistentQueue(this TwinoMQ mq,
+                                                                   string queueName,
+                                                                   QueueOptions options,
+                                                                   Func<DatabaseOptions, IPersistentDeliveryHandler> factory)
+        {
+            TwinoQueue queue = await CreateQueue(mq, queueName, options, factory);
+            IPersistentDeliveryHandler deliveryHandler = (IPersistentDeliveryHandler) queue.DeliveryHandler;
+            ConfigurationFactory.Manager.Add(queue, deliveryHandler.DbFilename);
+            ConfigurationFactory.Manager.Save();
+            return queue;
+        }
+
+        /// <summary>
+        /// Creates and returns persistent queue
         /// </summary>
         internal static async Task<TwinoQueue> CreateQueue(TwinoMQ mq,
                                                            string queueName,
@@ -189,6 +225,23 @@ namespace Twino.MQ.Data
             {
                 DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
                 PersistentDeliveryHandler handler = new PersistentDeliveryHandler(builder.Queue, databaseOptions, deleteWhen, producerAckDecision);
+                await handler.Initialize();
+                return handler;
+            });
+        }
+
+        /// <summary>
+        /// Creates and returns persistent queue
+        /// </summary>
+        internal static async Task<TwinoQueue> CreateQueue(TwinoMQ mq,
+                                                           string queueName,
+                                                           QueueOptions options,
+                                                           Func<DatabaseOptions, IPersistentDeliveryHandler> factory)
+        {
+            return await mq.CreateQueue(queueName, options, async builder =>
+            {
+                DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
+                IPersistentDeliveryHandler handler = factory(databaseOptions);
                 await handler.Initialize();
                 return handler;
             });
