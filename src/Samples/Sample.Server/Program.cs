@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Twino.MQ;
+using Twino.MQ.Data;
 using Twino.MQ.Queues;
 using Twino.Server;
 
@@ -13,12 +14,17 @@ namespace Sample.Server
                                        .AddOptions(o => o.Status = QueueStatus.Broadcast)
                                        .AddClientHandler<ClientHandler>()
                                        .AddQueueEventHandler<QueueEventHandler>()
+                                       .AddPersistentQueues()
+                                       .UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterSaved)
                                        .UseJustAllowDeliveryHandler()
                                        .Build();
+
+            mq.LoadPersistentQueues(cfg => new PersistentDeliveryHandler(cfg.Queue, cfg.DatabaseOptions, cfg.DeleteWhen, cfg.ProducerAck));
 
             TwinoServer server = new TwinoServer();
             server.UseTwinoMQ(mq);
             server.Start(26222);
+
             return server.BlockWhileRunningAsync();
         }
     }

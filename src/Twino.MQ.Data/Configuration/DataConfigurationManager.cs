@@ -107,7 +107,7 @@ namespace Twino.MQ.Data.Configuration
         /// <summary>
         /// Loads messages of queues in configuration
         /// </summary>
-        public async Task LoadQueues(TwinoMQ server, Func<DatabaseOptions, IPersistentDeliveryHandler> factory = null)
+        public async Task LoadQueues(TwinoMQ server, Func<LoadingQueueConfig, IPersistentDeliveryHandler> factory = null)
         {
             foreach (QueueConfiguration queueConfiguration in Config.Queues)
             {
@@ -120,7 +120,15 @@ namespace Twino.MQ.Data.Configuration
                                                          async builder =>
                                                          {
                                                              DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
-                                                             IPersistentDeliveryHandler handler = factory(databaseOptions);
+                                                             LoadingQueueConfig config = new LoadingQueueConfig
+                                                                                         {
+                                                                                             DatabaseOptions = databaseOptions,
+                                                                                             DeliveryHandler = queueConfiguration.DeliveryHandler,
+                                                                                             Queue = builder.Queue,
+                                                                                             DeleteWhen = (DeleteWhen) queueConfiguration.DeleteWhen,
+                                                                                             ProducerAck = (ProducerAckDecision) queueConfiguration.ProducerAck
+                                                                                         };
+                                                             IPersistentDeliveryHandler handler = factory(config);
                                                              await handler.Initialize();
                                                              return handler;
                                                          });
