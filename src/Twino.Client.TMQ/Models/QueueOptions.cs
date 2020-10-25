@@ -75,5 +75,14 @@ namespace Twino.Client.TMQ.Models
         /// </summary>
         [JsonPropertyName("AutoDestroy")]
         public string AutoDestroy { get; set; }
+        
+        /// <summary>
+        /// Delay between messages in milliseconds.
+        /// Useful when wait for acknowledge is disabled but you need to prevent overheat on consumers if producer pushes too many messages in a short duration.
+        /// Zero is no delay.
+        /// </summary>
+        [JsonPropertyName("DelayBetweenMessages")]
+        public int? DelayBetweenMessages { get; set; }
+
     }
 }

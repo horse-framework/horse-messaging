@@ -75,6 +75,14 @@ namespace Twino.MQ.Queues
         [JsonPropertyName("AutoDestroy")]
         public string AutoDestroy { get; set; }
 
+        /// <summary>
+        /// Delay between messages in milliseconds.
+        /// Useful when wait for acknowledge is disabled but you need to prevent overheat on consumers if producer pushes too many messages in a short duration.
+        /// Zero is no delay.
+        /// </summary>
+        [JsonPropertyName("DelayBetweenMessages")]
+        public int? DelayBetweenMessages { get; set; }
+        
         #endregion
 
         #region Apply
@@ -140,6 +148,9 @@ namespace Twino.MQ.Queues
 
             if (ClientLimit.HasValue)
                 target.ClientLimit = ClientLimit.Value;
+
+            if (DelayBetweenMessages.HasValue)
+                target.DelayBetweenMessages = DelayBetweenMessages.Value;
         }
 
         #endregion
