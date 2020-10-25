@@ -72,6 +72,11 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         public string RouterName { get; set; }
 
         /// <summary>
+        /// Delay between messages option (in milliseconds)
+        /// </summary>
+        public int? DelayBetweenMessages { get; set; }
+
+        /// <summary>
         /// True if type has QueueNameAttribute
         /// </summary>
         public bool HasQueueName { get; set; }
@@ -158,6 +163,9 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
 
             if (!string.IsNullOrEmpty(Topic))
                 message.AddHeader(TwinoHeaders.QUEUE_TOPIC, Topic);
+
+            if (DelayBetweenMessages.HasValue)
+                message.AddHeader(TwinoHeaders.DELAY_BETWEEN_MESSAGES, DelayBetweenMessages.Value.ToString());
 
             foreach (KeyValuePair<string, string> pair in Headers)
                 message.AddHeader(pair.Key, pair.Value);

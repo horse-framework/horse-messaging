@@ -692,7 +692,11 @@ namespace Twino.MQ.Queues
                 return PushResult.LimitExceeded;
 
             //remove operational headers that are should not be sent to consumers or saved to disk
-            message.Message.RemoveHeaders(TwinoHeaders.ACKNOWLEDGE, TwinoHeaders.QUEUE_STATUS, TwinoHeaders.QUEUE_TOPIC, TwinoHeaders.CC);
+            message.Message.RemoveHeaders(TwinoHeaders.DELAY_BETWEEN_MESSAGES,
+                                          TwinoHeaders.ACKNOWLEDGE,
+                                          TwinoHeaders.QUEUE_STATUS,
+                                          TwinoHeaders.QUEUE_TOPIC,
+                                          TwinoHeaders.CC);
 
             //prepare properties
             message.Message.WaitResponse = Options.Acknowledge != QueueAckDecision.None;
@@ -871,7 +875,7 @@ namespace Twino.MQ.Queues
                     {
                     }
                 }
-                
+
                 if (Options.DelayBetweenMessages > 0)
                     await Task.Delay(Options.DelayBetweenMessages);
             }

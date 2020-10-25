@@ -71,6 +71,11 @@ namespace Twino.Protocols.TMQ
         public const string CC = "CC";
 
         /// <summary>
+        /// "Delay-In"
+        /// </summary>
+        public const string DELAY_BETWEEN_MESSAGES = "Delay-In";
+
+        /// <summary>
         /// "Request-Id"
         /// </summary>
         public const string REQUEST_ID = "Request-Id";
