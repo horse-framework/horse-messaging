@@ -20,7 +20,8 @@ namespace Twino.MQ.Data.Configuration
                        MessageSizeLimit = configuration.MessageSizeLimit,
                        UseMessageId = configuration.UseMessageId,
                        ClientLimit = configuration.ClientLimit,
-                       DelayBetweenMessages = configuration.DelayBetweenMessages
+                       DelayBetweenMessages = configuration.DelayBetweenMessages,
+                       PutBackDelay = configuration.PutBackDelay
                    };
         }
 
@@ -37,7 +38,8 @@ namespace Twino.MQ.Data.Configuration
                        MessageSizeLimit = options.MessageSizeLimit,
                        UseMessageId = options.UseMessageId,
                        ClientLimit = options.ClientLimit,
-                       DelayBetweenMessages = options.DelayBetweenMessages
+                       DelayBetweenMessages = options.DelayBetweenMessages,
+                       PutBackDelay = options.PutBackDelay
                    };
         }
 

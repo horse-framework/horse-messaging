@@ -64,6 +64,12 @@ namespace Twino.MQ.Options
         public int DelayBetweenMessages { get; set; }
 
         /// <summary>
+        /// Waits in milliseconds before putting message back into the queue.
+        /// Zero is no delay.
+        /// </summary>
+        public int PutBackDelay { get; set; }
+
+        /// <summary>
         /// Queue auto destroy options. Default value is NoMessagesAndConsumers.
         /// </summary>
         public QueueDestroy AutoDestroy { get; set; } = QueueDestroy.Disabled;
@@ -92,7 +98,8 @@ namespace Twino.MQ.Options
                        UseMessageId = options.UseMessageId,
                        MessageLimit = options.MessageLimit,
                        MessageSizeLimit = options.MessageSizeLimit,
-                       DelayBetweenMessages = options.DelayBetweenMessages
+                       DelayBetweenMessages = options.DelayBetweenMessages,
+                       PutBackDelay = options.PutBackDelay
                    };
         }
     }

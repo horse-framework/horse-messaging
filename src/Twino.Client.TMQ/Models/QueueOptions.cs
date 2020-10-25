@@ -83,5 +83,12 @@ namespace Twino.Client.TMQ.Models
         /// </summary>
         [JsonPropertyName("DelayBetweenMessages")]
         public int? DelayBetweenMessages { get; set; }
+
+        /// <summary>
+        /// Waits in milliseconds before putting message back into the queue.
+        /// Zero is no delay.
+        /// </summary>
+        [JsonPropertyName("PutBackDelay")]
+        public int? PutBackDelay { get; set; }
     }
 }

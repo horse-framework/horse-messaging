@@ -82,7 +82,14 @@ namespace Twino.MQ.Queues
         /// </summary>
         [JsonPropertyName("DelayBetweenMessages")]
         public int? DelayBetweenMessages { get; set; }
-        
+
+        /// <summary>
+        /// Waits in milliseconds before putting message back into the queue.
+        /// Zero is no delay.
+        /// </summary>
+        [JsonPropertyName("PutBackDelay")]
+        public int? PutBackDelay { get; set; }
+
         #endregion
 
         #region Apply
@@ -151,6 +158,9 @@ namespace Twino.MQ.Queues
 
             if (DelayBetweenMessages.HasValue)
                 target.DelayBetweenMessages = DelayBetweenMessages.Value;
+
+            if (PutBackDelay.HasValue)
+                target.PutBackDelay = PutBackDelay.Value;
         }
 
         #endregion

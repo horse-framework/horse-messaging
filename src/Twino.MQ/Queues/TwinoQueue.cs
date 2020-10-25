@@ -944,11 +944,8 @@ namespace Twino.MQ.Queues
                         await decision.AcknowledgeDelivery(message, message.Source, false);
                 }
 
-                if (decision.PutBack == PutBackDecision.Start)
-                    AddMessage(message, false);
-                else if (decision.PutBack == PutBackDecision.End)
-                    AddMessage(message);
-
+                if (decision.PutBack != PutBackDecision.No)
+                    ApplyPutBack(decision, message);
                 else if (!decision.Allow)
                 {
                     Info.AddMessageRemove();
@@ -961,6 +958,53 @@ namespace Twino.MQ.Queues
             }
 
             return decision.Allow;
+        }
+
+        /// <summary>
+        /// Executes put back decision for the message
+        /// </summary>
+        private void ApplyPutBack(Decision decision, QueueMessage message)
+        {
+            switch (decision.PutBack)
+            {
+                case PutBackDecision.Start:
+                    AddMessage(message, false);
+                    break;
+
+                case PutBackDecision.StartDelayed:
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await Task.Delay(Options.PutBackDelay);
+                            AddMessage(message, false);
+                        }
+                        catch (Exception e)
+                        {
+                            Server.SendError("APPLY_DECISION", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
+                        }
+                    });
+                    break;
+
+                case PutBackDecision.End:
+                    AddMessage(message);
+                    break;
+
+                case PutBackDecision.EndDelayed:
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await Task.Delay(Options.PutBackDelay);
+                            AddMessage(message);
+                        }
+                        catch (Exception e)
+                        {
+                            Server.SendError("APPLY_DECISION", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
+                        }
+                    });
+                    break;
+            }
         }
 
         /// <summary>

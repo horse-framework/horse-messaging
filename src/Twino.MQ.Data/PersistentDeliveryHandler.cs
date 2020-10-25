@@ -40,6 +40,16 @@ namespace Twino.MQ.Data
         /// </summary>
         public ProducerAckDecision ProducerAckDecision { get; }
 
+        /// <summary>
+        /// Put back decision when a negative acknowledge received by consumer
+        /// </summary>
+        public PutBackDecision NegativeAckPutBack { get; set; }
+
+        /// <summary>
+        /// Put back decision when acknowledge timed out
+        /// </summary>
+        public PutBackDecision AckTimeoutPutBack { get; set; }
+
         #region Init - Destroy
 
         /// <summary>
@@ -171,7 +181,7 @@ namespace Twino.MQ.Data
         {
             if (success && DeleteWhen == DeleteWhen.AfterAcknowledgeReceived)
                 await DeleteMessage(delivery.Message.Message.MessageId);
-
+            
             if (ProducerAckDecision == ProducerAckDecision.AfterConsumerAckReceived)
                 return new Decision(true, false, PutBackDecision.No, success
                                                                          ? DeliveryAcknowledgeDecision.Always
