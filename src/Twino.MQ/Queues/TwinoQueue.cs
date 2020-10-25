@@ -643,7 +643,9 @@ namespace Twino.MQ.Queues
 
             string queueStatus = message.FindHeader(TwinoHeaders.QUEUE_STATUS);
             if (queueStatus != null)
+            {
                 Options.Status = QueueStatusHelper.FindStatus(queueStatus);
+            }
 
             Topic = message.FindHeader(TwinoHeaders.QUEUE_TOPIC);
         }
@@ -688,6 +690,9 @@ namespace Twino.MQ.Queues
 
             if (Options.MessageSizeLimit > 0 && message.Message.Length > Options.MessageSizeLimit)
                 return PushResult.LimitExceeded;
+
+            //remove operational headers that are should not be sent to consumers or saved to disk
+            message.Message.RemoveHeaders(TwinoHeaders.ACKNOWLEDGE, TwinoHeaders.QUEUE_STATUS, TwinoHeaders.QUEUE_TOPIC, TwinoHeaders.CC);
 
             //prepare properties
             message.Message.WaitResponse = Options.Acknowledge != QueueAckDecision.None;

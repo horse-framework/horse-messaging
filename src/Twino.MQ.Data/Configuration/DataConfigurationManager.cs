@@ -124,8 +124,6 @@ namespace Twino.MQ.Data.Configuration
                                                              builder.OnAfterCompleted(b => { }); //don't trigger created events, it's already created and reloading
                                                              return handler;
                                                          });
-
-
                     else
                         queue = await Extensions.CreateQueue(server,
                                                              queueConfiguration.Name,

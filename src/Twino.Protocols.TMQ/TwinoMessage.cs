@@ -324,6 +324,37 @@ namespace Twino.Protocols.TMQ
             return pair.Value;
         }
 
+        /// <summary>
+        /// Removes a header from header list
+        /// </summary>
+        public void RemoveHeader(KeyValuePair<string, string> item)
+        {
+            HeadersList.Remove(item);
+            HasHeader = HeadersList.Count > 0;
+        }
+
+        /// <summary>
+        /// Removes a header by key
+        /// </summary>
+        public void RemoveHeader(string key)
+        {
+            HeadersList.RemoveAll(x => x.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase));
+            HasHeader = HeadersList.Count > 0;
+        }
+
+        /// <summary>
+        /// Removes a header by key
+        /// </summary>
+        public void RemoveHeaders(params string[] keys)
+        {
+            if (HeadersList == null || HeadersList.Count == 0)
+                return;
+
+            StringComparer comparer = StringComparer.InvariantCultureIgnoreCase;
+            HeadersList.RemoveAll(x => keys.Contains(x.Key, comparer));
+            HasHeader = HeadersList.Count > 0;
+        }
+
         #endregion
 
         #region Create
