@@ -58,6 +58,12 @@ namespace Twino.MQ.Options
         public int ClientLimit { get; set; }
 
         /// <summary>
+        /// Waits in milliseconds after sending each message to it's consumers.
+        /// Zero is no delay.
+        /// </summary>
+        public int DelayBetweenMessages { get; set; }
+
+        /// <summary>
         /// Queue auto destroy options. Default value is NoMessagesAndConsumers.
         /// </summary>
         public QueueDestroy AutoDestroy { get; set; } = QueueDestroy.Disabled;
@@ -85,7 +91,8 @@ namespace Twino.MQ.Options
                        HideClientNames = options.HideClientNames,
                        UseMessageId = options.UseMessageId,
                        MessageLimit = options.MessageLimit,
-                       MessageSizeLimit = options.MessageSizeLimit
+                       MessageSizeLimit = options.MessageSizeLimit,
+                       DelayBetweenMessages = options.DelayBetweenMessages
                    };
         }
     }

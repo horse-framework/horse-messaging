@@ -19,7 +19,8 @@ namespace Twino.MQ.Data.Configuration
                        HideClientNames = configuration.HideClientNames,
                        MessageSizeLimit = configuration.MessageSizeLimit,
                        UseMessageId = configuration.UseMessageId,
-                       ClientLimit = configuration.ClientLimit
+                       ClientLimit = configuration.ClientLimit,
+                       DelayBetweenMessages = configuration.DelayBetweenMessages
                    };
         }
 
@@ -35,7 +36,8 @@ namespace Twino.MQ.Data.Configuration
                        HideClientNames = options.HideClientNames,
                        MessageSizeLimit = options.MessageSizeLimit,
                        UseMessageId = options.UseMessageId,
-                       ClientLimit = options.ClientLimit
+                       ClientLimit = options.ClientLimit,
+                       DelayBetweenMessages = options.DelayBetweenMessages
                    };
         }
 

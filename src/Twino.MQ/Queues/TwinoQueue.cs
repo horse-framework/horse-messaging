@@ -871,6 +871,9 @@ namespace Twino.MQ.Queues
                     {
                     }
                 }
+                
+                if (Options.DelayBetweenMessages > 0)
+                    await Task.Delay(Options.DelayBetweenMessages);
             }
         }
 
