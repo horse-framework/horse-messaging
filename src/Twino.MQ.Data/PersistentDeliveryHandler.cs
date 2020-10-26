@@ -11,10 +11,10 @@ namespace Twino.MQ.Data
     /// <summary>
     /// Delivery handler for persistent queues
     /// </summary>
-    public class PersistentDeliveryHandler : IMessageDeliveryHandler, IPersistentDeliveryHandler
+    public class PersistentDeliveryHandler : IPersistentDeliveryHandler
     {
         internal Database Database { get; set; }
-        
+
         /// <summary>
         /// Queue of the delivery handler
         /// </summary>
@@ -34,21 +34,23 @@ namespace Twino.MQ.Data
         /// Option when to delete messages from disk
         /// </summary>
         public DeleteWhen DeleteWhen { get; }
-        
+
         /// <summary>
         /// Option when to send acknowledge to producer
         /// </summary>
         public ProducerAckDecision ProducerAckDecision { get; }
 
         /// <summary>
-        /// Put back decision when a negative acknowledge received by consumer
+        /// Put back decision when a negative acknowledge received by consumer.
+        /// Default is End with no delay.
         /// </summary>
-        public PutBackDecision NegativeAckPutBack { get; set; }
+        public PutBackDecision NegativeAckPutBack { get; set; } = PutBackDecision.End;
 
         /// <summary>
-        /// Put back decision when acknowledge timed out
+        /// Put back decision when acknowledge timed out.
+        /// Default is End with no delay.
         /// </summary>
-        public PutBackDecision AckTimeoutPutBack { get; set; }
+        public PutBackDecision AckTimeoutPutBack { get; set; } = PutBackDecision.End;
 
         #region Init - Destroy
 
@@ -181,13 +183,14 @@ namespace Twino.MQ.Data
         {
             if (success && DeleteWhen == DeleteWhen.AfterAcknowledgeReceived)
                 await DeleteMessage(delivery.Message.Message.MessageId);
-            
-            if (ProducerAckDecision == ProducerAckDecision.AfterConsumerAckReceived)
-                return new Decision(true, false, PutBackDecision.No, success
-                                                                         ? DeliveryAcknowledgeDecision.Always
-                                                                         : DeliveryAcknowledgeDecision.Negative);
 
-            return Decision.JustAllow();
+            DeliveryAcknowledgeDecision ack = DeliveryAcknowledgeDecision.None;
+            if (ProducerAckDecision == ProducerAckDecision.AfterConsumerAckReceived)
+                ack = success ? DeliveryAcknowledgeDecision.Always : DeliveryAcknowledgeDecision.Negative;
+
+            PutBackDecision putBack = success ? PutBackDecision.No : NegativeAckPutBack;
+
+            return new Decision(true, false, putBack, ack);
         }
 
         /// <inheritdoc />
@@ -215,10 +218,11 @@ namespace Twino.MQ.Data
         /// <inheritdoc />
         public virtual Task<Decision> AcknowledgeTimedOut(TwinoQueue queue, MessageDelivery delivery)
         {
-            if (ProducerAckDecision == ProducerAckDecision.AfterConsumerAckReceived)
-                return Task.FromResult(new Decision(true, false, PutBackDecision.Start, DeliveryAcknowledgeDecision.Negative));
-
-            return Task.FromResult(new Decision(true, false, PutBackDecision.Start, DeliveryAcknowledgeDecision.None));
+            DeliveryAcknowledgeDecision ack = ProducerAckDecision == ProducerAckDecision.AfterConsumerAckReceived
+                                                  ? DeliveryAcknowledgeDecision.Negative
+                                                  : DeliveryAcknowledgeDecision.None;
+            
+            return Task.FromResult(new Decision(true, false, AckTimeoutPutBack, ack));
         }
 
         /// <inheritdoc />
