@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Twino.Protocols.TMQ;
 
@@ -27,13 +28,13 @@ namespace Twino.Client.TMQ.Internal
             try
             {
                 if (_consumer != null)
-                    await _consumer.Consume(message, t, client);
+                    await Consume(_consumer, message, t, client);
                 else if (_consumerFactoryCreator != null)
                 {
                     consumerFactory = _consumerFactoryCreator();
                     object consumerObject = await consumerFactory.CreateConsumer(_consumerType);
                     IQueueConsumer<TModel> consumer = (IQueueConsumer<TModel>) consumerObject;
-                    await consumer.Consume(message, t, client);
+                    await Consume(consumer, message, t, client);
                 }
                 else
                     throw new ArgumentNullException("There is no consumer defined");
@@ -54,6 +55,37 @@ namespace Twino.Client.TMQ.Internal
             {
                 if (consumerFactory != null)
                     consumerFactory.Consumed(exception);
+            }
+        }
+
+        private async Task Consume(IQueueConsumer<TModel> consumer, TwinoMessage message, TModel model, TmqClient client)
+        {
+            if (Retry == null)
+            {
+                await consumer.Consume(message, model, client);
+                return;
+            }
+
+            int count = Retry.Count == 0 ? 100 : Retry.Count;
+            for (int i = 0; i < count; i++)
+            {
+                try
+                {
+                    await consumer.Consume(message, model, client);
+                    return;
+                }
+                catch (Exception e)
+                {
+                    Type type = e.GetType();
+                    if (Retry.IgnoreExceptions != null && Retry.IgnoreExceptions.Length > 0)
+                    {
+                        if (Retry.IgnoreExceptions.Any(x => x.IsAssignableFrom(type)))
+                            throw;
+                    }
+
+                    if (Retry.DelayBetweenRetries > 0)
+                        await Task.Delay(Retry.DelayBetweenRetries);
+                }
             }
         }
     }
