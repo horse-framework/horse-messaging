@@ -312,6 +312,29 @@ namespace Twino.Protocols.TMQ
             AddHeader(key, value.ToString());
         }
 
+
+        /// <summary>
+        /// Adds new header key value pair
+        /// </summary>
+        public void SetOrAddHeader(string key, string value)
+        {
+            if (HeadersList == null)
+                HeadersList = new List<KeyValuePair<string, string>>();
+
+            for (int i = 0; i < HeadersList.Count; i++)
+            {
+                KeyValuePair<string, string> pair = HeadersList[i];
+                if (pair.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    HeadersList[i] = new KeyValuePair<string, string>(key, value);
+                    return;
+                }
+            }
+
+            HeadersList.Add(new KeyValuePair<string, string>(key, value));
+            HasHeader = true;
+        }
+
         /// <summary>
         /// Finds a header value by key
         /// </summary>

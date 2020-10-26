@@ -204,5 +204,10 @@ namespace Twino.Protocols.TMQ
         /// "Put-Back-Delay"
         /// </summary>
         public const string PUT_BACK_DELAY = "Put-Back-Delay";
+        
+        /// <summary>
+        /// "Delivery"
+        /// </summary>
+        public const string DELIVERY = "Delivery";
     }
 }

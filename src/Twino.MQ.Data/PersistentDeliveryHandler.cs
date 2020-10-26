@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
 using Twino.MQ.Data.Configuration;
@@ -52,6 +54,16 @@ namespace Twino.MQ.Data
         /// </summary>
         public PutBackDecision AckTimeoutPutBack { get; set; } = PutBackDecision.End;
 
+        /// <summary>
+        /// Redelivery service for the queue
+        /// </summary>
+        protected RedeliveryService RedeliveryService { get; private set; }
+
+        /// <summary>
+        /// True If redelivery is used for the queue
+        /// </summary>
+        public bool UseRedelivery { get; }
+
         #region Init - Destroy
 
         /// <summary>
@@ -60,12 +72,14 @@ namespace Twino.MQ.Data
         public PersistentDeliveryHandler(TwinoQueue queue,
                                          DatabaseOptions options,
                                          DeleteWhen deleteWhen,
-                                         ProducerAckDecision producerAckDecision)
+                                         ProducerAckDecision producerAckDecision,
+                                         bool useRedelivery = false)
         {
             Queue = queue;
             DeleteWhen = deleteWhen;
             ProducerAckDecision = producerAckDecision;
             Database = new Database(options);
+            UseRedelivery = useRedelivery;
         }
 
         /// <summary>
@@ -89,11 +103,33 @@ namespace Twino.MQ.Data
             await Database.Open();
             Queue.OnDestroyed += Destroy;
 
+            List<KeyValuePair<string, int>> deliveries = null;
+            if (UseRedelivery)
+            {
+                RedeliveryService = new RedeliveryService(Database.File.Filename + ".delivery");
+                await RedeliveryService.Load();
+                deliveries = RedeliveryService.GetDeliveries();
+            }
+
             var dict = await Database.List();
             if (dict.Count > 0)
             {
                 QueueFiller filler = new QueueFiller(Queue);
-                PushResult result = filler.FillMessage(dict.Values, true);
+                PushResult result = filler.FillMessage(dict.Values,
+                                                       true,
+                                                       qm =>
+                                                       {
+                                                           if (!UseRedelivery ||
+                                                               deliveries == null ||
+                                                               deliveries.Count == 0 ||
+                                                               string.IsNullOrEmpty(qm.Message.MessageId))
+                                                               return;
+
+                                                           var kv = deliveries.FirstOrDefault(x => x.Key == qm.Message.MessageId);
+                                                           if (kv.Value > 0)
+                                                               qm.DeliveryCount = kv.Value;
+                                                       });
+
                 if (result != PushResult.Success)
                     throw new InvalidOperationException($"Cannot fill messages into {Queue.Name} queue : {result}");
             }
@@ -104,6 +140,12 @@ namespace Twino.MQ.Data
         /// </summary>
         private async void Destroy(TwinoQueue queue)
         {
+            if (UseRedelivery)
+            {
+                await RedeliveryService.Close();
+                RedeliveryService.Delete();
+            }
+
             try
             {
                 ConfigurationFactory.Manager.Remove(queue);
@@ -143,9 +185,18 @@ namespace Twino.MQ.Data
         }
 
         /// <inheritdoc />
-        public virtual Task<Decision> BeginSend(TwinoQueue queue, QueueMessage message)
+        public virtual async Task<Decision> BeginSend(TwinoQueue queue, QueueMessage message)
         {
-            return Task.FromResult(new Decision(true, true, PutBackDecision.No, DeliveryAcknowledgeDecision.None));
+            if (UseRedelivery)
+            {
+                message.DeliveryCount++;
+                await RedeliveryService.Set(message.Message.MessageId, message.DeliveryCount);
+
+                if (message.DeliveryCount > 1)
+                    message.Message.SetOrAddHeader(TwinoHeaders.DELIVERY, message.DeliveryCount.ToString());
+            }
+
+            return new Decision(true, true, PutBackDecision.No, DeliveryAcknowledgeDecision.None);
         }
 
         /// <inheritdoc />
@@ -205,6 +256,9 @@ namespace Twino.MQ.Data
         /// </summary>
         protected virtual async Task DeleteMessage(string id)
         {
+            if (UseRedelivery)
+                await RedeliveryService.Remove(id);
+
             for (int i = 0; i < 3; i++)
             {
                 bool deleted = await Database.Delete(id);
@@ -221,7 +275,7 @@ namespace Twino.MQ.Data
             DeliveryAcknowledgeDecision ack = ProducerAckDecision == ProducerAckDecision.AfterConsumerAckReceived
                                                   ? DeliveryAcknowledgeDecision.Negative
                                                   : DeliveryAcknowledgeDecision.None;
-            
+
             return Task.FromResult(new Decision(true, false, AckTimeoutPutBack, ack));
         }
 

@@ -705,6 +705,7 @@ namespace Twino.MQ.Queues
                                           TwinoHeaders.QUEUE_STATUS,
                                           TwinoHeaders.QUEUE_TOPIC,
                                           TwinoHeaders.PUT_BACK_DELAY,
+                                          TwinoHeaders.DELIVERY,
                                           TwinoHeaders.CC);
 
             //prepare properties
