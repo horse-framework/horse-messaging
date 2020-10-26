@@ -194,11 +194,15 @@ namespace Twino.Protocols.TMQ
         /// "Queue-Topic"
         /// </summary>
         public const string QUEUE_TOPIC = "Queue-Topic";
-        
+
         /// <summary>
         /// "Filter"
         /// </summary>
         public const string FILTER = "Filter";
 
+        /// <summary>
+        /// "Put-Back-Delay"
+        /// </summary>
+        public const string PUT_BACK_DELAY = "Put-Back-Delay";
     }
 }

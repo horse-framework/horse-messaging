@@ -77,6 +77,11 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
         public int? DelayBetweenMessages { get; set; }
 
         /// <summary>
+        /// Put back delay in milliseconds
+        /// </summary>
+        public int? PutBackDelay { get; set; }
+
+        /// <summary>
         /// True if type has QueueNameAttribute
         /// </summary>
         public bool HasQueueName { get; set; }
@@ -166,6 +171,9 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
 
             if (DelayBetweenMessages.HasValue)
                 message.AddHeader(TwinoHeaders.DELAY_BETWEEN_MESSAGES, DelayBetweenMessages.Value.ToString());
+
+            if (PutBackDelay.HasValue)
+                message.AddHeader(TwinoHeaders.PUT_BACK_DELAY, PutBackDelay.Value.ToString());
 
             foreach (KeyValuePair<string, string> pair in Headers)
                 message.AddHeader(pair.Key, pair.Value);

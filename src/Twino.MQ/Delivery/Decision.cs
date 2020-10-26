@@ -24,21 +24,7 @@ namespace Twino.MQ.Delivery
         /// Message will be put back to the end of the queue.
         /// It will be consumed at last.
         /// </summary>
-        End,
-        
-        /// <summary>
-        /// Puts message to the beginning of the queue after a period of time.
-        /// Time is decided in queue options as PutBackDelay.
-        /// IT will be consumed at first.
-        /// </summary>
-        StartDelayed,
-        
-        /// <summary>
-        /// Puts message to the end of the queue after a period of time.
-        /// Time is decided in queue options as PutBackDelay.
-        /// It will be consumed at last.
-        /// </summary>
-        EndDelayed
+        End
     }
 
     /// <summary>

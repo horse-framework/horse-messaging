@@ -84,6 +84,10 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
             DelayBetweenMessagesAttribute delayAttr = type.GetCustomAttribute<DelayBetweenMessagesAttribute>(true);
             if (delayAttr != null)
                 descriptor.DelayBetweenMessages = delayAttr.Value;
+            
+            PutBackDelayAttribute putbackAttr = type.GetCustomAttribute<PutBackDelayAttribute>(true);
+            if (putbackAttr != null)
+                descriptor.PutBackDelay = putbackAttr.Value;
         }
 
         /// <summary>

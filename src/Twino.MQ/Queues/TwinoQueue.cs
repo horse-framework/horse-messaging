@@ -626,28 +626,36 @@ namespace Twino.MQ.Queues
 
         private void UpdateOptionsByMessage(TwinoMessage message)
         {
-            string waitForAck = message.FindHeader(TwinoHeaders.ACKNOWLEDGE);
-            if (!string.IsNullOrEmpty(waitForAck))
-                switch (waitForAck.Trim().ToLower())
+            if (!message.HasHeader)
+                return;
+
+            foreach (KeyValuePair<string, string> pair in message.Headers)
+            {
+                if (pair.Key.Equals(TwinoHeaders.ACKNOWLEDGE, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    case "none":
-                        Options.Acknowledge = QueueAckDecision.None;
-                        break;
-                    case "request":
-                        Options.Acknowledge = QueueAckDecision.JustRequest;
-                        break;
-                    case "wait":
-                        Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-                        break;
+                    switch (pair.Value.Trim().ToLower())
+                    {
+                        case "none":
+                            Options.Acknowledge = QueueAckDecision.None;
+                            break;
+                        case "request":
+                            Options.Acknowledge = QueueAckDecision.JustRequest;
+                            break;
+                        case "wait":
+                            Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                            break;
+                    }
                 }
 
-            string queueStatus = message.FindHeader(TwinoHeaders.QUEUE_STATUS);
-            if (queueStatus != null)
-            {
-                Options.Status = QueueStatusHelper.FindStatus(queueStatus);
-            }
+                else if (pair.Key.Equals(TwinoHeaders.QUEUE_STATUS, StringComparison.InvariantCultureIgnoreCase))
+                    Options.Status = QueueStatusHelper.FindStatus(pair.Value);
 
-            Topic = message.FindHeader(TwinoHeaders.QUEUE_TOPIC);
+                else if (pair.Key.Equals(TwinoHeaders.QUEUE_TOPIC, StringComparison.InvariantCultureIgnoreCase))
+                    Topic = pair.Value;
+
+                else if (pair.Key.Equals(TwinoHeaders.PUT_BACK_DELAY, StringComparison.InvariantCultureIgnoreCase))
+                    Options.PutBackDelay = Convert.ToInt32(pair.Value);
+            }
         }
 
         #endregion
@@ -696,6 +704,7 @@ namespace Twino.MQ.Queues
                                           TwinoHeaders.ACKNOWLEDGE,
                                           TwinoHeaders.QUEUE_STATUS,
                                           TwinoHeaders.QUEUE_TOPIC,
+                                          TwinoHeaders.PUT_BACK_DELAY,
                                           TwinoHeaders.CC);
 
             //prepare properties
@@ -968,41 +977,39 @@ namespace Twino.MQ.Queues
             switch (decision.PutBack)
             {
                 case PutBackDecision.Start:
-                    AddMessage(message, false);
-                    break;
-
-                case PutBackDecision.StartDelayed:
-                    _ = Task.Run(async () =>
-                    {
-                        try
+                    if (Options.PutBackDelay == 0)
+                        AddMessage(message, false);
+                    else
+                        _ = Task.Run(async () =>
                         {
-                            await Task.Delay(Options.PutBackDelay);
-                            AddMessage(message, false);
-                        }
-                        catch (Exception e)
-                        {
-                            Server.SendError("APPLY_DECISION", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
-                        }
-                    });
+                            try
+                            {
+                                await Task.Delay(Options.PutBackDelay);
+                                AddMessage(message, false);
+                            }
+                            catch (Exception e)
+                            {
+                                Server.SendError("DELAYED_PUT_BACK", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
+                            }
+                        });
                     break;
 
                 case PutBackDecision.End:
-                    AddMessage(message);
-                    break;
-
-                case PutBackDecision.EndDelayed:
-                    _ = Task.Run(async () =>
-                    {
-                        try
+                    if (Options.PutBackDelay == 0)
+                        AddMessage(message);
+                    else
+                        _ = Task.Run(async () =>
                         {
-                            await Task.Delay(Options.PutBackDelay);
-                            AddMessage(message);
-                        }
-                        catch (Exception e)
-                        {
-                            Server.SendError("APPLY_DECISION", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
-                        }
-                    });
+                            try
+                            {
+                                await Task.Delay(Options.PutBackDelay);
+                                AddMessage(message);
+                            }
+                            catch (Exception e)
+                            {
+                                Server.SendError("DELAYED_PUT_BACK", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
+                            }
+                        });
                     break;
             }
         }
