@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Test.Common.Handlers;
 using Twino.MQ;
+using Twino.MQ.Delivery;
 using Twino.MQ.Options;
 using Twino.MQ.Queues;
 using Twino.Server;
@@ -37,6 +38,8 @@ namespace Test.Common
         public int Port { get; private set; }
 
         public bool SendAcknowledgeFromMQ { get; set; }
+        
+        public PutBackDecision PutBack { get; set; }
 
 
         public async Task Initialize()

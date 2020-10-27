@@ -73,6 +73,13 @@ namespace Twino.MQ.Queues.States
             if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
                 await _queue.WaitForAcknowledge(message);
 
+            //return if client unsubsribes while waiting ack of previous message
+            if (!_queue.ClientsClone.Contains(receiver))
+            {
+                _queue.AddMessage(message, false);
+                return PushResult.NoConsumers;
+            }
+
             message.Decision = await _queue.DeliveryHandler.BeginSend(_queue, message);
             if (!await _queue.ApplyDecision(message.Decision, message))
                 return PushResult.Success;

@@ -807,7 +807,7 @@ namespace Twino.MQ.Queues
                 if (_triggering || !State.TriggerSupported)
                     return;
 
-                if (ClientsCount() == 0)
+                if (_clients.Count == 0)
                     return;
 
                 _triggering = true;
@@ -833,6 +833,9 @@ namespace Twino.MQ.Queues
         {
             while (State.TriggerSupported)
             {
+                if (_clients.Count == 0)
+                    return;
+
                 QueueMessage message;
 
                 if (high)
@@ -869,7 +872,7 @@ namespace Twino.MQ.Queues
                 try
                 {
                     PushResult pr = await State.Push(message);
-                    if (pr == PushResult.Empty || pr == PushResult.NoConsumers)
+                    if (pr == PushResult.NoConsumers || pr == PushResult.Empty)
                         return;
                 }
                 catch (Exception ex)
@@ -973,7 +976,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Executes put back decision for the message
         /// </summary>
-        private void ApplyPutBack(Decision decision, QueueMessage message)
+        internal void ApplyPutBack(Decision decision, QueueMessage message)
         {
             switch (decision.PutBack)
             {

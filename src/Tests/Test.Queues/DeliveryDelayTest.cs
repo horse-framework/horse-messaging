@@ -1,6 +1,6 @@
 namespace Test.Queues
 {
-    public class FillerTest
+    public class DeliveryDelayTest
     {
         
     }
