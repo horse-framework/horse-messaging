@@ -6,7 +6,7 @@ using Twino.Protocols.TMQ;
 
 namespace Test.Bus.Consumers
 {
-    [AutoNack(NackReason.Error)]
+    [AutoNack(NackReason.ExceptionMessage)]
     public class QueueConsumer2  : IQueueConsumer<Model2>
     {
         public int Count { get; private set; }

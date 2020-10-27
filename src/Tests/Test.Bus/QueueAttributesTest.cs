@@ -40,9 +40,31 @@ namespace Test.Bus
         }
         
         [Fact]
-        public void AutoNackWithPutBackDelay()
+        public async Task AutoNackWithPutBackDelay()
         {
-            throw new NotImplementedException();
+            Registrar registrar = new Registrar();
+            TestTwinoMQ server = new TestTwinoMQ();
+            server.SendAcknowledgeFromMQ = false;
+            await server.Initialize();
+            int port = server.Start(300, 300);
+
+            TmqStickyConnector producer = new TmqAbsoluteConnector(TimeSpan.FromSeconds(10));
+            producer.AddHost("tmq://localhost:" + port);
+            producer.Run();
+            
+            TmqStickyConnector consumer = new TmqAbsoluteConnector(TimeSpan.FromSeconds(10));
+            consumer.AddHost("tmq://localhost:" + port);
+            registrar.Register(consumer);
+            consumer.Run();
+            
+            await Task.Delay(500);
+            Assert.True(producer.IsConnected);
+            Assert.True(consumer.IsConnected);
+
+            Model2 model = new Model2();
+            TwinoResult push = await producer.Bus.Queue.PushJson(model, true);
+            Assert.Equal(TwinoResultCode.Failed, push.Code);
+            Assert.Equal(1, QueueConsumer2.Instance.Count);
         }
         
         [Fact]

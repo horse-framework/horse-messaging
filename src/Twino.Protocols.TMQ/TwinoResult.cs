@@ -48,7 +48,7 @@ namespace Twino.Protocols.TMQ
 		/// <summary>
 		/// Reason for unsuccessful results
 		/// </summary>
-		public string Reason { get; protected set; }
+		public string Reason { get; set; }
 
 		/// <summary>
 		/// Response message

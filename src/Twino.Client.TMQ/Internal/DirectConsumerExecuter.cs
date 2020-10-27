@@ -51,7 +51,6 @@ namespace Twino.Client.TMQ.Internal
 
                 await SendExceptions(client, e);
                 exception = e;
-                throw;
             }
             finally
             {

@@ -703,6 +703,10 @@ namespace Twino.Client.TMQ
 
                 TwinoResult result = new TwinoResult((TwinoResultCode) response.ContentType);
                 result.Message = response;
+
+                if (response.HasHeader && string.IsNullOrEmpty(result.Reason))
+                    result.Reason = response.FindHeader(TwinoHeaders.NEGATIVE_ACKNOWLEDGE_REASON);
+
                 return result;
             }
 
