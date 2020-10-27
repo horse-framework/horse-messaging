@@ -7,7 +7,9 @@ using Twino.Protocols.TMQ;
 
 namespace Test.Bus.Consumers
 {
-    [Retry(5, 50, typeof(NotImplementedException))]
+    [AutoAck]
+    [AutoNack]
+    [Retry(5, 50, typeof(InvalidCastException))]
     public class QueueConsumer5 : IQueueConsumer<Model5>
     {
         public int Count { get; private set; }

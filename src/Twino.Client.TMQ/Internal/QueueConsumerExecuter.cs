@@ -84,6 +84,9 @@ namespace Twino.Client.TMQ.Internal
 
                     if (Retry.DelayBetweenRetries > 0)
                         await Task.Delay(Retry.DelayBetweenRetries);
+
+                    if (i == count - 1)
+                        throw;
                 }
             }
         }

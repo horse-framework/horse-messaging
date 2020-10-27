@@ -7,6 +7,8 @@ using Twino.Protocols.TMQ;
 
 namespace Test.Bus.Consumers
 {
+    [AutoAck]
+    [AutoNack]
     [PushExceptions("ex-queue-1")]
     [PushExceptions(typeof(NotSupportedException), "ex-queue-2")]
     [PushExceptions(typeof(InvalidOperationException), "ex-queue-3")]
@@ -21,10 +23,17 @@ namespace Test.Bus.Consumers
             Instance = this;
         }
 
-        public async Task Consume(TwinoMessage message, Model3 model, TmqClient client)
+        public Task Consume(TwinoMessage message, Model3 model, TmqClient client)
         {
             Count++;
-            throw new NotImplementedException();
+
+            if (Count == 2)
+                throw new NotSupportedException();
+
+            if (Count == 3)
+                throw new InvalidOperationException();
+
+            throw new InvalidCastException();
         }
     }
 }
