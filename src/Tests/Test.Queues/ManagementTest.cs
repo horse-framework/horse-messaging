@@ -201,7 +201,7 @@ namespace Test.Queues
             int port = server.Start();
 
             TwinoQueue queue = server.Server.FindQueue("push-a");
-            queue.AddStringMessageWithId("Hello, World", false, false);
+            queue.AddStringMessageWithId("Hello, World");
             queue.AddStringMessageWithId("Hello, World", false, true);
 
             TmqClient client = new TmqClient();

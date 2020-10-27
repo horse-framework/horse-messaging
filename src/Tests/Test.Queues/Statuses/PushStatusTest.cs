@@ -135,14 +135,8 @@ namespace Test.Queues.Statuses
 
             int consumer1Msgs = 0;
             int consumer2Msgs = 0;
-            consumer1.MessageReceived += (c, m) =>
-            {
-                consumer1Msgs++;
-            };
-            consumer2.MessageReceived += (c, m) =>
-            {
-                consumer2Msgs++;
-            };
+            consumer1.MessageReceived += (c, m) => { consumer1Msgs++; };
+            consumer2.MessageReceived += (c, m) => { consumer2Msgs++; };
 
             TwinoResult joined1 = await consumer1.Queues.Subscribe("push-a", true);
             Assert.Equal(TwinoResultCode.Ok, joined1.Code);
@@ -160,14 +154,5 @@ namespace Test.Queues.Statuses
             Assert.Equal(1, consumer1Msgs);
             Assert.Equal(1, consumer2Msgs);
         }
-        
-        
-        
-        //push when there are multiple subscribers
-        //push when there is no subscriber
-        //request ack
-        //request and wait for ack
-        //ack timeout
-        //message timeout
     }
 }

@@ -1,7 +1,6 @@
 using System.Threading.Tasks;
 using Test.Common;
 using Twino.Client.TMQ;
-using Twino.MQ.Delivery;
 using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
 using Xunit;
