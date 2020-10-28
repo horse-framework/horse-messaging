@@ -57,7 +57,7 @@ namespace Twino.MQ.Data
         /// <summary>
         /// Redelivery service for the queue
         /// </summary>
-        protected RedeliveryService RedeliveryService { get; private set; }
+        public RedeliveryService RedeliveryService { get; private set; }
 
         /// <summary>
         /// True If redelivery is used for the queue
