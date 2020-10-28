@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
@@ -441,62 +439,6 @@ namespace Twino.MQ.Queues
         }
 
         /// <summary>
-        /// Adds new string message into the queue without Message Id and headers
-        /// </summary>
-        public void AddStringMessage(string messageContent)
-        {
-            AddStringMessage(null, messageContent);
-        }
-
-        /// <summary>
-        /// Adds new string message into the queue with Message Id and returns the Id
-        /// </summary>
-        public string AddStringMessageWithId(string messageContent,
-                                             bool firstAcquirer = false,
-                                             bool priority = false,
-                                             IEnumerable<KeyValuePair<string, string>> headers = null)
-
-        {
-            string messageId = Server.MessageIdGenerator.Create();
-            AddStringMessage(messageId, messageContent, firstAcquirer, priority, headers);
-            return messageId;
-        }
-
-        /// <summary>
-        /// Adds new string message into the queue
-        /// </summary>
-        public void AddStringMessage(string messageId,
-                                     string messageContent,
-                                     bool firstAcquirer = false,
-                                     bool priority = false,
-                                     IEnumerable<KeyValuePair<string, string>> headers = null)
-        {
-            AddBinaryMessage(messageId, Encoding.UTF8.GetBytes(messageContent), firstAcquirer, priority, headers);
-        }
-
-        /// <summary>
-        /// Adds new binary message into the queue
-        /// </summary>
-        public void AddBinaryMessage(string messageId,
-                                     byte[] messageContent,
-                                     bool firstAcquirer = false,
-                                     bool priority = false,
-                                     IEnumerable<KeyValuePair<string, string>> headers = null)
-        {
-            TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, Name);
-            message.SetMessageId(messageId);
-            message.Content = new MemoryStream(messageContent);
-            message.HighPriority = priority;
-
-            if (headers != null)
-                foreach (KeyValuePair<string, string> header in headers)
-                    message.AddHeader(header.Key, header.Value);
-
-            QueueMessage queueMessage = new QueueMessage(message);
-            AddMessage(queueMessage);
-        }
-
-        /// <summary>
         /// Adds message into the queue
         /// </summary>
         internal void AddMessage(QueueMessage message, bool toEnd = true)
@@ -662,6 +604,28 @@ namespace Twino.MQ.Queues
 
         #region Delivery
 
+        /// <summary>
+        /// Pushes new message into the queue
+        /// </summary>
+        public Task<PushResult> Push(string message, bool highPriority = false)
+        {
+            TwinoMessage msg = new TwinoMessage(MessageType.QueueMessage, Name);
+            msg.HighPriority = highPriority;
+            msg.SetStringContent(message);
+            return Push(msg);
+        }
+
+        /// <summary>
+        /// Pushes new message into the queue
+        /// </summary>
+        public Task<PushResult> Push(TwinoMessage message)
+        {
+            message.Type = MessageType.QueueMessage;
+            message.SetTarget(Name);
+            
+            return Push(new QueueMessage(message), null);
+        }
+        
         /// <summary>
         /// Pushes a message into the queue.
         /// </summary>

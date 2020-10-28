@@ -111,8 +111,8 @@ namespace Test.Queues.Statuses
             int port = server.Start();
 
             TwinoQueue queue = server.Server.FindQueue("pull-a");
-            queue.AddStringMessageWithId("First Message");
-            queue.AddStringMessageWithId("Second Message");
+            await queue.Push("First Message");
+            await queue.Push("Second Message");
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
@@ -154,7 +154,7 @@ namespace Test.Queues.Statuses
 
             TwinoQueue queue = server.Server.FindQueue("pull-a");
             for (int i = 0; i < 25; i++)
-                queue.AddStringMessageWithId("Hello, World");
+                await queue.Push("Hello, World");
 
             TmqClient client = new TmqClient();
             await client.ConnectAsync("tmq://localhost:" + port);
@@ -188,8 +188,8 @@ namespace Test.Queues.Statuses
             TwinoQueue queue = server.Server.FindQueue("pull-a");
             for (int i = 0; i < 5; i++)
             {
-                queue.AddStringMessageWithId("Hello, World");
-                queue.AddStringMessageWithId("Hello, World", false, true);
+                await queue.Push("Hello, World");
+                await queue.Push("Hello, World");
             }
 
             TmqClient client = new TmqClient();

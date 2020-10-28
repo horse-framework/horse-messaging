@@ -94,13 +94,15 @@ namespace Twino.MQ.Data
         /// <param name="builder">Delivery handler builder</param>
         /// <param name="deleteWhen">Decision when messages are deleted from disk</param>
         /// <param name="producerAckDecision">Decision when producer receives acknowledge</param>
+        /// <param name="useRedelivery">True if want to keep redelivery data and send to consumers with message headers</param>
         /// <returns></returns>
         public static async Task<IMessageDeliveryHandler> CreatePersistentDeliveryHandler(this DeliveryHandlerBuilder builder,
                                                                                           DeleteWhen deleteWhen,
-                                                                                          ProducerAckDecision producerAckDecision)
+                                                                                          ProducerAckDecision producerAckDecision,
+                                                                                          bool useRedelivery = false)
         {
             DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
-            PersistentDeliveryHandler handler = new PersistentDeliveryHandler(builder.Queue, databaseOptions, deleteWhen, producerAckDecision);
+            PersistentDeliveryHandler handler = new PersistentDeliveryHandler(builder.Queue, databaseOptions, deleteWhen, producerAckDecision, useRedelivery);
             await handler.Initialize();
             builder.OnAfterCompleted(AfterDeliveryHandlerCreated);
             return handler;

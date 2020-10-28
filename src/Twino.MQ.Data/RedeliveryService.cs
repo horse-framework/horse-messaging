@@ -117,12 +117,15 @@ namespace Twino.MQ.Data
         public async Task Save()
         {
             await using MemoryStream ms = new MemoryStream();
-            await using StreamWriter writer = new StreamWriter(ms, Encoding.ASCII);
 
             lock (_redeliveries)
             {
                 foreach (var pair in _redeliveries)
-                    writer.Write(pair.Key + "\t" + pair.Value + "\n");
+                {
+                    string line = pair.Key + "\t" + pair.Value + "\n";
+                    byte[] data = Encoding.ASCII.GetBytes(line);
+                    ms.Write(data);
+                }
             }
 
             ms.Position = 0;
