@@ -73,13 +73,17 @@ namespace Twino.MQ.Data
                                          DatabaseOptions options,
                                          DeleteWhen deleteWhen,
                                          ProducerAckDecision producerAckDecision,
-                                         bool useRedelivery = false)
+                                         bool useRedelivery = false,
+                                         string key = "default")
         {
             Queue = queue;
             DeleteWhen = deleteWhen;
             ProducerAckDecision = producerAckDecision;
             Database = new Database(options);
             UseRedelivery = useRedelivery;
+            Key = key;
+            if (string.IsNullOrEmpty(Key))
+                Key = "default";
         }
 
         /// <summary>

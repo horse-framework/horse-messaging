@@ -72,15 +72,22 @@ namespace Twino.MQ.Data
         /// <param name="builder">Twino MQ Builder</param>
         /// <param name="deleteWhen">Decision when messages are deleted from disk</param>
         /// <param name="producerAckDecision">Decision when producer receives acknowledge</param>
+        /// <param name="useRedelivery">True if want to keep redelivery data and send to consumers with message headers</param>
         /// <returns></returns>
         public static TwinoMqBuilder UsePersistentDeliveryHandler(this TwinoMqBuilder builder,
                                                                   DeleteWhen deleteWhen,
-                                                                  ProducerAckDecision producerAckDecision)
+                                                                  ProducerAckDecision producerAckDecision,
+                                                                  bool useRedelivery = false)
         {
             builder.Server.DeliveryHandlerFactory = async (dh) =>
             {
                 DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(dh.Queue);
-                PersistentDeliveryHandler handler = new PersistentDeliveryHandler(dh.Queue, databaseOptions, deleteWhen, producerAckDecision);
+                PersistentDeliveryHandler handler = new PersistentDeliveryHandler(dh.Queue, databaseOptions,
+                                                                                  deleteWhen,
+                                                                                  producerAckDecision,
+                                                                                  useRedelivery,
+                                                                                  dh.DeliveryHandlerHeader);
+
                 await handler.Initialize();
                 dh.OnAfterCompleted(AfterDeliveryHandlerCreated);
                 return handler;
@@ -95,14 +102,16 @@ namespace Twino.MQ.Data
         /// <param name="deleteWhen">Decision when messages are deleted from disk</param>
         /// <param name="producerAckDecision">Decision when producer receives acknowledge</param>
         /// <param name="useRedelivery">True if want to keep redelivery data and send to consumers with message headers</param>
+        /// <param name="key">Definition key for delivery handler. You can manage with that key, how the queue will be reloaded.</param>
         /// <returns></returns>
         public static async Task<IMessageDeliveryHandler> CreatePersistentDeliveryHandler(this DeliveryHandlerBuilder builder,
                                                                                           DeleteWhen deleteWhen,
                                                                                           ProducerAckDecision producerAckDecision,
-                                                                                          bool useRedelivery = false)
+                                                                                          bool useRedelivery = false,
+                                                                                          string key = "default")
         {
             DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
-            PersistentDeliveryHandler handler = new PersistentDeliveryHandler(builder.Queue, databaseOptions, deleteWhen, producerAckDecision, useRedelivery);
+            PersistentDeliveryHandler handler = new PersistentDeliveryHandler(builder.Queue, databaseOptions, deleteWhen, producerAckDecision, useRedelivery, key);
             await handler.Initialize();
             builder.OnAfterCompleted(AfterDeliveryHandlerCreated);
             return handler;
