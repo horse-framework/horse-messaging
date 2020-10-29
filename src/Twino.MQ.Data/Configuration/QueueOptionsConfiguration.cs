@@ -44,5 +44,13 @@ namespace Twino.MQ.Data.Configuration
         [JsonProperty("AutoDestroy")]
         [JsonPropertyName("AutoDestroy")]
         public string AutoDestroy { get; set; }
+
+        [JsonProperty("DelayBetweenMessages")]
+        [JsonPropertyName("DelayBetweenMessages")]
+        public int DelayBetweenMessages { get; set; }
+        
+        [JsonProperty("PutBackDelay")]
+        [JsonPropertyName("PutBackDelay")]
+        public int PutBackDelay { get; set; }
     }
 }

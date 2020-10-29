@@ -312,6 +312,29 @@ namespace Twino.Protocols.TMQ
             AddHeader(key, value.ToString());
         }
 
+
+        /// <summary>
+        /// Adds new header key value pair
+        /// </summary>
+        public void SetOrAddHeader(string key, string value)
+        {
+            if (HeadersList == null)
+                HeadersList = new List<KeyValuePair<string, string>>();
+
+            for (int i = 0; i < HeadersList.Count; i++)
+            {
+                KeyValuePair<string, string> pair = HeadersList[i];
+                if (pair.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    HeadersList[i] = new KeyValuePair<string, string>(key, value);
+                    return;
+                }
+            }
+
+            HeadersList.Add(new KeyValuePair<string, string>(key, value));
+            HasHeader = true;
+        }
+
         /// <summary>
         /// Finds a header value by key
         /// </summary>
@@ -322,6 +345,37 @@ namespace Twino.Protocols.TMQ
 
             KeyValuePair<string, string> pair = HeadersList.FirstOrDefault(x => x.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase));
             return pair.Value;
+        }
+
+        /// <summary>
+        /// Removes a header from header list
+        /// </summary>
+        public void RemoveHeader(KeyValuePair<string, string> item)
+        {
+            HeadersList.Remove(item);
+            HasHeader = HeadersList.Count > 0;
+        }
+
+        /// <summary>
+        /// Removes a header by key
+        /// </summary>
+        public void RemoveHeader(string key)
+        {
+            HeadersList.RemoveAll(x => x.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase));
+            HasHeader = HeadersList.Count > 0;
+        }
+
+        /// <summary>
+        /// Removes a header by key
+        /// </summary>
+        public void RemoveHeaders(params string[] keys)
+        {
+            if (HeadersList == null || HeadersList.Count == 0)
+                return;
+
+            StringComparer comparer = StringComparer.InvariantCultureIgnoreCase;
+            HeadersList.RemoveAll(x => keys.Contains(x.Key, comparer));
+            HasHeader = HeadersList.Count > 0;
         }
 
         #endregion

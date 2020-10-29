@@ -170,5 +170,13 @@ namespace Twino.Protocols.TMQ.Models
         [JsonProperty("MessageSizeLimit")]
         [JsonPropertyName("MessageSizeLimit")]
         public ulong MessageSizeLimit { get; set; }
+        
+        /// <summary>
+        /// Delay in milliseconds between messages
+        /// </summary>
+        [JsonProperty("DelayBetweenMessages")]
+        [JsonPropertyName("DelayBetweenMessages")]
+        public int DelayBetweenMessages { get; set; }
+
     }
 }

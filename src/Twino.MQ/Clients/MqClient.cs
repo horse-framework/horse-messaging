@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Twino.Core;
 using Twino.Protocols.TMQ;
+
+[assembly:InternalsVisibleTo("Twino.MQ.WebSocket.Server")]
 
 namespace Twino.MQ.Clients
 {

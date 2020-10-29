@@ -226,7 +226,7 @@ namespace Twino.MQ.Queues
         /// <summary>
         /// Fills TMQ Message objects to the queue
         /// </summary>
-        public PushResult FillMessage(IEnumerable<TwinoMessage> messages, bool isSaved)
+        public PushResult FillMessage(IEnumerable<TwinoMessage> messages, bool isSaved, Action<QueueMessage> actionPerMessage = null)
         {
             try
             {
@@ -254,6 +254,9 @@ namespace Twino.MQ.Queues
                     else
                         lock (_queue.MessagesList)
                             _queue.MessagesList.AddLast(qm);
+
+                    if (actionPerMessage != null)
+                        actionPerMessage(qm);
                 }
 
                 _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);

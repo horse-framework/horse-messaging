@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Twino.MQ.Delivery;
 using Twino.MQ.Handlers;
 using Twino.MQ.Network;
 using Twino.MQ.Options;
@@ -307,9 +308,12 @@ namespace Twino.MQ
         /// <summary>
         /// Implements non-durable basic delivery handler with ack
         /// </summary>
-        public static TwinoMqBuilder UseSendAckDeliveryHandler(this TwinoMqBuilder builder, AcknowledgeWhen acknowledgeWhen)
+        /// <param name="builder">Twino MQ Builder</param>
+        /// <param name="producerAck">Decision, when producer will receive acknowledge (or confirm)</param>
+        /// <param name="consumerAckFail">Decision, what will be done if consumer sends nack or doesn't send ack in time</param>
+        public static TwinoMqBuilder UseAckDeliveryHandler(this TwinoMqBuilder builder, AcknowledgeWhen producerAck, PutBackDecision consumerAckFail)
         {
-            builder.Server.DeliveryHandlerFactory = d => Task.FromResult<IMessageDeliveryHandler>(new SendAckDeliveryHandler(acknowledgeWhen));
+            builder.Server.DeliveryHandlerFactory = d => Task.FromResult<IMessageDeliveryHandler>(new AckDeliveryHandler(producerAck, consumerAckFail));
             return builder;
         }
 

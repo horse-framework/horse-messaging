@@ -72,6 +72,12 @@ namespace Twino.MQ.Queues
         public object Payload { get; set; }
 
         /// <summary>
+        /// Delivery count for the message.
+        /// The value tells how many times message is proceed to send (multiple consumers are counted 1)
+        /// </summary>
+        public int DeliveryCount { get; internal set; }
+        
+        /// <summary>
         /// Creates new QueueMessage from TmqMessage with save status
         /// </summary>
         public QueueMessage(TwinoMessage message, bool isSaved = false)

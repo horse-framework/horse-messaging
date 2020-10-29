@@ -460,7 +460,8 @@ namespace Twino.MQ.Network
                              LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
                              LastMessageSent = queue.Info.GetLastMessageSendUnix(),
                              MessageLimit = queue.Options.MessageLimit,
-                             MessageSizeLimit = queue.Options.MessageSizeLimit
+                             MessageSizeLimit = queue.Options.MessageSizeLimit,
+                             DelayBetweenMessages = queue.Options.DelayBetweenMessages
                          });
             }
 
