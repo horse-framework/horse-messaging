@@ -6,9 +6,9 @@
         <Product>Twino.Client.TMQ</Product>
         <Description>Twino Messaging Queue Client to connect all TMQ Servers</Description>
         <PackageTags>twino,tmq,client,mq,messaging,queue</PackageTags>
-        <AssemblyVersion>4.0.7</AssemblyVersion>
-        <FileVersion>4.0.7</FileVersion>
-        <PackageVersion>4.0.7</PackageVersion>
+        <AssemblyVersion>4.1.0</AssemblyVersion>
+        <FileVersion>4.1.0</FileVersion>
+        <PackageVersion>4.1.0</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/twino-framework/twino-mq</PackageProjectUrl>
