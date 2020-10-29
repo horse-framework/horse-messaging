@@ -17,13 +17,11 @@ namespace RoutingSample.Producer
 			connector.ContentSerializer = new NewtonsoftContentSerializer();
 			connector.Run();
 
-			ITwinoQueueBus queueBus = connector.Bus.Queue;
 			ITwinoRouteBus routeBus = connector.Bus.Route;
 
 			while (true)
 			{
 				TwinoResult result = await routeBus.PublishJson(new SampleMessage());
-				// TwinoResult result = await queueBus.PushJson(new SampleMessage());
 				Console.WriteLine($"Push: {result.Code}");
 				await Task.Delay(5000);
 			}
