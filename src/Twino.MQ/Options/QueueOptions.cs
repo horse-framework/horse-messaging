@@ -10,9 +10,9 @@ namespace Twino.MQ.Options
     public class QueueOptions
     {
         /// <summary>
-        /// Acknowledge decision. Default is wait for acknowledge.
+        /// Acknowledge decision. Default is just request.
         /// </summary>
-        public QueueAckDecision Acknowledge { get; set; } = QueueAckDecision.None;
+        public QueueAckDecision Acknowledge { get; set; } = QueueAckDecision.JustRequest;
 
         /// <summary>
         /// When acknowledge is required, maximum duration for waiting acknowledge message
