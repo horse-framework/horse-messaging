@@ -18,8 +18,8 @@ namespace RoutingSample.Server
 									   .Build();
 
 			var sampleMessageRouter = mq.AddRouter("SAMPLE-MESSAGE-ROUTER", RouteMethod.Distribute);
-			var sampleMessageQueueBinding = new QueueBinding("sample-message-queue-binding", "SAMPLE-MESSAGE-QUEUE", 1, BindingInteraction.None);
-			var sampleMessageDirectBinding = new DirectBinding("sample-message-direct-binding", "@type:SAMPLE-MESSAGE-CONSUMER", 2, BindingInteraction.None);
+			var sampleMessageQueueBinding = new QueueBinding("sample-message-queue-binding", "SAMPLE-MESSAGE-QUEUE", 1, BindingInteraction.Response);
+			var sampleMessageDirectBinding = new DirectBinding("sample-message-direct-binding", "@type:SAMPLE-MESSAGE-CONSUMER", 2, BindingInteraction.None, RouteMethod.RoundRobin);
 			sampleMessageRouter.AddBinding(sampleMessageQueueBinding);
 			sampleMessageRouter.AddBinding(sampleMessageDirectBinding);
 

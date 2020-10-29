@@ -43,9 +43,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoutingSample.Server", "Sam
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoutingSample.Producer", "Samples\RoutingSample.Producer\RoutingSample.Producer.csproj", "{8B240E96-90B2-4072-A147-6BCB89320791}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoutingSample.Consumer", "Samples\RoutingSample.Consumer\RoutingSample.Consumer.csproj", "{C1E3CFEB-6CB2-4863-A8F0-9AE7914D6BEC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoutingSample.QueueConsumer", "Samples\RoutingSample.QueueConsumer\RoutingSample.QueueConsumer.csproj", "{C1E3CFEB-6CB2-4863-A8F0-9AE7914D6BEC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoutingSample.Models", "Samples\RoutingSample.Models\RoutingSample.Models.csproj", "{7658B4DD-59EC-4523-91A9-E068FB27D9E3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoutingSample.DirectConsumer", "Samples\RoutingSample.DirectConsumer\RoutingSample.DirectConsumer.csproj", "{487749A5-5EA9-4F3B-8F67-3ACD8C5C060A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -129,6 +131,10 @@ Global
 		{7658B4DD-59EC-4523-91A9-E068FB27D9E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7658B4DD-59EC-4523-91A9-E068FB27D9E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7658B4DD-59EC-4523-91A9-E068FB27D9E3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{487749A5-5EA9-4F3B-8F67-3ACD8C5C060A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{487749A5-5EA9-4F3B-8F67-3ACD8C5C060A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{487749A5-5EA9-4F3B-8F67-3ACD8C5C060A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{487749A5-5EA9-4F3B-8F67-3ACD8C5C060A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -150,6 +156,7 @@ Global
 		{8B240E96-90B2-4072-A147-6BCB89320791} = {430E6567-B8CF-4667-8837-1F277720266C}
 		{C1E3CFEB-6CB2-4863-A8F0-9AE7914D6BEC} = {430E6567-B8CF-4667-8837-1F277720266C}
 		{7658B4DD-59EC-4523-91A9-E068FB27D9E3} = {430E6567-B8CF-4667-8837-1F277720266C}
+		{487749A5-5EA9-4F3B-8F67-3ACD8C5C060A} = {430E6567-B8CF-4667-8837-1F277720266C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A73712E1-2BB7-4F7D-852F-ED8FE4ABA180}
