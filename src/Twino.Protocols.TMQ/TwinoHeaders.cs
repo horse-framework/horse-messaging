@@ -71,6 +71,11 @@ namespace Twino.Protocols.TMQ
         public const string CC = "CC";
 
         /// <summary>
+        /// "Delay-In"
+        /// </summary>
+        public const string DELAY_BETWEEN_MESSAGES = "Delay-In";
+
+        /// <summary>
         /// "Request-Id"
         /// </summary>
         public const string REQUEST_ID = "Request-Id";
@@ -189,11 +194,20 @@ namespace Twino.Protocols.TMQ
         /// "Queue-Topic"
         /// </summary>
         public const string QUEUE_TOPIC = "Queue-Topic";
-        
+
         /// <summary>
         /// "Filter"
         /// </summary>
         public const string FILTER = "Filter";
 
+        /// <summary>
+        /// "Put-Back-Delay"
+        /// </summary>
+        public const string PUT_BACK_DELAY = "Put-Back-Delay";
+        
+        /// <summary>
+        /// "Delivery"
+        /// </summary>
+        public const string DELIVERY = "Delivery";
     }
 }

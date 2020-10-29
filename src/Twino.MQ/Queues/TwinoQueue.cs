@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Twino.MQ.Clients;
@@ -441,62 +439,6 @@ namespace Twino.MQ.Queues
         }
 
         /// <summary>
-        /// Adds new string message into the queue without Message Id and headers
-        /// </summary>
-        public void AddStringMessage(string messageContent)
-        {
-            AddStringMessage(null, messageContent);
-        }
-
-        /// <summary>
-        /// Adds new string message into the queue with Message Id and returns the Id
-        /// </summary>
-        public string AddStringMessageWithId(string messageContent,
-                                             bool firstAcquirer = false,
-                                             bool priority = false,
-                                             IEnumerable<KeyValuePair<string, string>> headers = null)
-
-        {
-            string messageId = Server.MessageIdGenerator.Create();
-            AddStringMessage(messageId, messageContent, firstAcquirer, priority, headers);
-            return messageId;
-        }
-
-        /// <summary>
-        /// Adds new string message into the queue
-        /// </summary>
-        public void AddStringMessage(string messageId,
-                                     string messageContent,
-                                     bool firstAcquirer = false,
-                                     bool priority = false,
-                                     IEnumerable<KeyValuePair<string, string>> headers = null)
-        {
-            AddBinaryMessage(messageId, Encoding.UTF8.GetBytes(messageContent), firstAcquirer, priority, headers);
-        }
-
-        /// <summary>
-        /// Adds new binary message into the queue
-        /// </summary>
-        public void AddBinaryMessage(string messageId,
-                                     byte[] messageContent,
-                                     bool firstAcquirer = false,
-                                     bool priority = false,
-                                     IEnumerable<KeyValuePair<string, string>> headers = null)
-        {
-            TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, Name);
-            message.SetMessageId(messageId);
-            message.Content = new MemoryStream(messageContent);
-            message.HighPriority = priority;
-
-            if (headers != null)
-                foreach (KeyValuePair<string, string> header in headers)
-                    message.AddHeader(header.Key, header.Value);
-
-            QueueMessage queueMessage = new QueueMessage(message);
-            AddMessage(queueMessage);
-        }
-
-        /// <summary>
         /// Adds message into the queue
         /// </summary>
         internal void AddMessage(QueueMessage message, bool toEnd = true)
@@ -626,32 +568,64 @@ namespace Twino.MQ.Queues
 
         private void UpdateOptionsByMessage(TwinoMessage message)
         {
-            string waitForAck = message.FindHeader(TwinoHeaders.ACKNOWLEDGE);
-            if (!string.IsNullOrEmpty(waitForAck))
-                switch (waitForAck.Trim().ToLower())
+            if (!message.HasHeader)
+                return;
+
+            foreach (KeyValuePair<string, string> pair in message.Headers)
+            {
+                if (pair.Key.Equals(TwinoHeaders.ACKNOWLEDGE, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    case "none":
-                        Options.Acknowledge = QueueAckDecision.None;
-                        break;
-                    case "request":
-                        Options.Acknowledge = QueueAckDecision.JustRequest;
-                        break;
-                    case "wait":
-                        Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-                        break;
+                    switch (pair.Value.Trim().ToLower())
+                    {
+                        case "none":
+                            Options.Acknowledge = QueueAckDecision.None;
+                            break;
+                        case "request":
+                            Options.Acknowledge = QueueAckDecision.JustRequest;
+                            break;
+                        case "wait":
+                            Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                            break;
+                    }
                 }
 
-            string queueStatus = message.FindHeader(TwinoHeaders.QUEUE_STATUS);
-            if (queueStatus != null)
-                Options.Status = QueueStatusHelper.FindStatus(queueStatus);
+                else if (pair.Key.Equals(TwinoHeaders.QUEUE_STATUS, StringComparison.InvariantCultureIgnoreCase))
+                    Options.Status = QueueStatusHelper.FindStatus(pair.Value);
 
-            Topic = message.FindHeader(TwinoHeaders.QUEUE_TOPIC);
+                else if (pair.Key.Equals(TwinoHeaders.QUEUE_TOPIC, StringComparison.InvariantCultureIgnoreCase))
+                    Topic = pair.Value;
+
+                else if (pair.Key.Equals(TwinoHeaders.PUT_BACK_DELAY, StringComparison.InvariantCultureIgnoreCase))
+                    Options.PutBackDelay = Convert.ToInt32(pair.Value);
+            }
         }
 
         #endregion
 
         #region Delivery
 
+        /// <summary>
+        /// Pushes new message into the queue
+        /// </summary>
+        public Task<PushResult> Push(string message, bool highPriority = false)
+        {
+            TwinoMessage msg = new TwinoMessage(MessageType.QueueMessage, Name);
+            msg.HighPriority = highPriority;
+            msg.SetStringContent(message);
+            return Push(msg);
+        }
+
+        /// <summary>
+        /// Pushes new message into the queue
+        /// </summary>
+        public Task<PushResult> Push(TwinoMessage message)
+        {
+            message.Type = MessageType.QueueMessage;
+            message.SetTarget(Name);
+            
+            return Push(new QueueMessage(message), null);
+        }
+        
         /// <summary>
         /// Pushes a message into the queue.
         /// </summary>
@@ -688,6 +662,15 @@ namespace Twino.MQ.Queues
 
             if (Options.MessageSizeLimit > 0 && message.Message.Length > Options.MessageSizeLimit)
                 return PushResult.LimitExceeded;
+
+            //remove operational headers that are should not be sent to consumers or saved to disk
+            message.Message.RemoveHeaders(TwinoHeaders.DELAY_BETWEEN_MESSAGES,
+                                          TwinoHeaders.ACKNOWLEDGE,
+                                          TwinoHeaders.QUEUE_STATUS,
+                                          TwinoHeaders.QUEUE_TOPIC,
+                                          TwinoHeaders.PUT_BACK_DELAY,
+                                          TwinoHeaders.DELIVERY,
+                                          TwinoHeaders.CC);
 
             //prepare properties
             message.Message.WaitResponse = Options.Acknowledge != QueueAckDecision.None;
@@ -788,7 +771,7 @@ namespace Twino.MQ.Queues
                 if (_triggering || !State.TriggerSupported)
                     return;
 
-                if (ClientsCount() == 0)
+                if (_clients.Count == 0)
                     return;
 
                 _triggering = true;
@@ -814,6 +797,9 @@ namespace Twino.MQ.Queues
         {
             while (State.TriggerSupported)
             {
+                if (_clients.Count == 0)
+                    return;
+
                 QueueMessage message;
 
                 if (high)
@@ -850,7 +836,7 @@ namespace Twino.MQ.Queues
                 try
                 {
                     PushResult pr = await State.Push(message);
-                    if (pr == PushResult.Empty || pr == PushResult.NoConsumers)
+                    if (pr == PushResult.NoConsumers || pr == PushResult.Empty)
                         return;
                 }
                 catch (Exception ex)
@@ -866,6 +852,9 @@ namespace Twino.MQ.Queues
                     {
                     }
                 }
+
+                if (Options.DelayBetweenMessages > 0)
+                    await Task.Delay(Options.DelayBetweenMessages);
             }
         }
 
@@ -932,11 +921,8 @@ namespace Twino.MQ.Queues
                         await decision.AcknowledgeDelivery(message, message.Source, false);
                 }
 
-                if (decision.PutBack == PutBackDecision.Start)
-                    AddMessage(message, false);
-                else if (decision.PutBack == PutBackDecision.End)
-                    AddMessage(message);
-
+                if (decision.PutBack != PutBackDecision.No)
+                    ApplyPutBack(decision, message);
                 else if (!decision.Allow)
                 {
                     Info.AddMessageRemove();
@@ -949,6 +935,51 @@ namespace Twino.MQ.Queues
             }
 
             return decision.Allow;
+        }
+
+        /// <summary>
+        /// Executes put back decision for the message
+        /// </summary>
+        internal void ApplyPutBack(Decision decision, QueueMessage message)
+        {
+            switch (decision.PutBack)
+            {
+                case PutBackDecision.Start:
+                    if (Options.PutBackDelay == 0)
+                        AddMessage(message, false);
+                    else
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await Task.Delay(Options.PutBackDelay);
+                                AddMessage(message, false);
+                            }
+                            catch (Exception e)
+                            {
+                                Server.SendError("DELAYED_PUT_BACK", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
+                            }
+                        });
+                    break;
+
+                case PutBackDecision.End:
+                    if (Options.PutBackDelay == 0)
+                        AddMessage(message);
+                    else
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await Task.Delay(Options.PutBackDelay);
+                                AddMessage(message);
+                            }
+                            catch (Exception e)
+                            {
+                                Server.SendError("DELAYED_PUT_BACK", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
+                            }
+                        });
+                    break;
+            }
         }
 
         /// <summary>

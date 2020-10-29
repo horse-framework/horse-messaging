@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Twino.Protocols.TMQ;
 
@@ -42,7 +43,7 @@ namespace Twino.Client.TMQ.Internal
 
                 try
                 {
-                    TResponse responseModel = await handler.Handle(requestModel, message, client);
+                    TResponse responseModel = await Handle(handler, requestModel, message, client);
                     TwinoResultCode code = responseModel is null ? TwinoResultCode.NoContent : TwinoResultCode.Ok;
                     TwinoMessage responseMessage = message.CreateResponse(code);
 
@@ -85,13 +86,41 @@ namespace Twino.Client.TMQ.Internal
 
                 await SendExceptions(client, e);
                 exception = e;
-                throw;
             }
             finally
             {
                 if (consumerFactory != null)
                     consumerFactory.Consumed(exception);
             }
+        }
+
+        private async Task<TResponse> Handle(ITwinoRequestHandler<TRequest, TResponse> handler, TRequest request, TwinoMessage message, TmqClient client)
+        {
+            if (Retry == null)
+                return await handler.Handle(request, message, client);
+
+            int count = Retry.Count == 0 ? 100 : Retry.Count;
+            for (int i = 0; i < count; i++)
+            {
+                try
+                {
+                    return await handler.Handle(request, message, client);
+                }
+                catch (Exception e)
+                {
+                    Type type = e.GetType();
+                    if (Retry.IgnoreExceptions != null && Retry.IgnoreExceptions.Length > 0)
+                    {
+                        if (Retry.IgnoreExceptions.Any(x => x.IsAssignableFrom(type)))
+                            throw;
+                    }
+
+                    if (Retry.DelayBetweenRetries > 0)
+                        await Task.Delay(Retry.DelayBetweenRetries);
+                }
+            }
+
+            throw new OperationCanceledException("Reached to maximum retry count and execution could not be completed");
         }
     }
 }

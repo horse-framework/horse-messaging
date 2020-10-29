@@ -21,7 +21,7 @@ namespace Twino.MQ.Delivery
         Start,
 
         /// <summary>
-        /// Message will be put back to the beginning of the queue.
+        /// Message will be put back to the end of the queue.
         /// It will be consumed at last.
         /// </summary>
         End

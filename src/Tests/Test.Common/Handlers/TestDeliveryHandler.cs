@@ -59,6 +59,10 @@ namespace Test.Common.Handlers
         public Task<Decision> AcknowledgeReceived(TwinoQueue queue, TwinoMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
             _mq.OnAcknowledge++;
+
+            if (!success)
+                return Task.FromResult(new Decision(true, false, _mq.PutBack, DeliveryAcknowledgeDecision.Always));
+            
             return Task.FromResult(new Decision(true, false, PutBackDecision.No, DeliveryAcknowledgeDecision.Always));
         }
 
@@ -71,7 +75,7 @@ namespace Test.Common.Handlers
         public Task<Decision> AcknowledgeTimedOut(TwinoQueue queue, MessageDelivery delivery)
         {
             _mq.OnAcknowledgeTimeUp++;
-            return Task.FromResult(new Decision(true, false));
+            return Task.FromResult(new Decision(true, false, _mq.PutBack, DeliveryAcknowledgeDecision.None));
         }
 
         public Task MessageDequeued(TwinoQueue queue, QueueMessage message)

@@ -57,6 +57,10 @@ namespace Twino.MQ.Queues.States
             if (_queue.Options.Acknowledge != QueueAckDecision.None)
                 ackDeadline = DateTime.UtcNow.Add(_queue.Options.AcknowledgeTimeout);
 
+            //if to process next message is requires previous message acknowledge, wait here
+            if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
+                await _queue.WaitForAcknowledge(message);
+
             //if there are not receivers, complete send operation
             List<QueueClient> clients = _queue.ClientsClone;
             if (clients.Count == 0)
@@ -64,10 +68,6 @@ namespace Twino.MQ.Queues.States
                 _queue.AddMessage(message, false);
                 return PushResult.NoConsumers;
             }
-
-            //if to process next message is requires previous message acknowledge, wait here
-            if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
-                await _queue.WaitForAcknowledge(message);
 
             message.Decision = await _queue.DeliveryHandler.BeginSend(_queue, message);
             if (!await _queue.ApplyDecision(message.Decision, message))

@@ -6,6 +6,11 @@ namespace Twino.Protocols.TMQ
     public class KnownContentTypes
     {
         /// <summary>
+        /// "500" Process failed
+        /// </summary>
+        public const ushort Failed = 1;
+
+        /// <summary>
         /// "101" After procotol handshake completed, first message is the hello message 
         /// </summary>
         public const ushort Hello = 101;
@@ -49,11 +54,6 @@ namespace Twino.Protocols.TMQ
         /// "482" Limit exceeded, such as, maximum queue limit of the server
         /// </summary>
         public const ushort LimitExceeded = 482;
-
-        /// <summary>
-        /// "500" Process failed
-        /// </summary>
-        public const ushort Failed = 500;
 
         /// <summary>
         /// "503" Server is too busy to handle the message
