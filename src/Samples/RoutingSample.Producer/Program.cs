@@ -18,10 +18,11 @@ namespace RoutingSample.Producer
 			connector.Run();
 
 			ITwinoRouteBus routeBus = connector.Bus.Route;
+			ITwinoDirectBus directBus = connector.Bus.Direct;
 
 			while (true)
 			{
-				TwinoResult result = await routeBus.PublishJson(new SampleMessage());
+				TwinoResult result = await routeBus.PublishJson(new SampleMessage(), true);
 				Console.WriteLine($"Push: {result.Code}");
 				await Task.Delay(5000);
 			}
