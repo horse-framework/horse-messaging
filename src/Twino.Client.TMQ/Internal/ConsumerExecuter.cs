@@ -9,15 +9,23 @@ namespace Twino.Client.TMQ.Internal
 {
     internal abstract class ConsumerExecuter
     {
+        #region Properties
+
         protected bool SendAck { get; private set; }
         protected bool SendNack { get; private set; }
         protected NackReason NackReason { get; private set; }
+
+        protected RetryAttribute Retry { get; private set; }
 
         protected string DefaultPushException { get; private set; }
         protected List<Tuple<Type, string>> PushExceptions { get; private set; }
 
         protected KeyValuePair<string, ushort> DefaultPublishException { get; private set; }
         protected List<Tuple<Type, KeyValuePair<string, ushort>>> PublishExceptions { get; private set; }
+
+        #endregion
+
+        #region Actions
 
         public abstract Task Execute(TmqClient client, TwinoMessage message, object model);
 
@@ -29,6 +37,8 @@ namespace Twino.Client.TMQ.Internal
             AutoNackAttribute nackAttribute = type.GetCustomAttribute<AutoNackAttribute>();
             SendNack = nackAttribute != null;
             NackReason = nackAttribute != null ? nackAttribute.Reason : NackReason.None;
+
+            Retry = type.GetCustomAttribute<RetryAttribute>();
 
             PushExceptions = new List<Tuple<Type, string>>();
             IEnumerable<PushExceptionsAttribute> pushAttributes = type.GetCustomAttributes<PushExceptionsAttribute>(true);
@@ -117,5 +127,7 @@ namespace Twino.Client.TMQ.Internal
             if (!publishFound && !string.IsNullOrEmpty(DefaultPublishException.Key))
                 await client.Routers.Publish(DefaultPublishException.Key, serialized, false, DefaultPublishException.Value);
         }
+
+        #endregion
     }
 }

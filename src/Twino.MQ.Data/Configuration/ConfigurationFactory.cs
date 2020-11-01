@@ -1,5 +1,7 @@
 using System;
-using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
+
+[assembly:InternalsVisibleTo("Test.Persistency")]
 
 namespace Twino.MQ.Data.Configuration
 {
@@ -31,6 +33,16 @@ namespace Twino.MQ.Data.Configuration
             Builder = builder;
             Manager = new DataConfigurationManager();
             Configuration = Manager.Load(builder.ConfigFile);
+        }
+
+        /// <summary>
+        /// Destroys configuration factory options
+        /// </summary>
+        internal static void Destroy()
+        {
+            Builder = null;
+            Manager = null;
+            Configuration = null;
         }
     }
 }

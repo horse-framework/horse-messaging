@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Test.Common;
 using Twino.Client.TMQ;
+using Twino.MQ.Delivery;
 using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;
 using Xunit;
@@ -113,6 +114,84 @@ namespace Test.Queues.Statuses
 
             TwinoResult ack = await producer.Queues.Push("rr-a", "Hello, World!", true);
             Assert.Equal(queueAckIsActive, ack.Code == TwinoResultCode.Ok);
+        }
+
+        [Fact]
+        public async Task WaitForAcknowledge()
+        {
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
+            int port = server.Start(300, 300);
+
+            TwinoQueue queue = server.Server.FindQueue("rr-a");
+            Assert.NotNull(queue);
+            queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
+            queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+
+            TmqClient producer = new TmqClient();
+            await producer.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(producer.IsConnected);
+
+            int received = 0;
+            TmqClient consumer = new TmqClient();
+            consumer.ResponseTimeout = TimeSpan.FromSeconds(4);
+            consumer.ClientId = "consumer";
+            consumer.MessageReceived += async (client, message) =>
+            {
+                received++;
+                await Task.Delay(100);
+                await consumer.SendAck(message);
+            };
+
+            await consumer.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(consumer.IsConnected);
+            TwinoResult joined = await consumer.Queues.Subscribe("rr-a", true);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
+
+            for (int i = 0; i < 50; i++)
+                await producer.Queues.Push("rr-a", "Hello, World!", false);
+
+            await Task.Delay(1050);
+            Assert.True(received > 8);
+            Assert.True(received < 12);
+        }
+
+        [Fact]
+        public async Task AcknowledgeTimeout()
+        {
+            TestTwinoMQ server = new TestTwinoMQ();
+            await server.Initialize();
+            int port = server.Start(300, 300);
+
+            TwinoQueue queue = server.Server.FindQueue("rr-a");
+            Assert.NotNull(queue);
+            queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(2);
+            queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            server.PutBack = PutBackDecision.End;
+
+            TmqClient producer = new TmqClient();
+            await producer.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(producer.IsConnected);
+
+            int received = 0;
+            TmqClient consumer = new TmqClient();
+            consumer.ResponseTimeout = TimeSpan.FromSeconds(4);
+            consumer.ClientId = "consumer";
+            consumer.MessageReceived += async (client, message) => received++;
+
+            await consumer.ConnectAsync("tmq://localhost:" + port);
+            Assert.True(consumer.IsConnected);
+            TwinoResult joined = await consumer.Queues.Subscribe("rr-a", true);
+            Assert.Equal(TwinoResultCode.Ok, joined.Code);
+
+            for (int i = 0; i < 10; i++)
+                await producer.Queues.Push("rr-a", "Hello, World!", false);
+
+            await Task.Delay(3500);
+            Assert.Equal(2, received);
+            
+            //1 msg is pending ack, 1 msg is prepared and ready to send (waiting for ack) and 8 msgs are in queue
+            Assert.Equal(8, queue.MessageCount());
         }
     }
 }

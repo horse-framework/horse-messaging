@@ -32,17 +32,20 @@ namespace Twino.MQ.Handlers
     /// Quick IMessageDeliveryHandler implementation.
     /// Allows all operations, does not keep and sends acknowledge message to producer
     /// </summary>
-    public class SendAckDeliveryHandler : IMessageDeliveryHandler
+    public class AckDeliveryHandler : IMessageDeliveryHandler
     {
-        private readonly AcknowledgeWhen _when;
+        private readonly AcknowledgeWhen _producerAck;
+        private readonly PutBackDecision _consumerAckFail;
 
         /// <summary>
-        /// Quick IMessageDeliveryHandler implementation.
-        /// Allows all operations, does not keep and sends acknowledge message to producer
+        /// Quick IMessageDeliveryHandler implementation with acknowledge features.
         /// </summary>
-        public SendAckDeliveryHandler(AcknowledgeWhen when)
+        /// <param name="producerAck">Decision, when producer will receive acknowledge (or confirm)</param>
+        /// <param name="consumerAckFail">Decision, what will be done if consumer sends nack or doesn't send ack in time</param>
+        public AckDeliveryHandler(AcknowledgeWhen producerAck, PutBackDecision consumerAckFail)
         {
-            _when = when;
+            _producerAck = producerAck;
+            _consumerAckFail = consumerAckFail;
         }
 
         /// <summary>
@@ -51,7 +54,7 @@ namespace Twino.MQ.Handlers
         /// </summary>
         public async Task<Decision> ReceivedFromProducer(TwinoQueue queue, QueueMessage message, MqClient sender)
         {
-            if (_when == AcknowledgeWhen.AfterReceived)
+            if (_producerAck == AcknowledgeWhen.AfterReceived)
                 return await Task.FromResult(new Decision(true, false, PutBackDecision.No, DeliveryAcknowledgeDecision.Always));
 
             return await Task.FromResult(new Decision(true, false));
@@ -95,7 +98,7 @@ namespace Twino.MQ.Handlers
         /// </summary>
         public async Task<Decision> EndSend(TwinoQueue queue, QueueMessage message)
         {
-            if (_when == AcknowledgeWhen.AfterSent)
+            if (_producerAck == AcknowledgeWhen.AfterSent)
                 return await Task.FromResult(new Decision(true, false, PutBackDecision.No, DeliveryAcknowledgeDecision.Always));
 
             return await Task.FromResult(new Decision(true, false));
@@ -107,10 +110,16 @@ namespace Twino.MQ.Handlers
         /// </summary>
         public async Task<Decision> AcknowledgeReceived(TwinoQueue queue, TwinoMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
-            if (_when == AcknowledgeWhen.AfterAcknowledge)
-                return await Task.FromResult(new Decision(true, false, PutBackDecision.No, DeliveryAcknowledgeDecision.Always));
+            DeliveryAcknowledgeDecision ack = DeliveryAcknowledgeDecision.None;
 
-            return await Task.FromResult(new Decision(true, false));
+            if (_producerAck == AcknowledgeWhen.AfterAcknowledge)
+                ack = success ? DeliveryAcknowledgeDecision.Always : DeliveryAcknowledgeDecision.Negative;
+
+            PutBackDecision putBack = PutBackDecision.No;
+            if (!success)
+                putBack = _consumerAckFail;
+
+            return await Task.FromResult(new Decision(true, false, putBack, ack));
         }
 
         /// <summary>
@@ -126,7 +135,7 @@ namespace Twino.MQ.Handlers
         /// </summary>
         public async Task<Decision> AcknowledgeTimedOut(TwinoQueue queue, MessageDelivery delivery)
         {
-            return await Task.FromResult(new Decision(true, false));
+            return await Task.FromResult(new Decision(true, false, _consumerAckFail, DeliveryAcknowledgeDecision.None));
         }
 
         /// <summary>

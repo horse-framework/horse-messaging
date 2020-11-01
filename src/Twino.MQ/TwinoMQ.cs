@@ -491,6 +491,10 @@ namespace Twino.MQ
                     }
 
                     topic = requestMessage.FindHeader(TwinoHeaders.QUEUE_TOPIC);
+
+                    string delay = requestMessage.FindHeader(TwinoHeaders.DELAY_BETWEEN_MESSAGES);
+                    if (!string.IsNullOrEmpty(delay))
+                        options.DelayBetweenMessages = Convert.ToInt32(delay);
                 }
 
                 queue = new TwinoQueue(this, queueName, options);

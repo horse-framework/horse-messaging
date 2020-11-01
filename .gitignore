@@ -248,12 +248,12 @@ paket-files/
 # FAKE - F# Make
 .fake/
 
+# CodeRush
+.cr/
+
 # JetBrains Rider
 .idea/
 *.sln.iml
-
-# CodeRush
-.cr/
 
 # Python Tools for Visual Studio (PTVS)
 __pycache__/

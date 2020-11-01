@@ -14,6 +14,10 @@ namespace Twino.MQ.Data.Configuration
         [JsonPropertyName("File")]
         public string File { get; set; }
 
+        [JsonProperty("DeliveryHandler")]
+        [JsonPropertyName("DeliveryHandler")]
+        public string DeliveryHandler { get; set; }
+
         [JsonProperty("DeleteWhen")]
         [JsonPropertyName("DeleteWhen")]
         public int DeleteWhen { get; set; }
