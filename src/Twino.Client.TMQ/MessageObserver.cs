@@ -170,6 +170,10 @@ namespace Twino.Client.TMQ
 
                         case ReadSource.Request:
                             subs = _subscriptions.Where(x => x.Source == ReadSource.Request && x.ContentType == message.ContentType).ToList();
+                            
+                            //direct consumer waits for ack
+                            if (subs.Count == 0)
+                                subs = _subscriptions.Where(x => x.Source == ReadSource.Direct && x.ContentType == message.ContentType).ToList();
                             break;
                     }
                 }

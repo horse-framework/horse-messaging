@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using RoutingSample.Models;
 using Twino.Client.TMQ;
+using Twino.Client.TMQ.Annotations;
 using Twino.Client.TMQ.Connectors;
 using Twino.Protocols.TMQ;
 
@@ -21,6 +22,7 @@ namespace RoutingSample.QueueConsumer
 				_ = connector.GetClient().Queues.Subscribe("SAMPLE-MESSAGE-QUEUE", false);
 			};
 			connector.Disconnected += (c) => Console.WriteLine("DISCONNECTED");
+			connector.MessageReceived += (client, message) => Console.WriteLine("Queue message received");
 			connector.Run();
 
 			while (true)
@@ -28,11 +30,13 @@ namespace RoutingSample.QueueConsumer
 		}
 	}
 
+	[AutoAck]
+	[AutoNack]
 	public class SampleMessageQueueConsumer : IQueueConsumer<SampleMessage>
 	{
 		public Task Consume(TwinoMessage message, SampleMessage model, TmqClient client)
 		{
-			Console.WriteLine("SAMPLE QUEUE MESSAGE RECEIVED");
+			Console.WriteLine("SAMPLE QUEUE MESSAGE CONSUMED");
 			return Task.CompletedTask;
 		}
 	}

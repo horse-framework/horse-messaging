@@ -1,9 +1,14 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Sample.Server;
 using Twino.MQ;
+using Twino.MQ.Clients;
+using Twino.MQ.Delivery;
+using Twino.MQ.Queues;
 using Twino.MQ.Routing;
 using Twino.Protocols.TMQ;
 using Twino.Server;
+using QueueEventHandler = Sample.Server.QueueEventHandler;
 
 namespace RoutingSample.Server
 {
@@ -19,7 +24,7 @@ namespace RoutingSample.Server
 
 			var sampleMessageRouter = mq.AddRouter("SAMPLE-MESSAGE-ROUTER", RouteMethod.Distribute);
 			var sampleMessageQueueBinding = new QueueBinding("sample-message-queue-binding", "SAMPLE-MESSAGE-QUEUE", 1, BindingInteraction.Response);
-			var sampleMessageDirectBinding = new DirectBinding("sample-message-direct-binding", "@type:SAMPLE-MESSAGE-CONSUMER", 2, BindingInteraction.None, RouteMethod.RoundRobin);
+			var sampleMessageDirectBinding = new DirectBinding("sample-message-direct-binding", "@type:SAMPLE-MESSAGE-CONSUMER", 2, BindingInteraction.Response, RouteMethod.RoundRobin);
 			sampleMessageRouter.AddBinding(sampleMessageQueueBinding);
 			sampleMessageRouter.AddBinding(sampleMessageDirectBinding);
 
