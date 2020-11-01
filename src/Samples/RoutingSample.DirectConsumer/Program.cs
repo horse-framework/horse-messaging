@@ -22,6 +22,7 @@ namespace RoutingSample.DirectConsumer
 			connector.Observer.RegisterConsumer<SampleDirectMessageConsumer>();
 			connector.Connected += (c) => { Console.WriteLine("CONNECTED"); };
 			connector.Disconnected += (c) => Console.WriteLine("DISCONNECTED");
+			connector.MessageReceived +=(client, message) =>  Console.WriteLine("mmmm");
 			connector.Run();
 
 			while (true)
