@@ -138,6 +138,7 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
 
                     if (!contentType.HasValue)
                         contentType = ContentType;
+                        
                     break;
             }
 
@@ -162,6 +163,9 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
                         break;
                 }
             }
+
+            if (HasQueueName)
+                message.AddHeader(TwinoHeaders.QUEUE_NAME, QueueName);
 
             if (QueueStatus.HasValue)
                 message.AddHeader(TwinoHeaders.QUEUE_STATUS, QueueStatus.Value.ToString().Trim().ToLower());

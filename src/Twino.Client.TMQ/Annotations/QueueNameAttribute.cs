@@ -14,6 +14,14 @@ namespace Twino.Client.TMQ.Annotations
         public string Name { get; }
 
         /// <summary>
+        /// Creates new queue name attribute with model type name
+        /// </summary>
+        public QueueNameAttribute()
+        {
+            Name = null;
+        }
+        
+        /// <summary>
         /// Creates new queue name attribute
         /// </summary>
         public QueueNameAttribute(string name)

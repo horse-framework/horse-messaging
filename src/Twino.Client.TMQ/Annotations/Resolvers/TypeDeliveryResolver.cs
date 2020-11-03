@@ -76,15 +76,15 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
             if (queueNameAttribute != null)
             {
                 descriptor.HasQueueName = true;
-                descriptor.QueueName = queueNameAttribute.Name;
+                descriptor.QueueName = string.IsNullOrEmpty(queueNameAttribute.Name) ? type.Name : queueNameAttribute.Name;
             }
             else
                 descriptor.QueueName = type.Name;
-            
+
             DelayBetweenMessagesAttribute delayAttr = type.GetCustomAttribute<DelayBetweenMessagesAttribute>(true);
             if (delayAttr != null)
                 descriptor.DelayBetweenMessages = delayAttr.Value;
-            
+
             PutBackDelayAttribute putbackAttr = type.GetCustomAttribute<PutBackDelayAttribute>(true);
             if (putbackAttr != null)
                 descriptor.PutBackDelay = putbackAttr.Value;
