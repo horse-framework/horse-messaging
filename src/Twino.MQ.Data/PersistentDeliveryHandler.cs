@@ -25,7 +25,7 @@ namespace Twino.MQ.Data
         /// <summary>
         /// Key for delivery handler attribute
         /// </summary>
-        public string Key { get; protected set; } = "default";
+        public string Key { get; protected set; }
 
         /// <summary>
         /// Database Filename

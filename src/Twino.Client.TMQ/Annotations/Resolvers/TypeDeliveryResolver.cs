@@ -79,7 +79,7 @@ namespace Twino.Client.TMQ.Annotations.Resolvers
                 descriptor.QueueName = queueNameAttribute.Name;
             }
             else
-                descriptor.QueueName = type.FullName;
+                descriptor.QueueName = type.Name;
             
             DelayBetweenMessagesAttribute delayAttr = type.GetCustomAttribute<DelayBetweenMessagesAttribute>(true);
             if (delayAttr != null)
