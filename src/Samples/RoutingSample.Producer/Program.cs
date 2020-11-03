@@ -18,7 +18,6 @@ namespace RoutingSample.Producer
 			connector.Run();
 
 			ITwinoRouteBus routeBus = connector.Bus.Route;
-			ITwinoDirectBus directBus = connector.Bus.Direct;
 
 			while (true)
 			{

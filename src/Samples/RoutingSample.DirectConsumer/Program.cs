@@ -1,15 +1,14 @@
 ﻿using System;
-using System.Threading.Tasks;
-using RoutingSample.Models;
 using Twino.Client.TMQ;
-using Twino.Client.TMQ.Annotations;
+using Twino.Client.TMQ.Bus;
 using Twino.Client.TMQ.Connectors;
-using Twino.Protocols.TMQ;
 
 namespace RoutingSample.DirectConsumer
 {
 	internal class Program
 	{
+		public static ITwinoRouteBus RouteBus;
+
 		private static void Main(string[] args)
 		{
 			TmqStickyConnector connector = new TmqStickyConnector(TimeSpan.FromSeconds(2), () =>
@@ -18,6 +17,7 @@ namespace RoutingSample.DirectConsumer
 				client.SetClientType("SAMPLE-MESSAGE-CONSUMER");
 				return client;
 			});
+
 			connector.AddHost("tmq://localhost:15500");
 			connector.ContentSerializer = new NewtonsoftContentSerializer();
 			connector.Observer.RegisterConsumer<SampleDirectMessageConsumer>();
@@ -26,32 +26,10 @@ namespace RoutingSample.DirectConsumer
 			connector.MessageReceived += (client, message) => Console.WriteLine("Direct message received");
 			connector.Run();
 
+			RouteBus = connector.Bus.Route;
+			
 			while (true)
 				Console.ReadLine();
-		}
-	}
-
-	public class SampleDirectMessageConsumer : BaseDirectConsumer<SampleMessage>
-	{
-		protected override Task Handle(SampleMessage model)
-		{
-			Console.WriteLine("SAMPLE DIRECT MESSAGE CONSUMED");
-			return Task.CompletedTask;
-		}
-	}
-
-	[AutoAck]
-	[AutoNack(NackReason.ExceptionType)]
-	[PushExceptions("SAMPLE-EXCEPTION-QUEUE")]
-	public abstract class BaseDirectConsumer<T> : IDirectConsumer<T>
-	{
-		protected abstract Task Handle(T model);
-
-		public Task Consume(TwinoMessage message, T model, TmqClient client)
-		{
-			// Uncomment for test exception messages queue
-			// throw new Exception("Something was wrong.");
-			return Handle(model);
 		}
 	}
 }
