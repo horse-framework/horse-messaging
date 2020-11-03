@@ -10,6 +10,7 @@ namespace Twino.MQ.Routing
     /// Auto Queue message binding.
     /// Targets queues.
     /// Creates queue automatically from message headers, if it's not exist.
+    /// Once the queue is created, always same queue is used for all messages.
     /// Binding receivers are received messages as QueueMessage.
     /// </summary>
     public class AutoQueueBinding : Binding
@@ -26,6 +27,9 @@ namespace Twino.MQ.Routing
         {
         }
 
+        /// <summary>
+        /// Sends the message to binding receivers
+        /// </summary>
         public override async Task<bool> Send(MqClient sender, TwinoMessage message)
         {
             try
@@ -47,7 +51,7 @@ namespace Twino.MQ.Routing
                 QueueMessage queueMessage = new QueueMessage(msg);
                 queueMessage.Source = sender;
 
-                PushResult result = await _targetQueue.Push(queueMessage, sender);
+                PushResult result = await queue.Push(queueMessage, sender);
                 return result == PushResult.Success;
             }
             catch (Exception e)

@@ -666,6 +666,7 @@ namespace Twino.MQ.Queues
             //remove operational headers that are should not be sent to consumers or saved to disk
             message.Message.RemoveHeaders(TwinoHeaders.DELAY_BETWEEN_MESSAGES,
                                           TwinoHeaders.ACKNOWLEDGE,
+                                          TwinoHeaders.QUEUE_NAME,
                                           TwinoHeaders.QUEUE_STATUS,
                                           TwinoHeaders.QUEUE_TOPIC,
                                           TwinoHeaders.PUT_BACK_DELAY,

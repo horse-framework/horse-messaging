@@ -7,24 +7,21 @@ using Twino.Protocols.TMQ;
 namespace Twino.MQ.Routing
 {
     /// <summary>
-    /// Queue message binding.
+    /// Dynamic Queue message binding.
     /// Targets queues.
+    /// Creates queue automatically from message headers, if it's not exist.
+    /// Queue is searched for each published messages. This binding can send each message to different queues.
     /// Binding receivers are received messages as QueueMessage.
     /// </summary>
-    public class QueueBinding : Binding
+    public class DynamicQueueBinding : Binding
     {
-        private TwinoQueue _targetQueue;
-        private DateTime _queueUpdateTime;
-
         /// <summary>
         /// Creates new queue binding.
         /// Name is the name of the binding.
-        /// Target should be queue name.
-        /// Content Type should be Queue Id.
         /// Priority for router binding.
         /// </summary>
-        public QueueBinding(string name, string target, int priority, BindingInteraction interaction)
-            : base(name, target, null, priority, interaction)
+        public DynamicQueueBinding(string name, int priority, BindingInteraction interaction)
+            : base(name, null, null, priority, interaction)
         {
         }
 
@@ -35,7 +32,7 @@ namespace Twino.MQ.Routing
         {
             try
             {
-                TwinoQueue queue = GetQueue();
+                TwinoQueue queue = await GetQueue(message);
                 if (queue == null)
                     return false;
 
@@ -57,7 +54,7 @@ namespace Twino.MQ.Routing
             }
             catch (Exception e)
             {
-                Router.Server.SendError("BINDING_SEND", e, $"Type:Queue, Binding:{Name}");
+                Router.Server.SendError("BINDING_SEND", e, $"Type:AutoQueue, Binding:{Name}");
                 return false;
             }
         }
@@ -67,18 +64,14 @@ namespace Twino.MQ.Routing
         /// If it's not cached, finds and caches it before returns.
         /// </summary>
         /// <returns></returns>
-        private TwinoQueue GetQueue()
+        private async Task<TwinoQueue> GetQueue(TwinoMessage message)
         {
-            if (_targetQueue != null && DateTime.UtcNow - _queueUpdateTime < TimeSpan.FromMinutes(1))
-                return _targetQueue;
-
-            TwinoQueue queue = Router.Server.FindQueue(Target);
-            if (queue == null)
+            string queueName = message.FindHeader(TwinoHeaders.QUEUE_NAME);
+            if (queueName == null)
                 return null;
 
-            _queueUpdateTime = DateTime.UtcNow;
-            _targetQueue = queue;
-            return _targetQueue;
+            TwinoQueue queue = await Router.Server.CreateQueue(queueName, Router.Server.Options, message, null, true, true);
+            return queue;
         }
     }
 }
