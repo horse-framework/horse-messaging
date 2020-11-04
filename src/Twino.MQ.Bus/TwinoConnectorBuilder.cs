@@ -31,6 +31,7 @@ namespace Twino.MQ.Bus
         private Action<TmqStickyConnector> _disconnected;
         private Action<Exception> _error;
         private Action<TmqClient> _enhance;
+        private ModelTypeConfigurator _configurator;
 
         private readonly List<Tuple<ServiceLifetime, Type>> _individualConsumers = new List<Tuple<ServiceLifetime, Type>>();
         private readonly List<Tuple<ServiceLifetime, Type>> _assembyConsumers = new List<Tuple<ServiceLifetime, Type>>();
@@ -248,6 +249,21 @@ namespace Twino.MQ.Bus
 
         #endregion
 
+        #region Options
+
+        /// <summary>
+        /// Sets default configuration for all model and consumer types.
+        /// The configuration options can be overwritten with attributes.
+        /// </summary>
+        public TwinoConnectorBuilder ConfigureModels(Action<ModelTypeConfigurator> cfg)
+        {
+            _configurator = new ModelTypeConfigurator();
+            cfg(_configurator);
+            return this;
+        }
+
+        #endregion
+
         #region Events
 
         /// <summary>
@@ -307,7 +323,7 @@ namespace Twino.MQ.Bus
             ConfigureConnector(_connector);
             if (_serviceContainer == null)
                 RegisterConsumers(_connector);
-            
+
             return _connector;
         }
 
@@ -329,6 +345,7 @@ namespace Twino.MQ.Bus
         /// </summary>
         private void ConfigureConnector(TmqStickyConnector connector)
         {
+            connector.Observer.Configurator = _configurator;
             connector.AutoSubscribe = _autoSubscribe;
             connector.DisconnectionOnAutoJoinFailure = _disconnectOnSubscribeFailure;
             if (_contentSerializer != null)

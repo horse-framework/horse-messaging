@@ -16,7 +16,12 @@ namespace Twino.MQ.Client.Internal
             _consumerType = consumerType;
             _consumer = consumer;
             _consumerFactoryCreator = consumerFactoryCreator;
-            ResolveAttributes(consumerType, typeof(TModel));
+        }
+
+        public override void Resolve(ModelTypeConfigurator defaultOptions = null)
+        {
+            base.Resolve(defaultOptions);
+            ResolveAttributes(_consumerType, typeof(TModel));
         }
 
         public override async Task Execute(TmqClient client, TwinoMessage message, object model)

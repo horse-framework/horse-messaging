@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Twino.Client.Connectors;
 using Twino.Core;
+using Twino.MQ.Client.Annotations.Resolvers;
 using Twino.MQ.Client.Bus;
 using Twino.MQ.Client.Exceptions;
 using Twino.MQ.Client.Internal;
@@ -79,7 +80,10 @@ namespace Twino.MQ.Client.Connectors
         protected override void ClientConnected(SocketBase client)
         {
             TmqClient tmqClient = (TmqClient) client;
+            
             tmqClient.Events = Events;
+            if (tmqClient.DeliveryContainer is TypeDeliveryContainer container)
+                container.DefaultConfiguration = Observer.Configurator;
 
             if (ContentSerializer != null)
                 tmqClient.JsonSerializer = ContentSerializer;

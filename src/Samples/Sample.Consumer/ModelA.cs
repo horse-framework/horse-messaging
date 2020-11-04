@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 using Newtonsoft.Json;
-using Twino.Client.TMQ.Annotations;
+using Twino.MQ.Client.Annotations;
 
 namespace Sample.Consumer
 {

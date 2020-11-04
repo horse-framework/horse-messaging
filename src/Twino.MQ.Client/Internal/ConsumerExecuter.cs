@@ -27,20 +27,45 @@ namespace Twino.MQ.Client.Internal
 
         #region Actions
 
+        public virtual void Resolve(ModelTypeConfigurator defaultOptions = null)
+        {
+            if (defaultOptions == null)
+                return;
+
+            SendAck = defaultOptions.AutoAck;
+            SendNack = defaultOptions.AutoNack;
+            NackReason = defaultOptions.NackReason;
+            Retry = defaultOptions.Retry;
+            DefaultPublishException = defaultOptions.DefaultPublishException;
+            PushExceptions = defaultOptions.PushExceptions;
+            DefaultPublishException = defaultOptions.DefaultPublishException;
+            PublishExceptions = defaultOptions.PublishExceptions;
+        }
+
         public abstract Task Execute(TmqClient client, TwinoMessage message, object model);
 
         protected void ResolveAttributes(Type type, Type modelType)
         {
-            AutoAckAttribute ackAttribute = type.GetCustomAttribute<AutoAckAttribute>();
-            SendAck = ackAttribute != null;
+            if (!SendAck)
+            {
+                AutoAckAttribute ackAttribute = type.GetCustomAttribute<AutoAckAttribute>();
+                SendAck = ackAttribute != null;
+            }
 
-            AutoNackAttribute nackAttribute = type.GetCustomAttribute<AutoNackAttribute>();
-            SendNack = nackAttribute != null;
-            NackReason = nackAttribute != null ? nackAttribute.Reason : NackReason.None;
+            if (!SendNack)
+            {
+                AutoNackAttribute nackAttribute = type.GetCustomAttribute<AutoNackAttribute>();
+                SendNack = nackAttribute != null;
+                NackReason = nackAttribute != null ? nackAttribute.Reason : NackReason.None;
+            }
 
-            Retry = type.GetCustomAttribute<RetryAttribute>();
+            RetryAttribute retryAttr = type.GetCustomAttribute<RetryAttribute>();
+            if (retryAttr != null)
+                Retry = retryAttr;
 
-            PushExceptions = new List<Tuple<Type, string>>();
+            if (PushExceptions == null)
+                PushExceptions = new List<Tuple<Type, string>>();
+            
             IEnumerable<PushExceptionsAttribute> pushAttributes = type.GetCustomAttributes<PushExceptionsAttribute>(true);
             foreach (PushExceptionsAttribute attribute in pushAttributes)
             {
@@ -50,7 +75,9 @@ namespace Twino.MQ.Client.Internal
                     PushExceptions.Add(new Tuple<Type, string>(attribute.ExceptionType, attribute.QueueName));
             }
 
-            PublishExceptions = new List<Tuple<Type, KeyValuePair<string, ushort>>>();
+            if (PublishExceptions == null)
+                PublishExceptions = new List<Tuple<Type, KeyValuePair<string, ushort>>>();
+
             IEnumerable<PublishExceptionsAttribute> publishAttributes = type.GetCustomAttributes<PublishExceptionsAttribute>(true);
             foreach (PublishExceptionsAttribute attribute in publishAttributes)
             {

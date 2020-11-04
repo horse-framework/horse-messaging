@@ -43,6 +43,11 @@ namespace Twino.MQ.Client
 
         private readonly ITypeDeliveryContainer _deliveryContainer;
 
+        /// <summary>
+        /// Default configurator for model and consumer types
+        /// </summary>
+        public ModelTypeConfigurator Configurator { get; set; }
+
         #endregion
 
         #region Create
@@ -161,7 +166,7 @@ namespace Twino.MQ.Client
 
                         case ReadSource.Request:
                             subs = _subscriptions.Where(x => x.Source == ReadSource.Request && x.ContentType == message.ContentType).ToList();
-                            
+
                             //direct consumer waits for ack
                             if (subs.Count == 0)
                                 subs = _subscriptions.Where(x => x.Source == ReadSource.Direct && x.ContentType == message.ContentType).ToList();
@@ -612,8 +617,8 @@ namespace Twino.MQ.Client
             bool useConsumerFactory = consumerFactoryBuilder != null;
 
             TypeDeliveryResolver resolver = new TypeDeliveryResolver();
-            TypeDeliveryDescriptor consumerDescriptor = resolver.Resolve(typeInfo.ConsumerType);
-            TypeDeliveryDescriptor modelDescriptor = resolver.Resolve(typeInfo.ModelType);
+            TypeDeliveryDescriptor consumerDescriptor = resolver.Resolve(typeInfo.ConsumerType, null);
+            TypeDeliveryDescriptor modelDescriptor = resolver.Resolve(typeInfo.ModelType, Configurator);
             var target = GetTarget(typeInfo.Source, consumerDescriptor, modelDescriptor);
 
             object consumerInstance = useConsumerFactory ? null : Activator.CreateInstance(typeInfo.ConsumerType);
@@ -653,6 +658,9 @@ namespace Twino.MQ.Client
                     break;
                 }
             }
+
+            if (executer != null)
+                executer.Resolve(Configurator);
 
             ReadSubscription subscription = new ReadSubscription
                                             {

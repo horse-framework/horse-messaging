@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
-using Twino.Client.TMQ;
-using Twino.Client.TMQ.Annotations;
+using Twino.MQ.Client;
+using Twino.MQ.Client.Annotations;
 using Twino.Protocols.TMQ;
 
 namespace Sample.Consumer

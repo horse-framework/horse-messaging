@@ -14,6 +14,8 @@ namespace Twino.MQ.Client.Annotations.Resolvers
 
 		private readonly Dictionary<Type, TypeDeliveryDescriptor> _deliveryDescriptors;
 
+		internal ModelTypeConfigurator DefaultConfiguration { get; set; }
+
 		/// <summary>
 		/// Creates new delivery container
 		/// </summary>
@@ -46,7 +48,7 @@ namespace Twino.MQ.Client.Annotations.Resolvers
 
 				_locker.EnterWriteLock();
 				upgraded = true;
-				descriptor = _resolver.Resolve(type);
+				descriptor = _resolver.Resolve(type, DefaultConfiguration);
 				_deliveryDescriptors.Add(type, descriptor);
 
 				return descriptor;

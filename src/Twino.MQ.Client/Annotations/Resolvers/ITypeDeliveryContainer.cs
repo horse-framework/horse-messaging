@@ -16,6 +16,5 @@ namespace Twino.MQ.Client.Annotations.Resolvers
         /// Gets delivery descriptor for type
         /// </summary>
         TypeDeliveryDescriptor GetDescriptor(Type type);
-
     }
 }

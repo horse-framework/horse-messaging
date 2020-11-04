@@ -11,12 +11,12 @@ namespace Twino.MQ.Client.Annotations.Resolvers
         /// <summary>
         /// Resolves model type descriptor
         /// </summary>
-        TypeDeliveryDescriptor Resolve<TModel>();
+        TypeDeliveryDescriptor Resolve<TModel>(ModelTypeConfigurator defaultConfigurator);
 
         /// <summary>
         /// Resolves model type descriptor
         /// </summary>
-        TypeDeliveryDescriptor Resolve(Type type);
+        TypeDeliveryDescriptor Resolve(Type type, ModelTypeConfigurator defaultConfigurator);
 
     }
 }

@@ -13,23 +13,57 @@ namespace Twino.MQ.Client.Annotations.Resolvers
         /// <summary>
         /// Resolves model type descriptor
         /// </summary>
-        public TypeDeliveryDescriptor Resolve<TModel>()
+        public TypeDeliveryDescriptor Resolve<TModel>(ModelTypeConfigurator defaultConfigurator)
         {
-            return Resolve(typeof(TModel));
+            return Resolve(typeof(TModel), defaultConfigurator);
         }
 
         /// <summary>
         /// Resolves model type descriptor
         /// </summary>
-        public TypeDeliveryDescriptor Resolve(Type type)
+        public TypeDeliveryDescriptor Resolve(Type type, ModelTypeConfigurator defaultConfigurator)
         {
             TypeDeliveryDescriptor descriptor = new TypeDeliveryDescriptor();
+
+            if (defaultConfigurator != null)
+                ResolveDefaults(type, descriptor, defaultConfigurator);
+
             ResolveBase(type, descriptor);
             ResolveDirect(type, descriptor);
             ResolveQueue(type, descriptor);
             ResolveRouter(type, descriptor);
 
             return descriptor;
+        }
+
+        /// <summary>
+        /// Resolves default values from model type configurator
+        /// </summary>
+        private void ResolveDefaults(Type type, TypeDeliveryDescriptor descriptor, ModelTypeConfigurator defaultConfigurator)
+        {
+            if (defaultConfigurator.QueueNameFactory != null)
+            {
+                descriptor.QueueName = defaultConfigurator.QueueNameFactory(type);
+                descriptor.HasQueueName = true;
+            }
+            
+            if (defaultConfigurator.QueueStatus.HasValue)
+                descriptor.QueueStatus = defaultConfigurator.QueueStatus.Value;
+
+            if (!string.IsNullOrEmpty(defaultConfigurator.Topic))
+                descriptor.Topic = defaultConfigurator.Topic;
+
+            if (defaultConfigurator.PutBackDelay.HasValue)
+                descriptor.PutBackDelay = defaultConfigurator.PutBackDelay.Value;
+
+            if (defaultConfigurator.DelayBetweenMessages.HasValue)
+                descriptor.DelayBetweenMessages = defaultConfigurator.DelayBetweenMessages.Value;
+
+            if (defaultConfigurator.AckDecision.HasValue)
+                descriptor.Acknowledge = defaultConfigurator.AckDecision.Value;
+
+            foreach (Func<KeyValuePair<string, string>> func in defaultConfigurator.HeaderFactories)
+                descriptor.Headers.Add(func());
         }
 
         /// <summary>

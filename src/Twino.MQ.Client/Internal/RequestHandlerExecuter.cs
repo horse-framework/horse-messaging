@@ -16,6 +16,11 @@ namespace Twino.MQ.Client.Internal
             _handlerType = handlerType;
             _handler = handler;
             _handlerFactoryCreator = handlerFactoryCreator;
+        }
+
+        public override void Resolve(ModelTypeConfigurator defaultOptions = null)
+        {
+            base.Resolve(defaultOptions);
             ResolveAttributes(_handlerType, typeof(TRequest));
         }
 
