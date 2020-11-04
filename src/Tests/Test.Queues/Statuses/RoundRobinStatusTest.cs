@@ -1,9 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Test.Common;
-using Twino.Client.TMQ;
+using Twino.MQ.Client;
 using Twino.MQ.Delivery;
 using Twino.MQ.Queues;
 using Twino.Protocols.TMQ;

@@ -1,5 +1,5 @@
 using System;
-using Twino.Client.TMQ.Annotations;
+using Twino.MQ.Client.Annotations;
 
 namespace RoutingSample.Models
 {

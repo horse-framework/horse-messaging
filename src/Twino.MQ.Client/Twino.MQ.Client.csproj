@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <Title>Twino.MQ.Client</Title>
+        <Product>Twino.MQ.Client</Product>
+        <Description>Twino Messaging Queue Client to connect all TMQ Servers</Description>
+        <PackageTags>twino,tmq,client,mq,messaging,queue</PackageTags>
+        <AssemblyVersion>4.1.1</AssemblyVersion>
+        <FileVersion>4.1.1</FileVersion>
+        <PackageVersion>4.1.1</PackageVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
+        <PackageProjectUrl>https://github.com/twino-framework/twino-mq</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/twino-framework/twino-mq/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/twino-framework/twino-mq</RepositoryUrl>
+        <RootNamespace>Twino.MQ.Client</RootNamespace>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <DocumentationFile>bin\Debug\Twino.Client.Tmq.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <DocumentationFile>bin\Release\Twino.Client.Tmq.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Twino.Client.Connectors" Version="4.0.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
+    </ItemGroup>
+
+</Project>

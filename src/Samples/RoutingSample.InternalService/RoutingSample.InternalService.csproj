@@ -6,7 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\Twino.Client.TMQ\Twino.Client.TMQ.csproj" />
+      <ProjectReference Include="..\..\Twino.MQ.Client\Twino.MQ.Client.csproj" />
       <ProjectReference Include="..\RoutingSample.Models\RoutingSample.Models.csproj" />
     </ItemGroup>
 

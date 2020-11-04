@@ -3,7 +3,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Test.Common;
 using Test.Common.Models;
-using Twino.Client.TMQ;
+using Twino.MQ.Client;
 using Twino.Protocols.TMQ;
 using Xunit;
 

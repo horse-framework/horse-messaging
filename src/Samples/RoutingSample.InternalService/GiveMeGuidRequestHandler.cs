@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using RoutingSample.Models;
-using Twino.Client.TMQ;
+using Twino.MQ.Client;
 using Twino.Protocols.TMQ;
 
 namespace RoutingSample.InternalService

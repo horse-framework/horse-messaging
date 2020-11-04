@@ -1,6 +1,6 @@
 ﻿using System;
-using Twino.Client.TMQ;
-using Twino.Client.TMQ.Connectors;
+using Twino.MQ.Client;
+using Twino.MQ.Client.Connectors;
 
 namespace RoutingSample.QueueConsumer
 {

@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using Twino.Client.TMQ.Connectors;
+using Twino.MQ.Client.Connectors;
 using Twino.MQ.Clients;
 using Twino.Protocols.TMQ;
 

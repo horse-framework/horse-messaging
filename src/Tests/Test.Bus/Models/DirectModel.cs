@@ -1,4 +1,4 @@
-using Twino.Client.TMQ.Annotations;
+using Twino.MQ.Client.Annotations;
 
 namespace Test.Bus.Models
 {

@@ -1,8 +1,8 @@
 using System;
 using System.Threading.Tasks;
 using Test.Bus.Models;
-using Twino.Client.TMQ;
-using Twino.Client.TMQ.Annotations;
+using Twino.MQ.Client;
+using Twino.MQ.Client.Annotations;
 using Twino.Protocols.TMQ;
 
 namespace Test.Bus.Consumers

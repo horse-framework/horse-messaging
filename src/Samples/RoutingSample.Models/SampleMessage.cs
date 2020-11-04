@@ -1,5 +1,5 @@
-﻿using Twino.Client.TMQ.Annotations;
-using Twino.Client.TMQ.Models;
+﻿using Twino.MQ.Client.Annotations;
+using Twino.MQ.Client.Models;
 using Twino.Protocols.TMQ;
 
 namespace RoutingSample.Models

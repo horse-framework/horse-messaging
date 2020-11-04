@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Twino.Client.TMQ;
-using Twino.Client.TMQ.Bus;
-using Twino.Client.TMQ.Connectors;
 using Twino.Ioc;
+using Twino.MQ.Client;
+using Twino.MQ.Client.Bus;
+using Twino.MQ.Client.Connectors;
 using Twino.Protocols.TMQ;
 
 namespace Sample.Producer
