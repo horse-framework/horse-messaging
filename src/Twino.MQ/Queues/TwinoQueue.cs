@@ -1301,7 +1301,7 @@ namespace Twino.MQ.Queues
             if (clients.Count == 0)
                 return new Tuple<QueueClient, int>(null, currentIndex);
 
-            DateTime retryExpiration = DateTime.UtcNow.AddSeconds(15);
+            DateTime retryExpiration = DateTime.UtcNow.AddSeconds(30);
             while (true)
             {
                 int index = currentIndex < 0 ? 0 : currentIndex;
@@ -1323,7 +1323,10 @@ namespace Twino.MQ.Queues
                     index++;
                 }
 
-                await Task.Delay(2);
+                await Task.Delay(3);
+                clients = _clients.GetAsClone();
+                if (clients.Count == 0)
+                    break;
 
                 //don't try hard so much, wait for next trigger operation of the queue.
                 //it will be triggered in 5 secs, anyway
