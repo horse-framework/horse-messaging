@@ -101,6 +101,12 @@ namespace Twino.MQ.Queues.States
 
                 if (sent)
                 {
+                    if (_queue.Options.Acknowledge != QueueAckDecision.None)
+                    {
+                        client.CurrentlyProcessing = message;
+                        client.ProcessDeadline = ackDeadline ?? DateTime.UtcNow;
+                    }
+                    
                     messageIsSent = true;
 
                     //adds the delivery to time keeper to check timing up

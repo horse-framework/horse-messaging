@@ -134,6 +134,9 @@ namespace Twino.MQ.Delivery
         /// </summary>
         public bool MarkAsAcknowledgeTimeout()
         {
+            if (Receiver != null)
+                Receiver.CurrentlyProcessing = null;
+            
             if (Acknowledge != DeliveryAcknowledge.None)
                 return false;
 

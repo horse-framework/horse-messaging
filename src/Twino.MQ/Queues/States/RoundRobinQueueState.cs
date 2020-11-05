@@ -42,7 +42,23 @@ namespace Twino.MQ.Queues.States
         {
             try
             {
-                QueueClient cc = _queue.GetNextRRClient(ref _roundRobinIndex);
+                QueueClient cc;
+                if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
+                {
+                    Tuple<QueueClient, int> tuple = await _queue.GetNextAvailableRRClient(_roundRobinIndex);
+                    cc = tuple.Item1;
+                    if (cc != null)
+                        _roundRobinIndex = tuple.Item2;
+                }
+                else
+                    cc = _queue.GetNextRRClient(ref _roundRobinIndex);
+
+                /*
+                //if to process next message is requires previous message acknowledge, wait here
+                if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
+                    await _queue.WaitForAcknowledge(message);
+                */
+
                 if (cc == null)
                 {
                     _queue.AddMessage(message, false);
@@ -68,10 +84,6 @@ namespace Twino.MQ.Queues.States
             DateTime? deadline = null;
             if (_queue.Options.Acknowledge != QueueAckDecision.None)
                 deadline = DateTime.UtcNow.Add(_queue.Options.AcknowledgeTimeout);
-
-            //if to process next message is requires previous message acknowledge, wait here
-            if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
-                await _queue.WaitForAcknowledge(message);
 
             //return if client unsubsribes while waiting ack of previous message
             if (!_queue.ClientsClone.Contains(receiver))
@@ -100,6 +112,12 @@ namespace Twino.MQ.Queues.States
 
             if (sent)
             {
+                if (_queue.Options.Acknowledge != QueueAckDecision.None)
+                {
+                    receiver.CurrentlyProcessing = message;
+                    receiver.ProcessDeadline = deadline ?? DateTime.UtcNow;
+                }
+
                 //adds the delivery to time keeper to check timing up
                 _queue.TimeKeeper.AddAcknowledgeCheck(delivery);
 

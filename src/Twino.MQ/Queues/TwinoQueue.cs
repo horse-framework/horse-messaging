@@ -622,10 +622,10 @@ namespace Twino.MQ.Queues
         {
             message.Type = MessageType.QueueMessage;
             message.SetTarget(Name);
-            
+
             return Push(new QueueMessage(message), null);
         }
-        
+
         /// <summary>
         /// Pushes a message into the queue.
         /// </summary>
@@ -1126,7 +1126,12 @@ namespace Twino.MQ.Queues
 
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse (it's possible, resharper doesn't work properly in here)
                 if (delivery != null)
+                {
+                    if (delivery.Receiver != null && delivery.Message == delivery.Receiver.CurrentlyProcessing)
+                        delivery.Receiver.CurrentlyProcessing = null;
+
                     delivery.MarkAsAcknowledged(success);
+                }
 
                 if (success)
                     Info.AddAcknowledge();
@@ -1284,6 +1289,49 @@ namespace Twino.MQ.Queues
 
             index++;
             return clients[index];
+        }
+
+        /// <summary>
+        /// Gets next available client which is not currently consuming any message.
+        /// Used for wait for acknowledge situations
+        /// </summary>
+        internal async Task<Tuple<QueueClient, int>> GetNextAvailableRRClient(int currentIndex)
+        {
+            List<QueueClient> clients = _clients.GetAsClone();
+            if (clients.Count == 0)
+                return new Tuple<QueueClient, int>(null, currentIndex);
+
+            DateTime retryExpiration = DateTime.UtcNow.AddSeconds(15);
+            while (true)
+            {
+                int index = currentIndex < 0 ? 0 : currentIndex;
+                for (int i = 0; i < clients.Count; i++)
+                {
+                    if (index >= clients.Count)
+                        index = 0;
+
+                    QueueClient client = clients[index];
+                    if (client.CurrentlyProcessing == null)
+                        return new Tuple<QueueClient, int>(client, index);
+
+                    if (client.CurrentlyProcessing.Deadline < DateTime.UtcNow)
+                    {
+                        client.CurrentlyProcessing = null;
+                        return new Tuple<QueueClient, int>(client, index);
+                    }
+
+                    index++;
+                }
+
+                await Task.Delay(2);
+
+                //don't try hard so much, wait for next trigger operation of the queue.
+                //it will be triggered in 5 secs, anyway
+                if (DateTime.UtcNow > retryExpiration)
+                    break;
+            }
+
+            return new Tuple<QueueClient, int>(null, currentIndex);
         }
 
         #endregion

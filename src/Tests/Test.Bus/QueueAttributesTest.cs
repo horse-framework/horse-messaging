@@ -5,6 +5,7 @@ using Test.Bus.Consumers;
 using Test.Bus.Models;
 using Test.Common;
 using Twino.MQ.Client.Connectors;
+using Twino.MQ.Queues;
 using Twino.MQ.Routing;
 using Twino.Protocols.TMQ;
 using Xunit;
