@@ -14,7 +14,7 @@ namespace RoutingSample.Server
 {
 	internal class Program
 	{
-		private static Task Main(string[] args)
+		private static void Main(string[] args)
 		{
 			TwinoMQ mq = TwinoMqBuilder.Create()
 									   .AddClientHandler<ClientHandler>()
@@ -34,8 +34,7 @@ namespace RoutingSample.Server
 
 			TwinoServer server = new TwinoServer();
 			server.UseTwinoMQ(mq);
-			server.Start(15500);
-			return server.BlockWhileRunningAsync();
+			server.Run(15500);
 		}
 	}
 }
