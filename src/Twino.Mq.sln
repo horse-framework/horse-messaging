@@ -13,7 +13,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.MQ", "Twino.MQ\Twino.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Protocols.TMQ", "Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj", "{D0F826C2-8B03-48D1-88C1-8BFF917C8EBC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.Client.TMQ", "Twino.Client.TMQ\Twino.Client.TMQ.csproj", "{A75CABEB-197E-457A-AAC9-4C59D49DDF68}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.MQ.Client", "Twino.MQ.Client\Twino.MQ.Client.csproj", "{A75CABEB-197E-457A-AAC9-4C59D49DDF68}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.MQ.Data", "Twino.MQ.Data\Twino.MQ.Data.csproj", "{45017EA4-63E1-49BF-8B53-25A45ADF8FCD}"
 EndProject
@@ -54,6 +54,10 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RoutingSample", "RoutingSample", "{5AF8912A-0ADB-429E-B095-5D4ACD36F9CE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoutingSample.ExceptionConsumer", "Samples\RoutingSample.ExceptionConsumer\RoutingSample.ExceptionConsumer.csproj", "{C06F8A53-C022-43C3-A728-B6B82D4DF054}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoutingSample.InternalService", "Samples\RoutingSample.InternalService\RoutingSample.InternalService.csproj", "{AD240570-21FF-4E5B-BAFB-8A7F282F9E9A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Twino.MQ.Bus", "Twino.MQ.Bus\Twino.MQ.Bus.csproj", "{E49B6DED-0A54-42C6-9B28-1E256ABB7E50}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -153,6 +157,14 @@ Global
 		{C06F8A53-C022-43C3-A728-B6B82D4DF054}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C06F8A53-C022-43C3-A728-B6B82D4DF054}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C06F8A53-C022-43C3-A728-B6B82D4DF054}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AD240570-21FF-4E5B-BAFB-8A7F282F9E9A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AD240570-21FF-4E5B-BAFB-8A7F282F9E9A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AD240570-21FF-4E5B-BAFB-8A7F282F9E9A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AD240570-21FF-4E5B-BAFB-8A7F282F9E9A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E49B6DED-0A54-42C6-9B28-1E256ABB7E50}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E49B6DED-0A54-42C6-9B28-1E256ABB7E50}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E49B6DED-0A54-42C6-9B28-1E256ABB7E50}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E49B6DED-0A54-42C6-9B28-1E256ABB7E50}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -177,6 +189,7 @@ Global
 		{45F7292D-3CFB-47B0-9D6B-D8DF5C7940A3} = {5AF8912A-0ADB-429E-B095-5D4ACD36F9CE}
 		{36722057-D5F9-46F9-BCC3-0719CAA34C04} = {5AF8912A-0ADB-429E-B095-5D4ACD36F9CE}
 		{C06F8A53-C022-43C3-A728-B6B82D4DF054} = {5AF8912A-0ADB-429E-B095-5D4ACD36F9CE}
+		{AD240570-21FF-4E5B-BAFB-8A7F282F9E9A} = {5AF8912A-0ADB-429E-B095-5D4ACD36F9CE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A73712E1-2BB7-4F7D-852F-ED8FE4ABA180}

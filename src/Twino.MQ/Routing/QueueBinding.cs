@@ -17,7 +17,7 @@ namespace Twino.MQ.Routing
         private DateTime _queueUpdateTime;
 
         /// <summary>
-        /// Creates new direct binding.
+        /// Creates new queue binding.
         /// Name is the name of the binding.
         /// Target should be queue name.
         /// Content Type should be Queue Id.
@@ -52,7 +52,7 @@ namespace Twino.MQ.Routing
                 QueueMessage queueMessage = new QueueMessage(msg);
                 queueMessage.Source = sender;
 
-                PushResult result = await _targetQueue.Push(queueMessage, sender);
+                PushResult result = await queue.Push(queueMessage, sender);
                 return result == PushResult.Success;
             }
             catch (Exception e)

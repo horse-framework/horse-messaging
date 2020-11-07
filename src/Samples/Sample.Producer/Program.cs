@@ -1,17 +1,14 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Twino.Client.TMQ;
-using Twino.Client.TMQ.Bus;
-using Twino.Client.TMQ.Connectors;
-using Twino.Ioc;
+using Twino.MQ.Client;
+using Twino.MQ.Client.Bus;
+using Twino.MQ.Client.Connectors;
 using Twino.Protocols.TMQ;
 
 namespace Sample.Producer
 {
     class Program
     {
-        public static IServiceContainer Services { get; } = new ServiceContainer();
-
         static async Task Main(string[] args)
         {
             TmqStickyConnector connector = new TmqStickyConnector(TimeSpan.FromSeconds(2));

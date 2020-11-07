@@ -1,5 +1,5 @@
 using Test.Bus.Consumers;
-using Twino.Client.TMQ.Connectors;
+using Twino.MQ.Client.Connectors;
 
 namespace Test.Bus
 {

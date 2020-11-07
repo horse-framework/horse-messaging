@@ -9,7 +9,7 @@ namespace Sample.Server
 {
     class Program
     {
-        static Task Main(string[] args)
+        static void Main(string[] args)
         {
             TwinoMQ mq = TwinoMqBuilder.Create()
                                        .AddOptions(o => o.Status = QueueStatus.Push)
@@ -23,9 +23,7 @@ namespace Sample.Server
 
             TwinoServer server = new TwinoServer();
             server.UseTwinoMQ(mq);
-            server.Start(26222);
-
-            return server.BlockWhileRunningAsync();
+            server.Run(26222);
         }
     }
 }

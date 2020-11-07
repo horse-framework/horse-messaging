@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
 using RoutingSample.Models;
-using Twino.Client.TMQ;
-using Twino.Client.TMQ.Bus;
-using Twino.Client.TMQ.Connectors;
+using Twino.MQ.Client;
+using Twino.MQ.Client.Bus;
+using Twino.MQ.Client.Connectors;
 using Twino.Protocols.TMQ;
 
 namespace RoutingSample.Producer
@@ -18,7 +18,6 @@ namespace RoutingSample.Producer
 			connector.Run();
 
 			ITwinoRouteBus routeBus = connector.Bus.Route;
-			ITwinoDirectBus directBus = connector.Bus.Direct;
 
 			while (true)
 			{

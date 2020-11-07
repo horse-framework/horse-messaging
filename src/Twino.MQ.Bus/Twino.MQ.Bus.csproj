@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <Title>Twino.MQ.Bus</Title>
+        <Product>Twino.MQ.Bus</Product>
+        <Description>Twino MQ Bus extension for Twino IOC</Description>
+        <PackageTags>twino,tmq,consumer,bus</PackageTags>
+        <AssemblyVersion>4.2.0</AssemblyVersion>
+        <FileVersion>4.2.0</FileVersion>
+        <PackageVersion>4.2.0</PackageVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
+        <PackageProjectUrl>https://github.com/twino-framework/twino-extensions</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/twino-framework/twino-extensions/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/twino-framework/twino-extensions</RepositoryUrl>
+        <RootNamespace>Twino.MQ.Bus</RootNamespace>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+        <DocumentationFile>bin\Debug\Twino.Extensions.Bus.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <DocumentationFile>bin\Release\Twino.Extensions.Bus.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Twino.MQ.Client\Twino.MQ.Client.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.9" />
+    </ItemGroup>
+
+</Project>

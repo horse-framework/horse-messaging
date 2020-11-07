@@ -14,7 +14,7 @@ namespace RoutingSample.Server
 {
 	internal class Program
 	{
-		private static Task Main(string[] args)
+		private static void Main(string[] args)
 		{
 			TwinoMQ mq = TwinoMqBuilder.Create()
 									   .AddClientHandler<ClientHandler>()
@@ -28,10 +28,13 @@ namespace RoutingSample.Server
 			sampleMessageRouter.AddBinding(sampleMessageQueueBinding);
 			sampleMessageRouter.AddBinding(sampleMessageDirectBinding);
 
+			var giveMeGuidRequestRouter = mq.AddRouter("GIVE-ME-REQUEST-ROUTER", RouteMethod.Distribute);
+			var giveMeGuidRequestHandler = new DirectBinding("sample-message-direct-binding", "@name:GIVE-ME-GUID-REQUEST-HANDLER-CONSUMER", 2, BindingInteraction.Response);
+			giveMeGuidRequestRouter.AddBinding(giveMeGuidRequestHandler);
+
 			TwinoServer server = new TwinoServer();
 			server.UseTwinoMQ(mq);
-			server.Start(15500);
-			return server.BlockWhileRunningAsync();
+			server.Run(15500);
 		}
 	}
 }

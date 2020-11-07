@@ -4,7 +4,7 @@ using System.Data;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Twino.Client.TMQ;
+using Twino.MQ.Client;
 using Twino.MQ.Clients;
 using Twino.MQ.Events;
 using Twino.MQ.Helpers;

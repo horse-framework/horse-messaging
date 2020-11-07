@@ -6,14 +6,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\Twino.Client.TMQ\Twino.Client.TMQ.csproj" />
+      <ProjectReference Include="..\..\Twino.MQ.Bus\Twino.MQ.Bus.csproj" />
+      <ProjectReference Include="..\..\Twino.MQ.Client\Twino.MQ.Client.csproj" />
       <ProjectReference Include="..\..\Twino.MQ.Data\Twino.MQ.Data.csproj" />
       <ProjectReference Include="..\..\Twino.MQ\Twino.MQ.csproj" />
       <ProjectReference Include="..\..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <PackageReference Include="Twino.Ioc" Version="3.4.2" />
     </ItemGroup>
 
 </Project>

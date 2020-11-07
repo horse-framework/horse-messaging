@@ -10,7 +10,7 @@ namespace Twino.MQ.Data.Configuration
     {
         #region Fields - Properties
 
-        private bool _instantFlush = true;
+        private bool _instantFlush = false;
         private bool _autoFlush = true;
         private bool _createBackup = true;
         private bool _autoShrink = true;

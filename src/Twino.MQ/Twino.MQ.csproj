@@ -6,9 +6,9 @@
         <Product>Twino.MQ</Product>
         <Description>Messaging Queue Server library with TMQ Protocol via Twino Server</Description>
         <PackageTags>twino,server,tmq,messaging,queue,mq</PackageTags>
-        <AssemblyVersion>4.1.1</AssemblyVersion>
-        <FileVersion>4.1.1</FileVersion>
-        <PackageVersion>4.1.1</PackageVersion>
+        <AssemblyVersion>4.2.0</AssemblyVersion>
+        <FileVersion>4.2.0</FileVersion>
+        <PackageVersion>4.2.0</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/twino-framework/twino-mq</PackageProjectUrl>
@@ -26,12 +26,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Twino.Server" Version="4.0.2" />
-        <PackageReference Include="Twino.Client.Connectors" Version="4.0.2" />
+        <PackageReference Include="Twino.Server" Version="4.2.0" />
+        <PackageReference Include="Twino.Client.Connectors" Version="4.2.0" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Twino.Client.TMQ\Twino.Client.TMQ.csproj" />
+        <ProjectReference Include="..\Twino.MQ.Client\Twino.MQ.Client.csproj" />
         <ProjectReference Include="..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
     </ItemGroup>
 
