@@ -12,34 +12,27 @@ namespace Twino.MQ.Client.Annotations
         /// Exception type
         /// </summary>
         public Type ExceptionType { get; }
-        
+
         /// <summary>
-        /// Router name
+        /// Exception model type
         /// </summary>
-        public string RouterName { get; }
-        
-        /// <summary>
-        /// Content Type
-        /// </summary>
-        public ushort ContentType { get; }
+        public Type ModelType { get; }
 
         /// <summary>
         /// Publishes all exceptions
         /// </summary>
-        public PublishExceptionsAttribute(string routerName, ushort contentType = 0)
+        public PublishExceptionsAttribute(Type modelType)
         {
-            RouterName = routerName;
-            ContentType = contentType;
+            ModelType = modelType;
         }
 
         /// <summary>
         /// Publishes specified type of exceptions
         /// </summary>
-        public PublishExceptionsAttribute(Type exceptionType, string routerName, ushort contentType = 0)
+        public PublishExceptionsAttribute(Type modelType, Type exceptionType)
         {
+            ModelType = modelType;
             ExceptionType = exceptionType;
-            RouterName = routerName;
-            ContentType = contentType;
         }
     }
 }

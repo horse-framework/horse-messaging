@@ -34,6 +34,7 @@ namespace Twino.MQ.Client.Internal
             {
                 if (_consumer != null)
                     await Consume(_consumer, message, t, client);
+                
                 else if (_consumerFactoryCreator != null)
                 {
                     consumerFactory = _consumerFactoryCreator();
@@ -52,7 +53,7 @@ namespace Twino.MQ.Client.Internal
                 if (SendNack)
                     await SendNegativeAck(message, client, e);
 
-                await SendExceptions(client, e);
+                await SendExceptions(message, client, e);
                 exception = e;
             }
             finally

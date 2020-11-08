@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
 using Twino.MQ.Client.Annotations;
+using Twino.MQ.Client.Models;
 using Twino.Protocols.TMQ;
 
 namespace Twino.MQ.Client.Internal
@@ -17,11 +18,11 @@ namespace Twino.MQ.Client.Internal
 
         protected RetryAttribute Retry { get; private set; }
 
-        protected string DefaultPushException { get; private set; }
-        protected List<Tuple<Type, string>> PushExceptions { get; private set; }
+        protected TransportExceptionDescriptor DefaultPushException { get; private set; }
+        protected List<TransportExceptionDescriptor> PushExceptions { get; private set; }
 
-        protected KeyValuePair<string, ushort> DefaultPublishException { get; private set; }
-        protected List<Tuple<Type, KeyValuePair<string, ushort>>> PublishExceptions { get; private set; }
+        protected TransportExceptionDescriptor DefaultPublishException { get; private set; }
+        protected List<TransportExceptionDescriptor> PublishExceptions { get; private set; }
 
         #endregion
 
@@ -40,6 +41,20 @@ namespace Twino.MQ.Client.Internal
             PushExceptions = defaultOptions.PushExceptions;
             DefaultPublishException = defaultOptions.DefaultPublishException;
             PublishExceptions = defaultOptions.PublishExceptions;
+
+            if (DefaultPushException != null && !typeof(ITransportableException).IsAssignableFrom(DefaultPushException.ModelType))
+                throw new InvalidCastException("PushException model type must implement ITransportableException interface");
+
+            foreach (TransportExceptionDescriptor item in PushExceptions)
+                if (item != null && !typeof(ITransportableException).IsAssignableFrom(item.ModelType))
+                    throw new InvalidCastException("PushException model type must implement ITransportableException interface");
+
+            if (DefaultPublishException != null && !typeof(ITransportableException).IsAssignableFrom(DefaultPublishException.ModelType))
+                throw new InvalidCastException("PublishException model type must implement ITransportableException interface");
+
+            foreach (TransportExceptionDescriptor item in PublishExceptions)
+                if (item != null && !typeof(ITransportableException).IsAssignableFrom(item.ModelType))
+                    throw new InvalidCastException("PublishException model type must implement ITransportableException interface");
         }
 
         public abstract Task Execute(TmqClient client, TwinoMessage message, object model);
@@ -64,28 +79,27 @@ namespace Twino.MQ.Client.Internal
                 Retry = retryAttr;
 
             if (PushExceptions == null)
-                PushExceptions = new List<Tuple<Type, string>>();
-            
+                PushExceptions = new List<TransportExceptionDescriptor>();
+
             IEnumerable<PushExceptionsAttribute> pushAttributes = type.GetCustomAttributes<PushExceptionsAttribute>(true);
             foreach (PushExceptionsAttribute attribute in pushAttributes)
             {
                 if (attribute.ExceptionType == null)
-                    DefaultPushException = attribute.QueueName;
+                    DefaultPushException = new TransportExceptionDescriptor(attribute.ModelType);
                 else
-                    PushExceptions.Add(new Tuple<Type, string>(attribute.ExceptionType, attribute.QueueName));
+                    PushExceptions.Add(new TransportExceptionDescriptor(attribute.ModelType, attribute.ExceptionType));
             }
 
             if (PublishExceptions == null)
-                PublishExceptions = new List<Tuple<Type, KeyValuePair<string, ushort>>>();
+                PublishExceptions = new List<TransportExceptionDescriptor>();
 
             IEnumerable<PublishExceptionsAttribute> publishAttributes = type.GetCustomAttributes<PublishExceptionsAttribute>(true);
             foreach (PublishExceptionsAttribute attribute in publishAttributes)
             {
                 if (attribute.ExceptionType == null)
-                    DefaultPublishException = new KeyValuePair<string, ushort>(attribute.RouterName, attribute.ContentType);
+                    DefaultPublishException = new TransportExceptionDescriptor(attribute.ModelType);
                 else
-                    PublishExceptions.Add(new Tuple<Type, KeyValuePair<string, ushort>>(attribute.ExceptionType,
-                                                                                        new KeyValuePair<string, ushort>(attribute.RouterName, attribute.ContentType)));
+                    PublishExceptions.Add(new TransportExceptionDescriptor(attribute.ModelType, attribute.ExceptionType));
             }
         }
 
@@ -117,42 +131,70 @@ namespace Twino.MQ.Client.Internal
             return client.SendNegativeAck(message, reason);
         }
 
-        protected async Task SendExceptions(TmqClient client, Exception exception)
+        protected async Task SendExceptions(TwinoMessage consumingMessage, TmqClient client, Exception exception)
         {
-            if (PushExceptions.Count == 0 &&
-                PublishExceptions.Count == 0 &&
-                string.IsNullOrEmpty(DefaultPushException) &&
-                string.IsNullOrEmpty(DefaultPublishException.Key))
+            if (PushExceptions.Count == 0 && PublishExceptions.Count == 0 && DefaultPushException == null && DefaultPublishException == null)
                 return;
 
             Type type = exception.GetType();
-            string serialized = Newtonsoft.Json.JsonConvert.SerializeObject(exception);
 
             bool pushFound = false;
-            foreach (Tuple<Type, string> tuple in PushExceptions)
+            foreach (TransportExceptionDescriptor item in PushExceptions)
             {
-                if (tuple.Item1.IsAssignableFrom(type))
+                if (item.ExceptionType.IsAssignableFrom(type))
                 {
-                    await client.Queues.Push(tuple.Item2, serialized, false);
+                    await TransportToQueue(client, item, exception, consumingMessage);
                     pushFound = true;
                 }
             }
 
-            if (!pushFound && !string.IsNullOrEmpty(DefaultPushException))
-                await client.Queues.Push(DefaultPushException, serialized, false);
+            if (!pushFound && DefaultPushException != null)
+                await TransportToQueue(client, DefaultPushException, exception, consumingMessage);
 
             bool publishFound = false;
-            foreach (Tuple<Type, KeyValuePair<string, ushort>> tuple in PublishExceptions)
+            foreach (TransportExceptionDescriptor item in PublishExceptions)
             {
-                if (tuple.Item1.IsAssignableFrom(type))
+                if (item.ExceptionType.IsAssignableFrom(type))
                 {
-                    await client.Routers.Publish(tuple.Item2.Key, serialized, false, tuple.Item2.Value);
+                    await TransportToRouter(client, item, exception, consumingMessage);
                     publishFound = true;
                 }
             }
 
-            if (!publishFound && !string.IsNullOrEmpty(DefaultPublishException.Key))
-                await client.Routers.Publish(DefaultPublishException.Key, serialized, false, DefaultPublishException.Value);
+            if (!publishFound && DefaultPublishException != null)
+                await TransportToRouter(client, DefaultPublishException, exception, consumingMessage);
+        }
+
+        private async Task TransportToQueue(TmqClient client, TransportExceptionDescriptor item, Exception exception, TwinoMessage consumingMessage)
+        {
+            ITransportableException transportable = (ITransportableException) Activator.CreateInstance(item.ModelType);
+            if (transportable == null)
+                return;
+
+            transportable.Initialize(new ExceptionContext
+                                     {
+                                         Consumer = this,
+                                         Exception = exception,
+                                         ConsumingMessage = consumingMessage
+                                     });
+
+            await client.Queues.PushJson(transportable, false);
+        }
+
+        private async Task TransportToRouter(TmqClient client, TransportExceptionDescriptor item, Exception exception, TwinoMessage consumingMessage)
+        {
+            ITransportableException transportable = (ITransportableException) Activator.CreateInstance(item.ModelType);
+            if (transportable == null)
+                return;
+
+            transportable.Initialize(new ExceptionContext
+                                     {
+                                         Consumer = this,
+                                         Exception = exception,
+                                         ConsumingMessage = consumingMessage
+                                     });
+
+            await client.Routers.PublishJson(transportable);
         }
 
         #endregion

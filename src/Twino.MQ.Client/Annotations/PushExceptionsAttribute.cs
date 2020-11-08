@@ -14,25 +14,25 @@ namespace Twino.MQ.Client.Annotations
         public Type ExceptionType { get; }
         
         /// <summary>
-        /// Queue name
+        /// Exception model type
         /// </summary>
-        public string QueueName { get; }
+        public Type ModelType { get; }
         
         /// <summary>
         /// Pushes all exceptions
         /// </summary>
-        public PushExceptionsAttribute(string queue)
+        public PushExceptionsAttribute(Type modelType)
         {
-            QueueName = queue;
+            ModelType = modelType;
         }
 
         /// <summary>
         /// Pushes specified type of exceptions
         /// </summary>
-        public PushExceptionsAttribute(Type exceptionType, string queue)
+        public PushExceptionsAttribute(Type modelType, Type exceptionType)
         {
+            ModelType = modelType;
             ExceptionType = exceptionType;
-            QueueName = queue;
         }
     }
 }

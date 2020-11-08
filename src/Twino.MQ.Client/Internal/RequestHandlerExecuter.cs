@@ -89,7 +89,7 @@ namespace Twino.MQ.Client.Internal
                     }
                 }
 
-                await SendExceptions(client, e);
+                await SendExceptions(message, client, e);
                 exception = e;
             }
             finally
