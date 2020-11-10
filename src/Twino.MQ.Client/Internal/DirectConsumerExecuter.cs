@@ -54,7 +54,7 @@ namespace Twino.MQ.Client.Internal
                 if (SendNack)
                     await SendNegativeAck(message, client, e);
 
-                await SendExceptions(client, e);
+                await SendExceptions(message, client, e);
                 exception = e;
             }
             finally

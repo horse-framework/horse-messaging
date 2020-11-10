@@ -7,7 +7,7 @@ namespace RoutingSample.DirectConsumer
 {
 	[AutoAck]
 	[AutoNack(NackReason.ExceptionType)]
-	[PushExceptions("SAMPLE-EXCEPTION-QUEUE")]
+	//[PushExceptions("SAMPLE-EXCEPTION-QUEUE")]
 	public abstract class BaseDirectConsumer<T> : IDirectConsumer<T>
 	{
 		protected abstract Task Handle(T model);

@@ -1,12 +1,12 @@
 using System.Threading.Tasks;
+using Test.Bus.Models;
 using Twino.MQ.Client;
 using Twino.MQ.Client.Annotations;
 using Twino.Protocols.TMQ;
 
 namespace Test.Bus.Consumers
 {
-    [QueueName("ex-queue-1")]
-    public class ExceptionConsumer1 : IQueueConsumer<string>
+    public class ExceptionConsumer1 : IQueueConsumer<ExceptionModel1>
     {
         public int Count { get; private set; }
 
@@ -17,7 +17,7 @@ namespace Test.Bus.Consumers
             Instance = this;
         }
 
-        public Task Consume(TwinoMessage message, string model, TmqClient client)
+        public Task Consume(TwinoMessage message, ExceptionModel1 model, TmqClient client)
         {
             Count++;
             return Task.CompletedTask;

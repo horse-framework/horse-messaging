@@ -170,8 +170,11 @@ namespace Twino.MQ
             foreach (TmqStickyConnector connector in Connectors)
                 connector.Abort();
 
-            _nodeServer.Stop();
-            _nodeServer = null;
+            if (_nodeServer != null)
+            {
+                _nodeServer.Stop();
+                _nodeServer = null;
+            }
         }
 
         #endregion

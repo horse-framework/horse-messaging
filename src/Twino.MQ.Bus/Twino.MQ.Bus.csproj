@@ -6,9 +6,9 @@
         <Product>Twino.MQ.Bus</Product>
         <Description>Twino MQ Bus extension for Twino IOC</Description>
         <PackageTags>twino,tmq,consumer,bus</PackageTags>
-        <AssemblyVersion>4.2.0</AssemblyVersion>
-        <FileVersion>4.2.0</FileVersion>
-        <PackageVersion>4.2.0</PackageVersion>
+        <AssemblyVersion>4.2.1</AssemblyVersion>
+        <FileVersion>4.2.1</FileVersion>
+        <PackageVersion>4.2.1</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/twino-framework/twino-extensions</PackageProjectUrl>

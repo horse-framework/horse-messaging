@@ -26,7 +26,6 @@ namespace Sample.Consumer
                    .ConfigureModels(cfg => cfg.UseQueueName(type => type.Name)
                                               .UseConsumerAck()
                                               .AddMessageHeader("Sender-Client-Name", "MyName")
-                                              .PublishConsumerExceptions("router-name")
                                               .SetPutBackDelay(TimeSpan.FromSeconds(10)));
 
 

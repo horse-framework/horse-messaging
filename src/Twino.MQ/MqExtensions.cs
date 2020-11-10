@@ -277,7 +277,16 @@ namespace Twino.MQ
         /// <summary>
         /// Uses a custom server message handler
         /// </summary>
+        [Obsolete("This method adds new handler, use AddServerMessageHandler instead")]
         public static TwinoMqBuilder UseServerMessageHandler(this TwinoMqBuilder builder, IServerMessageHandler messageHandler)
+        {
+            return AddServerMessageHandler(builder, messageHandler);
+        }
+        
+        /// <summary>
+        /// Uses a custom server message handler
+        /// </summary>
+        public static TwinoMqBuilder AddServerMessageHandler(this TwinoMqBuilder builder, IServerMessageHandler messageHandler)
         {
             builder.Server.AddMessageHandler(messageHandler);
             return builder;

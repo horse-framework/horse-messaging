@@ -9,9 +9,9 @@ namespace Test.Bus.Consumers
 {
     [AutoAck]
     [AutoNack]
-    [PublishExceptions("ex-route-1")]
-    [PublishExceptions(typeof(NotSupportedException), "ex-route-2")]
-    [PublishExceptions(typeof(InvalidOperationException), "ex-route-3")]
+    [PublishExceptions(typeof(ExceptionModel1))]
+    [PublishExceptions(typeof(ExceptionModel2), typeof(NotSupportedException))]
+    [PublishExceptions(typeof(ExceptionModel3), typeof(InvalidOperationException))]
     public class QueueConsumer4 : IQueueConsumer<Model4>
     {
         public int Count { get; private set; }

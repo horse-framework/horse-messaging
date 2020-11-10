@@ -16,7 +16,7 @@ namespace Twino.MQ.Client
 
         internal List<Func<KeyValuePair<string, string>>> HeaderFactories { get; } = new List<Func<KeyValuePair<string, string>>>();
         internal Func<Type, string> QueueNameFactory { get; private set; }
-        
+
         internal MessagingQueueStatus? QueueStatus { get; private set; }
         internal QueueAckDecision? AckDecision { get; private set; }
         internal int? DelayBetweenMessages { get; private set; }
@@ -33,11 +33,11 @@ namespace Twino.MQ.Client
 
         internal RetryAttribute Retry { get; private set; }
 
-        internal string DefaultPushException { get; private set; }
-        internal List<Tuple<Type, string>> PushExceptions { get; } = new List<Tuple<Type, string>>();
+        internal TransportExceptionDescriptor DefaultPushException { get; private set; }
+        internal List<TransportExceptionDescriptor> PushExceptions { get; } = new List<TransportExceptionDescriptor>();
 
-        internal KeyValuePair<string, ushort> DefaultPublishException { get; private set; }
-        internal List<Tuple<Type, KeyValuePair<string, ushort>>> PublishExceptions { get; } = new List<Tuple<Type, KeyValuePair<string, ushort>>>();
+        internal TransportExceptionDescriptor DefaultPublishException { get; private set; }
+        internal List<TransportExceptionDescriptor> PublishExceptions { get; } = new List<TransportExceptionDescriptor>();
 
         #endregion
 
@@ -163,36 +163,40 @@ namespace Twino.MQ.Client
         /// <summary>
         /// Push exceptions in consumers' consume operations to specified queue
         /// </summary>
-        public ModelTypeConfigurator PushConsumerExceptions(string queueName)
+        public ModelTypeConfigurator PushConsumerExceptions<TModel>()
+            where TModel : ITransportableException, new()
         {
-            DefaultPushException = queueName;
+            DefaultPushException = new TransportExceptionDescriptor(typeof(TModel));
             return this;
         }
 
         /// <summary>
         /// Push exceptions in specified types in consumers' consume operations to specified queue
         /// </summary>
-        public ModelTypeConfigurator PushConsumerExceptions(Type exceptionType, string queueName)
+        public ModelTypeConfigurator PushConsumerExceptions<TModel>(Type exceptionType)
+            where TModel : ITransportableException, new()
         {
-            PushExceptions.Add(new Tuple<Type, string>(exceptionType, queueName));
+            PushExceptions.Add(new TransportExceptionDescriptor(typeof(TModel), exceptionType));
             return this;
         }
 
         /// <summary>
         /// Publish exceptions in consumers' consume operations to specified route
         /// </summary>
-        public ModelTypeConfigurator PublishConsumerExceptions(string routerName, ushort contentType = 0)
+        public ModelTypeConfigurator PublishConsumerExceptions<TModel>()
+            where TModel : ITransportableException, new()
         {
-            DefaultPublishException = new KeyValuePair<string, ushort>(routerName, contentType);
+            DefaultPublishException = new TransportExceptionDescriptor(typeof(TModel));
             return this;
         }
 
         /// <summary>
         /// Publish exceptions in specified types in consumers' consume operations to specified route
         /// </summary>
-        public ModelTypeConfigurator PublishConsumerExceptions(Type exceptionType, string routerName, ushort contentType = 0)
+        public ModelTypeConfigurator PublishConsumerExceptions<TModel>(Type exceptionType)
+            where TModel : ITransportableException, new()
         {
-            PublishExceptions.Add(new Tuple<Type, KeyValuePair<string, ushort>>(exceptionType, new KeyValuePair<string, ushort>(routerName, contentType)));
+            PublishExceptions.Add(DefaultPublishException = new TransportExceptionDescriptor(typeof(TModel), exceptionType));
             return this;
         }
 
