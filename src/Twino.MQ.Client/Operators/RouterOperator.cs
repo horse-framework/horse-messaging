@@ -141,15 +141,33 @@ namespace Twino.MQ.Client.Operators
         /// <summary>
         /// Publishes a string message to a router
         /// </summary>
+        public Task<TwinoResult> Publish(string routerName,
+                                         string message,
+                                         bool waitForAcknowledge = false,
+                                         ushort contentType = 0,
+                                         IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        {
+            return Publish(routerName, message, null, waitForAcknowledge, contentType, messageHeaders);
+        }
+
+        /// <summary>
+        /// Publishes a string message to a router
+        /// </summary>
         public async Task<TwinoResult> Publish(string routerName,
                                                string message,
+                                               string messageId = null,
                                                bool waitForAcknowledge = false,
                                                ushort contentType = 0,
                                                IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TwinoMessage msg = new TwinoMessage(MessageType.Router, routerName, contentType);
             msg.WaitResponse = waitForAcknowledge;
-            msg.SetMessageId(_client.UniqueIdGenerator.Create());
+
+            if (!string.IsNullOrEmpty(messageId))
+                msg.SetMessageId(messageId);
+            else
+                msg.SetMessageId(_client.UniqueIdGenerator.Create());
+
             msg.Content = new MemoryStream(Encoding.UTF8.GetBytes(message));
 
             if (messageHeaders != null)
@@ -162,15 +180,33 @@ namespace Twino.MQ.Client.Operators
         /// <summary>
         /// Publishes a byte array data to a router
         /// </summary>
+        public Task<TwinoResult> Publish(string routerName,
+                                         byte[] data,
+                                         bool waitForAcknowledge = false,
+                                         ushort contentType = 0,
+                                         IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        {
+            return Publish(routerName, data, null, waitForAcknowledge, contentType, messageHeaders);
+        }
+
+        /// <summary>
+        /// Publishes a byte array data to a router
+        /// </summary>
         public async Task<TwinoResult> Publish(string routerName,
                                                byte[] data,
+                                               string messageId = null,
                                                bool waitForAcknowledge = false,
                                                ushort contentType = 0,
                                                IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TwinoMessage msg = new TwinoMessage(MessageType.Router, routerName, contentType);
+
+            if (!string.IsNullOrEmpty(messageId))
+                msg.SetMessageId(messageId);
+            else
+                msg.SetMessageId(_client.UniqueIdGenerator.Create());
+
             msg.WaitResponse = waitForAcknowledge;
-            msg.SetMessageId(_client.UniqueIdGenerator.Create());
             msg.Content = new MemoryStream(data);
 
             if (messageHeaders != null)
@@ -186,7 +222,7 @@ namespace Twino.MQ.Client.Operators
         public Task<TwinoResult> PublishJson(object model, bool waitForAcknowledge = false,
                                              IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return PublishJson(null, model, waitForAcknowledge, null, messageHeaders);
+            return PublishJson(null, model, null, waitForAcknowledge, null, messageHeaders);
         }
 
         /// <summary>
@@ -194,6 +230,7 @@ namespace Twino.MQ.Client.Operators
         /// </summary>
         public async Task<TwinoResult> PublishJson(string routerName,
                                                    object model,
+                                                   string messageId = null,
                                                    bool waitForAcknowledge = false,
                                                    ushort? contentType = null,
                                                    IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
@@ -201,8 +238,12 @@ namespace Twino.MQ.Client.Operators
             TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor(model.GetType());
             TwinoMessage message = descriptor.CreateMessage(MessageType.Router, routerName, contentType);
 
+            if (!string.IsNullOrEmpty(messageId))
+                message.SetMessageId(messageId);
+            else
+                message.SetMessageId(_client.UniqueIdGenerator.Create());
+
             message.WaitResponse = waitForAcknowledge;
-            message.SetMessageId(_client.UniqueIdGenerator.Create());
             message.Serialize(model, _client.JsonSerializer);
 
             if (messageHeaders != null)
@@ -217,7 +258,7 @@ namespace Twino.MQ.Client.Operators
         /// Waits response from at least one binding.
         /// </summary>
         public async Task<TwinoMessage> PublishRequest(string routerName, string message, ushort contentType = 0,
-                                                     IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+                                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TwinoMessage msg = new TwinoMessage(MessageType.Router, routerName, contentType);
             msg.WaitResponse = true;

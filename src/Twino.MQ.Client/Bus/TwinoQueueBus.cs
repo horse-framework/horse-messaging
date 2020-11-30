@@ -56,6 +56,34 @@ namespace Twino.MQ.Client.Bus
         }
 
         /// <inheritdoc />
+        public Task<TwinoResult> Push(string queue,
+                                      MemoryStream content,
+                                      string messageId,
+                                      bool waitAcknowledge = false,
+                                      IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        {
+            TmqClient client = _connector.GetClient();
+            if (client == null)
+                return Task.FromResult(new TwinoResult(TwinoResultCode.SendError));
+
+            return client.Queues.Push(queue, content, messageId, waitAcknowledge, messageHeaders);
+        }
+
+        /// <inheritdoc />
+        public Task<TwinoResult> Push(string queue,
+                                      string content,
+                                      string messageId,
+                                      bool waitAcknowledge = false,
+                                      IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        {
+            TmqClient client = _connector.GetClient();
+            if (client == null)
+                return Task.FromResult(new TwinoResult(TwinoResultCode.SendError));
+
+            return client.Queues.Push(queue, content, messageId, waitAcknowledge, messageHeaders);
+        }
+
+        /// <inheritdoc />
         public Task<TwinoResult> PushJson(object jsonObject,
                                           bool waitAcknowledge = false,
                                           IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
@@ -78,6 +106,33 @@ namespace Twino.MQ.Client.Bus
                 return Task.FromResult(new TwinoResult(TwinoResultCode.SendError));
 
             return client.Queues.PushJson(queue, jsonObject, waitAcknowledge, messageHeaders);
+        }
+
+        /// <inheritdoc />
+        public Task<TwinoResult> PushJson(object jsonObject,
+                                          string messageId,
+                                          bool waitAcknowledge = false,
+                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        {
+            TmqClient client = _connector.GetClient();
+            if (client == null)
+                return Task.FromResult(new TwinoResult(TwinoResultCode.SendError));
+
+            return client.Queues.PushJson(jsonObject, messageId, waitAcknowledge, messageHeaders);
+        }
+
+        /// <inheritdoc />
+        public Task<TwinoResult> PushJson(string queue,
+                                          object jsonObject,
+                                          string messageId,
+                                          bool waitAcknowledge = false,
+                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        {
+            TmqClient client = _connector.GetClient();
+            if (client == null)
+                return Task.FromResult(new TwinoResult(TwinoResultCode.SendError));
+
+            return client.Queues.PushJson(queue, jsonObject, messageId, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />

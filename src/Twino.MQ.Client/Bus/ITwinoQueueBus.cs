@@ -35,6 +35,30 @@ namespace Twino.MQ.Client.Bus
                                IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
+        /// Pushes a message into a queue
+        /// </summary>
+        /// <param name="queue">Target queue name</param>
+        /// <param name="content">Message content</param>
+        /// <param name="messageId">Message Id string</param>
+        /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
+        /// <param name="messageHeaders">Additional message headers</param>
+        /// <returns></returns>
+        Task<TwinoResult> Push(string queue, MemoryStream content, string messageId, bool waitAcknowledge = false,
+                               IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+
+        /// <summary>
+        /// Pushes a message into a queue
+        /// </summary>
+        /// <param name="queue">Target queue name</param>
+        /// <param name="content">Message content</param>
+        /// <param name="messageId">Message Id string</param>
+        /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
+        /// <param name="messageHeaders">Additional message headers</param>
+        /// <returns></returns>
+        Task<TwinoResult> Push(string queue, string content, string messageId, bool waitAcknowledge = false,
+                               IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+
+        /// <summary>
         /// Pushes a JSON message into a queue
         /// </summary>
         /// <param name="jsonObject">The object that will be serialized to JSON string</param>
@@ -53,6 +77,29 @@ namespace Twino.MQ.Client.Bus
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<TwinoResult> PushJson(string queue, object jsonObject, bool waitAcknowledge = false,
+                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+
+        /// <summary>
+        /// Pushes a JSON message into a queue
+        /// </summary>
+        /// <param name="jsonObject">The object that will be serialized to JSON string</param>
+        /// <param name="messageId">Message Id string</param>
+        /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
+        /// <param name="messageHeaders">Additional message headers</param>
+        /// <returns></returns>
+        Task<TwinoResult> PushJson(object jsonObject, string messageId, bool waitAcknowledge = false,
+                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+
+        /// <summary>
+        /// Pushes a JSON message into a specified queue
+        /// </summary>
+        /// <param name="queue">Target queue name</param>
+        /// <param name="messageId">Message Id string</param>
+        /// <param name="jsonObject">The object that will be serialized to JSON string</param>
+        /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
+        /// <param name="messageHeaders">Additional message headers</param>
+        /// <returns></returns>
+        Task<TwinoResult> PushJson(string queue, object jsonObject, string messageId, bool waitAcknowledge = false,
                                    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
