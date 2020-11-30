@@ -285,7 +285,7 @@ namespace Twino.MQ.Client.Operators
 
             message.Serialize(jsonObject, _client.JsonSerializer);
 
-            if (waitAcknowledge)
+            if (string.IsNullOrEmpty(message.MessageId) && waitAcknowledge)
                 message.SetMessageId(_client.UniqueIdGenerator.Create());
 
             return await _client.WaitResponse(message, waitAcknowledge);
@@ -335,7 +335,7 @@ namespace Twino.MQ.Client.Operators
                 foreach (KeyValuePair<string, string> pair in messageHeaders)
                     message.AddHeader(pair.Key, pair.Value);
 
-            if (waitAcknowledge)
+            if (string.IsNullOrEmpty(message.MessageId) && waitAcknowledge)
                 message.SetMessageId(_client.UniqueIdGenerator.Create());
 
             return await _client.WaitResponse(message, waitAcknowledge);
