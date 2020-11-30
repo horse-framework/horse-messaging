@@ -66,7 +66,7 @@ namespace Twino.MQ.Client.Bus
             if (client == null)
                 return Task.FromResult(new TwinoResult(TwinoResultCode.SendError));
 
-            return client.Queues.Push(queue, content, waitAcknowledge, messageHeaders);
+            return client.Queues.Push(queue, content, messageId, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -118,7 +118,7 @@ namespace Twino.MQ.Client.Bus
             if (client == null)
                 return Task.FromResult(new TwinoResult(TwinoResultCode.SendError));
 
-            return client.Queues.PushJson(jsonObject, waitAcknowledge, messageHeaders);
+            return client.Queues.PushJson(jsonObject, messageId, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />
