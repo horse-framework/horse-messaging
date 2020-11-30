@@ -250,11 +250,33 @@ namespace Twino.MQ.Client.Operators
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public async Task<TwinoResult> PushJson(string queue, object jsonObject, bool waitAcknowledge,
+        public Task<TwinoResult> PushJson(object jsonObject, string messageId, bool waitAcknowledge,
+                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        {
+            return PushJson(null, jsonObject, messageId, waitAcknowledge, messageHeaders);
+        }
+
+        /// <summary>
+        /// Pushes a message to a queue
+        /// </summary>
+        public Task<TwinoResult> PushJson(string queue, object jsonObject, bool waitAcknowledge,
+                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        {
+            return PushJson(queue, jsonObject, null, waitAcknowledge, messageHeaders);
+        }
+
+        /// <summary>
+        /// Pushes a message to a queue
+        /// </summary>
+        public async Task<TwinoResult> PushJson(string queue, object jsonObject, string messageId, bool waitAcknowledge,
                                                 IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor(jsonObject.GetType());
             TwinoMessage message = descriptor.CreateMessage(MessageType.QueueMessage, queue, 0);
+
+            if (!string.IsNullOrEmpty(messageId))
+                message.SetMessageId(messageId);
+
             message.WaitResponse = waitAcknowledge;
 
             if (messageHeaders != null)
@@ -281,12 +303,33 @@ namespace Twino.MQ.Client.Operators
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public async Task<TwinoResult> Push(string queue, MemoryStream content, bool waitAcknowledge,
+        public async Task<TwinoResult> Push(string queue, string content, string messageId, bool waitAcknowledge,
+                                            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        {
+            return await Push(queue, new MemoryStream(Encoding.UTF8.GetBytes(content)), messageId, waitAcknowledge, messageHeaders);
+        }
+
+        /// <summary>
+        /// Pushes a message to a queue
+        /// </summary>
+        public Task<TwinoResult> Push(string queue, MemoryStream content, bool waitAcknowledge,
+                                      IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        {
+            return Push(queue, content, null, waitAcknowledge, messageHeaders);
+        }
+
+        /// <summary>
+        /// Pushes a message to a queue
+        /// </summary>
+        public async Task<TwinoResult> Push(string queue, MemoryStream content, string messageId, bool waitAcknowledge,
                                             IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, queue, 0);
             message.Content = content;
             message.WaitResponse = waitAcknowledge;
+
+            if (!string.IsNullOrEmpty(messageId))
+                message.SetMessageId(messageId);
 
             if (messageHeaders != null)
                 foreach (KeyValuePair<string, string> pair in messageHeaders)

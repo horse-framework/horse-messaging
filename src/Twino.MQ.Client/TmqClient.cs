@@ -557,7 +557,10 @@ namespace Twino.MQ.Client
         {
             message.SetSource(_clientId);
             message.WaitResponse = true;
-            message.SetMessageId(UniqueIdGenerator.Create());
+
+            if (string.IsNullOrEmpty(message.MessageId))
+                message.SetMessageId(UniqueIdGenerator.Create());
+
             if (message.Type == MessageType.DirectMessage)
                 message.HighPriority = true;
 

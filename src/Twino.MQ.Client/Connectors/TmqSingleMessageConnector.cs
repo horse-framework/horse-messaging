@@ -330,7 +330,7 @@ namespace Twino.MQ.Client.Connectors
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
-                return client.Routers.Publish(routerName, content.ToArray(), waitAcknowledge);
+                return client.Routers.Publish(routerName, content.ToArray(), null, waitAcknowledge);
 
             return Task.FromResult(TwinoResult.Failed());
         }
@@ -354,7 +354,7 @@ namespace Twino.MQ.Client.Connectors
         {
             TmqClient client = GetClient();
             if (client != null && client.IsConnected)
-                return client.Routers.PublishJson(routerName, jsonObject, waitAcknowledge);
+                return client.Routers.PublishJson(routerName, jsonObject, null, waitAcknowledge);
 
             return Task.FromResult(TwinoResult.Failed());
         }

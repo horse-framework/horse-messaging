@@ -18,7 +18,24 @@ namespace Twino.MQ.Client.Bus
         /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
-        Task<TwinoResult> Publish(string routerName, string content, bool waitAcknowledge = false,
+        Task<TwinoResult> Publish(string routerName,
+                                  string content,
+                                  bool waitAcknowledge = false,
+                                  IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+
+        /// <summary>
+        /// Publish a message to a router
+        /// </summary>
+        /// <param name="routerName">Router name</param>
+        /// <param name="content">Message content</param>
+        /// <param name="messageId">User specified message Id, must be unique</param>
+        /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
+        /// <param name="messageHeaders">Additional message headers</param>
+        /// <returns></returns>
+        Task<TwinoResult> Publish(string routerName,
+                                  string content,
+                                  string messageId,
+                                  bool waitAcknowledge = false,
                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
@@ -29,7 +46,24 @@ namespace Twino.MQ.Client.Bus
         /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
-        Task<TwinoResult> Publish(string routerName, MemoryStream content, bool waitAcknowledge = false,
+        Task<TwinoResult> Publish(string routerName,
+                                  MemoryStream content,
+                                  bool waitAcknowledge = false,
+                                  IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+
+        /// <summary>
+        /// Publish a message to a router
+        /// </summary>
+        /// <param name="routerName">Router name</param>
+        /// <param name="content">Message content</param>
+        /// <param name="messageId">User specified message Id, must be unique</param>
+        /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
+        /// <param name="messageHeaders">Additional message headers</param>
+        /// <returns></returns>
+        Task<TwinoResult> Publish(string routerName,
+                                  MemoryStream content,
+                                  string messageId,
+                                  bool waitAcknowledge = false,
                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
@@ -39,7 +73,8 @@ namespace Twino.MQ.Client.Bus
         /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
-        Task<TwinoResult> PublishJson(object jsonObject, bool waitAcknowledge = false,
+        Task<TwinoResult> PublishJson(object jsonObject,
+                                      bool waitAcknowledge = false,
                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
@@ -50,7 +85,9 @@ namespace Twino.MQ.Client.Bus
         /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
-        Task<TwinoResult> PublishJson(string routerName, object jsonObject, bool waitAcknowledge = false,
+        Task<TwinoResult> PublishJson(string routerName,
+                                      object jsonObject,
+                                      bool waitAcknowledge = false,
                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
@@ -62,10 +99,31 @@ namespace Twino.MQ.Client.Bus
         /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
-        Task<TwinoResult> PublishJson(string routerName, object jsonObject, ushort? contentType = null,
+        Task<TwinoResult> PublishJson(string routerName,
+                                      object jsonObject,
+                                      ushort? contentType = null,
                                       bool waitAcknowledge = false,
                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
+        /// <summary>
+        /// Publish a JSON message to a router
+        /// </summary>
+        /// <param name="routerName">Router name</param>
+        /// <param name="jsonObject">The object that will be serialized to JSON string</param>
+        /// <param name="messageId">User specified message Id, must be unique</param>
+        /// <param name="contentType">Message content type</param>
+        /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
+        /// <param name="messageHeaders">Additional message headers</param>
+        /// <returns></returns>
+        Task<TwinoResult> PublishJson(string routerName,
+                                      object jsonObject,
+                                      string messageId,
+                                      ushort? contentType = null,
+                                      bool waitAcknowledge = false,
+                                      IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+
+
+        
         /// <summary>
         /// Publish a string message to a router and waits for a response message
         /// </summary>
@@ -75,7 +133,7 @@ namespace Twino.MQ.Client.Bus
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<TwinoMessage> PublishRequest(string routerName, string message, ushort contentType = 0,
-                                        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Publish a JSON message to a router and waits for a response message
