@@ -537,13 +537,17 @@ namespace Twino.MQ.Client.Operators
         /// <summary>
         /// Subscribes to a queue
         /// </summary>
-        public async Task<TwinoResult> Subscribe(string queue, bool verifyResponse)
+        public async Task<TwinoResult> Subscribe(string queue, bool verifyResponse, IEnumerable<KeyValuePair<string, string>> headers = null)
         {
             TwinoMessage message = new TwinoMessage();
             message.Type = MessageType.Server;
             message.ContentType = KnownContentTypes.Subscribe;
             message.SetTarget(queue);
             message.WaitResponse = verifyResponse;
+            
+            if (headers != null)
+                foreach (KeyValuePair<string, string> header in headers)
+                    message.AddHeader(header.Key, header.Value);
 
             if (verifyResponse)
                 message.SetMessageId(_client.UniqueIdGenerator.Create());
