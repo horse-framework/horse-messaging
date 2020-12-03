@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Twino.MQ.Data.Configuration;
+using Twino.MQ.Delivery;
 using Twino.MQ.Options;
 using Twino.MQ.Queues;
 
@@ -73,11 +74,15 @@ namespace Twino.MQ.Data
         /// <param name="deleteWhen">Decision when messages are deleted from disk</param>
         /// <param name="producerAckDecision">Decision when producer receives acknowledge</param>
         /// <param name="useRedelivery">True if want to keep redelivery data and send to consumers with message headers</param>
+        /// <param name="ackTimeoutPutback">Putback decision when ack message isn't received</param>
+        /// <param name="nackPutback">Putback decision when negative ack is received</param>
         /// <returns></returns>
         public static TwinoMqBuilder UsePersistentDeliveryHandler(this TwinoMqBuilder builder,
                                                                   DeleteWhen deleteWhen,
                                                                   ProducerAckDecision producerAckDecision,
-                                                                  bool useRedelivery = false)
+                                                                  bool useRedelivery = false,
+                                                                  PutBackDecision ackTimeoutPutback = PutBackDecision.End,
+                                                                  PutBackDecision nackPutback = PutBackDecision.End)
         {
             builder.Server.DeliveryHandlerFactory = async (dh) =>
             {
@@ -88,6 +93,9 @@ namespace Twino.MQ.Data
                                                                                   useRedelivery,
                                                                                   dh.DeliveryHandlerHeader);
 
+                handler.AckTimeoutPutBack = ackTimeoutPutback;
+                handler.NegativeAckPutBack = nackPutback;
+                
                 await handler.Initialize();
                 dh.OnAfterCompleted(AfterDeliveryHandlerCreated);
                 return handler;
@@ -103,15 +111,21 @@ namespace Twino.MQ.Data
         /// <param name="producerAckDecision">Decision when producer receives acknowledge</param>
         /// <param name="useRedelivery">True if want to keep redelivery data and send to consumers with message headers</param>
         /// <param name="key">Definition key for delivery handler. You can manage with that key, how the queue will be reloaded.</param>
+        /// <param name="ackTimeoutPutback">Putback decision when ack message isn't received</param>
+        /// <param name="nackPutback">Putback decision when negative ack is received</param>
         /// <returns></returns>
         public static async Task<IMessageDeliveryHandler> CreatePersistentDeliveryHandler(this DeliveryHandlerBuilder builder,
                                                                                           DeleteWhen deleteWhen,
                                                                                           ProducerAckDecision producerAckDecision,
                                                                                           bool useRedelivery = false,
+                                                                                          PutBackDecision ackTimeoutPutback = PutBackDecision.End,
+                                                                                          PutBackDecision nackPutback = PutBackDecision.End,
                                                                                           string key = "default")
         {
             DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
             PersistentDeliveryHandler handler = new PersistentDeliveryHandler(builder.Queue, databaseOptions, deleteWhen, producerAckDecision, useRedelivery, key);
+            handler.AckTimeoutPutBack = ackTimeoutPutback;
+            handler.NegativeAckPutBack = nackPutback;
             await handler.Initialize();
             builder.OnAfterCompleted(AfterDeliveryHandlerCreated);
             return handler;

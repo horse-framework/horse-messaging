@@ -646,6 +646,8 @@ namespace Twino.MQ.Queues
 
                     IMessageDeliveryHandler deliveryHandler = await Server.DeliveryHandlerFactory(handlerBuilder);
                     InitializeQueue(deliveryHandler);
+
+                    handlerBuilder.TriggerAfterCompleted();
                 }
                 catch (Exception e)
                 {
@@ -671,6 +673,7 @@ namespace Twino.MQ.Queues
                                           TwinoHeaders.QUEUE_TOPIC,
                                           TwinoHeaders.PUT_BACK_DELAY,
                                           TwinoHeaders.DELIVERY,
+                                          TwinoHeaders.DELIVERY_HANDLER,
                                           TwinoHeaders.CC);
 
             //prepare properties

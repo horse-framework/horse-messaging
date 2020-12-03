@@ -25,7 +25,7 @@ namespace Twino.MQ.Client.Connectors
         /// <summary>
         /// If true, automatically subscribes all implemented IQueueConsumer queues
         /// </summary>
-        public bool AutoSubscribe { get; set; }
+        public bool AutoSubscribe { get; set; } = true;
 
         /// <summary>
         /// If true, disconnected from server when auto join fails
@@ -122,10 +122,11 @@ namespace Twino.MQ.Client.Connectors
                 throw new TwinoSocketException("There is no active connection");
             }
 
-            string[] queues = _observer.GetSubscribedQueues();
-            foreach (string queue in queues)
+            Tuple<string, TypeDeliveryDescriptor>[] items = _observer.GetSubscribedQueues();
+            foreach (Tuple<string, TypeDeliveryDescriptor> item in items)
             {
-                TwinoResult joinResult = await client.Queues.Subscribe(queue, verify);
+                TwinoMessage msg = item.Item2.CreateMessage(MessageType.Server, item.Item1, KnownContentTypes.Subscribe);
+                TwinoResult joinResult = await client.SendAndGetAck(msg);
                 if (joinResult.Code == TwinoResultCode.Ok)
                     continue;
 
@@ -133,7 +134,7 @@ namespace Twino.MQ.Client.Connectors
                     client.Disconnect();
 
                 if (!silent)
-                    throw new TwinoQueueException($"Can't subscribe to {queue} queue: {joinResult.Reason} ({joinResult.Code})");
+                    throw new TwinoQueueException($"Can't subscribe to {item.Item1} queue: {joinResult.Reason} ({joinResult.Code})");
 
                 return false;
             }

@@ -15,7 +15,6 @@ namespace Sample.Consumer
             connector.AddHost("tmq://localhost:26222");
             connector.ContentSerializer = new NewtonsoftContentSerializer();
             connector.Observer.RegisterConsumer<ModelAConsumer>();
-            connector.Connected += (c) => { _ = connector.GetClient().Queues.Subscribe("model-a", false); };
             connector.Run();
 
             TwinoConnectorBuilder builder = new TwinoConnectorBuilder();

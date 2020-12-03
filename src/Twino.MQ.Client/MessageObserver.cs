@@ -496,9 +496,9 @@ namespace Twino.MQ.Client
         /// <summary>
         /// Returns all subscribed queues
         /// </summary>
-        public string[] GetSubscribedQueues()
+        public Tuple<string, TypeDeliveryDescriptor>[] GetSubscribedQueues()
         {
-            List<string> queues = new List<string>();
+            List<Tuple<string, TypeDeliveryDescriptor>> queues = new List<Tuple<string, TypeDeliveryDescriptor>>();
 
             lock (_subscriptions)
             {
@@ -507,7 +507,8 @@ namespace Twino.MQ.Client
                     if (subscription.Source != ReadSource.Queue)
                         continue;
 
-                    queues.Add(subscription.Queue);
+                    TypeDeliveryDescriptor descriptor = _deliveryContainer.GetDescriptor(subscription.MessageType);
+                    queues.Add(new Tuple<string, TypeDeliveryDescriptor>(subscription.Queue, descriptor));
                 }
             }
 
