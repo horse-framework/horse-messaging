@@ -257,6 +257,9 @@ namespace Twino.MQ.Queues.States
             if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
                 await _queue.WaitForAcknowledge(message);
 
+            if (message.CurrentDeliveryReceivers.Count > 0)
+                message.CurrentDeliveryReceivers.Clear();
+
             message.Decision = await _queue.DeliveryHandler.BeginSend(_queue, message);
             if (!await _queue.ApplyDecision(message.Decision, message))
                 return false;
@@ -272,6 +275,7 @@ namespace Twino.MQ.Queues.States
 
             if (sent)
             {
+                message.CurrentDeliveryReceivers.Add(requester);
                 _queue.TimeKeeper.AddAcknowledgeCheck(delivery);
                 delivery.MarkAsSent();
 

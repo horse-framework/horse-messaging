@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Twino.MQ.Clients;
 using Twino.MQ.Delivery;
 using Twino.Protocols.TMQ;
@@ -76,6 +77,12 @@ namespace Twino.MQ.Queues
         /// The value tells how many times message is proceed to send (multiple consumers are counted 1)
         /// </summary>
         public int DeliveryCount { get; internal set; }
+
+        /// <summary>
+        /// All receivers for current delivery.
+        /// That list is reset before each delivery (if message ack timed out or nack received etc)
+        /// </summary>
+        internal List<QueueClient> CurrentDeliveryReceivers { get; } = new List<QueueClient>();
         
         /// <summary>
         /// Creates new QueueMessage from TmqMessage with save status
