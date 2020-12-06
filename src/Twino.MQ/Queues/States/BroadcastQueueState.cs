@@ -77,15 +77,10 @@ namespace Twino.MQ.Queues.States
                 if (!ccrd.Allow)
                     continue;
 
-                //create delivery object
-                MessageDelivery delivery = new MessageDelivery(message, client, null);
-
                 //send the message
                 _ = client.Client.SendAsync(messageData);
 
                 messageIsSent = true;
-                //mark message is sent
-                delivery.MarkAsSent();
 
                 //do after send operations for per message
                 _queue.Info.AddDelivery();

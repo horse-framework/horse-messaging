@@ -160,6 +160,17 @@ namespace Twino.MQ.Queues
                         //expired
                         else if (DateTime.UtcNow > delivery.AcknowledgeDeadline.Value)
                             rdlist.Add(new Tuple<bool, MessageDelivery>(true, delivery));
+
+                        //check if all receivers disconnected
+                        else if (delivery.Message.CurrentDeliveryReceivers.Count > 0)
+                        {
+                            bool allDisconnected = delivery.Message.CurrentDeliveryReceivers.All(x => x.Client == null || !x.Client.IsConnected);
+                            if (allDisconnected)
+                            {
+                                rdlist.Add(new Tuple<bool, MessageDelivery>(true, delivery));
+                                delivery.Message.CurrentDeliveryReceivers.Clear();
+                            }
+                        }
                     }
 
                 if (rdlist.Count == 0)

@@ -26,6 +26,9 @@ namespace Twino.MQ.Queues.States
                 return PullResult.Empty;
             }
 
+            if (message.CurrentDeliveryReceivers.Count > 0)
+                message.CurrentDeliveryReceivers.Clear();
+
             ProcessingMessage = message;
 
             message.Decision = await _queue.DeliveryHandler.BeginSend(_queue, message);

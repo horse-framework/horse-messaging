@@ -91,6 +91,9 @@ namespace Twino.MQ.Queues.States
                 _queue.AddMessage(message, false);
                 return PushResult.NoConsumers;
             }
+            
+            if (message.CurrentDeliveryReceivers.Count > 0)
+                message.CurrentDeliveryReceivers.Clear();
 
             message.Decision = await _queue.DeliveryHandler.BeginSend(_queue, message);
             if (!await _queue.ApplyDecision(message.Decision, message))
@@ -117,6 +120,8 @@ namespace Twino.MQ.Queues.States
                     receiver.CurrentlyProcessing = message;
                     receiver.ProcessDeadline = deadline ?? DateTime.UtcNow;
                 }
+                
+                message.CurrentDeliveryReceivers.Add(receiver);
 
                 //adds the delivery to time keeper to check timing up
                 _queue.TimeKeeper.AddAcknowledgeCheck(delivery);
