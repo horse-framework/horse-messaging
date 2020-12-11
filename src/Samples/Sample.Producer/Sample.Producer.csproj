@@ -6,11 +6,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\Twino.MQ.Bus\Twino.MQ.Bus.csproj" />
-      <ProjectReference Include="..\..\Twino.MQ.Client\Twino.MQ.Client.csproj" />
-      <ProjectReference Include="..\..\Twino.MQ.Data\Twino.MQ.Data.csproj" />
-      <ProjectReference Include="..\..\Twino.MQ\Twino.MQ.csproj" />
-      <ProjectReference Include="..\..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
+      <ProjectReference Include="..\..\Horse.Mq.Client\Horse.Mq.Client.csproj" />
+      <ProjectReference Include="..\..\Horse.Mq.Data\Horse.Mq.Data.csproj" />
+      <ProjectReference Include="..\..\Horse.Mq\Horse.Mq.csproj" />
+      <ProjectReference Include="..\..\Horse.Protocols.Hmq\Horse.Protocols.Hmq.csproj" />
+      <ProjectReference Include="..\..\Horse.Mq.Bus\Horse.Mq.Bus.csproj" />
     </ItemGroup>
 
 </Project>

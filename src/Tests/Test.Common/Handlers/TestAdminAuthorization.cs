@@ -1,30 +1,30 @@
 using System.Reflection.Metadata.Ecma335;
 using System.Threading.Tasks;
-using Twino.MQ.Clients;
-using Twino.MQ.Queues;
-using Twino.MQ.Security;
-using Twino.Protocols.TMQ;
+using Horse.Mq.Clients;
+using Horse.Mq.Queues;
+using Horse.Mq.Security;
+using Horse.Protocols.Hmq;
 
 namespace Test.Common.Handlers
 {
     public class TestAdminAuthorization : IAdminAuthorization
     {
-        public Task<bool> CanUpdateQueueOptions(MqClient client, TwinoQueue queue, NetworkOptionsBuilder options)
+        public Task<bool> CanUpdateQueueOptions(MqClient client, HorseQueue queue, NetworkOptionsBuilder options)
         {
             return Task.FromResult(true);
         }
 
-        public Task<bool> CanRemoveQueue(MqClient client, TwinoQueue queue)
+        public Task<bool> CanRemoveQueue(MqClient client, HorseQueue queue)
         {
             return Task.FromResult(true);
         }
 
-        public Task<bool> CanClearQueueMessages(MqClient client, TwinoQueue queue, bool priorityMessages, bool messages)
+        public Task<bool> CanClearQueueMessages(MqClient client, HorseQueue queue, bool priorityMessages, bool messages)
         {
             return Task.FromResult(true);
         }
 
-        public Task<bool> CanManageInstances(MqClient client, TwinoMessage request)
+        public Task<bool> CanManageInstances(MqClient client, HorseMessage request)
         {
             return Task.FromResult(true);
         }
@@ -39,7 +39,7 @@ namespace Test.Common.Handlers
             return Task.FromResult(true);
         }
 
-        public Task<bool> CanReceiveQueueConsumers(MqClient client, TwinoQueue queue)
+        public Task<bool> CanReceiveQueueConsumers(MqClient client, HorseQueue queue)
         {
             return Task.FromResult(true);
         }

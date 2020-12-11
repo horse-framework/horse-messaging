@@ -1,26 +1,26 @@
 using System.Threading.Tasks;
-using Twino.MQ;
-using Twino.MQ.Clients;
-using Twino.MQ.Queues;
+using Horse.Mq;
+using Horse.Mq.Clients;
+using Horse.Mq.Queues;
 
 namespace Test.Common.Handlers
 {
     public class TestQueueHandler : IQueueEventHandler
     {
-        private readonly TestTwinoMQ _mq;
+        private readonly TestHorseMq _mq;
 
-        public TestQueueHandler(TestTwinoMQ mq)
+        public TestQueueHandler(TestHorseMq mq)
         {
             _mq = mq;
         }
 
-        public Task OnCreated(TwinoQueue queue)
+        public Task OnCreated(HorseQueue queue)
         {
             _mq.OnQueueCreated++;
             return Task.CompletedTask;
         }
 
-        public Task OnRemoved(TwinoQueue queue)
+        public Task OnRemoved(HorseQueue queue)
         {
             _mq.OnQueueRemoved++;
             return Task.CompletedTask;
@@ -38,7 +38,7 @@ namespace Test.Common.Handlers
             return Task.CompletedTask;
         }
 
-        public Task OnStatusChanged(TwinoQueue queue, QueueStatus @from, QueueStatus to)
+        public Task OnStatusChanged(HorseQueue queue, QueueStatus @from, QueueStatus to)
         {
             _mq.OnQueueStatusChanged++;
             return Task.CompletedTask;

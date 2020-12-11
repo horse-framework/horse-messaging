@@ -1,5 +1,5 @@
-using Twino.MQ.Client.Annotations;
-using Twino.MQ.Client.Models;
+using Horse.Mq.Client.Annotations;
+using Horse.Mq.Client.Models;
 
 namespace Test.Bus.Models
 {

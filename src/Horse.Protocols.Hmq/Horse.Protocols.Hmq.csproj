@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <Title>Horse.Protocols.Hmq</Title>
+        <Product>Horse.Protocols.Hmq</Product>
+        <Description>Horse Messaging Queue (HMQ) Protocol library and server extension for Horse Server</Description>
+        <PackageTags>horse,tcp,server,http,messaging,queue,hmq,mq,protocol</PackageTags>
+        <AssemblyVersion>4.3.2</AssemblyVersion>
+        <FileVersion>4.3.2</FileVersion>
+        <PackageVersion>4.3.2</PackageVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
+        <PackageProjectUrl>https://github.com/horse-framework/horse-mq</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/horse-framework/horse-mq/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/horse-framework/horse-mq</RepositoryUrl>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+        <DocumentationFile>bin\Debug\Horse.Protocols.Hmq.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <DocumentationFile>bin\Release\Horse.Protocols.Hmq.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
+        <PackageReference Include="Horse.Core" Version="4.3.2" />
+    </ItemGroup>
+
+</Project>

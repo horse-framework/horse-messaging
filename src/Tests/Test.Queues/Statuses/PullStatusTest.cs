@@ -2,10 +2,10 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Test.Common;
-using Twino.MQ.Client;
-using Twino.MQ.Client.Models;
-using Twino.MQ.Queues;
-using Twino.Protocols.TMQ;
+using Horse.Mq.Client;
+using Horse.Mq.Client.Models;
+using Horse.Mq.Queues;
+using Horse.Protocols.Hmq;
 using Xunit;
 
 namespace Test.Queues.Statuses
@@ -15,25 +15,25 @@ namespace Test.Queues.Statuses
         [Fact]
         public async Task SendAndPull()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            TmqClient consumer = new TmqClient();
+            HorseClient consumer = new HorseClient();
             consumer.ClientId = "consumer";
-            await consumer.ConnectAsync("tmq://localhost:" + port);
+            await consumer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
-            TwinoResult joined = await consumer.Queues.Subscribe("pull-a", true);
-            Assert.Equal(TwinoResultCode.Ok, joined.Code);
+            HorseResult joined = await consumer.Queues.Subscribe("pull-a", true);
+            Assert.Equal(HorseResultCode.Ok, joined.Code);
 
-            TmqClient producer = new TmqClient();
-            await producer.ConnectAsync("tmq://localhost:" + port);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             await producer.Queues.Push("pull-a", "Hello, World!", false);
             await Task.Delay(700);
 
-            TwinoQueue queue = server.Server.FindQueue("pull-a");
+            HorseQueue queue = server.Server.FindQueue("pull-a");
             Assert.NotNull(queue);
             Assert.Single(queue.Messages);
 
@@ -56,33 +56,33 @@ namespace Test.Queues.Statuses
         [Fact]
         public async Task RequestAcknowledge()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            TwinoQueue queue = server.Server.FindQueue("pull-a");
+            HorseQueue queue = server.Server.FindQueue("pull-a");
             Assert.NotNull(queue);
             queue.Options.Acknowledge = QueueAckDecision.JustRequest;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
 
-            TmqClient consumer = new TmqClient();
+            HorseClient consumer = new HorseClient();
             consumer.AutoAcknowledge = true;
             consumer.ClientId = "consumer";
 
-            await consumer.ConnectAsync("tmq://localhost:" + port);
+            await consumer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
 
             bool msgReceived = false;
             consumer.MessageReceived += (c, m) => msgReceived = true;
-            TwinoResult joined = await consumer.Queues.Subscribe("pull-a", true);
-            Assert.Equal(TwinoResultCode.Ok, joined.Code);
+            HorseResult joined = await consumer.Queues.Subscribe("pull-a", true);
+            Assert.Equal(HorseResultCode.Ok, joined.Code);
 
-            TmqClient producer = new TmqClient();
+            HorseClient producer = new HorseClient();
             producer.ResponseTimeout = TimeSpan.FromSeconds(15);
-            await producer.ConnectAsync("tmq://localhost:" + port);
+            await producer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            Task<TwinoResult> taskAck = producer.Queues.Push("pull-a", "Hello, World!", true);
+            Task<HorseResult> taskAck = producer.Queues.Push("pull-a", "Hello, World!", true);
 
             await Task.Delay(500);
             Assert.False(taskAck.IsCompleted);
@@ -106,18 +106,18 @@ namespace Test.Queues.Statuses
         [InlineData(false)]
         public async Task PullOrder(bool? fifo)
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start();
 
-            TwinoQueue queue = server.Server.FindQueue("pull-a");
+            HorseQueue queue = server.Server.FindQueue("pull-a");
             await queue.Push("First Message");
             await queue.Push("Second Message");
 
-            TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:" + port);
-            TwinoResult joined = await client.Queues.Subscribe("pull-a", true);
-            Assert.Equal(TwinoResultCode.Ok, joined.Code);
+            HorseClient client = new HorseClient();
+            await client.ConnectAsync("hmq://localhost:" + port);
+            HorseResult joined = await client.Queues.Subscribe("pull-a", true);
+            Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             PullRequest request = new PullRequest
                                   {
@@ -129,7 +129,7 @@ namespace Test.Queues.Statuses
             PullContainer container = await client.Queues.Pull(request);
             Assert.Equal(PullProcess.Completed, container.Status);
 
-            TwinoMessage msg = container.ReceivedMessages.FirstOrDefault();
+            HorseMessage msg = container.ReceivedMessages.FirstOrDefault();
             Assert.NotNull(msg);
 
             string content = msg.GetStringContent();
@@ -148,18 +148,18 @@ namespace Test.Queues.Statuses
         [InlineData(10)]
         public async Task PullCount(int count)
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start();
 
-            TwinoQueue queue = server.Server.FindQueue("pull-a");
+            HorseQueue queue = server.Server.FindQueue("pull-a");
             for (int i = 0; i < 25; i++)
                 await queue.Push("Hello, World");
 
-            TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:" + port);
-            TwinoResult joined = await client.Queues.Subscribe("pull-a", true);
-            Assert.Equal(TwinoResultCode.Ok, joined.Code);
+            HorseClient client = new HorseClient();
+            await client.ConnectAsync("hmq://localhost:" + port);
+            HorseResult joined = await client.Queues.Subscribe("pull-a", true);
+            Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             PullRequest request = new PullRequest
                                   {
@@ -181,21 +181,21 @@ namespace Test.Queues.Statuses
         [InlineData(4, false, true)]
         public async Task PullClearAfter(int count, bool priorityMessages, bool messages)
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start();
 
-            TwinoQueue queue = server.Server.FindQueue("pull-a");
+            HorseQueue queue = server.Server.FindQueue("pull-a");
             for (int i = 0; i < 5; i++)
             {
                 await queue.Push("Hello, World");
                 await queue.Push("Hello, World");
             }
 
-            TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:" + port);
-            TwinoResult joined = await client.Queues.Subscribe("pull-a", true);
-            Assert.Equal(TwinoResultCode.Ok, joined.Code);
+            HorseClient client = new HorseClient();
+            await client.ConnectAsync("hmq://localhost:" + port);
+            HorseResult joined = await client.Queues.Subscribe("pull-a", true);
+            Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             ClearDecision clearDecision = ClearDecision.None;
             if (priorityMessages && messages)

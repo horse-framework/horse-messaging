@@ -1,8 +1,8 @@
 using System;
 using System.Threading.Tasks;
 using Test.Common;
-using Twino.MQ.Client;
-using Twino.Protocols.TMQ;
+using Horse.Mq.Client;
+using Horse.Protocols.Hmq;
 using Xunit;
 
 namespace Test.Direct
@@ -15,18 +15,18 @@ namespace Test.Direct
         [Fact]
         public async Task WithoutAnyResponse()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start();
 
-            TmqClient client1 = new TmqClient();
-            TmqClient client2 = new TmqClient();
+            HorseClient client1 = new HorseClient();
+            HorseClient client2 = new HorseClient();
 
             client1.ClientId = "client-1";
             client2.ClientId = "client-2";
 
-            await client1.ConnectAsync("tmq://localhost:" + port);
-            await client2.ConnectAsync("tmq://localhost:" + port);
+            await client1.ConnectAsync("hmq://localhost:" + port);
+            await client2.ConnectAsync("hmq://localhost:" + port);
 
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
@@ -34,11 +34,11 @@ namespace Test.Direct
             bool received = false;
             client2.MessageReceived += (c, m) => received = m.Source == "client-1";
 
-            TwinoMessage message = new TwinoMessage(MessageType.DirectMessage, "client-2");
+            HorseMessage message = new HorseMessage(MessageType.DirectMessage, "client-2");
             message.SetStringContent("Hello, World!");
 
-            TwinoResult sent = await client1.SendAsync(message);
-            Assert.Equal(TwinoResultCode.Ok, sent.Code);
+            HorseResult sent = await client1.SendAsync(message);
+            Assert.Equal(HorseResultCode.Ok, sent.Code);
             await Task.Delay(1000);
             Assert.True(received);
         }
@@ -49,20 +49,20 @@ namespace Test.Direct
         [Fact]
         public async Task WithAcknowledge()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start();
 
-            TmqClient client1 = new TmqClient();
-            TmqClient client2 = new TmqClient();
+            HorseClient client1 = new HorseClient();
+            HorseClient client2 = new HorseClient();
 
             client1.ClientId = "client-1";
             client2.ClientId = "client-2";
             client2.AutoAcknowledge = true;
             client1.ResponseTimeout = TimeSpan.FromSeconds(14);
 
-            await client1.ConnectAsync("tmq://localhost:" + port);
-            await client2.ConnectAsync("tmq://localhost:" + port);
+            await client1.ConnectAsync("hmq://localhost:" + port);
+            await client2.ConnectAsync("hmq://localhost:" + port);
 
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
@@ -70,11 +70,11 @@ namespace Test.Direct
             bool received = false;
             client2.MessageReceived += (c, m) => received = m.Source == "client-1";
 
-            TwinoMessage message = new TwinoMessage(MessageType.DirectMessage, "client-2");
+            HorseMessage message = new HorseMessage(MessageType.DirectMessage, "client-2");
             message.SetStringContent("Hello, World!");
 
-            TwinoResult sent = await client1.SendAndGetAck(message);
-            Assert.Equal(TwinoResultCode.Ok, sent.Code);
+            HorseResult sent = await client1.SendAndGetAck(message);
+            Assert.Equal(HorseResultCode.Ok, sent.Code);
             Assert.True(received);
         }
 
@@ -84,19 +84,19 @@ namespace Test.Direct
         [Fact]
         public async Task WithResponse()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start();
 
-            TmqClient client1 = new TmqClient();
-            TmqClient client2 = new TmqClient();
+            HorseClient client1 = new HorseClient();
+            HorseClient client2 = new HorseClient();
 
             client1.ClientId = "client-1";
             client2.ClientId = "client-2";
             client2.AutoAcknowledge = true;
 
-            await client1.ConnectAsync("tmq://localhost:" + port);
-            await client2.ConnectAsync("tmq://localhost:" + port);
+            await client1.ConnectAsync("hmq://localhost:" + port);
+            await client2.ConnectAsync("hmq://localhost:" + port);
 
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
@@ -105,16 +105,16 @@ namespace Test.Direct
             {
                 if (m.Source == "client-1")
                 {
-                    TwinoMessage rmsg = m.CreateResponse(TwinoResultCode.Ok);
+                    HorseMessage rmsg = m.CreateResponse(HorseResultCode.Ok);
                     rmsg.SetStringContent("Hello, World Response!");
-                    await ((TmqClient) c).SendAsync(rmsg);
+                    await ((HorseClient) c).SendAsync(rmsg);
                 }
             };
 
-            TwinoMessage message = new TwinoMessage(MessageType.DirectMessage, "client-2");
+            HorseMessage message = new HorseMessage(MessageType.DirectMessage, "client-2");
             message.SetStringContent("Hello, World!");
 
-            TwinoMessage response = await client1.Request(message);
+            HorseMessage response = await client1.Request(message);
             Assert.NotNull(response);
             Assert.Equal(0, response.ContentType);
         }

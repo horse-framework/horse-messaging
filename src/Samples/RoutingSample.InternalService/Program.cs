@@ -1,6 +1,6 @@
 ﻿using System;
-using Twino.MQ.Client;
-using Twino.MQ.Client.Connectors;
+using Horse.Mq.Client;
+using Horse.Mq.Client.Connectors;
 
 namespace RoutingSample.InternalService
 {
@@ -8,15 +8,15 @@ namespace RoutingSample.InternalService
 	{
 		static void Main(string[] args)
 		{
-			TmqStickyConnector connector = new TmqStickyConnector(TimeSpan.FromSeconds(2), () =>
+			HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(2), () =>
 			{
-				TmqClient client = new TmqClient();
+				HorseClient client = new HorseClient();
 				client.SetClientName("GIVE-ME-GUID-REQUEST-HANDLER-CONSUMER");
 				return client;
 			});
 
 
-			connector.AddHost("tmq://localhost:15500");
+			connector.AddHost("hmq://localhost:15500");
 			connector.ContentSerializer = new NewtonsoftContentSerializer();
 			connector.Observer.RegisterConsumer<GiveMeGuidRequestHandler>();
 			connector.Connected += (c) => { Console.WriteLine("CONNECTED"); };

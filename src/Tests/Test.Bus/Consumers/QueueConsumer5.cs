@@ -1,9 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using Test.Bus.Models;
-using Twino.MQ.Client;
-using Twino.MQ.Client.Annotations;
-using Twino.Protocols.TMQ;
+using Horse.Mq.Client;
+using Horse.Mq.Client.Annotations;
+using Horse.Protocols.Hmq;
 
 namespace Test.Bus.Consumers
 {
@@ -21,7 +21,7 @@ namespace Test.Bus.Consumers
             Instance = this;
         }
 
-        public async Task Consume(TwinoMessage message, Model5 model, TmqClient client)
+        public async Task Consume(HorseMessage message, Model5 model, HorseClient client)
         {
             Count++;
             throw new NotImplementedException();

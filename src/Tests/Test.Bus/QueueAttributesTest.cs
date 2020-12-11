@@ -4,10 +4,9 @@ using System.Threading.Tasks;
 using Test.Bus.Consumers;
 using Test.Bus.Models;
 using Test.Common;
-using Twino.MQ.Client.Connectors;
-using Twino.MQ.Queues;
-using Twino.MQ.Routing;
-using Twino.Protocols.TMQ;
+using Horse.Mq.Client.Connectors;
+using Horse.Mq.Routing;
+using Horse.Protocols.Hmq;
 using Xunit;
 
 namespace Test.Bus
@@ -18,17 +17,17 @@ namespace Test.Bus
         public async Task AutoAckWithDelay()
         {
             Registrar registrar = new Registrar();
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             server.SendAcknowledgeFromMQ = false;
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            TmqStickyConnector producer = new TmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            producer.AddHost("tmq://localhost:" + port);
+            HmqStickyConnector producer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
+            producer.AddHost("hmq://localhost:" + port);
             producer.Run();
             
-            TmqStickyConnector consumer = new TmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            consumer.AddHost("tmq://localhost:" + port);
+            HmqStickyConnector consumer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
+            consumer.AddHost("hmq://localhost:" + port);
             registrar.Register(consumer);
             consumer.Run();
             
@@ -37,8 +36,8 @@ namespace Test.Bus
             Assert.True(consumer.IsConnected);
 
             Model1 model = new Model1();
-            TwinoResult push = await producer.Bus.Queue.PushJson(model, true);
-            Assert.Equal(TwinoResultCode.Ok, push.Code);
+            HorseResult push = await producer.Bus.Queue.PushJson(model, true);
+            Assert.Equal(HorseResultCode.Ok, push.Code);
             Assert.Equal(1, QueueConsumer1.Instance.Count);
         }
         
@@ -46,17 +45,17 @@ namespace Test.Bus
         public async Task AutoNackWithPutBackDelay()
         {
             Registrar registrar = new Registrar();
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             server.SendAcknowledgeFromMQ = false;
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            TmqStickyConnector producer = new TmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            producer.AddHost("tmq://localhost:" + port);
+            HmqStickyConnector producer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
+            producer.AddHost("hmq://localhost:" + port);
             producer.Run();
             
-            TmqStickyConnector consumer = new TmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            consumer.AddHost("tmq://localhost:" + port);
+            HmqStickyConnector consumer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
+            consumer.AddHost("hmq://localhost:" + port);
             registrar.Register(consumer);
             consumer.Run();
             
@@ -65,8 +64,8 @@ namespace Test.Bus
             Assert.True(consumer.IsConnected);
 
             Model2 model = new Model2();
-            TwinoResult push = await producer.Bus.Queue.PushJson(model, true);
-            Assert.Equal(TwinoResultCode.Failed, push.Code);
+            HorseResult push = await producer.Bus.Queue.PushJson(model, true);
+            Assert.Equal(HorseResultCode.Failed, push.Code);
             Assert.Equal(1, QueueConsumer2.Instance.Count);
         }
         
@@ -74,17 +73,17 @@ namespace Test.Bus
         public async Task PushExceptionsWithTopic()
         {
             Registrar registrar = new Registrar();
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             server.SendAcknowledgeFromMQ = false;
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            TmqStickyConnector producer = new TmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            producer.AddHost("tmq://localhost:" + port);
+            HmqStickyConnector producer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
+            producer.AddHost("hmq://localhost:" + port);
             producer.Run();
             
-            TmqStickyConnector consumer = new TmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            consumer.AddHost("tmq://localhost:" + port);
+            HmqStickyConnector consumer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
+            consumer.AddHost("hmq://localhost:" + port);
             registrar.Register(consumer);
             consumer.Run();
             
@@ -94,24 +93,24 @@ namespace Test.Bus
 
             Model3 model = new Model3();
             
-            TwinoResult push1 = await producer.Bus.Queue.PushJson(model, true);
-            Assert.Equal(TwinoResultCode.Failed, push1.Code);
+            HorseResult push1 = await producer.Bus.Queue.PushJson(model, true);
+            Assert.Equal(HorseResultCode.Failed, push1.Code);
             await Task.Delay(100);
             
             Assert.Equal(1, ExceptionConsumer1.Instance.Count);
             Assert.Equal(0, ExceptionConsumer2.Instance.Count);
             Assert.Equal(0, ExceptionConsumer3.Instance.Count);
             
-            TwinoResult push2 = await producer.Bus.Queue.PushJson(model, true);
-            Assert.Equal(TwinoResultCode.Failed, push2.Code);
+            HorseResult push2 = await producer.Bus.Queue.PushJson(model, true);
+            Assert.Equal(HorseResultCode.Failed, push2.Code);
             await Task.Delay(100);
             
             Assert.Equal(1, ExceptionConsumer1.Instance.Count);
             Assert.Equal(1, ExceptionConsumer2.Instance.Count);
             Assert.Equal(0, ExceptionConsumer3.Instance.Count);
             
-            TwinoResult push3 = await producer.Bus.Queue.PushJson(model, true);
-            Assert.Equal(TwinoResultCode.Failed, push3.Code);
+            HorseResult push3 = await producer.Bus.Queue.PushJson(model, true);
+            Assert.Equal(HorseResultCode.Failed, push3.Code);
             await Task.Delay(100);
             
             Assert.Equal(1, ExceptionConsumer1.Instance.Count);
@@ -125,7 +124,7 @@ namespace Test.Bus
         public async Task PublishExceptionsWithHighPriority()
         {
             Registrar registrar = new Registrar();
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             server.SendAcknowledgeFromMQ = false;
             await server.Initialize();
             int port = server.Start(300, 300);
@@ -138,12 +137,12 @@ namespace Test.Bus
             router2.AddBinding(new QueueBinding("bind-2", "ex-queue-2", 0, BindingInteraction.None));
             router3.AddBinding(new QueueBinding("bind-3", "ex-queue-3", 0, BindingInteraction.None));
 
-            TmqStickyConnector producer = new TmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            producer.AddHost("tmq://localhost:" + port);
+            HmqStickyConnector producer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
+            producer.AddHost("hmq://localhost:" + port);
             producer.Run();
             
-            TmqStickyConnector consumer = new TmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            consumer.AddHost("tmq://localhost:" + port);
+            HmqStickyConnector consumer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
+            consumer.AddHost("hmq://localhost:" + port);
             registrar.Register(consumer);
             consumer.Run();
             
@@ -153,24 +152,24 @@ namespace Test.Bus
 
             Model4 model = new Model4();
             
-            TwinoResult push1 = await producer.Bus.Queue.PushJson(model, true);
-            Assert.Equal(TwinoResultCode.Failed, push1.Code);
+            HorseResult push1 = await producer.Bus.Queue.PushJson(model, true);
+            Assert.Equal(HorseResultCode.Failed, push1.Code);
             await Task.Delay(100);
             
             Assert.Equal(1, ExceptionConsumer1.Instance.Count);
             Assert.Equal(0, ExceptionConsumer2.Instance.Count);
             Assert.Equal(0, ExceptionConsumer3.Instance.Count);
 
-            TwinoResult push2 = await producer.Bus.Queue.PushJson(model, true);
-            Assert.Equal(TwinoResultCode.Failed, push2.Code);
+            HorseResult push2 = await producer.Bus.Queue.PushJson(model, true);
+            Assert.Equal(HorseResultCode.Failed, push2.Code);
             await Task.Delay(100);
             
             Assert.Equal(1, ExceptionConsumer1.Instance.Count);
             Assert.Equal(1, ExceptionConsumer2.Instance.Count);
             Assert.Equal(0, ExceptionConsumer3.Instance.Count);
             
-            TwinoResult push3 = await producer.Bus.Queue.PushJson(model, true);
-            Assert.Equal(TwinoResultCode.Failed, push3.Code);
+            HorseResult push3 = await producer.Bus.Queue.PushJson(model, true);
+            Assert.Equal(HorseResultCode.Failed, push3.Code);
             await Task.Delay(100);
             
             Assert.Equal(1, ExceptionConsumer1.Instance.Count);
@@ -184,17 +183,17 @@ namespace Test.Bus
         public async Task RetryWaitForAcknowledge()
         {
             Registrar registrar = new Registrar();
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             server.SendAcknowledgeFromMQ = false;
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            TmqStickyConnector producer = new TmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            producer.AddHost("tmq://localhost:" + port);
+            HmqStickyConnector producer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
+            producer.AddHost("hmq://localhost:" + port);
             producer.Run();
             
-            TmqStickyConnector consumer = new TmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            consumer.AddHost("tmq://localhost:" + port);
+            HmqStickyConnector consumer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
+            consumer.AddHost("hmq://localhost:" + port);
             registrar.Register(consumer);
             consumer.Run();
             
@@ -206,10 +205,10 @@ namespace Test.Bus
             
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            TwinoResult push = await producer.Bus.Queue.PushJson(model, true);
+            HorseResult push = await producer.Bus.Queue.PushJson(model, true);
             sw.Stop();
 
-            Assert.Equal(TwinoResultCode.Failed, push.Code);
+            Assert.Equal(HorseResultCode.Failed, push.Code);
             Assert.Equal(5, QueueConsumer5.Instance.Count);
             
             //5 times with 50 ms delay between them (5 tries, 4 delays)

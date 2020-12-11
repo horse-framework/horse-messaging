@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Twino.MQ.Client;
-using Twino.MQ.Client.Bus;
-using Twino.MQ.Client.Connectors;
-using Twino.Protocols.TMQ;
+using Horse.Mq.Client;
+using Horse.Mq.Client.Bus;
+using Horse.Mq.Client.Connectors;
+using Horse.Protocols.Hmq;
 
 namespace Sample.Producer
 {
@@ -11,12 +11,12 @@ namespace Sample.Producer
     {
         static async Task Main(string[] args)
         {
-            TmqStickyConnector connector = new TmqStickyConnector(TimeSpan.FromSeconds(2));
-            connector.AddHost("tmq://localhost:26222");
+            HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(2));
+            connector.AddHost("hmq://localhost:26222");
             connector.ContentSerializer = new NewtonsoftContentSerializer();
             connector.Run();
             
-            ITwinoQueueBus queueBus = connector.Bus.Queue;
+            IHorseQueueBus queueBus = connector.Bus.Queue;
 
             ModelA a = new ModelA();
             a.Foo = "foo";
@@ -24,7 +24,7 @@ namespace Sample.Producer
 
             while (true)
             {
-                TwinoResult result = await queueBus.PushJson(a);
+                HorseResult result = await queueBus.PushJson(a);
                 Console.WriteLine($"Push: {result.Code}");
                 await Task.Delay(5000);
             }

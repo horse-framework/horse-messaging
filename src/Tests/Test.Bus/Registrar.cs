@@ -1,11 +1,11 @@
 using Test.Bus.Consumers;
-using Twino.MQ.Client.Connectors;
+using Horse.Mq.Client.Connectors;
 
 namespace Test.Bus
 {
     public class Registrar
     {
-        public void Register(TmqStickyConnector connector)
+        public void Register(HmqStickyConnector connector)
         {
             connector.Observer.RegisterConsumer<ExceptionConsumer1>();
             connector.Observer.RegisterConsumer<ExceptionConsumer2>();
