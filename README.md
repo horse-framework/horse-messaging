@@ -16,7 +16,7 @@
         static void Main(string[] args)
         {
             HorseServer server = new HorseServer();
-            server.UseTwinoMQ(cfg => cfg.UseJustAllowDeliveryHandler());
+            server.UseHorseMq(cfg => cfg.UseJustAllowDeliveryHandler());
             server.Run(22200);
         }
     }
@@ -37,7 +37,7 @@
         }
     }
 
-### Consumer without Twino.Extensions.Bus
+### Consumer without Horse.Extensions.Bus
 
 Implementation
 
@@ -88,7 +88,7 @@ If you use a service provider, you can inject other services to consumer objects
 
 ### Sending Messages as Producer
 
-Horse accepts producers and consumers as client. Each client can be producer and consumer at same time. With ConsumerFactory implementation, you can inject ITwinoBus interface for being producer at same time. If you want to create only producer, you can skip Add..Consumers methods.
+Horse accepts producers and consumers as client. Each client can be producer and consumer at same time. With ConsumerFactory implementation, you can inject IHorseBus interface for being producer at same time. If you want to create only producer, you can skip Add..Consumers methods.
 
      IHorseQueueBus queueBus;   //injected
      IHorseRouteBus routeBus;   //injected
