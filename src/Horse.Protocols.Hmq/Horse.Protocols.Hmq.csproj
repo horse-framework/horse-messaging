@@ -1,14 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <TargetFramework>net5.0</TargetFramework>
         <Title>Horse.Protocols.Hmq</Title>
         <Product>Horse.Protocols.Hmq</Product>
         <Description>Horse Messaging Queue (HMQ) Protocol library and server extension for Horse Server</Description>
         <PackageTags>horse,tcp,server,http,messaging,queue,hmq,mq,protocol</PackageTags>
-        <AssemblyVersion>4.3.2</AssemblyVersion>
-        <FileVersion>4.3.2</FileVersion>
-        <PackageVersion>4.3.2</PackageVersion>
+        <AssemblyVersion>5.0.1</AssemblyVersion>
+        <FileVersion>5.0.1</FileVersion>
+        <PackageVersion>5.0.1</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/horse-framework/horse-mq</PackageProjectUrl>
@@ -25,8 +25,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
-        <PackageReference Include="Horse.Core" Version="4.3.2" />
+        <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+        <PackageReference Include="Horse.Core" Version="5.0.1" />
     </ItemGroup>
 
 </Project>

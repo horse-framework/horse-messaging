@@ -1,14 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
-        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <TargetFramework>net5.0</TargetFramework>
     </PropertyGroup>
-
     <ItemGroup>
-      <ProjectReference Include="..\..\Horse.Mq.Client\Horse.Mq.Client.csproj" />
-      <ProjectReference Include="..\..\Horse.Mq.Data\Horse.Mq.Data.csproj" />
-      <ProjectReference Include="..\..\Horse.Mq\Horse.Mq.csproj" />
-      <ProjectReference Include="..\..\Horse.Protocols.Hmq\Horse.Protocols.Hmq.csproj" />
+        <ProjectReference Include="..\..\Horse.Mq.Client\Horse.Mq.Client.csproj"/>
+        <ProjectReference Include="..\..\Horse.Mq.Data\Horse.Mq.Data.csproj"/>
+        <ProjectReference Include="..\..\Horse.Mq\Horse.Mq.csproj"/>
+        <ProjectReference Include="..\..\Horse.Protocols.Hmq\Horse.Protocols.Hmq.csproj"/>
     </ItemGroup>
 
 </Project>
