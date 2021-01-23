@@ -1,26 +1,23 @@
-# Twino MQ
+# Horse MQ
 
-[![NuGet](https://img.shields.io/nuget/v/Twino.MQ?label=server%20nuget)](https://www.nuget.org/packages/Twino.MQ)
-[![NuGet](https://img.shields.io/nuget/v/Twino.MQ.Client?label=client%20nuget)](https://www.nuget.org/packages/Twino.MQ.Client)
-[![NuGet](https://img.shields.io/nuget/v/Twino.MQ.Bus?label=bus%20nuget)](https://www.nuget.org/packages/Twino.MQ.Bus)
+[![NuGet](https://img.shields.io/nuget/v/Horse.MQ?label=server%20nuget)](https://www.nuget.org/packages/Horse.MQ)
+[![NuGet](https://img.shields.io/nuget/v/Horse.MQ.Client?label=client%20nuget)](https://www.nuget.org/packages/Horse.MQ.Client)
+[![NuGet](https://img.shields.io/nuget/v/Horse.MQ.Bus?label=bus%20nuget)](https://www.nuget.org/packages/Horse.MQ.Bus)
 
-* Twino MQ is a .NET Core messaging queue and communication framework.
-* Twino MQ is not only queue messaging server. In provides direct messages, requests, responses and getting server and client informations.
-* Twino MQ has many queue messaging structure: Broadcast, Push, Pull, Cache.
+* Horse MQ is a .NET Core messaging queue and communication framework.
+* Horse MQ is not only queue messaging server. In provides direct messages, requests, responses and getting server and client informations.
+* Horse MQ has many queue messaging structure: Broadcast, Push, Pull, Cache.
 * Clients can subscribe events and gets information when another client is connected or does something.
-
-If you want to go further about Twino MQ infrastructure you can read specification and documentation from [here](https://github.com/twino-framework/twino-mq/blob/master/docs/twino-mq.pdf)<br><br>
 
 ### Very Quick Messaging Queue Server Example
 
     class Program
     {
-        static Task Main(string[] args)
+        static void Main(string[] args)
         {
-            TwinoServer server = new TwinoServer();
-            server.UseTwinoMQ(cfg => cfg.UseJustAllowDeliveryHandler());
-            server.Start(22200);
-            await server.BlockWhileRunningAsync();
+            HorseServer server = new HorseServer();
+            server.UseHorseMq(cfg => cfg.UseJustAllowDeliveryHandler());
+            server.Run(22200);
         }
     }
     
@@ -28,26 +25,25 @@ If you want to go further about Twino MQ infrastructure you can read specificati
 
     class Program
     {
-        static Task Main(string[] args)
+        static async Task Main(string[] args)
         {
-            TwinoServer server = new TwinoServer();
-            TwinoMQ mq = server.UseTwinoMQ(cfg => cfg
+            HorseServer server = new HorseServer();
+            HorseMq mq = server.UseHorseMq(cfg => cfg
                                                   .AddPersistentQueues(q => q.KeepLastBackup())
                                                   .UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterReceived));
 
             await mq.LoadPersistentQueues();
-            server.Start(22200);
-            await server.BlockWhileRunningAsync();
+            server.Run(22200);
         }
     }
 
-### Consumer without Twino.Extensions.Bus
+### Consumer without Horse.Extensions.Bus
 
 Implementation
 
         static async Task Main(string[] args)
         {
-            TmqStickyConnector connector = new TmqStickyConnector(TimeSpan.FromSeconds(1));
+            HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(1));
             connector.AutoSubscribe = true;
             connector.ContentSerializer = new NewtonsoftContentSerializer();
             connector.Observer.RegisterAssemblyConsumers(typeof(Program));
@@ -71,7 +67,7 @@ Consumer
     [AutoNack]
     public class QueueConsumerA : IQueueConsumer<ModelA>
     {
-        public Task Consume(TwinoMessage message, ModelA model, TmqClient client)
+        public Task Consume(HorseMessage message, ModelA model, HorseClient client)
         {
             Console.WriteLine("Model A Consumed");
             return Task.CompletedTask;
@@ -79,11 +75,11 @@ Consumer
     }
 
 
-### Consumer with Twino.Extensions.Bus
+### Consumer with Horse.Extensions.Bus
 
 Model and Consumer same with example above. The Implementation change is here:
 
-    services.UseTwinoBus(cfg => cfg.AddHost("tmq://127.0.0.1:22200")
+    services.UseHorseBus(cfg => cfg.AddHost("tmq://127.0.0.1:22200")
                                    .AddTransientConsumers(typeof(Program)));
 
 
@@ -92,11 +88,11 @@ If you use a service provider, you can inject other services to consumer objects
 
 ### Sending Messages as Producer
 
-Twino accepts producers and consumers as client. Each client can be producer and consumer at same time. With ConsumerFactory implementation, you can inject ITwinoBus interface for being producer at same time. If you want to create only producer, you can skip Add..Consumers methods.
+Horse accepts producers and consumers as client. Each client can be producer and consumer at same time. With ConsumerFactory implementation, you can inject IHorseBus interface for being producer at same time. If you want to create only producer, you can skip Add..Consumers methods.
 
-     ITwinoQueueBus queueBus;   //injected
-     ITwinoRouteBus routeBus;   //injected
-     ITwinoDirectBus directBus; //injected
+     IHorseQueueBus queueBus;   //injected
+     IHorseRouteBus routeBus;   //injected
+     IHorseDirectBus directBus; //injected
 
      //push to a queue
      await queueBus.PushJson(new ModelA());

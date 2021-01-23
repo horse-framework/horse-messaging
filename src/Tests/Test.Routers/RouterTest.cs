@@ -1,9 +1,9 @@
 using System.Threading.Tasks;
+using Horse.Mq.Client;
+using Horse.Mq.Queues;
+using Horse.Mq.Routing;
+using Horse.Protocols.Hmq;
 using Test.Common;
-using Twino.MQ.Client;
-using Twino.MQ.Queues;
-using Twino.MQ.Routing;
-using Twino.Protocols.TMQ;
 using Xunit;
 
 namespace Test.Routers
@@ -13,7 +13,7 @@ namespace Test.Routers
         [Fact]
         public async Task Distribute()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(300, 300);
 
@@ -24,18 +24,18 @@ namespace Test.Routers
             router.AddBinding(new DirectBinding("dbind-2", "client-2", 0, BindingInteraction.None));
             server.Server.AddRouter(router);
 
-            TmqClient producer = new TmqClient();
-            await producer.ConnectAsync("tmq://localhost:" + port);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            TmqClient client1 = new TmqClient();
+            HorseClient client1 = new HorseClient();
             client1.ClientId = "client-1";
-            await client1.ConnectAsync("tmq://localhost:" + port);
+            await client1.ConnectAsync("hmq://localhost:" + port);
             Assert.True(client1.IsConnected);
 
-            TmqClient client2 = new TmqClient();
+            HorseClient client2 = new HorseClient();
             client2.ClientId = "client-2";
-            await client2.ConnectAsync("tmq://localhost:" + port);
+            await client2.ConnectAsync("hmq://localhost:" + port);
             Assert.True(client2.IsConnected);
 
             int client1Received = 0;
@@ -45,14 +45,14 @@ namespace Test.Routers
 
             for (int i = 0; i < 4; i++)
             {
-                TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
-                Assert.Equal(TwinoResultCode.Ok, result.Code);
+                HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
+                Assert.Equal(HorseResultCode.Ok, result.Code);
             }
 
             await Task.Delay(500);
 
-            TwinoQueue queue1 = server.Server.FindQueue("push-a");
-            TwinoQueue queue2 = server.Server.FindQueue("push-a-cc");
+            HorseQueue queue1 = server.Server.FindQueue("push-a");
+            HorseQueue queue2 = server.Server.FindQueue("push-a-cc");
 
             Assert.Equal(4, queue1.MessageCount());
             Assert.Equal(4, queue2.MessageCount());
@@ -64,7 +64,7 @@ namespace Test.Routers
         [Fact]
         public async Task RoundRobin()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(300, 300);
 
@@ -75,18 +75,18 @@ namespace Test.Routers
             router.AddBinding(new DirectBinding("dbind-2", "client-2", 0, BindingInteraction.None));
             server.Server.AddRouter(router);
 
-            TmqClient producer = new TmqClient();
-            await producer.ConnectAsync("tmq://localhost:" + port);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            TmqClient client1 = new TmqClient();
+            HorseClient client1 = new HorseClient();
             client1.ClientId = "client-1";
-            await client1.ConnectAsync("tmq://localhost:" + port);
+            await client1.ConnectAsync("hmq://localhost:" + port);
             Assert.True(client1.IsConnected);
 
-            TmqClient client2 = new TmqClient();
+            HorseClient client2 = new HorseClient();
             client2.ClientId = "client-2";
-            await client2.ConnectAsync("tmq://localhost:" + port);
+            await client2.ConnectAsync("hmq://localhost:" + port);
             Assert.True(client2.IsConnected);
 
             int client1Received = 0;
@@ -96,14 +96,14 @@ namespace Test.Routers
 
             for (int i = 0; i < 5; i++)
             {
-                TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
-                Assert.Equal(TwinoResultCode.Ok, result.Code);
+                HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
+                Assert.Equal(HorseResultCode.Ok, result.Code);
             }
 
             await Task.Delay(500);
 
-            TwinoQueue queue1 = server.Server.FindQueue("push-a");
-            TwinoQueue queue2 = server.Server.FindQueue("push-a-cc");
+            HorseQueue queue1 = server.Server.FindQueue("push-a");
+            HorseQueue queue2 = server.Server.FindQueue("push-a-cc");
 
             Assert.Equal(1, queue1.MessageCount());
             Assert.Equal(1, queue2.MessageCount());
@@ -115,7 +115,7 @@ namespace Test.Routers
         [Fact]
         public async Task OnlyFirst()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(300, 300);
 
@@ -126,18 +126,18 @@ namespace Test.Routers
             router.AddBinding(new DirectBinding("dbind-2", "client-2", 8, BindingInteraction.None));
             server.Server.AddRouter(router);
 
-            TmqClient producer = new TmqClient();
-            await producer.ConnectAsync("tmq://localhost:" + port);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            TmqClient client1 = new TmqClient();
+            HorseClient client1 = new HorseClient();
             client1.ClientId = "client-1";
-            await client1.ConnectAsync("tmq://localhost:" + port);
+            await client1.ConnectAsync("hmq://localhost:" + port);
             Assert.True(client1.IsConnected);
 
-            TmqClient client2 = new TmqClient();
+            HorseClient client2 = new HorseClient();
             client2.ClientId = "client-2";
-            await client2.ConnectAsync("tmq://localhost:" + port);
+            await client2.ConnectAsync("hmq://localhost:" + port);
             Assert.True(client2.IsConnected);
 
             int client1Received = 0;
@@ -147,14 +147,14 @@ namespace Test.Routers
 
             for (int i = 0; i < 4; i++)
             {
-                TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
-                Assert.Equal(TwinoResultCode.Ok, result.Code);
+                HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
+                Assert.Equal(HorseResultCode.Ok, result.Code);
             }
 
             await Task.Delay(500);
 
-            TwinoQueue queue1 = server.Server.FindQueue("push-a");
-            TwinoQueue queue2 = server.Server.FindQueue("push-a-cc");
+            HorseQueue queue1 = server.Server.FindQueue("push-a");
+            HorseQueue queue2 = server.Server.FindQueue("push-a-cc");
 
             Assert.Equal(0, queue1.MessageCount());
             Assert.Equal(4, queue2.MessageCount());
@@ -166,7 +166,7 @@ namespace Test.Routers
         [Fact]
         public async Task MultipleQueue()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(300, 300);
 
@@ -175,15 +175,15 @@ namespace Test.Routers
             router.AddBinding(new QueueBinding("qbind-2", "push-a-cc", 0, BindingInteraction.None));
             server.Server.AddRouter(router);
 
-            TmqClient producer = new TmqClient();
-            await producer.ConnectAsync("tmq://localhost:" + port);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
-            Assert.Equal(TwinoResultCode.Ok, result.Code);
+            HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
+            Assert.Equal(HorseResultCode.Ok, result.Code);
 
-            TwinoQueue queue1 = server.Server.FindQueue("push-a");
-            TwinoQueue queue2 = server.Server.FindQueue("push-a-cc");
+            HorseQueue queue1 = server.Server.FindQueue("push-a");
+            HorseQueue queue2 = server.Server.FindQueue("push-a-cc");
 
             Assert.Equal(1, queue1.MessageCount());
             Assert.Equal(1, queue2.MessageCount());
@@ -192,7 +192,7 @@ namespace Test.Routers
         [Fact]
         public async Task MultipleDirect()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(300, 300);
 
@@ -201,18 +201,18 @@ namespace Test.Routers
             router.AddBinding(new DirectBinding("dbind-2", "client-2", 0, BindingInteraction.None));
             server.Server.AddRouter(router);
 
-            TmqClient producer = new TmqClient();
-            await producer.ConnectAsync("tmq://localhost:" + port);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            TmqClient client1 = new TmqClient();
+            HorseClient client1 = new HorseClient();
             client1.ClientId = "client-1";
-            await client1.ConnectAsync("tmq://localhost:" + port);
+            await client1.ConnectAsync("hmq://localhost:" + port);
             Assert.True(client1.IsConnected);
 
-            TmqClient client2 = new TmqClient();
+            HorseClient client2 = new HorseClient();
             client2.ClientId = "client-2";
-            await client2.ConnectAsync("tmq://localhost:" + port);
+            await client2.ConnectAsync("hmq://localhost:" + port);
             Assert.True(client2.IsConnected);
 
             bool client1Received = false;
@@ -220,8 +220,8 @@ namespace Test.Routers
             client1.MessageReceived += (c, m) => client1Received = true;
             client2.MessageReceived += (c, m) => client2Received = true;
 
-            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
-            Assert.Equal(TwinoResultCode.Ok, result.Code);
+            HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
+            Assert.Equal(HorseResultCode.Ok, result.Code);
             await Task.Delay(500);
 
             Assert.True(client1Received);
@@ -231,7 +231,7 @@ namespace Test.Routers
         [Fact]
         public async Task MultipleOfflineDirect()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(300, 300);
 
@@ -240,18 +240,18 @@ namespace Test.Routers
             router.AddBinding(new DirectBinding("dbind-2", "client-2", 0, BindingInteraction.None));
             server.Server.AddRouter(router);
 
-            TmqClient producer = new TmqClient();
-            await producer.ConnectAsync("tmq://localhost:" + port);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
-            Assert.Equal(TwinoResultCode.NotFound, result.Code);
+            HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
+            Assert.Equal(HorseResultCode.NotFound, result.Code);
         }
 
         [Fact]
         public async Task SingleQueueSingleDirect()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(300, 300);
 
@@ -260,22 +260,22 @@ namespace Test.Routers
             router.AddBinding(new DirectBinding("dbind-1", "client-1", 0, BindingInteraction.None));
             server.Server.AddRouter(router);
 
-            TmqClient producer = new TmqClient();
-            await producer.ConnectAsync("tmq://localhost:" + port);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             bool client1Received = false;
-            TmqClient client1 = new TmqClient();
+            HorseClient client1 = new HorseClient();
             client1.ClientId = "client-1";
-            await client1.ConnectAsync("tmq://localhost:" + port);
+            await client1.ConnectAsync("hmq://localhost:" + port);
             client1.MessageReceived += (c, m) => client1Received = true;
             Assert.True(client1.IsConnected);
 
-            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
-            Assert.Equal(TwinoResultCode.Ok, result.Code);
+            HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
+            Assert.Equal(HorseResultCode.Ok, result.Code);
             await Task.Delay(500);
 
-            TwinoQueue queue1 = server.Server.FindQueue("push-a");
+            HorseQueue queue1 = server.Server.FindQueue("push-a");
 
             Assert.Equal(1, queue1.MessageCount());
             Assert.True(client1Received);
@@ -284,7 +284,7 @@ namespace Test.Routers
         [Fact]
         public async Task MultipleQueueMultipleDirect()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(300, 300);
 
@@ -295,18 +295,18 @@ namespace Test.Routers
             router.AddBinding(new DirectBinding("dbind-2", "client-2", 0, BindingInteraction.None));
             server.Server.AddRouter(router);
 
-            TmqClient producer = new TmqClient();
-            await producer.ConnectAsync("tmq://localhost:" + port);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            TmqClient client1 = new TmqClient();
+            HorseClient client1 = new HorseClient();
             client1.ClientId = "client-1";
-            await client1.ConnectAsync("tmq://localhost:" + port);
+            await client1.ConnectAsync("hmq://localhost:" + port);
             Assert.True(client1.IsConnected);
 
-            TmqClient client2 = new TmqClient();
+            HorseClient client2 = new HorseClient();
             client2.ClientId = "client-2";
-            await client2.ConnectAsync("tmq://localhost:" + port);
+            await client2.ConnectAsync("hmq://localhost:" + port);
             Assert.True(client2.IsConnected);
 
             bool client1Received = false;
@@ -314,12 +314,12 @@ namespace Test.Routers
             client1.MessageReceived += (c, m) => client1Received = true;
             client2.MessageReceived += (c, m) => client2Received = true;
 
-            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
-            Assert.Equal(TwinoResultCode.Ok, result.Code);
+            HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
+            Assert.Equal(HorseResultCode.Ok, result.Code);
             await Task.Delay(500);
 
-            TwinoQueue queue1 = server.Server.FindQueue("push-a");
-            TwinoQueue queue2 = server.Server.FindQueue("push-a-cc");
+            HorseQueue queue1 = server.Server.FindQueue("push-a");
+            HorseQueue queue2 = server.Server.FindQueue("push-a-cc");
 
             Assert.Equal(1, queue1.MessageCount());
             Assert.Equal(1, queue2.MessageCount());
@@ -331,7 +331,7 @@ namespace Test.Routers
         [Fact]
         public async Task SingleQueueSingleDirectAckFromQueue()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(300, 300);
             server.SendAcknowledgeFromMQ = true;
@@ -341,21 +341,21 @@ namespace Test.Routers
             router.AddBinding(new DirectBinding("dbind-1", "client-1", 0, BindingInteraction.None));
             server.Server.AddRouter(router);
 
-            TmqClient producer = new TmqClient();
-            await producer.ConnectAsync("tmq://localhost:" + port);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             bool client1Received = false;
-            TmqClient client1 = new TmqClient();
+            HorseClient client1 = new HorseClient();
             client1.ClientId = "client-1";
-            await client1.ConnectAsync("tmq://localhost:" + port);
+            await client1.ConnectAsync("hmq://localhost:" + port);
             client1.MessageReceived += (c, m) => client1Received = true;
             Assert.True(client1.IsConnected);
 
-            TwinoQueue queue1 = server.Server.FindQueue("push-a");
+            HorseQueue queue1 = server.Server.FindQueue("push-a");
 
-            TwinoResult result = await producer.Routers.Publish("router", "Hello, World!", true);
-            Assert.Equal(TwinoResultCode.Ok, result.Code);
+            HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
+            Assert.Equal(HorseResultCode.Ok, result.Code);
 
             await Task.Delay(500);
             Assert.Equal(1, queue1.MessageCount());
@@ -365,7 +365,7 @@ namespace Test.Routers
         [Fact]
         public async Task SingleQueueSingleDirectResponseFromDirect()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(300, 300);
 
@@ -374,24 +374,24 @@ namespace Test.Routers
             router.AddBinding(new DirectBinding("dbind-1", "client-1", 0, BindingInteraction.Response));
             server.Server.AddRouter(router);
 
-            TmqClient producer = new TmqClient();
-            await producer.ConnectAsync("tmq://localhost:" + port);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            TmqClient client1 = new TmqClient();
+            HorseClient client1 = new HorseClient();
             client1.ClientId = "client-1";
-            await client1.ConnectAsync("tmq://localhost:" + port);
+            await client1.ConnectAsync("hmq://localhost:" + port);
             client1.MessageReceived += (c, m) =>
             {
-                TwinoMessage response = m.CreateResponse(TwinoResultCode.Ok);
+                HorseMessage response = m.CreateResponse(HorseResultCode.Ok);
                 response.SetStringContent("Response");
                 client1.SendAsync(response);
             };
             Assert.True(client1.IsConnected);
 
-            TwinoQueue queue1 = server.Server.FindQueue("push-a");
+            HorseQueue queue1 = server.Server.FindQueue("push-a");
 
-            TwinoMessage message = await producer.Routers.PublishRequest("router", "Hello, World!");
+            HorseMessage message = await producer.Routers.PublishRequest("router", "Hello, World!");
             Assert.NotNull(message);
             Assert.Equal("Response", message.GetStringContent());
             Assert.Equal(1, queue1.MessageCount());

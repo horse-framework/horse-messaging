@@ -2,9 +2,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Test.Common;
-using Twino.MQ.Client;
-using Twino.MQ.Queues;
-using Twino.Protocols.TMQ;
+using Horse.Mq.Client;
+using Horse.Mq.Queues;
+using Horse.Protocols.Hmq;
 using Xunit;
 
 namespace Test.Queues.Statuses
@@ -21,25 +21,25 @@ namespace Test.Queues.Statuses
         [InlineData(20)]
         public async Task SendToOnlineConsumers(int onlineConsumerCount)
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            TmqClient producer = new TmqClient();
-            await producer.ConnectAsync("tmq://localhost:" + port);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             int msgReceived = 0;
 
             for (int i = 0; i < onlineConsumerCount; i++)
             {
-                TmqClient consumer = new TmqClient();
+                HorseClient consumer = new HorseClient();
                 consumer.ClientId = "consumer-" + i;
-                await consumer.ConnectAsync("tmq://localhost:" + port);
+                await consumer.ConnectAsync("hmq://localhost:" + port);
                 Assert.True(consumer.IsConnected);
                 consumer.MessageReceived += (c, m) => Interlocked.Increment(ref msgReceived);
-                TwinoResult joined = await consumer.Queues.Subscribe("push-a", true);
-                Assert.Equal(TwinoResultCode.Ok, joined.Code);
+                HorseResult joined = await consumer.Queues.Subscribe("push-a", true);
+                Assert.Equal(HorseResultCode.Ok, joined.Code);
             }
 
             await producer.Queues.Push("push-a", "Hello, World!", false);
@@ -50,29 +50,29 @@ namespace Test.Queues.Statuses
         [Fact]
         public async Task SendToOfflineConsumers()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            TmqClient producer = new TmqClient();
-            await producer.ConnectAsync("tmq://localhost:" + port);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             await producer.Queues.Push("push-a", "Hello, World!", false);
             await Task.Delay(700);
 
-            TwinoQueue queue = server.Server.FindQueue("push-a");
+            HorseQueue queue = server.Server.FindQueue("push-a");
             Assert.NotNull(queue);
             Assert.Single(queue.Messages);
 
             bool msgReceived = false;
-            TmqClient consumer = new TmqClient();
+            HorseClient consumer = new HorseClient();
             consumer.ClientId = "consumer";
-            await consumer.ConnectAsync("tmq://localhost:" + port);
+            await consumer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
             consumer.MessageReceived += (c, m) => msgReceived = true;
-            TwinoResult joined = await consumer.Queues.Subscribe("push-a", true);
-            Assert.Equal(TwinoResultCode.Ok, joined.Code);
+            HorseResult joined = await consumer.Queues.Subscribe("push-a", true);
+            Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             await Task.Delay(800);
             Assert.True(msgReceived);
@@ -83,29 +83,29 @@ namespace Test.Queues.Statuses
         [InlineData(false)]
         public async Task RequestAcknowledge(bool queueAckIsActive)
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(300, 300);
-            TwinoQueue queue = server.Server.FindQueue("push-a");
+            HorseQueue queue = server.Server.FindQueue("push-a");
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
             queue.Options.Acknowledge = queueAckIsActive ? QueueAckDecision.JustRequest : QueueAckDecision.None;
 
-            TmqClient producer = new TmqClient();
-            await producer.ConnectAsync("tmq://localhost:" + port);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            TmqClient consumer = new TmqClient();
+            HorseClient consumer = new HorseClient();
             consumer.AutoAcknowledge = true;
             consumer.ResponseTimeout = TimeSpan.FromSeconds(4);
             consumer.ClientId = "consumer";
-            await consumer.ConnectAsync("tmq://localhost:" + port);
+            await consumer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(consumer.IsConnected);
-            TwinoResult joined = await consumer.Queues.Subscribe("push-a", true);
-            Assert.Equal(TwinoResultCode.Ok, joined.Code);
+            HorseResult joined = await consumer.Queues.Subscribe("push-a", true);
+            Assert.Equal(HorseResultCode.Ok, joined.Code);
 
-            TwinoResult ack = await producer.Queues.Push("push-a", "Hello, World!", true);
-            Assert.Equal(queueAckIsActive, ack.Code == TwinoResultCode.Ok);
+            HorseResult ack = await producer.Queues.Push("push-a", "Hello, World!", true);
+            Assert.Equal(queueAckIsActive, ack.Code == HorseResultCode.Ok);
         }
 
         /// <summary>
@@ -114,21 +114,21 @@ namespace Test.Queues.Statuses
         [Fact]
         public async Task PushWithCC()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            TmqClient producer = new TmqClient();
-            await producer.ConnectAsync("tmq://localhost:" + port);
+            HorseClient producer = new HorseClient();
+            await producer.ConnectAsync("hmq://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            TmqClient consumer1 = new TmqClient();
+            HorseClient consumer1 = new HorseClient();
             consumer1.ClientId = "consumer-1";
-            await consumer1.ConnectAsync("tmq://localhost:" + port);
+            await consumer1.ConnectAsync("hmq://localhost:" + port);
 
-            TmqClient consumer2 = new TmqClient();
+            HorseClient consumer2 = new HorseClient();
             consumer2.ClientId = "consumer-2";
-            await consumer2.ConnectAsync("tmq://localhost:" + port);
+            await consumer2.ConnectAsync("hmq://localhost:" + port);
 
             Assert.True(consumer1.IsConnected);
             Assert.True(consumer2.IsConnected);
@@ -138,14 +138,14 @@ namespace Test.Queues.Statuses
             consumer1.MessageReceived += (c, m) => { consumer1Msgs++; };
             consumer2.MessageReceived += (c, m) => { consumer2Msgs++; };
 
-            TwinoResult joined1 = await consumer1.Queues.Subscribe("push-a", true);
-            Assert.Equal(TwinoResultCode.Ok, joined1.Code);
+            HorseResult joined1 = await consumer1.Queues.Subscribe("push-a", true);
+            Assert.Equal(HorseResultCode.Ok, joined1.Code);
 
-            TwinoResult joined2 = await consumer2.Queues.Subscribe("push-a-cc", true);
-            Assert.Equal(TwinoResultCode.Ok, joined2.Code);
+            HorseResult joined2 = await consumer2.Queues.Subscribe("push-a-cc", true);
+            Assert.Equal(HorseResultCode.Ok, joined2.Code);
 
-            TwinoMessage msg = new TwinoMessage(MessageType.QueueMessage, "push-a");
-            msg.AddHeader(TwinoHeaders.CC, "push-a-cc");
+            HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "push-a");
+            msg.AddHeader(HorseHeaders.CC, "push-a-cc");
             msg.SetStringContent("Hello, World!");
 
             await producer.SendAsync(msg);

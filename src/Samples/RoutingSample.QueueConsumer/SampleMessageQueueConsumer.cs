@@ -1,9 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using RoutingSample.Models;
-using Twino.MQ.Client;
-using Twino.MQ.Client.Annotations;
-using Twino.Protocols.TMQ;
+using Horse.Mq.Client;
+using Horse.Mq.Client.Annotations;
+using Horse.Protocols.Hmq;
 
 namespace RoutingSample.QueueConsumer
 {
@@ -11,7 +11,7 @@ namespace RoutingSample.QueueConsumer
 	[AutoNack]
 	public class SampleMessageQueueConsumer : IQueueConsumer<SampleMessage>
 	{
-		public Task Consume(TwinoMessage message, SampleMessage model, TmqClient client)
+		public Task Consume(HorseMessage message, SampleMessage model, HorseClient client)
 		{
 			Console.WriteLine("SAMPLE QUEUE MESSAGE CONSUMED");
 			return Task.CompletedTask;

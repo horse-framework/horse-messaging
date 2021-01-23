@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
+using Horse.Protocols.Hmq;
 using RoutingSample.Models;
-using Twino.Protocols.TMQ;
 
 namespace RoutingSample.DirectConsumer
 {
@@ -13,7 +13,7 @@ namespace RoutingSample.DirectConsumer
 			{
 				Foo = "Hello from sample direct message consumer"
 			};
-			TwinoResult<GiveMeGuidResponse> guidResponse = await Program.RouteBus.PublishRequestJson<GiveMeGuidRequest, GiveMeGuidResponse>(request);
+			HorseResult<GiveMeGuidResponse> guidResponse = await Program.RouteBus.PublishRequestJson<GiveMeGuidRequest, GiveMeGuidResponse>(request);
 			Console.WriteLine($"SAMPLE DIRECT MESSAGE CONSUMED [{guidResponse.Model.Guid}]");
 		}
 	}

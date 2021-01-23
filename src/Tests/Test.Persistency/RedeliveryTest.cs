@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Twino.MQ;
-using Twino.MQ.Data;
-using Twino.MQ.Data.Configuration;
-using Twino.MQ.Queues;
-using Twino.Protocols.TMQ;
-using Twino.Server;
+using Horse.Mq;
+using Horse.Mq.Data;
+using Horse.Mq.Data.Configuration;
+using Horse.Mq.Queues;
+using Horse.Protocols.Hmq;
+using Horse.Server;
 using Xunit;
 
 namespace Test.Persistency
@@ -63,7 +63,7 @@ namespace Test.Persistency
             if (System.IO.File.Exists("data/reload-test.tdb.delivery"))
                 System.IO.File.Delete("data/reload-test.tdb.delivery");
 
-            TwinoServer server = new TwinoServer();
+            HorseServer server = new HorseServer();
             PersistentDeliveryHandler handler = null;
             Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> fac = async builder =>
             {
@@ -86,14 +86,14 @@ namespace Test.Persistency
                 return handler;
             };
 
-            TwinoMQ mq = server.UseTwinoMQ(cfg => cfg
+            HorseMq mq = server.UseHorseMq(cfg => cfg
                                                   .AddPersistentQueues(q => q.KeepLastBackup())
                                                   .UseDeliveryHandler(fac));
 
-            TwinoQueue queue = await mq.CreateQueue("reload-test",
+            HorseQueue queue = await mq.CreateQueue("reload-test",
                                                     o => o.Status = QueueStatus.Push);
 
-            TwinoMessage msg = new TwinoMessage(MessageType.QueueMessage, "reload-test");
+            HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "reload-test");
             msg.SetMessageId("id");
             msg.SetStringContent("Hello, World!");
             await queue.Push(msg);
@@ -104,12 +104,12 @@ namespace Test.Persistency
             await handler.RedeliveryService.Close();
             ConfigurationFactory.Destroy();
 
-            mq = server.UseTwinoMQ(cfg => cfg
+            mq = server.UseHorseMq(cfg => cfg
                                           .AddPersistentQueues(q => q.KeepLastBackup())
                                           .UseDeliveryHandler(fac));
 
             await mq.LoadPersistentQueues();
-            TwinoQueue queue2 = mq.FindQueue("reload-test");
+            HorseQueue queue2 = mq.FindQueue("reload-test");
             Assert.NotNull(queue2);
             Assert.NotEmpty(queue2.Messages);
             QueueMessage loadedMsg = queue2.Messages.FirstOrDefault();

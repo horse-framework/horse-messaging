@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using Test.Common;
-using Twino.MQ.Client;
-using Twino.Protocols.TMQ;
+using Horse.Mq.Client;
+using Horse.Protocols.Hmq;
 using Xunit;
 
 namespace Test.Events
@@ -11,12 +11,12 @@ namespace Test.Events
         [Fact]
         public async Task QueueCreated()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(3000, 3000);
 
-            TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:" + port);
+            HorseClient client = new HorseClient();
+            await client.ConnectAsync("hmq://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Queues.OnCreated(q =>
@@ -27,7 +27,7 @@ namespace Test.Events
             Assert.True(subscribed);
 
             var result = await client.Queues.Create("pull-b");
-            Assert.Equal(TwinoResultCode.Ok, result.Code);
+            Assert.Equal(HorseResultCode.Ok, result.Code);
             await Task.Delay(250);
             Assert.True(received);
             received = false;
@@ -36,7 +36,7 @@ namespace Test.Events
             Assert.True(unsubscribed);
 
             result = await client.Queues.Create("pull-c");
-            Assert.Equal(TwinoResultCode.Ok, result.Code);
+            Assert.Equal(HorseResultCode.Ok, result.Code);
             await Task.Delay(250);
             Assert.False(received);
         }
@@ -44,12 +44,12 @@ namespace Test.Events
         [Fact]
         public async Task QueueUpdated()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(3000, 3000);
 
-            TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:" + port);
+            HorseClient client = new HorseClient();
+            await client.ConnectAsync("hmq://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Queues.OnUpdated(q =>
@@ -60,7 +60,7 @@ namespace Test.Events
             Assert.True(subscribed);
 
             var result = await client.Queues.SetOptions("pull-a", opt => { opt.MessageLimit = 666; });
-            Assert.Equal(TwinoResultCode.Ok, result.Code);
+            Assert.Equal(HorseResultCode.Ok, result.Code);
             await Task.Delay(250);
             Assert.True(received);
         }
@@ -68,12 +68,12 @@ namespace Test.Events
         [Fact]
         public async Task QueueRemoved()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(3000, 3000);
 
-            TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:" + port);
+            HorseClient client = new HorseClient();
+            await client.ConnectAsync("hmq://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Queues.OnRemoved(q =>
@@ -84,7 +84,7 @@ namespace Test.Events
             Assert.True(subscribed);
 
             var result = await client.Queues.Remove("pull-a");
-            Assert.Equal(TwinoResultCode.Ok, result.Code);
+            Assert.Equal(HorseResultCode.Ok, result.Code);
             await Task.Delay(250);
             Assert.True(received);
         }
@@ -92,13 +92,13 @@ namespace Test.Events
         [Fact]
         public async Task MessageProduced()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start(3000, 3000);
             server.SendAcknowledgeFromMQ = true;
 
-            TmqClient client = new TmqClient();
-            await client.ConnectAsync("tmq://localhost:" + port);
+            HorseClient client = new HorseClient();
+            await client.ConnectAsync("hmq://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Queues.OnMessageProduced("pull-a",q =>
@@ -109,7 +109,7 @@ namespace Test.Events
             Assert.True(subscribed);
 
             var result = await client.Queues.Push("pull-a", "Hello, World!", true);
-            Assert.Equal(TwinoResultCode.Ok, result.Code);
+            Assert.Equal(HorseResultCode.Ok, result.Code);
             await Task.Delay(250);
             Assert.True(received);
         }

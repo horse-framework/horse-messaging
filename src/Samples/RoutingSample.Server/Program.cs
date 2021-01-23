@@ -1,13 +1,8 @@
-﻿using System;
-using System.Threading.Tasks;
-using Sample.Server;
-using Twino.MQ;
-using Twino.MQ.Clients;
-using Twino.MQ.Delivery;
-using Twino.MQ.Queues;
-using Twino.MQ.Routing;
-using Twino.Protocols.TMQ;
-using Twino.Server;
+﻿using Sample.Server;
+using Horse.Mq;
+using Horse.Mq.Routing;
+using Horse.Protocols.Hmq;
+using Horse.Server;
 using QueueEventHandler = Sample.Server.QueueEventHandler;
 
 namespace RoutingSample.Server
@@ -16,7 +11,7 @@ namespace RoutingSample.Server
 	{
 		private static void Main(string[] args)
 		{
-			TwinoMQ mq = TwinoMqBuilder.Create()
+			HorseMq mq = HorseMqBuilder.Create()
 									   .AddClientHandler<ClientHandler>()
 									   .AddQueueEventHandler<QueueEventHandler>()
 									   .UseJustAllowDeliveryHandler()
@@ -32,8 +27,8 @@ namespace RoutingSample.Server
 			var giveMeGuidRequestHandler = new DirectBinding("sample-message-direct-binding", "@name:GIVE-ME-GUID-REQUEST-HANDLER-CONSUMER", 2, BindingInteraction.Response);
 			giveMeGuidRequestRouter.AddBinding(giveMeGuidRequestHandler);
 
-			TwinoServer server = new TwinoServer();
-			server.UseTwinoMQ(mq);
+			HorseServer server = new HorseServer();
+			server.UseHorseMq(mq);
 			server.Run(15500);
 		}
 	}

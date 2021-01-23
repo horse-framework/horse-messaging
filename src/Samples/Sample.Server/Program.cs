@@ -1,9 +1,7 @@
-﻿using System;
-using System.Threading.Tasks;
-using Twino.MQ;
-using Twino.MQ.Data;
-using Twino.MQ.Queues;
-using Twino.Server;
+﻿using Horse.Mq;
+using Horse.Mq.Data;
+using Horse.Mq.Queues;
+using Horse.Server;
 
 namespace Sample.Server
 {
@@ -11,7 +9,7 @@ namespace Sample.Server
     {
         static void Main(string[] args)
         {
-            TwinoMQ mq = TwinoMqBuilder.Create()
+            HorseMq mq = HorseMqBuilder.Create()
                                        .AddOptions(o => o.Status = QueueStatus.Push)
                                        .AddClientHandler<ClientHandler>()
                                        .AddQueueEventHandler<QueueEventHandler>()
@@ -21,8 +19,8 @@ namespace Sample.Server
 
             mq.LoadPersistentQueues();
 
-            TwinoServer server = new TwinoServer();
-            server.UseTwinoMQ(mq);
+            HorseServer server = new HorseServer();
+            server.UseHorseMq(mq);
             server.Run(26222);
         }
     }

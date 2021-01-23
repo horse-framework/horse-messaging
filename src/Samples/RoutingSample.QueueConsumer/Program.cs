@@ -1,6 +1,6 @@
 ﻿using System;
-using Twino.MQ.Client;
-using Twino.MQ.Client.Connectors;
+using Horse.Mq.Client;
+using Horse.Mq.Client.Connectors;
 
 namespace RoutingSample.QueueConsumer
 {
@@ -8,8 +8,8 @@ namespace RoutingSample.QueueConsumer
 	{
 		private static void Main(string[] args)
 		{
-			TmqStickyConnector connector = new TmqStickyConnector(TimeSpan.FromSeconds(2));
-			connector.AddHost("tmq://localhost:15500");
+			HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(2));
+			connector.AddHost("hmq://localhost:15500");
 			connector.ContentSerializer = new NewtonsoftContentSerializer();
 			connector.Observer.RegisterConsumer<SampleMessageQueueConsumer>();
 			connector.Connected += (c) =>

@@ -3,7 +3,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Test.Common;
 using Test.Common.Models;
-using Twino.MQ.Queues;
+using Horse.Mq.Queues;
 using Xunit;
 
 namespace Test.Persistency
@@ -17,12 +17,12 @@ namespace Test.Persistency
             for (int i = 0; i < 10; i++)
                 items.Add(new QueueMessageA("No #" + i));
 
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             server.Start(300, 300);
 
-            TwinoQueue route = server.Server.FindQueue("broadcast-a");
-            TwinoQueue push = server.Server.FindQueue("push-a");
+            HorseQueue route = server.Server.FindQueue("broadcast-a");
+            HorseQueue push = server.Server.FindQueue("push-a");
             Assert.NotNull(route);
             Assert.NotNull(push);
 
@@ -44,11 +44,11 @@ namespace Test.Persistency
             for (int i = 0; i < 10; i++)
                 items.Add("No #" + i);
 
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             server.Start(300, 300);
 
-            TwinoQueue queue = server.Server.FindQueue("push-a");
+            HorseQueue queue = server.Server.FindQueue("push-a");
             Assert.NotNull(queue);
 
             QueueFiller filler = new QueueFiller(queue);
@@ -67,11 +67,11 @@ namespace Test.Persistency
             for (int i = 0; i < 10; i++)
                 items.Add(Encoding.UTF8.GetBytes("No #" + i));
 
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             server.Start(300, 300);
 
-            TwinoQueue queue = server.Server.FindQueue("push-a");
+            HorseQueue queue = server.Server.FindQueue("push-a");
             Assert.NotNull(queue);
 
             QueueFiller filler = new QueueFiller(queue);

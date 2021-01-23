@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Twino.MQ;
-using Twino.MQ.Data;
-using Twino.MQ.Data.Configuration;
-using Twino.MQ.Queues;
-using Twino.Protocols.TMQ;
-using Twino.Server;
+using Horse.Mq;
+using Horse.Mq.Data;
+using Horse.Mq.Data.Configuration;
+using Horse.Mq.Queues;
+using Horse.Protocols.Hmq;
+using Horse.Server;
 using Xunit;
 
 namespace Test.Persistency
@@ -18,8 +18,8 @@ namespace Test.Persistency
         {
             ConfigurationFactory.Destroy();
             PersistentDeliveryHandler handler = null;
-            TwinoServer server = new TwinoServer();
-            TwinoMQ mq = server.UseTwinoMQ(cfg => cfg
+            HorseServer server = new HorseServer();
+            HorseMq mq = server.UseHorseMq(cfg => cfg
                                                   .AddPersistentQueues(q => q.KeepLastBackup())
                                                   .UseDeliveryHandler(async builder =>
                                                   {
@@ -40,9 +40,9 @@ namespace Test.Persistency
                                                       return handler;
                                                   }));
 
-            TwinoQueue queue = await mq.CreateQueue("test");
+            HorseQueue queue = await mq.CreateQueue("test");
 
-            TwinoMessage message = new TwinoMessage(MessageType.QueueMessage, "test");
+            HorseMessage message = new HorseMessage(MessageType.QueueMessage, "test");
             message.SetMessageId("id");
             message.SetStringContent("Hello, World!");
             QueueMessage queueMessage = new QueueMessage(message);
@@ -54,7 +54,7 @@ namespace Test.Persistency
             Assert.Equal("id", deliveries[0].Key);
             Assert.Equal(1, deliveries[0].Value);
 
-            string header = message.FindHeader(TwinoHeaders.DELIVERY);
+            string header = message.FindHeader(HorseHeaders.DELIVERY);
             Assert.Null(header);
 
             await handler.BeginSend(queue, queueMessage);
@@ -63,7 +63,7 @@ namespace Test.Persistency
             Assert.Equal("id", deliveries[0].Key);
             Assert.Equal(2, deliveries[0].Value);
 
-            header = message.FindHeader(TwinoHeaders.DELIVERY);
+            header = message.FindHeader(HorseHeaders.DELIVERY);
             Assert.NotNull(header);
             Assert.Equal(2, Convert.ToInt32(header));
 

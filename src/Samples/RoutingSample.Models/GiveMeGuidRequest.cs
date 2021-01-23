@@ -1,5 +1,5 @@
 using System;
-using Twino.MQ.Client.Annotations;
+using Horse.Mq.Client.Annotations;
 
 namespace RoutingSample.Models
 {

@@ -1,8 +1,7 @@
 ﻿using System;
-using Microsoft.Extensions.DependencyInjection;
-using Twino.MQ.Bus;
-using Twino.MQ.Client;
-using Twino.MQ.Client.Connectors;
+using Horse.Mq.Bus;
+using Horse.Mq.Client;
+using Horse.Mq.Client.Connectors;
 
 namespace Sample.Consumer
 {
@@ -10,14 +9,13 @@ namespace Sample.Consumer
     {
         static void Main(string[] args)
         {
-            IServiceCollection services = new ServiceCollection();
-            TmqStickyConnector connector = new TmqStickyConnector(TimeSpan.FromSeconds(2));
-            connector.AddHost("tmq://localhost:26222");
+            HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(2));
+            connector.AddHost("hmq://localhost:26222");
             connector.ContentSerializer = new NewtonsoftContentSerializer();
             connector.Observer.RegisterConsumer<ModelAConsumer>();
             connector.Run();
 
-            TwinoConnectorBuilder builder = new TwinoConnectorBuilder();
+            HorseConnectorBuilder builder = new HorseConnectorBuilder();
 
 
             builder.AddHost("host")

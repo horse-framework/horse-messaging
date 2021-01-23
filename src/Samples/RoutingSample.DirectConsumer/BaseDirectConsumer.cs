@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
-using Twino.MQ.Client;
-using Twino.MQ.Client.Annotations;
-using Twino.Protocols.TMQ;
+using Horse.Mq.Client;
+using Horse.Mq.Client.Annotations;
+using Horse.Protocols.Hmq;
 
 namespace RoutingSample.DirectConsumer
 {
@@ -12,7 +12,7 @@ namespace RoutingSample.DirectConsumer
 	{
 		protected abstract Task Handle(T model);
 
-		public Task Consume(TwinoMessage message, T model, TmqClient client)
+		public Task Consume(HorseMessage message, T model, HorseClient client)
 		{
 			// Uncomment for test exception messages queue
 			// throw new Exception("Something was wrong.");

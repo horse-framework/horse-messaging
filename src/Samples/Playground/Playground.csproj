@@ -5,13 +5,4 @@
         <TargetFramework>netcoreapp3.1</TargetFramework>
     </PropertyGroup>
 
-    <ItemGroup>
-        <PackageReference Include="Twino.Server" Version="4.2.0" />
-    </ItemGroup>
-    
-    <ItemGroup>
-      <ProjectReference Include="..\..\Twino.MQ.Data\Twino.MQ.Data.csproj" />
-      <ProjectReference Include="..\..\Twino.Protocols.TMQ\Twino.Protocols.TMQ.csproj" />
-    </ItemGroup>
-
 </Project>

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net5.0</TargetFramework>
+        <Title>Horse.Mq.Data</Title>
+        <Product>Horse.Mq.Data</Product>
+        <Description>Persistant queue message data library for Horse MQ</Description>
+        <PackageTags>horse,server,messaging,queue,mq,persistent,database,db</PackageTags>
+        <AssemblyVersion>5.0.1</AssemblyVersion>
+        <FileVersion>5.0.1</FileVersion>
+        <PackageVersion>5.0.1</PackageVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
+        <PackageProjectUrl>https://github.com/horse-framework/horse-mq</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/horse-framework/horse-mq/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/horse-framework/horse-mq</RepositoryUrl>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <DocumentationFile>bin\Debug\Horse.Mq.Data.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <DocumentationFile>bin\Release\Horse.Mq.Data.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Horse.Mq\Horse.Mq.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -3,8 +3,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Test.Common;
 using Test.Common.Models;
-using Twino.MQ.Client;
-using Twino.Protocols.TMQ;
+using Horse.Mq.Client;
+using Horse.Protocols.Hmq;
 using Xunit;
 
 namespace Test.Direct
@@ -19,30 +19,30 @@ namespace Test.Direct
         [InlineData(false)]
         public async Task UseUniqueMessageId(bool enabled)
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             server.Server.Options.UseMessageId = enabled;
             server.Server.FindQueue("push-a").Options.UseMessageId = false;
             int port = server.Start();
 
-            TmqClient client = new TmqClient();
+            HorseClient client = new HorseClient();
             client.UseUniqueMessageId = false;
 
-            await client.ConnectAsync("tmq://localhost:" + port);
+            await client.ConnectAsync("hmq://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            TwinoResult joined = await client.Queues.Subscribe("push-a", true);
-            Assert.Equal(TwinoResultCode.Ok, joined.Code);
+            HorseResult joined = await client.Queues.Subscribe("push-a", true);
+            Assert.Equal(HorseResultCode.Ok, joined.Code);
             await Task.Delay(250);
 
-            TwinoMessage received = null;
+            HorseMessage received = null;
             client.MessageReceived += (c, m) => received = m;
 
             QueueMessageA a = new QueueMessageA("A");
             string serialized = Newtonsoft.Json.JsonConvert.SerializeObject(a);
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(serialized));
-            TwinoResult sent = await client.Queues.Push("push-a", ms, false);
-            Assert.Equal(TwinoResultCode.Ok, sent.Code);
+            HorseResult sent = await client.Queues.Push("push-a", ms, false);
+            Assert.Equal(HorseResultCode.Ok, sent.Code);
 
             await Task.Delay(1000);
 
@@ -55,7 +55,7 @@ namespace Test.Direct
         }
 
         /// <summary>
-        /// Subscribes message received event of TmqClient.
+        /// Subscribes message received event of HorseClient.
         /// Sends a message and waits for response.
         /// If catching response is enabled, response message should trigger message received event.
         /// </summary>
@@ -64,19 +64,19 @@ namespace Test.Direct
         [InlineData(false)]
         public async Task CatchResponseMessages(bool enabled)
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start();
 
-            TmqClient client1 = new TmqClient();
-            TmqClient client2 = new TmqClient();
+            HorseClient client1 = new HorseClient();
+            HorseClient client2 = new HorseClient();
 
             client1.ClientId = "client-1";
             client2.ClientId = "client-2";
             client1.CatchResponseMessages = enabled;
 
-            await client1.ConnectAsync("tmq://localhost:" + port);
-            await client2.ConnectAsync("tmq://localhost:" + port);
+            await client1.ConnectAsync("hmq://localhost:" + port);
+            await client2.ConnectAsync("hmq://localhost:" + port);
 
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
@@ -85,16 +85,16 @@ namespace Test.Direct
             client1.MessageReceived += (c, m) => responseCaught = true;
             client2.MessageReceived += async (c, m) =>
             {
-                TwinoMessage rmsg = m.CreateResponse(TwinoResultCode.Ok);
+                HorseMessage rmsg = m.CreateResponse(HorseResultCode.Ok);
                 rmsg.SetStringContent("Response!");
-                await ((TmqClient) c).SendAsync(rmsg);
+                await ((HorseClient) c).SendAsync(rmsg);
             };
 
-            TwinoMessage msg = new TwinoMessage(MessageType.DirectMessage, "client-2");
+            HorseMessage msg = new HorseMessage(MessageType.DirectMessage, "client-2");
             msg.WaitResponse = true;
             msg.SetStringContent("Hello, World!");
 
-            TwinoMessage response = await client1.Request(msg);
+            HorseMessage response = await client1.Request(msg);
             await Task.Delay(500);
             Assert.NotNull(response);
             Assert.Equal(msg.MessageId, response.MessageId);

@@ -5,8 +5,8 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Test.Common;
-using Twino.MQ.Client;
-using Twino.Protocols.TMQ;
+using Horse.Mq.Client;
+using Horse.Protocols.Hmq;
 using Xunit;
 
 namespace Test.Nodes
@@ -14,18 +14,18 @@ namespace Test.Nodes
     public class ServerConnectionTest
     {
         /// <summary>
-        /// Connects to TMQ Server and sends info message
+        /// Connects to Horse Server and sends info message
         /// </summary>
         [Fact]
         public async Task ConnectWithInfo()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start();
 
-            TmqClient client = new TmqClient();
+            HorseClient client = new HorseClient();
             client.Data.Properties.Add("Name", "Test-" + port);
-            client.Connect("tmq://localhost:" + port + "/path");
+            client.Connect("hmq://localhost:" + port + "/path");
 
             Thread.Sleep(50);
 
@@ -34,12 +34,12 @@ namespace Test.Nodes
         }
 
         /// <summary>
-        /// Connects to TMQ Server and does not send info message
+        /// Connects to HMQ Server and does not send info message
         /// </summary>
         [Fact]
         public async Task ConnectWithoutInfo()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start();
 
@@ -89,18 +89,18 @@ namespace Test.Nodes
         }
 
         /// <summary>
-        /// Connects to TMQ Server and stays alive with PING and PONG messages
+        /// Connects to Horse Server and stays alive with PING and PONG messages
         /// </summary>
         [Fact]
         public async Task KeepAliveWithPingPong()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start();
 
-            TmqClient client = new TmqClient();
+            HorseClient client = new HorseClient();
             client.Data.Properties.Add("Name", "Test-" + port);
-            client.Connect("tmq://localhost:" + port + "/path");
+            client.Connect("hmq://localhost:" + port + "/path");
 
             Thread.Sleep(25000);
 
@@ -109,12 +109,12 @@ namespace Test.Nodes
         }
 
         /// <summary>
-        /// Connects to TMQ Server and stays alive until PING time out (does not send PONG message)
+        /// Connects to Horse Server and stays alive until PING time out (does not send PONG message)
         /// </summary>
         [Fact]
         public async Task DisconnectDueToPingTimeout()
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start();
 
@@ -123,12 +123,12 @@ namespace Test.Nodes
 
             NetworkStream stream = client.GetStream();
             stream.Write(PredefinedMessages.PROTOCOL_BYTES_V2);
-            TwinoMessage msg = new TwinoMessage();
+            HorseMessage msg = new HorseMessage();
             msg.Type = MessageType.Server;
             msg.ContentType = KnownContentTypes.Hello;
             msg.SetStringContent("GET /\r\nName: Test-" + port);
             msg.CalculateLengths();
-            TmqWriter.Write(msg, stream);
+            HmqWriter.Write(msg, stream);
             await Task.Delay(1000);
             Assert.Equal(1, server.ClientConnected);
 
@@ -153,7 +153,7 @@ namespace Test.Nodes
         }
 
         /// <summary>
-        /// Connects to TMQ Server and stays alive a short duration and disconnects again with concurrent clients
+        /// Connects to Horse Server and stays alive a short duration and disconnects again with concurrent clients
         /// </summary>
         [Theory]
         [InlineData(10, 20, 100, 500)]
@@ -164,7 +164,7 @@ namespace Test.Nodes
             int connected = 0;
             int disconnected = 0;
 
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start();
 
@@ -176,8 +176,8 @@ namespace Test.Nodes
                     {
                         try
                         {
-                            TmqClient client = new TmqClient();
-                            client.Connect("tmq://localhost:" + port);
+                            HorseClient client = new HorseClient();
+                            client.Connect("hmq://localhost:" + port);
                             Assert.True(client.IsConnected);
                             Interlocked.Increment(ref connected);
                             await Task.Delay(rnd.Next(minAliveMs, maxAliveMs));
@@ -213,17 +213,17 @@ namespace Test.Nodes
         [InlineData("*client*")]
         public async Task GetOnlineClients(string filter)
         {
-            TestTwinoMQ server = new TestTwinoMQ();
+            TestHorseMq server = new TestHorseMq();
             await server.Initialize();
             int port = server.Start();
 
-            TmqClient client = new TmqClient();
+            HorseClient client = new HorseClient();
             client.SetClientType("client-test");
             client.SetClientName("client-test");
-            await client.ConnectAsync("tmq://localhost:" + port);
+            await client.ConnectAsync("hmq://localhost:" + port);
 
             var result = await client.Connections.GetConnectedClients(filter);
-            Assert.Equal(TwinoResultCode.Ok, result.Result.Code);
+            Assert.Equal(HorseResultCode.Ok, result.Result.Code);
             Assert.NotNull(result.Model);
             var c = result.Model.FirstOrDefault();
             Assert.NotNull(c);
