@@ -11,68 +11,78 @@
 
 ### Very Quick Messaging Queue Server Example
 
-    class Program
+```C#
+class Program
+{
+    static void Main(string[] args)
     {
-        static void Main(string[] args)
-        {
-            HorseServer server = new HorseServer();
-            server.UseHorseMq(cfg => cfg.UseJustAllowDeliveryHandler());
-            server.Run(22200);
-        }
+        HorseServer server = new HorseServer();
+        server.UseHorseMq(cfg => cfg.UseJustAllowDeliveryHandler());
+        server.Run(22200);
     }
-    
+}
+```
+
 ### Very Quick Server Example with Persistent Queues
 
-    class Program
+```C#
+class Program
+{
+    static async Task Main(string[] args)
     {
-        static async Task Main(string[] args)
-        {
-            HorseServer server = new HorseServer();
-            HorseMq mq = server.UseHorseMq(cfg => cfg
-                                                  .AddPersistentQueues(q => q.KeepLastBackup())
-                                                  .UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterReceived));
+        HorseServer server = new HorseServer();
+        HorseMq mq = server.UseHorseMq(cfg => cfg
+                                              .AddPersistentQueues(q => q.KeepLastBackup())
+                                              .UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterReceived));
 
-            await mq.LoadPersistentQueues();
-            server.Run(22200);
-        }
+        await mq.LoadPersistentQueues();
+        server.Run(22200);
     }
+}
+```    
 
 ### Consumer without Horse.Extensions.Bus
 
 Implementation
 
-        static async Task Main(string[] args)
-        {
-            HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(1));
-            connector.AutoSubscribe = true;
-            connector.ContentSerializer = new NewtonsoftContentSerializer();
-            connector.Observer.RegisterAssemblyConsumers(typeof(Program));
-            connector.AddHost("tmq://127.0.0.1:22200");
-            connector.Run();
-            while (true)
-                await Task.Delay(1000);
-        }
+```C#
+static async Task Main(string[] args)
+{
+    HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(1));
+    connector.AutoSubscribe = true;
+    connector.ContentSerializer = new NewtonsoftContentSerializer();
+    connector.Observer.RegisterAssemblyConsumers(typeof(Program));
+    connector.AddHost("tmq://127.0.0.1:22200");
+    connector.Run();
+    while (true)
+        await Task.Delay(1000);
+}
+```
 
 Model
 
-    [QueueName("model-a")]
-    public class ModelA
-    {
-        public string Foo { get; set; }
-    }
+```C#
+[QueueName("model-a")]
+public class ModelA
+{
+    public string Foo { get; set; }
+}
+```
 
 Consumer
 
-    [AutoAck]
-    [AutoNack]
-    public class QueueConsumerA : IQueueConsumer<ModelA>
+```C#
+[AutoAck]
+[AutoNack]
+public class QueueConsumerA : IQueueConsumer<ModelA>
+{
+    public Task Consume(HorseMessage message, ModelA model, HorseClient client)
     {
-        public Task Consume(HorseMessage message, ModelA model, HorseClient client)
-        {
-            Console.WriteLine("Model A Consumed");
-            return Task.CompletedTask;
-        }
+        Console.WriteLine("Model A Consumed");
+        return Task.CompletedTask;
     }
+}
+```
 
 
 ### Consumer with Horse.Extensions.Bus
@@ -90,20 +100,21 @@ If you use a service provider, you can inject other services to consumer objects
 
 Horse accepts producers and consumers as client. Each client can be producer and consumer at same time. With ConsumerFactory implementation, you can inject IHorseBus interface for being producer at same time. If you want to create only producer, you can skip Add..Consumers methods.
 
-     IHorseQueueBus queueBus;   //injected
-     IHorseRouteBus routeBus;   //injected
-     IHorseDirectBus directBus; //injected
+```C#
+ IHorseQueueBus queueBus;   //injected
+ IHorseRouteBus routeBus;   //injected
+ IHorseDirectBus directBus; //injected
 
-     //push to a queue
-     await queueBus.PushJson(new ModelA());
+ //push to a queue
+ await queueBus.PushJson(new ModelA());
 
-     //publish to a router
-     await routeBus.PublishJson(new ModelA());
+ //publish to a router
+ await routeBus.PublishJson(new ModelA());
 
-     //to a direct target, ModelA requires DirectTarget attribute
-     //and ContentType attribute will be useful to recognize message type by receiver
-     directBus.SendJson(new ModelA());
-
+ //to a direct target, ModelA requires DirectTarget attribute
+ //and ContentType attribute will be useful to recognize message type by receiver
+ directBus.SendJson(new ModelA());
+```
 
 
 ## Thanks
