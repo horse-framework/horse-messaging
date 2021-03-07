@@ -601,6 +601,9 @@ namespace Horse.Mq.Queues
                 else if (pair.Key.Equals(HorseHeaders.MESSAGE_TIMEOUT, StringComparison.InvariantCultureIgnoreCase))
                     Options.MessageTimeout = TimeSpan.FromSeconds(Convert.ToInt32(pair.Value));
 
+                else if (pair.Key.Equals(HorseHeaders.ACK_TIMEOUT, StringComparison.InvariantCultureIgnoreCase))
+                    Options.AcknowledgeTimeout = TimeSpan.FromSeconds(Convert.ToInt32(pair.Value));
+
                 else if (pair.Key.Equals(HorseHeaders.DELAY_BETWEEN_MESSAGES, StringComparison.InvariantCultureIgnoreCase))
                 {
                     if (!string.IsNullOrEmpty(pair.Value))
@@ -684,6 +687,7 @@ namespace Horse.Mq.Queues
                                           HorseHeaders.DELIVERY,
                                           HorseHeaders.DELIVERY_HANDLER,
                                           HorseHeaders.MESSAGE_TIMEOUT,
+                                          HorseHeaders.ACK_TIMEOUT,
                                           HorseHeaders.CC);
 
             //prepare properties

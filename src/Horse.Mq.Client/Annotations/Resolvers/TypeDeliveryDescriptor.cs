@@ -107,6 +107,11 @@ namespace Horse.Mq.Client.Annotations.Resolvers
         public int? MessageTimeout { get; set; }
 
         /// <summary>
+        /// Acknowledge timeout in seconds
+        /// </summary>
+        public int? AcknowledgeTimeout { get; set; }
+
+        /// <summary>
         /// Creates new type delivery descriptor
         /// </summary>
         public TypeDeliveryDescriptor()
@@ -186,6 +191,9 @@ namespace Horse.Mq.Client.Annotations.Resolvers
             
             if (MessageTimeout.HasValue)
                 message.AddHeader(HorseHeaders.MESSAGE_TIMEOUT, MessageTimeout.Value.ToString());
+            
+            if (AcknowledgeTimeout.HasValue)
+                message.AddHeader(HorseHeaders.ACK_TIMEOUT, AcknowledgeTimeout.Value.ToString());
 
             foreach (KeyValuePair<string, string> pair in Headers)
                 message.AddHeader(pair.Key, pair.Value);

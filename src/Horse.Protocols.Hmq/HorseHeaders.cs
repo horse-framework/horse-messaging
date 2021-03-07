@@ -214,6 +214,11 @@ namespace Horse.Protocols.Hmq
         /// "Message-Timeout"
         /// </summary>
         public const string MESSAGE_TIMEOUT = "Message-Timeout";
+        
+        /// <summary>
+        /// "Ack-Timeout"
+        /// </summary>
+        public const string ACK_TIMEOUT = "Ack-Timeout";
 
     }
 }

@@ -165,6 +165,10 @@ namespace Horse.Mq.Client.Annotations.Resolvers
             MessageTimeoutAttribute msgTimeoutAttr = type.GetCustomAttribute<MessageTimeoutAttribute>(true);
             if (msgTimeoutAttr != null)
                 descriptor.MessageTimeout = msgTimeoutAttr.Value;
+            
+            AcknowledgeTimeoutAttribute ackTimeoutAttr = type.GetCustomAttribute<AcknowledgeTimeoutAttribute>(true);
+            if (ackTimeoutAttr != null)
+                descriptor.AcknowledgeTimeout = ackTimeoutAttr.Value;
 
             IEnumerable<MessageHeaderAttribute> headerAttributes = type.GetCustomAttributes<MessageHeaderAttribute>(true);
             foreach (MessageHeaderAttribute headerAttribute in headerAttributes)

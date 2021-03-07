@@ -3,20 +3,20 @@ using System;
 namespace Horse.Mq.Client.Annotations
 {
     /// <summary>
-    /// Used to specify message timeout for the queue
+    /// Used to specify acknowledge timeout for the queue
     /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
-    public class MessageTimeoutAttribute : Attribute
+    public class AcknowledgeTimeoutAttribute : Attribute
     {
         /// <summary>
-        /// Message timeout duration in seconds
+        /// Acknowledge timeout duration in seconds
         /// </summary>
         public int Value { get; }
 
         /// <summary>
-        /// Creates new message timeout attribute
+        /// Creates new acknowledge timeout attribute
         /// </summary>
-        public MessageTimeoutAttribute(int seconds)
+        public AcknowledgeTimeoutAttribute(int seconds)
         {
             Value = seconds;
         }
