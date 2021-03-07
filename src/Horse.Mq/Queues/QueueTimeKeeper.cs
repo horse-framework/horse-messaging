@@ -97,7 +97,7 @@ namespace Horse.Mq.Queues
         /// </summary>
         private async Task ProcessReceiveTimeup()
         {
-            if (_queue.IsInitialized)
+            if (!_queue.IsInitialized)
                 return;
 
             List<QueueMessage> temp = new List<QueueMessage>();
@@ -128,6 +128,11 @@ namespace Horse.Mq.Queues
         /// </summary>
         private void ProcessReceiveTimeupOnList(LinkedList<QueueMessage> list, List<QueueMessage> temp)
         {
+            //if the first message has not expired, none of the messages have expired. 
+            QueueMessage firstMessage = list.FirstOrDefault();
+            if (firstMessage != null && firstMessage.Deadline.HasValue && firstMessage.Deadline > DateTime.UtcNow)
+                return;
+            
             foreach (QueueMessage message in list)
             {
                 if (!message.Deadline.HasValue)

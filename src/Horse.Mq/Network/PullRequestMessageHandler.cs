@@ -61,7 +61,7 @@ namespace Horse.Mq.Network
         private async Task HandlePullRequest(MqClient client, HorseMessage message, HorseQueue queue)
         {
             //only pull statused queues can handle this request
-            if (queue.Status != QueueStatus.Pull)
+            if (queue.Status != QueueStatus.Pull && queue.Status != QueueStatus.Cache)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))
                     await client.SendAsync(MessageBuilder.CreateNoContentPullResponse(message, HorseHeaders.UNACCEPTABLE));
@@ -69,15 +69,22 @@ namespace Horse.Mq.Network
                 return;
             }
 
-            //client cannot pull message from the queue not in
-            QueueClient queueClient = queue.FindClient(client);
-            if (queueClient == null)
-            {
-                if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(MessageBuilder.CreateNoContentPullResponse(message, HorseHeaders.UNACCEPTABLE));
+            QueueClient queueClient;
 
-                return;
+            if (queue.Status != QueueStatus.Cache)
+            {
+                //client cannot pull message from the queue not in
+                queueClient = queue.FindClient(client);
+                if (queueClient == null)
+                {
+                    if (!string.IsNullOrEmpty(message.MessageId))
+                        await client.SendAsync(MessageBuilder.CreateNoContentPullResponse(message, HorseHeaders.UNACCEPTABLE));
+
+                    return;
+                }
             }
+            else
+                queueClient = new QueueClient(queue, client);
 
             //check authorization
             foreach (IClientAuthorization authorization in _server.Authorizations)

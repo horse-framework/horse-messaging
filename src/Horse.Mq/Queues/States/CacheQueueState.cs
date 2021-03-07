@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Horse.Mq.Clients;
 using Horse.Mq.Delivery;
@@ -22,7 +23,11 @@ namespace Horse.Mq.Queues.States
             QueueMessage message = _queue.FindNextMessage();
             if (message == null)
             {
-                await client.Client.SendAsync(request.CreateResponse(HorseResultCode.NotFound));
+                HorseMessage eoq = new HorseMessage(MessageType.QueueMessage, _queue.Name);
+                eoq.SetMessageId(request.MessageId);
+                eoq.AddHeader(HorseHeaders.REQUEST_ID, request.MessageId);
+                eoq.AddHeader(HorseHeaders.NO_CONTENT, HorseHeaders.END);
+                await client.Client.SendAsync(eoq);
                 return PullResult.Empty;
             }
 
@@ -32,12 +37,12 @@ namespace Horse.Mq.Queues.States
             ProcessingMessage = message;
 
             message.Decision = await _queue.DeliveryHandler.BeginSend(_queue, message);
-            if (!await _queue.ApplyDecision(message.Decision, message))
+            if (!message.Decision.Allow)
                 return PullResult.Success;
 
             //call before send and check decision
             message.Decision = await _queue.DeliveryHandler.CanConsumerReceive(_queue, message, client.Client);
-            if (!await _queue.ApplyDecision(message.Decision, message))
+            if (!message.Decision.Allow)
                 return PullResult.Success;
 
             //create delivery object
@@ -45,6 +50,9 @@ namespace Horse.Mq.Queues.States
 
             //change to response message, send, change back to queue message
             message.Message.SetMessageId(request.MessageId);
+            message.Message.SetOrAddHeader(HorseHeaders.REQUEST_ID, request.MessageId);
+            message.Message.AddHeader(HorseHeaders.NO_CONTENT, HorseHeaders.END);
+
             bool sent = await client.Client.SendAsync(message.Message);
 
             if (sent)
@@ -57,19 +65,9 @@ namespace Horse.Mq.Queues.States
 
                 //after all sending operations completed, calls implementation send completed method and complete the operation
                 _queue.Info.AddMessageSend();
-
-                if (!await _queue.ApplyDecision(message.Decision, message))
-                    return PullResult.Success;
             }
             else
-            {
-                message.Decision = await _queue.DeliveryHandler.ConsumerReceiveFailed(_queue, delivery, client.Client);
-                if (!await _queue.ApplyDecision(message.Decision, message))
-                    return PullResult.Success;
-            }
-
-            message.Decision = await _queue.DeliveryHandler.EndSend(_queue, message);
-            await _queue.ApplyDecision(message.Decision, message);
+                await _queue.DeliveryHandler.ConsumerReceiveFailed(_queue, delivery, client.Client);
 
             return PullResult.Success;
         }
@@ -78,9 +76,12 @@ namespace Horse.Mq.Queues.States
         {
             //if we need acknowledge, we are sending this information to receivers that we require response
             message.Message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
-            message.IsInQueue = true;
+            
+            if (_queue.Options.MessageTimeout > TimeSpan.Zero)
+                message.Deadline = DateTime.UtcNow.Add(_queue.Options.MessageTimeout);
 
             _queue.ClearAllMessages();
+            _queue.AddMessage(message);
             return true;
         }
 

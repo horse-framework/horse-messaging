@@ -464,42 +464,20 @@ namespace Horse.Mq
                     throw new DuplicateNameException($"The server has already a queue with same name: {queueName}");
                 }
 
-                string topic = null;
                 bool statusSpecified = false; //when queue is created by subscriber, it will be initialized if status is specified
                 if (requestMessage != null)
                 {
-                    string waitForAck = requestMessage.FindHeader(HorseHeaders.ACKNOWLEDGE);
-                    if (!string.IsNullOrEmpty(waitForAck))
-                        switch (waitForAck.Trim().ToLower())
-                        {
-                            case "none":
-                                options.Acknowledge = QueueAckDecision.None;
-                                break;
-                            case "request":
-                                options.Acknowledge = QueueAckDecision.JustRequest;
-                                break;
-                            case "wait":
-                                options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-                                break;
-                        }
-
                     string queueStatus = requestMessage.FindHeader(HorseHeaders.QUEUE_STATUS);
                     if (queueStatus != null)
                     {
                         statusSpecified = true;
                         options.Status = QueueStatusHelper.FindStatus(queueStatus);
                     }
-
-                    topic = requestMessage.FindHeader(HorseHeaders.QUEUE_TOPIC);
-
-                    string delay = requestMessage.FindHeader(HorseHeaders.DELAY_BETWEEN_MESSAGES);
-                    if (!string.IsNullOrEmpty(delay))
-                        options.DelayBetweenMessages = Convert.ToInt32(delay);
                 }
 
                 queue = new HorseQueue(this, queueName, options);
-                if (!string.IsNullOrEmpty(topic))
-                    queue.Topic = topic;
+                if (requestMessage != null)
+                    queue.UpdateOptionsByMessage(requestMessage);
 
                 DeliveryHandlerBuilder handlerBuilder = new DeliveryHandlerBuilder
                                                         {

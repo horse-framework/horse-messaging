@@ -209,5 +209,11 @@ namespace Horse.Protocols.Hmq
         /// "Delivery"
         /// </summary>
         public const string DELIVERY = "Delivery";
+        
+        /// <summary>
+        /// "Message-Timeout"
+        /// </summary>
+        public const string MESSAGE_TIMEOUT = "Message-Timeout";
+
     }
 }

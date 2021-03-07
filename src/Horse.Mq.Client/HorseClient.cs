@@ -472,10 +472,7 @@ namespace Horse.Mq.Client
         private void ProcessPull(string requestId, HorseMessage message, PullContainer container)
         {
             if (message.Length > 0)
-            {
                 container.AddMessage(message);
-                return;
-            }
 
             string noContent = message.FindHeader(HorseHeaders.NO_CONTENT);
 

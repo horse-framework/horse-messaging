@@ -35,6 +35,13 @@ namespace Horse.Mq.Client.Models
         Pull,
 
         /// <summary>
+        /// Queue messaging is in running state.
+        /// Producers push message into queue, consumers receive the messages when they requested.
+        /// Only one message can store in queue at same time.
+        /// </summary>
+        Cache,
+
+        /// <summary>
         /// Queue messages are accepted from producers but they are not sending to consumers even they request new messages. 
         /// </summary>
         Paused,

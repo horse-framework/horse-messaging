@@ -161,6 +161,10 @@ namespace Horse.Mq.Client.Annotations.Resolvers
             QueueTopicAttribute topicAttr = type.GetCustomAttribute<QueueTopicAttribute>(true);
             if (topicAttr != null)
                 descriptor.Topic = topicAttr.Topic;
+            
+            MessageTimeoutAttribute msgTimeoutAttr = type.GetCustomAttribute<MessageTimeoutAttribute>(true);
+            if (msgTimeoutAttr != null)
+                descriptor.MessageTimeout = msgTimeoutAttr.Value;
 
             IEnumerable<MessageHeaderAttribute> headerAttributes = type.GetCustomAttributes<MessageHeaderAttribute>(true);
             foreach (MessageHeaderAttribute headerAttribute in headerAttributes)

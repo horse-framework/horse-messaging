@@ -102,6 +102,11 @@ namespace Horse.Mq.Client.Annotations.Resolvers
         public bool HasDirectReceiver { get; set; }
 
         /// <summary>
+        /// Message timeout in seconds
+        /// </summary>
+        public int? MessageTimeout { get; set; }
+
+        /// <summary>
         /// Creates new type delivery descriptor
         /// </summary>
         public TypeDeliveryDescriptor()
@@ -178,6 +183,9 @@ namespace Horse.Mq.Client.Annotations.Resolvers
 
             if (PutBackDelay.HasValue)
                 message.AddHeader(HorseHeaders.PUT_BACK_DELAY, PutBackDelay.Value.ToString());
+            
+            if (MessageTimeout.HasValue)
+                message.AddHeader(HorseHeaders.MESSAGE_TIMEOUT, MessageTimeout.Value.ToString());
 
             foreach (KeyValuePair<string, string> pair in Headers)
                 message.AddHeader(pair.Key, pair.Value);

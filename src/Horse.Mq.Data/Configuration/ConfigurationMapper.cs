@@ -14,7 +14,7 @@ namespace Horse.Mq.Data.Configuration
                        Acknowledge = configuration.Acknowledge.ToAckDecision(),
                        Status = configuration.Status.ToQueueStatus(),
                        AcknowledgeTimeout = TimeSpan.FromMilliseconds(configuration.AcknowledgeTimeout),
-                       MessageTimeout = TimeSpan.FromMilliseconds(configuration.AcknowledgeTimeout),
+                       MessageTimeout = TimeSpan.FromMilliseconds(configuration.MessageTimeout),
                        MessageLimit = configuration.MessageLimit,
                        HideClientNames = configuration.HideClientNames,
                        MessageSizeLimit = configuration.MessageSizeLimit,
