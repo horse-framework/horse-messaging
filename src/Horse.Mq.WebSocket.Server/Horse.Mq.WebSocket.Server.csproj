@@ -1,12 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <TargetFramework>net5.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Horse.Protocols.Http" Version="4.3.2" />
-      <PackageReference Include="Horse.Protocols.WebSocket" Version="4.3.2" />
+      <PackageReference Include="Horse.Protocols.Http" Version="5.0.1" />
+      <PackageReference Include="Horse.Protocols.WebSocket" Version="5.0.1" />
     </ItemGroup>
 
     <ItemGroup>

@@ -566,7 +566,7 @@ namespace Horse.Mq.Queues
             await SetStatus(prev);
         }
 
-        private void UpdateOptionsByMessage(HorseMessage message)
+        internal void UpdateOptionsByMessage(HorseMessage message)
         {
             if (!message.HasHeader)
                 return;
@@ -597,6 +597,18 @@ namespace Horse.Mq.Queues
 
                 else if (pair.Key.Equals(HorseHeaders.PUT_BACK_DELAY, StringComparison.InvariantCultureIgnoreCase))
                     Options.PutBackDelay = Convert.ToInt32(pair.Value);
+
+                else if (pair.Key.Equals(HorseHeaders.MESSAGE_TIMEOUT, StringComparison.InvariantCultureIgnoreCase))
+                    Options.MessageTimeout = TimeSpan.FromSeconds(Convert.ToInt32(pair.Value));
+
+                else if (pair.Key.Equals(HorseHeaders.ACK_TIMEOUT, StringComparison.InvariantCultureIgnoreCase))
+                    Options.AcknowledgeTimeout = TimeSpan.FromSeconds(Convert.ToInt32(pair.Value));
+
+                else if (pair.Key.Equals(HorseHeaders.DELAY_BETWEEN_MESSAGES, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    if (!string.IsNullOrEmpty(pair.Value))
+                        Options.DelayBetweenMessages = Convert.ToInt32(pair.Value);
+                }
             }
         }
 
@@ -674,6 +686,8 @@ namespace Horse.Mq.Queues
                                           HorseHeaders.PUT_BACK_DELAY,
                                           HorseHeaders.DELIVERY,
                                           HorseHeaders.DELIVERY_HANDLER,
+                                          HorseHeaders.MESSAGE_TIMEOUT,
+                                          HorseHeaders.ACK_TIMEOUT,
                                           HorseHeaders.CC);
 
             //prepare properties

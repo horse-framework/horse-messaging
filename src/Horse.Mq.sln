@@ -59,6 +59,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoutingSample.InternalServi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Mq.Bus", "Horse.Mq.Bus\Horse.Mq.Bus.csproj", "{E49B6DED-0A54-42C6-9B28-1E256ABB7E50}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Cache", "Samples\Sample.Cache\Sample.Cache.csproj", "{78630FD3-DA2F-45B6-91B3-18D08707D6C8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -165,6 +167,10 @@ Global
 		{E49B6DED-0A54-42C6-9B28-1E256ABB7E50}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E49B6DED-0A54-42C6-9B28-1E256ABB7E50}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E49B6DED-0A54-42C6-9B28-1E256ABB7E50}.Release|Any CPU.Build.0 = Release|Any CPU
+		{78630FD3-DA2F-45B6-91B3-18D08707D6C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{78630FD3-DA2F-45B6-91B3-18D08707D6C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{78630FD3-DA2F-45B6-91B3-18D08707D6C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{78630FD3-DA2F-45B6-91B3-18D08707D6C8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -190,6 +196,7 @@ Global
 		{36722057-D5F9-46F9-BCC3-0719CAA34C04} = {5AF8912A-0ADB-429E-B095-5D4ACD36F9CE}
 		{C06F8A53-C022-43C3-A728-B6B82D4DF054} = {5AF8912A-0ADB-429E-B095-5D4ACD36F9CE}
 		{AD240570-21FF-4E5B-BAFB-8A7F282F9E9A} = {5AF8912A-0ADB-429E-B095-5D4ACD36F9CE}
+		{78630FD3-DA2F-45B6-91B3-18D08707D6C8} = {2BAA30B9-6118-4C33-BD6B-AC6A5827EC7E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A73712E1-2BB7-4F7D-852F-ED8FE4ABA180}

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net5.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Horse.Mq.Bus\Horse.Mq.Bus.csproj" />
+      <ProjectReference Include="..\..\Horse.Mq.Client\Horse.Mq.Client.csproj" />
+      <ProjectReference Include="..\..\Horse.Mq\Horse.Mq.csproj" />
+      <ProjectReference Include="..\..\Horse.Protocols.Hmq\Horse.Protocols.Hmq.csproj" />
+    </ItemGroup>
+
+</Project>
