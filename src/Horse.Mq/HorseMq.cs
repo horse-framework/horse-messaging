@@ -185,7 +185,6 @@ namespace Horse.Mq
             _clients = new SafeList<MqClient>(2048);
 
             NodeManager = new NodeManager(this);
-
             NodeManager.Initialize();
 
             OnClientConnected = new ClientEventManager(EventNames.ClientConnected, this);
