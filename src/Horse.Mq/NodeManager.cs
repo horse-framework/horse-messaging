@@ -111,16 +111,24 @@ namespace Horse.Mq
         }
 
         /// <summary>
+        /// Sets node host options
+        /// </summary>
+        public void SetHost(HostOptions options)
+        {
+            Server.Options.NodeHost = options;
+        }
+
+        /// <summary>
         /// Client creation action for server instances
         /// </summary>
         private static HorseClient CreateInstanceClient(NodeOptions options)
         {
             HorseClient client = new HorseClient();
             client.SetClientName(options.Name);
-            
+
             if (!string.IsNullOrEmpty(options.Token))
                 client.SetClientToken(options.Token);
-            
+
             client.SetClientType("server");
             return client;
         }
@@ -164,7 +172,10 @@ namespace Horse.Mq
         public async Task Start()
         {
             foreach (HmqStickyConnector connector in Connectors)
-                connector.Run();
+            {
+                if (!connector.IsRunning)
+                    connector.Run();
+            }
 
             if (_nodeServer != null && _nodeServer.IsRunning)
             {

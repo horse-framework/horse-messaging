@@ -35,6 +35,7 @@ namespace Sample.Cluster
                                        .UseAckDeliveryHandler(AcknowledgeWhen.AfterReceived, PutBackDecision.No)
                                        .Build();
 
+            mq.NodeManager.SetHost(new HostOptions {Port = 26101});
             mq.NodeManager.AddRemoteNode(new NodeOptions
                                          {
                                              Host = "hmq://localhost:26100",
@@ -56,7 +57,14 @@ namespace Sample.Cluster
                                        .UseAckDeliveryHandler(AcknowledgeWhen.AfterReceived, PutBackDecision.No)
                                        .Build();
 
-            mq.Options.NodeHost = new HostOptions {Port = 26100};
+            mq.NodeManager.SetHost(new HostOptions {Port = 26100});
+            mq.NodeManager.AddRemoteNode(new NodeOptions
+                                         {
+                                             Host = "hmq://localhost:26101",
+                                             Name = "Node-2",
+                                             KeepMessages = false,
+                                             ReconnectWait = 500
+                                         });
 
             HorseServer server = new HorseServer();
             server.UseHorseMq(mq);
@@ -67,7 +75,7 @@ namespace Sample.Cluster
         static void ConnectToServer1AsProducer()
         {
             HmqStickyConnector producer = new HmqStickyConnector(TimeSpan.FromSeconds(2));
-            producer.AddHost("hmq://localhost:26001");
+            producer.AddHost("hmq://localhost:26002");
             
             producer.ContentSerializer = new NewtonsoftContentSerializer();
             producer.Run();
@@ -93,10 +101,16 @@ namespace Sample.Cluster
         static void ConnectToServer2AsConsumer()
         {
             HmqStickyConnector consumer = new HmqStickyConnector(TimeSpan.FromSeconds(2));
-            consumer.AddHost("hmq://localhost:26002");
+            consumer.AddHost("hmq://localhost:26001");
             consumer.ContentSerializer = new NewtonsoftContentSerializer();
             consumer.Observer.RegisterConsumer<MirroredModelConsumer>();
             consumer.Run();
+            
+            HmqStickyConnector consumer1 = new HmqStickyConnector(TimeSpan.FromSeconds(2));
+            consumer1.AddHost("hmq://localhost:26002");
+            consumer1.ContentSerializer = new NewtonsoftContentSerializer();
+            consumer1.Observer.RegisterConsumer<MirroredModelConsumer>();
+            consumer1.Run();
         }
     }
 }
