@@ -66,7 +66,7 @@ namespace Horse.Mq
         /// <summary>
         /// Inits node options and starts the connections
         /// </summary>
-        public void Initialize()
+        internal void Initialize()
         {
             if (Server.Options.Nodes == null || Server.Options.Nodes.Length < 1)
                 return;
@@ -90,13 +90,45 @@ namespace Horse.Mq
         }
 
         /// <summary>
+        /// Adds new remote master node
+        /// </summary>
+        public void AddRemoteNode(NodeOptions options)
+        {
+            HmqStickyConnector[] newArray = new HmqStickyConnector[Connectors.Length + 1];
+            Array.Copy(Connectors, newArray, Connectors.Length);
+
+            TimeSpan reconnect = TimeSpan.FromMilliseconds(options.ReconnectWait);
+
+            HmqStickyConnector connector = options.KeepMessages
+                                               ? new HmqAbsoluteConnector(reconnect, () => CreateInstanceClient(options))
+                                               : new HmqStickyConnector(reconnect, () => CreateInstanceClient(options));
+
+            newArray[^1] = connector;
+            connector.Tag = options;
+
+            connector.AddHost(options.Host);
+            Connectors = newArray;
+        }
+
+        /// <summary>
+        /// Sets node host options
+        /// </summary>
+        public void SetHost(HostOptions options)
+        {
+            Server.Options.NodeHost = options;
+        }
+
+        /// <summary>
         /// Client creation action for server instances
         /// </summary>
         private static HorseClient CreateInstanceClient(NodeOptions options)
         {
             HorseClient client = new HorseClient();
             client.SetClientName(options.Name);
-            client.SetClientToken(options.Token);
+
+            if (!string.IsNullOrEmpty(options.Token))
+                client.SetClientToken(options.Token);
+
             client.SetClientType("server");
             return client;
         }
@@ -140,7 +172,10 @@ namespace Horse.Mq
         public async Task Start()
         {
             foreach (HmqStickyConnector connector in Connectors)
-                connector.Run();
+            {
+                if (!connector.IsRunning)
+                    connector.Run();
+            }
 
             if (_nodeServer != null && _nodeServer.IsRunning)
             {
@@ -159,6 +194,7 @@ namespace Horse.Mq
                                               RequestTimeout = 15
                                           });
 
+            _nodeServer.UseHmq(ConnectionHandler);
             _nodeServer.Start();
         }
 
