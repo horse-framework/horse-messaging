@@ -40,13 +40,16 @@ namespace Horse.Mq.Queues.States
             {
                 ProcessingMessage = message;
                 PushResult result = await ProcessMessage(message);
-                ProcessingMessage = null;
                 return result;
             }
             catch (Exception e)
             {
                 _queue.Server.SendError("PUSH", e, $"QueueName:{_queue.Name}, State:Push");
                 return PushResult.Error;
+            }
+            finally
+            {
+                ProcessingMessage = null;
             }
         }
 
@@ -109,10 +112,10 @@ namespace Horse.Mq.Queues.States
                         client.CurrentlyProcessing = message;
                         client.ProcessDeadline = ackDeadline ?? DateTime.UtcNow;
                     }
-                    
+
                     messageIsSent = true;
                     message.CurrentDeliveryReceivers.Add(client);
-                    
+
                     //adds the delivery to time keeper to check timing up
                     _queue.TimeKeeper.AddAcknowledgeCheck(delivery);
 

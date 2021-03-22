@@ -75,6 +75,12 @@ namespace Horse.Mq.Queues
         public QueueInfo Info { get; } = new QueueInfo();
 
         /// <summary>
+        /// Returns currently processing message.
+        /// The message is about to send, but it might be waiting for acknowledge of previous message or delay between messages.
+        /// </summary>
+        public QueueMessage ProcessingMessage => State.ProcessingMessage;
+
+        /// <summary>
         /// High priority message list
         /// </summary>
         public IEnumerable<QueueMessage> PriorityMessages => PriorityMessagesList;
@@ -316,6 +322,14 @@ namespace Horse.Mq.Queues
         public int MessageCount()
         {
             return MessagesList.Count;
+        }
+
+        /// <summary>
+        /// Returns unique pending message count
+        /// </summary>
+        public int GetAckPendingMessageCount()
+        {
+            return TimeKeeper.GetPendingMessageCount();
         }
 
         /// <summary>

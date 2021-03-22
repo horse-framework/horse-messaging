@@ -163,6 +163,10 @@ namespace Horse.Mq.Queues.States
                     {
                     }
                 }
+                finally
+                {
+                    ProcessingMessage = null;
+                }
             }
 
             await client.Client.SendAsync(MessageBuilder.CreateNoContentPullResponse(request, HorseHeaders.END));
@@ -237,6 +241,9 @@ namespace Horse.Mq.Queues.States
                     _queue.ClearRegularMessages();
             });
 
+            if (message != null)
+                ProcessingMessage = message;
+            
             return new Tuple<QueueMessage, int, int>(message, prioMessageCount, messageCount);
         }
 
