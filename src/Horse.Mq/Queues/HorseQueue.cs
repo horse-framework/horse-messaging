@@ -752,18 +752,14 @@ namespace Horse.Mq.Queues
                 try
                 {
                     Decision decision = await DeliveryHandler.ExceptionThrown(this, State.ProcessingMessage, ex);
-                    if (State.ProcessingMessage != null)
-                    {
-                        await ApplyDecision(decision, State.ProcessingMessage);
 
-                        if (!State.ProcessingMessage.IsInQueue)
-                        {
-                            if (decision.PutBack == PutBackDecision.Start)
-                                AddMessage(State.ProcessingMessage, false);
-                            else if (decision.PutBack == PutBackDecision.End)
-                                AddMessage(State.ProcessingMessage);
-                        }
-                    }
+                    //the message is removed from the queue and it's not sent to consumers
+                    //we should put the message back into the queue
+                    if (!message.IsInQueue && !message.IsSent && State.CanEnqueue(message))
+                        decision = new Decision(true, true, PutBackDecision.Start, DeliveryAcknowledgeDecision.None);
+
+                    if (State.ProcessingMessage != null)
+                        await ApplyDecision(decision, State.ProcessingMessage);
                 }
                 catch //if developer does wrong operation, we should not stop
                 {
@@ -878,7 +874,13 @@ namespace Horse.Mq.Queues
                     try
                     {
                         Decision decision = await DeliveryHandler.ExceptionThrown(this, message, ex);
-                        await ApplyDecision(decision, message);
+                        
+                        //the message is removed from the queue and it's not sent to consumers
+                        //we should put the message back into the queue
+                        if (!message.IsInQueue && !message.IsSent)
+                            decision = new Decision(true, true, PutBackDecision.Start, DeliveryAcknowledgeDecision.None);
+
+                        await ApplyDecision(decision, message, null, 5000);
                     }
                     catch //if developer does wrong operation, we should not stop
                     {
@@ -929,7 +931,7 @@ namespace Horse.Mq.Queues
         /// If acknowledge is chosen, sends an ack message to source.
         /// Returns true is allowed
         /// </summary>
-        internal async Task<bool> ApplyDecision(Decision decision, QueueMessage message, HorseMessage customAck = null)
+        internal async Task<bool> ApplyDecision(Decision decision, QueueMessage message, HorseMessage customAck = null, int forceDelay = 0)
         {
             try
             {
@@ -954,7 +956,7 @@ namespace Horse.Mq.Queues
                 }
 
                 if (decision.PutBack != PutBackDecision.No)
-                    ApplyPutBack(decision, message);
+                    ApplyPutBack(decision, message, forceDelay);
                 else if (!decision.Allow)
                 {
                     Info.AddMessageRemove();
@@ -972,7 +974,7 @@ namespace Horse.Mq.Queues
         /// <summary>
         /// Executes put back decision for the message
         /// </summary>
-        internal void ApplyPutBack(Decision decision, QueueMessage message)
+        internal void ApplyPutBack(Decision decision, QueueMessage message, int forceDelay = 0)
         {
             switch (decision.PutBack)
             {
@@ -995,14 +997,14 @@ namespace Horse.Mq.Queues
                     break;
 
                 case PutBackDecision.End:
-                    if (Options.PutBackDelay == 0)
+                    if (Options.PutBackDelay == 0 && forceDelay == 0)
                         AddMessage(message);
                     else
                         _ = Task.Run(async () =>
                         {
                             try
                             {
-                                await Task.Delay(Options.PutBackDelay);
+                                await Task.Delay(Math.Max(forceDelay, Options.PutBackDelay));
                                 AddMessage(message);
                             }
                             catch (Exception e)

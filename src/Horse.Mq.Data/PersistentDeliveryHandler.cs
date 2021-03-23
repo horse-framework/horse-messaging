@@ -294,6 +294,7 @@ namespace Horse.Mq.Data
         {
             if (ConfigurationFactory.Builder.ErrorAction != null)
                 ConfigurationFactory.Builder.ErrorAction(queue, message, exception);
+
             return Task.FromResult(Decision.JustAllow());
         }
 
