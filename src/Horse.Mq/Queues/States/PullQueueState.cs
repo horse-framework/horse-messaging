@@ -149,6 +149,7 @@ namespace Horse.Mq.Queues.States
                     try
                     {
                         Decision decision = await _queue.DeliveryHandler.ExceptionThrown(_queue, message, ex);
+
                         await _queue.ApplyDecision(decision, message);
 
                         if (!message.IsInQueue)
@@ -162,6 +163,10 @@ namespace Horse.Mq.Queues.States
                     catch //if developer does wrong operation, we should not stop
                     {
                     }
+                }
+                finally
+                {
+                    ProcessingMessage = null;
                 }
             }
 
@@ -236,6 +241,9 @@ namespace Horse.Mq.Queues.States
                 else if (clear == ClearDecision.DefaultPriority)
                     _queue.ClearRegularMessages();
             });
+
+            if (message != null)
+                ProcessingMessage = message;
 
             return new Tuple<QueueMessage, int, int>(message, prioMessageCount, messageCount);
         }

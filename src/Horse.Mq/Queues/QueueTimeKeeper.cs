@@ -28,7 +28,7 @@ namespace Horse.Mq.Queues
         /// <summary>
         /// All following deliveries
         /// </summary>
-        private readonly List<MessageDelivery> _deliveries = new List<MessageDelivery>(1024);
+        private readonly List<MessageDelivery> _deliveries = new(1024);
 
         #endregion
 
@@ -132,7 +132,7 @@ namespace Horse.Mq.Queues
             QueueMessage firstMessage = list.FirstOrDefault();
             if (firstMessage != null && firstMessage.Deadline.HasValue && firstMessage.Deadline > DateTime.UtcNow)
                 return;
-            
+
             foreach (QueueMessage message in list)
             {
                 if (!message.Deadline.HasValue)
@@ -289,6 +289,21 @@ namespace Horse.Mq.Queues
         public bool HasPendingDelivery()
         {
             return _deliveries.Count > 0;
+        }
+
+        /// <summary>
+        /// Returns unique pending message count
+        /// </summary>
+        public int GetPendingMessageCount()
+        {
+            int count;
+            lock (_deliveries)
+                count = _deliveries.Where(x => !string.IsNullOrEmpty(x.Message.Message.MessageId))
+                                   .Select(x => x.Message.Message.MessageId)
+                                   .Distinct()
+                                   .Count();
+
+            return count;
         }
 
         #endregion

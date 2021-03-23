@@ -67,7 +67,6 @@ namespace Horse.Mq.Queues.States
 
                 ProcessingMessage = message;
                 PushResult result = await ProcessMessage(message, cc);
-                ProcessingMessage = null;
 
                 return result;
             }
@@ -75,6 +74,10 @@ namespace Horse.Mq.Queues.States
             {
                 _queue.Server.SendError("PUSH", e, $"QueueName:{_queue.Name}, State:RoundRobin");
                 return PushResult.Error;
+            }
+            finally
+            {
+                ProcessingMessage = null;
             }
         }
 
@@ -91,7 +94,7 @@ namespace Horse.Mq.Queues.States
                 _queue.AddMessage(message, false);
                 return PushResult.NoConsumers;
             }
-            
+
             if (message.CurrentDeliveryReceivers.Count > 0)
                 message.CurrentDeliveryReceivers.Clear();
 
@@ -120,7 +123,7 @@ namespace Horse.Mq.Queues.States
                     receiver.CurrentlyProcessing = message;
                     receiver.ProcessDeadline = deadline ?? DateTime.UtcNow;
                 }
-                
+
                 message.CurrentDeliveryReceivers.Add(receiver);
 
                 //adds the delivery to time keeper to check timing up
