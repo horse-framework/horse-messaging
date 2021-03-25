@@ -30,6 +30,12 @@ namespace Horse.Mq.Options
         public int QueueLimit { get; set; }
 
         /// <summary>
+        /// Maximum router limit of the server
+        /// Zero is unlimited.
+        /// </summary>
+        public int RouterLimit { get; set; }
+
+        /// <summary>
         /// Other server node informations that will be connected
         /// </summary>
         public NodeOptions[] Nodes { get; set; }

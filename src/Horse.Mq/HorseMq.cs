@@ -663,6 +663,9 @@ namespace Horse.Mq
                 if (!Filter.CheckNameEligibility(name))
                     throw new InvalidOperationException("Invalid router name");
 
+                if (Options.RouterLimit > 0 && Options.RouterLimit >= _routers.Count)
+                    throw new OperationCanceledException("Router limit is exceeded for the server");
+
                 if (_routers.Find(x => x.Name == name) != null)
                     throw new DuplicateNameException();
 
@@ -687,6 +690,9 @@ namespace Horse.Mq
             {
                 if (!Filter.CheckNameEligibility(router.Name))
                     throw new InvalidOperationException("Invalid router name");
+
+                if (Options.RouterLimit > 0 && Options.RouterLimit >= _routers.Count)
+                    throw new OperationCanceledException("Router limit is exceeded for the server");
 
                 if (_routers.Find(x => x.Name == router.Name) != null)
                     throw new DuplicateNameException();
