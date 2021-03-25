@@ -495,7 +495,7 @@ namespace Horse.Mq.Network
             List<NodeInformation> list = new List<NodeInformation>();
 
             //slave instances
-            List<MqClient> slaves = _server.NodeManager.Clients.GetAsClone();
+            List<MqClient> slaves = _server.NodeManager.IncomingNodes.GetAsClone();
             foreach (MqClient slave in slaves)
             {
                 list.Add(new NodeInformation
