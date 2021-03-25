@@ -291,6 +291,9 @@ namespace Horse.Mq.Queues.States
                 _queue.Info.AddDelivery();
                 message.Decision = await _queue.DeliveryHandler.ConsumerReceived(_queue, delivery, requester.Client);
 
+                foreach (IQueueMessageEventHandler handler in _queue.Server.QueueMessageHandlers)
+                    _ = handler.OnConsumed(_queue, delivery, requester.Client);
+
                 //after all sending operations completed, calls implementation send completed method and complete the operation
                 _queue.Info.AddMessageSend();
 

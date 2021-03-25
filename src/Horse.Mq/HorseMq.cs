@@ -35,6 +35,7 @@ namespace Horse.Mq
         private IClientAuthenticator[] _authenticators = new IClientAuthenticator[0];
         private IClientAuthorization[] _authorizations = new IClientAuthorization[0];
         private IAdminAuthorization[] _adminAuthorizations = new IAdminAuthorization[0];
+        private IQueueMessageEventHandler[] _queueMessageHandlers = new IQueueMessageEventHandler[0];
 
         /// <summary>
         /// Locker object for preventing to create duplicated queues when requests are concurrent and auto queue creation is enabled
@@ -95,6 +96,11 @@ namespace Horse.Mq
         /// Client connect and disconnect operations
         /// </summary>
         public IEnumerable<IClientHandler> ClientHandlers => _clientHandlers;
+
+        /// <summary>
+        /// Event handlers to track queue message events
+        /// </summary>
+        public IEnumerable<IQueueMessageEventHandler> QueueMessageHandlers => _queueMessageHandlers;
 
         /// <summary>
         /// Error handlers
@@ -236,6 +242,26 @@ namespace Horse.Mq
             List<IClientHandler> list = _clientHandlers.ToList();
             list.Remove(handler);
             _clientHandlers = list.ToArray();
+        }
+
+        /// <summary>
+        /// Adds queue message event handler
+        /// </summary>
+        public void AddQueueMessageHandler(IQueueMessageEventHandler handler)
+        {
+            List<IQueueMessageEventHandler> list = _queueMessageHandlers.ToList();
+            list.Add(handler);
+            _queueMessageHandlers = list.ToArray();
+        }
+
+        /// <summary>
+        /// Removes queue message event handler
+        /// </summary>
+        public void RemoveQueueMessageHandler(IQueueMessageEventHandler handler)
+        {
+            List<IQueueMessageEventHandler> list = _queueMessageHandlers.ToList();
+            list.Remove(handler);
+            _queueMessageHandlers = list.ToArray();
         }
 
         /// <summary>
