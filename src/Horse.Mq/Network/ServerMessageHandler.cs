@@ -282,7 +282,7 @@ namespace Horse.Mq.Network
             QueueOptions options = QueueOptions.CloneFrom(_server.Options);
             if (builder != null)
                 builder.ApplyToQueue(options);
-            
+
             queue = await _server.CreateQueue(message.Target, options, message, _server.DeliveryHandlerFactory, true, false);
 
             //if creation successful, sends response
@@ -509,9 +509,14 @@ namespace Horse.Mq.Network
                          });
             }
 
-            //master instances
-            foreach (HmqStickyConnector connector in _server.NodeManager.Connectors)
+            //outgoing nodes
+            foreach (OutgoingNode node in _server.NodeManager.OutgoingNodes)
             {
+                if (node?.Connector == null)
+                    continue;
+
+                HmqStickyConnector connector = node.Connector;
+
                 NodeOptions options = connector.Tag as NodeOptions;
                 HorseClient c = connector.GetClient();
 
