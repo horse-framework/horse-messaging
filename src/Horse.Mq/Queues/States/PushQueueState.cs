@@ -125,6 +125,10 @@ namespace Horse.Mq.Queues.States
                     //do after send operations for per message
                     _queue.Info.AddDelivery();
                     Decision d = await _queue.DeliveryHandler.ConsumerReceived(_queue, delivery, client.Client);
+                    
+                    foreach (IQueueMessageEventHandler handler in _queue.Server.QueueMessageHandlers)
+                        _ = handler.OnConsumed(_queue, delivery, client.Client);
+                    
                     final = HorseQueue.CreateFinalDecision(final, d);
                 }
                 else

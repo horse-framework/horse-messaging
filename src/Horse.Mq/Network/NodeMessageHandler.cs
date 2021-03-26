@@ -29,12 +29,17 @@ namespace Horse.Mq.Network
         public async Task Handle(MqClient client, HorseMessage message, bool fromNode)
         {
             //if server is not set or there is no connected server
-            if (_server.NodeManager.Connectors.Length == 0)
+            if (_server.NodeManager.OutgoingNodes.Length == 0)
                 return;
 
             byte[] mdata = HmqWriter.Create(message);
-            foreach (HmqStickyConnector connector in _server.NodeManager.Connectors)
+            foreach (OutgoingNode node in _server.NodeManager.OutgoingNodes)
             {
+                if (node?.Connector == null)
+                    continue;
+
+                HmqStickyConnector connector = node.Connector;
+
                 bool grant = _server.NodeManager.Authenticator == null || await _server.NodeManager.Authenticator.CanReceive(connector.GetClient(), message);
 
                 if (grant)

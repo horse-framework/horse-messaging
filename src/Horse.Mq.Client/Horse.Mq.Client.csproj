@@ -6,9 +6,9 @@
         <Product>Horse.Mq.Client</Product>
         <Description>Horse Messaging Queue Client to connect all HMQ Servers</Description>
         <PackageTags>horse,hmq,client,mq,messaging,queue</PackageTags>
-        <AssemblyVersion>5.0.4</AssemblyVersion>
-        <FileVersion>5.0.4</FileVersion>
-        <PackageVersion>5.0.4</PackageVersion>
+        <AssemblyVersion>5.0.5</AssemblyVersion>
+        <FileVersion>5.0.5</FileVersion>
+        <PackageVersion>5.0.5</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/horse-framework/horse-mq</PackageProjectUrl>

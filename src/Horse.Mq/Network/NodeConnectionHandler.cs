@@ -34,10 +34,10 @@ namespace Horse.Mq.Network
             string clientId;
             bool found = data.Properties.TryGetValue(HorseHeaders.CLIENT_ID, out clientId);
             if (!found || string.IsNullOrEmpty(clientId))
-                clientId = _server.Server.ClientIdGenerator.Create();
+                clientId = _server.Self.ClientIdGenerator.Create();
 
             //if another client with same unique id is online, do not accept new client
-            MqClient foundClient = _server.Clients.Find(x => x.UniqueId == clientId);
+            MqClient foundClient = _server.IncomingNodes.Find(x => x.UniqueId == clientId);
             if (foundClient != null)
             {
                 await connection.Socket.SendAsync(HmqWriter.Create(MessageBuilder.Busy()));
@@ -45,7 +45,7 @@ namespace Horse.Mq.Network
             }
 
             //creates new node client object 
-            MqClient client = new MqClient(_server.Server, connection);
+            MqClient client = new MqClient(_server.Self, connection);
             client.Data = data;
             client.UniqueId = clientId.Trim();
             client.Token = data.Properties.GetStringValue(HorseHeaders.CLIENT_TOKEN);
@@ -60,7 +60,7 @@ namespace Horse.Mq.Network
             }
 
             client.RemoteHost = client.Info.Client.Client.RemoteEndPoint.ToString()?.Split(':')[0];
-            _server.Clients.Add(client);
+            _server.IncomingNodes.Add(client);
 
             await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
 
@@ -99,7 +99,7 @@ namespace Horse.Mq.Network
         public Task Disconnected(IHorseServer server, HorseServerSocket client)
         {
             MqClient node = (MqClient) client;
-            _server.Clients.Remove(node);
+            _server.IncomingNodes.Remove(node);
 
             return Task.CompletedTask;
         }
@@ -109,11 +109,11 @@ namespace Horse.Mq.Network
         /// </summary>
         private void DecisionOverNode(HorseMessage message)
         {
-            DecisionOverNode model = message.Deserialize<DecisionOverNode>(_server.Server.MessageContentSerializer);
+            DecisionOverNode model = message.Deserialize<DecisionOverNode>(_server.Self.MessageContentSerializer);
             if (model == null)
                 return;
 
-            HorseQueue queue = _server.Server.FindQueue(model.Queue);
+            HorseQueue queue = _server.Self.FindQueue(model.Queue);
             if (queue == null)
                 return;
 

@@ -31,17 +31,17 @@ namespace Horse.Mq
         /// <summary>
         /// Messaging queue server of the node server
         /// </summary>
-        public HorseMq Server { get; }
+        public HorseMq Self { get; }
 
         /// <summary>
         /// Remote node connectors
         /// </summary>
-        internal HmqStickyConnector[] Connectors { get; private set; } = new HmqStickyConnector[0];
+        public OutgoingNode[] OutgoingNodes { get; private set; } = new OutgoingNode[0];
 
         /// <summary>
         /// Other Horse MQ server nodes that are sending messages to this server
         /// </summary>
-        internal SafeList<MqClient> Clients { get; private set; } = new SafeList<MqClient>(16);
+        public SafeList<MqClient> IncomingNodes { get; } = new(16);
 
         /// <summary>
         /// Connection handler for node clients
@@ -58,9 +58,9 @@ namespace Horse.Mq
         /// <summary>
         /// 
         /// </summary>
-        public NodeManager(HorseMq server)
+        public NodeManager(HorseMq self)
         {
-            Server = server;
+            Self = self;
         }
 
         /// <summary>
@@ -68,21 +68,25 @@ namespace Horse.Mq
         /// </summary>
         internal void Initialize()
         {
-            if (Server.Options.Nodes == null || Server.Options.Nodes.Length < 1)
+            if (Self.Options.Nodes == null || Self.Options.Nodes.Length < 1)
                 return;
 
-            Connectors = new HmqStickyConnector[Server.Options.Nodes.Length];
+            OutgoingNodes = new OutgoingNode[Self.Options.Nodes.Length];
 
-            for (int i = 0; i < Connectors.Length; i++)
+            for (int i = 0; i < OutgoingNodes.Length; i++)
             {
-                NodeOptions options = Server.Options.Nodes[i];
+                NodeOptions options = Self.Options.Nodes[i];
                 TimeSpan reconnect = TimeSpan.FromMilliseconds(options.ReconnectWait);
 
                 HmqStickyConnector connector = options.KeepMessages
                                                    ? new HmqAbsoluteConnector(reconnect, () => CreateInstanceClient(options))
                                                    : new HmqStickyConnector(reconnect, () => CreateInstanceClient(options));
 
-                Connectors[i] = connector;
+                OutgoingNode node = new OutgoingNode();
+                node.Options = options;
+                node.Connector = connector;
+
+                OutgoingNodes[i] = node;
                 connector.Tag = options;
 
                 connector.AddHost(options.Host);
@@ -94,8 +98,8 @@ namespace Horse.Mq
         /// </summary>
         public void AddRemoteNode(NodeOptions options)
         {
-            HmqStickyConnector[] newArray = new HmqStickyConnector[Connectors.Length + 1];
-            Array.Copy(Connectors, newArray, Connectors.Length);
+            OutgoingNode[] newArray = new OutgoingNode[OutgoingNodes.Length + 1];
+            Array.Copy(OutgoingNodes, newArray, OutgoingNodes.Length);
 
             TimeSpan reconnect = TimeSpan.FromMilliseconds(options.ReconnectWait);
 
@@ -103,11 +107,15 @@ namespace Horse.Mq
                                                ? new HmqAbsoluteConnector(reconnect, () => CreateInstanceClient(options))
                                                : new HmqStickyConnector(reconnect, () => CreateInstanceClient(options));
 
-            newArray[^1] = connector;
+            OutgoingNode node = new OutgoingNode();
+            node.Options = options;
+            node.Connector = connector;
+
+            newArray[^1] = node;
             connector.Tag = options;
 
             connector.AddHost(options.Host);
-            Connectors = newArray;
+            OutgoingNodes = newArray;
         }
 
         /// <summary>
@@ -115,7 +123,7 @@ namespace Horse.Mq
         /// </summary>
         public void SetHost(HostOptions options)
         {
-            Server.Options.NodeHost = options;
+            Self.Options.NodeHost = options;
         }
 
         /// <summary>
@@ -160,7 +168,7 @@ namespace Horse.Mq
             _subscribed = true;
 
             server.OnStarted += s => _ = Start();
-            server.OnStopped += s => Stop();
+            server.OnStopped += _ => Stop();
 
             if (server.IsRunning)
                 _ = Start();
@@ -171,10 +179,13 @@ namespace Horse.Mq
         /// </summary>
         public async Task Start()
         {
-            foreach (HmqStickyConnector connector in Connectors)
+            foreach (OutgoingNode node in OutgoingNodes)
             {
-                if (!connector.IsRunning)
-                    connector.Run();
+                if (node?.Connector == null)
+                    continue;
+
+                if (!node.Connector.IsRunning)
+                    node.Connector.Run();
             }
 
             if (_nodeServer != null && _nodeServer.IsRunning)
@@ -184,12 +195,12 @@ namespace Horse.Mq
                 await Task.Delay(500);
             }
 
-            if (Server.Options.NodeHost == null)
+            if (Self.Options.NodeHost == null)
                 return;
 
             _nodeServer = new HorseServer(new ServerOptions
                                           {
-                                              Hosts = new List<HostOptions> {Server.Options.NodeHost},
+                                              Hosts = new List<HostOptions> {Self.Options.NodeHost},
                                               PingInterval = 15,
                                               RequestTimeout = 15
                                           });
@@ -203,8 +214,13 @@ namespace Horse.Mq
         /// </summary>
         public void Stop()
         {
-            foreach (HmqStickyConnector connector in Connectors)
-                connector.Abort();
+            foreach (OutgoingNode node in OutgoingNodes)
+            {
+                if (node?.Connector == null)
+                    continue;
+
+                node.Connector.Abort();
+            }
 
             if (_nodeServer != null)
             {
@@ -220,8 +236,9 @@ namespace Horse.Mq
         /// </summary>
         public void SendMessageToNodes(HorseMessage message)
         {
-            foreach (HmqStickyConnector connector in Connectors)
-                _ = connector.GetClient()?.SendAsync(message);
+            foreach (OutgoingNode node in OutgoingNodes)
+                if (node != null && node.Connector != null)
+                    _ = node.Connector.GetClient()?.SendAsync(message);
         }
     }
 }

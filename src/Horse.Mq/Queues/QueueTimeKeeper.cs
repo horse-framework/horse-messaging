@@ -109,6 +109,9 @@ namespace Horse.Mq.Queues
                 _queue.Info.AddMessageTimeout();
                 Decision decision = await _queue.DeliveryHandler.MessageTimedOut(_queue, message);
                 await _queue.ApplyDecision(decision, message);
+                
+                foreach (IQueueMessageEventHandler handler in _queue.Server.QueueMessageHandlers)
+                    _ = handler.MessageTimedOut(_queue, message);
             }
 
             temp.Clear();
@@ -120,6 +123,9 @@ namespace Horse.Mq.Queues
                 _queue.Info.AddMessageTimeout();
                 Decision decision = await _queue.DeliveryHandler.MessageTimedOut(_queue, message);
                 await _queue.ApplyDecision(decision, message);
+                
+                foreach (IQueueMessageEventHandler handler in _queue.Server.QueueMessageHandlers)
+                    _ = handler.MessageTimedOut(_queue, message);
             }
         }
 
@@ -199,12 +205,15 @@ namespace Horse.Mq.Queues
                             continue;
                         }
 
-                        _queue.Info.AddNegativeAcknowledge();
+                        _queue.Info.AddUnacknowledge();
                         Decision decision = await _queue.DeliveryHandler.AcknowledgeTimedOut(_queue, delivery);
 
                         if (delivery.Message != null)
                             await _queue.ApplyDecision(decision, delivery.Message);
 
+                        foreach (IQueueMessageEventHandler handler in _queue.Server.QueueMessageHandlers)
+                            _ = handler.OnAcknowledgeTimedOut(_queue, delivery);
+                        
                         if (!released)
                         {
                             released = true;

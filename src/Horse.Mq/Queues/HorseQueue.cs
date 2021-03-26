@@ -727,6 +727,10 @@ namespace Horse.Mq.Queues
                 message.Decision = decision;
 
                 bool allow = await ApplyDecision(decision, message);
+                
+                foreach (IQueueMessageEventHandler handler in Server.QueueMessageHandlers)
+                    _ = handler.OnProduced(this, message, sender);
+
                 if (!allow)
                     return PushResult.Success;
 
@@ -874,7 +878,7 @@ namespace Horse.Mq.Queues
                     try
                     {
                         Decision decision = await DeliveryHandler.ExceptionThrown(this, message, ex);
-                        
+
                         //the message is removed from the queue and it's not sent to consumers
                         //we should put the message back into the queue
                         if (!message.IsInQueue && !message.IsSent)
@@ -1181,6 +1185,9 @@ namespace Horse.Mq.Queues
 
                     await ApplyDecision(decision, delivery.Message, deliveryMessage);
                 }
+
+                foreach (IQueueMessageEventHandler handler in Server.QueueMessageHandlers)
+                    _ = handler.OnAcknowledged(this, deliveryMessage, delivery, success);
 
                 ReleaseAcknowledgeLock(true);
             }

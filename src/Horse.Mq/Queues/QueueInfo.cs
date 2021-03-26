@@ -62,14 +62,17 @@ namespace Horse.Mq.Queues
         private long _timedOutMessages;
 
         /// <summary>
-        /// Timed out acknowledge count
+        /// Acknowledge count
         /// </summary>
         public long Acknowledges => _acknowledges;
 
         /// <summary>
         /// Timed out acknowledge count
         /// </summary>
+        public long Unacknowledges => _unacknowledges;
+
         private long _acknowledges;
+        private long _unacknowledges;
 
         /// <summary>
         /// Acknowledge timed out message count.
@@ -160,6 +163,7 @@ namespace Horse.Mq.Queues
             Volatile.Write(ref _deliveries, 0);
             Volatile.Write(ref _timedOutMessages, 0);
             Volatile.Write(ref _acknowledges, 0);
+            Volatile.Write(ref _unacknowledges, 0);
             Volatile.Write(ref _negativeAcknowledge, 0);
             Volatile.Write(ref _messageRemoved, 0);
             Volatile.Write(ref _messageSaved, 0);
@@ -223,6 +227,14 @@ namespace Horse.Mq.Queues
         internal void AddNegativeAcknowledge()
         {
             Interlocked.Increment(ref _negativeAcknowledge);
+        }
+
+        /// <summary>
+        /// Increases acknowledge timeout count
+        /// </summary>
+        internal void AddUnacknowledge()
+        {
+            Interlocked.Increment(ref _unacknowledges);
         }
 
         /// <summary>
