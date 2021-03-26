@@ -205,7 +205,7 @@ namespace Horse.Mq.Queues
                             continue;
                         }
 
-                        _queue.Info.AddNegativeAcknowledge();
+                        _queue.Info.AddUnacknowledge();
                         Decision decision = await _queue.DeliveryHandler.AcknowledgeTimedOut(_queue, delivery);
 
                         if (delivery.Message != null)
