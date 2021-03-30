@@ -11,13 +11,18 @@ namespace Horse.Mq
     public interface IRouterMessageHandler
     {
         /// <summary>
-        /// Triggered when a client sends a message to a router
-        /// </summary>
-        Task OnProduced(MqClient sender, IRouter router, HorseMessage message);
-        
-        /// <summary>
         /// Triggered when a client sends a message but router cannot be found
         /// </summary>
-        Task OnNotFound(MqClient sender, HorseMessage message);
+        Task OnRouterNotFound(MqClient sender, HorseMessage message);
+
+        /// <summary>
+        /// Triggered when a client sends a message, router exists but there are no available bindings
+        /// </summary>
+        Task OnNotRouted(MqClient sender, IRouter router, HorseMessage message);
+
+        /// <summary>
+        /// Triggered when a client sends a message to a router
+        /// </summary>
+        Task OnRouted(MqClient sender, IRouter router, HorseMessage message);
     }
 }
