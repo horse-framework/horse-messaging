@@ -27,10 +27,22 @@ namespace Horse.Mq.Network
             if (router == null)
             {
                 await SendResponse(RouterPublishResult.Disabled, client, message);
+
+                foreach (IRouterMessageHandler handler in _server.RouterMessageHandlers)
+                    _ = handler.OnRouterNotFound(client, message);
+
                 return;
             }
 
             RouterPublishResult result = await router.Publish(client, message);
+            foreach (IRouterMessageHandler handler in _server.RouterMessageHandlers)
+            {
+                if (result == RouterPublishResult.OkWillNotRespond || result == RouterPublishResult.OkAndWillBeRespond)
+                    _ = handler.OnRouted(client, router, message);
+                else
+                    _ = handler.OnNotRouted(client, router, message);
+            }
+
             await SendResponse(result, client, message);
         }
 

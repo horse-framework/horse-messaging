@@ -44,6 +44,10 @@ namespace Horse.Mq.Network
                 }
                 else if (message.WaitResponse)
                     await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+
+                if (receivers.Count == 0)
+                    foreach (IDirectMessageHandler handler in _server.DirectMessageHandlers)
+                        _ = handler.OnNotFound(client, message);
             }
             else if (message.Target.StartsWith("@type:"))
             {
@@ -61,6 +65,10 @@ namespace Horse.Mq.Network
                 }
                 else if (message.WaitResponse)
                     await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+
+                if (receivers.Count == 0)
+                    foreach (IDirectMessageHandler handler in _server.DirectMessageHandlers)
+                        _ = handler.OnNotFound(client, message);
             }
             else
                 await ProcessSingleReceiverClientMessage(client, message);
@@ -94,6 +102,9 @@ namespace Horse.Mq.Network
                 //send the message
                 await receiver.SendAsync(message);
             }
+
+            foreach (IDirectMessageHandler handler in _server.DirectMessageHandlers)
+                _ = handler.OnDirect(sender, message, receivers);
         }
 
         /// <summary>
@@ -106,6 +117,10 @@ namespace Horse.Mq.Network
             if (other == null)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+
+                foreach (IDirectMessageHandler handler in _server.DirectMessageHandlers)
+                    _ = handler.OnNotFound(client, message);
+
                 return;
             }
 
@@ -122,6 +137,9 @@ namespace Horse.Mq.Network
 
             //send the message
             await other.SendAsync(message);
+
+            foreach (IDirectMessageHandler handler in _server.DirectMessageHandlers)
+                _ = handler.OnDirect(client, message, new List<MqClient> {other});
         }
     }
 }

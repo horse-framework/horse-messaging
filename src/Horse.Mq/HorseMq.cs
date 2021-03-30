@@ -30,6 +30,8 @@ namespace Horse.Mq
         private IClientHandler[] _clientHandlers = new IClientHandler[0];
         private IErrorHandler[] _errorHandlers = new IErrorHandler[0];
         private IQueueEventHandler[] _queueEventHandlers = new IQueueEventHandler[0];
+        private IDirectMessageHandler[] _directMessageHandlers = new IDirectMessageHandler[0];
+        private IRouterMessageHandler[] _routerMessageHandlers = new IRouterMessageHandler[0];
         private IServerMessageHandler[] _messageHandlers = new IServerMessageHandler[0];
         private IQueueAuthenticator[] _queueAuthenticators = new IQueueAuthenticator[0];
         private IClientAuthenticator[] _authenticators = new IClientAuthenticator[0];
@@ -116,6 +118,16 @@ namespace Horse.Mq
         /// Queue event handlers
         /// </summary>
         public IEnumerable<IQueueEventHandler> QueueEventHandlers => _queueEventHandlers;
+
+        /// <summary>
+        /// Direct message event handlers
+        /// </summary>
+        public IEnumerable<IDirectMessageHandler> DirectMessageHandlers => _directMessageHandlers;
+
+        /// <summary>
+        /// Router message event handlers
+        /// </summary>
+        public IEnumerable<IRouterMessageHandler> RouterMessageHandlers => _routerMessageHandlers;
 
         /// <summary>
         /// Queue authenticators
@@ -222,6 +234,46 @@ namespace Horse.Mq
             List<IQueueEventHandler> list = _queueEventHandlers.ToList();
             list.Remove(handler);
             _queueEventHandlers = list.ToArray();
+        }
+
+        /// <summary>
+        /// Adds direct message handler
+        /// </summary>
+        public void AddDirectMessageHandler(IDirectMessageHandler handler)
+        {
+            List<IDirectMessageHandler> list = _directMessageHandlers.ToList();
+            list.Add(handler);
+            _directMessageHandlers = list.ToArray();
+        }
+
+        /// <summary>
+        /// Removes direct message handler
+        /// </summary>
+        public void RemoveDirectMessageHandler(IDirectMessageHandler handler)
+        {
+            List<IDirectMessageHandler> list = _directMessageHandlers.ToList();
+            list.Remove(handler);
+            _directMessageHandlers = list.ToArray();
+        }
+
+        /// <summary>
+        /// Adds router message handler
+        /// </summary>
+        public void AddRouterMessageHandler(IRouterMessageHandler handler)
+        {
+            List<IRouterMessageHandler> list = _routerMessageHandlers.ToList();
+            list.Add(handler);
+            _routerMessageHandlers = list.ToArray();
+        }
+
+        /// <summary>
+        /// Removes router message handler
+        /// </summary>
+        public void RemoveRouterMessageHandler(IRouterMessageHandler handler)
+        {
+            List<IRouterMessageHandler> list = _routerMessageHandlers.ToList();
+            list.Remove(handler);
+            _routerMessageHandlers = list.ToArray();
         }
 
         /// <summary>
