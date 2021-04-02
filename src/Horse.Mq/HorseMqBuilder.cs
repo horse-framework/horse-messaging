@@ -11,6 +11,10 @@ namespace Horse.Mq
     {
         internal HorseMq Server { get; set; }
 
+        internal HorseMqBuilder()
+        {
+        }
+
         /// <summary>
         /// Creates new Horse MQ Builder
         /// </summary>
