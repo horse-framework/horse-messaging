@@ -24,6 +24,11 @@ namespace Horse.Mq.Routing
         /// If false, messages are not routed.
         /// </summary>
         bool IsEnabled { get; set; }
+        
+        /// <summary>
+        /// Route method. Defines how messages will be routed.
+        /// </summary>
+        RouteMethod Method { get; }
 
         /// <summary>
         /// Gets all bindings of router

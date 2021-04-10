@@ -187,14 +187,14 @@ namespace Horse.Mq
         /// <summary>
         /// Creates new Messaging Queue Server
         /// </summary>
-        public HorseMq() : this(null)
+        internal HorseMq() : this(null)
         {
         }
 
         /// <summary>
         /// Creates new Messaging Queue Server
         /// </summary>
-        public HorseMq(HorseMqOptions options)
+        internal HorseMq(HorseMqOptions options)
         {
             Options = options ?? new HorseMqOptions();
 
