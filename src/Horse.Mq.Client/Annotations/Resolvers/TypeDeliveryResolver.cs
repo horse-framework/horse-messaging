@@ -46,7 +46,7 @@ namespace Horse.Mq.Client.Annotations.Resolvers
                 descriptor.QueueName = defaultConfigurator.QueueNameFactory(type);
                 descriptor.HasQueueName = true;
             }
-            
+
             if (defaultConfigurator.QueueStatus.HasValue)
                 descriptor.QueueStatus = defaultConfigurator.QueueStatus.Value;
 
@@ -112,7 +112,7 @@ namespace Horse.Mq.Client.Annotations.Resolvers
                 descriptor.HasQueueName = true;
                 descriptor.QueueName = string.IsNullOrEmpty(queueNameAttribute.Name) ? type.Name : queueNameAttribute.Name;
             }
-            else
+            else if (!descriptor.HasQueueName)
                 descriptor.QueueName = type.Name;
 
             DelayBetweenMessagesAttribute delayAttr = type.GetCustomAttribute<DelayBetweenMessagesAttribute>(true);
@@ -161,11 +161,11 @@ namespace Horse.Mq.Client.Annotations.Resolvers
             QueueTopicAttribute topicAttr = type.GetCustomAttribute<QueueTopicAttribute>(true);
             if (topicAttr != null)
                 descriptor.Topic = topicAttr.Topic;
-            
+
             MessageTimeoutAttribute msgTimeoutAttr = type.GetCustomAttribute<MessageTimeoutAttribute>(true);
             if (msgTimeoutAttr != null)
                 descriptor.MessageTimeout = msgTimeoutAttr.Value;
-            
+
             AcknowledgeTimeoutAttribute ackTimeoutAttr = type.GetCustomAttribute<AcknowledgeTimeoutAttribute>(true);
             if (ackTimeoutAttr != null)
                 descriptor.AcknowledgeTimeout = ackTimeoutAttr.Value;

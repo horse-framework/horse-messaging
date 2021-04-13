@@ -196,7 +196,7 @@ namespace Horse.Mq.Network
                 return;
             }
 
-            bool success = await queue.RemoveClient(client);
+            bool success = queue.RemoveClient(client);
 
             if (message.WaitResponse)
                 await client.SendAsync(message.CreateResponse(success ? HorseResultCode.Ok : HorseResultCode.NotFound));
