@@ -582,7 +582,7 @@ namespace Horse.Mq
 
                 _queues.Add(queue);
                 foreach (IQueueEventHandler handler in _queueEventHandlers)
-                    await handler.OnCreated(queue);
+                    _ = handler.OnCreated(queue);
 
                 if (initialize)
                     handlerBuilder.TriggerAfterCompleted();
@@ -634,7 +634,7 @@ namespace Horse.Mq
                 await queue.SetStatus(QueueStatus.Stopped);
 
                 foreach (IQueueEventHandler handler in _queueEventHandlers)
-                    await handler.OnRemoved(queue);
+                    _ = handler.OnRemoved(queue);
 
                 OnQueueRemoved.Trigger(queue);
                 await queue.Destroy();
@@ -661,10 +661,10 @@ namespace Horse.Mq
         /// <summary>
         /// Removes the client from the server
         /// </summary>
-        internal async Task RemoveClient(MqClient client)
+        internal void RemoveClient(MqClient client)
         {
             _clients.Remove(client);
-            await client.UnsubscribeFromAllQueues();
+            client.UnsubscribeFromAllQueues();
             OnClientDisconnected.Trigger(client);
         }
 

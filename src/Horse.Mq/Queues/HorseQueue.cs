@@ -558,7 +558,7 @@ namespace Horse.Mq.Queues
                     DeliveryHandler = newDeliveryHandler;
 
                 foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
-                    await handler.OnStatusChanged(this, prevStatus, status);
+                    _ = handler.OnStatusChanged(this, prevStatus, status);
 
                 if (enter == QueueStatusAction.AllowAndTrigger)
                     _ = Trigger();
@@ -727,7 +727,7 @@ namespace Horse.Mq.Queues
                 message.Decision = decision;
 
                 bool allow = await ApplyDecision(decision, message);
-                
+
                 foreach (IQueueMessageEventHandler handler in Server.QueueMessageHandlers)
                     _ = handler.OnProduced(this, message, sender);
 
@@ -1243,7 +1243,7 @@ namespace Horse.Mq.Queues
             client.AddSubscription(cc);
 
             foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
-                await handler.OnConsumerSubscribed(cc);
+                _ = handler.OnConsumerSubscribed(cc);
 
             _ = Trigger();
             OnConsumerSubscribed.Trigger(cc);
@@ -1259,7 +1259,7 @@ namespace Horse.Mq.Queues
             client.Client.RemoveSubscription(client);
 
             foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
-                await handler.OnConsumerUnsubscribed(client);
+                _ = handler.OnConsumerUnsubscribed(client);
 
             OnConsumerUnsubscribed.Trigger(client);
         }
@@ -1267,12 +1267,12 @@ namespace Horse.Mq.Queues
         /// <summary>
         /// Removes client from the queue, does not call MqClient's remove method
         /// </summary>
-        internal async Task RemoveClientSilent(QueueClient client)
+        internal void RemoveClientSilent(QueueClient client)
         {
             _clients.Remove(client);
 
             foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
-                await handler.OnConsumerUnsubscribed(client);
+                _ = handler.OnConsumerUnsubscribed(client);
 
             OnConsumerUnsubscribed.Trigger(client);
         }
@@ -1280,7 +1280,7 @@ namespace Horse.Mq.Queues
         /// <summary>
         /// Removes client from the queue
         /// </summary>
-        public async Task<bool> RemoveClient(MqClient client)
+        public bool RemoveClient(MqClient client)
         {
             QueueClient cc = _clients.FindAndRemove(x => x.Client == client);
 
@@ -1290,7 +1290,7 @@ namespace Horse.Mq.Queues
             client.RemoveSubscription(cc);
 
             foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
-                await handler.OnConsumerUnsubscribed(cc);
+                _ = handler.OnConsumerUnsubscribed(cc);
 
             OnConsumerUnsubscribed.Trigger(cc);
             return true;

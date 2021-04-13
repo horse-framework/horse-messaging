@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Horse.Core;
 using Horse.Protocols.Hmq;
 
-[assembly:InternalsVisibleTo("Horse.Mq.WebSocket.Server")]
+[assembly: InternalsVisibleTo("Horse.Mq.WebSocket.Server")]
 
 namespace Horse.Mq.Clients
 {
@@ -142,7 +142,7 @@ namespace Horse.Mq.Clients
         /// <summary>
         /// Unsubscribes from all queues
         /// </summary>
-        internal async Task UnsubscribeFromAllQueues()
+        internal void UnsubscribeFromAllQueues()
         {
             List<QueueClient> list;
             lock (_queues)
@@ -153,7 +153,7 @@ namespace Horse.Mq.Clients
 
             foreach (QueueClient cc in list)
                 if (cc.Queue != null)
-                    await cc.Queue.RemoveClientSilent(cc);
+                    cc.Queue.RemoveClientSilent(cc);
         }
 
         #endregion

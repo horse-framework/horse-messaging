@@ -110,12 +110,14 @@ namespace Horse.Mq.Network
         /// <summary>
         /// Called when connected client is connected in HMQ protocol
         /// </summary>
-        public async Task Disconnected(IHorseServer server, HorseServerSocket client)
+        public Task Disconnected(IHorseServer server, HorseServerSocket client)
         {
             MqClient mqClient = (MqClient) client;
-            await _server.RemoveClient(mqClient);
+            _server.RemoveClient(mqClient);
             foreach (IClientHandler handler in _server.ClientHandlers)
-                await handler.Disconnected(_server, mqClient);
+                _ = handler.Disconnected(_server, mqClient);
+
+            return Task.CompletedTask;
         }
 
         #endregion
