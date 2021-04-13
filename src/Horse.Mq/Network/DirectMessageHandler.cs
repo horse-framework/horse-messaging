@@ -139,7 +139,12 @@ namespace Horse.Mq.Network
             await other.SendAsync(message);
 
             foreach (IDirectMessageHandler handler in _server.DirectMessageHandlers)
-                _ = handler.OnDirect(client, message, new List<MqClient> {other});
+            {
+                if (message.Type == MessageType.Response)
+                    _ = handler.OnResponse(client, message, other);
+                else
+                    _ = handler.OnDirect(client, message, new List<MqClient> {other});
+            }
         }
     }
 }
