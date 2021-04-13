@@ -94,7 +94,7 @@ namespace Horse.Mq.Network
             await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
 
             foreach (IClientHandler handler in _server.ClientHandlers)
-                await handler.Connected(_server, client);
+                _ = handler.Connected(_server, client);
 
             return client;
         }
