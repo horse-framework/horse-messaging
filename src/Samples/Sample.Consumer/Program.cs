@@ -10,7 +10,7 @@ namespace Sample.Consumer
         static void Main(string[] args)
         {
             HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(2));
-            connector.AddHost("hmq://localhost:26222");
+            connector.AddHost("hmq://localhost:9999");
             connector.ContentSerializer = new NewtonsoftContentSerializer();
             connector.Observer.RegisterConsumer<ModelAConsumer>();
             connector.Run();

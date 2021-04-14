@@ -200,32 +200,35 @@ namespace Horse.Mq.Queues
         /// <summary>
         /// Initializes queue to first use
         /// </summary>
-        internal void InitializeQueue(IMessageDeliveryHandler deliveryHandler = null)
+        internal Task InitializeQueue(IMessageDeliveryHandler deliveryHandler = null)
         {
-            if (IsInitialized)
-                return;
-
-            IsInitialized = true;
-            if (deliveryHandler != null)
-                DeliveryHandler = deliveryHandler;
-
-            if (DeliveryHandler == null)
-                throw new ArgumentNullException("Queue has no delivery handler: " + Name);
-
-            State = QueueStateFactory.Create(this, Options.Status);
-
-            TimeKeeper = new QueueTimeKeeper(this);
-            TimeKeeper.Run();
-
-            _ackSync = new SemaphoreSlim(1, 1);
-
-            _triggerTimer = new Timer(a =>
+            return RunInListSync(() =>
             {
-                if (!_triggering && State.TriggerSupported)
-                    _ = Trigger();
+                if (IsInitialized)
+                    return;
 
-                _ = CheckAutoDestroy();
-            }, null, TimeSpan.FromMilliseconds(5000), TimeSpan.FromMilliseconds(5000));
+                IsInitialized = true;
+                if (deliveryHandler != null)
+                    DeliveryHandler = deliveryHandler;
+
+                if (DeliveryHandler == null)
+                    throw new ArgumentNullException("Queue has no delivery handler: " + Name);
+
+                State = QueueStateFactory.Create(this, Options.Status);
+
+                TimeKeeper = new QueueTimeKeeper(this);
+                TimeKeeper.Run();
+
+                _ackSync = new SemaphoreSlim(1, 1);
+
+                _triggerTimer = new Timer(a =>
+                {
+                    if (!_triggering && State.TriggerSupported)
+                        _ = Trigger();
+
+                    _ = CheckAutoDestroy();
+                }, null, TimeSpan.FromMilliseconds(5000), TimeSpan.FromMilliseconds(5000));
+            });
         }
 
         /// <summary>
@@ -237,7 +240,9 @@ namespace Horse.Mq.Queues
 
             try
             {
-                await TimeKeeper.Destroy();
+                if (TimeKeeper != null)
+                    await TimeKeeper.Destroy();
+
                 OnMessageProduced.Dispose();
 
                 lock (PriorityMessagesList)
@@ -291,13 +296,13 @@ namespace Horse.Mq.Queues
                     break;
 
                 case QueueDestroy.NoMessages:
-                    if (MessagesList.Count == 0 && PriorityMessagesList.Count == 0 && !TimeKeeper.HasPendingDelivery())
+                    if (MessagesList.Count == 0 && PriorityMessagesList.Count == 0 && (TimeKeeper == null || !TimeKeeper.HasPendingDelivery()))
                         await Server.RemoveQueue(this);
 
                     break;
 
                 case QueueDestroy.Empty:
-                    if (_clients.Count == 0 && MessagesList.Count == 0 && PriorityMessagesList.Count == 0 && !TimeKeeper.HasPendingDelivery())
+                    if (_clients.Count == 0 && MessagesList.Count == 0 && PriorityMessagesList.Count == 0 && (TimeKeeper == null || !TimeKeeper.HasPendingDelivery()))
                         await Server.RemoveQueue(this);
 
                     break;
@@ -329,6 +334,9 @@ namespace Horse.Mq.Queues
         /// </summary>
         public int GetAckPendingMessageCount()
         {
+            if (TimeKeeper == null)
+                return 0;
+            
             return TimeKeeper.GetPendingMessageCount();
         }
 
@@ -671,7 +679,7 @@ namespace Horse.Mq.Queues
                                                             };
 
                     IMessageDeliveryHandler deliveryHandler = await Server.DeliveryHandlerFactory(handlerBuilder);
-                    InitializeQueue(deliveryHandler);
+                    await InitializeQueue(deliveryHandler);
 
                     handlerBuilder.TriggerAfterCompleted();
                 }

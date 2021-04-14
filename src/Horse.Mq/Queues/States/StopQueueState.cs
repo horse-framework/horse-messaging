@@ -39,7 +39,8 @@ namespace Horse.Mq.Queues.States
             lock (_queue.MessagesList)
                 _queue.MessagesList.Clear();
 
-            _queue.TimeKeeper.Reset();
+            if (_queue.TimeKeeper != null)
+                _queue.TimeKeeper.Reset();
 
             return Task.FromResult(QueueStatusAction.Allow);
         }
