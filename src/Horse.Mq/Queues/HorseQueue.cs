@@ -78,7 +78,7 @@ namespace Horse.Mq.Queues
         /// Returns currently processing message.
         /// The message is about to send, but it might be waiting for acknowledge of previous message or delay between messages.
         /// </summary>
-        public QueueMessage ProcessingMessage => State.ProcessingMessage;
+        public QueueMessage ProcessingMessage => State?.ProcessingMessage;
 
         /// <summary>
         /// High priority message list
@@ -336,7 +336,7 @@ namespace Horse.Mq.Queues
         {
             if (TimeKeeper == null)
                 return 0;
-            
+
             return TimeKeeper.GetPendingMessageCount();
         }
 
@@ -554,7 +554,9 @@ namespace Horse.Mq.Queues
                 {
                     Status = prevStatus;
                     State = prevState;
-                    await prevState.EnterStatus(prevStatus);
+                    
+                    if (prevState != null)
+                        await prevState.EnterStatus(prevStatus);
 
                     if (enter == QueueStatusAction.DenyAndTrigger)
                         await Trigger();

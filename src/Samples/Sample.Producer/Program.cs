@@ -15,7 +15,7 @@ namespace Sample.Producer
             connector.AddHost("hmq://localhost:26222");
             connector.ContentSerializer = new NewtonsoftContentSerializer();
             connector.Run();
-            
+
             IHorseQueueBus queueBus = connector.Bus.Queue;
 
             ModelA a = new ModelA();
@@ -24,7 +24,7 @@ namespace Sample.Producer
 
             while (true)
             {
-                HorseResult result = await queueBus.PushJson("Username1", a);
+                HorseResult result = await queueBus.PushJson(a);
                 Console.WriteLine($"Push: {result.Code}");
                 await Task.Delay(5000);
             }
