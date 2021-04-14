@@ -9,21 +9,16 @@ namespace Sample.Consumer
     {
         static void Main(string[] args)
         {
-            HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(2));
-            connector.AddHost("hmq://localhost:26222");
-            connector.ContentSerializer = new NewtonsoftContentSerializer();
-            connector.Observer.RegisterConsumer<ModelAConsumer>();
-            connector.Run();
-
             HorseConnectorBuilder builder = new HorseConnectorBuilder();
 
-
-            builder.AddHost("host")
+            builder.AddHost("hmq://localhost:26222")
                    .AddTransientConsumers(typeof(Program))
-                   .ConfigureModels(cfg => cfg.UseQueueName(type => type.Name)
+                   .ConfigureModels(cfg => cfg.UseQueueName(type => "Username1")
                                               .UseConsumerAck()
                                               .AddMessageHeader("Sender-Client-Name", "MyName")
-                                              .SetPutBackDelay(TimeSpan.FromSeconds(10)));
+                                              .SetPutBackDelay(TimeSpan.FromSeconds(10)))
+                   .Build()
+                   .Run();
 
 
             while (true)

@@ -577,7 +577,7 @@ namespace Horse.Mq
                 if (initialize)
                 {
                     IMessageDeliveryHandler deliveryHandler = await asyncHandler(handlerBuilder);
-                    queue.InitializeQueue(deliveryHandler);
+                    await queue.InitializeQueue(deliveryHandler);
                 }
 
                 _queues.Add(queue);

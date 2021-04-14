@@ -6,9 +6,9 @@ using Horse.Protocols.Hmq;
 
 namespace Sample.Producer
 {
-    [QueueName("model-a")]
+ //   [QueueName("model-a")]
     [DeliveryHandler("dhand")]
-  //  [QueueStatus(MessagingQueueStatus.Push)]
+    [QueueStatus(MessagingQueueStatus.Push)]
     [Acknowledge(QueueAckDecision.JustRequest)]
     public class ModelA
     {

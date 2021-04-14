@@ -5,7 +5,7 @@ using Horse.Mq.Client.Models;
 
 namespace Sample.Consumer
 {
-    [QueueName("model-a")]
+ //   [QueueName("model-a")]
     //[QueueStatus(MessagingQueueStatus.Push)]
     public class ModelA
     {
