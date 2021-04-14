@@ -12,7 +12,7 @@ namespace Sample.Producer
         static async Task Main(string[] args)
         {
             HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(2));
-            connector.AddHost("hmq://localhost:9999");
+            connector.AddHost("hmq://localhost:26222");
             connector.ContentSerializer = new NewtonsoftContentSerializer();
             connector.Run();
             
@@ -24,7 +24,7 @@ namespace Sample.Producer
 
             while (true)
             {
-                HorseResult result = await queueBus.PushJson(a);
+                HorseResult result = await queueBus.PushJson("Username1", a);
                 Console.WriteLine($"Push: {result.Code}");
                 await Task.Delay(5000);
             }
