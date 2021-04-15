@@ -16,20 +16,6 @@ namespace Horse.Mq.Queues
         /// </summary>
         public DateTime CreatedDate { get; }
 
-        /// <summary>
-        /// Pending high priority message count in queue
-        /// </summary>
-        public long InQueueHighPriorityMessages => _inQueueHighPriorityMessages;
-
-        private long _inQueueHighPriorityMessages;
-
-        /// <summary>
-        /// Pending regular message count in queue
-        /// </summary>
-        public long InQueueRegularMessages => _inQueueRegularMessages;
-
-        private long _inQueueRegularMessages;
-
 
         /// <summary>
         /// Total received messages from producers
@@ -115,11 +101,6 @@ namespace Horse.Mq.Queues
         public DateTime? LastMessageSendDate { get; private set; }
 
         /// <summary>
-        /// Queue status name
-        /// </summary>
-        public string Status { get; internal set; }
-
-        /// <summary>
         /// Returns last message received date in unix milliseconds
         /// </summary>
         public long GetLastMessageReceiveUnix()
@@ -168,8 +149,6 @@ namespace Horse.Mq.Queues
             Volatile.Write(ref _messageRemoved, 0);
             Volatile.Write(ref _messageSaved, 0);
             Volatile.Write(ref _errorCount, 0);
-            Volatile.Write(ref _inQueueHighPriorityMessages, 0);
-            Volatile.Write(ref _inQueueRegularMessages, 0);
 
             LastMessageReceiveDate = null;
             LastMessageSendDate = null;
@@ -259,22 +238,6 @@ namespace Horse.Mq.Queues
         internal void AddError()
         {
             Interlocked.Increment(ref _errorCount);
-        }
-
-        /// <summary>
-        /// Updates high priority message count in queue
-        /// </summary>
-        internal void UpdateHighPriorityMessageCount(long value)
-        {
-            _inQueueHighPriorityMessages = value;
-        }
-
-        /// <summary>
-        /// Updates regular message count in queue
-        /// </summary>
-        internal void UpdateRegularMessageCount(long value)
-        {
-            _inQueueRegularMessages = value;
         }
 
         #endregion

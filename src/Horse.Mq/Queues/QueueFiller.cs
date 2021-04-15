@@ -56,9 +56,6 @@ namespace Horse.Mq.Queues
                             _queue.MessagesList.AddLast(qm);
                 }
 
-                _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
-                _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
-
                 _ = _queue.Trigger();
 
                 return PushResult.Success;
@@ -105,9 +102,6 @@ namespace Horse.Mq.Queues
                         lock (_queue.MessagesList)
                             _queue.MessagesList.AddLast(qm);
                 }
-
-                _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
-                _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
 
                 _ = _queue.Trigger();
 
@@ -157,9 +151,6 @@ namespace Horse.Mq.Queues
                             _queue.MessagesList.AddLast(qm);
                 }
 
-                _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
-                _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
-
                 _ = _queue.Trigger();
 
                 return PushResult.Success;
@@ -208,9 +199,6 @@ namespace Horse.Mq.Queues
                             _queue.MessagesList.AddLast(qm);
                 }
 
-                _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
-                _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
-
                 _ = _queue.Trigger();
 
                 return PushResult.Success;
@@ -257,9 +245,6 @@ namespace Horse.Mq.Queues
                     if (actionPerMessage != null)
                         actionPerMessage(qm);
                 }
-
-                _queue.Info.UpdateHighPriorityMessageCount(_queue.PriorityMessagesList.Count);
-                _queue.Info.UpdateRegularMessageCount(_queue.MessagesList.Count);
 
                 _ = _queue.Trigger();
 

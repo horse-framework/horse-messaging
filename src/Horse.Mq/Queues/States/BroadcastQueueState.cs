@@ -35,13 +35,16 @@ namespace Horse.Mq.Queues.States
             {
                 ProcessingMessage = message;
                 PushResult result = await ProcessMessage(message);
-                ProcessingMessage = null;
                 return result;
             }
             catch (Exception e)
             {
                 _queue.Server.SendError("PUSH", e, $"QueueName:{_queue.Name}, State:Broadcast");
                 return PushResult.Error;
+            }
+            finally
+            {
+                ProcessingMessage = null;
             }
         }
 

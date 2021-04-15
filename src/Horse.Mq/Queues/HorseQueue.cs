@@ -407,8 +407,6 @@ namespace Horse.Mq.Queues
                         PriorityMessagesList.AddLast(message);
                     else
                         PriorityMessagesList.AddFirst(message);
-
-                    Info.UpdateHighPriorityMessageCount(PriorityMessagesList.Count);
                 }
                 else
                 {
@@ -416,8 +414,6 @@ namespace Horse.Mq.Queues
                         MessagesList.AddLast(message);
                     else
                         MessagesList.AddFirst(message);
-
-                    Info.UpdateRegularMessageCount(MessagesList.Count);
                 }
             }
             finally
@@ -484,8 +480,6 @@ namespace Horse.Mq.Queues
 
                     message.IsInQueue = true;
                 }
-
-                Info.UpdateHighPriorityMessageCount(PriorityMessagesList.Count);
             }
             else
             {
@@ -503,8 +497,6 @@ namespace Horse.Mq.Queues
 
                     message.IsInQueue = true;
                 }
-
-                Info.UpdateRegularMessageCount(MessagesList.Count);
             }
 
             _ = Trigger();
@@ -1263,7 +1255,7 @@ namespace Horse.Mq.Queues
         /// <summary>
         /// Removes client from the queue
         /// </summary>
-        public async Task RemoveClient(QueueClient client)
+        public void RemoveClient(QueueClient client)
         {
             _clients.Remove(client);
             client.Client.RemoveSubscription(client);
