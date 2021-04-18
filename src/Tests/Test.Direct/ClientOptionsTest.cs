@@ -1,10 +1,11 @@
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using Horse.Messaging.Server.Client;
 using Test.Common;
 using Test.Common.Models;
+using Horse.Messaging.Server.Protocol;
 using Horse.Mq.Client;
-using Horse.Protocols.Hmq;
 using Xunit;
 
 namespace Test.Direct
@@ -28,7 +29,7 @@ namespace Test.Direct
             HorseClient client = new HorseClient();
             client.UseUniqueMessageId = false;
 
-            await client.ConnectAsync("hmq://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + port);
             Assert.True(client.IsConnected);
 
             HorseResult joined = await client.Queues.Subscribe("push-a", true);
@@ -75,8 +76,8 @@ namespace Test.Direct
             client2.ClientId = "client-2";
             client1.CatchResponseMessages = enabled;
 
-            await client1.ConnectAsync("hmq://localhost:" + port);
-            await client2.ConnectAsync("hmq://localhost:" + port);
+            await client1.ConnectAsync("horse://localhost:" + port);
+            await client2.ConnectAsync("horse://localhost:" + port);
 
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);

@@ -1,6 +1,6 @@
-﻿using Horse.Mq;
-using Horse.Mq.Data;
-using Horse.Mq.Queues;
+﻿using Horse.Messaging.Server;
+using Horse.Messaging.Server.Data;
+using Horse.Messaging.Server.Queues;
 using Horse.Server;
 
 namespace Sample.Server
@@ -21,7 +21,7 @@ namespace Sample.Server
 
             HorseServer server = new HorseServer();
             server.UseHorseMq(mq);
-            server.Run(26222);
+            server.Run(9999);
         }
     }
 }

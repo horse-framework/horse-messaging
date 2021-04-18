@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Horse.Messaging.Server.Client;
+using Horse.Messaging.Server.Client.Bus;
+using Horse.Messaging.Server.Protocol;
 using Horse.Mq.Client;
-using Horse.Mq.Client.Bus;
 using Horse.Mq.Client.Connectors;
-using Horse.Protocols.Hmq;
 
 namespace Sample.Producer
 {
@@ -12,7 +13,7 @@ namespace Sample.Producer
         static async Task Main(string[] args)
         {
             HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(2));
-            connector.AddHost("hmq://localhost:26222");
+            connector.AddHost("horse://localhost:9999");
             connector.ContentSerializer = new NewtonsoftContentSerializer();
             connector.Run();
 

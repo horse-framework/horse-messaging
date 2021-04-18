@@ -1,10 +1,10 @@
 using System;
 using System.Threading.Tasks;
-using Horse.Mq;
-using Horse.Mq.Clients;
-using Horse.Mq.Delivery;
-using Horse.Mq.Queues;
-using Horse.Protocols.Hmq;
+using Horse.Messaging.Server;
+using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Protocol;
+using Horse.Messaging.Server.Queues.Delivery;
 
 namespace Test.Common.Handlers
 {
@@ -17,7 +17,7 @@ namespace Test.Common.Handlers
             _mq = mq;
         }
 
-        public Task<Decision> ReceivedFromProducer(HorseQueue queue, QueueMessage message, MqClient sender)
+        public Task<Decision> ReceivedFromProducer(HorseQueue queue, QueueMessage message, MessagingClient sender)
         {
             _mq.OnReceived++;
 
@@ -33,19 +33,19 @@ namespace Test.Common.Handlers
             return Task.FromResult(new Decision(true, false));
         }
 
-        public Task<Decision> CanConsumerReceive(HorseQueue queue, QueueMessage message, MqClient receiver)
+        public Task<Decision> CanConsumerReceive(HorseQueue queue, QueueMessage message, MessagingClient receiver)
         {
             _mq.OnBeforeSend++;
             return Task.FromResult(new Decision(true, false));
         }
 
-        public Task<Decision> ConsumerReceived(HorseQueue queue, MessageDelivery delivery, MqClient receiver)
+        public Task<Decision> ConsumerReceived(HorseQueue queue, MessageDelivery delivery, MessagingClient receiver)
         {
             _mq.OnAfterSend++;
             return Task.FromResult(new Decision(true, false));
         }
 
-        public Task<Decision> ConsumerReceiveFailed(HorseQueue queue, MessageDelivery delivery, MqClient receiver)
+        public Task<Decision> ConsumerReceiveFailed(HorseQueue queue, MessageDelivery delivery, MessagingClient receiver)
         {
             return Task.FromResult(new Decision(true, false));
         }

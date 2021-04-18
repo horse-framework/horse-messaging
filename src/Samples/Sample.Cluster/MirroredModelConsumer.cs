@@ -1,7 +1,8 @@
 using System;
 using System.Threading.Tasks;
+using Horse.Messaging.Server.Client;
+using Horse.Messaging.Server.Protocol;
 using Horse.Mq.Client;
-using Horse.Protocols.Hmq;
 
 namespace Sample.Cluster
 {

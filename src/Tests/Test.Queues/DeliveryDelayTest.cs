@@ -1,8 +1,9 @@
 using System.Threading.Tasks;
+using Horse.Messaging.Server.Client;
 using Test.Common;
+using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Protocol;
 using Horse.Mq.Client;
-using Horse.Mq.Queues;
-using Horse.Protocols.Hmq;
 using Xunit;
 
 namespace Test.Queues
@@ -21,13 +22,13 @@ namespace Test.Queues
             queue.Options.DelayBetweenMessages = 100;
 
             HorseClient producer = new HorseClient();
-            await producer.ConnectAsync("hmq://localhost:" + port);
+            await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             int receivedMessages = 0;
             HorseClient consumer = new HorseClient();
             consumer.ClientId = "consumer";
-            await consumer.ConnectAsync("hmq://localhost:" + port);
+            await consumer.ConnectAsync("horse://localhost:" + port);
             Assert.True(consumer.IsConnected);
             consumer.MessageReceived += (c, m) => receivedMessages++;
 

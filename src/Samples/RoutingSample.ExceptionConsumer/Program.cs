@@ -1,4 +1,5 @@
 ﻿using System;
+using Horse.Messaging.Client;
 using Horse.Mq.Client;
 using Horse.Mq.Client.Connectors;
 
@@ -14,7 +15,7 @@ namespace RoutingSample.ExceptionConsumer
 				client.SetClientType("SAMPLE-EXCEPTION-CONSUMER");
 				return client;
 			});
-			connector.AddHost("hmq://localhost:15500");
+			connector.AddHost("horse://localhost:15500");
 			connector.ContentSerializer = new NewtonsoftContentSerializer();
 			connector.Observer.RegisterConsumer<SampleExceptionConsumer>();
 			connector.Connected += (c) =>

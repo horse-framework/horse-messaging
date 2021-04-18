@@ -1,5 +1,6 @@
+using Horse.Messaging.Server.Client.Annotations;
+using Horse.Messaging.Server.Client.Models;
 using Horse.Mq.Client.Annotations;
-using Horse.Mq.Client.Models;
 
 namespace Sample.Cluster
 {

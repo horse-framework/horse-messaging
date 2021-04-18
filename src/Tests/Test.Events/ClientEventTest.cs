@@ -1,7 +1,8 @@
 using System.Threading.Tasks;
+using Horse.Messaging.Server.Client;
 using Test.Common;
+using Horse.Messaging.Server.Protocol;
 using Horse.Mq.Client;
-using Horse.Protocols.Hmq;
 using Xunit;
 
 namespace Test.Events
@@ -16,7 +17,7 @@ namespace Test.Events
             int port = server.Start(3000, 3000);
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Connections.OnClientConnected(c =>
@@ -28,7 +29,7 @@ namespace Test.Events
 
             HorseClient client2 = new HorseClient();
             client2.ClientId = "client-2";
-            await client2.ConnectAsync("hmq://localhost:" + port);
+            await client2.ConnectAsync("horse://localhost:" + port);
             Assert.True(client2.IsConnected);
             await Task.Delay(500);
             Assert.True(received);
@@ -39,7 +40,7 @@ namespace Test.Events
             client2.Disconnect();
             client2 = new HorseClient();
             client2.ClientId = "client-2";
-            await client2.ConnectAsync("hmq://localhost:" + port);
+            await client2.ConnectAsync("horse://localhost:" + port);
             Assert.True(client2.IsConnected);
             await Task.Delay(500);
 
@@ -54,7 +55,7 @@ namespace Test.Events
             int port = server.Start(3000, 3000);
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Connections.OnClientDisconnected(c =>
@@ -66,7 +67,7 @@ namespace Test.Events
 
             HorseClient client2 = new HorseClient();
             client2.ClientId = "client-2";
-            await client2.ConnectAsync("hmq://localhost:" + port);
+            await client2.ConnectAsync("horse://localhost:" + port);
             Assert.True(client2.IsConnected);
             client2.Disconnect();
             await Task.Delay(500);
@@ -76,7 +77,7 @@ namespace Test.Events
             bool unsubscribed = await client.Connections.OffClientDisconnected();
             Assert.True(unsubscribed);
 
-            await client2.ConnectAsync("hmq://localhost:" + port);
+            await client2.ConnectAsync("horse://localhost:" + port);
             Assert.True(client2.IsConnected);
             client2.Disconnect();
             await Task.Delay(500);
@@ -92,7 +93,7 @@ namespace Test.Events
             int port = server.Start(3000, 3000);
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Queues.OnSubscribed("push-a", c =>
@@ -127,7 +128,7 @@ namespace Test.Events
             int port = server.Start(3000, 3000);
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
             bool subscribed = await client.Queues.OnUnsubscribed("push-a", c =>

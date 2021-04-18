@@ -1,7 +1,5 @@
 ﻿using System;
-using Horse.Mq.Bus;
-using Horse.Mq.Client;
-using Horse.Mq.Client.Connectors;
+using Horse.Messaging.Server.Bus;
 
 namespace Sample.Consumer
 {
@@ -11,7 +9,7 @@ namespace Sample.Consumer
         {
             HorseConnectorBuilder builder = new HorseConnectorBuilder();
 
-            builder.AddHost("hmq://localhost:26222")
+            builder.AddHost("horse://localhost:26222")
                    .AddTransientConsumers(typeof(Program))
                    .ConfigureModels(cfg => cfg.UseQueueName(type => "Username1")
                                               .UseConsumerAck()

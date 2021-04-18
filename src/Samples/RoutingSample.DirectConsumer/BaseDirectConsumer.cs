@@ -1,7 +1,11 @@
 using System.Threading.Tasks;
+using Horse.Messaging.Client;
+using Horse.Messaging.Client.Annotations;
+using Horse.Messaging.Client.Direct;
+using Horse.Messaging.Client.Queues.Annotations;
+using Horse.Messaging.Protocol;
 using Horse.Mq.Client;
 using Horse.Mq.Client.Annotations;
-using Horse.Protocols.Hmq;
 
 namespace RoutingSample.DirectConsumer
 {

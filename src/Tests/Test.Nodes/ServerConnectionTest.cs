@@ -4,9 +4,10 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Horse.Messaging.Server.Client;
 using Test.Common;
+using Horse.Messaging.Server.Protocol;
 using Horse.Mq.Client;
-using Horse.Protocols.Hmq;
 using Xunit;
 
 namespace Test.Nodes
@@ -25,7 +26,7 @@ namespace Test.Nodes
 
             HorseClient client = new HorseClient();
             client.Data.Properties.Add("Name", "Test-" + port);
-            client.Connect("hmq://localhost:" + port + "/path");
+            client.Connect("horse://localhost:" + port + "/path");
 
             Thread.Sleep(50);
 
@@ -100,7 +101,7 @@ namespace Test.Nodes
 
             HorseClient client = new HorseClient();
             client.Data.Properties.Add("Name", "Test-" + port);
-            client.Connect("hmq://localhost:" + port + "/path");
+            client.Connect("horse://localhost:" + port + "/path");
 
             Thread.Sleep(25000);
 
@@ -128,7 +129,7 @@ namespace Test.Nodes
             msg.ContentType = KnownContentTypes.Hello;
             msg.SetStringContent("GET /\r\nName: Test-" + port);
             msg.CalculateLengths();
-            HmqWriter.Write(msg, stream);
+            HorseProtocolWriter.Write(msg, stream);
             await Task.Delay(1000);
             Assert.Equal(1, server.ClientConnected);
 
@@ -177,7 +178,7 @@ namespace Test.Nodes
                         try
                         {
                             HorseClient client = new HorseClient();
-                            client.Connect("hmq://localhost:" + port);
+                            client.Connect("horse://localhost:" + port);
                             Assert.True(client.IsConnected);
                             Interlocked.Increment(ref connected);
                             await Task.Delay(rnd.Next(minAliveMs, maxAliveMs));
@@ -220,7 +221,7 @@ namespace Test.Nodes
             HorseClient client = new HorseClient();
             client.SetClientType("client-test");
             client.SetClientName("client-test");
-            await client.ConnectAsync("hmq://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + port);
 
             var result = await client.Connections.GetConnectedClients(filter);
             Assert.Equal(HorseResultCode.Ok, result.Result.Code);

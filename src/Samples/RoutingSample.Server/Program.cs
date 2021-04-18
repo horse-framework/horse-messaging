@@ -1,7 +1,7 @@
 ﻿using Sample.Server;
-using Horse.Mq;
-using Horse.Mq.Routing;
-using Horse.Protocols.Hmq;
+using Horse.Messaging.Server;
+using Horse.Messaging.Server.Protocol;
+using Horse.Messaging.Server.Routing;
 using Horse.Server;
 using QueueEventHandler = Sample.Server.QueueEventHandler;
 

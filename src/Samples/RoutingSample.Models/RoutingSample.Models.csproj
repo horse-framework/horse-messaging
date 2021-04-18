@@ -5,7 +5,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\Horse.Mq.Client\Horse.Mq.Client.csproj" />
+      <ProjectReference Include="..\..\Horse.Messaging.Client\Horse.Messaging.Client.csproj" />
     </ItemGroup>
 
 </Project>

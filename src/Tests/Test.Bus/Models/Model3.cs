@@ -1,6 +1,8 @@
+using Horse.Messaging.Client.Annotations;
+using Horse.Messaging.Client.Models;
+using Horse.Messaging.Client.Queues.Annotations;
+using Horse.Messaging.Protocol;
 using Horse.Mq.Client.Annotations;
-using Horse.Mq.Client.Models;
-using Horse.Protocols.Hmq;
 
 namespace Test.Bus.Models
 {

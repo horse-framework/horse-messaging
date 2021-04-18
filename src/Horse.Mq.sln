@@ -9,13 +9,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{41761E68
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Playground", "Samples\Playground\Playground.csproj", "{3A3A6CBA-E31C-4E63-A06A-E0FF5DFE1619}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Mq", "Horse.Mq\Horse.Mq.csproj", "{CFB19F80-FBC0-4999-BD95-44CF0B916B86}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Messaging.Server", "Horse.Messaging.Server\Horse.Messaging.Server.csproj", "{CFB19F80-FBC0-4999-BD95-44CF0B916B86}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Protocols.Hmq", "Horse.Protocols.Hmq\Horse.Protocols.Hmq.csproj", "{D0F826C2-8B03-48D1-88C1-8BFF917C8EBC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Messaging.Protocol", "Horse.Messaging.Protocol\Horse.Messaging.Protocol.csproj", "{D0F826C2-8B03-48D1-88C1-8BFF917C8EBC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Mq.Client", "Horse.Mq.Client\Horse.Mq.Client.csproj", "{A75CABEB-197E-457A-AAC9-4C59D49DDF68}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Messaging.Client", "Horse.Messaging.Client\Horse.Messaging.Client.csproj", "{A75CABEB-197E-457A-AAC9-4C59D49DDF68}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Mq.Data", "Horse.Mq.Data\Horse.Mq.Data.csproj", "{45017EA4-63E1-49BF-8B53-25A45ADF8FCD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Messaging.Data", "Horse.Messaging.Data\Horse.Messaging.Data.csproj", "{45017EA4-63E1-49BF-8B53-25A45ADF8FCD}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Common", "Tests\Test.Common\Test.Common.csproj", "{66F442DC-EC31-4BD9-B124-64D343B45A6A}"
 EndProject
@@ -37,8 +37,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Producer", "Samples\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Consumer", "Samples\Sample.Consumer\Sample.Consumer.csproj", "{2AF41E76-D345-46F9-A783-FF0AEDD2526F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Mq.WebSocket.Server", "Horse.Mq.WebSocket.Server\Horse.Mq.WebSocket.Server.csproj", "{47F84BA9-242C-4663-84E3-6150DB168F8B}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Bus", "Tests\Test.Bus\Test.Bus.csproj", "{8E163547-E5D1-4D3A-8C58-BA26E7F2879D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoutingSample.Server", "Samples\RoutingSample.Server\RoutingSample.Server.csproj", "{36722057-D5F9-46F9-BCC3-0719CAA34C04}"
@@ -57,7 +55,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoutingSample.ExceptionCons
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoutingSample.InternalService", "Samples\RoutingSample.InternalService\RoutingSample.InternalService.csproj", "{AD240570-21FF-4E5B-BAFB-8A7F282F9E9A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Mq.Bus", "Horse.Mq.Bus\Horse.Mq.Bus.csproj", "{E49B6DED-0A54-42C6-9B28-1E256ABB7E50}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Messaging.Bus", "Horse.Messaging.Bus\Horse.Messaging.Bus.csproj", "{E49B6DED-0A54-42C6-9B28-1E256ABB7E50}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Cache", "Samples\Sample.Cache\Sample.Cache.csproj", "{78630FD3-DA2F-45B6-91B3-18D08707D6C8}"
 EndProject
@@ -129,10 +127,6 @@ Global
 		{2AF41E76-D345-46F9-A783-FF0AEDD2526F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2AF41E76-D345-46F9-A783-FF0AEDD2526F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2AF41E76-D345-46F9-A783-FF0AEDD2526F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{47F84BA9-242C-4663-84E3-6150DB168F8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{47F84BA9-242C-4663-84E3-6150DB168F8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{47F84BA9-242C-4663-84E3-6150DB168F8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{47F84BA9-242C-4663-84E3-6150DB168F8B}.Release|Any CPU.Build.0 = Release|Any CPU
 		{8E163547-E5D1-4D3A-8C58-BA26E7F2879D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{8E163547-E5D1-4D3A-8C58-BA26E7F2879D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8E163547-E5D1-4D3A-8C58-BA26E7F2879D}.Release|Any CPU.ActiveCfg = Release|Any CPU

@@ -1,11 +1,12 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Horse.Messaging.Server.Client;
+using Horse.Messaging.Server.Client.Models;
 using Test.Common;
+using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Protocol;
 using Horse.Mq.Client;
-using Horse.Mq.Client.Models;
-using Horse.Mq.Queues;
-using Horse.Protocols.Hmq;
 using Xunit;
 
 namespace Test.Queues.Statuses
@@ -21,13 +22,13 @@ namespace Test.Queues.Statuses
 
             HorseClient consumer = new HorseClient();
             consumer.ClientId = "consumer";
-            await consumer.ConnectAsync("hmq://localhost:" + port);
+            await consumer.ConnectAsync("horse://localhost:" + port);
             Assert.True(consumer.IsConnected);
             HorseResult joined = await consumer.Queues.Subscribe("pull-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             HorseClient producer = new HorseClient();
-            await producer.ConnectAsync("hmq://localhost:" + port);
+            await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             await producer.Queues.Push("pull-a", "Hello, World!", false);
@@ -69,7 +70,7 @@ namespace Test.Queues.Statuses
             consumer.AutoAcknowledge = true;
             consumer.ClientId = "consumer";
 
-            await consumer.ConnectAsync("hmq://localhost:" + port);
+            await consumer.ConnectAsync("horse://localhost:" + port);
             Assert.True(consumer.IsConnected);
 
             bool msgReceived = false;
@@ -79,7 +80,7 @@ namespace Test.Queues.Statuses
 
             HorseClient producer = new HorseClient();
             producer.ResponseTimeout = TimeSpan.FromSeconds(15);
-            await producer.ConnectAsync("hmq://localhost:" + port);
+            await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             Task<HorseResult> taskAck = producer.Queues.Push("pull-a", "Hello, World!", true);
@@ -115,7 +116,7 @@ namespace Test.Queues.Statuses
             await queue.Push("Second Message");
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + port);
             HorseResult joined = await client.Queues.Subscribe("pull-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
@@ -157,7 +158,7 @@ namespace Test.Queues.Statuses
                 await queue.Push("Hello, World");
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + port);
             HorseResult joined = await client.Queues.Subscribe("pull-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
@@ -193,7 +194,7 @@ namespace Test.Queues.Statuses
             }
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + port);
             HorseResult joined = await client.Queues.Subscribe("pull-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 

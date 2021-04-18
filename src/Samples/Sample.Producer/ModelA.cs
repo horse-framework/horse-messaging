@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Horse.Messaging.Server.Client.Annotations;
+using Horse.Messaging.Server.Client.Models;
+using Horse.Messaging.Server.Client.Queues.Annotations;
 using Newtonsoft.Json;
+using Horse.Messaging.Server.Protocol;
 using Horse.Mq.Client.Annotations;
-using Horse.Mq.Client.Models;
-using Horse.Protocols.Hmq;
 
 namespace Sample.Producer
 {

@@ -1,3 +1,4 @@
+using Horse.Messaging.Client.Annotations;
 using Horse.Mq.Client.Annotations;
 
 namespace Test.Bus.Models

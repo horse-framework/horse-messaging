@@ -6,11 +6,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\Horse.Mq.Bus\Horse.Mq.Bus.csproj" />
-      <ProjectReference Include="..\..\Horse.Mq.Client\Horse.Mq.Client.csproj" />
-      <ProjectReference Include="..\..\Horse.Mq.Data\Horse.Mq.Data.csproj" />
-      <ProjectReference Include="..\..\Horse.Mq\Horse.Mq.csproj" />
-      <ProjectReference Include="..\..\Horse.Protocols.Hmq\Horse.Protocols.Hmq.csproj" />
+      <ProjectReference Include="..\..\Horse.Messaging.Bus\Horse.Messaging.Bus.csproj" />
+      <ProjectReference Include="..\..\Horse.Messaging.Client\Horse.Messaging.Client.csproj" />
+      <ProjectReference Include="..\..\Horse.Messaging.Data\Horse.Messaging.Data.csproj" />
+      <ProjectReference Include="..\..\Horse.Messaging.Server\Horse.Messaging.Server.csproj" />
+      <ProjectReference Include="..\..\Horse.Messaging.Protocol\Horse.Messaging.Protocol.csproj" />
       <ProjectReference Include="..\..\Horse.Mq.Bus\Horse.Mq.Bus.csproj" />
     </ItemGroup>
 

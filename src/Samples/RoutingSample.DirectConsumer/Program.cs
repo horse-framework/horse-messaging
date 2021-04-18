@@ -1,6 +1,8 @@
 ﻿using System;
+using Horse.Messaging.Client;
+using Horse.Messaging.Client.Bus;
+using Horse.Messaging.Client.Routers;
 using Horse.Mq.Client;
-using Horse.Mq.Client.Bus;
 using Horse.Mq.Client.Connectors;
 
 namespace RoutingSample.DirectConsumer
@@ -18,7 +20,7 @@ namespace RoutingSample.DirectConsumer
 				return client;
 			});
 
-			connector.AddHost("hmq://localhost:15500");
+			connector.AddHost("horse://localhost:15500");
 			connector.ContentSerializer = new NewtonsoftContentSerializer();
 			connector.Observer.RegisterConsumer<SampleDirectMessageConsumer>();
 			connector.Connected += (c) => { Console.WriteLine("CONNECTED"); };

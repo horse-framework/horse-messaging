@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Horse.Mq;
-using Horse.Mq.Data;
-using Horse.Mq.Data.Configuration;
-using Horse.Mq.Queues;
-using Horse.Protocols.Hmq;
+using Horse.Messaging.Server;
+using Horse.Messaging.Server.Data;
+using Horse.Messaging.Server.Data.Configuration;
+using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Protocol;
 using Horse.Server;
 using Xunit;
 

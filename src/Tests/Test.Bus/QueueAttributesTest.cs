@@ -1,12 +1,12 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Horse.Messaging.Protocol;
+using Horse.Messaging.Routing;
 using Test.Bus.Consumers;
 using Test.Bus.Models;
 using Test.Common;
 using Horse.Mq.Client.Connectors;
-using Horse.Mq.Routing;
-using Horse.Protocols.Hmq;
 using Xunit;
 
 namespace Test.Bus
@@ -23,11 +23,11 @@ namespace Test.Bus
             int port = server.Start(300, 300);
 
             HmqStickyConnector producer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            producer.AddHost("hmq://localhost:" + port);
+            producer.AddHost("horse://localhost:" + port);
             producer.Run();
             
             HmqStickyConnector consumer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            consumer.AddHost("hmq://localhost:" + port);
+            consumer.AddHost("horse://localhost:" + port);
             registrar.Register(consumer);
             consumer.Run();
             
@@ -51,11 +51,11 @@ namespace Test.Bus
             int port = server.Start(300, 300);
 
             HmqStickyConnector producer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            producer.AddHost("hmq://localhost:" + port);
+            producer.AddHost("horse://localhost:" + port);
             producer.Run();
             
             HmqStickyConnector consumer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            consumer.AddHost("hmq://localhost:" + port);
+            consumer.AddHost("horse://localhost:" + port);
             registrar.Register(consumer);
             consumer.Run();
             
@@ -79,11 +79,11 @@ namespace Test.Bus
             int port = server.Start(300, 300);
 
             HmqStickyConnector producer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            producer.AddHost("hmq://localhost:" + port);
+            producer.AddHost("horse://localhost:" + port);
             producer.Run();
             
             HmqStickyConnector consumer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            consumer.AddHost("hmq://localhost:" + port);
+            consumer.AddHost("horse://localhost:" + port);
             registrar.Register(consumer);
             consumer.Run();
             
@@ -138,11 +138,11 @@ namespace Test.Bus
             router3.AddBinding(new QueueBinding("bind-3", "ex-queue-3", 0, BindingInteraction.None));
 
             HmqStickyConnector producer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            producer.AddHost("hmq://localhost:" + port);
+            producer.AddHost("horse://localhost:" + port);
             producer.Run();
             
             HmqStickyConnector consumer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            consumer.AddHost("hmq://localhost:" + port);
+            consumer.AddHost("horse://localhost:" + port);
             registrar.Register(consumer);
             consumer.Run();
             
@@ -189,11 +189,11 @@ namespace Test.Bus
             int port = server.Start(300, 300);
 
             HmqStickyConnector producer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            producer.AddHost("hmq://localhost:" + port);
+            producer.AddHost("horse://localhost:" + port);
             producer.Run();
             
             HmqStickyConnector consumer = new HmqAbsoluteConnector(TimeSpan.FromSeconds(10));
-            consumer.AddHost("hmq://localhost:" + port);
+            consumer.AddHost("horse://localhost:" + port);
             registrar.Register(consumer);
             consumer.Run();
             

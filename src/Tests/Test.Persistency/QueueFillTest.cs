@@ -3,7 +3,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Test.Common;
 using Test.Common.Models;
-using Horse.Mq.Queues;
+using Horse.Messaging.Server.Queues;
 using Xunit;
 
 namespace Test.Persistency

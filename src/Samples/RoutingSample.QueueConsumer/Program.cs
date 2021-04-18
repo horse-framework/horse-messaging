@@ -1,4 +1,5 @@
 ﻿using System;
+using Horse.Messaging.Client;
 using Horse.Mq.Client;
 using Horse.Mq.Client.Connectors;
 
@@ -9,7 +10,7 @@ namespace RoutingSample.QueueConsumer
 		private static void Main(string[] args)
 		{
 			HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(2));
-			connector.AddHost("hmq://localhost:15500");
+			connector.AddHost("horse://localhost:15500");
 			connector.ContentSerializer = new NewtonsoftContentSerializer();
 			connector.Observer.RegisterConsumer<SampleMessageQueueConsumer>();
 			connector.Connected += (c) =>

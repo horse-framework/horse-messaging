@@ -20,7 +20,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\Horse.Mq.Client\Horse.Mq.Client.csproj" />
+      <ProjectReference Include="..\..\Horse.Messaging.Client\Horse.Messaging.Client.csproj" />
       <ProjectReference Include="..\Test.Common\Test.Common.csproj" />
     </ItemGroup>
 

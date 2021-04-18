@@ -1,7 +1,8 @@
 using System.Threading.Tasks;
+using Horse.Messaging.Client;
+using Horse.Messaging.Protocol;
 using Test.Bus.Models;
 using Horse.Mq.Client;
-using Horse.Protocols.Hmq;
 
 namespace Test.Bus.Consumers
 {

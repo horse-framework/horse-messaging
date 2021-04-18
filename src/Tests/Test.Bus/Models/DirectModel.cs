@@ -1,8 +1,10 @@
+using Horse.Messaging.Client.Annotations;
+using Horse.Messaging.Client.Direct.Annotations;
 using Horse.Mq.Client.Annotations;
 
 namespace Test.Bus.Models
 {
-    [ContentType(222)]
+    [DirectContentType(222)]
     [DirectTarget(FindTargetBy.Name, "direct-receiver")]
     public class DirectModel
     {

@@ -10,7 +10,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Horse.Mq\Horse.Mq.csproj" />
+      <ProjectReference Include="..\Horse.Messaging\Horse.Messaging.csproj" />
     </ItemGroup>
 
 </Project>

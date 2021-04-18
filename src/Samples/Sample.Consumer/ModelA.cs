@@ -1,7 +1,5 @@
 using System.Text.Json.Serialization;
 using Newtonsoft.Json;
-using Horse.Mq.Client.Annotations;
-using Horse.Mq.Client.Models;
 
 namespace Sample.Consumer
 {

@@ -1,10 +1,12 @@
 using System;
 using System.Threading.Tasks;
+using Horse.Messaging.Client;
+using Horse.Messaging.Client.Annotations;
+using Horse.Messaging.Client.Models;
+using Horse.Messaging.Protocol;
 using Newtonsoft.Json;
 using Horse.Mq.Client;
 using Horse.Mq.Client.Annotations;
-using Horse.Mq.Client.Models;
-using Horse.Protocols.Hmq;
 
 namespace RoutingSample.ExceptionConsumer
 {

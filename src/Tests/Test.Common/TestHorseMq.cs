@@ -2,10 +2,10 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Test.Common.Handlers;
-using Horse.Mq;
-using Horse.Mq.Delivery;
-using Horse.Mq.Options;
-using Horse.Mq.Queues;
+using Horse.Messaging.Server;
+using Horse.Messaging.Server.Options;
+using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Server;
 
 namespace Test.Common

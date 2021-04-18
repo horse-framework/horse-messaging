@@ -1,5 +1,7 @@
+using Horse.Messaging.Server.Client.Annotations;
+using Horse.Messaging.Server.Client.Models;
+using Horse.Messaging.Server.Client.Queues.Annotations;
 using Horse.Mq.Client.Annotations;
-using Horse.Mq.Client.Models;
 
 namespace Sample.Cache
 {

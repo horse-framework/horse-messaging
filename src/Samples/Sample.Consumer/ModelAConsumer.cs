@@ -1,8 +1,10 @@
 using System;
 using System.Threading.Tasks;
+using Horse.Messaging.Server.Client;
+using Horse.Messaging.Server.Client.Annotations;
+using Horse.Messaging.Server.Protocol;
 using Horse.Mq.Client;
 using Horse.Mq.Client.Annotations;
-using Horse.Protocols.Hmq;
 
 namespace Sample.Consumer
 {

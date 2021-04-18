@@ -1,45 +1,45 @@
 using System.Reflection.Metadata.Ecma335;
 using System.Threading.Tasks;
-using Horse.Mq.Clients;
-using Horse.Mq.Queues;
-using Horse.Mq.Security;
-using Horse.Protocols.Hmq;
+using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Security;
+using Horse.Messaging.Server.Protocol;
 
 namespace Test.Common.Handlers
 {
     public class TestAdminAuthorization : IAdminAuthorization
     {
-        public Task<bool> CanUpdateQueueOptions(MqClient client, HorseQueue queue, NetworkOptionsBuilder options)
+        public Task<bool> CanUpdateQueueOptions(MessagingClient client, HorseQueue queue, NetworkOptionsBuilder options)
         {
             return Task.FromResult(true);
         }
 
-        public Task<bool> CanRemoveQueue(MqClient client, HorseQueue queue)
+        public Task<bool> CanRemoveQueue(MessagingClient client, HorseQueue queue)
         {
             return Task.FromResult(true);
         }
 
-        public Task<bool> CanClearQueueMessages(MqClient client, HorseQueue queue, bool priorityMessages, bool messages)
+        public Task<bool> CanClearQueueMessages(MessagingClient client, HorseQueue queue, bool priorityMessages, bool messages)
         {
             return Task.FromResult(true);
         }
 
-        public Task<bool> CanManageInstances(MqClient client, HorseMessage request)
+        public Task<bool> CanManageInstances(MessagingClient client, HorseMessage request)
         {
             return Task.FromResult(true);
         }
 
-        public Task<bool> CanReceiveClients(MqClient client)
+        public Task<bool> CanReceiveClients(MessagingClient client)
         {
             return Task.FromResult(true);
         }
 
-        public Task<bool> CanReceiveQueues(MqClient client)
+        public Task<bool> CanReceiveQueues(MessagingClient client)
         {
             return Task.FromResult(true);
         }
 
-        public Task<bool> CanReceiveQueueConsumers(MqClient client, HorseQueue queue)
+        public Task<bool> CanReceiveQueueConsumers(MessagingClient client, HorseQueue queue)
         {
             return Task.FromResult(true);
         }

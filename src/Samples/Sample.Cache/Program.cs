@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Horse.Mq;
+using Horse.Messaging.Server;
+using Horse.Messaging.Server.Client;
+using Horse.Messaging.Server.Client.Bus;
+using Horse.Messaging.Server.Client.Models;
+using Horse.Messaging.Server.Handlers;
+using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Protocol;
+using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Mq.Client;
-using Horse.Mq.Client.Bus;
 using Horse.Mq.Client.Connectors;
-using Horse.Mq.Client.Models;
-using Horse.Mq.Delivery;
-using Horse.Mq.Handlers;
-using Horse.Mq.Queues;
-using Horse.Protocols.Hmq;
 using Horse.Server;
 
 namespace Sample.Cache
@@ -21,12 +22,12 @@ namespace Sample.Cache
             HorseMq mq = StartServer();
 
             HmqStickyConnector producer = new HmqStickyConnector(TimeSpan.FromSeconds(2));
-            producer.AddHost("hmq://localhost:26223");
+            producer.AddHost("horse://localhost:26223");
             producer.ContentSerializer = new NewtonsoftContentSerializer();
             producer.Run();
 
             HmqStickyConnector consumer = new HmqStickyConnector(TimeSpan.FromSeconds(2));
-            consumer.AddHost("hmq://localhost:26223");
+            consumer.AddHost("horse://localhost:26223");
             consumer.ContentSerializer = new NewtonsoftContentSerializer();
             consumer.Run();
 

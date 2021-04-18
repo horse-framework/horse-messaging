@@ -1,8 +1,9 @@
 using System.Threading.Tasks;
+using Horse.Messaging.Client;
+using Horse.Messaging.Protocol;
+using Horse.Messaging.Queues;
+using Horse.Messaging.Routing;
 using Horse.Mq.Client;
-using Horse.Mq.Queues;
-using Horse.Mq.Routing;
-using Horse.Protocols.Hmq;
 using Test.Common;
 using Xunit;
 
@@ -25,17 +26,17 @@ namespace Test.Routers
             server.Server.AddRouter(router);
 
             HorseClient producer = new HorseClient();
-            await producer.ConnectAsync("hmq://localhost:" + port);
+            await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             HorseClient client1 = new HorseClient();
             client1.ClientId = "client-1";
-            await client1.ConnectAsync("hmq://localhost:" + port);
+            await client1.ConnectAsync("horse://localhost:" + port);
             Assert.True(client1.IsConnected);
 
             HorseClient client2 = new HorseClient();
             client2.ClientId = "client-2";
-            await client2.ConnectAsync("hmq://localhost:" + port);
+            await client2.ConnectAsync("horse://localhost:" + port);
             Assert.True(client2.IsConnected);
 
             int client1Received = 0;
@@ -76,17 +77,17 @@ namespace Test.Routers
             server.Server.AddRouter(router);
 
             HorseClient producer = new HorseClient();
-            await producer.ConnectAsync("hmq://localhost:" + port);
+            await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             HorseClient client1 = new HorseClient();
             client1.ClientId = "client-1";
-            await client1.ConnectAsync("hmq://localhost:" + port);
+            await client1.ConnectAsync("horse://localhost:" + port);
             Assert.True(client1.IsConnected);
 
             HorseClient client2 = new HorseClient();
             client2.ClientId = "client-2";
-            await client2.ConnectAsync("hmq://localhost:" + port);
+            await client2.ConnectAsync("horse://localhost:" + port);
             Assert.True(client2.IsConnected);
 
             int client1Received = 0;
@@ -127,17 +128,17 @@ namespace Test.Routers
             server.Server.AddRouter(router);
 
             HorseClient producer = new HorseClient();
-            await producer.ConnectAsync("hmq://localhost:" + port);
+            await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             HorseClient client1 = new HorseClient();
             client1.ClientId = "client-1";
-            await client1.ConnectAsync("hmq://localhost:" + port);
+            await client1.ConnectAsync("horse://localhost:" + port);
             Assert.True(client1.IsConnected);
 
             HorseClient client2 = new HorseClient();
             client2.ClientId = "client-2";
-            await client2.ConnectAsync("hmq://localhost:" + port);
+            await client2.ConnectAsync("horse://localhost:" + port);
             Assert.True(client2.IsConnected);
 
             int client1Received = 0;
@@ -176,7 +177,7 @@ namespace Test.Routers
             server.Server.AddRouter(router);
 
             HorseClient producer = new HorseClient();
-            await producer.ConnectAsync("hmq://localhost:" + port);
+            await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
@@ -202,17 +203,17 @@ namespace Test.Routers
             server.Server.AddRouter(router);
 
             HorseClient producer = new HorseClient();
-            await producer.ConnectAsync("hmq://localhost:" + port);
+            await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             HorseClient client1 = new HorseClient();
             client1.ClientId = "client-1";
-            await client1.ConnectAsync("hmq://localhost:" + port);
+            await client1.ConnectAsync("horse://localhost:" + port);
             Assert.True(client1.IsConnected);
 
             HorseClient client2 = new HorseClient();
             client2.ClientId = "client-2";
-            await client2.ConnectAsync("hmq://localhost:" + port);
+            await client2.ConnectAsync("horse://localhost:" + port);
             Assert.True(client2.IsConnected);
 
             bool client1Received = false;
@@ -241,7 +242,7 @@ namespace Test.Routers
             server.Server.AddRouter(router);
 
             HorseClient producer = new HorseClient();
-            await producer.ConnectAsync("hmq://localhost:" + port);
+            await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
@@ -261,13 +262,13 @@ namespace Test.Routers
             server.Server.AddRouter(router);
 
             HorseClient producer = new HorseClient();
-            await producer.ConnectAsync("hmq://localhost:" + port);
+            await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             bool client1Received = false;
             HorseClient client1 = new HorseClient();
             client1.ClientId = "client-1";
-            await client1.ConnectAsync("hmq://localhost:" + port);
+            await client1.ConnectAsync("horse://localhost:" + port);
             client1.MessageReceived += (c, m) => client1Received = true;
             Assert.True(client1.IsConnected);
 
@@ -296,17 +297,17 @@ namespace Test.Routers
             server.Server.AddRouter(router);
 
             HorseClient producer = new HorseClient();
-            await producer.ConnectAsync("hmq://localhost:" + port);
+            await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             HorseClient client1 = new HorseClient();
             client1.ClientId = "client-1";
-            await client1.ConnectAsync("hmq://localhost:" + port);
+            await client1.ConnectAsync("horse://localhost:" + port);
             Assert.True(client1.IsConnected);
 
             HorseClient client2 = new HorseClient();
             client2.ClientId = "client-2";
-            await client2.ConnectAsync("hmq://localhost:" + port);
+            await client2.ConnectAsync("horse://localhost:" + port);
             Assert.True(client2.IsConnected);
 
             bool client1Received = false;
@@ -342,13 +343,13 @@ namespace Test.Routers
             server.Server.AddRouter(router);
 
             HorseClient producer = new HorseClient();
-            await producer.ConnectAsync("hmq://localhost:" + port);
+            await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             bool client1Received = false;
             HorseClient client1 = new HorseClient();
             client1.ClientId = "client-1";
-            await client1.ConnectAsync("hmq://localhost:" + port);
+            await client1.ConnectAsync("horse://localhost:" + port);
             client1.MessageReceived += (c, m) => client1Received = true;
             Assert.True(client1.IsConnected);
 
@@ -375,12 +376,12 @@ namespace Test.Routers
             server.Server.AddRouter(router);
 
             HorseClient producer = new HorseClient();
-            await producer.ConnectAsync("hmq://localhost:" + port);
+            await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             HorseClient client1 = new HorseClient();
             client1.ClientId = "client-1";
-            await client1.ConnectAsync("hmq://localhost:" + port);
+            await client1.ConnectAsync("horse://localhost:" + port);
             client1.MessageReceived += (c, m) =>
             {
                 HorseMessage response = m.CreateResponse(HorseResultCode.Ok);

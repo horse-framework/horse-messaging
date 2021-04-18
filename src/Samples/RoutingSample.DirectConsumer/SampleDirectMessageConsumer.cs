@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using Horse.Protocols.Hmq;
+using Horse.Messaging.Protocol;
 using RoutingSample.Models;
 
 namespace RoutingSample.DirectConsumer
