@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Core;
 using Horse.Messaging.Client.Annotations.Resolvers;
@@ -26,22 +27,57 @@ namespace Horse.Messaging.Client
     /// </summary>
     public class HorseClient : IDisposable
     {
-        private HorseSocket _socket;
-        private readonly ConnectionData _data = new ConnectionData();
-
         #region Properties
 
-        public bool KeepMessages { get; set; }
-
+        /// <summary>
+        /// Custom tag object for client.
+        /// If you need to attach an other to HorseClient, use this property.
+        /// </summary>
         public object Tag { get; set; }
 
-        public TimeSpan ReconnectWait { get; set; }
-
-        public TimeSpan Lifetime { get; set; }
-
+        /// <summary>
+        /// The waiting time before reconnecting, after disconnection.
+        /// Default value ise 3 seconds.
+        /// </summary>
+        public TimeSpan ReconnectWait
+        {
+            get => _reconnectWait;
+            set
+            {
+                _reconnectWait = value;
+                UpdateReconnectTimer();
+            }
+        }
 
         /// <summary>
-        /// If true, automatically subscribes all implemented IQueueConsumer queues
+        /// Connection lifetime.
+        /// It's reset after reconnection.
+        /// </summary>
+        public TimeSpan Lifetime { get; set; }
+
+        /// <summary>
+        /// Defined remote host.
+        /// If Connect methods are used with remote host parameter, this value is updated.
+        /// </summary>
+        public string RemoteHost { get; set; }
+
+        /// <summary>
+        /// Internal connected event
+        /// </summary>
+        internal Action<HorseClient> ConnectedAction { get; set; }
+
+        /// <summary>
+        /// Internal disconnected event
+        /// </summary>
+        internal Action<HorseClient> DisconnectedAction { get; set; }
+
+        /// <summary>
+        /// Internal error event
+        /// </summary>
+        internal Action<Exception> ErrorAction { get; set; }
+
+        /// <summary>
+        /// If true, automatically subscribes all implemented queues and channels.
         /// </summary>
         public bool AutoSubscribe { get; set; } = true;
 
@@ -51,7 +87,7 @@ namespace Horse.Messaging.Client
         public bool DisconnectionOnAutoJoinFailure { get; set; } = true;
 
         /// <summary>
-        /// Returns true is connected
+        /// Returns true if connected
         /// </summary>
         public bool IsConnected => _socket != null && _socket.IsConnected;
 
@@ -59,13 +95,6 @@ namespace Horse.Messaging.Client
         /// Unique Id generator for sending messages
         /// </summary>
         public IUniqueIdGenerator UniqueIdGenerator { get; set; } = new DefaultUniqueIdGenerator();
-
-        /// <summary>
-        /// If true, each message has it's own unique message id.
-        /// IF false, message unique id value will be sent as empty.
-        /// Default value is true
-        /// </summary>
-        public bool UseUniqueMessageId { get; set; } = true;
 
         /// <summary>
         /// If true, acknowledge message will be sent automatically if message requires.
@@ -154,6 +183,13 @@ namespace Horse.Messaging.Client
 
         #region Constructors - Destructors
 
+        private TimeSpan _reconnectWait = TimeSpan.FromSeconds(3);
+        private HorseSocket _socket;
+        private readonly ConnectionData _data = new ConnectionData();
+        private List<ClientSubscription> _subscriptions = new List<ClientSubscription>();
+        private bool _autoConnect;
+        private Timer _reconnectTimer;
+
         /// <summary>
         /// Creates new HMQ protocol client
         /// </summary>
@@ -178,6 +214,54 @@ namespace Horse.Messaging.Client
         {
             Tracker?.Dispose();
             Queues.Dispose();
+        }
+
+
+        private void UpdateReconnectTimer()
+        {
+            if (_reconnectWait == TimeSpan.Zero)
+                return;
+
+            if (_reconnectTimer != null)
+            {
+                int ms = Convert.ToInt32(_reconnectWait.TotalMilliseconds);
+                _reconnectTimer = new Timer(s =>
+                {
+                    if (!_autoConnect || IsConnected)
+                        return;
+
+                    if (_socket != null)
+                    {
+                        if (_socket.IsConnecting)
+                            return;
+
+                        _socket.Disconnect();
+                    }
+
+                    _socket = new HorseSocket(this, _data);
+                    _ = _socket.ConnectAsync(RemoteHost);
+                }, null, ms, ms);
+            }
+        }
+
+        private void SetAutoReconnect(bool value)
+        {
+            _autoConnect = value;
+            if (value)
+            {
+                if (_reconnectTimer != null)
+                    return;
+
+                UpdateReconnectTimer();
+            }
+            else
+            {
+                if (_reconnectTimer != null)
+                {
+                    _reconnectTimer.Dispose();
+                    _reconnectTimer = null;
+                }
+            }
         }
 
         #endregion
@@ -227,6 +311,14 @@ namespace Horse.Messaging.Client
         #region Connect - Read
 
         /// <summary>
+        /// Connects to RemoteHost
+        /// </summary>
+        public void Connect()
+        {
+            Connect(RemoteHost);
+        }
+
+        /// <summary>
         /// Connects to well defined remote host
         /// </summary>
         public void Connect(string host)
@@ -244,10 +336,19 @@ namespace Horse.Messaging.Client
                 _clientId = UniqueIdGenerator.Create();
 
             if (host.Protocol != Core.Protocol.Hmq)
-                throw new NotSupportedException("Only HMQ protocol is supported");
+                throw new NotSupportedException("Only Horse protocol is supported");
 
+            SetAutoReconnect(true);
             _socket = new HorseSocket(this, _data);
             _socket.Connect(host);
+        }
+
+        /// <summary>
+        /// Connects to RemoteHost
+        /// </summary>
+        public Task ConnectAsync()
+        {
+            return ConnectAsync(RemoteHost);
         }
 
         /// <summary>
@@ -268,15 +369,25 @@ namespace Horse.Messaging.Client
                 _clientId = UniqueIdGenerator.Create();
 
             if (host.Protocol != Core.Protocol.Hmq)
-                throw new NotSupportedException("Only HMQ protocol is supported");
+                throw new NotSupportedException("Only Horse protocol is supported");
 
+            SetAutoReconnect(true);
             _socket = new HorseSocket(this, _data);
             return _socket.ConnectAsync(host);
         }
 
+        /// <summary>
+        /// Disconnected from the server
+        /// </summary>
         public void Disconnect()
         {
-            throw new NotImplementedException();
+            SetAutoReconnect(false);
+
+            if (_socket != null)
+            {
+                _socket.Disconnect();
+                _socket = null;
+            }
         }
 
         #endregion
@@ -290,12 +401,15 @@ namespace Horse.Messaging.Client
         {
             message.SetSource(_clientId);
 
-            if (string.IsNullOrEmpty(message.MessageId) && UseUniqueMessageId)
+            if (string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(UniqueIdGenerator.Create());
 
             byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
 
-            return _socket.Send(data); //todo: null check
+            if (_socket == null)
+                return false;
+
+            return _socket.Send(data);
         }
 
         /// <summary>
@@ -305,11 +419,15 @@ namespace Horse.Messaging.Client
         {
             message.SetSource(_clientId);
 
-            if (string.IsNullOrEmpty(message.MessageId) && UseUniqueMessageId)
+            if (string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(UniqueIdGenerator.Create());
 
             byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
-            bool sent = await _socket.SendAsync(data); //todo: null check
+
+            if (_socket == null)
+                return new HorseResult(HorseResultCode.SendError);
+
+            bool sent = await _socket.SendAsync(data);
             return sent ? HorseResult.Ok() : new HorseResult(HorseResultCode.SendError);
         }
 
@@ -572,10 +690,7 @@ namespace Horse.Messaging.Client
                                 Queues.PullContainers.TryGetValue(requestId, out container);
 
                             if (container != null)
-                            {
                                 ProcessPull(requestId, message, container);
-                                break;
-                            }
                         }
                     }
 

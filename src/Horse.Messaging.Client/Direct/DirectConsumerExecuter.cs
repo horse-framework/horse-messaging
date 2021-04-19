@@ -9,14 +9,14 @@ namespace Horse.Messaging.Client.Direct
     internal class DirectConsumerExecuter<TModel> : ExecuterBase
     {
         private readonly Type _consumerType;
-        private readonly IDirectConsumer<TModel> _consumer;
+        private readonly IDirectMessageReceiver<TModel> _messageReceiver;
         private readonly Func<IConsumerFactory> _consumerFactoryCreator;
         private DirectConsumeRegistration _registration;
 
-        public DirectConsumerExecuter(Type consumerType, IDirectConsumer<TModel> consumer, Func<IConsumerFactory> consumerFactoryCreator)
+        public DirectConsumerExecuter(Type consumerType, IDirectMessageReceiver<TModel> messageReceiver, Func<IConsumerFactory> consumerFactoryCreator)
         {
             _consumerType = consumerType;
-            _consumer = consumer;
+            _messageReceiver = messageReceiver;
             _consumerFactoryCreator = consumerFactoryCreator;
         }
 
@@ -42,15 +42,15 @@ namespace Horse.Messaging.Client.Direct
 
             try
             {
-                if (_consumer != null)
-                    await Consume(_consumer, message, t, client);
+                if (_messageReceiver != null)
+                    await Consume(_messageReceiver, message, t, client);
 
                 else if (_consumerFactoryCreator != null)
                 {
                     consumerFactory = _consumerFactoryCreator();
                     object consumerObject = await consumerFactory.CreateConsumer(_consumerType);
-                    IDirectConsumer<TModel> consumer = (IDirectConsumer<TModel>) consumerObject;
-                    await Consume(consumer, message, t, client);
+                    IDirectMessageReceiver<TModel> messageReceiver = (IDirectMessageReceiver<TModel>) consumerObject;
+                    await Consume(messageReceiver, message, t, client);
                 }
                 else
                     throw new ArgumentNullException("There is no consumer defined");
@@ -74,11 +74,11 @@ namespace Horse.Messaging.Client.Direct
             }
         }
 
-        private async Task Consume(IDirectConsumer<TModel> consumer, HorseMessage message, TModel model, HorseClient client)
+        private async Task Consume(IDirectMessageReceiver<TModel> messageReceiver, HorseMessage message, TModel model, HorseClient client)
         {
             if (Retry == null)
             {
-                await consumer.Consume(message, model, client);
+                await messageReceiver.Consume(message, model, client);
                 return;
             }
 
@@ -87,7 +87,7 @@ namespace Horse.Messaging.Client.Direct
             {
                 try
                 {
-                    await consumer.Consume(message, model, client);
+                    await messageReceiver.Consume(message, model, client);
                     return;
                 }
                 catch (Exception e)

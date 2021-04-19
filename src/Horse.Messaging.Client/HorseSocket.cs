@@ -18,11 +18,12 @@ namespace Horse.Messaging.Client
     public class HorseSocket : ClientSocketBase<HorseMessage>
     {
         private readonly HorseClient _client;
+        internal bool IsConnecting { get; private set; }
 
         internal HorseSocket(HorseClient client, ConnectionData data)
         {
             _client = client;
-            
+
             Data.Method = "CONNECT";
             Data.Path = "/";
             data.SetProperties(data.Properties);
@@ -55,6 +56,7 @@ namespace Horse.Messaging.Client
         {
             try
             {
+                IsConnecting = true;
                 Client = new TcpClient();
                 Client.Connect(host.IPAddress, host.Port);
                 IsConnected = true;
@@ -94,6 +96,10 @@ namespace Horse.Messaging.Client
                 Disconnect();
                 throw;
             }
+            finally
+            {
+                IsConnecting = false;
+            }
         }
 
         /// <summary>
@@ -103,6 +109,7 @@ namespace Horse.Messaging.Client
         {
             try
             {
+                IsConnecting = true;
                 Client = new TcpClient();
                 await Client.ConnectAsync(host.IPAddress, host.Port);
                 IsConnected = true;
@@ -141,6 +148,10 @@ namespace Horse.Messaging.Client
             {
                 Disconnect();
                 throw;
+            }
+            finally
+            {
+                IsConnecting = false;
             }
         }
 
@@ -261,7 +272,7 @@ namespace Horse.Messaging.Client
         {
             message.SetSource(_client.ClientId);
 
-            if (string.IsNullOrEmpty(message.MessageId) && _client.UseUniqueMessageId)
+            if (string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(_client.UniqueIdGenerator.Create());
 
             byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);

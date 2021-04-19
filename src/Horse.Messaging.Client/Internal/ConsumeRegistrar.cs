@@ -84,7 +84,7 @@ namespace Horse.Messaging.Client.Internal
         private List<ModelTypeInfo> FindModelTypes(Type consumerType)
         {
             Type openQueueGeneric = typeof(IQueueConsumer<>);
-            Type openDirectGeneric = typeof(IDirectConsumer<>);
+            Type openDirectGeneric = typeof(IDirectMessageReceiver<>);
             Type openRequestGeneric = typeof(IHorseRequestHandler<,>);
 
             List<ModelTypeInfo> result = new List<ModelTypeInfo>();

@@ -11,7 +11,7 @@ namespace RoutingSample.Server
 	{
 		private static void Main(string[] args)
 		{
-			HorseRider rider = HorseRiderBuilder.Create()
+			HorseRider rider = HorseRiderBuilder.Build()
 									   .AddClientHandler<ClientHandler>()
 									   .AddQueueEventHandler<QueueEventHandler>()
 									   .UseJustAllowDeliveryHandler()

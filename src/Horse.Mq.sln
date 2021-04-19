@@ -55,8 +55,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoutingSample.ExceptionCons
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RoutingSample.InternalService", "Samples\RoutingSample.InternalService\RoutingSample.InternalService.csproj", "{AD240570-21FF-4E5B-BAFB-8A7F282F9E9A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Messaging.Bus", "Horse.Messaging.Bus\Horse.Messaging.Bus.csproj", "{E49B6DED-0A54-42C6-9B28-1E256ABB7E50}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Cache", "Samples\Sample.Cache\Sample.Cache.csproj", "{78630FD3-DA2F-45B6-91B3-18D08707D6C8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Cluster", "Samples\Sample.Cluster\Sample.Cluster.csproj", "{60E80FB8-47E0-4836-A439-17DE6A39C4F4}"
@@ -159,10 +157,6 @@ Global
 		{AD240570-21FF-4E5B-BAFB-8A7F282F9E9A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AD240570-21FF-4E5B-BAFB-8A7F282F9E9A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AD240570-21FF-4E5B-BAFB-8A7F282F9E9A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E49B6DED-0A54-42C6-9B28-1E256ABB7E50}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E49B6DED-0A54-42C6-9B28-1E256ABB7E50}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E49B6DED-0A54-42C6-9B28-1E256ABB7E50}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E49B6DED-0A54-42C6-9B28-1E256ABB7E50}.Release|Any CPU.Build.0 = Release|Any CPU
 		{78630FD3-DA2F-45B6-91B3-18D08707D6C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{78630FD3-DA2F-45B6-91B3-18D08707D6C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{78630FD3-DA2F-45B6-91B3-18D08707D6C8}.Release|Any CPU.ActiveCfg = Release|Any CPU

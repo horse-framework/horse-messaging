@@ -86,7 +86,7 @@ namespace Sample.Cache
 
         private static HorseRider StartServer()
         {
-            HorseRider rider = HorseRiderBuilder.Create()
+            HorseRider rider = HorseRiderBuilder.Build()
                                        .AddOptions(o => o.Status = QueueStatus.Cache)
                                        .UseAckDeliveryHandler(AcknowledgeWhen.AfterReceived, PutBackDecision.No)
                                        .Build();

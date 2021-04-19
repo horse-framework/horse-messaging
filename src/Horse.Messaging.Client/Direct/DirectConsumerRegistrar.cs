@@ -11,7 +11,6 @@ namespace Horse.Messaging.Client.Direct
 
         public DirectTypeDescriptor DefaultDescriptor { get; set; }
 
-        
         internal DirectConsumerRegistrar(DirectOperator directOperator)
         {
             _operator = directOperator;
@@ -82,7 +81,7 @@ namespace Horse.Messaging.Client.Direct
 
         private List<ModelTypeInfo> FindModelTypes(Type consumerType)
         {
-            Type openDirectGeneric = typeof(IDirectConsumer<>);
+            Type openDirectGeneric = typeof(IDirectMessageReceiver<>);
             Type openRequestGeneric = typeof(IHorseRequestHandler<,>);
 
             List<ModelTypeInfo> result = new List<ModelTypeInfo>();

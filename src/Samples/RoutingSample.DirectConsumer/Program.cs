@@ -22,7 +22,7 @@ namespace RoutingSample.DirectConsumer
 
 			connector.AddHost("horse://localhost:15500");
 			connector.ContentSerializer = new NewtonsoftContentSerializer();
-			connector.Observer.RegisterConsumer<SampleDirectMessageConsumer>();
+			connector.Observer.RegisterConsumer<SampleDirectMessageMessageReceiver>();
 			connector.Connected += (c) => { Console.WriteLine("CONNECTED"); };
 			connector.Disconnected += (c) => Console.WriteLine("DISCONNECTED");
 			connector.MessageReceived += (client, message) => Console.WriteLine("Direct message received");

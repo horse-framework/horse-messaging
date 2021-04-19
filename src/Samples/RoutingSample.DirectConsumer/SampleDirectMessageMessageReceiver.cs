@@ -5,7 +5,7 @@ using RoutingSample.Models;
 
 namespace RoutingSample.DirectConsumer
 {
-	public class SampleDirectMessageConsumer : BaseDirectConsumer<SampleMessage>
+	public class SampleDirectMessageMessageReceiver : BaseDirectMessageReceiver<SampleMessage>
 	{
 		protected override async Task Handle(SampleMessage model)
 		{

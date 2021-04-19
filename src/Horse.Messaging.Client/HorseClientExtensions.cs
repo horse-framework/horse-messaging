@@ -1,28 +1,29 @@
 using System;
 using System.Collections.Generic;
-using Horse.Messaging.Bus.Internal;
-using Horse.Mq.Client.Connectors;
+using Horse.Messaging.Client.Bus;
+using Horse.Messaging.Client.Direct;
+using Horse.Messaging.Client.Routers;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Horse.Messaging.Bus
+namespace Horse.Messaging.Client
 {
     /// <summary>
     /// Horse Connector implementations
     /// </summary>
-    public static class HorseConnectorExtensions
+    public static class HorseClientExtensions
     {
         /// <summary>
         /// Adds Horse connector with configuration
         /// </summary>
-        public static IServiceCollection AddHorseBus(this IServiceCollection services, Action<HorseConnectorBuilder> config)
+        public static IServiceCollection AddHorseBus(this IServiceCollection services, Action<HorseClientBuilder> config)
         {
-            HorseConnectorBuilder builder = new HorseConnectorBuilder(services);
+            HorseClientBuilder builder = new HorseClientBuilder(services);
             config(builder);
 
-            HmqStickyConnector connector = builder.Build();
+            HorseClient client = builder.Build();
 
-            AddConsumersMicrosoftDI(services, connector, builder);
-            services.AddSingleton(connector);
+            AddConsumersMicrosoftDI(services, client, builder);
+            services.AddSingleton(client);
             services.AddSingleton(connector.Bus);
             services.AddSingleton(connector.Bus.Direct);
             services.AddSingleton(connector.Bus.Queue);
@@ -53,7 +54,7 @@ namespace Horse.Messaging.Bus
             return services;
         }
 
-        private static void AddConsumersMicrosoftDI(IServiceCollection services, HmqStickyConnector connector, HorseConnectorBuilder builder)
+        private static void AddConsumersMicrosoftDI(IServiceCollection services, HorseClient connector, HorseClientBuilder builder)
         {
             foreach (Tuple<ServiceLifetime, Type> pair in builder.AssembyConsumers)
             {

@@ -30,7 +30,7 @@ namespace Sample.Cluster
 
         static HorseRider StartServer1()
         {
-            HorseRider rider = HorseRiderBuilder.Create()
+            HorseRider rider = HorseRiderBuilder.Build()
                                        .AddOptions(o => o.Status = QueueStatus.Push)
                                        .UseAckDeliveryHandler(AcknowledgeWhen.AfterReceived, PutBackDecision.No)
                                        .Build();
@@ -52,7 +52,7 @@ namespace Sample.Cluster
 
         static HorseRider StartServer2()
         {
-            HorseRider rider = HorseRiderBuilder.Create()
+            HorseRider rider = HorseRiderBuilder.Build()
                                        .AddOptions(o => o.Status = QueueStatus.Push)
                                        .UseAckDeliveryHandler(AcknowledgeWhen.AfterReceived, PutBackDecision.No)
                                        .Build();

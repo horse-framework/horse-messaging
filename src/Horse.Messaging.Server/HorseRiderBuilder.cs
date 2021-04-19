@@ -11,8 +11,12 @@ namespace Horse.Messaging.Server
     {
         internal HorseRider Rider { get; set; }
 
-        internal HorseRiderBuilder()
+        /// <summary>
+        /// Creates new rider builder
+        /// </summary>
+        public HorseRiderBuilder()
         {
+            Rider = new HorseRider();
         }
 
         /// <summary>
@@ -20,9 +24,7 @@ namespace Horse.Messaging.Server
         /// </summary>
         public static HorseRiderBuilder Create()
         {
-            HorseRiderBuilder builder = new HorseRiderBuilder();
-            builder.Rider = new HorseRider();
-            return builder;
+            return new HorseRiderBuilder();
         }
 
         /// <summary>

@@ -50,7 +50,7 @@ namespace Test.Common
             horseRiderOptions.MessageTimeout = TimeSpan.FromSeconds(12);
             horseRiderOptions.Status = QueueStatus.Broadcast;
 
-            Server = HorseRiderBuilder.Create()
+            Server = HorseRiderBuilder.Build()
                                    .AddOptions(horseRiderOptions)
                                    .AddQueueEventHandler(new TestQueueHandler(this))
                                    .UseDeliveryHandler(d => Task.FromResult<IMessageDeliveryHandler>(new TestDeliveryHandler(this)))

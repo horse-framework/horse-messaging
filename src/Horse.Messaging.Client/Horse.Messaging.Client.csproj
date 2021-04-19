@@ -27,6 +27,7 @@
 
     <ItemGroup>
         <PackageReference Include="Horse.Client.Connectors" Version="5.0.1" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.1" />
     </ItemGroup>
 
     <ItemGroup>
@@ -34,9 +35,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Pipes\Annotations" />
       <Folder Include="Routers\Annotations" />
-      <Folder Include="Stacks\Annotations" />
     </ItemGroup>
 
 </Project>

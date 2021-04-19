@@ -1,10 +1,8 @@
 using System;
 using System.Threading.Tasks;
-using Horse.Messaging.Client;
-using Horse.Mq.Client;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Horse.Messaging.Bus
+namespace Horse.Messaging.Client.Internal
 {
     internal class MicrosoftDependencyConsumerFactory : IConsumerFactory
     {

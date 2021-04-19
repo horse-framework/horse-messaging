@@ -21,11 +21,6 @@ namespace Horse.Messaging.Server.Options
         public string Token { get; set; }
 
         /// <summary>
-        /// If true, messages will will queued if nodes are not connected, and they will be sent after short disconnections
-        /// </summary>
-        public bool KeepMessages { get; set; }
-
-        /// <summary>
         /// How many milliseconds should wait to try reconnect
         /// </summary>
         public int ReconnectWait { get; set; }

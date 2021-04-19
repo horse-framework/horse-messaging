@@ -7,7 +7,7 @@ namespace Horse.Messaging.Client.Direct
     /// Directmessage Consumer implementation.
     /// </summary>
     /// <typeparam name="TModel">Model type</typeparam>
-    public interface IDirectConsumer<in TModel>
+    public interface IDirectMessageReceiver<in TModel>
     {
         /// <summary>
         /// Consumes a message

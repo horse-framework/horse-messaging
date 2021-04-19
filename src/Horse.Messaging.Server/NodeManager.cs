@@ -6,7 +6,6 @@ using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Containers;
-using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Network;
 using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Security;
@@ -78,7 +77,6 @@ namespace Horse.Messaging.Server
                 NodeOptions options = Self.Options.Nodes[i];
 
                 HorseClient client = new HorseClient();
-                client.KeepMessages = options.KeepMessages;
                 client.SetClientName(options.Name);
                 client.SetClientType("server");
                 client.ReconnectWait = TimeSpan.FromMilliseconds(options.ReconnectWait);
@@ -104,7 +102,6 @@ namespace Horse.Messaging.Server
             Array.Copy(OutgoingNodes, newArray, OutgoingNodes.Length);
 
             HorseClient client = new HorseClient();
-            client.KeepMessages = options.KeepMessages;
             client.SetClientName(options.Name);
             client.SetClientType("server");
             client.ReconnectWait = TimeSpan.FromMilliseconds(options.ReconnectWait);
