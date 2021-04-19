@@ -9,7 +9,7 @@ namespace Horse.Messaging.Server.Cache
     /// <summary>
     /// Horse cache manager
     /// </summary>
-    public class HorseCache : IHorseCache
+    public class HorseCache
     {
         #region Properties
 

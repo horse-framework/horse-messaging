@@ -9,7 +9,7 @@ namespace Horse.Messaging.Server.Clients
     /// <summary>
     /// Manages clients in messaging server
     /// </summary>
-    public class ClientRider : IClientRider
+    public class ClientRider
     {
         #region Properties
 

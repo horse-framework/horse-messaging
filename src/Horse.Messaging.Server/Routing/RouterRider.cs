@@ -10,7 +10,7 @@ namespace Horse.Messaging.Server.Routing
     /// <summary>
     /// Manages routers in messaging server
     /// </summary>
-    public class RouterRider : IRouterRider
+    public class RouterRider
     {
         private readonly ArrayContainer<IRouter> _routers = new ArrayContainer<IRouter>();
 

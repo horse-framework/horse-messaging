@@ -15,7 +15,7 @@ namespace Horse.Messaging.Server.Queues
     /// <summary>
     /// Manages queues in messaging server
     /// </summary>
-    public class QueueRider : IQueueRider
+    public class QueueRider
     {
         private readonly ArrayContainer<HorseQueue> _queues = new ArrayContainer<HorseQueue>();
 

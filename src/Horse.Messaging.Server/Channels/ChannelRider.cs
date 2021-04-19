@@ -12,7 +12,7 @@ namespace Horse.Messaging.Server.Channels
     /// <summary>
     /// Manages channels in messaging server
     /// </summary>
-    public class ChannelRider : IChannelRider
+    public class ChannelRider
     {
         private readonly ArrayContainer<HorseChannel> _channels = new ArrayContainer<HorseChannel>();
 

@@ -1,6 +1,5 @@
 ﻿using Horse.Messaging.Data;
 using Horse.Messaging.Server;
-using Horse.Messaging.Server.Data;
 using Horse.Messaging.Server.Queues;
 using Horse.Server;
 
@@ -15,13 +14,13 @@ namespace Sample.Server
                 {
                     cfg.Options.Type = QueueType.Push;
                     cfg.EventHandlers.Add(new QueueEventHandler());
+                    cfg.AddPersistentQueues();
+                    cfg.UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterSaved);
                 })
                .ConfigureClients(cfg =>
                 {
                     cfg.Handlers.Add(new ClientHandler());
                 })
-               .AddPersistentQueues()
-               .UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterSaved)
                .Build();
 
             rider.LoadPersistentQueues();

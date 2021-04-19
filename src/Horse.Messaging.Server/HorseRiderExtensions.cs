@@ -1,15 +1,12 @@
 using System;
-using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Cache;
 using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Direct;
-using Horse.Messaging.Server.Handlers;
 using Horse.Messaging.Server.Network;
 using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Queues;
-using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Routing;
 using Horse.Server;
 
@@ -124,54 +121,60 @@ namespace Horse.Messaging.Server
         /// <summary>
         /// Configure clients
         /// </summary>
-        public static HorseRiderBuilder ConfigureClients(this HorseRiderBuilder builder, Action<IClientRider> cfg)
+        public static HorseRiderBuilder ConfigureClients(this HorseRiderBuilder builder, Action<HorseClientConfigurator> cfg)
         {
-            cfg(builder.Rider.Client);
+            HorseClientConfigurator configurator = new HorseClientConfigurator(builder.Rider);
+            cfg(configurator);
             return builder;
         }
 
         /// <summary>
         /// Configure cache
         /// </summary>
-        public static HorseRiderBuilder ConfigureCache(this HorseRiderBuilder builder, Action<IHorseCache> cfg)
+        public static HorseRiderBuilder ConfigureCache(this HorseRiderBuilder builder, Action<HorseCacheConfigurator> cfg)
         {
-            cfg(builder.Rider.Cache);
+            HorseCacheConfigurator configurator = new HorseCacheConfigurator(builder.Rider);
+            cfg(configurator);
             return builder;
         }
 
         /// <summary>
         /// Configure channels
         /// </summary>
-        public static HorseRiderBuilder ConfigureChannels(this HorseRiderBuilder builder, Action<IChannelRider> cfg)
+        public static HorseRiderBuilder ConfigureChannels(this HorseRiderBuilder builder, Action<HorseChannelConfigurator> cfg)
         {
-            cfg(builder.Rider.Channel);
+            HorseChannelConfigurator configurator = new HorseChannelConfigurator(builder.Rider);
+            cfg(configurator);
             return builder;
         }
 
         /// <summary>
         /// Configure routers
         /// </summary>
-        public static HorseRiderBuilder ConfigureRouters(this HorseRiderBuilder builder, Action<IRouterRider> cfg)
+        public static HorseRiderBuilder ConfigureRouters(this HorseRiderBuilder builder, Action<HorseRouterConfigurator> cfg)
         {
-            cfg(builder.Rider.Router);
+            HorseRouterConfigurator configurator = new HorseRouterConfigurator(builder.Rider);
+            cfg(configurator);
             return builder;
         }
 
         /// <summary>
         /// Configure queues
         /// </summary>
-        public static HorseRiderBuilder ConfigureQueues(this HorseRiderBuilder builder, Action<IQueueRider> cfg)
+        public static HorseRiderBuilder ConfigureQueues(this HorseRiderBuilder builder, Action<HorseQueueConfigurator> cfg)
         {
-            cfg(builder.Rider.Queue);
+            HorseQueueConfigurator configurator = new HorseQueueConfigurator(builder.Rider);
+            cfg(configurator);
             return builder;
         }
 
         /// <summary>
         /// Configure direct messages
         /// </summary>
-        public static HorseRiderBuilder ConfigureDirect(this HorseRiderBuilder builder, Action<IDirectRider> cfg)
+        public static HorseRiderBuilder ConfigureDirect(this HorseRiderBuilder builder, Action<HorseDirectConfigurator> cfg)
         {
-            cfg(builder.Rider.Direct);
+            HorseDirectConfigurator configurator = new HorseDirectConfigurator(builder.Rider);
+            cfg(configurator);
             return builder;
         }
 
@@ -221,40 +224,6 @@ namespace Horse.Messaging.Server
         public static HorseRiderBuilder AddServerMessageHandler(this HorseRiderBuilder builder, IServerMessageHandler messageHandler)
         {
             builder.Rider.ServerMessageHandlers.Add(messageHandler);
-            return builder;
-        }
-
-        #endregion
-
-        #region Delivery
-
-        /// <summary>
-        /// Implements a message delivery handler factory
-        /// </summary>
-        public static HorseRiderBuilder UseDeliveryHandler(this HorseRiderBuilder builder, Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> deliveryHandler)
-        {
-            builder.Rider.Queue.DeliveryHandlerFactory = deliveryHandler;
-            return builder;
-        }
-
-        /// <summary>
-        /// Implements non-durable basic delivery handler
-        /// </summary>
-        public static HorseRiderBuilder UseJustAllowDeliveryHandler(this HorseRiderBuilder builder)
-        {
-            builder.Rider.Queue.DeliveryHandlerFactory = _ => Task.FromResult<IMessageDeliveryHandler>(new JustAllowDeliveryHandler());
-            return builder;
-        }
-
-        /// <summary>
-        /// Implements non-durable basic delivery handler with ack
-        /// </summary>
-        /// <param name="builder">Horse MQ Builder</param>
-        /// <param name="producerAck">Decision, when producer will receive acknowledge (or confirm)</param>
-        /// <param name="consumerAckFail">Decision, what will be done if consumer sends nack or doesn't send ack in time</param>
-        public static HorseRiderBuilder UseAckDeliveryHandler(this HorseRiderBuilder builder, AcknowledgeWhen producerAck, PutBackDecision consumerAckFail)
-        {
-            builder.Rider.Queue.DeliveryHandlerFactory = _ => Task.FromResult<IMessageDeliveryHandler>(new AckDeliveryHandler(producerAck, consumerAckFail));
             return builder;
         }
 

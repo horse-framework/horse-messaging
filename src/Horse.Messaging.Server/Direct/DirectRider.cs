@@ -5,7 +5,7 @@ namespace Horse.Messaging.Server.Direct
     /// <summary>
     /// Manages direct messages
     /// </summary>
-    public class DirectRider : IDirectRider
+    public class DirectRider
     {
         /// <summary>
         /// Root horse rider object

@@ -108,25 +108,25 @@ namespace Horse.Messaging.Data.Configuration
         /// <summary>
         /// Loads messages of queues in configuration
         /// </summary>
-        public async Task LoadQueues(HorseRider server)
+        public async Task LoadQueues(HorseRider rider)
         {
             foreach (QueueConfiguration queueConfiguration in Config.Queues)
             {
-                HorseQueue queue = server.FindQueue(queueConfiguration.Name);
+                HorseQueue queue = rider.Queue.FindQueue(queueConfiguration.Name);
                 if (queue == null)
                 {
-                    if (server.DeliveryHandlerFactory != null)
-                        queue = await server.CreateQueue(queueConfiguration.Name,
+                    if (rider.Queue.DeliveryHandlerFactory != null)
+                        queue = await rider.Queue.CreateQueue(queueConfiguration.Name,
                                                          queueConfiguration.Configuration.ToOptions(),
                                                          async builder =>
                                                          {
                                                              builder.DeliveryHandlerHeader = queueConfiguration.DeliveryHandler;
-                                                             IMessageDeliveryHandler handler = await server.DeliveryHandlerFactory(builder);
-                                                             builder.OnAfterCompleted(b => { }); //don't trigger created events, it's already created and reloading
+                                                             IMessageDeliveryHandler handler = await rider.Queue.DeliveryHandlerFactory(builder);
+                                                             builder.OnAfterCompleted(_ => { }); //don't trigger created events, it's already created and reloading
                                                              return handler;
                                                          });
                     else
-                        queue = await Extensions.CreateQueue(server,
+                        queue = await Extensions.CreateQueue(rider.Queue,
                                                              queueConfiguration.Name,
                                                              (DeleteWhen) queueConfiguration.DeleteWhen,
                                                              (ProducerAckDecision) queueConfiguration.ProducerAck,
