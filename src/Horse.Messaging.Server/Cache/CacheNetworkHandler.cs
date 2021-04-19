@@ -9,10 +9,10 @@ namespace Horse.Messaging.Server.Cache
 {
     internal class CacheNetworkHandler : INetworkMessageHandler
     {
-        private readonly HorseMq _server;
+        private readonly HorseRider _server;
         private readonly HorseCache _cache;
 
-        public CacheNetworkHandler(HorseMq server, HorseCache cache)
+        public CacheNetworkHandler(HorseRider server, HorseCache cache)
         {
             _server = server;
             _cache = cache;
@@ -28,9 +28,9 @@ namespace Horse.Messaging.Server.Cache
             {
                 return client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
             }
-            catch (DuplicateNameException)
+            catch
             {
-                return client.SendAsync(message.CreateResponse(HorseResultCode.Duplicate));
+                return client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
             }
         }
 
@@ -41,7 +41,7 @@ namespace Horse.Messaging.Server.Cache
                 //get cache item
                 case KnownContentTypes.GetCache:
 
-                    foreach (ICacheAuthorization authorization in _cache.GetAuthorizations())
+                    foreach (ICacheAuthorization authorization in _cache.Authorizations.All())
                     {
                         if (!authorization.CanGet(client, message.Target))
                             return client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
@@ -59,7 +59,7 @@ namespace Horse.Messaging.Server.Cache
                 //set cache item
                 case KnownContentTypes.SetCache:
 
-                    foreach (ICacheAuthorization authorization in _cache.GetAuthorizations())
+                    foreach (ICacheAuthorization authorization in _cache.Authorizations.All())
                     {
                         if (!authorization.CanSet(client, message.Target, message.Content))
                             return client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
@@ -93,7 +93,7 @@ namespace Horse.Messaging.Server.Cache
                 //remove cache item
                 case KnownContentTypes.RemoveCache:
 
-                    foreach (ICacheAuthorization authorization in _cache.GetAuthorizations())
+                    foreach (ICacheAuthorization authorization in _cache.Authorizations.All())
                     {
                         if (!authorization.CanRemove(client, message.Target))
                             return client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
@@ -105,7 +105,7 @@ namespace Horse.Messaging.Server.Cache
                 //purge all caches
                 case KnownContentTypes.PurgeCache:
 
-                    foreach (ICacheAuthorization authorization in _cache.GetAuthorizations())
+                    foreach (ICacheAuthorization authorization in _cache.Authorizations.All())
                     {
                         if (!authorization.CanPurge(client))
                             return client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));

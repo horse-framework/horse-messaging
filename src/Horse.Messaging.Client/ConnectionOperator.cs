@@ -7,7 +7,7 @@ using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Models;
 using Horse.Messaging.Protocol.Models.Events;
 
-namespace Horse.Messaging.Client.Operators
+namespace Horse.Messaging.Client
 {
     /// <summary>
     /// Connection manager object for horse client

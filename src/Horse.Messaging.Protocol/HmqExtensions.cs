@@ -11,7 +11,7 @@ namespace Horse.Messaging.Protocol
         /// <summary>
         /// Uses HMQ Protocol and accepts TCP connections.
         /// </summary>
-        public static IHorseServer UseHmq(this IHorseServer server, IProtocolConnectionHandler<HorseServerSocket, HorseMessage> handler)
+        public static IHorseServer UseHorseProtocol(this IHorseServer server, IProtocolConnectionHandler<HorseServerSocket, HorseMessage> handler)
         {
             HorseProtocol protocol = new HorseProtocol(server, handler);
             server.UseProtocol(protocol);
@@ -21,7 +21,7 @@ namespace Horse.Messaging.Protocol
         /// <summary>
         /// Uses HMQ Protocol and accepts TCP connections.
         /// </summary>
-        public static IHorseServer UseHmq(this IHorseServer server, HorseMessageHandler action)
+        public static IHorseServer UseHorseProtocol(this IHorseServer server, HorseMessageHandler action)
         {
             HorseMethodHandler handler = new HorseMethodHandler(action);
             HorseProtocol protocol = new HorseProtocol(server, handler);

@@ -4,6 +4,7 @@ using Horse.Core.Protocols;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Direct;
+using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
@@ -21,7 +22,7 @@ namespace Horse.Messaging.Server.Network
         /// <summary>
         /// Messaging Queue Server
         /// </summary>
-        private readonly HorseMq _server;
+        private readonly HorseRider _rider;
 
         private readonly INetworkMessageHandler _serverHandler;
         private readonly INetworkMessageHandler _queueMessageHandler;
@@ -34,17 +35,17 @@ namespace Horse.Messaging.Server.Network
 
         internal INetworkMessageHandler CacheHandler { get; set; }
 
-        public HmqNetworkHandler(HorseMq server)
+        public HmqNetworkHandler(HorseRider rider)
         {
-            _server = server;
-            _serverHandler = new ServerMessageHandler(server);
-            _queueMessageHandler = new QueueMessageHandler(server);
-            _routerMessageHandler = new RouterMessageHandler(server);
-            _pullRequestHandler = new PullRequestMessageHandler(server);
-            _clientHandler = new DirectMessageHandler(server);
-            _responseHandler = new ResponseMessageHandler(server);
-            _instanceHandler = new NodeMessageHandler(server);
-            _eventHandler = new EventMessageHandler(server);
+            _rider = rider;
+            _serverHandler = new ServerMessageHandler(rider);
+            _queueMessageHandler = new QueueMessageHandler(rider);
+            _routerMessageHandler = new RouterMessageHandler(rider);
+            _pullRequestHandler = new PullRequestMessageHandler(rider);
+            _clientHandler = new DirectMessageHandler(rider);
+            _responseHandler = new ResponseMessageHandler(rider);
+            _instanceHandler = new NodeMessageHandler(rider);
+            _eventHandler = new EventMessageHandler(rider);
         }
 
         #endregion
@@ -59,21 +60,21 @@ namespace Horse.Messaging.Server.Network
             string clientId;
             bool found = data.Properties.TryGetValue(HorseHeaders.CLIENT_ID, out clientId);
             if (!found || string.IsNullOrEmpty(clientId))
-                clientId = _server.ClientIdGenerator.Create();
+                clientId = _rider.Client.ClientIdGenerator.Create();
 
             //if another client with same unique id is online, do not accept new client
-            MessagingClient foundClient = _server.FindClient(clientId);
+            MessagingClient foundClient = _rider.Client.FindClient(clientId);
             if (foundClient != null)
             {
                 await connection.Socket.SendAsync(HorseProtocolWriter.Create(MessageBuilder.Busy()));
                 return null;
             }
 
-            if (_server.Options.ClientLimit > 0 && _server.GetOnlineClients() >= _server.Options.ClientLimit)
+            if (_rider.Options.ClientLimit > 0 && _rider.Client.GetOnlineClients() >= _rider.Options.ClientLimit)
                 return null;
 
             //creates new mq client object 
-            MessagingClient client = new MessagingClient(_server, connection, _server.MessageIdGenerator);
+            MessagingClient client = new MessagingClient(_rider, connection, _rider.MessageIdGenerator);
             client.Data = data;
             client.UniqueId = clientId.Trim();
             client.Token = data.Properties.GetStringValue(HorseHeaders.CLIENT_TOKEN);
@@ -81,9 +82,9 @@ namespace Horse.Messaging.Server.Network
             client.Type = data.Properties.GetStringValue(HorseHeaders.CLIENT_TYPE);
 
             //authenticates client
-            foreach (IClientAuthenticator authenticator in _server.Authenticators)
+            foreach (IClientAuthenticator authenticator in _rider.Client.Authenticators.All())
             {
-                client.IsAuthenticated = await authenticator.Authenticate(_server, client);
+                client.IsAuthenticated = await authenticator.Authenticate(_rider, client);
                 if (!client.IsAuthenticated)
                 {
                     await client.SendAsync(MessageBuilder.Unauthorized());
@@ -92,14 +93,14 @@ namespace Horse.Messaging.Server.Network
             }
 
             //client authenticated, add it into the connected clients list
-            _server.AddClient(client);
+            _rider.Client.AddClient(client);
 
             //send response message to the client, client should check unique id,
             //if client's unique id isn't permitted, server will create new id for client and send it as response
             await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
 
-            foreach (IClientHandler handler in _server.ClientHandlers)
-                _ = handler.Connected(_server, client);
+            foreach (IClientHandler handler in _rider.Client.Handlers.All())
+                _ = handler.Connected(_rider, client);
 
             return client;
         }
@@ -118,9 +119,9 @@ namespace Horse.Messaging.Server.Network
         public Task Disconnected(IHorseServer server, HorseServerSocket client)
         {
             MessagingClient messagingClient = (MessagingClient) client;
-            _server.RemoveClient(messagingClient);
-            foreach (IClientHandler handler in _server.ClientHandlers)
-                _ = handler.Disconnected(_server, messagingClient);
+            _rider.Client.RemoveClient(messagingClient);
+            foreach (IClientHandler handler in _rider.Client.Handlers.All())
+                _ = handler.Disconnected(_rider, messagingClient);
 
             return Task.CompletedTask;
         }
@@ -143,7 +144,7 @@ namespace Horse.Messaging.Server.Network
                 if (message.WaitResponse)
                     message.WaitResponse = false;
 
-                message.SetMessageId(_server.MessageIdGenerator.Create());
+                message.SetMessageId(_rider.MessageIdGenerator.Create());
             }
 
             //if message does not have a source information, source will be set to sender's unique id

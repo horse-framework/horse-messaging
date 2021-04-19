@@ -22,11 +22,11 @@ namespace Horse.Messaging.Server.Network
         /// <summary>
         /// Messaging Queue Server
         /// </summary>
-        private readonly HorseMq _server;
+        private readonly HorseRider _rider;
 
-        public ServerMessageHandler(HorseMq server)
+        public ServerMessageHandler(HorseRider rider)
         {
-            _server = server;
+            _rider = rider;
         }
 
         #endregion
@@ -119,7 +119,7 @@ namespace Horse.Messaging.Server.Network
 
                 //for not-defines content types, use user-defined message handler
                 default:
-                    foreach (IServerMessageHandler handler in _server.ServerMessageHandlers)
+                    foreach (IServerMessageHandler handler in _rider.ServerMessageHandlers.All())
                         return handler.Received(client, message);
 
                     return Task.CompletedTask;
@@ -135,13 +135,13 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task Subscribe(MessagingClient client, HorseMessage message)
         {
-            HorseQueue queue = _server.FindQueue(message.Target);
+            HorseQueue queue = _rider.Queue.FindQueue(message.Target);
 
             //if auto creation active, try to create queue
-            if (queue == null && _server.Options.AutoQueueCreation)
+            if (queue == null && _rider.Options.AutoQueueCreation)
             {
-                QueueOptions options = QueueOptions.CloneFrom(_server.Options);
-                queue = await _server.CreateQueue(message.Target, options, message, _server.DeliveryHandlerFactory, true, true);
+                QueueOptions options = QueueOptions.CloneFrom(_rider.Queue.Options);
+                queue = await _rider.Queue.CreateQueue(message.Target, options, message, _rider.Queue.DeliveryHandlerFactory, true, true);
             }
 
             if (queue == null)
@@ -186,7 +186,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task Unsubscribe(MessagingClient client, HorseMessage message)
         {
-            HorseQueue queue = _server.FindQueue(message.Target);
+            HorseQueue queue = _rider.Queue.FindQueue(message.Target);
             if (queue == null)
             {
                 if (message.WaitResponse)
@@ -206,7 +206,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         public async Task GetQueueConsumers(MessagingClient client, HorseMessage message)
         {
-            HorseQueue queue = _server.FindQueue(message.Target);
+            HorseQueue queue = _rider.Queue.FindQueue(message.Target);
 
             if (queue == null)
             {
@@ -214,7 +214,7 @@ namespace Horse.Messaging.Server.Network
                 return;
             }
 
-            foreach (IAdminAuthorization authorization in _server.AdminAuthorizations)
+            foreach (IAdminAuthorization authorization in _rider.Client.AdminAuthorizations.All())
             {
                 bool grant = await authorization.CanReceiveQueueConsumers(client, queue);
                 if (!grant)
@@ -240,7 +240,7 @@ namespace Horse.Messaging.Server.Network
 
             HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
             message.ContentType = KnownContentTypes.QueueConsumers;
-            response.Serialize(list, _server.MessageContentSerializer);
+            response.Serialize(list, _rider.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
@@ -253,7 +253,7 @@ namespace Horse.Messaging.Server.Network
             if (message.Length > 0)
                 builder = await System.Text.Json.JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content);
 
-            HorseQueue queue = _server.FindQueue(message.Target);
+            HorseQueue queue = _rider.Queue.FindQueue(message.Target);
 
             //if queue exists, we can't create. return duplicate response.
             if (queue != null)
@@ -265,7 +265,7 @@ namespace Horse.Messaging.Server.Network
             }
 
             //check authority if client can create queue
-            foreach (IClientAuthorization authorization in _server.Authorizations)
+            foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
             {
                 bool grant = await authorization.CanCreateQueue(client, message.Target, builder);
                 if (!grant)
@@ -278,11 +278,11 @@ namespace Horse.Messaging.Server.Network
             }
 
             //creates new queue
-            QueueOptions options = QueueOptions.CloneFrom(_server.Options);
+            QueueOptions options = QueueOptions.CloneFrom(_rider.Queue.Options);
             if (builder != null)
                 builder.ApplyToQueue(options);
 
-            queue = await _server.CreateQueue(message.Target, options, message, _server.DeliveryHandlerFactory, true, false);
+            queue = await _rider.Queue.CreateQueue(message.Target, options, message, _rider.Queue.DeliveryHandlerFactory, true, false);
 
             //if creation successful, sends response
             if (message.WaitResponse)
@@ -299,7 +299,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task RemoveQueue(MessagingClient client, HorseMessage message)
         {
-            HorseQueue queue = _server.FindQueue(message.Target);
+            HorseQueue queue = _rider.Queue.FindQueue(message.Target);
             if (queue == null)
             {
                 if (message.WaitResponse)
@@ -307,7 +307,7 @@ namespace Horse.Messaging.Server.Network
                 return;
             }
 
-            foreach (IAdminAuthorization authorization in _server.AdminAuthorizations)
+            foreach (IAdminAuthorization authorization in _rider.Client.AdminAuthorizations.All())
             {
                 bool grant = await authorization.CanRemoveQueue(client, queue);
                 if (!grant)
@@ -319,7 +319,7 @@ namespace Horse.Messaging.Server.Network
                 }
             }
 
-            await _server.RemoveQueue(queue);
+            await _rider.Queue.RemoveQueue(queue);
 
             if (message.WaitResponse)
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
@@ -332,7 +332,7 @@ namespace Horse.Messaging.Server.Network
         {
             NetworkOptionsBuilder builder = await System.Text.Json.JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content);
 
-            HorseQueue queue = _server.FindQueue(message.Target);
+            HorseQueue queue = _rider.Queue.FindQueue(message.Target);
             if (queue == null)
             {
                 if (message.WaitResponse)
@@ -341,7 +341,7 @@ namespace Horse.Messaging.Server.Network
                 return;
             }
 
-            foreach (IAdminAuthorization authorization in _server.AdminAuthorizations)
+            foreach (IAdminAuthorization authorization in _rider.Client.AdminAuthorizations.All())
             {
                 bool grant = await authorization.CanUpdateQueueOptions(client, queue, builder);
                 if (!grant)
@@ -355,7 +355,7 @@ namespace Horse.Messaging.Server.Network
 
             builder.Type = null;
             builder.ApplyToQueue(queue.Options);
-            _server.OnQueueUpdated.Trigger(queue);
+            _rider.Queue.OnQueueUpdated.Trigger(queue);
 
             //if creation successful, sends response
             if (message.WaitResponse)
@@ -367,7 +367,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task ClearMessages(MessagingClient client, HorseMessage message)
         {
-            HorseQueue queue = _server.FindQueue(message.Target);
+            HorseQueue queue = _rider.Queue.FindQueue(message.Target);
             if (queue == null)
             {
                 if (message.WaitResponse)
@@ -381,7 +381,7 @@ namespace Horse.Messaging.Server.Network
             bool clearPrio = !string.IsNullOrEmpty(prio) && prio.Equals("yes", StringComparison.InvariantCultureIgnoreCase);
             bool clearMsgs = !string.IsNullOrEmpty(msgs) && msgs.Equals("yes", StringComparison.InvariantCultureIgnoreCase);
 
-            foreach (IAdminAuthorization authorization in _server.AdminAuthorizations)
+            foreach (IAdminAuthorization authorization in _rider.Client.AdminAuthorizations.All())
             {
                 bool grant = await authorization.CanClearQueueMessages(client, queue, clearPrio, clearMsgs);
                 if (!grant)
@@ -410,7 +410,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task GetQueueList(MessagingClient client, HorseMessage message)
         {
-            foreach (IAdminAuthorization authorization in _server.AdminAuthorizations)
+            foreach (IAdminAuthorization authorization in _rider.Client.AdminAuthorizations.All())
             {
                 bool grant = await authorization.CanReceiveQueues(client);
                 if (!grant)
@@ -423,7 +423,7 @@ namespace Horse.Messaging.Server.Network
             }
 
             List<QueueInformation> list = new List<QueueInformation>();
-            foreach (HorseQueue queue in _server.Queues)
+            foreach (HorseQueue queue in _rider.Queue.Queues)
             {
                 if (queue == null)
                     continue;
@@ -463,7 +463,7 @@ namespace Horse.Messaging.Server.Network
 
             HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
             message.ContentType = KnownContentTypes.QueueList;
-            response.Serialize(list, _server.MessageContentSerializer);
+            response.Serialize(list, _rider.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
@@ -476,7 +476,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task GetInstanceList(MessagingClient client, HorseMessage message)
         {
-            foreach (IAdminAuthorization authorization in _server.AdminAuthorizations)
+            foreach (IAdminAuthorization authorization in _rider.Client.AdminAuthorizations.All())
             {
                 bool grant = await authorization.CanManageInstances(client, message);
                 if (!grant)
@@ -491,7 +491,7 @@ namespace Horse.Messaging.Server.Network
             List<NodeInformation> list = new List<NodeInformation>();
 
             //slave instances
-            List<MessagingClient> slaves = _server.NodeManager.IncomingNodes.GetAsClone();
+            List<MessagingClient> slaves = _rider.NodeManager.IncomingNodes.GetAsClone();
             foreach (MessagingClient slave in slaves)
             {
                 list.Add(new NodeInformation
@@ -506,7 +506,7 @@ namespace Horse.Messaging.Server.Network
             }
 
             //outgoing nodes
-            foreach (OutgoingNode node in _server.NodeManager.OutgoingNodes)
+            foreach (OutgoingNode node in _rider.NodeManager.OutgoingNodes)
             {
                 if (node?.Client == null)
                     continue;
@@ -526,7 +526,7 @@ namespace Horse.Messaging.Server.Network
 
             HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
             message.ContentType = KnownContentTypes.InstanceList;
-            response.Serialize(list, _server.MessageContentSerializer);
+            response.Serialize(list, _rider.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
@@ -539,7 +539,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         public async Task GetClients(MessagingClient client, HorseMessage message)
         {
-            foreach (IAdminAuthorization authorization in _server.AdminAuthorizations)
+            foreach (IAdminAuthorization authorization in _rider.Client.AdminAuthorizations.All())
             {
                 bool grant = await authorization.CanReceiveClients(client);
                 if (!grant)
@@ -557,7 +557,7 @@ namespace Horse.Messaging.Server.Network
             if (!string.IsNullOrEmpty(message.Target))
                 filter = message.Target;
 
-            foreach (MessagingClient mc in _server.Clients)
+            foreach (MessagingClient mc in _rider.Client.Clients)
             {
                 if (!string.IsNullOrEmpty(filter))
                 {
@@ -577,7 +577,7 @@ namespace Horse.Messaging.Server.Network
 
             HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
             message.ContentType = KnownContentTypes.ClientList;
-            response.Serialize(list, _server.MessageContentSerializer);
+            response.Serialize(list, _rider.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
@@ -590,7 +590,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task CreateRouter(MessagingClient client, HorseMessage message)
         {
-            IRouter found = _server.FindRouter(message.Target);
+            IRouter found = _rider.Router.FindRouter(message.Target);
             if (found != null)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
@@ -603,7 +603,7 @@ namespace Horse.Messaging.Server.Network
                 method = (RouteMethod) Convert.ToInt32(methodHeader);
 
             //check create queue access
-            foreach (IClientAuthorization authorization in _server.Authorizations)
+            foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
             {
                 bool grant = await authorization.CanCreateRouter(client, message.Target, method);
                 if (!grant)
@@ -613,7 +613,7 @@ namespace Horse.Messaging.Server.Network
                 }
             }
 
-            _server.AddRouter(message.Target, method);
+            _rider.Router.AddRouter(message.Target, method);
             await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
         }
 
@@ -622,7 +622,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task RemoveRouter(MessagingClient client, HorseMessage message)
         {
-            IRouter found = _server.FindRouter(message.Target);
+            IRouter found = _rider.Router.FindRouter(message.Target);
             if (found == null)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
@@ -630,7 +630,7 @@ namespace Horse.Messaging.Server.Network
             }
 
             //check create queue access
-            foreach (IClientAuthorization authorization in _server.Authorizations)
+            foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
             {
                 bool grant = await authorization.CanRemoveRouter(client, found);
                 if (!grant)
@@ -640,7 +640,7 @@ namespace Horse.Messaging.Server.Network
                 }
             }
 
-            _server.RemoveRouter(found);
+            _rider.Router.RemoveRouter(found);
             await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
         }
 
@@ -650,7 +650,7 @@ namespace Horse.Messaging.Server.Network
         private async Task ListRouters(MessagingClient client, HorseMessage message)
         {
             List<RouterInformation> items = new List<RouterInformation>();
-            foreach (IRouter router in _server.Routers)
+            foreach (IRouter router in _rider.Router.Routers)
             {
                 RouterInformation info = new RouterInformation
                                          {
@@ -674,7 +674,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task CreateRouterBinding(MessagingClient client, HorseMessage message)
         {
-            IRouter router = _server.FindRouter(message.Target);
+            IRouter router = _rider.Router.FindRouter(message.Target);
             if (router == null)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
@@ -684,7 +684,7 @@ namespace Horse.Messaging.Server.Network
             BindingInformation info = message.Deserialize<BindingInformation>(new NewtonsoftContentSerializer());
 
             //check create queue access
-            foreach (IClientAuthorization authorization in _server.Authorizations)
+            foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
             {
                 bool grant = await authorization.CanCreateBinding(client, router, info);
                 if (!grant)
@@ -721,7 +721,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task RemoveRouterBinding(MessagingClient client, HorseMessage message)
         {
-            IRouter router = _server.FindRouter(message.Target);
+            IRouter router = _rider.Router.FindRouter(message.Target);
             if (router == null)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
@@ -744,7 +744,7 @@ namespace Horse.Messaging.Server.Network
             }
 
             //check create queue access
-            foreach (IClientAuthorization authorization in _server.Authorizations)
+            foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
             {
                 bool grant = await authorization.CanRemoveBinding(client, binding);
                 if (!grant)
@@ -763,7 +763,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task ListRouterBindings(MessagingClient client, HorseMessage message)
         {
-            IRouter router = _server.FindRouter(message.Target);
+            IRouter router = _rider.Router.FindRouter(message.Target);
             if (router == null)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));

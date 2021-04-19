@@ -28,14 +28,14 @@ namespace Horse.Messaging.Server.Events
         /// </summary>
         private Timer _cleanup;
 
-        private readonly HorseMq _server;
+        private readonly HorseRider _server;
 
         /// <summary>
         /// Name is definition of the event.
         /// Target is the queue name of the event.
         /// Content Type is the Queue Id of the event.
         /// </summary>
-        protected EventManager(HorseMq server, string name, string target)
+        protected EventManager(HorseRider server, string name, string target)
         {
             _server = server;
             Name = name;

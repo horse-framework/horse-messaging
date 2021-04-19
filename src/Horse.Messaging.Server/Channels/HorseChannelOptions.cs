@@ -22,5 +22,18 @@ namespace Horse.Messaging.Server.Channels
         /// Acknowledge message is sent to producer, when message is received.
         /// </summary>
         public bool SendAcknowledge { get; set; }
+
+        /// <summary>
+        /// Clones options and return new copy
+        /// </summary>
+        public static HorseChannelOptions Clone(HorseChannelOptions other)
+        {
+            return new HorseChannelOptions
+            {
+                ClientLimit = other.ClientLimit,
+                SendAcknowledge = other.SendAcknowledge,
+                MessageSizeLimit = other.MessageSizeLimit
+            };
+        }
     }
 }

@@ -1,27 +1,36 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
+using Horse.Messaging.Server.Containers;
 
 namespace Horse.Messaging.Server.Cache
 {
     /// <summary>
     /// Horse cache manager
     /// </summary>
-    public class HorseCache
+    public class HorseCache : IHorseCache
     {
         #region Properties
 
         private Timer _timer;
         private bool _initialized;
-        private ICacheAuthorization[] _authorizations = new ICacheAuthorization[0];
         private readonly SortedDictionary<string, HorseCacheItem> _items = new SortedDictionary<string, HorseCacheItem>(StringComparer.InvariantCultureIgnoreCase);
+
+        /// <summary>
+        /// Cache authorizations
+        /// </summary>
+        public ArrayContainer<ICacheAuthorization> Authorizations { get; } = new ArrayContainer<ICacheAuthorization>();
 
         /// <summary>
         /// Options for cache
         /// </summary>
-        public HorseCacheOptions Options { get; }
+        public HorseCacheOptions Options { get; } = new HorseCacheOptions();
+
+        /// <summary>
+        /// Root horse rider object
+        /// </summary>
+        public HorseRider Rider { get; }
 
         #endregion
 
@@ -30,9 +39,9 @@ namespace Horse.Messaging.Server.Cache
         /// <summary>
         /// Creates new horse cacha manager
         /// </summary>
-        public HorseCache(HorseCacheOptions options)
+        public HorseCache(HorseRider rider)
         {
-            Options = options;
+            Rider = rider;
         }
 
         /// <summary>
@@ -52,36 +61,6 @@ namespace Horse.Messaging.Server.Cache
 
         #endregion
 
-        #region Authorization
-
-        /// <summary>
-        /// Gets all authorization implementations
-        /// </summary>
-        public IEnumerable<ICacheAuthorization> GetAuthorizations()
-        {
-            return _authorizations;
-        }
-
-        /// <summary>
-        /// Adds new authorization implementation
-        /// </summary>
-        public void AddAuthorization<TCacheAuthorization>() where TCacheAuthorization : ICacheAuthorization, new()
-        {
-            AddAuthorization(new TCacheAuthorization());
-        }
-
-        /// <summary>
-        /// Adds new authorization implementation
-        /// </summary>
-        public void AddAuthorization(ICacheAuthorization authorization)
-        {
-            List<ICacheAuthorization> list = _authorizations.ToList();
-            list.Add(authorization);
-            _authorizations = list.ToArray();
-        }
-
-        #endregion
-
         #region Actions
 
         /// <summary>
@@ -89,9 +68,6 @@ namespace Horse.Messaging.Server.Cache
         /// </summary>
         public CacheOperation Set(string key, MemoryStream value, TimeSpan duration)
         {
-            if (Options.KeyMaxSize > 0 && key.Length > Options.KeyMaxSize)
-                return new CacheOperation(CacheResult.KeySizeLimit, null);
-
             if (Options.MaximumKeys > 0 && _items.Count >= Options.MaximumKeys)
                 return new CacheOperation(CacheResult.KeyLimit, null);
 
@@ -108,11 +84,11 @@ namespace Horse.Messaging.Server.Cache
                 d = Options.MaximumDuration;
 
             HorseCacheItem item = new HorseCacheItem
-                                  {
-                                      Key = key,
-                                      Expiration = DateTime.UtcNow + d,
-                                      Value = new MemoryStream(value.ToArray())
-                                  };
+            {
+                Key = key,
+                Expiration = DateTime.UtcNow + d,
+                Value = new MemoryStream(value.ToArray())
+            };
 
             lock (_items)
             {

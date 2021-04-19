@@ -7,13 +7,13 @@ namespace Sample.Server
 {
     public class ClientHandler : IClientHandler
     {
-        public Task Connected(HorseMq server, MessagingClient client)
+        public Task Connected(HorseRider server, MessagingClient client)
         {
             Console.WriteLine("Client connected");
             return Task.CompletedTask;
         }
 
-        public Task Disconnected(HorseMq server, MessagingClient client)
+        public Task Disconnected(HorseRider server, MessagingClient client)
         {
             Console.WriteLine("Client dsconnected");
             return Task.CompletedTask;

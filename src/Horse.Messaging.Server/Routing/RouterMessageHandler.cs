@@ -12,30 +12,30 @@ namespace Horse.Messaging.Server.Routing
         /// <summary>
         /// Messaging Queue Server
         /// </summary>
-        private readonly HorseMq _server;
+        private readonly HorseRider _rider;
 
-        internal RouterMessageHandler(HorseMq server)
+        internal RouterMessageHandler(HorseRider rider)
         {
-            _server = server;
+            _rider = rider;
         }
 
         #endregion
 
         public async Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
         {
-            IRouter router = _server.FindRouter(message.Target);
+            IRouter router = _rider.Router.FindRouter(message.Target);
             if (router == null)
             {
                 await SendResponse(RouterPublishResult.Disabled, client, message);
 
-                foreach (IRouterMessageHandler handler in _server.RouterMessageHandlers)
+                foreach (IRouterMessageHandler handler in _rider.Router.MessageHandlers.All())
                     _ = handler.OnRouterNotFound(client, message);
 
                 return;
             }
 
             RouterPublishResult result = await router.Publish(client, message);
-            foreach (IRouterMessageHandler handler in _server.RouterMessageHandlers)
+            foreach (IRouterMessageHandler handler in _rider.Router.MessageHandlers.All())
             {
                 if (result == RouterPublishResult.OkWillNotRespond || result == RouterPublishResult.OkAndWillBeRespond)
                     _ = handler.OnRouted(client, router, message);

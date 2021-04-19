@@ -30,11 +30,6 @@ namespace Horse.Messaging.Server.Cache
         public int MaximumKeys { get; set; }
 
         /// <summary>
-        /// Maximum key length
-        /// </summary>
-        public int KeyMaxSize { get; set; }
-
-        /// <summary>
         /// Maximum value size in bytes
         /// </summary>
         public int ValueMaxSize { get; set; }

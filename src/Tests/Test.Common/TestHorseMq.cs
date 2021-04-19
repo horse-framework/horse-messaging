@@ -12,7 +12,7 @@ namespace Test.Common
 {
     public class TestHorseMq
     {
-        public HorseMq Server { get; private set; }
+        public HorseRider Server { get; private set; }
 
         public int OnQueueCreated { get; set; }
         public int OnQueueRemoved { get; set; }
@@ -44,14 +44,14 @@ namespace Test.Common
 
         public async Task Initialize()
         {
-            HorseMqOptions horseMqOptions = new HorseMqOptions();
-            horseMqOptions.AutoQueueCreation = true;
-            horseMqOptions.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
-            horseMqOptions.MessageTimeout = TimeSpan.FromSeconds(12);
-            horseMqOptions.Status = QueueStatus.Broadcast;
+            HorseRiderOptions horseRiderOptions = new HorseRiderOptions();
+            horseRiderOptions.AutoQueueCreation = true;
+            horseRiderOptions.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
+            horseRiderOptions.MessageTimeout = TimeSpan.FromSeconds(12);
+            horseRiderOptions.Status = QueueStatus.Broadcast;
 
-            Server = HorseMqBuilder.Create()
-                                   .AddOptions(horseMqOptions)
+            Server = HorseRiderBuilder.Create()
+                                   .AddOptions(horseRiderOptions)
                                    .AddQueueEventHandler(new TestQueueHandler(this))
                                    .UseDeliveryHandler(d => Task.FromResult<IMessageDeliveryHandler>(new TestDeliveryHandler(this)))
                                    .AddClientHandler(new TestClientHandler(this))
@@ -81,7 +81,7 @@ namespace Test.Common
                     serverOptions.RequestTimeout = requestTimeout;
 
                     HorseServer server = new HorseServer(serverOptions);
-                    server.UseHorseMq(Server);
+                    server.UseRider(Server);
                     server.Start();
                     Port = port;
                     return port;

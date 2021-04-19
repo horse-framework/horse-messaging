@@ -86,11 +86,11 @@ namespace Test.Persistency
                 return handler;
             };
 
-            HorseMq mq = server.UseHorseMq(cfg => cfg
+            HorseRider rider = server.UseRider(cfg => cfg
                                                   .AddPersistentQueues(q => q.KeepLastBackup())
                                                   .UseDeliveryHandler(fac));
 
-            HorseQueue queue = await mq.CreateQueue("reload-test",
+            HorseQueue queue = await rider.CreateQueue("reload-test",
                                                     o => o.Status = QueueStatus.Push);
 
             HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "reload-test");
@@ -104,12 +104,12 @@ namespace Test.Persistency
             await handler.RedeliveryService.Close();
             ConfigurationFactory.Destroy();
 
-            mq = server.UseHorseMq(cfg => cfg
+            rider = server.UseRider(cfg => cfg
                                           .AddPersistentQueues(q => q.KeepLastBackup())
                                           .UseDeliveryHandler(fac));
 
-            await mq.LoadPersistentQueues();
-            HorseQueue queue2 = mq.FindQueue("reload-test");
+            await rider.LoadPersistentQueues();
+            HorseQueue queue2 = rider.FindQueue("reload-test");
             Assert.NotNull(queue2);
             Assert.NotEmpty(queue2.Messages);
             QueueMessage loadedMsg = queue2.Messages.FirstOrDefault();

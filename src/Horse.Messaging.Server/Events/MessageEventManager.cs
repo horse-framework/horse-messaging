@@ -12,7 +12,7 @@ namespace Horse.Messaging.Server.Events
         /// <summary>
         /// Creates new message event manager
         /// </summary>
-        public MessageEventManager(HorseMq server, string eventName, HorseQueue queue)
+        public MessageEventManager(HorseRider server, string eventName, HorseQueue queue)
             : base(server, eventName, queue.Name)
         {
         }

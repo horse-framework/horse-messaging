@@ -13,11 +13,11 @@ namespace Horse.Messaging.Server.Direct
         /// <summary>
         /// Messaging Queue Server
         /// </summary>
-        private readonly HorseMq _server;
+        private readonly HorseRider _rider;
 
-        public ResponseMessageHandler(HorseMq server)
+        public ResponseMessageHandler(HorseRider rider)
         {
-            _server = server;
+            _rider = rider;
         }
 
         #endregion
@@ -29,7 +29,7 @@ namespace Horse.Messaging.Server.Direct
             if (message.HighPriority)
             {
                 //target should be client
-                MessagingClient target = _server.FindClient(message.Target);
+                MessagingClient target = _rider.Client.FindClient(message.Target);
                 if (target != null)
                 {
                     await target.SendAsync(message);
@@ -38,7 +38,7 @@ namespace Horse.Messaging.Server.Direct
             }
 
             //find queue
-            HorseQueue queue = _server.FindQueue(message.Target);
+            HorseQueue queue = _rider.Queue.FindQueue(message.Target);
             if (queue != null)
             {
                 await queue.AcknowledgeDelivered(sender, message);
@@ -49,7 +49,7 @@ namespace Horse.Messaging.Server.Direct
             if (!message.HighPriority)
             {
                 //target should be client
-                MessagingClient target = _server.FindClient(message.Target);
+                MessagingClient target = _rider.Client.FindClient(message.Target);
                 if (target != null)
                     await target.SendAsync(message);
             }

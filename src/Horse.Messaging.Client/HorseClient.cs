@@ -14,6 +14,11 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client
 {
+    /// <inheritdoc />
+    public class HorseClient<TIdentifier> : HorseClient
+    {
+    }
+
     /// <summary>
     /// HMQ Client class
     /// Can be used directly with event subscriptions
@@ -31,10 +36,10 @@ namespace Horse.Messaging.Client
         public object Tag { get; set; }
 
         public TimeSpan ReconnectWait { get; set; }
-        
+
         public TimeSpan Lifetime { get; set; }
 
-        
+
         /// <summary>
         /// If true, automatically subscribes all implemented IQueueConsumer queues
         /// </summary>
@@ -612,25 +617,8 @@ namespace Horse.Messaging.Client
         {
             throw new NotImplementedException();
         }
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
+
         /*
          *
 

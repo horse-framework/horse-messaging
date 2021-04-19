@@ -5,9 +5,9 @@ using Horse.Messaging.Protocol;
 namespace Horse.Messaging.Client.Channels
 {
     /// <summary>
-    /// Consumer for horse channel
+    /// Subscriber for horse channel
     /// </summary>
-    public interface IChannelConsumer<in TModel>
+    public interface IChannelSubscriber<in TModel>
     {
         /// <summary>
         /// Triggered when a message is received from a channel

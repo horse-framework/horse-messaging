@@ -44,7 +44,7 @@ namespace Horse.Messaging.Server.Queues.States
             }
             catch (Exception e)
             {
-                _queue.Server.SendError("PUSH", e, $"QueueName:{_queue.Name}, State:Push");
+                _queue.Rider.SendError("PUSH", e, $"QueueName:{_queue.Name}, State:Push");
                 return PushResult.Error;
             }
             finally
@@ -126,7 +126,7 @@ namespace Horse.Messaging.Server.Queues.States
                     _queue.Info.AddDelivery();
                     Decision d = await _queue.DeliveryHandler.ConsumerReceived(_queue, delivery, client.Client);
                     
-                    foreach (IQueueMessageEventHandler handler in _queue.Server.QueueMessageHandlers)
+                    foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                         _ = handler.OnConsumed(_queue, delivery, client.Client);
                     
                     final = HorseQueue.CreateFinalDecision(final, d);

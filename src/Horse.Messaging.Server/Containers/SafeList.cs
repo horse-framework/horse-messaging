@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Horse.Messaging.Server.Helpers
+namespace Horse.Messaging.Server.Containers
 {
     /// <summary>
     /// Thread safe list

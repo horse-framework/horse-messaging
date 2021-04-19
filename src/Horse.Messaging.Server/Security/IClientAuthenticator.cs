@@ -12,6 +12,6 @@ namespace Horse.Messaging.Server.Security
         /// Checks if a client can connect to the server
         /// It should return true if allowed.
         /// </summary>
-        Task<bool> Authenticate(HorseMq server, MessagingClient client);
+        Task<bool> Authenticate(HorseRider server, MessagingClient client);
     }
 }

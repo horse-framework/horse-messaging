@@ -19,7 +19,7 @@ namespace Sample.Cache
     {
         static async Task Main(string[] args)
         {
-            HorseMq mq = StartServer();
+            HorseRider rider = StartServer();
 
             HmqStickyConnector producer = new HmqStickyConnector(TimeSpan.FromSeconds(2));
             producer.AddHost("horse://localhost:26223");
@@ -84,17 +84,17 @@ namespace Sample.Cache
             Console.ReadLine();
         }
 
-        private static HorseMq StartServer()
+        private static HorseRider StartServer()
         {
-            HorseMq mq = HorseMqBuilder.Create()
+            HorseRider rider = HorseRiderBuilder.Create()
                                        .AddOptions(o => o.Status = QueueStatus.Cache)
                                        .UseAckDeliveryHandler(AcknowledgeWhen.AfterReceived, PutBackDecision.No)
                                        .Build();
 
             HorseServer server = new HorseServer();
-            server.UseHorseMq(mq);
+            server.UseRider(rider);
             server.Start(26223);
-            return mq;
+            return rider;
         }
     }
 }

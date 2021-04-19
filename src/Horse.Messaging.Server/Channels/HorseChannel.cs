@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
-using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Queues;
 
 namespace Horse.Messaging.Server.Channels
@@ -26,9 +26,9 @@ namespace Horse.Messaging.Server.Channels
         public string Topic { get; set; }
 
         /// <summary>
-        /// Server of the queue
+        /// Root horse rider
         /// </summary>
-        public HorseMq Server { get; }
+        public HorseRider Rider { get; }
 
         /// <summary>
         /// Channel status
@@ -62,13 +62,23 @@ namespace Horse.Messaging.Server.Channels
 
         #region Constructors - Destroy
 
-        internal HorseChannel(HorseMq server, string name, HorseChannelOptions options)
+        internal HorseChannel(HorseRider rider, string name, HorseChannelOptions options)
         {
-            Server = server;
+            Rider = rider;
             Name = name;
             Options = options;
             Status = ChannelStatus.Running;
             _clients = new SafeList<ChannelClient>(256);
+        }
+
+        internal void Destroy()
+        {
+            
+        }
+
+        internal void UpdateOptionsByMessage(HorseMessage message)
+        {
+            //todo: update options
         }
 
         #endregion
@@ -129,10 +139,9 @@ namespace Horse.Messaging.Server.Channels
             }
             catch (Exception ex)
             {
-                Server.SendError("PUSH", ex, $"ChannelName:{Name}");
+                Rider.SendError("PUSH", ex, $"ChannelName:{Name}");
+                return PushResult.Error;
             }
-
-            return PushResult.Success;
         }
 
         #endregion
@@ -153,9 +162,9 @@ namespace Horse.Messaging.Server.Channels
         /// </summary>
         public async Task<SubscriptionResult> AddClient(MessagingClient client)
         {
-            foreach (IChannelAuthenticator authenticator in Server.ChannelAuthenticators)
+            foreach (IChannelAuthorization authenticator in Rider.Channel.Authenticators.All())
             {
-                bool allowed = await authenticator.Authenticate(this, client);
+                bool allowed = await authenticator.CanSubscribe(this, client);
                 if (!allowed)
                     return SubscriptionResult.Unauthorized;
             }
@@ -167,8 +176,8 @@ namespace Horse.Messaging.Server.Channels
             _clients.Add(cc);
             client.AddSubscription(cc);
 
-            foreach (IChannelEventHandler handler in Server.ChannelEventHandlers)
-                _ = handler.OnSusbcribe(this, client);
+            foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
+                _ = handler.OnSubscribe(this, client);
 
             //todo: OnConsumerSubscribed.Trigger(cc);
             return SubscriptionResult.Success;
@@ -182,8 +191,8 @@ namespace Horse.Messaging.Server.Channels
             _clients.Remove(client);
             client.Client.RemoveSubscription(client);
 
-            foreach (IChannelEventHandler handler in Server.ChannelEventHandlers)
-                _ = handler.OnUnsusbcribe(this, client.Client);
+            foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
+                _ = handler.OnUnsubscribe(this, client.Client);
 
             //todo: OnConsumerUnsubscribed.Trigger(client);
         }
@@ -195,8 +204,8 @@ namespace Horse.Messaging.Server.Channels
         {
             _clients.Remove(client);
 
-            foreach (IChannelEventHandler handler in Server.ChannelEventHandlers)
-                _ = handler.OnUnsusbcribe(this, client.Client);
+            foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
+                _ = handler.OnUnsubscribe(this, client.Client);
 
             //todo: OnConsumerUnsubscribed.Trigger(client);
         }
@@ -213,8 +222,8 @@ namespace Horse.Messaging.Server.Channels
 
             client.RemoveSubscription(cc);
 
-            foreach (IChannelEventHandler handler in Server.ChannelEventHandlers)
-                _ = handler.OnUnsusbcribe(this, client);
+            foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
+                _ = handler.OnUnsubscribe(this, client);
 
             return true;
         }

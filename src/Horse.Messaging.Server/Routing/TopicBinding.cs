@@ -70,7 +70,7 @@ namespace Horse.Messaging.Server.Routing
             }
             catch (Exception e)
             {
-                Router.Server.SendError("BINDING_SEND", e, $"Type:Topic, Binding:{Name}");
+                Router.Rider.SendError("BINDING_SEND", e, $"Type:Topic, Binding:{Name}");
                 return Task.FromResult(false);
             }
         }
@@ -81,8 +81,8 @@ namespace Horse.Messaging.Server.Routing
             foreach (HorseQueue queue in _queues)
             {
                 string messageId = sent || Interaction == BindingInteraction.None
-                                       ? message.MessageId
-                                       : _idGenerator.Create();
+                    ? message.MessageId
+                    : _idGenerator.Create();
 
                 if (!sent)
                     sent = true;
@@ -101,21 +101,23 @@ namespace Horse.Messaging.Server.Routing
             int i = _roundRobinIndex;
 
             if (i >= _queues.Length)
-            {
                 _roundRobinIndex = 0;
-                i = 0;
-            }
 
             if (_queues.Length == 0)
                 return false;
 
-            HorseQueue queue = Router.Server.FindQueue(message.Target);
+            HorseQueue queue = Router.Rider.Queue.FindQueue(message.Target);
             if (queue == null)
             {
-                if (!Router.Server.Options.AutoQueueCreation)
+                if (!Router.Rider.Options.AutoQueueCreation)
                     return false;
 
-                queue = await Router.Server.CreateQueue(message.Target, Router.Server.Options, message, Router.Server.DeliveryHandlerFactory, true, true);
+                queue = await Router.Rider.Queue.CreateQueue(message.Target,
+                                                             Router.Rider.Queue.Options,
+                                                             message,
+                                                             Router.Rider.Queue.DeliveryHandlerFactory,
+                                                             true,
+                                                             true);
             }
 
             QueueMessage queueMessage = new QueueMessage(message);
@@ -128,13 +130,18 @@ namespace Horse.Messaging.Server.Routing
             if (_queues.Length < 1)
                 return false;
 
-            HorseQueue queue = Router.Server.FindQueue(message.Target);
+            HorseQueue queue = Router.Rider.Queue.FindQueue(message.Target);
             if (queue == null)
             {
-                if (!Router.Server.Options.AutoQueueCreation)
+                if (!Router.Rider.Options.AutoQueueCreation)
                     return false;
 
-                queue = await Router.Server.CreateQueue(message.Target, Router.Server.Options, message, Router.Server.DeliveryHandlerFactory, true, true);
+                queue = await Router.Rider.Queue.CreateQueue(message.Target,
+                                                             Router.Rider.Queue.Options,
+                                                             message,
+                                                             Router.Rider.Queue.DeliveryHandlerFactory,
+                                                             true,
+                                                             true);
             }
 
             QueueMessage queueMessage = new QueueMessage(message);
@@ -145,7 +152,7 @@ namespace Horse.Messaging.Server.Routing
         private void RefreshQueueCache()
         {
             _queueUpdateTime = DateTime.UtcNow;
-            _queues = Router.Server.Queues.Where(x => x.Topic != null && Filter.CheckMatch(x.Topic, Target)).ToArray();
+            _queues = Router.Rider.Queue.Queues.Where(x => x.Topic != null && Filter.CheckMatch(x.Topic, Target)).ToArray();
         }
     }
 }

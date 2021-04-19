@@ -6,6 +6,11 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Direct
 {
+    /// <inheritdoc />
+    public interface IHorseDirectBus<TIdentifier> : IHorseDirectBus
+    {
+    }
+    
     /// <summary>
     /// Implementation for direct messages and requests
     /// </summary>

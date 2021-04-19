@@ -9,9 +9,9 @@ namespace Horse.Messaging.Server.Network
         /// <summary>
         /// Messaging Queue Server
         /// </summary>
-        private readonly HorseMq _server;
+        private readonly HorseRider _server;
 
-        public NodeMessageHandler(HorseMq server)
+        public NodeMessageHandler(HorseRider server)
         {
             _server = server;
         }

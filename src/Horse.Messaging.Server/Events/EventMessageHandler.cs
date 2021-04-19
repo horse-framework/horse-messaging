@@ -1,11 +1,11 @@
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
-using Horse.Messaging.Server.Events;
+using Horse.Messaging.Server.Network;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Security;
 
-namespace Horse.Messaging.Server.Network
+namespace Horse.Messaging.Server.Events
 {
     internal class EventMessageHandler : INetworkMessageHandler
     {
@@ -14,11 +14,11 @@ namespace Horse.Messaging.Server.Network
         /// <summary>
         /// Messaging Queue Server
         /// </summary>
-        private readonly HorseMq _server;
+        private readonly HorseRider _rider;
 
-        public EventMessageHandler(HorseMq server)
+        public EventMessageHandler(HorseRider rider)
         {
-            _server = server;
+            _rider = rider;
         }
 
         #endregion
@@ -37,10 +37,10 @@ namespace Horse.Messaging.Server.Network
             string queueName = message.FindHeader(HorseHeaders.QUEUE_NAME);
             bool subscribe = message.ContentType == 1;
 
-            HorseQueue queue = !string.IsNullOrEmpty(queueName) ? _server.FindQueue(queueName) : null;
+            HorseQueue queue = !string.IsNullOrEmpty(queueName) ? _rider.Queue.FindQueue(queueName) : null;
             if (subscribe)
             {
-                foreach (IClientAuthorization authorization in _server.Authorizations)
+                foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
                 {
                     if (!authorization.CanSubscribeEvent(client, queue))
                         return SendResponse(client, message, false);
@@ -62,17 +62,17 @@ namespace Horse.Messaging.Server.Network
 
                 case EventNames.ClientConnected:
                     if (subscribe)
-                        _server.OnClientConnected.Subscribe(client);
+                        _rider.Client.OnClientConnected.Subscribe(client);
                     else
-                        _server.OnClientConnected.Unsubscribe(client);
+                        _rider.Client.OnClientConnected.Unsubscribe(client);
 
                     return SendResponse(client, message, true);
 
                 case EventNames.ClientDisconnected:
                     if (subscribe)
-                        _server.OnClientDisconnected.Subscribe(client);
+                        _rider.Client.OnClientDisconnected.Subscribe(client);
                     else
-                        _server.OnClientDisconnected.Unsubscribe(client);
+                        _rider.Client.OnClientDisconnected.Unsubscribe(client);
 
                     return SendResponse(client, message, true);
 
@@ -100,25 +100,25 @@ namespace Horse.Messaging.Server.Network
 
                 case EventNames.QueueCreated:
                     if (subscribe)
-                        _server.OnQueueCreated.Subscribe(client);
+                        _rider.Queue.OnQueueCreated.Subscribe(client);
                     else
-                        _server.OnQueueCreated.Unsubscribe(client);
+                        _rider.Queue.OnQueueCreated.Unsubscribe(client);
 
                     return SendResponse(client, message, true);
 
                 case EventNames.QueueUpdated:
                     if (subscribe)
-                        _server.OnQueueUpdated.Subscribe(client);
+                        _rider.Queue.OnQueueUpdated.Subscribe(client);
                     else
-                        _server.OnQueueUpdated.Unsubscribe(client);
+                        _rider.Queue.OnQueueUpdated.Unsubscribe(client);
 
                     return SendResponse(client, message, true);
 
                 case EventNames.QueueRemoved:
                     if (subscribe)
-                        _server.OnQueueRemoved.Subscribe(client);
+                        _rider.Queue.OnQueueRemoved.Subscribe(client);
                     else
-                        _server.OnQueueRemoved.Unsubscribe(client);
+                        _rider.Queue.OnQueueRemoved.Unsubscribe(client);
 
                     return SendResponse(client, message, true);
             }

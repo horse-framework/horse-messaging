@@ -84,7 +84,7 @@ namespace Horse.Messaging.Server.Routing
             }
             catch (Exception e)
             {
-                Router.Server.SendError("BINDING_SEND", e, $"Type:Http, Binding:{Name}");
+                Router.Rider.SendError("BINDING_SEND", e, $"Type:Http, Binding:{Name}");
                 return Task.FromResult(false);
             }
         }

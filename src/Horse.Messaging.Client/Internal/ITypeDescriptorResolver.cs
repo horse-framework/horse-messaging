@@ -2,6 +2,10 @@ using System;
 
 namespace Horse.Messaging.Client.Internal
 {
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <typeparam name="TDescriptor"></typeparam>
     public interface ITypeDescriptorResolver<TDescriptor>
     {
         /// <summary>

@@ -16,11 +16,11 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Messaging Queue Server
         /// </summary>
-        private readonly HorseMq _server;
+        private readonly HorseRider _rider;
 
-        public PullRequestMessageHandler(HorseMq server)
+        public PullRequestMessageHandler(HorseRider rider)
         {
-            _server = server;
+            _rider = rider;
         }
 
         #endregion
@@ -29,13 +29,13 @@ namespace Horse.Messaging.Server.Queues
         {
             try
             {
-                HorseQueue queue = _server.FindQueue(message.Target);
+                HorseQueue queue = _rider.Queue.FindQueue(message.Target);
 
                 //if auto creation active, try to create queue
-                if (queue == null && _server.Options.AutoQueueCreation)
+                if (queue == null && _rider.Options.AutoQueueCreation)
                 {
-                    QueueOptions options = QueueOptions.CloneFrom(_server.Options);
-                    queue = await _server.CreateQueue(message.Target, options, message, _server.DeliveryHandlerFactory, true, true);
+                    QueueOptions options = QueueOptions.CloneFrom(_rider.Queue.Options);
+                    queue = await _rider.Queue.CreateQueue(message.Target, options, message, _rider.Queue.DeliveryHandlerFactory, true, true);
                 }
 
                 if (queue == null)
@@ -50,7 +50,7 @@ namespace Horse.Messaging.Server.Queues
             }
             catch (Exception e)
             {
-                _server.SendError("PULL_REQUEST", e, $"QueueName:{message.Target}");
+                _rider.SendError("PULL_REQUEST", e, $"QueueName:{message.Target}");
             }
         }
 
@@ -80,7 +80,7 @@ namespace Horse.Messaging.Server.Queues
             }
 
             //check authorization
-            foreach (IClientAuthorization authorization in _server.Authorizations)
+            foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
             {
                 bool grant = await authorization.CanPullFromQueue(queueClient, queue);
                 if (!grant)

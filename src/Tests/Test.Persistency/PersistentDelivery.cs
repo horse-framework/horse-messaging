@@ -19,7 +19,7 @@ namespace Test.Persistency
             ConfigurationFactory.Destroy();
             PersistentDeliveryHandler handler = null;
             HorseServer server = new HorseServer();
-            HorseMq mq = server.UseHorseMq(cfg => cfg
+            HorseRider rider = server.UseRider(cfg => cfg
                                                   .AddPersistentQueues(q => q.KeepLastBackup())
                                                   .UseDeliveryHandler(async builder =>
                                                   {
@@ -40,7 +40,7 @@ namespace Test.Persistency
                                                       return handler;
                                                   }));
 
-            HorseQueue queue = await mq.CreateQueue("test");
+            HorseQueue queue = await rider.CreateQueue("test");
 
             HorseMessage message = new HorseMessage(MessageType.QueueMessage, "test");
             message.SetMessageId("id");

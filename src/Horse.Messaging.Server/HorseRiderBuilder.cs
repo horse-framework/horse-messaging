@@ -7,30 +7,30 @@ namespace Horse.Messaging.Server
     /// <summary>
     /// Horse MQ Builder
     /// </summary>
-    public class HorseMqBuilder
+    public class HorseRiderBuilder
     {
-        internal HorseMq Server { get; set; }
+        internal HorseRider Rider { get; set; }
 
-        internal HorseMqBuilder()
+        internal HorseRiderBuilder()
         {
         }
 
         /// <summary>
         /// Creates new Horse MQ Builder
         /// </summary>
-        public static HorseMqBuilder Create()
+        public static HorseRiderBuilder Create()
         {
-            HorseMqBuilder builder = new HorseMqBuilder();
-            builder.Server = new HorseMq();
+            HorseRiderBuilder builder = new HorseRiderBuilder();
+            builder.Rider = new HorseRider();
             return builder;
         }
 
         /// <summary>
         /// Gets Horse MQ Object
         /// </summary>
-        public HorseMq Build()
+        public HorseRider Build()
         {
-            return Server;
+            return Rider;
         }
     }
 }

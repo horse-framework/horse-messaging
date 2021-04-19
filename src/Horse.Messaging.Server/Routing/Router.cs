@@ -19,7 +19,7 @@ namespace Horse.Messaging.Server.Routing
         /// <summary>
         /// The server that router is defined
         /// </summary>
-        public HorseMq Server { get; }
+        public HorseRider Rider { get; }
 
         /// <summary>
         /// Route name.
@@ -55,9 +55,9 @@ namespace Horse.Messaging.Server.Routing
         /// <summary>
         /// Creates new router on the server
         /// </summary>
-        public Router(HorseMq server, string name, RouteMethod method)
+        public Router(HorseRider rider, string name, RouteMethod method)
         {
-            Server = server;
+            Rider = rider;
             IsEnabled = true;
             Name = name;
             Method = method;
@@ -92,7 +92,7 @@ namespace Horse.Messaging.Server.Routing
             }
             catch (Exception e)
             {
-                Server.SendError("ADD_ROUTER_BINDING", e, $"Router:{Name}, Binding:{binding?.Name}");
+                Rider.SendError("ADD_ROUTER_BINDING", e, $"Router:{Name}, Binding:{binding?.Name}");
                 return false;
             }
         }
@@ -119,7 +119,7 @@ namespace Horse.Messaging.Server.Routing
             }
             catch (Exception e)
             {
-                Server.SendError("REMOVE_ROUTER_BINDING", e, $"Router:{Name}, Binding:{bindingName}");
+                Rider.SendError("REMOVE_ROUTER_BINDING", e, $"Router:{Name}, Binding:{bindingName}");
             }
         }
 
@@ -142,7 +142,7 @@ namespace Horse.Messaging.Server.Routing
             }
             catch (Exception e)
             {
-                Server.SendError("REMOVE_ROUTER_BINDING", e, $"Router:{Name}, Binding:{binding?.Name}");
+                Rider.SendError("REMOVE_ROUTER_BINDING", e, $"Router:{Name}, Binding:{binding?.Name}");
             }
         }
 
@@ -180,7 +180,7 @@ namespace Horse.Messaging.Server.Routing
             }
             catch (Exception e)
             {
-                Server.SendError("PUBLISH", e, $"Router:{Name}, Binding:{Name}");
+                Rider.SendError("PUBLISH", e, $"Router:{Name}, Binding:{Name}");
                 return Task.FromResult(RouterPublishResult.NoBindings);
             }
         }

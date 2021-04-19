@@ -166,5 +166,31 @@ namespace Horse.Messaging.Protocol
         /// "674" Purges all cache keys 
         /// </summary>
         public const ushort PurgeCache = 674;
+
+        /// <summary>
+        /// "681" Pushes a message to channel
+        /// </summary>
+        public const ushort ChannelPush = 681;
+        
+        /// <summary>
+        /// "682" Creates new channel
+        /// </summary>
+        public const ushort ChannelCreate = 682;
+        
+        /// <summary>
+        /// "683" Updates a channel options
+        /// </summary>
+        public const ushort ChannelUpdate = 683;
+        
+        /// <summary>
+        /// "684" Removes a channel
+        /// </summary>
+        public const ushort ChannelRemove = 684;
+        
+        /// <summary>
+        /// "685" Gets channel list
+        /// </summary>
+        public const ushort ChannelList = 685;
+        
     }
 }

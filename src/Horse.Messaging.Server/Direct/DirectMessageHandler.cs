@@ -3,9 +3,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Network;
 using Horse.Messaging.Server.Security;
 
-namespace Horse.Messaging.Server.Network
+namespace Horse.Messaging.Server.Direct
 {
     internal class DirectMessageHandler : INetworkMessageHandler
     {
@@ -14,11 +15,11 @@ namespace Horse.Messaging.Server.Network
         /// <summary>
         /// Messaging Queue Server
         /// </summary>
-        private readonly HorseMq _server;
+        private readonly HorseRider _rider;
 
-        public DirectMessageHandler(HorseMq server)
+        public DirectMessageHandler(HorseRider rider)
         {
-            _server = server;
+            _rider = rider;
         }
 
         #endregion
@@ -30,7 +31,7 @@ namespace Horse.Messaging.Server.Network
 
             if (message.Target.StartsWith("@name:"))
             {
-                List<MessagingClient> receivers = _server.FindClientByName(message.Target.Substring(6));
+                List<MessagingClient> receivers = _rider.Client.FindClientByName(message.Target.Substring(6));
                 if (receivers.Count > 0)
                 {
                     if (message.HighPriority && receivers.Count > 1)
@@ -46,12 +47,12 @@ namespace Horse.Messaging.Server.Network
                     await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
 
                 if (receivers.Count == 0)
-                    foreach (IDirectMessageHandler handler in _server.DirectMessageHandlers)
+                    foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
                         _ = handler.OnNotFound(client, message);
             }
             else if (message.Target.StartsWith("@type:"))
             {
-                List<MessagingClient> receivers = _server.FindClientByType(message.Target.Substring(6));
+                List<MessagingClient> receivers = _rider.Client.FindClientByType(message.Target.Substring(6));
                 if (receivers.Count > 0)
                 {
                     if (message.HighPriority)
@@ -67,7 +68,7 @@ namespace Horse.Messaging.Server.Network
                     await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
 
                 if (receivers.Count == 0)
-                    foreach (IDirectMessageHandler handler in _server.DirectMessageHandlers)
+                    foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
                         _ = handler.OnNotFound(client, message);
             }
             else
@@ -89,7 +90,7 @@ namespace Horse.Messaging.Server.Network
             foreach (MessagingClient receiver in receivers)
             {
                 //check sending message authority
-                foreach (IClientAuthorization authorization in _server.Authorizations)
+                foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
                 {
                     bool grant = await authorization.CanDirectMessage(sender, message, receiver);
                     if (!grant)
@@ -103,7 +104,7 @@ namespace Horse.Messaging.Server.Network
                 await receiver.SendAsync(message);
             }
 
-            foreach (IDirectMessageHandler handler in _server.DirectMessageHandlers)
+            foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
                 _ = handler.OnDirect(sender, message, receivers);
         }
 
@@ -113,19 +114,19 @@ namespace Horse.Messaging.Server.Network
         private async Task ProcessSingleReceiverClientMessage(MessagingClient client, HorseMessage message)
         {
             //find the receiver
-            MessagingClient other = _server.FindClient(message.Target);
+            MessagingClient other = _rider.Client.FindClient(message.Target);
             if (other == null)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
 
-                foreach (IDirectMessageHandler handler in _server.DirectMessageHandlers)
+                foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
                     _ = handler.OnNotFound(client, message);
 
                 return;
             }
 
             //check sending message authority
-            foreach (IClientAuthorization authorization in _server.Authorizations)
+            foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
             {
                 bool grant = await authorization.CanDirectMessage(client, message, other);
                 if (!grant)
@@ -138,7 +139,7 @@ namespace Horse.Messaging.Server.Network
             //send the message
             await other.SendAsync(message);
 
-            foreach (IDirectMessageHandler handler in _server.DirectMessageHandlers)
+            foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
             {
                 if (message.Type == MessageType.Response)
                     _ = handler.OnResponse(client, message, other);

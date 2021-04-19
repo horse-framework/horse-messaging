@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Options;
@@ -41,7 +42,7 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Server of the queue
         /// </summary>
-        public HorseMq Server { get; }
+        public HorseRider Rider { get; }
 
         /// <summary>
         /// Queue status
@@ -190,18 +191,18 @@ namespace Horse.Messaging.Server.Queues
 
         #region Constructors - Destroy
 
-        internal HorseQueue(HorseMq server, string name, QueueOptions options)
+        internal HorseQueue(HorseRider rider, string name, QueueOptions options)
         {
-            Server = server;
+            Rider = rider;
             Name = name;
             Options = options;
             Type = options.Type;
             _clients = new SafeList<QueueClient>(256);
             Status = QueueStatus.NotInitialized;
 
-            OnConsumerSubscribed = new SubscriptionEventManager(Server, EventNames.Subscribe, this);
-            OnConsumerUnsubscribed = new SubscriptionEventManager(Server, EventNames.Unsubscribe, this);
-            OnMessageProduced = new MessageEventManager(Server, EventNames.MessageProduced, this);
+            OnConsumerSubscribed = new SubscriptionEventManager(Rider, EventNames.Subscribe, this);
+            OnConsumerUnsubscribed = new SubscriptionEventManager(Rider, EventNames.Unsubscribe, this);
+            OnMessageProduced = new MessageEventManager(Rider, EventNames.MessageProduced, this);
         }
 
         /// <summary>
@@ -311,19 +312,19 @@ namespace Horse.Messaging.Server.Queues
             {
                 case QueueDestroy.NoConsumers:
                     if (_clients.Count == 0)
-                        await Server.RemoveQueue(this);
+                        await Rider.Queue.RemoveQueue(this);
 
                     break;
 
                 case QueueDestroy.NoMessages:
                     if (MessagesList.Count == 0 && PriorityMessagesList.Count == 0 && (TimeKeeper == null || !TimeKeeper.HasPendingDelivery()))
-                        await Server.RemoveQueue(this);
+                        await Rider.Queue.RemoveQueue(this);
 
                     break;
 
                 case QueueDestroy.Empty:
                     if (_clients.Count == 0 && MessagesList.Count == 0 && PriorityMessagesList.Count == 0 && (TimeKeeper == null || !TimeKeeper.HasPendingDelivery()))
-                        await Server.RemoveQueue(this);
+                        await Rider.Queue.RemoveQueue(this);
 
                     break;
             }
@@ -618,20 +619,20 @@ namespace Horse.Messaging.Server.Queues
                     UpdateOptionsByMessage(message.Message);
                     DeliveryHandlerBuilder handlerBuilder = new DeliveryHandlerBuilder
                                                             {
-                                                                Server = Server,
+                                                                Server = Rider,
                                                                 Queue = this,
                                                                 Headers = message.Message.Headers,
                                                                 DeliveryHandlerHeader = message.Message.FindHeader(HorseHeaders.DELIVERY_HANDLER)
                                                             };
 
-                    IMessageDeliveryHandler deliveryHandler = await Server.DeliveryHandlerFactory(handlerBuilder);
+                    IMessageDeliveryHandler deliveryHandler = await Rider.Queue.DeliveryHandlerFactory(handlerBuilder);
                     await InitializeQueue(deliveryHandler);
 
                     handlerBuilder.TriggerAfterCompleted();
                 }
                 catch (Exception e)
                 {
-                    Server.SendError("INITIALIZE_IN_PUSH", e, $"QueueName:{Name}");
+                    Rider.SendError("INITIALIZE_IN_PUSH", e, $"QueueName:{Name}");
                     throw;
                 }
             }
@@ -663,7 +664,7 @@ namespace Horse.Messaging.Server.Queues
 
             //if message doesn't have message id, create new message id for the message
             if (string.IsNullOrEmpty(message.Message.MessageId))
-                message.Message.SetMessageId(Server.MessageIdGenerator.Create());
+                message.Message.SetMessageId(Rider.MessageIdGenerator.Create());
 
             //if we have an option maximum wait duration for message, set it after message joined to the queue.
             //time keeper will check this value and if message time is up, it will remove message from the queue.
@@ -679,7 +680,7 @@ namespace Horse.Messaging.Server.Queues
 
                 bool allow = await ApplyDecision(decision, message);
 
-                foreach (IQueueMessageEventHandler handler in Server.QueueMessageHandlers)
+                foreach (IQueueMessageEventHandler handler in Rider.Queue.MessageHandlers.All())
                     _ = handler.OnProduced(this, message, sender);
 
                 if (!allow)
@@ -702,7 +703,7 @@ namespace Horse.Messaging.Server.Queues
             }
             catch (Exception ex)
             {
-                Server.SendError("PUSH", ex, $"QueueName:{Name}");
+                Rider.SendError("PUSH", ex, $"QueueName:{Name}");
                 Info.AddError();
                 try
                 {
@@ -824,7 +825,7 @@ namespace Horse.Messaging.Server.Queues
                 }
                 catch (Exception ex)
                 {
-                    Server.SendError("PROCESS_MESSAGES", ex, $"QueueName:{Name}");
+                    Rider.SendError("PROCESS_MESSAGES", ex, $"QueueName:{Name}");
                     Info.AddError();
                     try
                     {
@@ -920,7 +921,7 @@ namespace Horse.Messaging.Server.Queues
             }
             catch (Exception e)
             {
-                Server.SendError("APPLY_DECISION", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
+                Rider.SendError("APPLY_DECISION", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
             }
 
             return decision.Allow;
@@ -946,7 +947,7 @@ namespace Horse.Messaging.Server.Queues
                             }
                             catch (Exception e)
                             {
-                                Server.SendError("DELAYED_PUT_BACK", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
+                                Rider.SendError("DELAYED_PUT_BACK", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
                             }
                         });
                     break;
@@ -964,7 +965,7 @@ namespace Horse.Messaging.Server.Queues
                             }
                             catch (Exception e)
                             {
-                                Server.SendError("DELAYED_PUT_BACK", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
+                                Rider.SendError("DELAYED_PUT_BACK", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
                             }
                         });
                     break;
@@ -989,7 +990,7 @@ namespace Horse.Messaging.Server.Queues
             }
             catch (Exception e)
             {
-                Server.SendError("SAVE_MESSAGE", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
+                Rider.SendError("SAVE_MESSAGE", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
             }
 
             return message.IsSaved;
@@ -1011,8 +1012,8 @@ namespace Horse.Messaging.Server.Queues
                                          SaveMessage = decision.SaveMessage
                                      };
 
-            msg.Serialize(model, Server.MessageContentSerializer);
-            Server.NodeManager.SendMessageToNodes(msg);
+            msg.Serialize(model, Rider.MessageContentSerializer);
+            Rider.NodeManager.SendMessageToNodes(msg);
         }
 
         /// <summary>
@@ -1132,14 +1133,14 @@ namespace Horse.Messaging.Server.Queues
                 if (delivery != null)
                     await ApplyDecision(decision, delivery.Message, deliveryMessage);
 
-                foreach (IQueueMessageEventHandler handler in Server.QueueMessageHandlers)
+                foreach (IQueueMessageEventHandler handler in Rider.Queue.MessageHandlers.All())
                     _ = handler.OnAcknowledged(this, deliveryMessage, delivery, success);
 
                 ReleaseAcknowledgeLock(true);
             }
             catch (Exception e)
             {
-                Server.SendError("QUEUE_ACK_RECEIVED", e, $"QueueName:{Name}, MessageId:{deliveryMessage.MessageId}");
+                Rider.SendError("QUEUE_ACK_RECEIVED", e, $"QueueName:{Name}, MessageId:{deliveryMessage.MessageId}");
             }
         }
 
@@ -1174,7 +1175,7 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         public async Task<SubscriptionResult> AddClient(MessagingClient client)
         {
-            foreach (IQueueAuthenticator authenticator in Server.QueueAuthenticators)
+            foreach (IQueueAuthenticator authenticator in Rider.Queue.Authenticators.All())
             {
                 bool allowed = await authenticator.Authenticate(this, client);
                 if (!allowed)
@@ -1188,7 +1189,7 @@ namespace Horse.Messaging.Server.Queues
             _clients.Add(cc);
             client.AddSubscription(cc);
 
-            foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
+            foreach (IQueueEventHandler handler in Rider.Queue.EventHandlers.All())
                 _ = handler.OnConsumerSubscribed(cc);
 
             _ = Trigger();
@@ -1204,7 +1205,7 @@ namespace Horse.Messaging.Server.Queues
             _clients.Remove(client);
             client.Client.RemoveSubscription(client);
 
-            foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
+            foreach (IQueueEventHandler handler in Rider.Queue.EventHandlers.All())
                 _ = handler.OnConsumerUnsubscribed(client);
 
             OnConsumerUnsubscribed.Trigger(client);
@@ -1217,7 +1218,7 @@ namespace Horse.Messaging.Server.Queues
         {
             _clients.Remove(client);
 
-            foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
+            foreach (IQueueEventHandler handler in Rider.Queue.EventHandlers.All())
                 _ = handler.OnConsumerUnsubscribed(client);
 
             OnConsumerUnsubscribed.Trigger(client);
@@ -1235,7 +1236,7 @@ namespace Horse.Messaging.Server.Queues
 
             client.RemoveSubscription(cc);
 
-            foreach (IQueueEventHandler handler in Server.QueueEventHandlers)
+            foreach (IQueueEventHandler handler in Rider.Queue.EventHandlers.All())
                 _ = handler.OnConsumerUnsubscribed(cc);
 
             OnConsumerUnsubscribed.Trigger(cc);

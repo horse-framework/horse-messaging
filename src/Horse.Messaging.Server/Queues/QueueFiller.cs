@@ -41,9 +41,9 @@ namespace Horse.Messaging.Server.Queues
                     HorseMessage message = new HorseMessage(MessageType.QueueMessage, _queue.Name);
                     message.HighPriority = highPriority;
                     message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
-                    message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
+                    message.SetMessageId(_queue.Rider.MessageIdGenerator.Create());
 
-                    message.Serialize(item, _queue.Server.MessageContentSerializer);
+                    message.Serialize(item, _queue.Rider.MessageContentSerializer);
                     QueueMessage qm = new QueueMessage(message, createAsSaved);
 
                     if (highPriority)
@@ -60,7 +60,7 @@ namespace Horse.Messaging.Server.Queues
             }
             catch (Exception e)
             {
-                _queue.Server.SendError("FILL_JSON", e, $"QueueName:{_queue.Name}");
+                _queue.Rider.SendError("FILL_JSON", e, $"QueueName:{_queue.Name}");
                 return PushResult.Error;
             }
         }
@@ -84,10 +84,10 @@ namespace Horse.Messaging.Server.Queues
                 {
                     HorseMessage message = new HorseMessage(MessageType.QueueMessage, _queue.Name);
                     message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
-                    message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
+                    message.SetMessageId(_queue.Rider.MessageIdGenerator.Create());
 
                     action(message, item);
-                    message.Serialize(item, _queue.Server.MessageContentSerializer);
+                    message.Serialize(item, _queue.Rider.MessageContentSerializer);
 
                     QueueMessage qm = new QueueMessage(message, createAsSaved);
 
@@ -105,7 +105,7 @@ namespace Horse.Messaging.Server.Queues
             }
             catch (Exception e)
             {
-                _queue.Server.SendError("FILL_JSON", e, $"QueueName:{_queue.Name}");
+                _queue.Rider.SendError("FILL_JSON", e, $"QueueName:{_queue.Name}");
                 return PushResult.Error;
             }
         }
@@ -129,7 +129,7 @@ namespace Horse.Messaging.Server.Queues
                     HorseMessage message = new HorseMessage(MessageType.QueueMessage, _queue.Name);
                     message.HighPriority = highPriority;
                     message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
-                    message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
+                    message.SetMessageId(_queue.Rider.MessageIdGenerator.Create());
 
                     message.Content = new MemoryStream(Encoding.UTF8.GetBytes(item));
                     message.Content.Position = 0;
@@ -151,7 +151,7 @@ namespace Horse.Messaging.Server.Queues
             }
             catch (Exception e)
             {
-                _queue.Server.SendError("FILL_STRING", e, $"QueueName:{_queue.Name}");
+                _queue.Rider.SendError("FILL_STRING", e, $"QueueName:{_queue.Name}");
                 return PushResult.Error;
             }
         }
@@ -175,7 +175,7 @@ namespace Horse.Messaging.Server.Queues
                     HorseMessage message = new HorseMessage(MessageType.QueueMessage, _queue.Name);
                     message.HighPriority = highPriority;
                     message.WaitResponse = _queue.Options.Acknowledge != QueueAckDecision.None;
-                    message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
+                    message.SetMessageId(_queue.Rider.MessageIdGenerator.Create());
 
                     message.Content = new MemoryStream(item);
                     message.Content.Position = 0;
@@ -197,7 +197,7 @@ namespace Horse.Messaging.Server.Queues
             }
             catch (Exception e)
             {
-                _queue.Server.SendError("FILL_DATA", e, $"QueueName:{_queue.Name}");
+                _queue.Rider.SendError("FILL_DATA", e, $"QueueName:{_queue.Name}");
                 return PushResult.Error;
             }
         }
@@ -221,7 +221,7 @@ namespace Horse.Messaging.Server.Queues
                     message.SetTarget(_queue.Name);
 
                     if (string.IsNullOrEmpty(message.MessageId))
-                        message.SetMessageId(_queue.Server.MessageIdGenerator.Create());
+                        message.SetMessageId(_queue.Rider.MessageIdGenerator.Create());
 
                     message.CalculateLengths();
 
@@ -244,7 +244,7 @@ namespace Horse.Messaging.Server.Queues
             }
             catch (Exception e)
             {
-                _queue.Server.SendError("FILL_MESSAGE", e, $"QueueName:{_queue.Name}");
+                _queue.Rider.SendError("FILL_MESSAGE", e, $"QueueName:{_queue.Name}");
                 return PushResult.Error;
             }
         }

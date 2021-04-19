@@ -7,6 +7,11 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Bus
 {
+    /// <inheritdoc />
+    public interface IHorseQueueBus<TIdentifier> : IHorseQueueBus
+    {
+    }
+    
     /// <summary>
     /// Implementation for queue messages and requests
     /// </summary>

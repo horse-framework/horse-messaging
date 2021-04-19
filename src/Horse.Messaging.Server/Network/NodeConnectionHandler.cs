@@ -14,15 +14,15 @@ namespace Horse.Messaging.Server.Network
     /// </summary>
     internal class NodeConnectionHandler : IProtocolConnectionHandler<HorseServerSocket, HorseMessage>
     {
-        private readonly NodeManager _server;
+        private readonly NodeManager _node;
         private readonly HmqNetworkHandler _connectionHandler;
 
         /// <summary>
         /// 
         /// </summary>
-        internal NodeConnectionHandler(NodeManager server, HmqNetworkHandler connectionHandler)
+        internal NodeConnectionHandler(NodeManager node, HmqNetworkHandler connectionHandler)
         {
-            _server = server;
+            _node = node;
             _connectionHandler = connectionHandler;
         }
 
@@ -34,10 +34,10 @@ namespace Horse.Messaging.Server.Network
             string clientId;
             bool found = data.Properties.TryGetValue(HorseHeaders.CLIENT_ID, out clientId);
             if (!found || string.IsNullOrEmpty(clientId))
-                clientId = _server.Self.ClientIdGenerator.Create();
+                clientId = _node.Self.Client.ClientIdGenerator.Create();
 
             //if another client with same unique id is online, do not accept new client
-            MessagingClient foundClient = _server.IncomingNodes.Find(x => x.UniqueId == clientId);
+            MessagingClient foundClient = _node.IncomingNodes.Find(x => x.UniqueId == clientId);
             if (foundClient != null)
             {
                 await connection.Socket.SendAsync(HorseProtocolWriter.Create(MessageBuilder.Busy()));
@@ -45,22 +45,22 @@ namespace Horse.Messaging.Server.Network
             }
 
             //creates new node client object 
-            MessagingClient client = new MessagingClient(_server.Self, connection);
+            MessagingClient client = new MessagingClient(_node.Self, connection);
             client.Data = data;
             client.UniqueId = clientId.Trim();
             client.Token = data.Properties.GetStringValue(HorseHeaders.CLIENT_TOKEN);
             client.Name = data.Properties.GetStringValue(HorseHeaders.CLIENT_NAME);
             client.Type = data.Properties.GetStringValue(HorseHeaders.CLIENT_TYPE);
 
-            if (_server.Authenticator != null)
+            if (_node.Authenticator != null)
             {
-                bool accepted = await _server.Authenticator.Authenticate(_server, client);
+                bool accepted = await _node.Authenticator.Authenticate(_node, client);
                 if (!accepted)
                     return null;
             }
 
             client.RemoteHost = client.Info.Client.Client.RemoteEndPoint.ToString()?.Split(':')[0];
-            _server.IncomingNodes.Add(client);
+            _node.IncomingNodes.Add(client);
 
             await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
 
@@ -99,7 +99,7 @@ namespace Horse.Messaging.Server.Network
         public Task Disconnected(IHorseServer server, HorseServerSocket client)
         {
             MessagingClient node = (MessagingClient) client;
-            _server.IncomingNodes.Remove(node);
+            _node.IncomingNodes.Remove(node);
 
             return Task.CompletedTask;
         }
@@ -109,11 +109,11 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private void DecisionOverNode(HorseMessage message)
         {
-            DecisionOverNode model = message.Deserialize<DecisionOverNode>(_server.Self.MessageContentSerializer);
+            DecisionOverNode model = message.Deserialize<DecisionOverNode>(_node.Self.MessageContentSerializer);
             if (model == null)
                 return;
 
-            HorseQueue queue = _server.Self.FindQueue(model.Queue);
+            HorseQueue queue = _node.Self.Queue.FindQueue(model.Queue);
             if (queue == null)
                 return;
 

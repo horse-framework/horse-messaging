@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Network;
 using Horse.Messaging.Server.Options;
@@ -30,7 +31,7 @@ namespace Horse.Messaging.Server
         /// <summary>
         /// Messaging queue server of the node server
         /// </summary>
-        public HorseMq Self { get; }
+        public HorseRider Self { get; }
 
         /// <summary>
         /// Remote node connectors
@@ -57,7 +58,7 @@ namespace Horse.Messaging.Server
         /// <summary>
         /// 
         /// </summary>
-        public NodeManager(HorseMq self)
+        public NodeManager(HorseRider self)
         {
             Self = self;
         }
@@ -192,7 +193,7 @@ namespace Horse.Messaging.Server
                                               RequestTimeout = 15
                                           });
 
-            _nodeServer.UseHmq(ConnectionHandler);
+            _nodeServer.UseHorseProtocol(ConnectionHandler);
             _nodeServer.Start();
         }
 

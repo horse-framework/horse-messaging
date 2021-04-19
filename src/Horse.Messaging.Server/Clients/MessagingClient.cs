@@ -67,7 +67,7 @@ namespace Horse.Messaging.Server.Clients
         /// <summary>
         /// Messaging queue server
         /// </summary>
-        public HorseMq HorseMq { get; }
+        public HorseRider HorseRider { get; }
 
         /// <summary>
         /// The time instance created
@@ -91,19 +91,19 @@ namespace Horse.Messaging.Server.Clients
         /// <summary>
         /// Creates new MQ Client
         /// </summary>
-        public MessagingClient(HorseMq server, IConnectionInfo info) : base(server.Server, info)
+        public MessagingClient(HorseRider server, IConnectionInfo info) : base(server.Server, info)
         {
-            HorseMq = server;
+            HorseRider = server;
             IsConnected = true;
         }
 
         /// <summary>
         /// Creates new MQ Client
         /// </summary>
-        public MessagingClient(HorseMq server, IConnectionInfo info, IUniqueIdGenerator generator)
+        public MessagingClient(HorseRider server, IConnectionInfo info, IUniqueIdGenerator generator)
             : base(server.Server, info, generator)
         {
-            HorseMq = server;
+            HorseRider = server;
             IsConnected = true;
         }
 

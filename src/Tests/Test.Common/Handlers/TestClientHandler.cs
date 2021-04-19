@@ -15,14 +15,14 @@ namespace Test.Common.Handlers
             _mq = mq;
         }
 
-        public Task Connected(HorseMq server, MessagingClient client)
+        public Task Connected(HorseRider server, MessagingClient client)
         {
             Console.WriteLine("Client Connected");
             _mq.ClientConnected++;
             return Task.CompletedTask;
         }
 
-        public Task Disconnected(HorseMq server, MessagingClient client)
+        public Task Disconnected(HorseRider server, MessagingClient client)
         {
             Console.WriteLine("Client Disconnected");
             _mq.ClientDisconnected++;

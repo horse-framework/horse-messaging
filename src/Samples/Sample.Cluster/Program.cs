@@ -28,15 +28,15 @@ namespace Sample.Cluster
             Console.ReadLine();
         }
 
-        static HorseMq StartServer1()
+        static HorseRider StartServer1()
         {
-            HorseMq mq = HorseMqBuilder.Create()
+            HorseRider rider = HorseRiderBuilder.Create()
                                        .AddOptions(o => o.Status = QueueStatus.Push)
                                        .UseAckDeliveryHandler(AcknowledgeWhen.AfterReceived, PutBackDecision.No)
                                        .Build();
 
-            mq.NodeManager.SetHost(new HostOptions {Port = 26101});
-            mq.NodeManager.AddRemoteNode(new NodeOptions
+            rider.NodeManager.SetHost(new HostOptions {Port = 26101});
+            rider.NodeManager.AddRemoteNode(new NodeOptions
                                          {
                                              Host = "horse://localhost:26100",
                                              Name = "Node-2",
@@ -45,20 +45,20 @@ namespace Sample.Cluster
                                          });
 
             HorseServer server = new HorseServer();
-            server.UseHorseMq(mq);
+            server.UseRider(rider);
             server.Start(26001);
-            return mq;
+            return rider;
         }
 
-        static HorseMq StartServer2()
+        static HorseRider StartServer2()
         {
-            HorseMq mq = HorseMqBuilder.Create()
+            HorseRider rider = HorseRiderBuilder.Create()
                                        .AddOptions(o => o.Status = QueueStatus.Push)
                                        .UseAckDeliveryHandler(AcknowledgeWhen.AfterReceived, PutBackDecision.No)
                                        .Build();
 
-            mq.NodeManager.SetHost(new HostOptions {Port = 26100});
-            mq.NodeManager.AddRemoteNode(new NodeOptions
+            rider.NodeManager.SetHost(new HostOptions {Port = 26100});
+            rider.NodeManager.AddRemoteNode(new NodeOptions
                                          {
                                              Host = "horse://localhost:26101",
                                              Name = "Node-1",
@@ -67,9 +67,9 @@ namespace Sample.Cluster
                                          });
 
             HorseServer server = new HorseServer();
-            server.UseHorseMq(mq);
+            server.UseRider(rider);
             server.Start(26002);
-            return mq;
+            return rider;
         }
 
         static void ConnectToServer1AsProducer()

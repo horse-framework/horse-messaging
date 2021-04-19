@@ -110,7 +110,7 @@ namespace Horse.Messaging.Server.Queues
                 Decision decision = await _queue.DeliveryHandler.MessageTimedOut(_queue, message);
                 await _queue.ApplyDecision(decision, message);
 
-                foreach (IQueueMessageEventHandler handler in _queue.Server.QueueMessageHandlers)
+                foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                     _ = handler.MessageTimedOut(_queue, message);
             }
 
@@ -124,7 +124,7 @@ namespace Horse.Messaging.Server.Queues
                 Decision decision = await _queue.DeliveryHandler.MessageTimedOut(_queue, message);
                 await _queue.ApplyDecision(decision, message);
 
-                foreach (IQueueMessageEventHandler handler in _queue.Server.QueueMessageHandlers)
+                foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                     _ = handler.MessageTimedOut(_queue, message);
             }
         }
@@ -211,7 +211,7 @@ namespace Horse.Messaging.Server.Queues
                         if (delivery.Message != null)
                             await _queue.ApplyDecision(decision, delivery.Message);
 
-                        foreach (IQueueMessageEventHandler handler in _queue.Server.QueueMessageHandlers)
+                        foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                             _ = handler.OnAcknowledgeTimedOut(_queue, delivery);
 
                         if (!released)
@@ -228,7 +228,7 @@ namespace Horse.Messaging.Server.Queues
             }
             catch (Exception e)
             {
-                _queue.Server.SendError("PROCESS_DELIVERIES", e, $"QueueName:{_queue.Name}");
+                _queue.Rider.SendError("PROCESS_DELIVERIES", e, $"QueueName:{_queue.Name}");
             }
         }
 

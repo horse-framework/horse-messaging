@@ -17,24 +17,24 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Messaging Queue Server
         /// </summary>
-        private readonly HorseMq _server;
+        private readonly HorseRider _rider;
 
-        public QueueMessageHandler(HorseMq server)
+        public QueueMessageHandler(HorseRider rider)
         {
-            _server = server;
+            _rider = rider;
         }
 
         #endregion
 
         private async Task<HorseQueue> FindQueue(MessagingClient client, string name, HorseMessage message)
         {
-            HorseQueue queue = _server.FindQueue(name);
+            HorseQueue queue = _rider.Queue.FindQueue(name);
 
             //if auto creation active, try to create queue
-            if (queue == null && _server.Options.AutoQueueCreation)
+            if (queue == null && _rider.Options.AutoQueueCreation)
             {
-                QueueOptions options = QueueOptions.CloneFrom(_server.Options);
-                queue = await _server.CreateQueue(name, options, message, _server.DeliveryHandlerFactory, true, true);
+                QueueOptions options = QueueOptions.CloneFrom(_rider.Queue.Options);
+                queue = await _rider.Queue.CreateQueue(name, options, message, _rider.Queue.DeliveryHandlerFactory, true, true);
             }
 
             if (queue == null)
@@ -64,7 +64,7 @@ namespace Horse.Messaging.Server.Queues
             {
                 additionalHeaders = message.Headers.Where(x => !x.Key.Equals(HorseHeaders.CC, StringComparison.InvariantCultureIgnoreCase)).ToList();
                 ccList = new List<string>(message.Headers.Where(x => x.Key.Equals(HorseHeaders.CC, StringComparison.InvariantCultureIgnoreCase)).Select(x => x.Value));
-                clone = message.Clone(false, true, _server.MessageIdGenerator.Create(), additionalHeaders);
+                clone = message.Clone(false, true, _rider.MessageIdGenerator.Create(), additionalHeaders);
             }
 
             await HandlePush(client, message, queue, true);
@@ -80,7 +80,7 @@ namespace Horse.Messaging.Server.Queues
         private async Task HandlePush(MessagingClient client, HorseMessage message, HorseQueue queue, bool answerSender)
         {
             //check authority
-            foreach (IClientAuthorization authorization in _server.Authorizations)
+            foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
             {
                 bool grant = await authorization.CanMessageToQueue(client, queue, message);
                 if (!grant)
@@ -133,7 +133,7 @@ namespace Horse.Messaging.Server.Queues
 
                 HorseMessage msg = clone;
                 if (i < ccList.Count - 1)
-                    clone = clone.Clone(false, true, _server.MessageIdGenerator.Create(), additionalHeaders);
+                    clone = clone.Clone(false, true, _rider.MessageIdGenerator.Create(), additionalHeaders);
 
                 if (!string.IsNullOrEmpty(messageId))
                     msg.SetMessageId(messageId);

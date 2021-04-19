@@ -12,7 +12,7 @@ namespace Horse.Messaging.Server
         /// <summary>
         /// Horse MQ Server
         /// </summary>
-        public HorseMq Server { get; internal set; }
+        public HorseRider Server { get; internal set; }
         
         /// <summary>
         /// The queue that will use delivery handler

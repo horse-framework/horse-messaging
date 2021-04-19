@@ -11,11 +11,11 @@ namespace Horse.Messaging.Server
         /// <summary>
         /// Called when a client is connected and HMQ protocol handshake is completed
         /// </summary>
-        Task Connected(HorseMq server, MessagingClient client);
+        Task Connected(HorseRider server, MessagingClient client);
 
         /// <summary>
         /// Called when a client is disconnected and removed from all queues
         /// </summary>
-        Task Disconnected(HorseMq server, MessagingClient client);
+        Task Disconnected(HorseRider server, MessagingClient client);
     }
 }

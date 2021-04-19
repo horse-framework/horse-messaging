@@ -6,6 +6,11 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Routers
 {
+    /// <inheritdoc />
+    public interface IHorseRouteBus<TIdentifier> : IHorseRouteBus
+    {
+    }
+    
     /// <summary>
     /// Implementation for route messages and requests
     /// </summary>

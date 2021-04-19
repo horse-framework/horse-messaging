@@ -40,7 +40,7 @@ namespace Horse.Messaging.Server.Routing
                     return false;
 
                 string messageId = Interaction == BindingInteraction.None
-                                       ? Router.Server.MessageIdGenerator.Create()
+                                       ? Router.Rider.MessageIdGenerator.Create()
                                        : message.MessageId;
 
                 HorseMessage msg = message.Clone(true, true, messageId);
@@ -57,7 +57,7 @@ namespace Horse.Messaging.Server.Routing
             }
             catch (Exception e)
             {
-                Router.Server.SendError("BINDING_SEND", e, $"Type:Queue, Binding:{Name}");
+                Router.Rider.SendError("BINDING_SEND", e, $"Type:Queue, Binding:{Name}");
                 return false;
             }
         }
@@ -72,7 +72,7 @@ namespace Horse.Messaging.Server.Routing
             if (_targetQueue != null && DateTime.UtcNow - _queueUpdateTime < TimeSpan.FromMinutes(1))
                 return _targetQueue;
 
-            HorseQueue queue = Router.Server.FindQueue(Target);
+            HorseQueue queue = Router.Rider.Queue.FindQueue(Target);
             if (queue == null)
                 return null;
 

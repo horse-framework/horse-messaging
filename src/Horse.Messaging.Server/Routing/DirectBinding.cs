@@ -100,7 +100,7 @@ namespace Horse.Messaging.Server.Routing
             }
             catch (Exception e)
             {
-                Router.Server.SendError("BINDING_SEND", e, $"Type:Direct, Binding:{Name}");
+                Router.Rider.SendError("BINDING_SEND", e, $"Type:Direct, Binding:{Name}");
                 return false;
             }
         }
@@ -134,17 +134,17 @@ namespace Horse.Messaging.Server.Routing
             {
                 if (Target.StartsWith("@type:", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    var list = Router.Server.FindClientByType(Target.Substring(6));
+                    var list = Router.Rider.Client.FindClientByType(Target.Substring(6));
                     _clients = list == null ? new MessagingClient[0] : list.ToArray();
                 }
                 else if (Target.StartsWith("@name:", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    var list = Router.Server.FindClientByName(Target.Substring(6));
+                    var list = Router.Rider.Client.FindClientByName(Target.Substring(6));
                     _clients = list == null ? new MessagingClient[0] : list.ToArray();
                 }
                 else
                 {
-                    MessagingClient client = Router.Server.FindClient(Target);
+                    MessagingClient client = Router.Rider.Client.FindClient(Target);
                     _clients = client == null ? new MessagingClient[0] : new[] {client};
                 }
 

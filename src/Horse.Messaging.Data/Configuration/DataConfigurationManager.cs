@@ -108,7 +108,7 @@ namespace Horse.Messaging.Data.Configuration
         /// <summary>
         /// Loads messages of queues in configuration
         /// </summary>
-        public async Task LoadQueues(HorseMq server)
+        public async Task LoadQueues(HorseRider server)
         {
             foreach (QueueConfiguration queueConfiguration in Config.Queues)
             {
