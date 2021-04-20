@@ -16,8 +16,8 @@ namespace Horse.Messaging.Client.Direct
         private readonly HorseClient _client;
         private readonly TypeDescriptorContainer<DirectTypeDescriptor> _descriptorContainer;
 
-        internal List<DirectConsumeRegistration> Registrations { get; } = new List<DirectConsumeRegistration>();
-
+        internal List<DirectHandlerRegistration> Registrations { get; } = new List<DirectHandlerRegistration>();
+        
         internal DirectOperator(HorseClient client)
         {
             _client = client;
@@ -26,7 +26,7 @@ namespace Horse.Messaging.Client.Direct
 
         internal async Task OnDirectMessage(HorseMessage message)
         {
-            DirectConsumeRegistration reg = Registrations.FirstOrDefault(x => x.ContentType == message.ContentType);
+            DirectHandlerRegistration reg = Registrations.FirstOrDefault(x => x.ContentType == message.ContentType);
             if (reg == null)
                 return;
 

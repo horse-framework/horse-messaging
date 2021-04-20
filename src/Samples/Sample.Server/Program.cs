@@ -9,18 +9,16 @@ namespace Sample.Server
     {
         static void Main(string[] args)
         {
-            HorseRider rider = HorseRiderBuilder
-               .Build(builder => builder.ConfigureQueues(cfg =>
-                           {
-                               cfg.Options.Type = QueueType.Push;
-                               cfg.EventHandlers.Add(new QueueEventHandler());
-                               cfg.AddPersistentQueues();
-                               cfg.UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterSaved);
-                           })
-                          .ConfigureClients(cfg =>
-                           {
-                               cfg.Handlers.Add(new ClientHandler());
-                           }));
+            HorseRider rider = HorseRiderBuilder.Create()
+               .ConfigureQueues(cfg =>
+                {
+                    cfg.Options.Type = QueueType.Push;
+                    cfg.EventHandlers.Add(new QueueEventHandler());
+                    cfg.AddPersistentQueues();
+                    cfg.UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterSaved);
+                })
+               .ConfigureClients(cfg => { cfg.Handlers.Add(new ClientHandler()); })
+               .Build();
 
             rider.LoadPersistentQueues();
 

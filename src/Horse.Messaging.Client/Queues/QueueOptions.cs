@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Horse.Messaging.Client.Models
+namespace Horse.Messaging.Client.Queues
 {
     /// <summary>
     /// Queue options
@@ -44,7 +44,7 @@ namespace Horse.Messaging.Client.Models
         /// Default status for the queue
         /// </summary>
         [JsonPropertyName("Status")]
-        public MessagingQueueStatus? Status { get; set; }
+        public MessagingQueueType? Status { get; set; }
 
         /// <summary>
         /// Registry key for message delivery handler

@@ -1,5 +1,8 @@
 using System;
-using System.Collections.Generic;
+using Horse.Messaging.Client.Channels;
+using Horse.Messaging.Client.Direct;
+using Horse.Messaging.Client.Internal;
+using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,17 +13,11 @@ namespace Horse.Messaging.Client
     /// </summary>
     public class HorseClientBuilder
     {
-        #region Fields
+        #region Declaration
 
-        private HorseClient _client;
+        private readonly HorseClient _client;
         private ModelTypeConfigurator _configurator;
-
-        internal readonly List<Tuple<ServiceLifetime, Type>> IndividualConsumers = new List<Tuple<ServiceLifetime, Type>>();
-        internal readonly List<Tuple<ServiceLifetime, Type>> AssembyConsumers = new List<Tuple<ServiceLifetime, Type>>();
-
-        private readonly object _serviceContainer;
-
-        #endregion
+        private readonly IServiceCollection _services;
 
         /// <summary>
         /// Creates Horse Connector Builder without IOC implementation
@@ -33,11 +30,21 @@ namespace Horse.Messaging.Client
         /// <summary>
         /// Creates Horse Connector Builder with IOC implementation
         /// </summary>
-        internal HorseClientBuilder(object serviceContainer)
+        internal HorseClientBuilder(IServiceCollection services)
         {
-            _serviceContainer = serviceContainer;
+            _services = services;
             _client = new HorseClient();
         }
+
+        /// <summary>
+        /// Builds new HmqStickyConnector with defined properties.
+        /// </summary>
+        public HorseClient Build()
+        {
+            return _client;
+        }
+
+        #endregion
 
         #region Client Info
 
@@ -122,6 +129,17 @@ namespace Horse.Messaging.Client
             return this;
         }
 
+        /// <summary>
+        /// Sets default configuration for all model and consumer types.
+        /// The configuration options can be overwritten with attributes.
+        /// </summary>
+        public HorseClientBuilder ConfigureModels(Action<ModelTypeConfigurator> cfg)
+        {
+            _configurator = new ModelTypeConfigurator();
+            cfg(_configurator);
+            return this;
+        }
+
         #endregion
 
         #region Serializers
@@ -155,80 +173,235 @@ namespace Horse.Messaging.Client
 
         #endregion
 
-        #region Consumers
+        #region Direct Handlers
 
-        /// <summary>
-        /// Registers new transient consumer
-        /// </summary>
-        public HorseClientBuilder AddTransientConsumer<TConsumer>() where TConsumer : class
+        public HorseClientBuilder AddTransientDirectHandler<THandler>() where THandler : class
         {
-            _individualConsumers.Add(new Tuple<ServiceLifetime, Type>(ServiceLifetime.Transient, typeof(TConsumer)));
-            return this;
-        }
+            if (_services == null)
+                throw new NotSupportedException("Transient handlers are not supported. " +
+                                                "If you want to use transient direct receivers " +
+                                                "Build HorseClient with IServiceCollection");
 
-        /// <summary>
-        /// Registers new scoped consumer
-        /// </summary>
-        public HorseClientBuilder AddScopedConsumer<TConsumer>() where TConsumer : class
-        {
-            _individualConsumers.Add(new Tuple<ServiceLifetime, Type>(ServiceLifetime.Scoped, typeof(TConsumer)));
-            return this;
-        }
-
-        /// <summary>
-        /// Registers new singleton consumer
-        /// </summary>
-        public HorseClientBuilder AddSingletonConsumer<TConsumer>() where TConsumer : class
-        {
-            _individualConsumers.Add(new Tuple<ServiceLifetime, Type>(ServiceLifetime.Singleton, typeof(TConsumer)));
-            return this;
-        }
-
-        /// <summary>
-        /// Registers all consumers types with transient lifetime in type assemblies
-        /// </summary>
-        public HorseClientBuilder AddTransientConsumers(params Type[] assemblyTypes)
-        {
-            foreach (Type type in assemblyTypes)
-                _assembyConsumers.Add(new Tuple<ServiceLifetime, Type>(ServiceLifetime.Transient, type));
+            DirectHandlerRegistrar registrar = new DirectHandlerRegistrar(_client.Direct);
+            registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient));
 
             return this;
         }
 
-        /// <summary>
-        /// Registers all consumers types with scoped lifetime in type assemblies
-        /// </summary>
-        public HorseClientBuilder AddScopedConsumers(params Type[] assemblyTypes)
+        public HorseClientBuilder AddScopedDirectHandler<THandler>() where THandler : class
         {
-            foreach (Type type in assemblyTypes)
-                _assembyConsumers.Add(new Tuple<ServiceLifetime, Type>(ServiceLifetime.Scoped, type));
+            if (_services == null)
+                throw new NotSupportedException("Scoped handlers are not supported. " +
+                                                "If you want to use transient direct receivers " +
+                                                "Build HorseClient with IServiceCollection");
+
+            DirectHandlerRegistrar registrar = new DirectHandlerRegistrar(_client.Direct);
+            registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped));
 
             return this;
         }
 
-        /// <summary>
-        /// Registers all consumers types with singleton lifetime in type assemblies
-        /// </summary>
-        public HorseClientBuilder AddSingletonConsumers(params Type[] assemblyTypes)
+        public HorseClientBuilder AddSingletonDirectHandler<THandler>() where THandler : class
         {
-            foreach (Type type in assemblyTypes)
-                _assembyConsumers.Add(new Tuple<ServiceLifetime, Type>(ServiceLifetime.Singleton, type));
+            DirectHandlerRegistrar registrar = new DirectHandlerRegistrar(_client.Direct);
+            if (_services == null)
+                registrar.RegisterHandler(typeof(THandler));
+            else
+                registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton));
+
+            return this;
+        }
+
+
+        public HorseClientBuilder AddTransientDirectHandlers(params Type[] assemblyTypes)
+        {
+            if (_services == null)
+                throw new NotSupportedException("Transient handlers are not supported. " +
+                                                "If you want to use transient direct receivers " +
+                                                "Build HorseClient with IServiceCollection");
+
+            DirectHandlerRegistrar registrar = new DirectHandlerRegistrar(_client.Direct);
+            registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), assemblyTypes);
+            return this;
+        }
+
+        public HorseClientBuilder AddScopedDirectHandlers(params Type[] assemblyTypes)
+        {
+            if (_services == null)
+                throw new NotSupportedException("Scoped handlers are not supported. " +
+                                                "If you want to use transient direct receivers " +
+                                                "Build HorseClient with IServiceCollection");
+
+            DirectHandlerRegistrar registrar = new DirectHandlerRegistrar(_client.Direct);
+            registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), assemblyTypes);
+
+            return this;
+        }
+
+        public HorseClientBuilder AddSingletonDirectHandlers(params Type[] assemblyTypes)
+        {
+            DirectHandlerRegistrar registrar = new DirectHandlerRegistrar(_client.Direct);
+            if (_services == null)
+                registrar.RegisterAssemblyHandlers(assemblyTypes);
+            else
+                registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), assemblyTypes);
 
             return this;
         }
 
         #endregion
 
-        #region Options
+        #region Channel Subscribers
 
-        /// <summary>
-        /// Sets default configuration for all model and consumer types.
-        /// The configuration options can be overwritten with attributes.
-        /// </summary>
-        public HorseClientBuilder ConfigureModels(Action<ModelTypeConfigurator> cfg)
+        public HorseClientBuilder AddTransientChannelSubscriber<THandler>() where THandler : class
         {
-            _configurator = new ModelTypeConfigurator();
-            cfg(_configurator);
+            if (_services == null)
+                throw new NotSupportedException("Transient handlers are not supported. " +
+                                                "If you want to use transient direct receivers " +
+                                                "Build HorseClient with IServiceCollection");
+
+            ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
+            registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient));
+
+            return this;
+        }
+
+        public HorseClientBuilder AddScopedChannelSubscriber<THandler>() where THandler : class
+        {
+            if (_services == null)
+                throw new NotSupportedException("Scoped handlers are not supported. " +
+                                                "If you want to use transient direct receivers " +
+                                                "Build HorseClient with IServiceCollection");
+
+            ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
+            registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped));
+
+            return this;
+        }
+
+        public HorseClientBuilder AddSingletonChannelSubscriber<THandler>() where THandler : class
+        {
+            ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
+            if (_services == null)
+                registrar.RegisterHandler(typeof(THandler));
+            else
+                registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton));
+
+            return this;
+        }
+
+
+        public HorseClientBuilder AddTransientChannelSubscribers(params Type[] assemblyTypes)
+        {
+            if (_services == null)
+                throw new NotSupportedException("Transient handlers are not supported. " +
+                                                "If you want to use transient direct receivers " +
+                                                "Build HorseClient with IServiceCollection");
+
+            ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
+            registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), assemblyTypes);
+            return this;
+        }
+
+        public HorseClientBuilder AddScopedChannelSubscribers(params Type[] assemblyTypes)
+        {
+            if (_services == null)
+                throw new NotSupportedException("Scoped handlers are not supported. " +
+                                                "If you want to use transient direct receivers " +
+                                                "Build HorseClient with IServiceCollection");
+
+            ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
+            registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), assemblyTypes);
+
+            return this;
+        }
+
+        public HorseClientBuilder AddSingletonChannelSubscribers(params Type[] assemblyTypes)
+        {
+            ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
+            if (_services == null)
+                registrar.RegisterAssemblyHandlers(assemblyTypes);
+            else
+                registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), assemblyTypes);
+
+            return this;
+        }
+
+        #endregion
+
+        #region Queue Consumers
+
+        public HorseClientBuilder AddTransientConsumer<TConsumer>() where TConsumer : class
+        {
+            if (_services == null)
+                throw new NotSupportedException("Transient handlers are not supported. " +
+                                                "If you want to use transient direct receivers " +
+                                                "Build HorseClient with IServiceCollection");
+
+            QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+            registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient));
+
+            return this;
+        }
+
+        public HorseClientBuilder AddScopedConsumer<TConsumer>() where TConsumer : class
+        {
+            if (_services == null)
+                throw new NotSupportedException("Scoped handlers are not supported. " +
+                                                "If you want to use transient direct receivers " +
+                                                "Build HorseClient with IServiceCollection");
+
+            QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+            registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped));
+
+            return this;
+        }
+
+        public HorseClientBuilder AddSingletonConsumer<TConsumer>() where TConsumer : class
+        {
+            QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+            if (_services == null)
+                registrar.RegisterConsumer(typeof(TConsumer));
+            else
+                registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton));
+
+            return this;
+        }
+
+
+        public HorseClientBuilder AddTransientConsumers(params Type[] assemblyTypes)
+        {
+            if (_services == null)
+                throw new NotSupportedException("Transient handlers are not supported. " +
+                                                "If you want to use transient direct receivers " +
+                                                "Build HorseClient with IServiceCollection");
+
+            QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+            registrar.RegisterAssemblyConsumers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), assemblyTypes);
+            return this;
+        }
+
+        public HorseClientBuilder AddScopedConsumers(params Type[] assemblyTypes)
+        {
+            if (_services == null)
+                throw new NotSupportedException("Scoped handlers are not supported. " +
+                                                "If you want to use transient direct receivers " +
+                                                "Build HorseClient with IServiceCollection");
+
+            QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+            registrar.RegisterAssemblyConsumers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), assemblyTypes);
+
+            return this;
+        }
+
+        public HorseClientBuilder AddSingletonConsumers(params Type[] assemblyTypes)
+        {
+            QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+            if (_services == null)
+                registrar.RegisterAssemblyConsumers(assemblyTypes);
+            else
+                registrar.RegisterAssemblyConsumers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), assemblyTypes);
+
             return this;
         }
 
@@ -261,62 +434,6 @@ namespace Horse.Messaging.Client
         {
             _client.ErrorAction = action;
             return this;
-        }
-
-        #endregion
-
-        #region Build - Dispose
-
-        /// <summary>
-        /// Builds new HmqStickyConnector with defined properties.
-        /// </summary>
-        public HorseClient Build()
-        {
-            if (_client != null)
-            {
-                ConfigureConnector(_connector);
-                if (_serviceContainer == null)
-                    RegisterConsumers(_connector);
-            }
-
-            return _client;
-        }
-
-        /// <summary>
-        /// Registers all consumers.
-        /// This method is called if implementation is done without ioc container.
-        /// </summary>
-        private void RegisterConsumers(HmqStickyConnector connector)
-        {
-            foreach (Tuple<ServiceLifetime, Type> pair in _assembyConsumers)
-                connector.Observer.RegisterAssemblyConsumers(pair.Item2);
-
-            foreach (Tuple<ServiceLifetime, Type> pair in _individualConsumers)
-                connector.Observer.RegisterConsumer(pair.Item2);
-        }
-
-        /// <summary>
-        /// Applies configurations on connector
-        /// </summary>
-        private void ConfigureConnector(HorseClient client)
-        {
-            connector.Observer.Configurator = _configurator;
-            connector.AutoSubscribe = _autoSubscribe;
-            connector.DisconnectionOnAutoJoinFailure = _disconnectOnSubscribeFailure;
-            if (_contentSerializer != null)
-                connector.ContentSerializer = _contentSerializer;
-
-            foreach (string host in _hosts)
-                connector.AddHost(host);
-
-            if (_connected != null)
-                connector.Connected += new ConnectionEventMapper(connector, _connected).Action;
-
-            if (_disconnected != null)
-                connector.Disconnected += new ConnectionEventMapper(connector, _disconnected).Action;
-
-            if (_error != null)
-                connector.ExceptionThrown += new ExceptionEventMapper(connector, _error).Action;
         }
 
         #endregion

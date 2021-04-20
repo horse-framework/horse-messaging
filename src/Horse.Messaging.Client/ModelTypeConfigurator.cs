@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Horse.Messaging.Client.Annotations;
-using Horse.Messaging.Client.Models;
+using Horse.Messaging.Client.Queues;
+using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client
@@ -12,12 +13,13 @@ namespace Horse.Messaging.Client
     /// </summary>
     public class ModelTypeConfigurator
     {
+        //todo: !
         #region Push Properties
 
         internal List<Func<KeyValuePair<string, string>>> HeaderFactories { get; } = new List<Func<KeyValuePair<string, string>>>();
         internal Func<Type, string> QueueNameFactory { get; private set; }
 
-        internal MessagingQueueStatus? QueueStatus { get; private set; }
+        internal MessagingQueueType? QueueStatus { get; private set; }
         internal QueueAckDecision? AckDecision { get; private set; }
         internal int? DelayBetweenMessages { get; private set; }
         internal int? PutBackDelay { get; private set; }
@@ -69,7 +71,7 @@ namespace Horse.Messaging.Client
         /// Topic value is applied only queues are created with first push.
         /// That value can be overwritten with queue status attribute.
         /// </summary>
-        public ModelTypeConfigurator SetQueueStatus(MessagingQueueStatus value)
+        public ModelTypeConfigurator SetQueueStatus(MessagingQueueType value)
         {
             QueueStatus = value;
             return this;

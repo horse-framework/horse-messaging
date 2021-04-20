@@ -1,4 +1,4 @@
-namespace Horse.Messaging.Client.Bus
+namespace Horse.Messaging.Client
 {
     /// <summary>
     /// Base Horse Connection implementation

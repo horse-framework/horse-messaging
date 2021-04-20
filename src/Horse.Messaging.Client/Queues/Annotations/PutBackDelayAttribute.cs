@@ -1,6 +1,6 @@
 using System;
 
-namespace Horse.Messaging.Client.Annotations
+namespace Horse.Messaging.Client.Queues.Annotations
 {
     /// <summary>
     /// Put Back Delay attribute

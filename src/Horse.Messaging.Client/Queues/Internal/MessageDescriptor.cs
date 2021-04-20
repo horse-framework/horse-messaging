@@ -1,7 +1,7 @@
 using System;
 using Horse.Messaging.Protocol;
 
-namespace Horse.Messaging.Client.Internal
+namespace Horse.Messaging.Client.Queues.Internal
 {
     /// <summary>
     /// Following messsage descriptor

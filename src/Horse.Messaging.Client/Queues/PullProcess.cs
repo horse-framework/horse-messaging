@@ -1,4 +1,4 @@
-namespace Horse.Messaging.Client.Models
+namespace Horse.Messaging.Client.Queues
 {
     /// <summary>
     /// Pull process status

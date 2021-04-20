@@ -1,6 +1,6 @@
 using System;
 
-namespace Horse.Messaging.Client.Exceptions
+namespace Horse.Messaging.Client.Queues.Exceptions
 {
     /// <summary>
     /// Throw when reigstered same type of Exception with PushExceptions attribute

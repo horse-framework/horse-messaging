@@ -1,6 +1,6 @@
 using System;
 
-namespace Horse.Messaging.Client.Annotations
+namespace Horse.Messaging.Client.Queues.Annotations
 {
     /// <summary>
     /// Queue Topic attribute for queue messages

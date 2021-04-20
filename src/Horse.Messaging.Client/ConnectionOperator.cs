@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Horse.Messaging.Client.Internal;
-using Horse.Messaging.Client.Models;
+using Horse.Messaging.Client.Queues;
+using Horse.Messaging.Client.Queues.Internal;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Models;
 using Horse.Messaging.Protocol.Models.Events;
@@ -59,7 +59,7 @@ namespace Horse.Messaging.Client
         {
             bool ok = await _client.EventSubscription(EventNames.ClientConnected, true, null);
             if (ok)
-                _client.Events.Add(EventNames.ClientConnected, null, action, typeof(ClientEvent));
+                _client.Event.Add(EventNames.ClientConnected, null, action, typeof(ClientEvent));
 
             return ok;
         }
@@ -71,7 +71,7 @@ namespace Horse.Messaging.Client
         {
             bool ok = await _client.EventSubscription(EventNames.ClientConnected, false, null);
             if (ok)
-                _client.Events.Remove(EventNames.ClientConnected, null);
+                _client.Event.Remove(EventNames.ClientConnected, null);
 
             return ok;
         }
@@ -83,7 +83,7 @@ namespace Horse.Messaging.Client
         {
             bool ok = await _client.EventSubscription(EventNames.ClientDisconnected, true, null);
             if (ok)
-                _client.Events.Add(EventNames.ClientDisconnected, null, action, typeof(ClientEvent));
+                _client.Event.Add(EventNames.ClientDisconnected, null, action, typeof(ClientEvent));
 
             return ok;
         }
@@ -95,7 +95,7 @@ namespace Horse.Messaging.Client
         {
             bool ok = await _client.EventSubscription(EventNames.ClientDisconnected, false, null);
             if (ok)
-                _client.Events.Remove(EventNames.ClientDisconnected, null);
+                _client.Event.Remove(EventNames.ClientDisconnected, null);
 
             return ok;
         }

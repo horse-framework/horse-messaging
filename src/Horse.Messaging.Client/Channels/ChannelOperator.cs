@@ -10,7 +10,8 @@ namespace Horse.Messaging.Client.Channels
     public class ChannelOperator
     {
         private readonly HorseClient _client;
-        internal List<ChannelConsumeRegistration> Registrations { get; } = new List<ChannelConsumeRegistration>();
+        
+        internal List<ChannelSubscriberRegistration> Registrations { get; } = new List<ChannelSubscriberRegistration>();
 
         internal ChannelOperator(HorseClient client)
         {
@@ -19,7 +20,7 @@ namespace Horse.Messaging.Client.Channels
 
         internal async Task OnChannelMessage(HorseMessage message)
         {
-            ChannelConsumeRegistration reg = Registrations.FirstOrDefault(x => x.Name == message.Target);
+            ChannelSubscriberRegistration reg = Registrations.FirstOrDefault(x => x.Name == message.Target);
             if (reg == null)
                 return;
 

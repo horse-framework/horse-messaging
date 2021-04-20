@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
-using Horse.Messaging.Client.Bus;
 using Horse.Messaging.Client.Routers;
 using Horse.Messaging.Protocol;
 using RoutingSample.Models;

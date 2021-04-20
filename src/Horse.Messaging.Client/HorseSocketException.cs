@@ -1,6 +1,6 @@
 using System;
 
-namespace Horse.Messaging.Client.Exceptions
+namespace Horse.Messaging.Client
 {
     /// <summary>
     /// Thrown when an error occured on connections

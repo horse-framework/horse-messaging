@@ -1,4 +1,4 @@
-namespace Horse.Messaging.Client.Annotations
+namespace Horse.Messaging.Client.Direct.Annotations
 {
     /// <summary>
     /// Used for direct receiver attribute.

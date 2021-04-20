@@ -1,8 +1,9 @@
 using System;
 using System.Threading.Tasks;
+using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Protocol;
 
-namespace Horse.Messaging.Client.Internal
+namespace Horse.Messaging.Client.Queues.Internal
 {
     /// <summary>
     /// Followed acknowledge message descriptor 

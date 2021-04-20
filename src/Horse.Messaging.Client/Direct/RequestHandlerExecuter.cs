@@ -10,10 +10,10 @@ namespace Horse.Messaging.Client.Direct
     {
         private readonly Type _handlerType;
         private readonly IHorseRequestHandler<TRequest, TResponse> _handler;
-        private readonly Func<IConsumerFactory> _handlerFactoryCreator;
-        private DirectConsumeRegistration _registration;
+        private readonly Func<IHandlerFactory> _handlerFactoryCreator;
+        private DirectHandlerRegistration _registration;
 
-        public RequestHandlerExecuter(Type handlerType, IHorseRequestHandler<TRequest, TResponse> handler, Func<IConsumerFactory> handlerFactoryCreator)
+        public RequestHandlerExecuter(Type handlerType, IHorseRequestHandler<TRequest, TResponse> handler, Func<IHandlerFactory> handlerFactoryCreator)
         {
             _handlerType = handlerType;
             _handler = handler;
@@ -22,9 +22,9 @@ namespace Horse.Messaging.Client.Direct
 
         public override void Resolve(object registration)
         {
-            DirectConsumeRegistration reg = registration as DirectConsumeRegistration;
+            DirectHandlerRegistration reg = registration as DirectHandlerRegistration;
             _registration = reg;
-            
+
             ResolveAttributes(reg.ConsumerType);
             ResolveDirectAttributes();
         }
@@ -36,9 +36,8 @@ namespace Horse.Messaging.Client.Direct
 
         public override async Task Execute(HorseClient client, HorseMessage message, object model)
         {
-            Exception exception = null;
-            IConsumerFactory consumerFactory = null;
             bool respond = false;
+            ProvidedHandler providedHandler = null;
 
             try
             {
@@ -49,9 +48,9 @@ namespace Horse.Messaging.Client.Direct
                     handler = _handler;
                 else if (_handlerFactoryCreator != null)
                 {
-                    consumerFactory = _handlerFactoryCreator();
-                    object consumerObject = await consumerFactory.CreateConsumer(_handlerType);
-                    handler = (IHorseRequestHandler<TRequest, TResponse>) consumerObject;
+                    IHandlerFactory handlerFactory = _handlerFactoryCreator();
+                    providedHandler = handlerFactory.CreateHandler(_handlerType);
+                    handler = (IHorseRequestHandler<TRequest, TResponse>) providedHandler.Service;
                 }
                 else
                     throw new ArgumentNullException("There is no consumer defined");
@@ -100,12 +99,11 @@ namespace Horse.Messaging.Client.Direct
                 }
 
                 await SendExceptions(message, client, e);
-                exception = e;
             }
             finally
             {
-                if (consumerFactory != null)
-                    consumerFactory.Consumed(exception);
+                if (providedHandler != null)
+                    providedHandler.Dispose();
             }
         }
 

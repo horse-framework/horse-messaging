@@ -34,7 +34,7 @@ namespace Horse.Messaging.Client.Routers
                                          bool waitAcknowledge = false,
                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Routers.Publish(routerName, content, null, waitAcknowledge, 0, messageHeaders);
+            return _client.Router.Publish(routerName, content, null, waitAcknowledge, 0, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -44,7 +44,7 @@ namespace Horse.Messaging.Client.Routers
                                          bool waitAcknowledge = false,
                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Routers.Publish(routerName, content, messageId, waitAcknowledge, 0, messageHeaders);
+            return _client.Router.Publish(routerName, content, messageId, waitAcknowledge, 0, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -53,7 +53,7 @@ namespace Horse.Messaging.Client.Routers
                                          bool waitAcknowledge = false,
                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Routers.Publish(routerName, content.ToArray(), null, waitAcknowledge, 0, messageHeaders);
+            return _client.Router.Publish(routerName, content.ToArray(), null, waitAcknowledge, 0, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -63,7 +63,7 @@ namespace Horse.Messaging.Client.Routers
                                          bool waitAcknowledge = false,
                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Routers.Publish(routerName, content.ToArray(), messageId, waitAcknowledge, 0, messageHeaders);
+            return _client.Router.Publish(routerName, content.ToArray(), messageId, waitAcknowledge, 0, messageHeaders);
         }
 
         #endregion
@@ -75,7 +75,7 @@ namespace Horse.Messaging.Client.Routers
                                              bool waitAcknowledge = false,
                                              IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Routers.PublishJson(jsonObject, waitAcknowledge, messageHeaders);
+            return _client.Router.PublishJson(jsonObject, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -94,7 +94,7 @@ namespace Horse.Messaging.Client.Routers
                                              bool waitAcknowledge = false,
                                              IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Routers.PublishJson(routerName, jsonObject, null, waitAcknowledge, contentType, messageHeaders);
+            return _client.Router.PublishJson(routerName, jsonObject, null, waitAcknowledge, contentType, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -105,7 +105,7 @@ namespace Horse.Messaging.Client.Routers
                                              bool waitAcknowledge = false,
                                              IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Routers.PublishJson(routerName, jsonObject, messageId, waitAcknowledge, contentType, messageHeaders);
+            return _client.Router.PublishJson(routerName, jsonObject, messageId, waitAcknowledge, contentType, messageHeaders);
         }
 
         #endregion
@@ -118,14 +118,14 @@ namespace Horse.Messaging.Client.Routers
                                                  ushort contentType = 0,
                                                  IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Routers.PublishRequest(routerName, message, contentType, messageHeaders);
+            return _client.Router.PublishRequest(routerName, message, contentType, messageHeaders);
         }
 
         /// <inheritdoc />
         public Task<HorseResult<TResponse>> PublishRequestJson<TRequest, TResponse>(TRequest request,
                                                                                     IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Routers.PublishRequestJson<TRequest, TResponse>(request, messageHeaders);
+            return _client.Router.PublishRequestJson<TRequest, TResponse>(request, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -134,7 +134,7 @@ namespace Horse.Messaging.Client.Routers
                                                                                     ushort? contentType = null,
                                                                                     IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Routers.PublishRequestJson<TRequest, TResponse>(routerName, request, contentType, messageHeaders);
+            return _client.Router.PublishRequestJson<TRequest, TResponse>(routerName, request, contentType, messageHeaders);
         }
 
         #endregion

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
 using Horse.Messaging.Client.Annotations;
-using Horse.Messaging.Client.Models;
+using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Protocol;
 
@@ -17,11 +17,11 @@ namespace Horse.Messaging.Client.Internal
         
         protected RetryAttribute Retry { get; private set; }
 
-        protected TransportExceptionDescriptor DefaultPushException { get; private set; }
-        protected List<TransportExceptionDescriptor> PushExceptions { get; private set; }
+        protected internal TransportExceptionDescriptor DefaultPushException { get; private set; }
+        protected internal List<TransportExceptionDescriptor> PushExceptions { get; private set; }
 
-        protected TransportExceptionDescriptor DefaultPublishException { get; private set; }
-        protected List<TransportExceptionDescriptor> PublishExceptions { get; private set; }
+        protected internal TransportExceptionDescriptor DefaultPublishException { get; private set; }
+        protected internal List<TransportExceptionDescriptor> PublishExceptions { get; private set; }
 
         public abstract void Resolve(object registration);
         
@@ -146,7 +146,7 @@ namespace Horse.Messaging.Client.Internal
                                          ConsumingMessage = consumingMessage
                                      });
 
-            return client.Queues.PushJson(transportable, false);
+            return client.Queue.PushJson(transportable, false);
         }
 
         private Task TransportToRouter(HorseClient client, TransportExceptionDescriptor item, Exception exception, HorseMessage consumingMessage)
@@ -162,7 +162,41 @@ namespace Horse.Messaging.Client.Internal
                                          ConsumingMessage = consumingMessage
                                      });
 
-            return client.Routers.PublishJson(transportable);
+            return client.Router.PublishJson(transportable);
         }
+        
+        
+        /*
+
+        public virtual void Resolve(ModelTypeConfigurator defaultOptions = null)
+        {
+            if (defaultOptions == null)
+                return;
+
+            SendAck = defaultOptions.AutoAck;
+            SendNack = defaultOptions.AutoNack;
+            NackReason = defaultOptions.NackReason;
+            Retry = defaultOptions.Retry;
+            DefaultPublishException = defaultOptions.DefaultPublishException;
+            PushExceptions = defaultOptions.PushExceptions;
+            DefaultPublishException = defaultOptions.DefaultPublishException;
+            PublishExceptions = defaultOptions.PublishExceptions;
+
+            if (DefaultPushException != null && !typeof(ITransportableException).IsAssignableFrom(DefaultPushException.ModelType))
+                throw new InvalidCastException("PushException model type must implement ITransportableException interface");
+
+            foreach (TransportExceptionDescriptor item in PushExceptions)
+                if (item != null && !typeof(ITransportableException).IsAssignableFrom(item.ModelType))
+                    throw new InvalidCastException("PushException model type must implement ITransportableException interface");
+
+            if (DefaultPublishException != null && !typeof(ITransportableException).IsAssignableFrom(DefaultPublishException.ModelType))
+                throw new InvalidCastException("PublishException model type must implement ITransportableException interface");
+
+            foreach (TransportExceptionDescriptor item in PublishExceptions)
+                if (item != null && !typeof(ITransportableException).IsAssignableFrom(item.ModelType))
+                    throw new InvalidCastException("PublishException model type must implement ITransportableException interface");
+        }
+
+         */
     }
 }

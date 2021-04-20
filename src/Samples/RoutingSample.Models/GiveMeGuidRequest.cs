@@ -1,6 +1,7 @@
 using System;
 using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Direct.Annotations;
+using Horse.Messaging.Client.Routers.Annotations;
 using Horse.Mq.Client.Annotations;
 
 namespace RoutingSample.Models

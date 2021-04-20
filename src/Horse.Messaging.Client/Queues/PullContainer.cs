@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 
-namespace Horse.Messaging.Client.Models
+namespace Horse.Messaging.Client.Queues
 {
     /// <summary>
     /// Pull from queue container

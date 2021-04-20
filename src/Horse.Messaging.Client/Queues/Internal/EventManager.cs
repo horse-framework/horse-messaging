@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 
-namespace Horse.Messaging.Client.Internal
+namespace Horse.Messaging.Client.Queues.Internal
 {
     internal class EventDescriptor
     {

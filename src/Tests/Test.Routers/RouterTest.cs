@@ -46,7 +46,7 @@ namespace Test.Routers
 
             for (int i = 0; i < 4; i++)
             {
-                HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
+                HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
                 Assert.Equal(HorseResultCode.Ok, result.Code);
             }
 
@@ -97,7 +97,7 @@ namespace Test.Routers
 
             for (int i = 0; i < 5; i++)
             {
-                HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
+                HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
                 Assert.Equal(HorseResultCode.Ok, result.Code);
             }
 
@@ -148,7 +148,7 @@ namespace Test.Routers
 
             for (int i = 0; i < 4; i++)
             {
-                HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
+                HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
                 Assert.Equal(HorseResultCode.Ok, result.Code);
             }
 
@@ -180,7 +180,7 @@ namespace Test.Routers
             await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
+            HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
             Assert.Equal(HorseResultCode.Ok, result.Code);
 
             HorseQueue queue1 = server.Server.FindQueue("push-a");
@@ -221,7 +221,7 @@ namespace Test.Routers
             client1.MessageReceived += (c, m) => client1Received = true;
             client2.MessageReceived += (c, m) => client2Received = true;
 
-            HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
+            HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
             Assert.Equal(HorseResultCode.Ok, result.Code);
             await Task.Delay(500);
 
@@ -245,7 +245,7 @@ namespace Test.Routers
             await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
+            HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
             Assert.Equal(HorseResultCode.NotFound, result.Code);
         }
 
@@ -272,7 +272,7 @@ namespace Test.Routers
             client1.MessageReceived += (c, m) => client1Received = true;
             Assert.True(client1.IsConnected);
 
-            HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
+            HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
             Assert.Equal(HorseResultCode.Ok, result.Code);
             await Task.Delay(500);
 
@@ -315,7 +315,7 @@ namespace Test.Routers
             client1.MessageReceived += (c, m) => client1Received = true;
             client2.MessageReceived += (c, m) => client2Received = true;
 
-            HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
+            HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
             Assert.Equal(HorseResultCode.Ok, result.Code);
             await Task.Delay(500);
 
@@ -355,7 +355,7 @@ namespace Test.Routers
 
             HorseQueue queue1 = server.Server.FindQueue("push-a");
 
-            HorseResult result = await producer.Routers.Publish("router", "Hello, World!", true);
+            HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
             Assert.Equal(HorseResultCode.Ok, result.Code);
 
             await Task.Delay(500);
@@ -392,7 +392,7 @@ namespace Test.Routers
 
             HorseQueue queue1 = server.Server.FindQueue("push-a");
 
-            HorseMessage message = await producer.Routers.PublishRequest("router", "Hello, World!");
+            HorseMessage message = await producer.Router.PublishRequest("router", "Hello, World!");
             Assert.NotNull(message);
             Assert.Equal("Response", message.GetStringContent());
             Assert.Equal(1, queue1.MessageCount());

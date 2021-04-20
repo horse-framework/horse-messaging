@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Horse.Messaging.Client.Bus;
-using Horse.Messaging.Client.Models;
 using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Queues
@@ -35,7 +33,7 @@ namespace Horse.Messaging.Client.Queues
                                       bool waitAcknowledge = false,
                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Queues.Push(queue, content, waitAcknowledge, messageHeaders);
+            return _client.Queue.Push(queue, content, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -44,7 +42,7 @@ namespace Horse.Messaging.Client.Queues
                                       bool waitAcknowledge = false,
                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Queues.Push(queue, content, waitAcknowledge, messageHeaders);
+            return _client.Queue.Push(queue, content, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -54,7 +52,7 @@ namespace Horse.Messaging.Client.Queues
                                       bool waitAcknowledge = false,
                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Queues.Push(queue, content, messageId, waitAcknowledge, messageHeaders);
+            return _client.Queue.Push(queue, content, messageId, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -64,7 +62,7 @@ namespace Horse.Messaging.Client.Queues
                                       bool waitAcknowledge = false,
                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Queues.Push(queue, content, messageId, waitAcknowledge, messageHeaders);
+            return _client.Queue.Push(queue, content, messageId, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -72,7 +70,7 @@ namespace Horse.Messaging.Client.Queues
                                           bool waitAcknowledge = false,
                                           IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Queues.PushJson(jsonObject, waitAcknowledge, messageHeaders);
+            return _client.Queue.PushJson(jsonObject, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -81,7 +79,7 @@ namespace Horse.Messaging.Client.Queues
                                           bool waitAcknowledge = false,
                                           IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Queues.PushJson(queue, jsonObject, waitAcknowledge, messageHeaders);
+            return _client.Queue.PushJson(queue, jsonObject, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -90,7 +88,7 @@ namespace Horse.Messaging.Client.Queues
                                           bool waitAcknowledge = false,
                                           IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Queues.PushJson(jsonObject, messageId, waitAcknowledge, messageHeaders);
+            return _client.Queue.PushJson(jsonObject, messageId, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -100,14 +98,14 @@ namespace Horse.Messaging.Client.Queues
                                           bool waitAcknowledge = false,
                                           IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Queues.PushJson(queue, jsonObject, messageId, waitAcknowledge, messageHeaders);
+            return _client.Queue.PushJson(queue, jsonObject, messageId, waitAcknowledge, messageHeaders);
         }
 
         /// <inheritdoc />
         public Task<PullContainer> Pull(PullRequest request,
                                         Func<int, HorseMessage, Task> actionForEachMessage = null)
         {
-            return _client.Queues.Pull(request, actionForEachMessage);
+            return _client.Queue.Pull(request, actionForEachMessage);
         }
     }
 }

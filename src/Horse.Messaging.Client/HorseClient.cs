@@ -4,17 +4,17 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Core;
-using Horse.Messaging.Client.Annotations.Resolvers;
+using Horse.Messaging.Client.Channels;
 using Horse.Messaging.Client.Direct;
-using Horse.Messaging.Client.Internal;
-using Horse.Messaging.Client.Models;
-using Horse.Messaging.Client.Operators;
 using Horse.Messaging.Client.Queues;
-using Horse.Messaging.Client.Queues.Annotations.Resolvers;
+using Horse.Messaging.Client.Queues.Internal;
+using Horse.Messaging.Client.Routers;
 using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client
 {
+    //todo: subscribe on connect
+
     /// <inheritdoc />
     public class HorseClient<TIdentifier> : HorseClient
     {
@@ -150,34 +150,36 @@ namespace Horse.Messaging.Client
         public DirectOperator Direct { get; }
 
         /// <summary>
+        /// HMQ Client Direct message management object
+        /// </summary>
+        public ChannelOperator Channel { get; }
+
+        /// <summary>
         /// HMQ Client Queue Management object
         /// </summary>
-        public QueueOperator Queues { get; }
+        public QueueOperator Queue { get; }
 
         /// <summary>
         /// HMQ Client Connection Management object
         /// </summary>
-        public ConnectionOperator Connections { get; }
+        public ConnectionOperator Connection { get; }
 
         /// <summary>
         /// HMQ Client Router Management object
         /// </summary>
-        public RouterOperator Routers { get; }
+        public RouterOperator Router { get; }
 
         /// <summary>
         /// Event manage of the client
         /// </summary>
-        internal EventManager Events { get; set; }
-
-        /// <summary>
-        /// Type delivery container
-        /// </summary>
-        internal ITypeDeliveryContainer DeliveryContainer { get; set; }
+        internal EventManager Event { get; set; }
 
         /// <summary>
         /// Serializer object for horse messages
         /// </summary>
         public IMessageContentSerializer MessageSerializer { get; set; } = new NewtonsoftContentSerializer();
+
+        internal IServiceProvider Provider { get; set; }
 
         #endregion
 
@@ -186,7 +188,6 @@ namespace Horse.Messaging.Client
         private TimeSpan _reconnectWait = TimeSpan.FromSeconds(3);
         private HorseSocket _socket;
         private readonly ConnectionData _data = new ConnectionData();
-        private List<ClientSubscription> _subscriptions = new List<ClientSubscription>();
         private bool _autoConnect;
         private Timer _reconnectTimer;
 
@@ -195,13 +196,12 @@ namespace Horse.Messaging.Client
         /// </summary>
         public HorseClient()
         {
+            Channel = new ChannelOperator(this);
             Direct = new DirectOperator(this);
-            Queues = new QueueOperator(this);
-            Connections = new ConnectionOperator(this);
-            Routers = new RouterOperator(this);
-
-            Events = new EventManager();
-            DeliveryContainer = new TypeDeliveryContainer(new TypeDeliveryResolver());
+            Queue = new QueueOperator(this);
+            Connection = new ConnectionOperator(this);
+            Router = new RouterOperator(this);
+            Event = new EventManager();
 
             Tracker = new MessageTracker(this);
             Tracker.Run();
@@ -213,7 +213,7 @@ namespace Horse.Messaging.Client
         public void Dispose()
         {
             Tracker?.Dispose();
-            Queues.Dispose();
+            Queue.Dispose();
         }
 
 
@@ -671,7 +671,7 @@ namespace Horse.Messaging.Client
                     break;
 
                 case MessageType.Event:
-                    _ = Events.TriggerEvents(this, message);
+                    _ = Event.TriggerEvents(this, message);
                     break;
 
                 case MessageType.QueueMessage:
@@ -679,21 +679,7 @@ namespace Horse.Messaging.Client
                     if (message.WaitResponse && AutoAcknowledge)
                         await SendAsync(message.CreateAcknowledge());
 
-                    //if message is response for pull request, process pull container
-                    if (Queues.PullContainers.Count > 0 && message.HasHeader)
-                    {
-                        string requestId = message.FindHeader(HorseHeaders.REQUEST_ID);
-                        if (!string.IsNullOrEmpty(requestId))
-                        {
-                            PullContainer container;
-                            lock (Queues.PullContainers)
-                                Queues.PullContainers.TryGetValue(requestId, out container);
-
-                            if (container != null)
-                                ProcessPull(requestId, message, container);
-                        }
-                    }
-
+                    await Queue.OnQueueMessage(message);
                     //SetOnMessageReceived(message);
                     break;
 
@@ -703,28 +689,8 @@ namespace Horse.Messaging.Client
                         await SendAsync(message.CreateAcknowledge());
 
                     await Direct.OnDirectMessage(message);
-
                     //SetOnMessageReceived(message);
                     break;
-            }
-        }
-
-        /// <summary>
-        /// Processes pull message
-        /// </summary>
-        private void ProcessPull(string requestId, HorseMessage message, PullContainer container)
-        {
-            if (message.Length > 0)
-                container.AddMessage(message);
-
-            string noContent = message.FindHeader(HorseHeaders.NO_CONTENT);
-
-            if (!string.IsNullOrEmpty(noContent))
-            {
-                lock (Queues.PullContainers)
-                    Queues.PullContainers.Remove(requestId);
-
-                container.Complete(noContent);
             }
         }
 

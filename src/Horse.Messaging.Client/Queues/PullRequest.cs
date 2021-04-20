@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Horse.Messaging.Client.Models
+namespace Horse.Messaging.Client.Queues
 {
     /// <summary>
     /// Consuming order

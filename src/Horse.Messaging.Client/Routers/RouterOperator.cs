@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Horse.Messaging.Client.Annotations.Resolvers;
-using Horse.Messaging.Client.Models;
+using Horse.Messaging.Client.Internal;
+using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Models;
 
-namespace Horse.Messaging.Client.Operators
+namespace Horse.Messaging.Client.Routers
 {
     /// <summary>
     /// Router manager object for hmq client
@@ -16,10 +16,12 @@ namespace Horse.Messaging.Client.Operators
     public class RouterOperator
     {
         private readonly HorseClient _client;
+        private readonly TypeDescriptorContainer<RouterTypeDescriptor> _descriptorContainer;
 
         internal RouterOperator(HorseClient client)
         {
             _client = client;
+            _descriptorContainer = new TypeDescriptorContainer<RouterTypeDescriptor>(new RouterTypeResolver());
         }
 
         #region Actions
@@ -94,15 +96,15 @@ namespace Horse.Messaging.Client.Operators
             message.WaitResponse = true;
             message.SetMessageId(_client.UniqueIdGenerator.Create());
             BindingInformation info = new BindingInformation
-                                      {
-                                          Name = name,
-                                          Target = target,
-                                          Interaction = interaction,
-                                          ContentType = contentType,
-                                          Priority = priority,
-                                          BindingType = type,
-                                          Method = bindingMethod
-                                      };
+            {
+                Name = name,
+                Target = target,
+                Interaction = interaction,
+                ContentType = contentType,
+                Priority = priority,
+                BindingType = type,
+                Method = bindingMethod
+            };
             message.Serialize(info, new NewtonsoftContentSerializer());
             return await _client.WaitResponse(message, true);
         }
@@ -235,8 +237,15 @@ namespace Horse.Messaging.Client.Operators
                                                    ushort? contentType = null,
                                                    IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor(model.GetType());
-            HorseMessage message = descriptor.CreateMessage(MessageType.Router, routerName, contentType);
+            RouterTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(model.GetType());
+
+            if (!string.IsNullOrEmpty(routerName))
+                descriptor.RouterName = routerName;
+            
+            if (contentType.HasValue)
+                descriptor.ContentType = contentType.Value;
+
+            HorseMessage message = descriptor.CreateMessage();
 
             if (!string.IsNullOrEmpty(messageId))
                 message.SetMessageId(messageId);
@@ -288,8 +297,15 @@ namespace Horse.Messaging.Client.Operators
         public async Task<HorseResult<TResponse>> PublishRequestJson<TRequest, TResponse>(string routerName, TRequest request, ushort? contentType = null,
                                                                                           IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            TypeDeliveryDescriptor descriptor = _client.DeliveryContainer.GetDescriptor(request.GetType());
-            HorseMessage message = descriptor.CreateMessage(MessageType.Router, routerName, contentType);
+            RouterTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(request.GetType());
+            
+            if (!string.IsNullOrEmpty(routerName))
+                descriptor.RouterName = routerName;
+            
+            if (contentType.HasValue)
+                descriptor.ContentType = contentType.Value;
+            
+            HorseMessage message = descriptor.CreateMessage();
             message.WaitResponse = true;
             message.Serialize(request, _client.MessageSerializer);
 

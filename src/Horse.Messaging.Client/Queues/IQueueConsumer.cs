@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 
-namespace Horse.Messaging.Client
+namespace Horse.Messaging.Client.Queues
 {
     /// <summary>
     /// Queue Consumer implementation.
