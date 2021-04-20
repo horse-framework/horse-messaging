@@ -59,7 +59,7 @@ namespace Horse.Messaging.Server.Channels
         /// <summary>
         /// Finds channel by name
         /// </summary>
-        public HorseChannel FindChannel(string name)
+        public HorseChannel Find(string name)
         {
             return _channels.Find(x => x.Name == name);
         }
@@ -70,10 +70,10 @@ namespace Horse.Messaging.Server.Channels
         /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
         /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>
         /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same id</exception>
-        public Task<HorseChannel> CreateChannel(string channelName)
+        public Task<HorseChannel> Create(string channelName)
         {
             HorseChannelOptions options = HorseChannelOptions.Clone(Options);
-            return CreateChannel(channelName, options);
+            return Create(channelName, options);
         }
 
         /// <summary>
@@ -82,11 +82,11 @@ namespace Horse.Messaging.Server.Channels
         /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
         /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>
         /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same id</exception>
-        public Task<HorseChannel> CreateChannel(string channelName, Action<HorseChannelOptions> optionsAction)
+        public Task<HorseChannel> Create(string channelName, Action<HorseChannelOptions> optionsAction)
         {
             HorseChannelOptions options = HorseChannelOptions.Clone(Options);
             optionsAction(options);
-            return CreateChannel(channelName, options);
+            return Create(channelName, options);
         }
 
         /// <summary>
@@ -95,12 +95,12 @@ namespace Horse.Messaging.Server.Channels
         /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
         /// <exception cref="OperationCanceledException">Thrown when channel limit is exceeded for the server</exception>
         /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same id</exception>
-        public Task<HorseChannel> CreateChannel(string channelName, HorseChannelOptions options)
+        public Task<HorseChannel> Create(string channelName, HorseChannelOptions options)
         {
-            return CreateChannel(channelName, options, null, false, false);
+            return Create(channelName, options, null, false, false);
         }
 
-        internal async Task<HorseChannel> CreateChannel(string channelName,
+        internal async Task<HorseChannel> Create(string channelName,
                                                         HorseChannelOptions options,
                                                         HorseMessage requestMessage,
                                                         bool hideException,
@@ -160,19 +160,19 @@ namespace Horse.Messaging.Server.Channels
         /// <summary>
         /// Removes a channel from the server
         /// </summary>
-        public void RemoveChannel(string name)
+        public void Remove(string name)
         {
             HorseChannel channel = _channels.Find(x => x.Name == name);
             if (channel == null)
                 return;
 
-            RemoveChannel(channel);
+            Remove(channel);
         }
 
         /// <summary>
         /// Removes a channel from the server
         /// </summary>
-        public void RemoveChannel(HorseChannel channel)
+        public void Remove(HorseChannel channel)
         {
             try
             {

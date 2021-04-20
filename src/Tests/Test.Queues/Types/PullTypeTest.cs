@@ -1,22 +1,17 @@
 using System;
-using System.Linq;
 using System.Threading.Tasks;
-using Horse.Messaging.Server.Client;
-using Horse.Messaging.Server.Client.Models;
-using Test.Common;
 using Horse.Messaging.Server.Queues;
-using Horse.Messaging.Server.Protocol;
-using Horse.Mq.Client;
+using Test.Common;
 using Xunit;
 
-namespace Test.Queues.Statuses
+namespace Test.Queues.Types
 {
-    public class PullStatusTest
+    public class PullTypeTest
     {
         [Fact]
         public async Task SendAndPull()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start(300, 300);
 
@@ -34,7 +29,7 @@ namespace Test.Queues.Statuses
             await producer.Queues.Push("pull-a", "Hello, World!", false);
             await Task.Delay(700);
 
-            HorseQueue queue = server.Server.FindQueue("pull-a");
+            HorseQueue queue = server.Rider.FindQueue("pull-a");
             Assert.NotNull(queue);
             Assert.Single(queue.Messages);
 
@@ -57,11 +52,11 @@ namespace Test.Queues.Statuses
         [Fact]
         public async Task RequestAcknowledge()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            HorseQueue queue = server.Server.FindQueue("pull-a");
+            HorseQueue queue = server.Rider.FindQueue("pull-a");
             Assert.NotNull(queue);
             queue.Options.Acknowledge = QueueAckDecision.JustRequest;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
@@ -107,11 +102,11 @@ namespace Test.Queues.Statuses
         [InlineData(false)]
         public async Task PullOrder(bool? fifo)
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
-            HorseQueue queue = server.Server.FindQueue("pull-a");
+            HorseQueue queue = server.Rider.FindQueue("pull-a");
             await queue.Push("First Message");
             await queue.Push("Second Message");
 
@@ -149,11 +144,11 @@ namespace Test.Queues.Statuses
         [InlineData(10)]
         public async Task PullCount(int count)
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
-            HorseQueue queue = server.Server.FindQueue("pull-a");
+            HorseQueue queue = server.Rider.FindQueue("pull-a");
             for (int i = 0; i < 25; i++)
                 await queue.Push("Hello, World");
 
@@ -182,11 +177,11 @@ namespace Test.Queues.Statuses
         [InlineData(4, false, true)]
         public async Task PullClearAfter(int count, bool priorityMessages, bool messages)
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
-            HorseQueue queue = server.Server.FindQueue("pull-a");
+            HorseQueue queue = server.Rider.FindQueue("pull-a");
             for (int i = 0; i < 5; i++)
             {
                 await queue.Push("Hello, World");

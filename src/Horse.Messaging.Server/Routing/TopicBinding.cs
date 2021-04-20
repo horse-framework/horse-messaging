@@ -106,13 +106,13 @@ namespace Horse.Messaging.Server.Routing
             if (_queues.Length == 0)
                 return false;
 
-            HorseQueue queue = Router.Rider.Queue.FindQueue(message.Target);
+            HorseQueue queue = Router.Rider.Queue.Find(message.Target);
             if (queue == null)
             {
                 if (!Router.Rider.Options.AutoQueueCreation)
                     return false;
 
-                queue = await Router.Rider.Queue.CreateQueue(message.Target,
+                queue = await Router.Rider.Queue.Create(message.Target,
                                                              Router.Rider.Queue.Options,
                                                              message,
                                                              Router.Rider.Queue.DeliveryHandlerFactory,
@@ -130,13 +130,13 @@ namespace Horse.Messaging.Server.Routing
             if (_queues.Length < 1)
                 return false;
 
-            HorseQueue queue = Router.Rider.Queue.FindQueue(message.Target);
+            HorseQueue queue = Router.Rider.Queue.Find(message.Target);
             if (queue == null)
             {
                 if (!Router.Rider.Options.AutoQueueCreation)
                     return false;
 
-                queue = await Router.Rider.Queue.CreateQueue(message.Target,
+                queue = await Router.Rider.Queue.Create(message.Target,
                                                              Router.Rider.Queue.Options,
                                                              message,
                                                              Router.Rider.Queue.DeliveryHandlerFactory,

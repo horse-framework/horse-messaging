@@ -90,7 +90,7 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Finds queue by name
         /// </summary>
-        public HorseQueue FindQueue(string name)
+        public HorseQueue Find(string name)
         {
             return _queues.Find(x => x.Name == name);
         }
@@ -101,10 +101,10 @@ namespace Horse.Messaging.Server.Queues
         /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
         /// <exception cref="OperationCanceledException">Thrown when queue limit is exceeded for the server</exception>
         /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
-        public async Task<HorseQueue> CreateQueue(string queueName)
+        public async Task<HorseQueue> Create(string queueName)
         {
             QueueOptions options = QueueOptions.CloneFrom(Options);
-            return await CreateQueue(queueName, options);
+            return await Create(queueName, options);
         }
 
         /// <summary>
@@ -113,11 +113,11 @@ namespace Horse.Messaging.Server.Queues
         /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
         /// <exception cref="OperationCanceledException">Thrown when queue limit is exceeded for the server</exception>
         /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
-        public async Task<HorseQueue> CreateQueue(string queueName, Action<QueueOptions> optionsAction)
+        public async Task<HorseQueue> Create(string queueName, Action<QueueOptions> optionsAction)
         {
             QueueOptions options = QueueOptions.CloneFrom(Options);
             optionsAction(options);
-            return await CreateQueue(queueName, options);
+            return await Create(queueName, options);
         }
 
         /// <summary>
@@ -126,9 +126,9 @@ namespace Horse.Messaging.Server.Queues
         /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
         /// <exception cref="OperationCanceledException">Thrown when queue limit is exceeded for the server</exception>
         /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
-        public Task<HorseQueue> CreateQueue(string queueName, QueueOptions options)
+        public Task<HorseQueue> Create(string queueName, QueueOptions options)
         {
-            return CreateQueue(queueName, options, DeliveryHandlerFactory);
+            return Create(queueName, options, DeliveryHandlerFactory);
         }
 
         /// <summary>
@@ -137,14 +137,14 @@ namespace Horse.Messaging.Server.Queues
         /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
         /// <exception cref="OperationCanceledException">Thrown when queue limit is exceeded for the server</exception>
         /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
-        public Task<HorseQueue> CreateQueue(string queueName,
+        public Task<HorseQueue> Create(string queueName,
                                             QueueOptions options,
                                             Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> asyncHandler)
         {
-            return CreateQueue(queueName, options, null, asyncHandler, false, false);
+            return Create(queueName, options, null, asyncHandler, false, false);
         }
 
-        internal async Task<HorseQueue> CreateQueue(string queueName,
+        internal async Task<HorseQueue> Create(string queueName,
                                                     QueueOptions options,
                                                     HorseMessage requestMessage,
                                                     Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> asyncHandler,
@@ -243,19 +243,19 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Removes a queue from the server
         /// </summary>
-        public async Task RemoveQueue(string name)
+        public async Task Remove(string name)
         {
-            HorseQueue queue = FindQueue(name);
+            HorseQueue queue = Find(name);
             if (queue == null)
                 return;
 
-            await RemoveQueue(queue);
+            await Remove(queue);
         }
 
         /// <summary>
         /// Removes a queue from the server
         /// </summary>
-        public async Task RemoveQueue(HorseQueue queue)
+        public async Task Remove(HorseQueue queue)
         {
             try
             {

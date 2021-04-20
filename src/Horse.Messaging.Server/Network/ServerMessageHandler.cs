@@ -135,13 +135,13 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task Subscribe(MessagingClient client, HorseMessage message)
         {
-            HorseQueue queue = _rider.Queue.FindQueue(message.Target);
+            HorseQueue queue = _rider.Queue.Find(message.Target);
 
             //if auto creation active, try to create queue
             if (queue == null && _rider.Options.AutoQueueCreation)
             {
                 QueueOptions options = QueueOptions.CloneFrom(_rider.Queue.Options);
-                queue = await _rider.Queue.CreateQueue(message.Target, options, message, _rider.Queue.DeliveryHandlerFactory, true, true);
+                queue = await _rider.Queue.Create(message.Target, options, message, _rider.Queue.DeliveryHandlerFactory, true, true);
             }
 
             if (queue == null)
@@ -186,7 +186,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task Unsubscribe(MessagingClient client, HorseMessage message)
         {
-            HorseQueue queue = _rider.Queue.FindQueue(message.Target);
+            HorseQueue queue = _rider.Queue.Find(message.Target);
             if (queue == null)
             {
                 if (message.WaitResponse)
@@ -206,7 +206,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         public async Task GetQueueConsumers(MessagingClient client, HorseMessage message)
         {
-            HorseQueue queue = _rider.Queue.FindQueue(message.Target);
+            HorseQueue queue = _rider.Queue.Find(message.Target);
 
             if (queue == null)
             {
@@ -253,7 +253,7 @@ namespace Horse.Messaging.Server.Network
             if (message.Length > 0)
                 builder = await System.Text.Json.JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content);
 
-            HorseQueue queue = _rider.Queue.FindQueue(message.Target);
+            HorseQueue queue = _rider.Queue.Find(message.Target);
 
             //if queue exists, we can't create. return duplicate response.
             if (queue != null)
@@ -282,7 +282,7 @@ namespace Horse.Messaging.Server.Network
             if (builder != null)
                 builder.ApplyToQueue(options);
 
-            queue = await _rider.Queue.CreateQueue(message.Target, options, message, _rider.Queue.DeliveryHandlerFactory, true, false);
+            queue = await _rider.Queue.Create(message.Target, options, message, _rider.Queue.DeliveryHandlerFactory, true, false);
 
             //if creation successful, sends response
             if (message.WaitResponse)
@@ -299,7 +299,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task RemoveQueue(MessagingClient client, HorseMessage message)
         {
-            HorseQueue queue = _rider.Queue.FindQueue(message.Target);
+            HorseQueue queue = _rider.Queue.Find(message.Target);
             if (queue == null)
             {
                 if (message.WaitResponse)
@@ -319,7 +319,7 @@ namespace Horse.Messaging.Server.Network
                 }
             }
 
-            await _rider.Queue.RemoveQueue(queue);
+            await _rider.Queue.Remove(queue);
 
             if (message.WaitResponse)
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
@@ -332,7 +332,7 @@ namespace Horse.Messaging.Server.Network
         {
             NetworkOptionsBuilder builder = await System.Text.Json.JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content);
 
-            HorseQueue queue = _rider.Queue.FindQueue(message.Target);
+            HorseQueue queue = _rider.Queue.Find(message.Target);
             if (queue == null)
             {
                 if (message.WaitResponse)
@@ -367,7 +367,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task ClearMessages(MessagingClient client, HorseMessage message)
         {
-            HorseQueue queue = _rider.Queue.FindQueue(message.Target);
+            HorseQueue queue = _rider.Queue.Find(message.Target);
             if (queue == null)
             {
                 if (message.WaitResponse)
@@ -590,7 +590,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task CreateRouter(MessagingClient client, HorseMessage message)
         {
-            IRouter found = _rider.Router.FindRouter(message.Target);
+            IRouter found = _rider.Router.Find(message.Target);
             if (found != null)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
@@ -613,7 +613,7 @@ namespace Horse.Messaging.Server.Network
                 }
             }
 
-            _rider.Router.AddRouter(message.Target, method);
+            _rider.Router.Add(message.Target, method);
             await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
         }
 
@@ -622,7 +622,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task RemoveRouter(MessagingClient client, HorseMessage message)
         {
-            IRouter found = _rider.Router.FindRouter(message.Target);
+            IRouter found = _rider.Router.Find(message.Target);
             if (found == null)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
@@ -640,7 +640,7 @@ namespace Horse.Messaging.Server.Network
                 }
             }
 
-            _rider.Router.RemoveRouter(found);
+            _rider.Router.Remove(found);
             await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
         }
 
@@ -674,7 +674,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task CreateRouterBinding(MessagingClient client, HorseMessage message)
         {
-            IRouter router = _rider.Router.FindRouter(message.Target);
+            IRouter router = _rider.Router.Find(message.Target);
             if (router == null)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
@@ -721,7 +721,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task RemoveRouterBinding(MessagingClient client, HorseMessage message)
         {
-            IRouter router = _rider.Router.FindRouter(message.Target);
+            IRouter router = _rider.Router.Find(message.Target);
             if (router == null)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
@@ -763,7 +763,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task ListRouterBindings(MessagingClient client, HorseMessage message)
         {
-            IRouter router = _rider.Router.FindRouter(message.Target);
+            IRouter router = _rider.Router.Find(message.Target);
             if (router == null)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));

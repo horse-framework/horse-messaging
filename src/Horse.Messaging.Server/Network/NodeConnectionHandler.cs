@@ -113,7 +113,7 @@ namespace Horse.Messaging.Server.Network
             if (model == null)
                 return;
 
-            HorseQueue queue = _node.Self.Queue.FindQueue(model.Queue);
+            HorseQueue queue = _node.Self.Queue.Find(model.Queue);
             if (queue == null)
                 return;
 

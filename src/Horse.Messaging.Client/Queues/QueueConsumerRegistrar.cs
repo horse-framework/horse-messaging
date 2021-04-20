@@ -5,13 +5,13 @@ using Horse.Messaging.Client.Internal;
 
 namespace Horse.Messaging.Client.Queues
 {
-    internal class QueueConsumerRegistrar
+    public class QueueConsumerRegistrar
     {
         private readonly QueueOperator _operator;
 
         public QueueTypeDescriptor DefaultDescriptor { get; set; }
 
-        internal QueueConsumerRegistrar(QueueOperator directOperator)
+        public QueueConsumerRegistrar(QueueOperator directOperator)
         {
             _operator = directOperator;
         }

@@ -1,27 +1,27 @@
 using System;
 using System.Threading.Tasks;
+using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Queues;
-using Horse.Messaging.Server.Protocol;
 using Horse.Messaging.Server.Queues.Delivery;
 
 namespace Test.Common.Handlers
 {
     public class TestDeliveryHandler : IMessageDeliveryHandler
     {
-        private readonly TestHorseMq _mq;
+        private readonly TestHorseRider _rider;
 
-        public TestDeliveryHandler(TestHorseMq mq)
+        public TestDeliveryHandler(TestHorseRider rider)
         {
-            _mq = mq;
+            _rider = rider;
         }
 
         public Task<Decision> ReceivedFromProducer(HorseQueue queue, QueueMessage message, MessagingClient sender)
         {
-            _mq.OnReceived++;
+            _rider.OnReceived++;
 
-            if (_mq.SendAcknowledgeFromMQ)
+            if (_rider.SendAcknowledgeFromMQ)
                 return Task.FromResult(new Decision(true, false, PutBackDecision.No, DeliveryAcknowledgeDecision.Always));
 
             return Task.FromResult(new Decision(true, false));
@@ -29,19 +29,19 @@ namespace Test.Common.Handlers
 
         public Task<Decision> BeginSend(HorseQueue queue, QueueMessage message)
         {
-            _mq.OnSendStarting++;
+            _rider.OnSendStarting++;
             return Task.FromResult(new Decision(true, false));
         }
 
         public Task<Decision> CanConsumerReceive(HorseQueue queue, QueueMessage message, MessagingClient receiver)
         {
-            _mq.OnBeforeSend++;
+            _rider.OnBeforeSend++;
             return Task.FromResult(new Decision(true, false));
         }
 
         public Task<Decision> ConsumerReceived(HorseQueue queue, MessageDelivery delivery, MessagingClient receiver)
         {
-            _mq.OnAfterSend++;
+            _rider.OnAfterSend++;
             return Task.FromResult(new Decision(true, false));
         }
 
@@ -52,47 +52,47 @@ namespace Test.Common.Handlers
 
         public Task<Decision> EndSend(HorseQueue queue, QueueMessage message)
         {
-            _mq.OnSendCompleted++;
+            _rider.OnSendCompleted++;
             return Task.FromResult(new Decision(true, true));
         }
 
         public Task<Decision> AcknowledgeReceived(HorseQueue queue, HorseMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
-            _mq.OnAcknowledge++;
+            _rider.OnAcknowledge++;
 
             if (!success)
-                return Task.FromResult(new Decision(true, false, _mq.PutBack, DeliveryAcknowledgeDecision.Always));
-            
+                return Task.FromResult(new Decision(true, false, _rider.PutBack, DeliveryAcknowledgeDecision.Always));
+
             return Task.FromResult(new Decision(true, false, PutBackDecision.No, DeliveryAcknowledgeDecision.Always));
         }
 
         public Task<Decision> MessageTimedOut(HorseQueue queue, QueueMessage message)
         {
-            _mq.OnTimeUp++;
+            _rider.OnTimeUp++;
             return Task.FromResult(new Decision(true, false));
         }
 
         public Task<Decision> AcknowledgeTimedOut(HorseQueue queue, MessageDelivery delivery)
         {
-            _mq.OnAcknowledgeTimeUp++;
-            return Task.FromResult(new Decision(true, false, _mq.PutBack, DeliveryAcknowledgeDecision.None));
+            _rider.OnAcknowledgeTimeUp++;
+            return Task.FromResult(new Decision(true, false, _rider.PutBack, DeliveryAcknowledgeDecision.None));
         }
 
         public Task MessageDequeued(HorseQueue queue, QueueMessage message)
         {
-            _mq.OnRemove++;
+            _rider.OnRemove++;
             return Task.CompletedTask;
         }
 
         public Task<Decision> ExceptionThrown(HorseQueue queue, QueueMessage message, Exception exception)
         {
-            _mq.OnException++;
+            _rider.OnException++;
             return Task.FromResult(new Decision(true, false));
         }
 
         public Task<bool> SaveMessage(HorseQueue queue, QueueMessage message)
         {
-            _mq.SaveMessage++;
+            _rider.SaveMessage++;
             return Task.FromResult(true);
         }
     }

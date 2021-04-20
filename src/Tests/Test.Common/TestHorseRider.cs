@@ -3,16 +3,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using Test.Common.Handlers;
 using Horse.Messaging.Server;
-using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Server;
 
 namespace Test.Common
 {
-    public class TestHorseMq
+    public class TestHorseRider
     {
-        public HorseRider Server { get; private set; }
+        public HorseRider Rider { get; private set; }
 
         public int OnQueueCreated { get; set; }
         public int OnQueueRemoved { get; set; }
@@ -38,32 +37,34 @@ namespace Test.Common
         public int Port { get; private set; }
 
         public bool SendAcknowledgeFromMQ { get; set; }
-        
+
         public PutBackDecision PutBack { get; set; }
 
 
         public async Task Initialize()
         {
-            HorseRiderOptions horseRiderOptions = new HorseRiderOptions();
-            horseRiderOptions.AutoQueueCreation = true;
-            horseRiderOptions.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
-            horseRiderOptions.MessageTimeout = TimeSpan.FromSeconds(12);
-            horseRiderOptions.Status = QueueStatus.Broadcast;
+            Rider = HorseRiderBuilder.Create()
+               .ConfigureOptions(o => o.AutoQueueCreation = true)
+               .ConfigureQueues(q =>
+                {
+                    q.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
+                    q.Options.MessageTimeout = TimeSpan.FromSeconds(12);
+                    q.Options.Type = QueueType.Push;
 
-            Server = HorseRiderBuilder.Build()
-                                   .AddOptions(horseRiderOptions)
-                                   .AddQueueEventHandler(new TestQueueHandler(this))
-                                   .UseDeliveryHandler(d => Task.FromResult<IMessageDeliveryHandler>(new TestDeliveryHandler(this)))
-                                   .AddClientHandler(new TestClientHandler(this))
-                                   .AddAdminAuthorization<TestAdminAuthorization>()
-                                   .Build();
+                    q.EventHandlers.Add(new TestQueueHandler(this));
+                    q.UseDeliveryHandler(_ => Task.FromResult<IMessageDeliveryHandler>(new TestDeliveryHandler(this)));
+                })
+               .ConfigureClients(c =>
+                {
+                    c.Handlers.Add(new TestClientHandler(this));
+                    c.AdminAuthorizations.Add(new TestAdminAuthorization());
+                })
+               .Build();
 
-            await Server.CreateQueue("broadcast-a", o => o.Status = QueueStatus.Broadcast);
-            await Server.CreateQueue("push-a", o => o.Status = QueueStatus.Push);
-            await Server.CreateQueue("push-a-cc", o => o.Status = QueueStatus.Push);
-            await Server.CreateQueue("rr-a", o => o.Status = QueueStatus.RoundRobin);
-            await Server.CreateQueue("pull-a", o => o.Status = QueueStatus.Pull);
-            await Server.CreateQueue("cache-a", o => o.Status = QueueStatus.Cache);
+            await Rider.Queue.Create("push-a", o => o.Type = QueueType.Push);
+            await Rider.Queue.Create("push-a-cc", o => o.Type = QueueType.Push);
+            await Rider.Queue.Create("rr-a", o => o.Type = QueueType.RoundRobin);
+            await Rider.Queue.Create("pull-a", o => o.Type = QueueType.Pull);
         }
 
         public int Start(int pingInterval = 3, int requestTimeout = 4)
@@ -81,7 +82,7 @@ namespace Test.Common
                     serverOptions.RequestTimeout = requestTimeout;
 
                     HorseServer server = new HorseServer(serverOptions);
-                    server.UseRider(Server);
+                    server.UseRider(Rider);
                     server.Start();
                     Port = port;
                     return port;

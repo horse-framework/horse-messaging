@@ -28,13 +28,13 @@ namespace Horse.Messaging.Server.Queues
 
         private async Task<HorseQueue> FindQueue(MessagingClient client, string name, HorseMessage message)
         {
-            HorseQueue queue = _rider.Queue.FindQueue(name);
+            HorseQueue queue = _rider.Queue.Find(name);
 
             //if auto creation active, try to create queue
             if (queue == null && _rider.Options.AutoQueueCreation)
             {
                 QueueOptions options = QueueOptions.CloneFrom(_rider.Queue.Options);
-                queue = await _rider.Queue.CreateQueue(name, options, message, _rider.Queue.DeliveryHandlerFactory, true, true);
+                queue = await _rider.Queue.Create(name, options, message, _rider.Queue.DeliveryHandlerFactory, true, true);
             }
 
             if (queue == null)

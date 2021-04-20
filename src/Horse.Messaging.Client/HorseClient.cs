@@ -13,6 +13,7 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client
 {
+    //todo: client data properties
     //todo: subscribe on connect
 
     /// <inheritdoc />
@@ -335,8 +336,10 @@ namespace Horse.Messaging.Client
             if (string.IsNullOrEmpty(_clientId))
                 _clientId = UniqueIdGenerator.Create();
 
+            /* todo
             if (host.Protocol != Core.Protocol.Hmq)
                 throw new NotSupportedException("Only Horse protocol is supported");
+                */
 
             SetAutoReconnect(true);
             _socket = new HorseSocket(this, _data);
@@ -368,9 +371,11 @@ namespace Horse.Messaging.Client
             if (string.IsNullOrEmpty(_clientId))
                 _clientId = UniqueIdGenerator.Create();
 
+            /* todo
             if (host.Protocol != Core.Protocol.Hmq)
                 throw new NotSupportedException("Only Horse protocol is supported");
-
+                */
+            
             SetAutoReconnect(true);
             _socket = new HorseSocket(this, _data);
             return _socket.ConnectAsync(host);

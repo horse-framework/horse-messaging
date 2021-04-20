@@ -75,14 +75,14 @@ namespace Horse.Messaging.Server.Routing
             if (queueName == null)
                 return null;
 
-            HorseQueue queue = Router.Rider.Queue.FindQueue(queueName);
+            HorseQueue queue = Router.Rider.Queue.Find(queueName);
             if (queue != null)
             {
                 _targetQueue = queue;
                 return _targetQueue;
             }
 
-            _targetQueue = await Router.Rider.Queue.CreateQueue(queueName, Router.Rider.Queue.Options, message, null, true, true);
+            _targetQueue = await Router.Rider.Queue.Create(queueName, Router.Rider.Queue.Options, message, null, true, true);
             return _targetQueue;
         }
     }

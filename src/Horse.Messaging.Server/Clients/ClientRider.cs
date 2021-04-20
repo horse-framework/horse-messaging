@@ -78,7 +78,7 @@ namespace Horse.Messaging.Server.Clients
         /// <summary>
         /// Adds new client to the server
         /// </summary>
-        internal void AddClient(MessagingClient client)
+        internal void Add(MessagingClient client)
         {
             _clients.Add(client);
             OnClientConnected.Trigger(client);
@@ -87,7 +87,7 @@ namespace Horse.Messaging.Server.Clients
         /// <summary>
         /// Removes the client from the server
         /// </summary>
-        internal void RemoveClient(MessagingClient client)
+        internal void Remove(MessagingClient client)
         {
             _clients.Remove(client);
             client.UnsubscribeFromAllQueues();
@@ -97,7 +97,7 @@ namespace Horse.Messaging.Server.Clients
         /// <summary>
         /// Finds client from unique id
         /// </summary>
-        public MessagingClient FindClient(string uniqueId)
+        public MessagingClient Find(string uniqueId)
         {
             return _clients.Find(x => x.UniqueId == uniqueId);
         }
@@ -113,7 +113,7 @@ namespace Horse.Messaging.Server.Clients
         /// <summary>
         /// Finds all connected client with specified type
         /// </summary>
-        public List<MessagingClient> FindClientByType(string type)
+        public List<MessagingClient> FindByType(string type)
         {
             return _clients.FindAll(x => x.Type == type);
         }

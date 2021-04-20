@@ -37,7 +37,7 @@ namespace Horse.Messaging.Server.Events
             string queueName = message.FindHeader(HorseHeaders.QUEUE_NAME);
             bool subscribe = message.ContentType == 1;
 
-            HorseQueue queue = !string.IsNullOrEmpty(queueName) ? _rider.Queue.FindQueue(queueName) : null;
+            HorseQueue queue = !string.IsNullOrEmpty(queueName) ? _rider.Queue.Find(queueName) : null;
             if (subscribe)
             {
                 foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())

@@ -52,7 +52,7 @@ namespace Horse.Messaging.Server.Direct
             }
             else if (message.Target.StartsWith("@type:"))
             {
-                List<MessagingClient> receivers = _rider.Client.FindClientByType(message.Target.Substring(6));
+                List<MessagingClient> receivers = _rider.Client.FindByType(message.Target.Substring(6));
                 if (receivers.Count > 0)
                 {
                     if (message.HighPriority)
@@ -114,7 +114,7 @@ namespace Horse.Messaging.Server.Direct
         private async Task ProcessSingleReceiverClientMessage(MessagingClient client, HorseMessage message)
         {
             //find the receiver
-            MessagingClient other = _rider.Client.FindClient(message.Target);
+            MessagingClient other = _rider.Client.Find(message.Target);
             if (other == null)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));

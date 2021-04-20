@@ -72,7 +72,7 @@ namespace Horse.Messaging.Server.Routing
             if (_targetQueue != null && DateTime.UtcNow - _queueUpdateTime < TimeSpan.FromMinutes(1))
                 return _targetQueue;
 
-            HorseQueue queue = Router.Rider.Queue.FindQueue(Target);
+            HorseQueue queue = Router.Rider.Queue.Find(Target);
             if (queue == null)
                 return null;
 

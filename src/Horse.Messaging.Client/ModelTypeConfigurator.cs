@@ -51,7 +51,7 @@ namespace Horse.Messaging.Client
         /// </summary>
         public ModelTypeConfigurator UseQueueName(Func<Type, string> func)
         {
-            QueueNameFactory = func;
+            QueueNameFactory = func; //todo: q name fac is not used now
             return this;
         }
 

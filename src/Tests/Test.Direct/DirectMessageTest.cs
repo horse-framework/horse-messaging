@@ -1,9 +1,8 @@
 using System;
 using System.Threading.Tasks;
-using Horse.Messaging.Server.Client;
+using Horse.Messaging.Client;
+using Horse.Messaging.Protocol;
 using Test.Common;
-using Horse.Messaging.Server.Protocol;
-using Horse.Mq.Client;
 using Xunit;
 
 namespace Test.Direct
@@ -16,7 +15,7 @@ namespace Test.Direct
         [Fact]
         public async Task WithoutAnyResponse()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
@@ -50,7 +49,7 @@ namespace Test.Direct
         [Fact]
         public async Task WithAcknowledge()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
@@ -85,7 +84,7 @@ namespace Test.Direct
         [Fact]
         public async Task WithResponse()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 

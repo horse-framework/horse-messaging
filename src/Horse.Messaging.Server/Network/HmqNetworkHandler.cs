@@ -63,7 +63,7 @@ namespace Horse.Messaging.Server.Network
                 clientId = _rider.Client.ClientIdGenerator.Create();
 
             //if another client with same unique id is online, do not accept new client
-            MessagingClient foundClient = _rider.Client.FindClient(clientId);
+            MessagingClient foundClient = _rider.Client.Find(clientId);
             if (foundClient != null)
             {
                 await connection.Socket.SendAsync(HorseProtocolWriter.Create(MessageBuilder.Busy()));
@@ -93,7 +93,7 @@ namespace Horse.Messaging.Server.Network
             }
 
             //client authenticated, add it into the connected clients list
-            _rider.Client.AddClient(client);
+            _rider.Client.Add(client);
 
             //send response message to the client, client should check unique id,
             //if client's unique id isn't permitted, server will create new id for client and send it as response
@@ -119,7 +119,7 @@ namespace Horse.Messaging.Server.Network
         public Task Disconnected(IHorseServer server, HorseServerSocket client)
         {
             MessagingClient messagingClient = (MessagingClient) client;
-            _rider.Client.RemoveClient(messagingClient);
+            _rider.Client.Remove(messagingClient);
             foreach (IClientHandler handler in _rider.Client.Handlers.All())
                 _ = handler.Disconnected(_rider, messagingClient);
 

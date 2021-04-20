@@ -134,7 +134,7 @@ namespace Horse.Messaging.Server.Routing
             {
                 if (Target.StartsWith("@type:", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    var list = Router.Rider.Client.FindClientByType(Target.Substring(6));
+                    var list = Router.Rider.Client.FindByType(Target.Substring(6));
                     _clients = list == null ? new MessagingClient[0] : list.ToArray();
                 }
                 else if (Target.StartsWith("@name:", StringComparison.InvariantCultureIgnoreCase))
@@ -144,7 +144,7 @@ namespace Horse.Messaging.Server.Routing
                 }
                 else
                 {
-                    MessagingClient client = Router.Rider.Client.FindClient(Target);
+                    MessagingClient client = Router.Rider.Client.Find(Target);
                     _clients = client == null ? new MessagingClient[0] : new[] {client};
                 }
 

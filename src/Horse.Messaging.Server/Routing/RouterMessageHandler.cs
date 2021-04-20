@@ -23,7 +23,7 @@ namespace Horse.Messaging.Server.Routing
 
         public async Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
         {
-            IRouter router = _rider.Router.FindRouter(message.Target);
+            IRouter router = _rider.Router.Find(message.Target);
             if (router == null)
             {
                 await SendResponse(RouterPublishResult.Disabled, client, message);

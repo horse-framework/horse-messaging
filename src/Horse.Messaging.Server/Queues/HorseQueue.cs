@@ -312,19 +312,19 @@ namespace Horse.Messaging.Server.Queues
             {
                 case QueueDestroy.NoConsumers:
                     if (_clients.Count == 0)
-                        await Rider.Queue.RemoveQueue(this);
+                        await Rider.Queue.Remove(this);
 
                     break;
 
                 case QueueDestroy.NoMessages:
                     if (MessagesList.Count == 0 && PriorityMessagesList.Count == 0 && (TimeKeeper == null || !TimeKeeper.HasPendingDelivery()))
-                        await Rider.Queue.RemoveQueue(this);
+                        await Rider.Queue.Remove(this);
 
                     break;
 
                 case QueueDestroy.Empty:
                     if (_clients.Count == 0 && MessagesList.Count == 0 && PriorityMessagesList.Count == 0 && (TimeKeeper == null || !TimeKeeper.HasPendingDelivery()))
-                        await Rider.Queue.RemoveQueue(this);
+                        await Rider.Queue.Remove(this);
 
                     break;
             }

@@ -1,5 +1,6 @@
 ﻿using System;
 using Horse.Messaging.Client;
+using Horse.Messaging.Client.Queues;
 using Horse.Mq.Client;
 using Horse.Mq.Client.Connectors;
 
@@ -9,18 +10,23 @@ namespace RoutingSample.QueueConsumer
 	{
 		private static void Main(string[] args)
 		{
-			HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(2));
-			connector.AddHost("horse://localhost:15500");
-			connector.ContentSerializer = new NewtonsoftContentSerializer();
-			connector.Observer.RegisterConsumer<SampleMessageQueueConsumer>();
-			connector.Connected += (c) =>
+			HorseClient client = new HorseClient();
+			client.RemoteHost = "horse://localhost:15500";
+			client.MessageSerializer = new NewtonsoftContentSerializer();
+
+			QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(client.Queue);
+			registrar.RegisterConsumer<SampleMessageQueueConsumer>();
+			
+			client.Connected += (c) =>
 			{
 				Console.WriteLine("CONNECTED");
-				_ = connector.GetClient().Queues.Subscribe("SAMPLE-MESSAGE-QUEUE", false);
+				_ = client.Queue.Subscribe("SAMPLE-MESSAGE-QUEUE", false);
 			};
-			connector.Disconnected += (c) => Console.WriteLine("DISCONNECTED");
-			connector.MessageReceived += (client, message) => Console.WriteLine("Queue message received");
-			connector.Run();
+			
+			client.Disconnected += (c) => Console.WriteLine("DISCONNECTED");
+			client.MessageReceived += (c, message) => Console.WriteLine("Queue message received");
+
+			client.Connect();
 
 			while (true)
 				Console.ReadLine();

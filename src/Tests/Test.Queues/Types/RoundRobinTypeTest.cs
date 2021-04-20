@@ -1,17 +1,14 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Horse.Messaging.Server.Client;
-using Test.Common;
 using Horse.Messaging.Server.Queues;
-using Horse.Messaging.Server.Protocol;
 using Horse.Messaging.Server.Queues.Delivery;
-using Horse.Mq.Client;
+using Test.Common;
 using Xunit;
 
-namespace Test.Queues.Statuses
+namespace Test.Queues.Types
 {
-    public class RoundRobinStatusTest
+    public class RoundRobinTypeTest
     {
         [Theory]
         [InlineData(1)]
@@ -20,10 +17,10 @@ namespace Test.Queues.Statuses
         [InlineData(20)]
         public async Task SendToOnlineConsumers(int onlineConsumerCount)
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start(300, 300);
-            server.Server.Options.Acknowledge = QueueAckDecision.None;
+            server.Rider.Options.Acknowledge = QueueAckDecision.None;
 
             HorseClient producer = new HorseClient();
             await producer.ConnectAsync("horse://localhost:" + port);
@@ -57,7 +54,7 @@ namespace Test.Queues.Statuses
         [Fact]
         public async Task SendToOfflineConsumers()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start(300, 300);
 
@@ -68,7 +65,7 @@ namespace Test.Queues.Statuses
             await producer.Queues.Push("rr-a", "Hello, World!", false);
             await Task.Delay(700);
 
-            HorseQueue queue = server.Server.FindQueue("rr-a");
+            HorseQueue queue = server.Rider.FindQueue("rr-a");
             Assert.NotNull(queue);
             Assert.Single(queue.Messages);
 
@@ -90,11 +87,11 @@ namespace Test.Queues.Statuses
         [InlineData(false)]
         public async Task RequestAcknowledge(bool queueAckIsActive)
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            HorseQueue queue = server.Server.FindQueue("rr-a");
+            HorseQueue queue = server.Rider.FindQueue("rr-a");
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
             queue.Options.Acknowledge = queueAckIsActive ? QueueAckDecision.JustRequest : QueueAckDecision.None;
@@ -119,11 +116,11 @@ namespace Test.Queues.Statuses
         [Fact]
         public async Task WaitForAcknowledge()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            HorseQueue queue = server.Server.FindQueue("rr-a");
+            HorseQueue queue = server.Rider.FindQueue("rr-a");
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
             queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
@@ -159,11 +156,11 @@ namespace Test.Queues.Statuses
         [Fact]
         public async Task AcknowledgeTimeout()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            HorseQueue queue = server.Server.FindQueue("rr-a");
+            HorseQueue queue = server.Rider.FindQueue("rr-a");
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(2);
             queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
@@ -197,11 +194,11 @@ namespace Test.Queues.Statuses
         [Fact]
         public async Task MultithreadConsumers()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            HorseQueue queue = server.Server.FindQueue("rr-a");
+            HorseQueue queue = server.Rider.FindQueue("rr-a");
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
             queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;

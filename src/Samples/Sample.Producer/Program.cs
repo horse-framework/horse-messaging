@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Horse.Messaging.Server.Client;
-using Horse.Messaging.Server.Client.Bus;
-using Horse.Messaging.Server.Protocol;
-using Horse.Mq.Client;
-using Horse.Mq.Client.Connectors;
+using Horse.Messaging.Client;
+using Horse.Messaging.Protocol;
 
 namespace Sample.Producer
 {
@@ -12,12 +9,11 @@ namespace Sample.Producer
     {
         static async Task Main(string[] args)
         {
-            HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(2));
-            connector.AddHost("horse://localhost:9999");
-            connector.ContentSerializer = new NewtonsoftContentSerializer();
-            connector.Run();
-
-            IHorseQueueBus queueBus = connector.Bus.Queue;
+            HorseClientBuilder builder = new HorseClientBuilder();
+            builder.SetHost("horse://localhost:9999");
+            builder.UseNewtonsoftJsonSerializer();
+            HorseClient client = builder.Build();
+            client.Connect();
 
             ModelA a = new ModelA();
             a.Foo = "foo";
@@ -25,7 +21,7 @@ namespace Sample.Producer
 
             while (true)
             {
-                HorseResult result = await queueBus.PushJson(a);
+                HorseResult result = await client.Queue.PushJson(a, false);
                 Console.WriteLine($"Push: {result.Code}");
                 await Task.Delay(5000);
             }

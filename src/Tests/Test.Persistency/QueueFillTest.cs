@@ -17,12 +17,12 @@ namespace Test.Persistency
             for (int i = 0; i < 10; i++)
                 items.Add(new QueueMessageA("No #" + i));
 
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             server.Start(300, 300);
 
-            HorseQueue route = server.Server.FindQueue("broadcast-a");
-            HorseQueue push = server.Server.FindQueue("push-a");
+            HorseQueue route = server.Rider.Queue.Find("broadcast-a");
+            HorseQueue push = server.Rider.Queue.Find("push-a");
             Assert.NotNull(route);
             Assert.NotNull(push);
 
@@ -44,11 +44,11 @@ namespace Test.Persistency
             for (int i = 0; i < 10; i++)
                 items.Add("No #" + i);
 
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             server.Start(300, 300);
 
-            HorseQueue queue = server.Server.FindQueue("push-a");
+            HorseQueue queue = server.Rider.Queue.Find("push-a");
             Assert.NotNull(queue);
 
             QueueFiller filler = new QueueFiller(queue);
@@ -67,11 +67,11 @@ namespace Test.Persistency
             for (int i = 0; i < 10; i++)
                 items.Add(Encoding.UTF8.GetBytes("No #" + i));
 
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             server.Start(300, 300);
 
-            HorseQueue queue = server.Server.FindQueue("push-a");
+            HorseQueue queue = server.Rider.Queue.Find("push-a");
             Assert.NotNull(queue);
 
             QueueFiller filler = new QueueFiller(queue);

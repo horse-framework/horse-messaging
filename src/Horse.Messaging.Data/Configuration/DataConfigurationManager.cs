@@ -112,11 +112,11 @@ namespace Horse.Messaging.Data.Configuration
         {
             foreach (QueueConfiguration queueConfiguration in Config.Queues)
             {
-                HorseQueue queue = rider.Queue.FindQueue(queueConfiguration.Name);
+                HorseQueue queue = rider.Queue.Find(queueConfiguration.Name);
                 if (queue == null)
                 {
                     if (rider.Queue.DeliveryHandlerFactory != null)
-                        queue = await rider.Queue.CreateQueue(queueConfiguration.Name,
+                        queue = await rider.Queue.Create(queueConfiguration.Name,
                                                          queueConfiguration.Configuration.ToOptions(),
                                                          async builder =>
                                                          {

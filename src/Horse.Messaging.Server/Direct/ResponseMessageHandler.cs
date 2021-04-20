@@ -29,7 +29,7 @@ namespace Horse.Messaging.Server.Direct
             if (message.HighPriority)
             {
                 //target should be client
-                MessagingClient target = _rider.Client.FindClient(message.Target);
+                MessagingClient target = _rider.Client.Find(message.Target);
                 if (target != null)
                 {
                     await target.SendAsync(message);
@@ -38,7 +38,7 @@ namespace Horse.Messaging.Server.Direct
             }
 
             //find queue
-            HorseQueue queue = _rider.Queue.FindQueue(message.Target);
+            HorseQueue queue = _rider.Queue.Find(message.Target);
             if (queue != null)
             {
                 await queue.AcknowledgeDelivered(sender, message);
@@ -49,7 +49,7 @@ namespace Horse.Messaging.Server.Direct
             if (!message.HighPriority)
             {
                 //target should be client
-                MessagingClient target = _rider.Client.FindClient(message.Target);
+                MessagingClient target = _rider.Client.Find(message.Target);
                 if (target != null)
                     await target.SendAsync(message);
             }

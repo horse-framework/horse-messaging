@@ -1,8 +1,7 @@
 using System.Threading.Tasks;
-using Horse.Messaging.Server.Client;
+using Horse.Messaging.Client;
+using Horse.Messaging.Protocol;
 using Test.Common;
-using Horse.Messaging.Server.Protocol;
-using Horse.Mq.Client;
 using Xunit;
 
 namespace Test.Events
@@ -12,7 +11,7 @@ namespace Test.Events
         [Fact]
         public async Task ClientConnected()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start(3000, 3000);
 
@@ -20,7 +19,7 @@ namespace Test.Events
             await client.ConnectAsync("horse://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
-            bool subscribed = await client.Connections.OnClientConnected(c =>
+            bool subscribed = await client.Connection.OnClientConnected(c =>
             {
                 if (c.Id == "client-2")
                     received = true;
@@ -35,7 +34,7 @@ namespace Test.Events
             Assert.True(received);
             received = false;
 
-            bool unsubscribed = await client.Connections.OffClientConnected();
+            bool unsubscribed = await client.Connection.OffClientConnected();
             Assert.True(unsubscribed);
             client2.Disconnect();
             client2 = new HorseClient();
@@ -50,7 +49,7 @@ namespace Test.Events
         [Fact]
         public async Task ClientDisconnected()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start(3000, 3000);
 
@@ -58,7 +57,7 @@ namespace Test.Events
             await client.ConnectAsync("horse://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
-            bool subscribed = await client.Connections.OnClientDisconnected(c =>
+            bool subscribed = await client.Connection.OnClientDisconnected(c =>
             {
                 if (c.Id == "client-2")
                     received = true;
@@ -74,7 +73,7 @@ namespace Test.Events
             Assert.True(received);
             received = false;
 
-            bool unsubscribed = await client.Connections.OffClientDisconnected();
+            bool unsubscribed = await client.Connection.OffClientDisconnected();
             Assert.True(unsubscribed);
 
             await client2.ConnectAsync("horse://localhost:" + port);
@@ -88,7 +87,7 @@ namespace Test.Events
         [Fact]
         public async Task ClientSubscribed()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start(3000, 3000);
 
@@ -96,25 +95,25 @@ namespace Test.Events
             await client.ConnectAsync("horse://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
-            bool subscribed = await client.Queues.OnSubscribed("push-a", c =>
+            bool subscribed = await client.Queue.OnSubscribed("push-a", c =>
             {
                 Assert.Equal("push-a", c.Queue);
                 received = true;
             });
             Assert.True(subscribed);
 
-            var result = await client.Queues.Subscribe("push-a", true);
+            var result = await client.Queue.Subscribe("push-a", true);
             Assert.Equal(HorseResultCode.Ok, result.Code);
             await Task.Delay(250);
             Assert.True(received);
             received = false;
 
-            bool unsubscribed = await client.Queues.OffSubscribed("push-a");
+            bool unsubscribed = await client.Queue.OffSubscribed("push-a");
             Assert.True(unsubscribed);
 
-            result = await client.Queues.Unsubscribe("push-a", true);
+            result = await client.Queue.Unsubscribe("push-a", true);
             Assert.Equal(HorseResultCode.Ok, result.Code);
-            result = await client.Queues.Subscribe("push-a", true);
+            result = await client.Queue.Subscribe("push-a", true);
             Assert.Equal(HorseResultCode.Ok, result.Code);
             await Task.Delay(250);
             Assert.False(received);
@@ -123,7 +122,7 @@ namespace Test.Events
         [Fact]
         public async Task ClientUnsubscribed()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start(3000, 3000);
 
@@ -131,31 +130,31 @@ namespace Test.Events
             await client.ConnectAsync("horse://localhost:" + port);
             Assert.True(client.IsConnected);
             bool received = false;
-            bool subscribed = await client.Queues.OnUnsubscribed("push-a", c =>
+            bool subscribed = await client.Queue.OnUnsubscribed("push-a", c =>
             {
                 Assert.Equal("push-a", c.Queue);
                 received = true;
             });
             Assert.True(subscribed);
 
-            var result = await client.Queues.Subscribe("push-a", true);
+            var result = await client.Queue.Subscribe("push-a", true);
             Assert.Equal(HorseResultCode.Ok, result.Code);
             await Task.Delay(250);
             Assert.False(received);
-            result = await client.Queues.Unsubscribe("push-a", true);
+            result = await client.Queue.Unsubscribe("push-a", true);
             await Task.Delay(250);
             Assert.True(received);
 
             // ReSharper disable once HeuristicUnreachableCode
             received = false;
 
-            bool unsubscribed = await client.Queues.OffUnsubscribed("push-a");
+            bool unsubscribed = await client.Queue.OffUnsubscribed("push-a");
             Assert.True(unsubscribed);
 
             Assert.Equal(HorseResultCode.Ok, result.Code);
-            result = await client.Queues.Subscribe("push-a", true);
+            result = await client.Queue.Subscribe("push-a", true);
             Assert.Equal(HorseResultCode.Ok, result.Code);
-            result = await client.Queues.Unsubscribe("push-a", true);
+            result = await client.Queue.Unsubscribe("push-a", true);
             Assert.Equal(HorseResultCode.Ok, result.Code);
             await Task.Delay(250);
             Assert.False(received);

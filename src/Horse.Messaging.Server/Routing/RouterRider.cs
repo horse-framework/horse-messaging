@@ -41,7 +41,7 @@ namespace Horse.Messaging.Server.Routing
         /// Creates new Router and adds it to server routers.
         /// Throws exception if name is not eligible
         /// </summary>
-        public IRouter AddRouter(string name, RouteMethod method)
+        public IRouter Add(string name, RouteMethod method)
         {
             try
             {
@@ -69,7 +69,7 @@ namespace Horse.Messaging.Server.Routing
         /// Adds new router to server server routers
         /// Throws exception if name is not eligible
         /// </summary>
-        public void AddRouter(IRouter router)
+        public void Add(IRouter router)
         {
             try
             {
@@ -94,7 +94,7 @@ namespace Horse.Messaging.Server.Routing
         /// <summary>
         /// Removes the router from server routers
         /// </summary>
-        public void RemoveRouter(IRouter router)
+        public void Remove(IRouter router)
         {
             _routers.Remove(router);
         }
@@ -102,7 +102,7 @@ namespace Horse.Messaging.Server.Routing
         /// <summary>
         /// Finds router by it's name
         /// </summary>
-        public IRouter FindRouter(string name)
+        public IRouter Find(string name)
         {
             return _routers.Find(x => x.Name == name);
         }

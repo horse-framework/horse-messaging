@@ -4,10 +4,9 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Horse.Messaging.Server.Client;
+using Horse.Messaging.Client;
+using Horse.Messaging.Protocol;
 using Test.Common;
-using Horse.Messaging.Server.Protocol;
-using Horse.Mq.Client;
 using Xunit;
 
 namespace Test.Nodes
@@ -20,12 +19,12 @@ namespace Test.Nodes
         [Fact]
         public async Task ConnectWithInfo()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
             HorseClient client = new HorseClient();
-            client.Data.Properties.Add("Name", "Test-" + port);
+            client.SetClientName("Test-" + port);
             client.Connect("horse://localhost:" + port + "/path");
 
             Thread.Sleep(50);
@@ -40,7 +39,7 @@ namespace Test.Nodes
         [Fact]
         public async Task ConnectWithoutInfo()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
@@ -95,12 +94,12 @@ namespace Test.Nodes
         [Fact]
         public async Task KeepAliveWithPingPong()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
             HorseClient client = new HorseClient();
-            client.Data.Properties.Add("Name", "Test-" + port);
+            client.SetClientName("Test-" + port);
             client.Connect("horse://localhost:" + port + "/path");
 
             Thread.Sleep(25000);
@@ -115,7 +114,7 @@ namespace Test.Nodes
         [Fact]
         public async Task DisconnectDueToPingTimeout()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
@@ -123,7 +122,7 @@ namespace Test.Nodes
             await client.ConnectAsync("127.0.0.1", port);
 
             NetworkStream stream = client.GetStream();
-            stream.Write(PredefinedMessages.PROTOCOL_BYTES_V2);
+            stream.Write(PredefinedMessages.PROTOCOL_BYTES_V3);
             HorseMessage msg = new HorseMessage();
             msg.Type = MessageType.Server;
             msg.ContentType = KnownContentTypes.Hello;
@@ -165,7 +164,7 @@ namespace Test.Nodes
             int connected = 0;
             int disconnected = 0;
 
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
@@ -208,13 +207,13 @@ namespace Test.Nodes
             Assert.Equal(connected, concurrentClients * connectionCount);
             Assert.Equal(disconnected, concurrentClients * connectionCount);
         }
-        
+
         [Theory]
         [InlineData(null)]
         [InlineData("*client*")]
         public async Task GetOnlineClients(string filter)
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
@@ -223,7 +222,7 @@ namespace Test.Nodes
             client.SetClientName("client-test");
             await client.ConnectAsync("horse://localhost:" + port);
 
-            var result = await client.Connections.GetConnectedClients(filter);
+            var result = await client.Connection.GetConnectedClients(filter);
             Assert.Equal(HorseResultCode.Ok, result.Result.Code);
             Assert.NotNull(result.Model);
             var c = result.Model.FirstOrDefault();

@@ -70,7 +70,7 @@ namespace Horse.Messaging.Server.Routing
             if (queueName == null)
                 return null;
 
-            HorseQueue queue = await Router.Rider.Queue.CreateQueue(queueName, Router.Rider.Queue.Options, message, null, true, true);
+            HorseQueue queue = await Router.Rider.Queue.Create(queueName, Router.Rider.Queue.Options, message, null, true, true);
             return queue;
         }
     }

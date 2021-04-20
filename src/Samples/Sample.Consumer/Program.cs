@@ -1,5 +1,5 @@
 ﻿using System;
-using Horse.Messaging.Server.Bus;
+using Horse.Messaging.Client;
 
 namespace Sample.Consumer
 {
@@ -7,17 +7,17 @@ namespace Sample.Consumer
     {
         static void Main(string[] args)
         {
-            HorseConnectorBuilder builder = new HorseConnectorBuilder();
+            HorseClientBuilder builder = new HorseClientBuilder();
 
-            builder.AddHost("horse://localhost:26222")
-                   .AddTransientConsumers(typeof(Program))
-                   .ConfigureModels(cfg => cfg.UseQueueName(type => "Username1")
-                                              .UseConsumerAck()
-                                              .AddMessageHeader("Sender-Client-Name", "MyName")
-                                              .SetPutBackDelay(TimeSpan.FromSeconds(10)))
-                   .Build()
-                   .Run();
+            HorseClient client = builder.SetHost("horse://localhost:9999")
+               .AddSingletonConsumers(typeof(Program))
+               .ConfigureModels(cfg => //cfg.UseQueueName(type => "Username1")
+                                   cfg.UseConsumerAck()
+                                   .AddMessageHeader("Sender-Client-Name", "MyName")
+                                   .SetPutBackDelay(TimeSpan.FromSeconds(10)))
+               .Build();
 
+            client.Connect();
 
             while (true)
                 Console.ReadLine();

@@ -1,16 +1,14 @@
 using System.Text.Json.Serialization;
-using Horse.Messaging.Server.Client.Annotations;
-using Horse.Messaging.Server.Client.Models;
-using Horse.Messaging.Server.Client.Queues.Annotations;
+using Horse.Messaging.Client.Queues;
+using Horse.Messaging.Client.Queues.Annotations;
+using Horse.Messaging.Protocol;
 using Newtonsoft.Json;
-using Horse.Messaging.Server.Protocol;
-using Horse.Mq.Client.Annotations;
 
 namespace Sample.Producer
 {
- //   [QueueName("model-a")]
+    [QueueName("model-a")]
     [DeliveryHandler("dhand")]
-    [QueueStatus(MessagingQueueStatus.Push)]
+    [QueueType(MessagingQueueType.Push)]
     [Acknowledge(QueueAckDecision.JustRequest)]
     public class ModelA
     {

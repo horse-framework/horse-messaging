@@ -1,9 +1,8 @@
-using System.Reflection.Metadata.Ecma335;
 using System.Threading.Tasks;
+using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Security;
-using Horse.Messaging.Server.Protocol;
 
 namespace Test.Common.Handlers
 {

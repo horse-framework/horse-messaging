@@ -247,7 +247,7 @@ namespace Horse.Messaging.Data
                                                            ProducerAckDecision producerAckDecision,
                                                            QueueOptions options)
         {
-            return await rider.CreateQueue(queueName, options, async builder =>
+            return await rider.Create(queueName, options, async builder =>
             {
                 DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
                 PersistentDeliveryHandler handler = new PersistentDeliveryHandler(builder.Queue, databaseOptions, deleteWhen, producerAckDecision);
@@ -264,7 +264,7 @@ namespace Horse.Messaging.Data
                                                            QueueOptions options,
                                                            Func<DatabaseOptions, IPersistentDeliveryHandler> factory)
         {
-            return await rider.CreateQueue(queueName, options, async builder =>
+            return await rider.Create(queueName, options, async builder =>
             {
                 DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
                 IPersistentDeliveryHandler handler = factory(databaseOptions);
