@@ -21,19 +21,14 @@ namespace Test.Persistency
             await server.Initialize();
             server.Start(300, 300);
 
-            HorseQueue route = server.Rider.Queue.Find("broadcast-a");
             HorseQueue push = server.Rider.Queue.Find("push-a");
-            Assert.NotNull(route);
             Assert.NotNull(push);
 
-            QueueFiller fillerRouteA = new QueueFiller(route);
             QueueFiller fillerPushA = new QueueFiller(push);
 
-            fillerRouteA.FillJson(items, false, false);
             fillerPushA.FillJson(items, false, false);
 
             await Task.Delay(500);
-            Assert.NotEmpty(route.Messages);
             Assert.NotEmpty(push.Messages);
         }
 

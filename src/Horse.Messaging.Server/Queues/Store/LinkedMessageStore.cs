@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Horse.Messaging.Server.Queues.Store
 {
-    public class LinkedMessageStore : IQueueMessageStore
+    internal class LinkedMessageStore : IQueueMessageStore
     {
         private readonly HorseQueue _queue;
         private readonly LinkedList<QueueMessage> _messages = new LinkedList<QueueMessage>();

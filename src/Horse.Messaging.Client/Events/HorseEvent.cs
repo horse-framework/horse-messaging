@@ -5,7 +5,7 @@ namespace Horse.Messaging.Client.Events
     /// <summary>
     /// Horse event model
     /// </summary>
-    public class HorseEvent
+    internal class HorseEvent
     {
         /// <summary>
         /// Event type

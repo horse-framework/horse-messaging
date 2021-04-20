@@ -4,17 +4,35 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Horse.Messaging.Client.Internal
 {
+    /// <summary>
+    /// Represents a provided service object with it's scope
+    /// </summary>
     public class ProvidedHandler
     {
+        /// <summary>
+        /// The scope service is provided
+        /// </summary>
         public IServiceScope Scope { get; private set; }
+        
+        /// <summary>
+        /// Service object's itself
+        /// </summary>
         public object Service { get; }
 
+        /// <summary>
+        /// Creates new provided handler
+        /// </summary>
+        /// <param name="scope"></param>
+        /// <param name="service"></param>
         public ProvidedHandler(IServiceScope scope, object service)
         {
             Scope = scope;
             Service = service;
         }
 
+        /// <summary>
+        /// Disposes the object and scope if exists
+        /// </summary>
         public void Dispose()
         {
             if (Scope != null)

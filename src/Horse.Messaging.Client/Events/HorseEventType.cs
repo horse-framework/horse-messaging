@@ -3,7 +3,7 @@ namespace Horse.Messaging.Client.Events
     /// <summary>
     /// Horse Event Types
     /// </summary>
-    public enum HorseEventType
+    internal enum HorseEventType
     {
         ClientConnect,
         ClientDisconnect,

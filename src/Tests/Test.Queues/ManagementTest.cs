@@ -27,7 +27,7 @@ namespace Test.Queues
             HorseClient client = new HorseClient();
             await client.ConnectAsync("horse://localhost:" + port);
 
-            HorseResult joined = await client.Queue.Subscribe("broadcast-a", true);
+            HorseResult joined = await client.Queue.Subscribe("push-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             HorseQueue queue = server.Rider.Queue.Queues.FirstOrDefault();
@@ -117,7 +117,7 @@ namespace Test.Queues
             await server.Initialize();
             int port = server.Start();
 
-            HorseQueue queue = server.Rider.Queue.Find("broadcast-a");
+            HorseQueue queue = server.Rider.Queue.Find("push-a");
             Assert.NotNull(queue);
 
             Assert.Equal(TimeSpan.FromSeconds(12), queue.Options.MessageTimeout);
@@ -126,7 +126,7 @@ namespace Test.Queues
             await client.ConnectAsync("horse://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            HorseResult updated = await client.Queue.SetOptions("broadcast-a", o => o.MessageTimeout = 666000);
+            HorseResult updated = await client.Queue.SetOptions("push-a", o => o.MessageTimeout = 666000);
             Assert.Equal(HorseResultCode.Ok, updated.Code);
 
             Assert.Equal(TimeSpan.FromSeconds(666), queue.Options.MessageTimeout);
@@ -139,17 +139,17 @@ namespace Test.Queues
             await server.Initialize();
             int port = server.Start();
 
-            HorseQueue queue = server.Rider.Queue.Find("broadcast-a");
+            HorseQueue queue = server.Rider.Queue.Find("push-a");
             Assert.NotNull(queue);
 
             HorseClient client = new HorseClient();
             await client.ConnectAsync("horse://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            HorseResult done = await client.Queue.Remove("broadcast-a");
+            HorseResult done = await client.Queue.Remove("push-a");
             Assert.Equal(HorseResultCode.Ok, done.Code);
 
-            queue = server.Rider.Queue.Find("broadcast-a");
+            queue = server.Rider.Queue.Find("push-a");
             Assert.Null(queue);
         }
 

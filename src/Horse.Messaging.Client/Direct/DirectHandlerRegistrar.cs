@@ -5,12 +5,21 @@ using Horse.Messaging.Client.Internal;
 
 namespace Horse.Messaging.Client.Direct
 {
+    /// <summary>
+    /// Registrar object for IDirectHandler and IRequestHandler implementations
+    /// </summary>
     public class DirectHandlerRegistrar
     {
         private readonly DirectOperator _operator;
 
+        /// <summary>
+        /// Default options for direct types
+        /// </summary>
         public DirectTypeDescriptor DefaultDescriptor { get; set; }
 
+        /// <summary>
+        /// Creates new direct handler registrar
+        /// </summary>
         public DirectHandlerRegistrar(DirectOperator directOperator)
         {
             _operator = directOperator;

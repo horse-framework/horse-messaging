@@ -5,7 +5,7 @@ namespace Horse.Messaging.Client.Events
     /// <summary>
     /// Horse event consumer implementation
     /// </summary>
-    public interface IEventConsumer
+    internal interface IEventConsumer
     {
         /// <summary>
         /// Called when the event is triggered 

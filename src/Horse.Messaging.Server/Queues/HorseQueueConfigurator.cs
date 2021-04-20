@@ -64,7 +64,6 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Implements non-durable basic delivery handler with ack
         /// </summary>
-        /// <param name="builder">Horse MQ Builder</param>
         /// <param name="producerAck">Decision, when producer will receive acknowledge (or confirm)</param>
         /// <param name="consumerAckFail">Decision, what will be done if consumer sends nack or doesn't send ack in time</param>
         public HorseQueueConfigurator UseAckDeliveryHandler(AcknowledgeWhen producerAck, PutBackDecision consumerAckFail)

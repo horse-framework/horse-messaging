@@ -6,7 +6,7 @@ namespace Horse.Messaging.Client.Events.Annotations
     /// 
     /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
-    public class HorseEventAttribute : Attribute
+    internal class HorseEventAttribute : Attribute
     {
         /// <summary>
         /// 
