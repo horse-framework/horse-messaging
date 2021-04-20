@@ -7,6 +7,7 @@ using Horse.Core;
 using Horse.Messaging.Client.Channels;
 using Horse.Messaging.Client.Direct;
 using Horse.Messaging.Client.Queues;
+using Horse.Messaging.Client.Queues.Exceptions;
 using Horse.Messaging.Client.Queues.Internal;
 using Horse.Messaging.Client.Routers;
 using Horse.Messaging.Protocol;
@@ -14,7 +15,21 @@ using Horse.Messaging.Protocol;
 namespace Horse.Messaging.Client
 {
     //todo: client data properties
-    //todo: subscribe on connect
+
+    /// <summary>
+    /// Delegate for HorseClient OnMessageReceived event
+    /// </summary>
+    public delegate void ClientMessageReceivedHandler(HorseClient client, HorseMessage message);
+
+    /// <summary>
+    /// Delegate for HorseClient Connected and Disconnected events
+    /// </summary>
+    public delegate void ClientConnectionHandler(HorseClient client);
+
+    /// <summary>
+    /// Delete for HorseClient Error event
+    /// </summary>
+    public delegate void ClientErrorHandler(HorseClient client, Exception exception);
 
     /// <inheritdoc />
     public class HorseClient<TIdentifier> : HorseClient
@@ -117,6 +132,26 @@ namespace Horse.Messaging.Client
         /// Maximum time for waiting next message of a pull request 
         /// </summary>
         public TimeSpan PullTimeout { get; set; } = TimeSpan.FromSeconds(15);
+
+        /// <summary>
+        /// Triggered when client receives a message
+        /// </summary>
+        public event ClientMessageReceivedHandler MessageReceived;
+
+        /// <summary>
+        /// Triggered when client connects to the server
+        /// </summary>
+        public event ClientConnectionHandler Connected;
+
+        /// <summary>
+        /// Triggered when client disconnects from the server
+        /// </summary>
+        public event ClientConnectionHandler Disconnected;
+
+        /// <summary>
+        /// Triggered when an exception is thrown in client operations
+        /// </summary>
+        public event ClientErrorHandler Error;
 
         /// <summary>
         /// Unique client id
@@ -375,7 +410,7 @@ namespace Horse.Messaging.Client
             if (host.Protocol != Core.Protocol.Hmq)
                 throw new NotSupportedException("Only Horse protocol is supported");
                 */
-            
+
             SetAutoReconnect(true);
             _socket = new HorseSocket(this, _data);
             return _socket.ConnectAsync(host);
@@ -669,9 +704,7 @@ namespace Horse.Messaging.Client
                     Tracker.Process(message);
 
                     if (CatchResponseMessages)
-                    {
-                        //SetOnMessageReceived(message);
-                    }
+                        MessageReceived?.Invoke(this, message);
 
                     break;
 
@@ -685,7 +718,7 @@ namespace Horse.Messaging.Client
                         await SendAsync(message.CreateAcknowledge());
 
                     await Queue.OnQueueMessage(message);
-                    //SetOnMessageReceived(message);
+                    MessageReceived?.Invoke(this, message);
                     break;
 
                 case MessageType.DirectMessage:
@@ -694,87 +727,66 @@ namespace Horse.Messaging.Client
                         await SendAsync(message.CreateAcknowledge());
 
                     await Direct.OnDirectMessage(message);
-                    //SetOnMessageReceived(message);
+                    MessageReceived?.Invoke(this, message);
                     break;
             }
         }
 
         internal void OnException(string hint, Exception e, HorseMessage message)
         {
-            throw new NotImplementedException();
+            Error?.Invoke(this, e);
         }
 
-
-        /*
-         *
-
-        /// <inheritdoc />
-        protected override void ClientConnected(SocketBase client)
+        internal async Task OnConnected()
         {
-            HorseClient horseClient = (HorseClient) client;
-            
-            horseClient.Events = Events;
-            if (horseClient.DeliveryContainer is TypeDeliveryContainer container)
-                container.DefaultConfiguration = Observer.Configurator;
+            Connected?.Invoke(this);
 
-            if (ContentSerializer != null)
-                horseClient.MessageSerializer = ContentSerializer;
+            if (!AutoSubscribe)
+                return;
 
-            base.ClientConnected(client);
-
-            if (AutoSubscribe)
-                _ = SubscribeToAllImplementedQueues(true, DisconnectionOnAutoJoinFailure);
-        }
-
-        /// <summary>
-        /// Subscribes to all implemenetd queues (Implemented with IQueueConsumer interface)
-        /// </summary>
-        /// <param name="verify">If true, waits response from server for each join operation</param>
-        /// <param name="disconnectOnFail">If any of queues fails to subscribe, disconnected from server</param>
-        /// <param name="silent">If true, errors are hidden, no exception thrown</param>
-        /// <returns></returns>
-        /// <exception cref="NullReferenceException">Thrown if there is no consumer initialized</exception>
-        /// <exception cref="HorseSocketException">Thrown if not connected to server</exception>
-        public async Task<bool> SubscribeToAllImplementedQueues(bool verify, bool disconnectOnFail = true, bool silent = true)
-        {
-            if (_observer == null)
+            foreach (QueueConsumerRegistration registration in Queue.Registrations)
             {
-                if (silent)
-                    return false;
-
-                throw new NullReferenceException("Consumer is null. Please init consumer first with InitReader methods");
-            }
-
-            HorseClient client = GetClient();
-            if (client == null)
-            {
-                if (silent)
-                    return false;
-
-                throw new HorseSocketException("There is no active connection");
-            }
-
-            Tuple<string, TypeDeliveryDescriptor>[] items = _observer.GetSubscribedQueues();
-            foreach (Tuple<string, TypeDeliveryDescriptor> item in items)
-            {
-                HorseMessage msg = item.Item2.CreateMessage(MessageType.Server, item.Item1, KnownContentTypes.Subscribe);
-                HorseResult joinResult = await client.SendAndGetAck(msg);
+                HorseResult joinResult = await Queue.Subscribe(registration.QueueName, true);
                 if (joinResult.Code == HorseResultCode.Ok)
                     continue;
 
-                if (disconnectOnFail)
-                    client.Disconnect();
+                if (DisconnectionOnAutoJoinFailure)
+                {
+                    if (_socket != null)
+                    {
+                        _socket.Disconnect();
+                        _socket = null;
 
-                if (!silent)
-                    throw new HorseQueueException($"Can't subscribe to {item.Item1} queue: {joinResult.Reason} ({joinResult.Code})");
-
-                return false;
+                        Error?.Invoke(this, new HorseQueueException($"Can't subscribe to {registration.QueueName} queue: {joinResult.Reason} ({joinResult.Code})"));
+                        return;
+                    }
+                }
             }
 
-            return true;
+            foreach (ChannelSubscriberRegistration registration in Channel.Registrations)
+            {
+                HorseResult joinResult = await Channel.Subscribe(registration.Name, true);
+                if (joinResult.Code == HorseResultCode.Ok)
+                    continue;
+
+                if (DisconnectionOnAutoJoinFailure)
+                {
+                    if (_socket != null)
+                    {
+                        _socket.Disconnect();
+                        _socket = null;
+
+                        Error?.Invoke(this, new HorseChannelException($"Can't subscribe to {registration.Name} channel: {joinResult.Reason} ({joinResult.Code})"));
+                        return;
+                    }
+                }
+            }
         }
 
-         * 
-         */
+        internal void OnDisconnected()
+        {
+            Tracker.MarkAllMessagesExpired();
+            Disconnected?.Invoke(this);
+        }
     }
 }

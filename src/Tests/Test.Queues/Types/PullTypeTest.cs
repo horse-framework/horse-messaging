@@ -1,5 +1,9 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
+using Horse.Messaging.Client;
+using Horse.Messaging.Client.Queues;
+using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues;
 using Test.Common;
 using Xunit;
@@ -19,17 +23,17 @@ namespace Test.Queues.Types
             consumer.ClientId = "consumer";
             await consumer.ConnectAsync("horse://localhost:" + port);
             Assert.True(consumer.IsConnected);
-            HorseResult joined = await consumer.Queues.Subscribe("pull-a", true);
+            HorseResult joined = await consumer.Queue.Subscribe("pull-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             HorseClient producer = new HorseClient();
             await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            await producer.Queues.Push("pull-a", "Hello, World!", false);
+            await producer.Queue.Push("pull-a", "Hello, World!", false);
             await Task.Delay(700);
 
-            HorseQueue queue = server.Rider.FindQueue("pull-a");
+            HorseQueue queue = server.Rider.Queue.Find("pull-a");
             Assert.NotNull(queue);
             Assert.Single(queue.Messages);
 
@@ -40,11 +44,11 @@ namespace Test.Queues.Types
             request.GetQueueMessageCounts = false;
             request.Order = MessageOrder.FIFO;
 
-            PullContainer container1 = await consumer.Queues.Pull(request);
+            PullContainer container1 = await consumer.Queue.Pull(request);
             Assert.Equal(PullProcess.Completed, container1.Status);
             Assert.NotEmpty(container1.ReceivedMessages);
 
-            PullContainer container2 = await consumer.Queues.Pull(request);
+            PullContainer container2 = await consumer.Queue.Pull(request);
             Assert.Equal(PullProcess.Empty, container2.Status);
             Assert.Empty(container2.ReceivedMessages);
         }
@@ -56,7 +60,7 @@ namespace Test.Queues.Types
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            HorseQueue queue = server.Rider.FindQueue("pull-a");
+            HorseQueue queue = server.Rider.Queue.Find("pull-a");
             Assert.NotNull(queue);
             queue.Options.Acknowledge = QueueAckDecision.JustRequest;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
@@ -70,7 +74,7 @@ namespace Test.Queues.Types
 
             bool msgReceived = false;
             consumer.MessageReceived += (c, m) => msgReceived = true;
-            HorseResult joined = await consumer.Queues.Subscribe("pull-a", true);
+            HorseResult joined = await consumer.Queue.Subscribe("pull-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             HorseClient producer = new HorseClient();
@@ -78,7 +82,7 @@ namespace Test.Queues.Types
             await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            Task<HorseResult> taskAck = producer.Queues.Push("pull-a", "Hello, World!", true);
+            Task<HorseResult> taskAck = producer.Queue.Push("pull-a", "Hello, World!", true);
 
             await Task.Delay(500);
             Assert.False(taskAck.IsCompleted);
@@ -87,7 +91,7 @@ namespace Test.Queues.Types
 
             consumer.PullTimeout = TimeSpan.FromDays(1);
 
-            PullContainer pull = await consumer.Queues.Pull(PullRequest.Single("pull-a"));
+            PullContainer pull = await consumer.Queue.Pull(PullRequest.Single("pull-a"));
             Assert.Equal(PullProcess.Completed, pull.Status);
             Assert.Equal(1, pull.ReceivedCount);
             Assert.NotEmpty(pull.ReceivedMessages);
@@ -106,23 +110,23 @@ namespace Test.Queues.Types
             await server.Initialize();
             int port = server.Start();
 
-            HorseQueue queue = server.Rider.FindQueue("pull-a");
+            HorseQueue queue = server.Rider.Queue.Find("pull-a");
             await queue.Push("First Message");
             await queue.Push("Second Message");
 
             HorseClient client = new HorseClient();
             await client.ConnectAsync("horse://localhost:" + port);
-            HorseResult joined = await client.Queues.Subscribe("pull-a", true);
+            HorseResult joined = await client.Queue.Subscribe("pull-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             PullRequest request = new PullRequest
-                                  {
-                                      Queue = "pull-a",
-                                      Count = 1,
-                                      Order = !fifo.HasValue || fifo.Value ? MessageOrder.FIFO : MessageOrder.LIFO
-                                  };
+            {
+                Queue = "pull-a",
+                Count = 1,
+                Order = !fifo.HasValue || fifo.Value ? MessageOrder.FIFO : MessageOrder.LIFO
+            };
 
-            PullContainer container = await client.Queues.Pull(request);
+            PullContainer container = await client.Queue.Pull(request);
             Assert.Equal(PullProcess.Completed, container.Status);
 
             HorseMessage msg = container.ReceivedMessages.FirstOrDefault();
@@ -148,22 +152,22 @@ namespace Test.Queues.Types
             await server.Initialize();
             int port = server.Start();
 
-            HorseQueue queue = server.Rider.FindQueue("pull-a");
+            HorseQueue queue = server.Rider.Queue.Find("pull-a");
             for (int i = 0; i < 25; i++)
                 await queue.Push("Hello, World");
 
             HorseClient client = new HorseClient();
             await client.ConnectAsync("horse://localhost:" + port);
-            HorseResult joined = await client.Queues.Subscribe("pull-a", true);
+            HorseResult joined = await client.Queue.Subscribe("pull-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             PullRequest request = new PullRequest
-                                  {
-                                      Queue = "pull-a",
-                                      Count = count
-                                  };
+            {
+                Queue = "pull-a",
+                Count = count
+            };
 
-            PullContainer container = await client.Queues.Pull(request);
+            PullContainer container = await client.Queue.Pull(request);
             Assert.Equal(count, container.ReceivedCount);
             Assert.Equal(PullProcess.Completed, container.Status);
         }
@@ -181,7 +185,7 @@ namespace Test.Queues.Types
             await server.Initialize();
             int port = server.Start();
 
-            HorseQueue queue = server.Rider.FindQueue("pull-a");
+            HorseQueue queue = server.Rider.Queue.Find("pull-a");
             for (int i = 0; i < 5; i++)
             {
                 await queue.Push("Hello, World");
@@ -190,7 +194,7 @@ namespace Test.Queues.Types
 
             HorseClient client = new HorseClient();
             await client.ConnectAsync("horse://localhost:" + port);
-            HorseResult joined = await client.Queues.Subscribe("pull-a", true);
+            HorseResult joined = await client.Queue.Subscribe("pull-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             ClearDecision clearDecision = ClearDecision.None;
@@ -202,13 +206,13 @@ namespace Test.Queues.Types
                 clearDecision = ClearDecision.Messages;
 
             PullRequest request = new PullRequest
-                                  {
-                                      Queue = "pull-a",
-                                      Count = count,
-                                      ClearAfter = clearDecision
-                                  };
+            {
+                Queue = "pull-a",
+                Count = count,
+                ClearAfter = clearDecision
+            };
 
-            PullContainer container = await client.Queues.Pull(request);
+            PullContainer container = await client.Queue.Pull(request);
             Assert.Equal(count, container.ReceivedCount);
 
             Assert.Equal(PullProcess.Completed, container.Status);

@@ -198,7 +198,7 @@ namespace Horse.Messaging.Server.Queues
 
                 bool initialize;
                 //if queue creation is triggered by consumer subscription, we might skip initialization
-                if (requestMessage != null && requestMessage.Type == MessageType.Server && requestMessage.ContentType == KnownContentTypes.Subscribe)
+                if (requestMessage != null && requestMessage.Type == MessageType.Server && requestMessage.ContentType == KnownContentTypes.QueueSubscribe)
                     initialize = typeSpecified;
                 else
                     initialize = true;

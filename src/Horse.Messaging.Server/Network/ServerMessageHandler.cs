@@ -54,11 +54,11 @@ namespace Horse.Messaging.Server.Network
             switch (message.ContentType)
             {
                 //subscribe to a queue
-                case KnownContentTypes.Subscribe:
+                case KnownContentTypes.QueueSubscribe:
                     return Subscribe(client, message);
 
                 //unsubscribe from a queue
-                case KnownContentTypes.Unsubscribe:
+                case KnownContentTypes.QueueUnsubscribe:
                     return Unsubscribe(client, message);
 
                 //get queue consumers

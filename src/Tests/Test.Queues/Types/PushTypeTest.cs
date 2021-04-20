@@ -1,6 +1,8 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Horse.Messaging.Client;
+using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues;
 using Test.Common;
 using Xunit;
@@ -36,11 +38,11 @@ namespace Test.Queues.Types
                 await consumer.ConnectAsync("horse://localhost:" + port);
                 Assert.True(consumer.IsConnected);
                 consumer.MessageReceived += (c, m) => Interlocked.Increment(ref msgReceived);
-                HorseResult joined = await consumer.Queues.Subscribe("push-a", true);
+                HorseResult joined = await consumer.Queue.Subscribe("push-a", true);
                 Assert.Equal(HorseResultCode.Ok, joined.Code);
             }
 
-            await producer.Queues.Push("push-a", "Hello, World!", false);
+            await producer.Queue.Push("push-a", "Hello, World!", false);
             await Task.Delay(1500);
             Assert.Equal(onlineConsumerCount, msgReceived);
         }
@@ -56,10 +58,10 @@ namespace Test.Queues.Types
             await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            await producer.Queues.Push("push-a", "Hello, World!", false);
+            await producer.Queue.Push("push-a", "Hello, World!", false);
             await Task.Delay(700);
 
-            HorseQueue queue = server.Rider.FindQueue("push-a");
+            HorseQueue queue = server.Rider.Queue.Find("push-a");
             Assert.NotNull(queue);
             Assert.Single(queue.Messages);
 
@@ -69,7 +71,7 @@ namespace Test.Queues.Types
             await consumer.ConnectAsync("horse://localhost:" + port);
             Assert.True(consumer.IsConnected);
             consumer.MessageReceived += (c, m) => msgReceived = true;
-            HorseResult joined = await consumer.Queues.Subscribe("push-a", true);
+            HorseResult joined = await consumer.Queue.Subscribe("push-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             await Task.Delay(800);
@@ -84,7 +86,7 @@ namespace Test.Queues.Types
             TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start(300, 300);
-            HorseQueue queue = server.Rider.FindQueue("push-a");
+            HorseQueue queue = server.Rider.Queue.Find("push-a");
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
             queue.Options.Acknowledge = queueAckIsActive ? QueueAckDecision.JustRequest : QueueAckDecision.None;
@@ -99,10 +101,10 @@ namespace Test.Queues.Types
             consumer.ClientId = "consumer";
             await consumer.ConnectAsync("horse://localhost:" + port);
             Assert.True(consumer.IsConnected);
-            HorseResult joined = await consumer.Queues.Subscribe("push-a", true);
+            HorseResult joined = await consumer.Queue.Subscribe("push-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
-            HorseResult ack = await producer.Queues.Push("push-a", "Hello, World!", true);
+            HorseResult ack = await producer.Queue.Push("push-a", "Hello, World!", true);
             Assert.Equal(queueAckIsActive, ack.Code == HorseResultCode.Ok);
         }
 
@@ -136,10 +138,10 @@ namespace Test.Queues.Types
             consumer1.MessageReceived += (c, m) => { consumer1Msgs++; };
             consumer2.MessageReceived += (c, m) => { consumer2Msgs++; };
 
-            HorseResult joined1 = await consumer1.Queues.Subscribe("push-a", true);
+            HorseResult joined1 = await consumer1.Queue.Subscribe("push-a", true);
             Assert.Equal(HorseResultCode.Ok, joined1.Code);
 
-            HorseResult joined2 = await consumer2.Queues.Subscribe("push-a-cc", true);
+            HorseResult joined2 = await consumer2.Queue.Subscribe("push-a-cc", true);
             Assert.Equal(HorseResultCode.Ok, joined2.Code);
 
             HorseMessage msg = new HorseMessage(MessageType.QueueMessage, "push-a");

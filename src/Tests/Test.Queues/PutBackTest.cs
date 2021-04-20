@@ -54,7 +54,7 @@ namespace Test.Queues
             await Task.Delay(3000);
             Assert.Equal(2, queue.MessageCount());
         }
-        
+
         [Fact]
         public async Task NoDelay()
         {

@@ -1,6 +1,8 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Horse.Messaging.Client;
+using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
 using Test.Common;
@@ -20,7 +22,7 @@ namespace Test.Queues.Types
             TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start(300, 300);
-            server.Rider.Options.Acknowledge = QueueAckDecision.None;
+            server.Rider.Queue.Options.Acknowledge = QueueAckDecision.None;
 
             HorseClient producer = new HorseClient();
             await producer.ConnectAsync("horse://localhost:" + port);
@@ -36,14 +38,14 @@ namespace Test.Queues.Types
                 await consumer.ConnectAsync("horse://localhost:" + port);
                 Assert.True(consumer.IsConnected);
                 consumer.MessageReceived += (c, m) => Interlocked.Increment(ref msgReceived);
-                HorseResult joined = await consumer.Queues.Subscribe("rr-a", true);
+                HorseResult joined = await consumer.Queue.Subscribe("rr-a", true);
                 Assert.Equal(HorseResultCode.Ok, joined.Code);
             }
 
             await Task.Delay(500);
             for (int i = 0; i < 50; i++)
             {
-                await producer.Queues.Push("rr-a", "Hello, World!", false);
+                await producer.Queue.Push("rr-a", "Hello, World!", false);
                 msgSent++;
             }
 
@@ -62,10 +64,10 @@ namespace Test.Queues.Types
             await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            await producer.Queues.Push("rr-a", "Hello, World!", false);
+            await producer.Queue.Push("rr-a", "Hello, World!", false);
             await Task.Delay(700);
 
-            HorseQueue queue = server.Rider.FindQueue("rr-a");
+            HorseQueue queue = server.Rider.Queue.Find("rr-a");
             Assert.NotNull(queue);
             Assert.Single(queue.Messages);
 
@@ -75,7 +77,7 @@ namespace Test.Queues.Types
             await consumer.ConnectAsync("horse://localhost:" + port);
             Assert.True(consumer.IsConnected);
             consumer.MessageReceived += (c, m) => msgReceived = true;
-            HorseResult joined = await consumer.Queues.Subscribe("rr-a", true);
+            HorseResult joined = await consumer.Queue.Subscribe("rr-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             await Task.Delay(800);
@@ -91,7 +93,7 @@ namespace Test.Queues.Types
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            HorseQueue queue = server.Rider.FindQueue("rr-a");
+            HorseQueue queue = server.Rider.Queue.Find("rr-a");
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
             queue.Options.Acknowledge = queueAckIsActive ? QueueAckDecision.JustRequest : QueueAckDecision.None;
@@ -106,10 +108,10 @@ namespace Test.Queues.Types
             consumer.ClientId = "consumer";
             await consumer.ConnectAsync("horse://localhost:" + port);
             Assert.True(consumer.IsConnected);
-            HorseResult joined = await consumer.Queues.Subscribe("rr-a", true);
+            HorseResult joined = await consumer.Queue.Subscribe("rr-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
-            HorseResult ack = await producer.Queues.Push("rr-a", "Hello, World!", true);
+            HorseResult ack = await producer.Queue.Push("rr-a", "Hello, World!", true);
             Assert.Equal(queueAckIsActive, ack.Code == HorseResultCode.Ok);
         }
 
@@ -120,7 +122,7 @@ namespace Test.Queues.Types
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            HorseQueue queue = server.Rider.FindQueue("rr-a");
+            HorseQueue queue = server.Rider.Queue.Find("rr-a");
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
             queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
@@ -142,11 +144,11 @@ namespace Test.Queues.Types
 
             await consumer.ConnectAsync("horse://localhost:" + port);
             Assert.True(consumer.IsConnected);
-            HorseResult joined = await consumer.Queues.Subscribe("rr-a", true);
+            HorseResult joined = await consumer.Queue.Subscribe("rr-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             for (int i = 0; i < 50; i++)
-                await producer.Queues.Push("rr-a", "Hello, World!", false);
+                await producer.Queue.Push("rr-a", "Hello, World!", false);
 
             await Task.Delay(1050);
             Assert.True(received > 8);
@@ -160,7 +162,7 @@ namespace Test.Queues.Types
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            HorseQueue queue = server.Rider.FindQueue("rr-a");
+            HorseQueue queue = server.Rider.Queue.Find("rr-a");
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(2);
             queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
@@ -178,15 +180,15 @@ namespace Test.Queues.Types
 
             await consumer.ConnectAsync("horse://localhost:" + port);
             Assert.True(consumer.IsConnected);
-            HorseResult joined = await consumer.Queues.Subscribe("rr-a", true);
+            HorseResult joined = await consumer.Queue.Subscribe("rr-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             for (int i = 0; i < 10; i++)
-                await producer.Queues.Push("rr-a", "Hello, World!", false);
+                await producer.Queue.Push("rr-a", "Hello, World!", false);
 
             await Task.Delay(3500);
             Assert.Equal(2, received);
-            
+
             //1 msg is pending ack, 1 msg is prepared and ready to send (waiting for ack) and 8 msgs are in queue
             Assert.Equal(8, queue.MessageCount());
         }
@@ -198,7 +200,7 @@ namespace Test.Queues.Types
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            HorseQueue queue = server.Rider.FindQueue("rr-a");
+            HorseQueue queue = server.Rider.Queue.Find("rr-a");
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
             queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
@@ -211,17 +213,17 @@ namespace Test.Queues.Types
             int c1 = 0;
             int c2 = 0;
             int c3 = 0;
-            
+
             HorseClient consumer1 = new HorseClient();
             consumer1.ResponseTimeout = TimeSpan.FromSeconds(4);
             consumer1.ClientId = "consumer1";
             consumer1.MessageReceived += async (client, message) => c1++;
-            
+
             HorseClient consumer2 = new HorseClient();
             consumer2.ResponseTimeout = TimeSpan.FromSeconds(4);
             consumer2.ClientId = "consumer2";
             consumer2.MessageReceived += async (client, message) => c2++;
-            
+
             HorseClient consumer3 = new HorseClient();
             consumer3.ResponseTimeout = TimeSpan.FromSeconds(4);
             consumer3.ClientId = "consumer3";
@@ -233,17 +235,17 @@ namespace Test.Queues.Types
             Assert.True(consumer1.IsConnected);
             Assert.True(consumer2.IsConnected);
             Assert.True(consumer3.IsConnected);
-            
-            HorseResult joined1 = await consumer1.Queues.Subscribe("rr-a", true);
-            HorseResult joined2 = await consumer2.Queues.Subscribe("rr-a", true);
-            HorseResult joined3 = await consumer3.Queues.Subscribe("rr-a", true);
+
+            HorseResult joined1 = await consumer1.Queue.Subscribe("rr-a", true);
+            HorseResult joined2 = await consumer2.Queue.Subscribe("rr-a", true);
+            HorseResult joined3 = await consumer3.Queue.Subscribe("rr-a", true);
             Assert.Equal(HorseResultCode.Ok, joined1.Code);
             Assert.Equal(HorseResultCode.Ok, joined2.Code);
             Assert.Equal(HorseResultCode.Ok, joined3.Code);
 
             for (int i = 0; i < 10; i++)
-                await producer.Queues.Push("rr-a", "Hello, World!", false);
-            
+                await producer.Queue.Push("rr-a", "Hello, World!", false);
+
             await Task.Delay(1200);
             Assert.Equal(1, c1);
             Assert.Equal(1, c2);

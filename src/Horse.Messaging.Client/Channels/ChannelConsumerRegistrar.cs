@@ -5,13 +5,13 @@ using Horse.Messaging.Client.Internal;
 
 namespace Horse.Messaging.Client.Channels
 {
-    internal class ChannelConsumerRegistrar
+    public class ChannelConsumerRegistrar
     {
         private readonly ChannelOperator _operator;
 
         public ChannelTypeDescriptor DefaultDescriptor { get; set; }
 
-        internal ChannelConsumerRegistrar(ChannelOperator directOperator)
+        public ChannelConsumerRegistrar(ChannelOperator directOperator)
         {
             _operator = directOperator;
         }

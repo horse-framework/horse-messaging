@@ -257,12 +257,21 @@ namespace Horse.Messaging.Client
         }
 
         /// <summary>
+        /// Client connected to the server
+        /// </summary>
+        protected override void OnConnected()
+        {
+            base.OnConnected();
+            _ = _client.OnConnected();
+        }
+
+        /// <summary>
         /// Client disconnected from the server
         /// </summary>
         protected override void OnDisconnected()
         {
             base.OnDisconnected();
-            _client.Tracker.MarkAllMessagesExpired();
+            _client.OnDisconnected();
         }
 
         /// <summary>

@@ -4,7 +4,6 @@ using Horse.Messaging.Client;
 using Horse.Messaging.Client.Direct;
 using Horse.Messaging.Protocol;
 using RoutingSample.Models;
-using Horse.Mq.Client;
 
 namespace RoutingSample.InternalService
 {

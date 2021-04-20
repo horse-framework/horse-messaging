@@ -41,10 +41,10 @@ namespace Horse.Messaging.Client.Queues
         public bool? HideClientNames { get; set; }
 
         /// <summary>
-        /// Default status for the queue
+        /// Default type for the queue
         /// </summary>
-        [JsonPropertyName("Status")]
-        public MessagingQueueType? Status { get; set; }
+        [JsonPropertyName("Type")]
+        public MessagingQueueType? Type { get; set; }
 
         /// <summary>
         /// Registry key for message delivery handler

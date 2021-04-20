@@ -1,10 +1,8 @@
-﻿using Horse.Messaging.Client.Annotations;
-using Horse.Messaging.Client.Direct.Annotations;
+﻿using Horse.Messaging.Client.Direct.Annotations;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Client.Routers.Annotations;
 using Horse.Messaging.Protocol;
-using Horse.Mq.Client.Annotations;
 
 namespace RoutingSample.Models
 {

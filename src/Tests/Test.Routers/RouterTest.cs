@@ -173,7 +173,7 @@ namespace Test.Routers
             Router router = new Router(server.Rider, "router", RouteMethod.Distribute);
             router.AddBinding(new QueueBinding("qbind-1", "push-a", 0, BindingInteraction.None));
             router.AddBinding(new QueueBinding("qbind-2", "push-a-cc", 0, BindingInteraction.None));
-            server.Rider.AddRouter(router);
+            server.Rider.Router.Add(router);
 
             HorseClient producer = new HorseClient();
             await producer.ConnectAsync("horse://localhost:" + port);

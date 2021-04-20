@@ -65,12 +65,12 @@ namespace Horse.Messaging.Protocol
         /// <summary>
         /// "601" Subscribe to a queue
         /// </summary>
-        public const ushort Subscribe = 601;
+        public const ushort QueueSubscribe = 601;
 
         /// <summary>
         /// "602" Unsubscribe from a queue
         /// </summary>
-        public const ushort Unsubscribe = 602;
+        public const ushort QueueUnsubscribe = 602;
 
         /// <summary>
         /// "607" Gets all consumers of a queue
@@ -192,5 +192,14 @@ namespace Horse.Messaging.Protocol
         /// </summary>
         public const ushort ChannelList = 685;
         
+        /// <summary>
+        /// "686" Subscribes to a channel
+        /// </summary>
+        public const ushort ChannelSubscribe = 686;
+        
+        /// <summary>
+        /// "686" Unsubscribes from a channel
+        /// </summary>
+        public const ushort ChannelUnsubscribe = 687;
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
+using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
 using Test.Common;
 using Horse.Messaging.Server.Clients;
@@ -55,7 +56,7 @@ namespace Test.Queues
             HorseResult left = await client.Queue.Unsubscribe("broadcast-a", true);
             Assert.Equal(HorseResultCode.Ok, left.Code);
 
-            HorseQueue queue = server.Rider.Queue.FirstOrDefault();
+            HorseQueue queue = server.Rider.Queue.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
             List<QueueClient> clients = queue.ClientsClone;
@@ -98,7 +99,7 @@ namespace Test.Queues
             HorseResult created = await client.Queue.Create("queue-test", o =>
             {
                 o.AcknowledgeTimeout = 33000;
-                o.Status = MessagingQueueStatus.Pull;
+                o.Type = MessagingQueueType.Pull;
             });
             Assert.Equal(HorseResultCode.Ok, created.Code);
 
@@ -106,7 +107,7 @@ namespace Test.Queues
             Assert.NotNull(queue);
 
             Assert.Equal(TimeSpan.FromSeconds(33), queue.Options.AcknowledgeTimeout);
-            Assert.Equal(QueueStatus.Pull, queue.Status);
+            Assert.Equal(QueueType.Pull, queue.Type);
         }
 
         [Fact]
@@ -125,7 +126,7 @@ namespace Test.Queues
             await client.ConnectAsync("horse://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            HorseResult updated = await client.Queue.Queues.SetOptions("broadcast-a", o => o.MessageTimeout = 666000);
+            HorseResult updated = await client.Queue.SetOptions("broadcast-a", o => o.MessageTimeout = 666000);
             Assert.Equal(HorseResultCode.Ok, updated.Code);
 
             Assert.Equal(TimeSpan.FromSeconds(666), queue.Options.MessageTimeout);

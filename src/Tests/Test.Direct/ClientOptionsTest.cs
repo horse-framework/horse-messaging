@@ -23,7 +23,7 @@ namespace Test.Direct
             int port = server.Start();
 
             HorseClient client1 = new HorseClient();
-            HorseClient<> client2 = new HorseClient();
+            HorseClient client2 = new HorseClient();
 
             client1.ClientId = "client-1";
             client2.ClientId = "client-2";

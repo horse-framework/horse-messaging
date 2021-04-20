@@ -606,7 +606,7 @@ namespace Horse.Messaging.Client.Queues
         {
             HorseMessage message = new HorseMessage();
             message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.Subscribe;
+            message.ContentType = KnownContentTypes.QueueSubscribe;
             message.SetTarget(queue);
             message.WaitResponse = verifyResponse;
 
@@ -627,7 +627,7 @@ namespace Horse.Messaging.Client.Queues
         {
             HorseMessage message = new HorseMessage();
             message.Type = MessageType.Server;
-            message.ContentType = KnownContentTypes.Unsubscribe;
+            message.ContentType = KnownContentTypes.QueueUnsubscribe;
             message.SetTarget(queue);
             message.WaitResponse = verifyResponse;
 

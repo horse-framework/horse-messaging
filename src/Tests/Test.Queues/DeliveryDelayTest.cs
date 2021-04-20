@@ -1,11 +1,8 @@
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
-using Horse.Messaging.Server.Client;
 using Test.Common;
 using Horse.Messaging.Server.Queues;
-using Horse.Messaging.Server.Protocol;
-using Horse.Mq.Client;
 using Xunit;
 
 namespace Test.Queues
