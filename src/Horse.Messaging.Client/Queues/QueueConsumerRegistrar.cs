@@ -126,12 +126,13 @@ namespace Horse.Messaging.Client.Queues
                                                                             consumerFactoryBuilder);
 
             string queueName = modelDescriptor.QueueName;
-            if (!string.IsNullOrEmpty(consumerDescriptor.QueueName))
+            if (consumerDescriptor.HasQueueName && !string.IsNullOrEmpty(consumerDescriptor.QueueName))
                 queueName = consumerDescriptor.QueueName;
             QueueConsumerRegistration registration = new QueueConsumerRegistration
             {
                 QueueName = queueName,
                 MessageType = typeInfo.ModelType,
+                ConsumerType = typeInfo.ConsumerType,
                 ConsumerExecuter = executer
             };
 

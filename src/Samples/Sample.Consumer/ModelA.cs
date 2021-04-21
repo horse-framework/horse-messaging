@@ -1,9 +1,10 @@
 using System.Text.Json.Serialization;
+using Horse.Messaging.Client.Queues.Annotations;
 using Newtonsoft.Json;
 
 namespace Sample.Consumer
 {
- //   [QueueName("model-a")]
+    [QueueName("model-a")]
     //[QueueStatus(MessagingQueueStatus.Push)]
     public class ModelA
     {

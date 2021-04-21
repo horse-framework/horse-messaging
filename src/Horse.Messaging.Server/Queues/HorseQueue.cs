@@ -93,45 +93,25 @@ namespace Horse.Messaging.Server.Queues
         public QueueMessage ProcessingMessage => State?.ProcessingMessage;
 
         /// <summary>
-        /// High priority message list
-        /// </summary>
-        public IEnumerable<QueueMessage> PriorityMessages => PriorityMessagesList;
-
-        /// <summary>
-        /// High priority message list
-        /// </summary>
-        internal readonly LinkedList<QueueMessage> PriorityMessagesList = new LinkedList<QueueMessage>();
-
-        /// <summary>
-        /// Standard priority queue message
-        /// </summary>
-        public IEnumerable<QueueMessage> Messages => MessagesList;
-
-        /// <summary>
-        /// Standard priority queue message
-        /// </summary>
-        internal readonly LinkedList<QueueMessage> MessagesList = new LinkedList<QueueMessage>();
-
-        /// <summary>
         /// Time keeper for the queue.
         /// Checks message receiver deadlines and delivery deadlines.
         /// </summary>
         internal QueueTimeKeeper TimeKeeper { get; private set; }
 
         /// <summary>
+        /// Returns true, if there are no messages in queue
+        /// </summary>
+        public bool IsEmpty => Store == null || Store.CountAll() == 0;
+
+        /// <summary>
         /// Wait acknowledge cross thread locker
         /// </summary>
-        private SemaphoreSlim _ackSync;
+        private SemaphoreSlim _ackLock;
 
         /// <summary>
         /// Sync object for inserting messages into queue as FIFO
         /// </summary>
-        private readonly SemaphoreSlim _listSync = new SemaphoreSlim(1, 1);
-
-        /// <summary>
-        /// Pushing messages cross thread locker
-        /// </summary>
-        private readonly SemaphoreSlim _pushSync = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
 
         /// <summary>
         /// This task holds the code until acknowledge is received
@@ -215,13 +195,14 @@ namespace Horse.Messaging.Server.Queues
 
             Status = newStatus;
         }
-        
+
         /// <summary>
         /// Initializes queue to first use
         /// </summary>
-        internal Task InitializeQueue(IMessageDeliveryHandler deliveryHandler = null)
+        internal async Task InitializeQueue(IMessageDeliveryHandler deliveryHandler = null)
         {
-            return RunInListSync(() =>
+            await _lock.WaitAsync();
+            try
             {
                 if (Status != QueueStatus.NotInitialized)
                     return;
@@ -235,13 +216,14 @@ namespace Horse.Messaging.Server.Queues
                 var tuple = QueueStateFactory.Create(this, Options.Type);
                 State = tuple.Item1;
                 Store = tuple.Item2;
+                Type = Options.Type;
 
                 TimeKeeper = new QueueTimeKeeper(this);
                 TimeKeeper.Run();
 
-                _ackSync = new SemaphoreSlim(1, 1);
+                _ackLock = new SemaphoreSlim(1, 1);
                 Status = QueueStatus.Running;
-                
+
                 _triggerTimer = new Timer(a =>
                 {
                     if (!_triggering && State.TriggerSupported)
@@ -249,7 +231,11 @@ namespace Horse.Messaging.Server.Queues
 
                     _ = CheckAutoDestroy();
                 }, null, TimeSpan.FromMilliseconds(5000), TimeSpan.FromMilliseconds(5000));
-            });
+            }
+            finally
+            {
+                _lock.Release();
+            }
         }
 
         /// <summary>
@@ -266,23 +252,16 @@ namespace Horse.Messaging.Server.Queues
 
                 OnMessageProduced.Dispose();
 
-                lock (PriorityMessagesList)
-                    PriorityMessagesList.Clear();
+                Store?.ClearAll();
 
-                lock (MessagesList)
-                    MessagesList.Clear();
-
-                if (_ackSync != null)
+                if (_ackLock != null)
                 {
-                    _ackSync.Dispose();
-                    _ackSync = null;
+                    _ackLock.Dispose();
+                    _ackLock = null;
                 }
 
-                if (_listSync != null)
-                    _listSync.Dispose();
-
-                if (_pushSync != null)
-                    _pushSync.Dispose();
+                if (_lock != null)
+                    _lock.Dispose();
 
                 if (_triggerTimer != null)
                 {
@@ -317,13 +296,13 @@ namespace Horse.Messaging.Server.Queues
                     break;
 
                 case QueueDestroy.NoMessages:
-                    if (MessagesList.Count == 0 && PriorityMessagesList.Count == 0 && (TimeKeeper == null || !TimeKeeper.HasPendingDelivery()))
+                    if (IsEmpty && (TimeKeeper == null || !TimeKeeper.HasPendingDelivery()))
                         await Rider.Queue.Remove(this);
 
                     break;
 
                 case QueueDestroy.Empty:
-                    if (_clients.Count == 0 && MessagesList.Count == 0 && PriorityMessagesList.Count == 0 && (TimeKeeper == null || !TimeKeeper.HasPendingDelivery()))
+                    if (_clients.Count == 0 && IsEmpty && (TimeKeeper == null || !TimeKeeper.HasPendingDelivery()))
                         await Rider.Queue.Remove(this);
 
                     break;
@@ -339,7 +318,7 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         public int PriorityMessageCount()
         {
-            return PriorityMessagesList.Count;
+            return Store == null ? 0 : Store.CountPriority();
         }
 
         /// <summary>
@@ -347,7 +326,7 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         public int MessageCount()
         {
-            return MessagesList.Count;
+            return Store == null ? 0 : Store.CountRegular();
         }
 
         /// <summary>
@@ -362,48 +341,14 @@ namespace Horse.Messaging.Server.Queues
         }
 
         /// <summary>
-        /// Finds and returns next queue message.
-        /// Message will not be removed from the queue.
-        /// If there is no message in queue, returns null
+        /// Returns next message but doesn't dequeue it
         /// </summary>
-        public QueueMessage FindNextMessage()
+        public QueueMessage FindNextMessage(bool priority)
         {
-            if (PriorityMessagesList.Count > 0)
-                lock (PriorityMessagesList)
-                    return PriorityMessagesList.First?.Value;
+            if (priority)
+                return Store.GetPriorityNext(false);
 
-            if (MessagesList.Count > 0)
-                lock (MessagesList)
-                    return MessagesList.First?.Value;
-
-            return null;
-        }
-
-        /// <summary>
-        /// Clears all messages in queue
-        /// </summary>
-        public void ClearRegularMessages()
-        {
-            lock (MessagesList)
-                MessagesList.Clear();
-        }
-
-        /// <summary>
-        /// Clears all messages in queue
-        /// </summary>
-        public void ClearHighPriorityMessages()
-        {
-            lock (PriorityMessagesList)
-                PriorityMessagesList.Clear();
-        }
-
-        /// <summary>
-        /// Clears all messages in queue
-        /// </summary>
-        public void ClearAllMessages()
-        {
-            ClearRegularMessages();
-            ClearHighPriorityMessages();
+            return Store.GetRegularNext(false);
         }
 
         /// <summary>
@@ -418,30 +363,7 @@ namespace Horse.Messaging.Server.Queues
 
             await RemoveMessage(message, true, true);
             message.Message.HighPriority = highPriority;
-
-            await _listSync.WaitAsync();
-            try
-            {
-                if (highPriority)
-                {
-                    if (putBack)
-                        PriorityMessagesList.AddLast(message);
-                    else
-                        PriorityMessagesList.AddFirst(message);
-                }
-                else
-                {
-                    if (putBack)
-                        MessagesList.AddLast(message);
-                    else
-                        MessagesList.AddFirst(message);
-                }
-            }
-            finally
-            {
-                _listSync.Release();
-            }
-
+            Store.Put(message, putBack);
             return true;
         }
 
@@ -455,18 +377,7 @@ namespace Horse.Messaging.Server.Queues
             if (!force && !message.IsSent)
                 return false;
 
-            await _listSync.WaitAsync();
-            try
-            {
-                if (message.Message.HighPriority)
-                    PriorityMessagesList.Remove(message);
-                else
-                    MessagesList.Remove(message);
-            }
-            finally
-            {
-                _listSync.Release();
-            }
+            Store.Remove(message);
 
             if (!silent)
             {
@@ -482,58 +393,15 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         internal void AddMessage(QueueMessage message, bool toEnd = true)
         {
-            if (message.IsInQueue)
-                return;
+            Store.Put(message, toEnd);
 
-            if (message.Message.HighPriority)
-            {
-                lock (PriorityMessagesList)
-                {
-                    //re-check when locked.
-                    //it's checked before lock, because we dont wanna lock anything in non-concurrent already queued situations
-                    if (message.IsInQueue)
-                        return;
-
-                    if (toEnd)
-                        PriorityMessagesList.AddLast(message);
-                    else
-                        PriorityMessagesList.AddFirst(message);
-
-                    message.IsInQueue = true;
-                }
-            }
-            else
-            {
-                lock (MessagesList)
-                {
-                    //re-check when locked
-                    //it's checked before lock, because we dont wanna lock anything in non-concurrent already queued situations
-                    if (message.IsInQueue)
-                        return;
-
-                    if (toEnd)
-                        MessagesList.AddLast(message);
-                    else
-                        MessagesList.AddFirst(message);
-
-                    message.IsInQueue = true;
-                }
-            }
-
-            _ = Trigger();
-        }
-
-        /// <summary>
-        /// Returns true, if there are no messages in queue
-        /// </summary>
-        public bool IsEmpty()
-        {
-            return PriorityMessagesList.Count == 0 && MessagesList.Count == 0;
+            if (State.TriggerSupported && !_triggering)
+                _ = Trigger();
         }
 
         #endregion
 
-        #region Status Actions
+        #region Type Actions
 
         internal void UpdateOptionsByMessage(HorseMessage message)
         {
@@ -618,12 +486,12 @@ namespace Horse.Messaging.Server.Queues
                 {
                     UpdateOptionsByMessage(message.Message);
                     DeliveryHandlerBuilder handlerBuilder = new DeliveryHandlerBuilder
-                                                            {
-                                                                Server = Rider,
-                                                                Queue = this,
-                                                                Headers = message.Message.Headers,
-                                                                DeliveryHandlerHeader = message.Message.FindHeader(HorseHeaders.DELIVERY_HANDLER)
-                                                            };
+                    {
+                        Server = Rider,
+                        Queue = this,
+                        Headers = message.Message.Headers,
+                        DeliveryHandlerHeader = message.Message.FindHeader(HorseHeaders.DELIVERY_HANDLER)
+                    };
 
                     IMessageDeliveryHandler deliveryHandler = await Rider.Queue.DeliveryHandlerFactory(handlerBuilder);
                     await InitializeQueue(deliveryHandler);
@@ -640,7 +508,7 @@ namespace Horse.Messaging.Server.Queues
             if (Status is QueueStatus.OnlyConsume or QueueStatus.Paused)
                 return PushResult.StatusNotSupported;
 
-            if (Options.MessageLimit > 0 && PriorityMessagesList.Count + MessagesList.Count >= Options.MessageLimit)
+            if (Options.MessageLimit > 0 && Store.CountAll() >= Options.MessageLimit)
                 return PushResult.LimitExceeded;
 
             if (Options.MessageSizeLimit > 0 && message.Message.Length > Options.MessageSizeLimit)
@@ -690,12 +558,7 @@ namespace Horse.Messaging.Server.Queues
                 OnMessageProduced.Trigger(message);
 
                 if (State.CanEnqueue(message))
-                {
-                    await RunInListSync(() => AddMessage(message));
-
-                    if (State.TriggerSupported && !_triggering)
-                        _ = Trigger();
-                }
+                    AddMessage(message);
                 else
                     _ = State.Push(message);
 
@@ -725,19 +588,6 @@ namespace Horse.Messaging.Server.Queues
             return PushResult.Success;
         }
 
-        internal async Task RunInListSync(Action action)
-        {
-            await _listSync.WaitAsync();
-            try
-            {
-                action();
-            }
-            finally
-            {
-                _listSync.Release();
-            }
-        }
-
         /// <summary>
         /// Checks all pending messages and subscribed receivers.
         /// If they should receive the messages, runs the process.
@@ -749,27 +599,19 @@ namespace Horse.Messaging.Server.Queues
             if (_triggering)
                 return;
 
-            await _pushSync.WaitAsync();
+            await _lock.WaitAsync();
             try
             {
                 if (_triggering || !State.TriggerSupported)
                     return;
 
-                if (_clients.Count == 0)
-                    return;
-
                 _triggering = true;
-
-                if (PriorityMessagesList.Count > 0)
-                    await ProcessPendingMessages(true);
-
-                if (MessagesList.Count > 0)
-                    await ProcessPendingMessages(false);
+                await ProcessPendingMessages();
             }
             finally
             {
                 _triggering = false;
-                _pushSync.Release();
+                _lock.Release();
             }
         }
 
@@ -777,45 +619,16 @@ namespace Horse.Messaging.Server.Queues
         /// Start to process all pending messages.
         /// This method is called after a client is subscribed to the queue.
         /// </summary>
-        private async Task ProcessPendingMessages(bool high)
+        private async Task ProcessPendingMessages()
         {
             while (State.TriggerSupported)
             {
                 if (_clients.Count == 0)
                     return;
 
-                QueueMessage message;
-
-                if (high)
-                {
-                    lock (PriorityMessagesList)
-                    {
-                        if (PriorityMessagesList.Count == 0)
-                            return;
-
-                        message = PriorityMessagesList.First?.Value;
-                        if (message == null)
-                            return;
-
-                        PriorityMessagesList.RemoveFirst();
-                        message.IsInQueue = false;
-                    }
-                }
-                else
-                {
-                    lock (MessagesList)
-                    {
-                        if (MessagesList.Count == 0)
-                            return;
-
-                        message = MessagesList.First?.Value;
-                        if (message == null)
-                            return;
-
-                        MessagesList.RemoveFirst();
-                        message.IsInQueue = false;
-                    }
-                }
+                QueueMessage message = Store.GetNext(true);
+                if (message == null)
+                    return;
 
                 try
                 {
@@ -1003,14 +816,14 @@ namespace Horse.Messaging.Server.Queues
         {
             HorseMessage msg = new HorseMessage(MessageType.Server, null, 10);
             DecisionOverNode model = new DecisionOverNode
-                                     {
-                                         Queue = Name,
-                                         MessageId = queueMessage.Message.MessageId,
-                                         Acknowledge = decision.Acknowledge,
-                                         Allow = decision.Allow,
-                                         PutBack = decision.PutBack,
-                                         SaveMessage = decision.SaveMessage
-                                     };
+            {
+                Queue = Name,
+                MessageId = queueMessage.Message.MessageId,
+                Acknowledge = decision.Acknowledge,
+                Allow = decision.Allow,
+                PutBack = decision.PutBack,
+                SaveMessage = decision.SaveMessage
+            };
 
             msg.Serialize(model, Rider.MessageContentSerializer);
             Rider.NodeManager.SendMessageToNodes(msg);
@@ -1021,31 +834,7 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         internal async Task ApplyDecisionOverNode(string messageId, Decision decision)
         {
-            QueueMessage message = null;
-            await RunInListSync(() =>
-            {
-                //pull from prefential messages
-                if (PriorityMessagesList.Count > 0)
-                {
-                    message = PriorityMessagesList.FirstOrDefault(x => x.Message.MessageId == messageId);
-                    if (message != null)
-                    {
-                        message.IsInQueue = false;
-                        PriorityMessagesList.Remove(message);
-                    }
-                }
-
-                //if there is no prefential message, pull from standard messages
-                if (message == null && MessagesList.Count > 0)
-                {
-                    message = MessagesList.FirstOrDefault(x => x.Message.MessageId == messageId);
-                    if (message != null)
-                    {
-                        message.IsInQueue = false;
-                        MessagesList.Remove(message);
-                    }
-                }
-            });
+            QueueMessage message = Store.FindAndRemove(x => x.Message.MessageId == messageId);
 
             if (message == null)
                 return;
@@ -1066,7 +855,7 @@ namespace Horse.Messaging.Server.Queues
             if (!message.Message.WaitResponse)
                 message.Message.WaitResponse = true;
 
-            await _ackSync.WaitAsync();
+            await _ackLock.WaitAsync();
             try
             {
                 if (_acknowledgeCallback != null)
@@ -1076,7 +865,7 @@ namespace Horse.Messaging.Server.Queues
             }
             finally
             {
-                _ackSync.Release();
+                _ackLock.Release();
             }
         }
 
@@ -1257,71 +1046,6 @@ namespace Horse.Messaging.Server.Queues
         public QueueClient FindClient(MessagingClient client)
         {
             return _clients.Find(x => x.Client == client);
-        }
-
-        /// <summary>
-        /// Gets next client with round robin algorithm and updates index
-        /// </summary>
-        internal QueueClient GetNextRRClient(ref int index)
-        {
-            List<QueueClient> clients = _clients.GetAsClone();
-            if (index < 0 || index + 1 >= clients.Count)
-            {
-                if (clients.Count == 0)
-                    return null;
-
-                index = 0;
-                return clients[0];
-            }
-
-            index++;
-            return clients[index];
-        }
-
-        /// <summary>
-        /// Gets next available client which is not currently consuming any message.
-        /// Used for wait for acknowledge situations
-        /// </summary>
-        internal async Task<Tuple<QueueClient, int>> GetNextAvailableRRClient(int currentIndex)
-        {
-            List<QueueClient> clients = _clients.GetAsClone();
-            if (clients.Count == 0)
-                return new Tuple<QueueClient, int>(null, currentIndex);
-
-            DateTime retryExpiration = DateTime.UtcNow.AddSeconds(30);
-            while (true)
-            {
-                int index = currentIndex < 0 ? 0 : currentIndex;
-                for (int i = 0; i < clients.Count; i++)
-                {
-                    if (index >= clients.Count)
-                        index = 0;
-
-                    QueueClient client = clients[index];
-                    if (client.CurrentlyProcessing == null)
-                        return new Tuple<QueueClient, int>(client, index);
-
-                    if (client.CurrentlyProcessing.Deadline < DateTime.UtcNow)
-                    {
-                        client.CurrentlyProcessing = null;
-                        return new Tuple<QueueClient, int>(client, index);
-                    }
-
-                    index++;
-                }
-
-                await Task.Delay(3);
-                clients = _clients.GetAsClone();
-                if (clients.Count == 0)
-                    break;
-
-                //don't try hard so much, wait for next trigger operation of the queue.
-                //it will be triggered in 5 secs, anyway
-                if (DateTime.UtcNow > retryExpiration)
-                    break;
-            }
-
-            return new Tuple<QueueClient, int>(null, currentIndex);
         }
 
         #endregion

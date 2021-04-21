@@ -212,14 +212,14 @@ namespace Test.Queues
             Assert.Equal(HorseResultCode.Ok, result.Code);
 
             if (priorityMessages)
-                Assert.Empty(queue.PriorityMessages);
+                Assert.Equal(0, queue.PriorityMessageCount());
             else
-                Assert.NotEmpty(queue.PriorityMessages);
+                Assert.NotEqual(0, queue.PriorityMessageCount());
 
             if (messages)
-                Assert.Empty(queue.Messages);
+                Assert.Equal(0, queue.MessageCount());
             else
-                Assert.NotEmpty(queue.Messages);
+                Assert.NotEqual(0, queue.MessageCount());
         }
     }
 }

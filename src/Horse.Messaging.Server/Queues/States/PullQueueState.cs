@@ -180,67 +180,17 @@ namespace Horse.Messaging.Server.Queues.States
         /// </summary>
         private async Task<Tuple<QueueMessage, int, int>> DequeueMessage(bool fifo, bool getInfo, ClearDecision clear)
         {
-            QueueMessage message = null;
+            
             int prioMessageCount = 0;
             int messageCount = 0;
 
-            await _queue.RunInListSync(() =>
+            QueueMessage message = _queue.Store.GetNext(true, !fifo);
+            
+            if (getInfo)
             {
-                //pull from prefential messages
-                if (_queue.PriorityMessagesList.Count > 0)
-                {
-                    if (fifo)
-                    {
-                        // ReSharper disable once PossibleNullReferenceException
-                        message = _queue.PriorityMessagesList.First.Value;
-                        _queue.PriorityMessagesList.RemoveFirst();
-                    }
-                    else
-                    {
-                        // ReSharper disable once PossibleNullReferenceException
-                        message = _queue.PriorityMessagesList.Last.Value;
-                        _queue.PriorityMessagesList.RemoveLast();
-                    }
-
-                    if (message != null)
-                        message.IsInQueue = false;
-                }
-
-                //if there is no prefential message, pull from standard messages
-                if (message == null && _queue.MessagesList.Count > 0)
-                {
-                    if (fifo)
-                    {
-                        // ReSharper disable once PossibleNullReferenceException
-                        message = _queue.MessagesList.First.Value;
-                        _queue.MessagesList.RemoveFirst();
-                    }
-                    else
-                    {
-                        // ReSharper disable once PossibleNullReferenceException
-                        message = _queue.MessagesList.Last.Value;
-                        _queue.MessagesList.RemoveLast();
-                    }
-
-                    if (message != null)
-                        message.IsInQueue = false;
-                }
-
-                if (getInfo)
-                {
-                    prioMessageCount = _queue.PriorityMessageCount();
-                    messageCount = _queue.MessageCount();
-                }
-
-                if (clear == ClearDecision.All)
-                    _queue.ClearAllMessages();
-
-                else if (clear == ClearDecision.HighPriority)
-                    _queue.ClearHighPriorityMessages();
-
-                else if (clear == ClearDecision.DefaultPriority)
-                    _queue.ClearRegularMessages();
-            });
+                prioMessageCount = _queue.Store.CountPriority();
+                messageCount = _queue.Store.CountRegular();
+            }
 
             if (message != null)
                 ProcessingMessage = message;

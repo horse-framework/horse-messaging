@@ -95,7 +95,7 @@ namespace Test.Persistency
             msg.SetStringContent("Hello, World!");
             await queue.Push(msg);
 
-            QueueMessage queueMsg = queue.Messages.FirstOrDefault();
+            QueueMessage queueMsg = queue.FindNextMessage(false);
             await handler.BeginSend(queue, queueMsg);
 
             await handler.RedeliveryService.Close();
@@ -105,8 +105,9 @@ namespace Test.Persistency
             await rider.LoadPersistentQueues();
             HorseQueue queue2 = rider.Queue.Find("reload-test");
             Assert.NotNull(queue2);
-            Assert.NotEmpty(queue2.Messages);
-            QueueMessage loadedMsg = queue2.Messages.FirstOrDefault();
+            Assert.NotEqual(0, queue2.MessageCount());
+            QueueMessage loadedMsg = queue2.FindNextMessage(false);
+            
             Assert.NotNull(loadedMsg);
             Assert.Equal(1, loadedMsg.DeliveryCount);
         }

@@ -29,7 +29,7 @@ namespace Test.Persistency
             fillerPushA.FillJson(items, false, false);
 
             await Task.Delay(500);
-            Assert.NotEmpty(push.Messages);
+            Assert.NotEqual(0, push.MessageCount());
         }
 
         [Fact]
@@ -51,8 +51,8 @@ namespace Test.Persistency
             filler.FillString(items, false, false);
 
             await Task.Delay(500);
-            Assert.NotEmpty(queue.PriorityMessages);
-            Assert.NotEmpty(queue.Messages);
+            Assert.NotEqual(0, queue.PriorityMessageCount());
+            Assert.NotEqual(0, queue.MessageCount());
         }
 
         [Fact]
@@ -74,8 +74,8 @@ namespace Test.Persistency
             filler.FillData(items, false, false);
 
             await Task.Delay(500);
-            Assert.NotEmpty(queue.PriorityMessages);
-            Assert.NotEmpty(queue.Messages);
+            Assert.NotEqual(0, queue.PriorityMessageCount());
+            Assert.NotEqual(0, queue.MessageCount());
         }
     }
 }

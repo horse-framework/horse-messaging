@@ -35,7 +35,7 @@ namespace Test.Queues.Types
 
             HorseQueue queue = server.Rider.Queue.Find("pull-a");
             Assert.NotNull(queue);
-            Assert.Single(queue.Messages);
+            Assert.Equal(1, queue.MessageCount());
 
             PullRequest request = new PullRequest();
             request.Queue = "pull-a";
@@ -87,7 +87,7 @@ namespace Test.Queues.Types
             await Task.Delay(500);
             Assert.False(taskAck.IsCompleted);
             Assert.False(msgReceived);
-            Assert.Single(queue.Messages);
+            Assert.Equal(1, queue.MessageCount());
 
             consumer.PullTimeout = TimeSpan.FromDays(1);
 
@@ -218,10 +218,10 @@ namespace Test.Queues.Types
             Assert.Equal(PullProcess.Completed, container.Status);
 
             if (priorityMessages)
-                Assert.Empty(queue.PriorityMessages);
+                Assert.Equal(0, queue.PriorityMessageCount());
 
             if (messages)
-                Assert.Empty(queue.Messages);
+                Assert.Equal(0, queue.MessageCount());
         }
     }
 }

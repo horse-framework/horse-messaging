@@ -23,6 +23,7 @@ namespace Sample.Producer
             {
                 HorseResult result = await client.Queue.PushJson(a, false);
                 Console.WriteLine($"Push: {result.Code}");
+                Console.ReadLine();
                 await Task.Delay(5000);
             }
         }

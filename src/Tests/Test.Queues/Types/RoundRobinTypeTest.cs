@@ -69,7 +69,7 @@ namespace Test.Queues.Types
 
             HorseQueue queue = server.Rider.Queue.Find("rr-a");
             Assert.NotNull(queue);
-            Assert.Single(queue.Messages);
+            Assert.Equal(1, queue.MessageCount());
 
             bool msgReceived = false;
             HorseClient consumer = new HorseClient();

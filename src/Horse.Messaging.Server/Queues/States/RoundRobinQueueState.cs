@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
@@ -45,13 +46,13 @@ namespace Horse.Messaging.Server.Queues.States
                 QueueClient cc;
                 if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
                 {
-                    Tuple<QueueClient, int> tuple = await _queue.GetNextAvailableRRClient(_roundRobinIndex);
+                    Tuple<QueueClient, int> tuple = await GetNextAvailableRRClient(_roundRobinIndex);
                     cc = tuple.Item1;
                     if (cc != null)
                         _roundRobinIndex = tuple.Item2;
                 }
                 else
-                    cc = _queue.GetNextRRClient(ref _roundRobinIndex);
+                    cc = GetNextRRClient(ref _roundRobinIndex);
 
                 /*
                 //if to process next message is requires previous message acknowledge, wait here
@@ -136,7 +137,7 @@ namespace Horse.Messaging.Server.Queues.States
                 //do after send operations for per message
                 _queue.Info.AddDelivery();
                 message.Decision = await _queue.DeliveryHandler.ConsumerReceived(_queue, delivery, receiver.Client);
-                
+
                 foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                     _ = handler.OnConsumed(_queue, delivery, receiver.Client);
             }
@@ -166,6 +167,72 @@ namespace Horse.Messaging.Server.Queues.States
         public Task<QueueStatusAction> LeaveStatus(QueueStatus nextStatus)
         {
             return Task.FromResult(QueueStatusAction.Allow);
+        }
+
+
+        /// <summary>
+        /// Gets next client with round robin algorithm and updates index
+        /// </summary>
+        internal QueueClient GetNextRRClient(ref int index)
+        {
+            List<QueueClient> clients = _queue.ClientsClone;
+            if (index < 0 || index + 1 >= clients.Count)
+            {
+                if (clients.Count == 0)
+                    return null;
+
+                index = 0;
+                return clients[0];
+            }
+
+            index++;
+            return clients[index];
+        }
+
+        /// <summary>
+        /// Gets next available client which is not currently consuming any message.
+        /// Used for wait for acknowledge situations
+        /// </summary>
+        internal async Task<Tuple<QueueClient, int>> GetNextAvailableRRClient(int currentIndex)
+        {
+            List<QueueClient> clients = _queue.ClientsClone;
+            if (clients.Count == 0)
+                return new Tuple<QueueClient, int>(null, currentIndex);
+
+            DateTime retryExpiration = DateTime.UtcNow.AddSeconds(30);
+            while (true)
+            {
+                int index = currentIndex < 0 ? 0 : currentIndex;
+                for (int i = 0; i < clients.Count; i++)
+                {
+                    if (index >= clients.Count)
+                        index = 0;
+
+                    QueueClient client = clients[index];
+                    if (client.CurrentlyProcessing == null)
+                        return new Tuple<QueueClient, int>(client, index);
+
+                    if (client.CurrentlyProcessing.Deadline < DateTime.UtcNow)
+                    {
+                        client.CurrentlyProcessing = null;
+                        return new Tuple<QueueClient, int>(client, index);
+                    }
+
+                    index++;
+                }
+
+                await Task.Delay(3);
+                clients = _queue.ClientsClone;
+                if (clients.Count == 0)
+                    break;
+
+                //don't try hard so much, wait for next trigger operation of the queue.
+                //it will be triggered in 5 secs, anyway
+                if (DateTime.UtcNow > retryExpiration)
+                    break;
+            }
+
+            return new Tuple<QueueClient, int>(null, currentIndex);
         }
     }
 }

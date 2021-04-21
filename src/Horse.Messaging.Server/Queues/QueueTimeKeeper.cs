@@ -101,8 +101,7 @@ namespace Horse.Messaging.Server.Queues
                 return;
 
             List<QueueMessage> temp = new List<QueueMessage>();
-            lock (_queue.PriorityMessagesList)
-                ProcessReceiveTimeupOnList(_queue.PriorityMessagesList, temp);
+            ProcessReceiveTimeupOnList(true, temp);
 
             foreach (QueueMessage message in temp)
             {
@@ -115,8 +114,7 @@ namespace Horse.Messaging.Server.Queues
             }
 
             temp.Clear();
-            lock (_queue.MessagesList)
-                ProcessReceiveTimeupOnList(_queue.MessagesList, temp);
+            ProcessReceiveTimeupOnList(false, temp);
 
             foreach (QueueMessage message in temp)
             {
@@ -132,24 +130,20 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Checks messages in the list and adds them into time up message list and remove from the queue if they are expired.
         /// </summary>
-        private void ProcessReceiveTimeupOnList(LinkedList<QueueMessage> list, List<QueueMessage> temp)
+        private void ProcessReceiveTimeupOnList(bool priority, List<QueueMessage> temp)
         {
             //if the first message has not expired, none of the messages have expired. 
-            QueueMessage firstMessage = list.FirstOrDefault();
+            QueueMessage firstMessage = priority
+                ? _queue.Store.GetPriorityNext(false)
+                : _queue.Store.GetRegularNext(false);
+
             if (firstMessage != null && firstMessage.Deadline.HasValue && firstMessage.Deadline > DateTime.UtcNow)
                 return;
 
-            foreach (QueueMessage message in list)
-            {
-                if (!message.Deadline.HasValue)
-                    continue;
-
-                if (DateTime.UtcNow > message.Deadline.Value)
-                    temp.Add(message);
-            }
-
-            foreach (QueueMessage message in temp)
-                list.Remove(message);
+            Func<QueueMessage, bool> predicate = m => m.Deadline.HasValue && DateTime.UtcNow > m.Deadline.Value;
+            temp.AddRange(priority
+                              ? _queue.Store.FindAndRemovePriority(predicate)
+                              : _queue.Store.FindAndRemoveRegular(predicate));
         }
 
         /// <summary>
@@ -308,9 +302,9 @@ namespace Horse.Messaging.Server.Queues
             int count;
             lock (_deliveries)
                 count = _deliveries.Where(x => !string.IsNullOrEmpty(x.Message.Message.MessageId))
-                                   .Select(x => x.Message.Message.MessageId)
-                                   .Distinct()
-                                   .Count();
+                   .Select(x => x.Message.Message.MessageId)
+                   .Distinct()
+                   .Count();
 
             return count;
         }

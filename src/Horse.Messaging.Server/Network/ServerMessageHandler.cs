@@ -394,11 +394,11 @@ namespace Horse.Messaging.Server.Network
             }
 
             if (clearPrio && clearMsgs)
-                queue.ClearAllMessages();
+                queue.Store.ClearAll();
             else if (clearPrio)
-                queue.ClearHighPriorityMessages();
+                queue.Store.ClearPriority();
             else if (clearMsgs)
-                queue.ClearRegularMessages();
+                queue.Store.ClearRegular();
 
             //if creation successful, sends response
             if (message.WaitResponse)
@@ -439,8 +439,8 @@ namespace Horse.Messaging.Server.Network
                              Name = queue.Name,
                              Topic = queue.Topic,
                              Status = queue.Status.ToString().Trim().ToLower(),
-                             PriorityMessages = queue.PriorityMessagesList.Count,
-                             Messages = queue.MessagesList.Count,
+                             PriorityMessages = queue.Store.CountPriority(),
+                             Messages = queue.Store.CountRegular(),
                              Acknowledge = ack,
                              AcknowledgeTimeout = Convert.ToInt32(queue.Options.AcknowledgeTimeout.TotalMilliseconds),
                              MessageTimeout = Convert.ToInt32(queue.Options.MessageTimeout.TotalMilliseconds),
