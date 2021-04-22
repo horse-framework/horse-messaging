@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Core;
+using Horse.Messaging.Client.Cache;
 using Horse.Messaging.Client.Channels;
 using Horse.Messaging.Client.Direct;
 using Horse.Messaging.Client.Queues;
@@ -181,6 +182,11 @@ namespace Horse.Messaging.Client
         internal MessageTracker Tracker { get; private set; }
 
         /// <summary>
+        /// Cache manager for Horse Client
+        /// </summary>
+        public IHorseCache Cache { get; }
+
+        /// <summary>
         /// HMQ Client Direct message management object
         /// </summary>
         public DirectOperator Direct { get; }
@@ -232,6 +238,7 @@ namespace Horse.Messaging.Client
         /// </summary>
         public HorseClient()
         {
+            Cache = new HorseCache(this);
             Channel = new ChannelOperator(this);
             Direct = new DirectOperator(this);
             Queue = new QueueOperator(this);

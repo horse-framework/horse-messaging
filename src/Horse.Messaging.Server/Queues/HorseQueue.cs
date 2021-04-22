@@ -226,7 +226,7 @@ namespace Horse.Messaging.Server.Queues
 
                 _triggerTimer = new Timer(a =>
                 {
-                    if (!_triggering && State.TriggerSupported)
+                    if (!_triggering && State != null && State.TriggerSupported)
                         _ = Trigger();
 
                     _ = CheckAutoDestroy();
@@ -395,7 +395,7 @@ namespace Horse.Messaging.Server.Queues
         {
             Store.Put(message, toEnd);
 
-            if (State.TriggerSupported && !_triggering)
+            if (State != null && State.TriggerSupported && !_triggering)
                 _ = Trigger();
         }
 
@@ -557,11 +557,8 @@ namespace Horse.Messaging.Server.Queues
                 //trigger message produced event
                 OnMessageProduced.Trigger(message);
 
-                if (State.CanEnqueue(message))
-                    AddMessage(message);
-                else
-                    _ = State.Push(message);
-
+                AddMessage(message);
+                
                 return PushResult.Success;
             }
             catch (Exception ex)
@@ -574,7 +571,7 @@ namespace Horse.Messaging.Server.Queues
 
                     //the message is removed from the queue and it's not sent to consumers
                     //we should put the message back into the queue
-                    if (!message.IsInQueue && !message.IsSent && State.CanEnqueue(message))
+                    if (!message.IsInQueue && !message.IsSent)
                         decision = new Decision(true, true, PutBackDecision.Start, DeliveryAcknowledgeDecision.None);
 
                     if (State.ProcessingMessage != null)
@@ -981,7 +978,9 @@ namespace Horse.Messaging.Server.Queues
             foreach (IQueueEventHandler handler in Rider.Queue.EventHandlers.All())
                 _ = handler.OnConsumerSubscribed(cc);
 
-            _ = Trigger();
+            if (State != null && State.TriggerSupported)
+                _ = Trigger();
+
             OnConsumerSubscribed.Trigger(cc);
             return SubscriptionResult.Success;
         }

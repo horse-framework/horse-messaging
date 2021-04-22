@@ -250,7 +250,7 @@ namespace Horse.Messaging.Server.Queues.Store
         public List<QueueMessage> FindAndRemovePriority(Func<QueueMessage, bool> predicate)
         {
             List<QueueMessage> messages = new List<QueueMessage>();
-
+            
             lock (_messagesPrio)
             {
                 if (_messagesPrio.Count == 0)

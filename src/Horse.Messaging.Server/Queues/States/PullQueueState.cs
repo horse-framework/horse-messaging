@@ -269,11 +269,6 @@ namespace Horse.Messaging.Server.Queues.States
             return true;
         }
 
-        public bool CanEnqueue(QueueMessage message)
-        {
-            return true;
-        }
-
         public Task<PushResult> Push(QueueMessage message)
         {
             return Task.FromResult(PushResult.Success);

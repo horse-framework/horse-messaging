@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using Horse.Core;
 using Horse.Core.Protocols;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Cache;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Direct;
 using Horse.Messaging.Server.Events;
@@ -32,8 +33,7 @@ namespace Horse.Messaging.Server.Network
         private readonly INetworkMessageHandler _responseHandler;
         private readonly INetworkMessageHandler _instanceHandler;
         private readonly INetworkMessageHandler _eventHandler;
-
-        internal INetworkMessageHandler CacheHandler { get; set; }
+        private readonly INetworkMessageHandler _cacheHandler;
 
         public HmqNetworkHandler(HorseRider rider)
         {
@@ -46,6 +46,7 @@ namespace Horse.Messaging.Server.Network
             _responseHandler = new ResponseMessageHandler(rider);
             _instanceHandler = new NodeMessageHandler(rider);
             _eventHandler = new EventMessageHandler(rider);
+            _cacheHandler = new CacheNetworkHandler(rider);
         }
 
         #endregion
@@ -184,7 +185,7 @@ namespace Horse.Messaging.Server.Network
                 case MessageType.Cache:
                     if (!fromNode)
                         _ = _instanceHandler.Handle(mc, message, false);
-                    return CacheHandler.Handle(mc, message, fromNode);
+                    return _cacheHandler.Handle(mc, message, fromNode);
 
                 //sends pull request to a queue
                 case MessageType.QueuePullRequest:

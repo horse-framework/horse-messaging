@@ -10,6 +10,7 @@ namespace Benchmark.Queue.Producer
     class Program
     {
         private static long Count;
+        private static HorseClient client;
 
         private static Thread CountThread()
         {
@@ -31,28 +32,47 @@ namespace Benchmark.Queue.Producer
             return thread;
         }
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             var tx = CountThread();
-            
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 1; i++)
                 _ = RunProducer("Test0");
 
             Console.ReadLine();
+            client.Disconnect();
+            Console.ReadLine();
         }
-        
+
         private static async Task RunProducer(string queue)
         {
             string x = new string('a', 1);
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(x));
-            HorseClient client = new HorseClient();
+            client = new HorseClient();
+            client.Connected += c => Console.WriteLine("connected");
+            client.Disconnected += c => Console.WriteLine("disconnected");
+
             await client.ConnectAsync("horse://localhost:27001");
 
-            while (true)
+            try
             {
-                ms.Position = 0;
-                await client.Queue.Push(queue, ms, true);
-                Interlocked.Increment(ref Count);
+                int y = 0;
+                while (client.IsConnected)
+                {
+                    ms.Position = 0;
+                    y++;
+                    await client.Queue.Push(queue, ms, false);
+                    if (y == 10)
+                    {
+                        await Task.Delay(1);
+                        y = 0;
+                    }
+
+                    Interlocked.Increment(ref Count);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
             }
         }
     }

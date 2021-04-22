@@ -1,5 +1,4 @@
 using System;
-using System.Data;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
@@ -12,10 +11,10 @@ namespace Horse.Messaging.Server.Cache
         private readonly HorseRider _server;
         private readonly HorseCache _cache;
 
-        public CacheNetworkHandler(HorseRider server, HorseCache cache)
+        public CacheNetworkHandler(HorseRider server)
         {
             _server = server;
-            _cache = cache;
+            _cache = server.Cache;
         }
 
         public Task Handle(MessagingClient client, HorseMessage message, bool fromNode)

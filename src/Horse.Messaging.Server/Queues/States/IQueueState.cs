@@ -10,8 +10,6 @@ namespace Horse.Messaging.Server.Queues.States
 
         bool TriggerSupported { get; }
 
-        bool CanEnqueue(QueueMessage message);
-
         Task<PushResult> Push(QueueMessage message);
 
         Task<PullResult> Pull(QueueClient client, HorseMessage request);

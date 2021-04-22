@@ -61,8 +61,9 @@ namespace Horse.Messaging.Server.Queues
 
                 await ProcessDeliveries();
             }
-            catch
+            catch (Exception e)
             {
+                _queue.Rider.SendError("PROCESS_DELIVERIES", e, $"QueueName:{_queue.Name}");
             }
         }
 
@@ -151,79 +152,72 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         private async Task ProcessDeliveries()
         {
-            try
-            {
-                var rdlist = new List<Tuple<bool, MessageDelivery>>(16);
+            var rdlist = new List<Tuple<bool, MessageDelivery>>(16);
 
-                lock (_deliveries)
-                    foreach (MessageDelivery delivery in _deliveries)
+            lock (_deliveries)
+                foreach (MessageDelivery delivery in _deliveries)
+                {
+                    //message acknowledge or came here accidently :)
+                    if (delivery.Acknowledge != DeliveryAcknowledge.None || !delivery.AcknowledgeDeadline.HasValue)
+                        rdlist.Add(new Tuple<bool, MessageDelivery>(false, delivery));
+
+                    //expired
+                    else if (DateTime.UtcNow > delivery.AcknowledgeDeadline.Value)
+                        rdlist.Add(new Tuple<bool, MessageDelivery>(true, delivery));
+
+                    //check if all receivers disconnected
+                    else if (delivery.Message.CurrentDeliveryReceivers.Count > 0)
                     {
-                        //message acknowledge or came here accidently :)
-                        if (delivery.Acknowledge != DeliveryAcknowledge.None || !delivery.AcknowledgeDeadline.HasValue)
-                            rdlist.Add(new Tuple<bool, MessageDelivery>(false, delivery));
-
-                        //expired
-                        else if (DateTime.UtcNow > delivery.AcknowledgeDeadline.Value)
-                            rdlist.Add(new Tuple<bool, MessageDelivery>(true, delivery));
-
-                        //check if all receivers disconnected
-                        else if (delivery.Message.CurrentDeliveryReceivers.Count > 0)
+                        bool allDisconnected = delivery.Message.CurrentDeliveryReceivers.All(x => x.Client == null || !x.Client.IsConnected);
+                        if (allDisconnected)
                         {
-                            bool allDisconnected = delivery.Message.CurrentDeliveryReceivers.All(x => x.Client == null || !x.Client.IsConnected);
-                            if (allDisconnected)
-                            {
-                                rdlist.Add(new Tuple<bool, MessageDelivery>(true, delivery));
-                                delivery.Message.CurrentDeliveryReceivers.Clear();
-                            }
+                            rdlist.Add(new Tuple<bool, MessageDelivery>(true, delivery));
+                            delivery.Message.CurrentDeliveryReceivers.Clear();
                         }
                     }
+                }
 
-                if (rdlist.Count == 0)
-                    return;
+            if (rdlist.Count == 0)
+                return;
 
-                bool released = false;
-                foreach (Tuple<bool, MessageDelivery> tuple in rdlist)
+            bool released = false;
+            foreach (Tuple<bool, MessageDelivery> tuple in rdlist)
+            {
+                MessageDelivery delivery = tuple.Item2;
+                if (tuple.Item1)
                 {
-                    MessageDelivery delivery = tuple.Item2;
-                    if (tuple.Item1)
+                    bool marked = delivery.MarkAsAcknowledgeTimeout();
+                    if (!marked)
                     {
-                        bool marked = delivery.MarkAsAcknowledgeTimeout();
-                        if (!marked)
-                        {
-                            if (!released)
-                            {
-                                released = true;
-                                _queue.ReleaseAcknowledgeLock(false);
-                            }
-
-                            continue;
-                        }
-
-                        _queue.Info.AddUnacknowledge();
-                        Decision decision = await _queue.DeliveryHandler.AcknowledgeTimedOut(_queue, delivery);
-
-                        if (delivery.Message != null)
-                            await _queue.ApplyDecision(decision, delivery.Message);
-
-                        foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
-                            _ = handler.OnAcknowledgeTimedOut(_queue, delivery);
-
                         if (!released)
                         {
                             released = true;
                             _queue.ReleaseAcknowledgeLock(false);
                         }
+
+                        continue;
+                    }
+
+                    _queue.Info.AddUnacknowledge();
+                    Decision decision = await _queue.DeliveryHandler.AcknowledgeTimedOut(_queue, delivery);
+
+                    if (delivery.Message != null)
+                        await _queue.ApplyDecision(decision, delivery.Message);
+
+                    foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
+                        _ = handler.OnAcknowledgeTimedOut(_queue, delivery);
+
+                    if (!released)
+                    {
+                        released = true;
+                        _queue.ReleaseAcknowledgeLock(false);
                     }
                 }
+            }
 
-                IEnumerable<MessageDelivery> rdm = rdlist.Select(x => x.Item2);
-                lock (_deliveries)
-                    _deliveries.RemoveAll(x => rdm.Contains(x));
-            }
-            catch (Exception e)
-            {
-                _queue.Rider.SendError("PROCESS_DELIVERIES", e, $"QueueName:{_queue.Name}");
-            }
+            IEnumerable<MessageDelivery> rdm = rdlist.Select(x => x.Item2);
+            lock (_deliveries)
+                _deliveries.RemoveAll(x => rdm.Contains(x));
         }
 
         /// <summary>

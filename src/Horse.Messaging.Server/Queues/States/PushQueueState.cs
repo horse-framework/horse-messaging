@@ -24,20 +24,13 @@ namespace Horse.Messaging.Server.Queues.States
             return Task.FromResult(PullResult.StatusNotSupported);
         }
 
-        public bool CanEnqueue(QueueMessage message)
-        {
-            //if we have an option maximum wait duration for message, set it after message joined to the queue.
-            //time keeper will check this value and if message time is up, it will remove message from the queue.
-            if (_queue.Options.MessageTimeout > TimeSpan.Zero)
-                message.Deadline = DateTime.UtcNow.Add(_queue.Options.MessageTimeout);
-
-            return true;
-        }
-
         public async Task<PushResult> Push(QueueMessage message)
         {
             try
             {
+                if (!message.Deadline.HasValue && _queue.Options.MessageTimeout > TimeSpan.Zero)
+                    message.Deadline = DateTime.UtcNow.Add(_queue.Options.MessageTimeout);
+
                 ProcessingMessage = message;
                 PushResult result = await ProcessMessage(message);
                 return result;
@@ -125,10 +118,10 @@ namespace Horse.Messaging.Server.Queues.States
                     //do after send operations for per message
                     _queue.Info.AddDelivery();
                     Decision d = await _queue.DeliveryHandler.ConsumerReceived(_queue, delivery, client.Client);
-                    
+
                     foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                         _ = handler.OnConsumed(_queue, delivery, client.Client);
-                    
+
                     final = HorseQueue.CreateFinalDecision(final, d);
                 }
                 else

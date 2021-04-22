@@ -31,15 +31,17 @@ namespace Benchmark.Queue.Consumer
 
         static void Main(string[] args)
         {
-            var tx = CountThread();
-
+            _ = CountThread();
             HorseClient client = new HorseClient();
             client.MessageReceived += (c, m) => Interlocked.Increment(ref Count);
-            client.Connected += c => Console.WriteLine("connected"); 
-            client.Disconnected += c => Console.WriteLine("disconnected"); 
+            client.AutoAcknowledge = true;
+            client.Connected += c => Console.WriteLine("connected");
+            client.Disconnected += c => Console.WriteLine("disconnected");
             client.Connect("horse://localhost:27001");
             client.Queue.Subscribe("Test0", true);
 
+            Console.ReadLine();
+            client.Disconnect();
             Console.ReadLine();
         }
     }
