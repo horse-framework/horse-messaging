@@ -1,39 +1,19 @@
 ﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
+using Benchmark.Channel.Publisher;
 using Horse.Messaging.Client;
 
 namespace Benchmark.Queue.Consumer
 {
     class Program
     {
-        private static long Count;
-
-        private static Thread CountThread()
-        {
-            int seconds = 0;
-            Thread thread = new Thread(async () =>
-            {
-                while (true)
-                {
-                    long prevPush = Count;
-                    await Task.Delay(1000);
-                    long curPush = Count;
-                    long difPush = curPush - prevPush;
-
-                    seconds++;
-                    Console.WriteLine($"{difPush} m/s \t {curPush} total \t {seconds} secs");
-                }
-            });
-            thread.Start();
-            return thread;
-        }
-
+        private static Counter _counter;
         static void Main(string[] args)
         {
-            _ = CountThread();
+            _counter = new Counter();
+            _counter.Run(c => Console.WriteLine($"{c.ChangeInSecond} m/s \t {c.Total} total \t"));
+            
             HorseClient client = new HorseClient();
-            client.MessageReceived += (c, m) => Interlocked.Increment(ref Count);
+            client.MessageReceived += (c, m) => _counter.Increase();
             client.AutoAcknowledge = true;
             client.Connected += c => Console.WriteLine("connected");
             client.Disconnected += c => Console.WriteLine("disconnected");

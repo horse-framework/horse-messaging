@@ -623,7 +623,13 @@ namespace Horse.Messaging.Client
         {
             Task<HorseMessage> task = null;
             if (waitForResponse)
+            {
+                message.WaitResponse = true;
+                if (string.IsNullOrEmpty(message.MessageId))
+                    message.SetMessageId(UniqueIdGenerator.Create());
+                
                 task = Tracker.Track(message);
+            }
 
             HorseResult sent = await SendAsync(message);
             if (sent.Code != HorseResultCode.Ok)

@@ -1,40 +1,22 @@
 ﻿using System;
 using System.IO;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using Benchmark.Channel.Publisher;
 using Horse.Messaging.Client;
 
 namespace Benchmark.Queue.Producer
 {
     class Program
     {
-        private static long Count;
+        private static Counter _counter;
         private static HorseClient client;
 
-        private static Thread CountThread()
+        static void Main(string[] args)
         {
-            int seconds = 0;
-            Thread thread = new Thread(async () =>
-            {
-                while (true)
-                {
-                    long prevPush = Count;
-                    await Task.Delay(1000);
-                    long curPush = Count;
-                    long difPush = curPush - prevPush;
+            _counter = new Counter();
+            _counter.Run(c => Console.WriteLine($"{c.ChangeInSecond} m/s \t {c.Total} total \t"));
 
-                    seconds++;
-                    Console.WriteLine($"{difPush} m/s \t {curPush} total \t {seconds} secs");
-                }
-            });
-            thread.Start();
-            return thread;
-        }
-
-        static async Task Main(string[] args)
-        {
-            var tx = CountThread();
             for (int i = 0; i < 1; i++)
                 _ = RunProducer("Test0");
 
@@ -61,13 +43,12 @@ namespace Benchmark.Queue.Producer
                     ms.Position = 0;
                     y++;
                     await client.Queue.Push(queue, ms, false);
+                    _counter.Increase();
                     if (y == 10)
                     {
                         await Task.Delay(1);
                         y = 0;
                     }
-
-                    Interlocked.Increment(ref Count);
                 }
             }
             catch (Exception e)

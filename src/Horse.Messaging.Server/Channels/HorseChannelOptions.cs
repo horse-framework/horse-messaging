@@ -18,10 +18,14 @@ namespace Horse.Messaging.Server.Channels
         public int ClientLimit { get; set; }
 
         /// <summary>
-        /// If true,
-        /// Acknowledge message is sent to producer, when message is received.
+        /// If true, the channel is created when a new message is sent to the channel is not created yet.
         /// </summary>
-        public bool SendAcknowledge { get; set; }
+        public bool AutoChannelCreation { get; set; } = true;
+        
+        /// <summary>
+        /// If true, the channel is destroyed automatically in a short period of time after last subscriber left. 
+        /// </summary>
+        public bool AutoDestroy { get; set; } = true; //todo: feature is not enabled
 
         /// <summary>
         /// Clones options and return new copy
@@ -31,7 +35,6 @@ namespace Horse.Messaging.Server.Channels
             return new HorseChannelOptions
             {
                 ClientLimit = other.ClientLimit,
-                SendAcknowledge = other.SendAcknowledge,
                 MessageSizeLimit = other.MessageSizeLimit
             };
         }

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Containers;
@@ -73,7 +72,6 @@ namespace Horse.Messaging.Server.Channels
 
         internal void Destroy()
         {
-            
         }
 
         internal void UpdateOptionsByMessage(HorseMessage message)
@@ -96,20 +94,9 @@ namespace Horse.Messaging.Server.Channels
         }
 
         /// <summary>
-        /// Pushes new message into the queue
-        /// </summary>
-        public PushResult Push(HorseMessage message)
-        {
-            message.Type = MessageType.QueueMessage;
-            message.SetTarget(Name);
-
-            return Push(message, null);
-        }
-
-        /// <summary>
         /// Pushes a message into the queue.
         /// </summary>
-        internal PushResult Push(HorseMessage message, MessagingClient sender)
+        internal PushResult Push(HorseMessage message)
         {
             if (Status == ChannelStatus.Paused)
                 return PushResult.StatusNotSupported;
@@ -119,6 +106,7 @@ namespace Horse.Messaging.Server.Channels
 
             //remove operational headers that are should not be sent to consumers or saved to disk
             message.RemoveHeaders(HorseHeaders.CHANNEL_NAME, HorseHeaders.CC);
+            message.WaitResponse = false;
 
             try
             {
@@ -160,11 +148,11 @@ namespace Horse.Messaging.Server.Channels
         /// <summary>
         /// Adds the client to the queue
         /// </summary>
-        public async Task<SubscriptionResult> AddClient(MessagingClient client)
+        public SubscriptionResult AddClient(MessagingClient client)
         {
             foreach (IChannelAuthorization authenticator in Rider.Channel.Authenticators.All())
             {
-                bool allowed = await authenticator.CanSubscribe(this, client);
+                bool allowed = authenticator.CanSubscribe(this, client);
                 if (!allowed)
                     return SubscriptionResult.Unauthorized;
             }

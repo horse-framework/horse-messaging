@@ -171,32 +171,32 @@ namespace Horse.Messaging.Protocol
         /// "681" Pushes a message to channel
         /// </summary>
         public const ushort ChannelPush = 681;
-        
+
         /// <summary>
         /// "682" Creates new channel
         /// </summary>
         public const ushort ChannelCreate = 682;
-        
+
         /// <summary>
         /// "683" Updates a channel options
         /// </summary>
         public const ushort ChannelUpdate = 683;
-        
+
         /// <summary>
         /// "684" Removes a channel
         /// </summary>
         public const ushort ChannelRemove = 684;
-        
+
         /// <summary>
         /// "685" Gets channel list
         /// </summary>
         public const ushort ChannelList = 685;
-        
+
         /// <summary>
         /// "686" Subscribes to a channel
         /// </summary>
         public const ushort ChannelSubscribe = 686;
-        
+
         /// <summary>
         /// "686" Unsubscribes from a channel
         /// </summary>

@@ -14,6 +14,8 @@ namespace Horse.Messaging.Server.Channels
     /// </summary>
     public class ChannelRider
     {
+        #region Properties
+
         private readonly ArrayContainer<HorseChannel> _channels = new ArrayContainer<HorseChannel>();
 
         /// <summary>
@@ -45,6 +47,8 @@ namespace Horse.Messaging.Server.Channels
         /// Root horse rider object
         /// </summary>
         public HorseRider Rider { get; }
+
+        #endregion
 
         /// <summary>
         /// Creates new channel rider
@@ -101,10 +105,10 @@ namespace Horse.Messaging.Server.Channels
         }
 
         internal async Task<HorseChannel> Create(string channelName,
-                                                        HorseChannelOptions options,
-                                                        HorseMessage requestMessage,
-                                                        bool hideException,
-                                                        bool returnIfExists)
+                                                 HorseChannelOptions options,
+                                                 HorseMessage requestMessage,
+                                                 bool hideException,
+                                                 bool returnIfExists)
         {
             await _createLock.WaitAsync();
             try

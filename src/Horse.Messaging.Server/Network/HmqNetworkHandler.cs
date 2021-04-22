@@ -3,6 +3,7 @@ using Horse.Core;
 using Horse.Core.Protocols;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Cache;
+using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Direct;
 using Horse.Messaging.Server.Events;
@@ -32,6 +33,7 @@ namespace Horse.Messaging.Server.Network
         private readonly INetworkMessageHandler _clientHandler;
         private readonly INetworkMessageHandler _responseHandler;
         private readonly INetworkMessageHandler _instanceHandler;
+        private readonly INetworkMessageHandler _channelHandler;
         private readonly INetworkMessageHandler _eventHandler;
         private readonly INetworkMessageHandler _cacheHandler;
 
@@ -47,6 +49,7 @@ namespace Horse.Messaging.Server.Network
             _instanceHandler = new NodeMessageHandler(rider);
             _eventHandler = new EventMessageHandler(rider);
             _cacheHandler = new CacheNetworkHandler(rider);
+            _channelHandler = new ChannelNetworkHandler(rider);
         }
 
         #endregion
@@ -169,59 +172,52 @@ namespace Horse.Messaging.Server.Network
         {
             switch (message.Type)
             {
-                //client sends a queue message
+                case MessageType.Channel:
+                    if (!fromNode)
+                        _ = _instanceHandler.Handle(mc, message, false);
+                    return _channelHandler.Handle(mc, message, fromNode);
+                
                 case MessageType.QueueMessage:
                     if (!fromNode)
                         _ = _instanceHandler.Handle(mc, message, false);
                     return _queueMessageHandler.Handle(mc, message, fromNode);
 
-                //router message
                 case MessageType.Router:
                     if (!fromNode)
                         _ = _instanceHandler.Handle(mc, message, false);
                     return _routerMessageHandler.Handle(mc, message, fromNode);
 
-                //cache message
                 case MessageType.Cache:
                     if (!fromNode)
                         _ = _instanceHandler.Handle(mc, message, false);
                     return _cacheHandler.Handle(mc, message, fromNode);
 
-                //sends pull request to a queue
                 case MessageType.QueuePullRequest:
                     return _pullRequestHandler.Handle(mc, message, fromNode);
 
-                //clients sends a message to another client
                 case MessageType.DirectMessage:
                     if (!fromNode)
                         _ = _instanceHandler.Handle(mc, message, false);
                     return _clientHandler.Handle(mc, message, fromNode);
 
-                //client sends a response message for a message
                 case MessageType.Response:
                     if (!fromNode)
                         _ = _instanceHandler.Handle(mc, message, false);
                     return _responseHandler.Handle(mc, message, fromNode);
 
-                //client sends a message to the server
-                //this message may be join, header, info, some another server message
                 case MessageType.Server:
                     return _serverHandler.Handle(mc, message, fromNode);
 
-                //event subscription or unsubscription request received
                 case MessageType.Event:
                     return _eventHandler.Handle(mc, message, fromNode);
 
-                //if client sends a ping message, response with pong
                 case MessageType.Ping:
                     return mc.SendAsync(PredefinedMessages.PONG);
 
-                //client sends PONG message
                 case MessageType.Pong:
                     mc.KeepAlive();
                     break;
 
-                //close the client's connection
                 case MessageType.Terminate:
                     mc.Disconnect();
                     break;
