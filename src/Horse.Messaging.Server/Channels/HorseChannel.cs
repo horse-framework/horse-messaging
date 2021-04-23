@@ -46,16 +46,11 @@ namespace Horse.Messaging.Server.Channels
         public object Payload { get; set; }
 
         /// <summary>
-        /// Clients in the queue as thread-unsafe list
-        /// </summary>
-        public IEnumerable<ChannelClient> ClientsUnsafe => _clients.GetUnsafeList();
-
-        /// <summary>
         /// Clients in the queue as cloned list
         /// </summary>
-        public List<ChannelClient> ClientsClone => _clients.GetAsClone();
+        public IEnumerable<ChannelClient> Clients => _clients.All();
 
-        private readonly SafeList<ChannelClient> _clients;
+        private readonly ArrayContainer<ChannelClient> _clients = new ArrayContainer<ChannelClient>();
 
         #endregion
 
@@ -67,7 +62,6 @@ namespace Horse.Messaging.Server.Channels
             Name = name;
             Options = options;
             Status = ChannelStatus.Running;
-            _clients = new SafeList<ChannelClient>(256);
         }
 
         internal void Destroy()
@@ -113,7 +107,7 @@ namespace Horse.Messaging.Server.Channels
                 byte[] messageData = HorseProtocolWriter.Create(message);
 
                 //to all receivers
-                foreach (ChannelClient client in ClientsClone)
+                foreach (ChannelClient client in Clients)
                 {
                     //to only online receivers
                     if (!client.Client.IsConnected)
@@ -142,7 +136,7 @@ namespace Horse.Messaging.Server.Channels
         /// <returns></returns>
         public int ClientsCount()
         {
-            return _clients.Count;
+            return _clients.Count();
         }
 
         /// <summary>
@@ -157,7 +151,7 @@ namespace Horse.Messaging.Server.Channels
                     return SubscriptionResult.Unauthorized;
             }
 
-            if (Options.ClientLimit > 0 && _clients.Count >= Options.ClientLimit)
+            if (Options.ClientLimit > 0 && _clients.Count() >= Options.ClientLimit)
                 return SubscriptionResult.Full;
 
             ChannelClient cc = new ChannelClient(this, client);
@@ -203,11 +197,12 @@ namespace Horse.Messaging.Server.Channels
         /// </summary>
         public bool RemoveClient(MessagingClient client)
         {
-            ChannelClient cc = _clients.FindAndRemove(x => x.Client == client);
-
+            ChannelClient cc = _clients.Find(x => x.Client == client);
+            
             if (cc == null)
                 return false;
 
+            _clients.Remove(cc);
             client.RemoveSubscription(cc);
 
             foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())

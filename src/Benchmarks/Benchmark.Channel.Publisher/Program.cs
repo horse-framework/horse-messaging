@@ -27,7 +27,9 @@ namespace Benchmark.Channel.Publisher
             HorseClient client = new HorseClient();
             await client.ConnectAsync("horse://localhost:27001");
 
-            HorseResult result = await client.Channel.Publish("ch1", "Hello, world!", true);
+            ChannelModel model = new ChannelModel {Foo = "123"};
+
+            HorseResult result = await client.Channel.PublishJson("channel", model, true);
             Console.WriteLine($"First publish result: {result.Code}");
             Console.Write("Enter client count (1-100): ");
             int count = Math.Max(1, Math.Min(100, Convert.ToInt32(Console.ReadLine())));
@@ -42,11 +44,12 @@ namespace Benchmark.Channel.Publisher
 
         private static async Task Run(bool waitForAck)
         {
+            ChannelModel model = new ChannelModel {Foo = "123"};
             HorseClient client = new HorseClient();
             await client.ConnectAsync("horse://localhost:27001");
             while (true)
             {
-                await client.Channel.Publish("ch1", "Hello, world!", waitForAck);
+                await client.Channel.PublishJson("channel", model, waitForAck);
                 _counter.Increase();
             }
         }

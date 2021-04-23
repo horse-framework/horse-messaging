@@ -695,6 +695,28 @@ namespace Horse.Messaging.Client
         {
             switch (message.Type)
             {
+                case MessageType.Channel:
+                    await Channel.OnChannelMessage(message);
+                    break;
+
+                case MessageType.QueueMessage:
+
+                    if (message.WaitResponse && AutoAcknowledge)
+                        await SendAsync(message.CreateAcknowledge());
+
+                    await Queue.OnQueueMessage(message);
+                    MessageReceived?.Invoke(this, message);
+                    break;
+
+                case MessageType.DirectMessage:
+
+                    if (message.WaitResponse && AutoAcknowledge)
+                        await SendAsync(message.CreateAcknowledge());
+
+                    await Direct.OnDirectMessage(message);
+                    MessageReceived?.Invoke(this, message);
+                    break;
+                
                 case MessageType.Server:
                     if (message.ContentType == KnownContentTypes.Accepted)
                         SetClientId(message.Target);
@@ -723,24 +745,6 @@ namespace Horse.Messaging.Client
 
                 case MessageType.Event:
                     _ = Event.TriggerEvents(this, message);
-                    break;
-
-                case MessageType.QueueMessage:
-
-                    if (message.WaitResponse && AutoAcknowledge)
-                        await SendAsync(message.CreateAcknowledge());
-
-                    await Queue.OnQueueMessage(message);
-                    MessageReceived?.Invoke(this, message);
-                    break;
-
-                case MessageType.DirectMessage:
-
-                    if (message.WaitResponse && AutoAcknowledge)
-                        await SendAsync(message.CreateAcknowledge());
-
-                    await Direct.OnDirectMessage(message);
-                    MessageReceived?.Invoke(this, message);
                     break;
             }
         }
