@@ -2,7 +2,7 @@
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Benchmark.Channel.Publisher;
+using Benchmark.Helper;
 using Horse.Messaging.Client;
 
 namespace Benchmark.Queue.Producer
@@ -14,41 +14,46 @@ namespace Benchmark.Queue.Producer
 
         static void Main(string[] args)
         {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("You should start Benchmark.Server to connect.");
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("This application connects with n clients to the server.");
+            Console.WriteLine("Each client pushes a message to the same queue.");
+            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.WriteLine("Press enter when you are ready");
+            Console.ReadLine();
+
+            Console.Write("Enter client count (1-100): ");
+            int count = Math.Max(1, Math.Min(100, Convert.ToInt32(Console.ReadLine())));
+            Console.Write("Wait of acknowledge? (Y/N): ");
+            bool ack = Console.ReadLine().Trim().ToUpper() == "Y";
+
             _counter = new Counter();
             _counter.Run(c => Console.WriteLine($"{c.ChangeInSecond} m/s \t {c.Total} total \t"));
 
-            for (int i = 0; i < 1; i++)
-                _ = RunProducer("Test0");
+            for (int i = 0; i < count; i++)
+                _ = RunProducer("TestQueue", ack);
 
             Console.ReadLine();
             client.Disconnect();
             Console.ReadLine();
         }
 
-        private static async Task RunProducer(string queue)
+        private static async Task RunProducer(string queue, bool waitForAck)
         {
             string x = new string('a', 1);
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(x));
             client = new HorseClient();
-            client.Connected += c => Console.WriteLine("connected");
-            client.Disconnected += c => Console.WriteLine("disconnected");
 
             await client.ConnectAsync("horse://localhost:27001");
 
             try
             {
-                int y = 0;
                 while (client.IsConnected)
                 {
                     ms.Position = 0;
-                    y++;
-                    await client.Queue.Push(queue, ms, false);
+                    await client.Queue.Push(queue, ms, waitForAck);
                     _counter.Increase();
-                    if (y == 10)
-                    {
-                        await Task.Delay(1);
-                        y = 0;
-                    }
                 }
             }
             catch (Exception e)

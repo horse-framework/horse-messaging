@@ -128,8 +128,70 @@ namespace Horse.Messaging.Server.Channels
                     break;
                 }
 
-                case KnownContentTypes.ChannelList:
+                case KnownContentTypes.ChannelSubscribe:
+                {
+                    bool waitResponse = message.WaitResponse;
+                    HorseChannel channel = _rider.Channel.Find(message.Target);
+
+                    if (channel == null)
+                    {
+                        if (_rider.Channel.Options.AutoChannelCreation)
+                            channel = await _rider.Channel.Create(message.Target);
+
+                        if (channel == null)
+                        {
+                            if (waitResponse)
+                                await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+
+                            return;
+                        }
+                    }
+
+                    SubscriptionResult result = channel.AddClient(client);
+                    if (waitResponse)
+                    {
+                        HorseMessage response;
+                        switch (result)
+                        {
+                            case SubscriptionResult.Success:
+                                response = message.CreateResponse(HorseResultCode.Ok);
+                                break;
+
+                            case SubscriptionResult.Unauthorized:
+                                response = message.CreateResponse(HorseResultCode.Unauthorized);
+                                break;
+
+                            default:
+                                response = message.CreateResponse(HorseResultCode.Failed);
+                                break;
+                        }
+
+                        response.SetSource(message.Target);
+                        await client.SendAsync(response);
+                    }
+
                     break;
+                }
+
+                case KnownContentTypes.ChannelUnsubscribe:
+                {
+                    bool waitResponse = message.WaitResponse;
+                    HorseChannel channel = _rider.Channel.Find(message.Target);
+
+                    if (channel != null)
+                    {
+                        channel.RemoveClient(client);
+                    }
+
+                    if (waitResponse)
+                        await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
+                    break;
+                }
+
+                case KnownContentTypes.ChannelList:
+                {
+                    break;
+                }
             }
         }
     }

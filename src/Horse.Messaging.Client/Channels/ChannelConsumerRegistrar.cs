@@ -115,24 +115,31 @@ namespace Horse.Messaging.Client.Channels
 
             ChannelTypeResolver resolver = new ChannelTypeResolver();
             ChannelTypeDescriptor consumerDescriptor = resolver.Resolve(typeInfo.ConsumerType, DefaultDescriptor);
-            ChannelTypeDescriptor modelDescriptor = resolver.Resolve(typeInfo.ModelType, DefaultDescriptor);
+
+            ChannelTypeDescriptor modelDescriptor = null;
+            if (!typeInfo.ModelType.IsAssignableTo(typeof(string)))
+                modelDescriptor = resolver.Resolve(typeInfo.ModelType, DefaultDescriptor);
 
             object consumerInstance = useConsumerFactory ? null : Activator.CreateInstance(typeInfo.ConsumerType);
 
-            Type executerType = typeof(ChannelConsumerExecuter);
-            Type executerGenericType = executerType.MakeGenericType(typeInfo.ModelType, typeInfo.ResponseType);
+            Type executerType = typeof(ChannelSubscriberExecuter<>);
+            Type executerGenericType = executerType.MakeGenericType(typeInfo.ModelType);
             ExecuterBase executer = (ExecuterBase) Activator.CreateInstance(executerGenericType,
                                                                             typeInfo.ConsumerType,
                                                                             consumerInstance,
                                                                             consumerFactoryBuilder);
 
-            string channelName = modelDescriptor.Name;
+            string channelName = modelDescriptor?.Name;
             if (!string.IsNullOrEmpty(consumerDescriptor.Name))
                 channelName = consumerDescriptor.Name;
+
+            if (string.IsNullOrEmpty(channelName))
+                throw new ArgumentNullException($"Channel name is not specified for {typeInfo.ConsumerType?.FullName}");
 
             ChannelSubscriberRegistration registration = new ChannelSubscriberRegistration
             {
                 Name = channelName,
+                SubscriberType = typeInfo.ConsumerType,
                 MessageType = typeInfo.ModelType,
                 Executer = executer
             };

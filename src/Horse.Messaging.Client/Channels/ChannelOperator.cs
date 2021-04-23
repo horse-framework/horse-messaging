@@ -50,7 +50,7 @@ namespace Horse.Messaging.Client.Channels
         public async Task<HorseResult> Subscribe(string channel, bool verifyResponse, IEnumerable<KeyValuePair<string, string>> headers = null)
         {
             HorseMessage message = new HorseMessage();
-            message.Type = MessageType.Server;
+            message.Type = MessageType.Channel;
             message.ContentType = KnownContentTypes.ChannelSubscribe;
             message.SetTarget(channel);
             message.WaitResponse = verifyResponse;
@@ -71,7 +71,7 @@ namespace Horse.Messaging.Client.Channels
         public async Task<HorseResult> Unsubscribe(string channel, bool verifyResponse)
         {
             HorseMessage message = new HorseMessage();
-            message.Type = MessageType.Server;
+            message.Type = MessageType.Channel;
             message.ContentType = KnownContentTypes.ChannelUnsubscribe;
             message.SetTarget(channel);
             message.WaitResponse = verifyResponse;

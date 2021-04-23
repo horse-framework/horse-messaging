@@ -2,7 +2,7 @@ using System;
 
 namespace Horse.Messaging.Client.Annotations
 {
-    internal class TransportExceptionDescriptor
+    public class TransportExceptionDescriptor
     {
         public Type ModelType { get; set; }
         public Type ExceptionType { get; set; }

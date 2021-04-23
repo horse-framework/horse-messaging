@@ -1,0 +1,108 @@
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Horse.Messaging.Client.Internal;
+using Horse.Messaging.Protocol;
+
+namespace Horse.Messaging.Client.Channels
+{
+    public class ChannelSubscriberExecuter<TModel> : ExecuterBase
+    {
+        private readonly Type _subscriberType;
+        private readonly IChannelSubscriber<TModel> _subscriber;
+        private readonly Func<IHandlerFactory> _subscriberFactoryCreator;
+        private ChannelSubscriberRegistration _registration;
+
+        public ChannelSubscriberExecuter(Type subscriberType, IChannelSubscriber<TModel> subscriber, Func<IHandlerFactory> subscriberFactoryCreator)
+        {
+            _subscriberType = subscriberType;
+            _subscriber = subscriber;
+            _subscriberFactoryCreator = subscriberFactoryCreator;
+        }
+
+        public override void Resolve(object registration)
+        {
+            ChannelSubscriberRegistration reg = registration as ChannelSubscriberRegistration;
+            _registration = reg;
+
+            ResolveAttributes(reg.SubscriberType);
+            ResolveChannelAttributes();
+        }
+
+        private void ResolveChannelAttributes()
+        {
+            //todo: resolve consume attributes
+        }
+
+        public override async Task Execute(HorseClient client, HorseMessage message, object model)
+        {
+            TModel t = (TModel) model;
+            ProvidedHandler providedHandler = null;
+
+            try
+            {
+                if (_subscriber != null)
+                    await Handle(_subscriber, message, t, client);
+
+                else if (_subscriberFactoryCreator != null)
+                {
+                    IHandlerFactory handlerFactory = _subscriberFactoryCreator();
+                    providedHandler = handlerFactory.CreateHandler(_subscriberType);
+                    IChannelSubscriber<TModel> consumer = (IChannelSubscriber<TModel>) providedHandler.Service;
+                    await Handle(consumer, message, t, client);
+                }
+                else
+                    throw new ArgumentNullException("There is no consumer defined");
+
+                if (SendAck)
+                    await client.SendAck(message);
+            }
+            catch (Exception e)
+            {
+                if (SendNack)
+                    await SendNegativeAck(message, client, e);
+
+                await SendExceptions(message, client, e);
+            }
+            finally
+            {
+                if (providedHandler != null)
+                    providedHandler.Dispose();
+            }
+        }
+
+        private async Task Handle(IChannelSubscriber<TModel> subscriber, HorseMessage message, TModel model, HorseClient client)
+        {
+            if (Retry == null)
+            {
+                await subscriber.Handle(model, message, client);
+                return;
+            }
+
+            int count = Retry.Count == 0 ? 100 : Retry.Count;
+            for (int i = 0; i < count; i++)
+            {
+                try
+                {
+                    await subscriber.Handle(model, message, client);
+                    return;
+                }
+                catch (Exception e)
+                {
+                    Type type = e.GetType();
+                    if (Retry.IgnoreExceptions != null && Retry.IgnoreExceptions.Length > 0)
+                    {
+                        if (Retry.IgnoreExceptions.Any(x => x.IsAssignableFrom(type)))
+                            throw;
+                    }
+
+                    if (Retry.DelayBetweenRetries > 0)
+                        await Task.Delay(Retry.DelayBetweenRetries);
+
+                    if (i == count - 1)
+                        throw;
+                }
+            }
+        }
+    }
+}

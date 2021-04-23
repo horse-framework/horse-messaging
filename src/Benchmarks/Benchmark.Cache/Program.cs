@@ -10,12 +10,15 @@ namespace Benchmark.Cache
     {
         static async Task Main(string[] args)
         {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("You should start Benchmark.Server to connect");
+            Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("This application connects with ONE client to the server.");
             Console.WriteLine("Sets string cache key with 'Hello, World' value once and gets the value n times.");
-            Console.WriteLine("You should start Benchmark.Server to connect");
+            Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine("Press enter when you are ready");
             Console.ReadLine();
-            
+
             HorseClient client = new HorseClient();
             client.Connected += c => Console.WriteLine("Connected to the server");
             await client.ConnectAsync("horse://localhost:27001");

@@ -16,7 +16,7 @@ namespace Horse.Messaging.Client.Channels
         /// <param name="rawMessage">Raw message</param>
         /// <param name="client">Consumer client</param>
         /// <returns></returns>
-        Task Consume(TModel model, HorseMessage rawMessage, HorseClient client);
+        Task Handle(TModel model, HorseMessage rawMessage, HorseClient client);
 
         /// <summary>
         /// Triggered when an exception is thrown while consuming the message

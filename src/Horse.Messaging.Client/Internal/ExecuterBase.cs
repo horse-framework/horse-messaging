@@ -9,22 +9,22 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Internal
 {
-    internal abstract class ExecuterBase
+    public abstract class ExecuterBase
     {
         protected bool SendAck { get; private set; }
         protected bool SendNack { get; private set; }
         protected NackReason NackReason { get; private set; }
-        
+
         protected RetryAttribute Retry { get; private set; }
 
-        protected internal TransportExceptionDescriptor DefaultPushException { get; private set; }
-        protected internal List<TransportExceptionDescriptor> PushExceptions { get; private set; }
+        protected TransportExceptionDescriptor DefaultPushException { get; private set; }
+        protected List<TransportExceptionDescriptor> PushExceptions { get; private set; }
 
-        protected internal TransportExceptionDescriptor DefaultPublishException { get; private set; }
-        protected internal List<TransportExceptionDescriptor> PublishExceptions { get; private set; }
+        protected TransportExceptionDescriptor DefaultPublishException { get; private set; }
+        protected List<TransportExceptionDescriptor> PublishExceptions { get; private set; }
 
         public abstract void Resolve(object registration);
-        
+
         public abstract Task Execute(HorseClient client, HorseMessage message, object model);
 
         protected void ResolveAttributes(Type type)
@@ -140,11 +140,11 @@ namespace Horse.Messaging.Client.Internal
                 return Task.CompletedTask;
 
             transportable.Initialize(new ExceptionContext
-                                     {
-                                         Consumer = this,
-                                         Exception = exception,
-                                         ConsumingMessage = consumingMessage
-                                     });
+            {
+                Consumer = this,
+                Exception = exception,
+                ConsumingMessage = consumingMessage
+            });
 
             return client.Queue.PushJson(transportable, false);
         }
@@ -156,16 +156,16 @@ namespace Horse.Messaging.Client.Internal
                 return Task.CompletedTask;
 
             transportable.Initialize(new ExceptionContext
-                                     {
-                                         Consumer = this,
-                                         Exception = exception,
-                                         ConsumingMessage = consumingMessage
-                                     });
+            {
+                Consumer = this,
+                Exception = exception,
+                ConsumingMessage = consumingMessage
+            });
 
             return client.Router.PublishJson(transportable);
         }
-        
-        
+
+
         /*
 
         public virtual void Resolve(ModelTypeConfigurator defaultOptions = null)

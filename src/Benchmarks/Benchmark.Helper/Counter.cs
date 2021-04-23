@@ -1,12 +1,12 @@
 using System;
 using System.Threading;
 
-namespace Benchmark.Channel.Publisher
+namespace Benchmark.Helper
 {
-    public struct Count
+    public readonly struct Count
     {
-        public int ChangeInSecond;
-        public int Total;
+        public readonly int ChangeInSecond;
+        public readonly int Total;
 
         public Count(int changeInSecond, int total)
         {
