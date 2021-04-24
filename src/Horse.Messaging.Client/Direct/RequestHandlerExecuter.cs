@@ -26,14 +26,8 @@ namespace Horse.Messaging.Client.Direct
             _registration = reg;
 
             ResolveAttributes(reg.ConsumerType);
-            ResolveDirectAttributes();
         }
-
-        private void ResolveDirectAttributes()
-        {
-            //todo: resolve consume attributes
-        }
-
+        
         public override async Task Execute(HorseClient client, HorseMessage message, object model)
         {
             bool respond = false;

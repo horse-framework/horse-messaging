@@ -3,7 +3,7 @@ namespace Horse.Messaging.Client.Queues.Annotations
     /// <summary>
     /// Negative Acknowledge reasons
     /// </summary>
-    public enum NackReason
+    public enum NegativeReason
     {
         /// <summary>
         /// Reason none

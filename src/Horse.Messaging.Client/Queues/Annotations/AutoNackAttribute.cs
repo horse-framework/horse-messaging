@@ -13,13 +13,13 @@ namespace Horse.Messaging.Client.Queues.Annotations
         /// <summary>
         /// Reason
         /// </summary>
-        public NackReason Reason { get; }
+        public NegativeReason Reason { get; }
 
         /// <summary>
         /// Creates new negative acknowledge attribute
         /// </summary>
         /// <param name="reason"></param>
-        public AutoNackAttribute(NackReason reason = NackReason.None)
+        public AutoNackAttribute(NegativeReason reason = NegativeReason.None)
         {
             Reason = reason;
         }

@@ -1,7 +1,10 @@
 using System;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
+using Horse.Messaging.Client.Direct.Annotations;
 using Horse.Messaging.Client.Internal;
+using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Direct
@@ -31,7 +34,18 @@ namespace Horse.Messaging.Client.Direct
 
         private void ResolveDirectAttributes()
         {
-            //todo: resolve consume attributes
+            AutoResponseAttribute responseAttribute = _consumerType.GetCustomAttribute<AutoResponseAttribute>();
+            if (responseAttribute != null)
+            {
+                if (responseAttribute.Response == AutoResponse.All || responseAttribute.Response == AutoResponse.OnSuccess)
+                    SendPositiveResponse = true;
+
+                if (responseAttribute.Response == AutoResponse.All || responseAttribute.Response == AutoResponse.OnError)
+                {
+                    SendNegativeResponse = true;
+                    NegativeReason = responseAttribute.Error;
+                }
+            }
         }
 
         public override async Task Execute(HorseClient client, HorseMessage message, object model)
@@ -55,12 +69,12 @@ namespace Horse.Messaging.Client.Direct
                     throw new ArgumentNullException("There is no consumer defined");
 
 
-                if (SendAck)
+                if (SendPositiveResponse)
                     await client.SendAck(message);
             }
             catch (Exception e)
             {
-                if (SendNack)
+                if (SendNegativeResponse)
                     await SendNegativeAck(message, client, e);
 
                 await SendExceptions(message, client, e);

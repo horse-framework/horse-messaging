@@ -7,7 +7,7 @@ using Horse.Messaging.Protocol;
 namespace RoutingSample.DirectConsumer
 {
 	[AutoAck]
-	[AutoNack(NackReason.ExceptionType)]
+	[AutoNack(NegativeReason.ExceptionType)]
 	//[PushExceptions("SAMPLE-EXCEPTION-QUEUE")]
 	public abstract class BaseDirectMessageHandler<T> : IDirectMessageHandler<T>
 	{

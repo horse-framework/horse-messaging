@@ -17,17 +17,17 @@ namespace Horse.Messaging.Client.Internal
         /// <summary>
         /// If true, sends acknowledge when execute operation is completed successfuly
         /// </summary>
-        protected bool SendAck { get; private set; }
-        
+        protected bool SendPositiveResponse { get; set; }
+
         /// <summary>
         /// If true, sends negative acknowledge when execute operation throws an exception
         /// </summary>
-        protected bool SendNack { get; private set; }
-        
+        protected bool SendNegativeResponse { get; set; }
+
         /// <summary>
         /// If Negative acknowledge is sending, this value is the reason for it.
         /// </summary>
-        protected NackReason NackReason { get; private set; }
+        protected NegativeReason NegativeReason { get; set; }
 
         /// <summary>
         /// Execution retry attribute
@@ -38,7 +38,7 @@ namespace Horse.Messaging.Client.Internal
         /// Default push exception descriptors
         /// </summary>
         protected TransportExceptionDescriptor DefaultPushException { get; private set; }
-        
+
         /// <summary>
         /// Additional push exception descriptors
         /// </summary>
@@ -48,7 +48,7 @@ namespace Horse.Messaging.Client.Internal
         /// Default publish exception descriptors
         /// </summary>
         protected TransportExceptionDescriptor DefaultPublishException { get; private set; }
-        
+
         /// <summary>
         /// Additional publish exception descriptors
         /// </summary>
@@ -69,19 +69,6 @@ namespace Horse.Messaging.Client.Internal
         /// </summary>
         protected void ResolveAttributes(Type type)
         {
-            if (!SendAck)
-            {
-                AutoAckAttribute ackAttribute = type.GetCustomAttribute<AutoAckAttribute>();
-                SendAck = ackAttribute != null;
-            }
-
-            if (!SendNack)
-            {
-                AutoNackAttribute nackAttribute = type.GetCustomAttribute<AutoNackAttribute>();
-                SendNack = nackAttribute != null;
-                NackReason = nackAttribute != null ? nackAttribute.Reason : NackReason.None;
-            }
-
             RetryAttribute retryAttr = type.GetCustomAttribute<RetryAttribute>();
             if (retryAttr != null)
                 Retry = retryAttr;
@@ -117,17 +104,17 @@ namespace Horse.Messaging.Client.Internal
         protected Task SendNegativeAck(HorseMessage message, HorseClient client, Exception exception)
         {
             string reason;
-            switch (NackReason)
+            switch (NegativeReason)
             {
-                case NackReason.Error:
+                case NegativeReason.Error:
                     reason = HorseHeaders.NACK_REASON_ERROR;
                     break;
 
-                case NackReason.ExceptionType:
+                case NegativeReason.ExceptionType:
                     reason = exception.GetType().Name;
                     break;
 
-                case NackReason.ExceptionMessage:
+                case NegativeReason.ExceptionMessage:
                     reason = exception.Message;
                     break;
 
@@ -207,7 +194,6 @@ namespace Horse.Messaging.Client.Internal
 
             return client.Router.PublishJson(transportable);
         }
-
 
         /* todo:
 

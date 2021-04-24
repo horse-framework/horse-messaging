@@ -1,7 +1,9 @@
 using System;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Horse.Messaging.Client.Internal;
+using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Queues
@@ -31,7 +33,18 @@ namespace Horse.Messaging.Client.Queues
 
         private void ResolveQueueAttributes()
         {
-            //todo: resolve consume attributes
+            if (!SendPositiveResponse)
+            {
+                AutoAckAttribute ackAttribute = _consumerType.GetCustomAttribute<AutoAckAttribute>();
+                SendPositiveResponse = ackAttribute != null;
+            }
+
+            if (!SendNegativeResponse)
+            {
+                AutoNackAttribute nackAttribute = _consumerType.GetCustomAttribute<AutoNackAttribute>();
+                SendNegativeResponse = nackAttribute != null;
+                NegativeReason = nackAttribute != null ? nackAttribute.Reason : NegativeReason.None;
+            }
         }
 
         public override async Task Execute(HorseClient client, HorseMessage message, object model)
@@ -54,12 +67,12 @@ namespace Horse.Messaging.Client.Queues
                 else
                     throw new ArgumentNullException("There is no consumer defined");
 
-                if (SendAck)
+                if (SendPositiveResponse)
                     await client.SendAck(message);
             }
             catch (Exception e)
             {
-                if (SendNack)
+                if (SendNegativeResponse)
                     await SendNegativeAck(message, client, e);
 
                 await SendExceptions(message, client, e);
