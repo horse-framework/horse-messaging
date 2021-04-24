@@ -15,8 +15,6 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client
 {
-    //todo: client data properties
-
     /// <summary>
     /// Delegate for HorseClient OnMessageReceived event
     /// </summary>
@@ -349,6 +347,23 @@ namespace Horse.Messaging.Client
                 _data.Properties.Add(HorseHeaders.CLIENT_TOKEN, token);
         }
 
+        /// <summary>
+        /// Adds new property to client.
+        /// The property key and value is sent to server when connected
+        /// </summary>
+        public void AddProperty(string key, string value)
+        {
+            _data.Properties.Add(key, value);
+        }
+
+        /// <summary>
+        /// Removes a data from the client
+        /// </summary>
+        public void RemoveProperty(string key)
+        {
+            _data.Properties.Remove(key);
+        }
+
         #endregion
 
         #region Connect - Read
@@ -627,7 +642,7 @@ namespace Horse.Messaging.Client
                 message.WaitResponse = true;
                 if (string.IsNullOrEmpty(message.MessageId))
                     message.SetMessageId(UniqueIdGenerator.Create());
-                
+
                 task = Tracker.Track(message);
             }
 
@@ -716,7 +731,7 @@ namespace Horse.Messaging.Client
                     await Direct.OnDirectMessage(message);
                     MessageReceived?.Invoke(this, message);
                     break;
-                
+
                 case MessageType.Server:
                     if (message.ContentType == KnownContentTypes.Accepted)
                         SetClientId(message.Target);
