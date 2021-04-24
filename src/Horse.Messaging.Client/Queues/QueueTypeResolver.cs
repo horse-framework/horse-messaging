@@ -10,12 +10,12 @@ namespace Horse.Messaging.Client.Queues
     internal class QueueTypeResolver : ITypeDescriptorResolver<QueueTypeDescriptor>
     {
         private readonly HorseClient _client;
-        
+
         public QueueTypeResolver(HorseClient client)
         {
             _client = client;
         }
-        
+
         public QueueTypeDescriptor Resolve(Type type, QueueTypeDescriptor defaultDescriptor)
         {
             QueueTypeDescriptor descriptor = new QueueTypeDescriptor();
@@ -50,7 +50,7 @@ namespace Horse.Messaging.Client.Queues
                 return false;
 
             Type openGenericType = typeof(IQueueConsumer<>);
-            
+
             foreach (Type interfaceType in interfaceTypes)
             {
                 if (!interfaceType.IsGenericType)
@@ -87,10 +87,6 @@ namespace Horse.Messaging.Client.Queues
 
             if (defaultConfigurator.Acknowledge.HasValue)
                 descriptor.Acknowledge = defaultConfigurator.Acknowledge.Value;
-
-            //todo: header factories
-            //foreach (Func<KeyValuePair<string, string>> func in defaultConfigurator.HeaderFactories)
-            //    descriptor.Headers.Add(func());
         }
 
         /// <summary>

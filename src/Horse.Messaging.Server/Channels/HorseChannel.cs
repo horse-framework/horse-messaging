@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Containers;
@@ -46,11 +47,17 @@ namespace Horse.Messaging.Server.Channels
         public object Payload { get; set; }
 
         /// <summary>
+        /// The UTC date last message is published
+        /// </summary>
+        public DateTime LastPublishDate { get; private set; }
+
+        /// <summary>
         /// Clients in the queue as cloned list
         /// </summary>
         public IEnumerable<ChannelClient> Clients => _clients.All();
 
         private readonly ArrayContainer<ChannelClient> _clients = new ArrayContainer<ChannelClient>();
+        private Timer _destoryTimer;
 
         #endregion
 
@@ -62,14 +69,31 @@ namespace Horse.Messaging.Server.Channels
             Name = name;
             Options = options;
             Status = ChannelStatus.Running;
+            
+            _destoryTimer = new Timer(s =>
+            {
+                if (Options.AutoDestroy &&
+                    DateTime.UtcNow - LastPublishDate > TimeSpan.FromSeconds(30) &&
+                    _clients.Count() == 0)
+                {
+                    Rider.Channel.Remove(this);
+                }
+                
+            }, null, 15000, 15000);
         }
 
         internal void Destroy()
         {
+            if (_destoryTimer != null)
+            {
+                _destoryTimer.Dispose();
+                _destoryTimer = null;
+            }
         }
 
         internal void UpdateOptionsByMessage(HorseMessage message)
         {
+            
             //todo: update options
         }
 

@@ -23,9 +23,9 @@ namespace Horse.Messaging.Server.Channels
         public bool AutoChannelCreation { get; set; } = true;
         
         /// <summary>
-        /// If true, the channel is destroyed automatically in a short period of time after last subscriber left. 
+        /// If true, the channel is destroyed automatically when channel is inactive (no subscribers, no new published messages). 
         /// </summary>
-        public bool AutoDestroy { get; set; } = true; //todo: feature is not enabled
+        public bool AutoDestroy { get; set; } = true;
 
         /// <summary>
         /// Clones options and return new copy

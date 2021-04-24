@@ -27,23 +27,12 @@ namespace Horse.Messaging.Client.Routers
         /// </summary>
         private void ResolveDefaults(Type type, RouterTypeDescriptor descriptor, RouterTypeDescriptor defaultConfigurator)
         {
-            //todo: queue name factory
-            //if (defaultConfigurator.QueueNameFactory != null)
-            //{
-            //    descriptor.QueueName = defaultConfigurator.QueueNameFactory(type);
-            //    descriptor.HasQueueName = true;
-            //}
-
             descriptor.HighPriority = defaultConfigurator.HighPriority;
             descriptor.ContentType = defaultConfigurator.ContentType;
             descriptor.RouterName = defaultConfigurator.RouterName;
 
             if (!string.IsNullOrEmpty(defaultConfigurator.Topic))
                 descriptor.Topic = defaultConfigurator.Topic;
-
-            //todo: header factories
-            //foreach (Func<KeyValuePair<string, string>> func in defaultConfigurator.HeaderFactories)
-            //    descriptor.Headers.Add(func());
         }
 
         /// <summary>
