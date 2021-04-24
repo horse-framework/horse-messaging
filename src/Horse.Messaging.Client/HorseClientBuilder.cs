@@ -16,7 +16,6 @@ namespace Horse.Messaging.Client
         #region Declaration
 
         private readonly HorseClient _client;
-        private ModelTypeConfigurator _configurator;
         private readonly IServiceCollection _services;
 
         /// <summary>
@@ -126,17 +125,6 @@ namespace Horse.Messaging.Client
         public HorseClientBuilder DisconnectionOnAutoSubscribeFailure(bool value)
         {
             _client.DisconnectionOnAutoJoinFailure = value;
-            return this;
-        }
-
-        /// <summary>
-        /// Sets default configuration for all model and consumer types.
-        /// The configuration options can be overwritten with attributes.
-        /// </summary>
-        public HorseClientBuilder ConfigureModels(Action<ModelTypeConfigurator> cfg)
-        {
-            _configurator = new ModelTypeConfigurator();
-            cfg(_configurator);
             return this;
         }
 
@@ -437,5 +425,23 @@ namespace Horse.Messaging.Client
         }
 
         #endregion
+
+        /// <summary>
+        /// Uses queue name handler
+        /// </summary>
+        public HorseClientBuilder UseQueueName(QueueNameHandler handler)
+        {
+            _client.Queue.NameHandler = handler;
+            return this;
+        }
+
+        /// <summary>
+        /// Uses channel name handler
+        /// </summary>
+        public HorseClientBuilder UseChannelName(ChannelNameHandler handler)
+        {
+            _client.Channel.NameHandler = handler;
+            return this;
+        }
     }
 }

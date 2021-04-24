@@ -4,24 +4,35 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Horse.Messaging.Client.Direct;
 using Horse.Messaging.Client.Internal;
-using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Channels
 {
+    /// <summary>
+    /// Handler for queue name generator
+    /// </summary>
+    public delegate string ChannelNameHandler(ChannelNameHandlerContext context);
+
+    /// <summary>
+    /// Channel operator
+    /// </summary>
     public class ChannelOperator
     {
-        private readonly HorseClient _client;
+        internal HorseClient Client { get; }
         private readonly TypeDescriptorContainer<ChannelTypeDescriptor> _descriptorContainer;
 
         internal List<ChannelSubscriberRegistration> Registrations { get; } = new List<ChannelSubscriberRegistration>();
 
+        /// <summary>
+        /// Channel name handler
+        /// </summary>
+        public ChannelNameHandler NameHandler { get; set; }
+
         internal ChannelOperator(HorseClient client)
         {
-            _client = client;
-            _descriptorContainer = new TypeDescriptorContainer<ChannelTypeDescriptor>(new ChannelTypeResolver());
+            Client = client;
+            _descriptorContainer = new TypeDescriptorContainer<ChannelTypeDescriptor>(new ChannelTypeResolver(Client));
         }
 
         internal async Task OnChannelMessage(HorseMessage message)
@@ -32,15 +43,15 @@ namespace Horse.Messaging.Client.Channels
 
             object model = reg.MessageType == typeof(string)
                 ? message.GetStringContent()
-                : _client.MessageSerializer.Deserialize(message, reg.MessageType);
+                : Client.MessageSerializer.Deserialize(message, reg.MessageType);
 
             try
             {
-                await reg.Executer.Execute(_client, message, model);
+                await reg.Executer.Execute(Client, message, model);
             }
             catch (Exception ex)
             {
-                _client.OnException("ChannelConsumer", ex, message);
+                Client.OnException("ChannelConsumer", ex, message);
             }
         }
 
@@ -60,9 +71,9 @@ namespace Horse.Messaging.Client.Channels
                     message.AddHeader(header.Key, header.Value);
 
             if (verifyResponse)
-                message.SetMessageId(_client.UniqueIdGenerator.Create());
+                message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-            return await _client.WaitResponse(message, verifyResponse);
+            return await Client.WaitResponse(message, verifyResponse);
         }
 
         /// <summary>
@@ -77,9 +88,9 @@ namespace Horse.Messaging.Client.Channels
             message.WaitResponse = verifyResponse;
 
             if (verifyResponse)
-                message.SetMessageId(_client.UniqueIdGenerator.Create());
+                message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-            return await _client.WaitResponse(message, verifyResponse);
+            return await Client.WaitResponse(message, verifyResponse);
         }
 
 
@@ -112,12 +123,12 @@ namespace Horse.Messaging.Client.Channels
                 foreach (KeyValuePair<string, string> pair in messageHeaders)
                     message.AddHeader(pair.Key, pair.Value);
 
-            message.Serialize(jsonObject, _client.MessageSerializer);
+            message.Serialize(jsonObject, Client.MessageSerializer);
 
             if (string.IsNullOrEmpty(message.MessageId) && waitAcknowledge)
-                message.SetMessageId(_client.UniqueIdGenerator.Create());
+                message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-            return await _client.WaitResponse(message, waitAcknowledge);
+            return await Client.WaitResponse(message, waitAcknowledge);
         }
 
         /// <summary>
@@ -142,7 +153,7 @@ namespace Horse.Messaging.Client.Channels
                 foreach (KeyValuePair<string, string> pair in messageHeaders)
                     message.AddHeader(pair.Key, pair.Value);
 
-            return await _client.WaitResponse(message, waitAcknowledge);
+            return await Client.WaitResponse(message, waitAcknowledge);
         }
 
         #endregion

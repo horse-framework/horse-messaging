@@ -11,10 +11,12 @@ namespace Sample.Consumer
 
             HorseClient client = builder.SetHost("horse://localhost:9999")
                .AddSingletonConsumers(typeof(Program))
+               
+                /*
                .ConfigureModels(cfg => //cfg.UseQueueName(type => "Username1")
                                    cfg.UseConsumerAck()
                                    .AddMessageHeader("Sender-Client-Name", "MyName")
-                                   .SetPutBackDelay(TimeSpan.FromSeconds(10)))
+                                   .SetPutBackDelay(TimeSpan.FromSeconds(10)))*/
                .Build();
 
             client.Connect();

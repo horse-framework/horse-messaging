@@ -113,7 +113,7 @@ namespace Horse.Messaging.Client.Channels
         {
             bool useConsumerFactory = consumerFactoryBuilder != null;
 
-            ChannelTypeResolver resolver = new ChannelTypeResolver();
+            ChannelTypeResolver resolver = new ChannelTypeResolver(_operator.Client);
             ChannelTypeDescriptor consumerDescriptor = resolver.Resolve(typeInfo.ConsumerType, DefaultDescriptor);
 
             ChannelTypeDescriptor modelDescriptor = null;

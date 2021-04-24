@@ -111,7 +111,7 @@ namespace Horse.Messaging.Client.Queues
         {
             bool useConsumerFactory = consumerFactoryBuilder != null;
 
-            QueueTypeResolver resolver = new QueueTypeResolver();
+            QueueTypeResolver resolver = new QueueTypeResolver(_operator.Client);
             QueueTypeDescriptor consumerDescriptor = resolver.Resolve(typeInfo.ConsumerType, null);
             QueueTypeDescriptor modelDescriptor = resolver.Resolve(typeInfo.ModelType, DefaultDescriptor);
 

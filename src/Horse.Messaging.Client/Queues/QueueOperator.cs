@@ -15,21 +15,31 @@ using Horse.Messaging.Protocol.Models.Events;
 namespace Horse.Messaging.Client.Queues
 {
     /// <summary>
+    /// Handler for queue name generator
+    /// </summary>
+    public delegate string QueueNameHandler(QueueNameHandlerContext context);
+
+    /// <summary>
     /// Queue manager object for hmq client
     /// </summary>
     public class QueueOperator : IDisposable
     {
-        private readonly HorseClient _client;
+        internal HorseClient Client { get; }
         private readonly Timer _pullContainerTimeoutHandler;
-        private readonly TypeDescriptorContainer<QueueTypeDescriptor> _descriptorContainer;
-
+        
+        internal TypeDescriptorContainer<QueueTypeDescriptor> DescriptorContainer { get; }
         internal List<QueueConsumerRegistration> Registrations { get; } = new List<QueueConsumerRegistration>();
         internal Dictionary<string, PullContainer> PullContainers { get; }
 
+        /// <summary>
+        /// Queue name handler
+        /// </summary>
+        public QueueNameHandler NameHandler { get; set; }
+
         internal QueueOperator(HorseClient client)
         {
-            _client = client;
-            _descriptorContainer = new TypeDescriptorContainer<QueueTypeDescriptor>(new QueueTypeResolver());
+            Client = client;
+            DescriptorContainer = new TypeDescriptorContainer<QueueTypeDescriptor>(new QueueTypeResolver(client));
             PullContainers = new Dictionary<string, PullContainer>();
             _pullContainerTimeoutHandler = new Timer(HandleTimeoutPulls, null, 1000, 1000);
         }
@@ -61,15 +71,15 @@ namespace Horse.Messaging.Client.Queues
 
             object model = reg.MessageType == typeof(string)
                 ? message.GetStringContent()
-                : _client.MessageSerializer.Deserialize(message, reg.MessageType);
+                : Client.MessageSerializer.Deserialize(message, reg.MessageType);
 
             try
             {
-                await reg.ConsumerExecuter.Execute(_client, message, model);
+                await reg.ConsumerExecuter.Execute(Client, message, model);
             }
             catch (Exception ex)
             {
-                _client.OnException("QueueConsumer", ex, message);
+                Client.OnException("QueueConsumer", ex, message);
             }
         }
 
@@ -106,7 +116,7 @@ namespace Horse.Messaging.Client.Queues
                     {
                         foreach (PullContainer container in PullContainers.Values)
                         {
-                            if (container.Status == PullProcess.Receiving && container.LastReceived + _client.PullTimeout < DateTime.UtcNow)
+                            if (container.Status == PullProcess.Receiving && container.LastReceived + Client.PullTimeout < DateTime.UtcNow)
                                 timedouts.Add(container);
                         }
                     }
@@ -193,9 +203,9 @@ namespace Horse.Messaging.Client.Queues
                 await JsonSerializer.SerializeAsync(message.Content, options);
             }
 
-            message.SetMessageId(_client.UniqueIdGenerator.Create());
+            message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-            return await _client.WaitResponse(message, true);
+            return await Client.WaitResponse(message, true);
         }
 
         /// <summary>
@@ -205,12 +215,12 @@ namespace Horse.Messaging.Client.Queues
         {
             HorseMessage message = new HorseMessage();
             message.Type = MessageType.Server;
-            message.SetMessageId(_client.UniqueIdGenerator.Create());
+            message.SetMessageId(Client.UniqueIdGenerator.Create());
             message.ContentType = KnownContentTypes.QueueList;
 
             message.AddHeader(HorseHeaders.FILTER, filter);
 
-            return await _client.SendAndGetJson<List<QueueInformation>>(message);
+            return await Client.SendAndGetJson<List<QueueInformation>>(message);
         }
 
         /// <summary>
@@ -225,9 +235,9 @@ namespace Horse.Messaging.Client.Queues
             message.ContentType = KnownContentTypes.RemoveQueue;
             message.SetTarget(queue);
             message.WaitResponse = true;
-            message.SetMessageId(_client.UniqueIdGenerator.Create());
+            message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-            return await _client.WaitResponse(message, true);
+            return await Client.WaitResponse(message, true);
         }
 
         /// <summary>
@@ -240,7 +250,7 @@ namespace Horse.Messaging.Client.Queues
             message.ContentType = KnownContentTypes.UpdateQueue;
             message.SetTarget(queue);
             message.WaitResponse = true;
-            message.SetMessageId(_client.UniqueIdGenerator.Create());
+            message.SetMessageId(Client.UniqueIdGenerator.Create());
             message.AddHeader(HorseHeaders.QUEUE_NAME, queue);
 
             QueueOptions options = new QueueOptions();
@@ -249,7 +259,7 @@ namespace Horse.Messaging.Client.Queues
             message.Content = new MemoryStream();
             await JsonSerializer.SerializeAsync(message.Content, options);
 
-            return await _client.WaitResponse(message, true);
+            return await Client.WaitResponse(message, true);
         }
 
         /// <summary>
@@ -267,7 +277,7 @@ namespace Horse.Messaging.Client.Queues
             message.ContentType = KnownContentTypes.ClearMessages;
             message.SetTarget(queue);
             message.WaitResponse = true;
-            message.SetMessageId(_client.UniqueIdGenerator.Create());
+            message.SetMessageId(Client.UniqueIdGenerator.Create());
             message.AddHeader(HorseHeaders.QUEUE_NAME, queue);
 
             if (clearPriorityMessages)
@@ -276,7 +286,7 @@ namespace Horse.Messaging.Client.Queues
             if (clearMessages)
                 message.AddHeader(HorseHeaders.MESSAGES, "yes");
 
-            return _client.WaitResponse(message, true);
+            return Client.WaitResponse(message, true);
         }
 
         /// <summary>
@@ -288,11 +298,11 @@ namespace Horse.Messaging.Client.Queues
             message.Type = MessageType.Server;
             message.SetTarget(queue);
             message.ContentType = KnownContentTypes.QueueConsumers;
-            message.SetMessageId(_client.UniqueIdGenerator.Create());
+            message.SetMessageId(Client.UniqueIdGenerator.Create());
 
             message.AddHeader(HorseHeaders.QUEUE_NAME, queue);
 
-            return await _client.SendAndGetJson<List<ClientInformation>>(message);
+            return await Client.SendAndGetJson<List<ClientInformation>>(message);
         }
 
         #endregion
@@ -332,11 +342,11 @@ namespace Horse.Messaging.Client.Queues
         public async Task<HorseResult> PushJson(string queue, object jsonObject, string messageId, bool waitAcknowledge,
                                                 IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            QueueTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(jsonObject.GetType());
-            
+            QueueTypeDescriptor descriptor = DescriptorContainer.GetDescriptor(jsonObject.GetType());
+
             if (!string.IsNullOrEmpty(queue))
                 descriptor.QueueName = queue;
-            
+
             HorseMessage message = descriptor.CreateMessage();
 
             if (!string.IsNullOrEmpty(messageId))
@@ -348,12 +358,12 @@ namespace Horse.Messaging.Client.Queues
                 foreach (KeyValuePair<string, string> pair in messageHeaders)
                     message.AddHeader(pair.Key, pair.Value);
 
-            message.Serialize(jsonObject, _client.MessageSerializer);
+            message.Serialize(jsonObject, Client.MessageSerializer);
 
             if (string.IsNullOrEmpty(message.MessageId) && waitAcknowledge)
-                message.SetMessageId(_client.UniqueIdGenerator.Create());
+                message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-            return await _client.WaitResponse(message, waitAcknowledge);
+            return await Client.WaitResponse(message, waitAcknowledge);
         }
 
         /// <summary>
@@ -401,9 +411,9 @@ namespace Horse.Messaging.Client.Queues
                     message.AddHeader(pair.Key, pair.Value);
 
             if (string.IsNullOrEmpty(message.MessageId) && waitAcknowledge)
-                message.SetMessageId(_client.UniqueIdGenerator.Create());
+                message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-            return await _client.WaitResponse(message, waitAcknowledge);
+            return await Client.WaitResponse(message, waitAcknowledge);
         }
 
         /// <summary>
@@ -412,7 +422,7 @@ namespace Horse.Messaging.Client.Queues
         public async Task<PullContainer> Pull(PullRequest request, Func<int, HorseMessage, Task> actionForEachMessage = null)
         {
             HorseMessage message = new HorseMessage(MessageType.QueuePullRequest, request.Queue);
-            message.SetMessageId(_client.UniqueIdGenerator.Create());
+            message.SetMessageId(Client.UniqueIdGenerator.Create());
             message.AddHeader(HorseHeaders.COUNT, request.Count);
 
             if (request.ClearAfter == ClearDecision.AllMessages)
@@ -435,7 +445,7 @@ namespace Horse.Messaging.Client.Queues
             lock (PullContainers)
                 PullContainers.Add(message.MessageId, container);
 
-            HorseResult sent = await _client.SendAsync(message);
+            HorseResult sent = await Client.SendAsync(message);
             if (sent.Code != HorseResultCode.Ok)
             {
                 lock (PullContainers)
@@ -456,9 +466,9 @@ namespace Horse.Messaging.Client.Queues
         /// </summary>
         public async Task<bool> OnMessageProduced(string queue, Action<MessageEvent> action)
         {
-            bool ok = await _client.EventSubscription(EventNames.MessageProduced, true, queue);
+            bool ok = await Client.EventSubscription(EventNames.MessageProduced, true, queue);
             if (ok)
-                _client.Event.Add(EventNames.MessageProduced, queue, action, typeof(MessageEvent));
+                Client.Event.Add(EventNames.MessageProduced, queue, action, typeof(MessageEvent));
 
             return ok;
         }
@@ -468,9 +478,9 @@ namespace Horse.Messaging.Client.Queues
         /// </summary>
         public async Task<bool> OffMessageProduced(string queue)
         {
-            bool ok = await _client.EventSubscription(EventNames.MessageProduced, false, queue);
+            bool ok = await Client.EventSubscription(EventNames.MessageProduced, false, queue);
             if (ok)
-                _client.Event.Remove(EventNames.MessageProduced, queue);
+                Client.Event.Remove(EventNames.MessageProduced, queue);
 
             return ok;
         }
@@ -480,9 +490,9 @@ namespace Horse.Messaging.Client.Queues
         /// </summary>
         public async Task<bool> OnCreated(Action<QueueEvent> action)
         {
-            bool ok = await _client.EventSubscription(EventNames.QueueCreated, true, null);
+            bool ok = await Client.EventSubscription(EventNames.QueueCreated, true, null);
             if (ok)
-                _client.Event.Add(EventNames.QueueCreated, null, action, typeof(QueueEvent));
+                Client.Event.Add(EventNames.QueueCreated, null, action, typeof(QueueEvent));
 
             return ok;
         }
@@ -492,9 +502,9 @@ namespace Horse.Messaging.Client.Queues
         /// </summary>
         public async Task<bool> OffCreated()
         {
-            bool ok = await _client.EventSubscription(EventNames.QueueCreated, false, null);
+            bool ok = await Client.EventSubscription(EventNames.QueueCreated, false, null);
             if (ok)
-                _client.Event.Remove(EventNames.QueueCreated, null);
+                Client.Event.Remove(EventNames.QueueCreated, null);
 
             return ok;
         }
@@ -504,9 +514,9 @@ namespace Horse.Messaging.Client.Queues
         /// </summary>
         public async Task<bool> OnUpdated(Action<QueueEvent> action)
         {
-            bool ok = await _client.EventSubscription(EventNames.QueueUpdated, true, null);
+            bool ok = await Client.EventSubscription(EventNames.QueueUpdated, true, null);
             if (ok)
-                _client.Event.Add(EventNames.QueueUpdated, null, action, typeof(QueueEvent));
+                Client.Event.Add(EventNames.QueueUpdated, null, action, typeof(QueueEvent));
 
             return ok;
         }
@@ -516,9 +526,9 @@ namespace Horse.Messaging.Client.Queues
         /// </summary>
         public async Task<bool> OffUpdated()
         {
-            bool ok = await _client.EventSubscription(EventNames.QueueUpdated, false, null);
+            bool ok = await Client.EventSubscription(EventNames.QueueUpdated, false, null);
             if (ok)
-                _client.Event.Remove(EventNames.QueueUpdated, null);
+                Client.Event.Remove(EventNames.QueueUpdated, null);
 
             return ok;
         }
@@ -528,9 +538,9 @@ namespace Horse.Messaging.Client.Queues
         /// </summary>
         public async Task<bool> OnRemoved(Action<QueueEvent> action)
         {
-            bool ok = await _client.EventSubscription(EventNames.QueueRemoved, true, null);
+            bool ok = await Client.EventSubscription(EventNames.QueueRemoved, true, null);
             if (ok)
-                _client.Event.Add(EventNames.QueueRemoved, null, action, typeof(QueueEvent));
+                Client.Event.Add(EventNames.QueueRemoved, null, action, typeof(QueueEvent));
 
             return ok;
         }
@@ -540,9 +550,9 @@ namespace Horse.Messaging.Client.Queues
         /// </summary>
         public async Task<bool> OffRemoved()
         {
-            bool ok = await _client.EventSubscription(EventNames.QueueRemoved, false, null);
+            bool ok = await Client.EventSubscription(EventNames.QueueRemoved, false, null);
             if (ok)
-                _client.Event.Remove(EventNames.QueueRemoved, null);
+                Client.Event.Remove(EventNames.QueueRemoved, null);
 
             return ok;
         }
@@ -552,9 +562,9 @@ namespace Horse.Messaging.Client.Queues
         /// </summary>
         public async Task<bool> OnSubscribed(string queue, Action<SubscriptionEvent> action)
         {
-            bool ok = await _client.EventSubscription(EventNames.Subscribe, true, queue);
+            bool ok = await Client.EventSubscription(EventNames.Subscribe, true, queue);
             if (ok)
-                _client.Event.Add(EventNames.Subscribe, queue, action, typeof(SubscriptionEvent));
+                Client.Event.Add(EventNames.Subscribe, queue, action, typeof(SubscriptionEvent));
 
             return ok;
         }
@@ -564,9 +574,9 @@ namespace Horse.Messaging.Client.Queues
         /// </summary>
         public async Task<bool> OffSubscribed(string queue)
         {
-            bool ok = await _client.EventSubscription(EventNames.Subscribe, false, queue);
+            bool ok = await Client.EventSubscription(EventNames.Subscribe, false, queue);
             if (ok)
-                _client.Event.Remove(EventNames.Subscribe, queue);
+                Client.Event.Remove(EventNames.Subscribe, queue);
 
             return ok;
         }
@@ -576,9 +586,9 @@ namespace Horse.Messaging.Client.Queues
         /// </summary>
         public async Task<bool> OnUnsubscribed(string queue, Action<SubscriptionEvent> action)
         {
-            bool ok = await _client.EventSubscription(EventNames.Unsubscribe, true, queue);
+            bool ok = await Client.EventSubscription(EventNames.Unsubscribe, true, queue);
             if (ok)
-                _client.Event.Add(EventNames.Unsubscribe, queue, action, typeof(SubscriptionEvent));
+                Client.Event.Add(EventNames.Unsubscribe, queue, action, typeof(SubscriptionEvent));
 
             return ok;
         }
@@ -588,9 +598,9 @@ namespace Horse.Messaging.Client.Queues
         /// </summary>
         public async Task<bool> OffUnsubscribed(string queue)
         {
-            bool ok = await _client.EventSubscription(EventNames.Unsubscribe, false, queue);
+            bool ok = await Client.EventSubscription(EventNames.Unsubscribe, false, queue);
             if (ok)
-                _client.Event.Remove(EventNames.Unsubscribe, queue);
+                Client.Event.Remove(EventNames.Unsubscribe, queue);
 
             return ok;
         }
@@ -615,9 +625,9 @@ namespace Horse.Messaging.Client.Queues
                     message.AddHeader(header.Key, header.Value);
 
             if (verifyResponse)
-                message.SetMessageId(_client.UniqueIdGenerator.Create());
+                message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-            return await _client.WaitResponse(message, verifyResponse);
+            return await Client.WaitResponse(message, verifyResponse);
         }
 
         /// <summary>
@@ -632,9 +642,9 @@ namespace Horse.Messaging.Client.Queues
             message.WaitResponse = verifyResponse;
 
             if (verifyResponse)
-                message.SetMessageId(_client.UniqueIdGenerator.Create());
+                message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-            return await _client.WaitResponse(message, verifyResponse);
+            return await Client.WaitResponse(message, verifyResponse);
         }
 
         #endregion

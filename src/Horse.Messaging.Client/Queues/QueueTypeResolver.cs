@@ -9,6 +9,13 @@ namespace Horse.Messaging.Client.Queues
 {
     internal class QueueTypeResolver : ITypeDescriptorResolver<QueueTypeDescriptor>
     {
+        private readonly HorseClient _client;
+        
+        public QueueTypeResolver(HorseClient client)
+        {
+            _client = client;
+        }
+        
         public QueueTypeDescriptor Resolve(Type type, QueueTypeDescriptor defaultDescriptor)
         {
             QueueTypeDescriptor descriptor = new QueueTypeDescriptor();
@@ -16,24 +23,56 @@ namespace Horse.Messaging.Client.Queues
             if (defaultDescriptor != null)
                 ResolveDefaults(type, descriptor, defaultDescriptor);
 
+            if (_client.Queue.NameHandler != null && !IsConsumerType(type))
+            {
+                string queueName = _client.Queue.NameHandler.Invoke(new QueueNameHandlerContext
+                {
+                    Type = type,
+                    Client = _client
+                });
+
+                if (!string.IsNullOrEmpty(queueName))
+                {
+                    descriptor.QueueName = queueName;
+                    descriptor.HasQueueName = true;
+                }
+            }
+
             ResolveDescriptor(type, descriptor);
 
             return descriptor;
         }
 
+        private bool IsConsumerType(Type type)
+        {
+            Type[] interfaceTypes = type.GetInterfaces();
+            if (interfaceTypes.Length == 0)
+                return false;
+
+            Type openGenericType = typeof(IQueueConsumer<>);
+            
+            foreach (Type interfaceType in interfaceTypes)
+            {
+                if (!interfaceType.IsGenericType)
+                    continue;
+
+                Type[] genericArgs = interfaceType.GetGenericArguments();
+                if (genericArgs.Length != 1)
+                    continue;
+
+                Type genericType = openGenericType.MakeGenericType(genericArgs[0]);
+                if (type.IsAssignableTo(genericType))
+                    return true;
+            }
+
+            return false;
+        }
 
         /// <summary>
         /// Resolves default values from model type configurator
         /// </summary>
         private void ResolveDefaults(Type type, QueueTypeDescriptor descriptor, QueueTypeDescriptor defaultConfigurator)
         {
-            //todo: queue name factory
-            //if (defaultConfigurator.QueueNameFactory != null)
-            //{
-            //    descriptor.QueueName = defaultConfigurator.QueueNameFactory(type);
-            //    descriptor.HasQueueName = true;
-            //}
-
             if (defaultConfigurator.QueueType.HasValue)
                 descriptor.QueueType = defaultConfigurator.QueueType.Value;
 

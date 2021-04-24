@@ -17,11 +17,15 @@ namespace Benchmark.Channel.Subscriber
             Counter.Run(c => Console.WriteLine($"{c.ChangeInSecond} m/s \t {c.Total} total \t"));
 
             HorseClient client = new HorseClient();
+            client.Channel.NameHandler = c =>
+            {
+                return "channel";
+            };
             ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(client.Channel);
             registrar.RegisterHandler<ChannelSubscriber>();
             await client.ConnectAsync("horse://localhost:27001");
 
-            HorseResult result = await client.Channel.Subscribe("ch1", true);
+            HorseResult result = await client.Channel.Subscribe("channel", true);
             Console.WriteLine($"Subscription result: {result.Code}");
             Console.ReadLine();
         }

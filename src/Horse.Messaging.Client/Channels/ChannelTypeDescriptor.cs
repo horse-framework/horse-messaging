@@ -14,6 +14,11 @@ namespace Horse.Messaging.Client.Channels
         public string Name { get; set; }
 
         /// <summary>
+        /// If true, name is specified by previous process
+        /// </summary>
+        public bool ChannelNameSpecified { get; set; }
+        
+        /// <summary>
         /// Creates new message
         /// </summary>
         public HorseMessage CreateMessage()
