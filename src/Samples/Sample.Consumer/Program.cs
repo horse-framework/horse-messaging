@@ -11,7 +11,7 @@ namespace Sample.Consumer
 
             HorseClient client = builder.SetHost("horse://localhost:9999")
                .AddSingletonConsumers(typeof(Program))
-               
+                
                 /*
                .ConfigureModels(cfg => //cfg.UseQueueName(type => "Username1")
                                    cfg.UseConsumerAck()

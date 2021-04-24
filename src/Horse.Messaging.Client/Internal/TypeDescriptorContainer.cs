@@ -4,13 +4,13 @@ using System.Threading;
 
 namespace Horse.Messaging.Client.Internal
 {
-    internal class TypeDescriptorContainer<TDescriptor>
+    internal class TypeDescriptorContainer<TDescriptor> where TDescriptor : new()
     {
         private readonly ITypeDescriptorResolver<TDescriptor> _resolver;
         private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
         private readonly Dictionary<Type, TDescriptor> _descriptors = new Dictionary<Type, TDescriptor>();
 
-        internal TDescriptor Default { get; set; }
+        internal TDescriptor Default { get; set; } = new TDescriptor();
 
         /// <summary>
         /// Creates new delivery container

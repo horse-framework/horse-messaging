@@ -21,6 +21,7 @@ namespace Benchmark.Channel.Subscriber
             {
                 return "channel";
             };
+            
             ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(client.Channel);
             registrar.RegisterHandler<ChannelSubscriber>();
             await client.ConnectAsync("horse://localhost:27001");

@@ -443,5 +443,15 @@ namespace Horse.Messaging.Client
             _client.Channel.NameHandler = handler;
             return this;
         }
+
+        /// <summary>
+        /// Configure default type descriptors for queues
+        /// </summary>
+        public HorseClientBuilder ConfigureQueueTypes(Action<DefaultQueueTypeConfigurator> cfg)
+        {
+            DefaultQueueTypeConfigurator configurator = new DefaultQueueTypeConfigurator(_client.Queue);
+            cfg(configurator);
+            return this;
+        }
     }
 }
