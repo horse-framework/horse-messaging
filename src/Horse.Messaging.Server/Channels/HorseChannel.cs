@@ -69,7 +69,7 @@ namespace Horse.Messaging.Server.Channels
             Name = name;
             Options = options;
             Status = ChannelStatus.Running;
-            
+
             _destoryTimer = new Timer(s =>
             {
                 if (Options.AutoDestroy &&
@@ -78,7 +78,6 @@ namespace Horse.Messaging.Server.Channels
                 {
                     Rider.Channel.Remove(this);
                 }
-                
             }, null, 15000, 15000);
         }
 
@@ -93,8 +92,20 @@ namespace Horse.Messaging.Server.Channels
 
         internal void UpdateOptionsByMessage(HorseMessage message)
         {
-            
-            //todo: update options
+            string clientLimit = message.FindHeader(HorseHeaders.CLIENT_LIMIT);
+            if (!string.IsNullOrEmpty(clientLimit))
+                Options.ClientLimit = Convert.ToInt32(clientLimit.Trim());
+
+            string messageSizeLimit = message.FindHeader(HorseHeaders.MESSAGE_SIZE_LIMIT);
+            if (!string.IsNullOrEmpty(messageSizeLimit))
+                Options.MessageSizeLimit = Convert.ToUInt64(messageSizeLimit.Trim());
+
+            string autoDestroy = message.FindHeader(HorseHeaders.AUTO_DESTROY);
+            if (!string.IsNullOrEmpty(autoDestroy))
+            {
+                string value = autoDestroy.Trim();
+                Options.AutoDestroy = value.Equals("TRUE", StringComparison.CurrentCultureIgnoreCase) || value == "1";
+            }
         }
 
         #endregion
@@ -222,7 +233,7 @@ namespace Horse.Messaging.Server.Channels
         public bool RemoveClient(MessagingClient client)
         {
             ChannelClient cc = _clients.Find(x => x.Client == client);
-            
+
             if (cc == null)
                 return false;
 

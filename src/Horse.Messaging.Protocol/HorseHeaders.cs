@@ -209,21 +209,35 @@ namespace Horse.Messaging.Protocol
         /// "Put-Back-Delay"
         /// </summary>
         public const string PUT_BACK_DELAY = "Put-Back-Delay";
-        
+
         /// <summary>
         /// "Delivery"
         /// </summary>
         public const string DELIVERY = "Delivery";
-        
+
         /// <summary>
         /// "Message-Timeout"
         /// </summary>
         public const string MESSAGE_TIMEOUT = "Message-Timeout";
-        
+
         /// <summary>
         /// "Ack-Timeout"
         /// </summary>
         public const string ACK_TIMEOUT = "Ack-Timeout";
 
+        /// <summary>
+        /// "Client-Limit"
+        /// </summary>
+        public const string CLIENT_LIMIT = "Client-Limit";
+
+        /// <summary>
+        /// "Auto-Destroy"
+        /// </summary>
+        public const string AUTO_DESTROY = "Auto-Destroy";
+
+        /// <summary>
+        /// "Message-Size-Limit"
+        /// </summary>
+        public const string MESSAGE_SIZE_LIMIT = "Message-Size-Limit";
     }
 }
