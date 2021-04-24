@@ -6,6 +6,13 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Queues
 {
+    internal class HorseQueueBus<TIdentifier> : HorseQueueBus, IHorseQueueBus<TIdentifier>
+    {
+        public HorseQueueBus(HorseClient client) : base(client)
+        {
+        }
+    }
+
     /// <summary>
     /// Implementation for queue messages and requests
     /// </summary>

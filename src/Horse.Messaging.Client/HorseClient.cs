@@ -33,6 +33,13 @@ namespace Horse.Messaging.Client
     /// <inheritdoc />
     public class HorseClient<TIdentifier> : HorseClient
     {
+        /// <summary>
+        /// Creates new Horse Client
+        /// </summary>
+        public HorseClient()
+        {
+            Cache = new HorseCache<TIdentifier>(this);
+        }
     }
 
     /// <summary>
@@ -177,37 +184,37 @@ namespace Horse.Messaging.Client
         /// <summary>
         /// Response message tracker of the client
         /// </summary>
-        internal MessageTracker Tracker { get; private set; }
+        internal MessageTracker Tracker { get; }
 
         /// <summary>
         /// Cache manager for Horse Client
         /// </summary>
-        public IHorseCache Cache { get; }
+        public IHorseCache Cache { get; protected init; }
 
         /// <summary>
         /// HMQ Client Direct message management object
         /// </summary>
-        public DirectOperator Direct { get; }
+        public DirectOperator Direct { get; protected init; }
 
         /// <summary>
         /// HMQ Client Direct message management object
         /// </summary>
-        public ChannelOperator Channel { get; }
+        public ChannelOperator Channel { get; protected init; }
 
         /// <summary>
         /// HMQ Client Queue Management object
         /// </summary>
-        public QueueOperator Queue { get; }
+        public QueueOperator Queue { get; protected init; }
 
         /// <summary>
         /// HMQ Client Connection Management object
         /// </summary>
-        public ConnectionOperator Connection { get; }
+        public ConnectionOperator Connection { get; protected init; }
 
         /// <summary>
         /// HMQ Client Router Management object
         /// </summary>
-        public RouterOperator Router { get; }
+        public RouterOperator Router { get; protected init; }
 
         /// <summary>
         /// Event manage of the client
@@ -232,7 +239,7 @@ namespace Horse.Messaging.Client
         private Timer _reconnectTimer;
 
         /// <summary>
-        /// Creates new HMQ protocol client
+        /// Creates new horse client
         /// </summary>
         public HorseClient()
         {
@@ -243,7 +250,6 @@ namespace Horse.Messaging.Client
             Connection = new ConnectionOperator(this);
             Router = new RouterOperator(this);
             Event = new EventManager();
-
             Tracker = new MessageTracker(this);
             Tracker.Run();
         }

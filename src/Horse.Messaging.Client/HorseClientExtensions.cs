@@ -1,4 +1,9 @@
 using System;
+using Horse.Messaging.Client.Cache;
+using Horse.Messaging.Client.Channels;
+using Horse.Messaging.Client.Direct;
+using Horse.Messaging.Client.Queues;
+using Horse.Messaging.Client.Routers;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Horse.Messaging.Client
@@ -13,20 +18,45 @@ namespace Horse.Messaging.Client
         /// <summary>
         /// Adds Horse connector with configuration
         /// </summary>
-        public static IServiceCollection AddHorseBus(this IServiceCollection services, Action<HorseClientBuilder> config)
+        public static IServiceCollection AddHorseBus<TIdentifier>(this IServiceCollection services, Action<HorseClientBuilder> config)
         {
-            HorseClientBuilder builder = new HorseClientBuilder(services);
+            HorseClientBuilder<TIdentifier> builder = new HorseClientBuilder<TIdentifier>(services);
             config(builder);
-            HorseClient client = builder.Build();
+            HorseClient<TIdentifier> client = builder.Build();
             services.AddSingleton(client);
-            
+
+            services.AddSingleton<IHorseCache<TIdentifier>>((HorseCache<TIdentifier>) client.Cache);
+            services.AddSingleton<IHorseChannelBus<TIdentifier>>(new HorseChannelBus<TIdentifier>(client));
+            services.AddSingleton<IHorseQueueBus<TIdentifier>>(new HorseQueueBus<TIdentifier>(client));
+            services.AddSingleton<IHorseRouteBus<TIdentifier>>(new HorseRouteBus<TIdentifier>(client));
+            services.AddSingleton<IHorseDirectBus<TIdentifier>>(new HorseDirectBus<TIdentifier>(client));
+
             /* todo: register bus
             services.AddSingleton(connector.Bus);
             services.AddSingleton(connector.Bus.Direct);
             services.AddSingleton(connector.Bus.Queue);
             services.AddSingleton(connector.Bus.Route);
             */
-            
+
+            return services;
+        }
+
+        /// <summary>
+        /// Adds Horse connector with configuration
+        /// </summary>
+        public static IServiceCollection AddHorseBus(this IServiceCollection services, Action<HorseClientBuilder> config)
+        {
+            HorseClientBuilder builder = new HorseClientBuilder(services);
+            config(builder);
+            HorseClient client = builder.Build();
+            services.AddSingleton(client);
+
+            services.AddSingleton<IHorseCache>(client.Cache);
+            services.AddSingleton<IHorseChannelBus>(new HorseChannelBus(client));
+            services.AddSingleton<IHorseQueueBus>(new HorseQueueBus(client));
+            services.AddSingleton<IHorseRouteBus>(new HorseRouteBus(client));
+            services.AddSingleton<IHorseDirectBus>(new HorseDirectBus(client));
+
             return services;
         }
 

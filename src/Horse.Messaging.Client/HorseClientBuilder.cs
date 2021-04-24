@@ -8,6 +8,32 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Horse.Messaging.Client
 {
+    /// <inheritdoc />
+    public class HorseClientBuilder<TIdentifier> : HorseClientBuilder
+    {
+        /// <summary>
+        /// Creates Horse Connector Builder without IOC implementation
+        /// </summary>
+        public HorseClientBuilder() : base(new HorseClient<TIdentifier>())
+        {
+        }
+
+        /// <summary>
+        /// Creates Horse Connector Builder without IOC implementation
+        /// </summary>
+        public HorseClientBuilder(IServiceCollection services) : base(services, new HorseClient<TIdentifier>())
+        {
+        }
+
+        /// <summary>
+        /// Builds new HmqStickyConnector with defined properties.
+        /// </summary>
+        public override HorseClient<TIdentifier> Build()
+        {
+            return (HorseClient<TIdentifier>) base.Build();
+        }
+    }
+
     /// <summary>
     /// Horse Client Builder
     /// </summary>
@@ -26,6 +52,11 @@ namespace Horse.Messaging.Client
             _client = new HorseClient();
         }
 
+        internal HorseClientBuilder(HorseClient client)
+        {
+            _client = client;
+        }
+
         /// <summary>
         /// Creates Horse Connector Builder with IOC implementation
         /// </summary>
@@ -36,9 +67,18 @@ namespace Horse.Messaging.Client
         }
 
         /// <summary>
+        /// Creates Horse Connector Builder with IOC implementation
+        /// </summary>
+        internal HorseClientBuilder(IServiceCollection services, HorseClient client)
+        {
+            _services = services;
+            _client = client;
+        }
+
+        /// <summary>
         /// Builds new HmqStickyConnector with defined properties.
         /// </summary>
-        public HorseClient Build()
+        public virtual HorseClient Build()
         {
             return _client;
         }

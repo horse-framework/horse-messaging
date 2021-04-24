@@ -6,6 +6,13 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Cache
 {
+    internal class HorseCache<TIdentifier> : HorseCache, IHorseCache<TIdentifier>
+    {
+        internal HorseCache(HorseClient client) : base(client)
+        {
+        }
+    }
+
     internal class HorseCache : IHorseCache
     {
         private readonly HorseClient _client;

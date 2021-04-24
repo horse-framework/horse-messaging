@@ -10,5 +10,18 @@ namespace Horse.Messaging.Client.Channels
         /// Set null for server defaults. 
         /// </summary>
         public bool? AutoDestroy { get; set; }
+        
+        /// <summary>
+        /// Maximum message size limit
+        /// Zero is unlimited
+        /// </summary>
+        public ulong? MessageSizeLimit { get; set; }
+
+        /// <summary>
+        /// Maximum client limit of the queue
+        /// Zero is unlimited
+        /// </summary>
+        public int? ClientLimit { get; set; }
+
     }
 }

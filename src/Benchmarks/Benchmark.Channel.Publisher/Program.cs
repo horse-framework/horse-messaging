@@ -29,7 +29,7 @@ namespace Benchmark.Channel.Publisher
 
             ChannelModel model = new ChannelModel {Foo = "123"};
 
-            HorseResult result = await client.Channel.PublishJson("channel", model, true);
+            HorseResult result = await client.Channel.Publish("channel", model, true);
             Console.WriteLine($"First publish result: {result.Code}");
             Console.Write("Enter client count (1-100): ");
             int count = Math.Max(1, Math.Min(100, Convert.ToInt32(Console.ReadLine())));
@@ -49,7 +49,7 @@ namespace Benchmark.Channel.Publisher
             await client.ConnectAsync("horse://localhost:27001");
             while (true)
             {
-                await client.Channel.PublishJson("channel", model, waitForAck);
+                await client.Channel.Publish("channel", model, waitForAck);
                 _counter.Increase();
             }
         }

@@ -19,9 +19,9 @@ namespace Horse.Messaging.Client.Channels
     /// </summary>
     public class ChannelOperator
     {
-        internal HorseClient Client { get; }
         private readonly TypeDescriptorContainer<ChannelTypeDescriptor> _descriptorContainer;
 
+        internal HorseClient Client { get; }
         internal List<ChannelSubscriberRegistration> Registrations { get; } = new List<ChannelSubscriberRegistration>();
 
         /// <summary>
@@ -53,6 +53,55 @@ namespace Horse.Messaging.Client.Channels
             {
                 Client.OnException("ChannelConsumer", ex, message);
             }
+        }
+
+        /// <summary>
+        /// Creates new channel
+        /// </summary>
+        public Task<HorseResult> Create(string channel, Action<ChannelOptions> options = null, bool verifyResponse = false)
+        {
+            HorseMessage message = new HorseMessage();
+            message.Type = MessageType.Channel;
+            message.ContentType = KnownContentTypes.ChannelCreate;
+            message.SetTarget(channel);
+            message.WaitResponse = verifyResponse;
+
+            if (options != null)
+            {
+                ChannelOptions o = new ChannelOptions();
+                options(o);
+
+                if (o.AutoDestroy.HasValue)
+                    message.AddHeader(HorseHeaders.AUTO_DESTROY, o.AutoDestroy.Value.ToString());
+
+                if (o.ClientLimit.HasValue)
+                    message.AddHeader(HorseHeaders.CLIENT_LIMIT, o.ClientLimit.Value.ToString());
+
+                if (o.MessageSizeLimit.HasValue)
+                    message.AddHeader(HorseHeaders.MESSAGE_SIZE_LIMIT, o.MessageSizeLimit.Value.ToString());
+            }
+
+            if (verifyResponse)
+                message.SetMessageId(Client.UniqueIdGenerator.Create());
+
+            return Client.WaitResponse(message, verifyResponse);
+        }
+
+        /// <summary>
+        /// Creates a channel
+        /// </summary>
+        public Task<HorseResult> Delete(string channel, bool verifyResponse = false)
+        {
+            HorseMessage message = new HorseMessage();
+            message.Type = MessageType.Channel;
+            message.ContentType = KnownContentTypes.ChannelRemove;
+            message.SetTarget(channel);
+            message.WaitResponse = verifyResponse;
+
+            if (verifyResponse)
+                message.SetMessageId(Client.UniqueIdGenerator.Create());
+
+            return Client.WaitResponse(message, verifyResponse);
         }
 
         /// <summary>
@@ -99,17 +148,17 @@ namespace Horse.Messaging.Client.Channels
         /// <summary>
         /// Publishes a message to a channel
         /// </summary>
-        public Task<HorseResult> PublishJson(object jsonObject, bool waitAcknowledge = false,
-                                             IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        public Task<HorseResult> Publish(object jsonObject, bool waitAcknowledge = false,
+                                         IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return PublishJson(null, jsonObject, waitAcknowledge, messageHeaders);
+            return Publish(null, jsonObject, waitAcknowledge, messageHeaders);
         }
 
         /// <summary>
         /// Publishes a message to a channel
         /// </summary>
-        public async Task<HorseResult> PublishJson(string channel, object jsonObject, bool waitAcknowledge = false,
-                                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        public async Task<HorseResult> Publish(string channel, object jsonObject, bool waitAcknowledge = false,
+                                               IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             ChannelTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(jsonObject.GetType());
 
@@ -134,17 +183,17 @@ namespace Horse.Messaging.Client.Channels
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public async Task<HorseResult> Publish(string channel, string content, bool waitAcknowledge = false,
-                                               IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        public async Task<HorseResult> PublishString(string channel, string content, bool waitAcknowledge = false,
+                                                     IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return await Publish(channel, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge, messageHeaders);
+            return await PublishData(channel, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge, messageHeaders);
         }
 
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public async Task<HorseResult> Publish(string channel, MemoryStream content, bool waitAcknowledge = false,
-                                               IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        public async Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitAcknowledge = false,
+                                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             HorseMessage message = new HorseMessage(MessageType.Channel, channel, KnownContentTypes.ChannelPush);
             message.Content = content;

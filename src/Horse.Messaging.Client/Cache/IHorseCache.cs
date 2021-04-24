@@ -4,6 +4,11 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Cache
 {
+    /// <inheritdoc />
+    public interface IHorseCache<TIdentifier> : IHorseCache
+    {
+    }
+
     /// <summary>
     /// Cache management implementation for client
     /// </summary>

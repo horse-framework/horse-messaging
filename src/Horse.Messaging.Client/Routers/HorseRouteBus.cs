@@ -5,6 +5,13 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Routers
 {
+    internal class HorseRouteBus<TIdentifier> : HorseRouteBus, IHorseRouteBus<TIdentifier>
+    {
+        public HorseRouteBus(HorseClient client) : base(client)
+        {
+        }
+    }
+
     /// <summary>
     /// Implementation for route messages and requests
     /// </summary>

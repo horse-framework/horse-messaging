@@ -8,6 +8,19 @@ namespace Horse.Messaging.Client.Direct
     /// <summary>
     /// Implementation for direct messages and requests
     /// </summary>
+    public class HorseDirectBus<TIdentifier> : HorseDirectBus, IHorseDirectBus<TIdentifier>
+    {
+        /// <summary>
+        /// Creates new horse route bus
+        /// </summary>
+        public HorseDirectBus(HorseClient client) : base(client)
+        {
+        }
+    }
+
+    /// <summary>
+    /// Implementation for direct messages and requests
+    /// </summary>
     public class HorseDirectBus : IHorseDirectBus
     {
         private readonly HorseClient _client;
