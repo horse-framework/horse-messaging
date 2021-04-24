@@ -163,6 +163,9 @@ namespace Horse.Messaging.Client
 
         #region Direct Handlers
 
+        /// <summary>
+        /// Adds a direct handler with transient life time
+        /// </summary>
         public HorseClientBuilder AddTransientDirectHandler<THandler>() where THandler : class
         {
             if (_services == null)
@@ -176,6 +179,9 @@ namespace Horse.Messaging.Client
             return this;
         }
 
+        /// <summary>
+        /// Adds a direct handler with scoped life time
+        /// </summary>
         public HorseClientBuilder AddScopedDirectHandler<THandler>() where THandler : class
         {
             if (_services == null)
@@ -189,6 +195,9 @@ namespace Horse.Messaging.Client
             return this;
         }
 
+        /// <summary>
+        /// Adds a direct handler with singleton life time
+        /// </summary>
         public HorseClientBuilder AddSingletonDirectHandler<THandler>() where THandler : class
         {
             DirectHandlerRegistrar registrar = new DirectHandlerRegistrar(_client.Direct);
@@ -200,7 +209,9 @@ namespace Horse.Messaging.Client
             return this;
         }
 
-
+        /// <summary>
+        /// Adds all direct handler types in specified assemblies with transient life time
+        /// </summary>
         public HorseClientBuilder AddTransientDirectHandlers(params Type[] assemblyTypes)
         {
             if (_services == null)
@@ -213,6 +224,9 @@ namespace Horse.Messaging.Client
             return this;
         }
 
+        /// <summary>
+        /// Adds all direct handler types in specified assemblies with scoped life time
+        /// </summary>
         public HorseClientBuilder AddScopedDirectHandlers(params Type[] assemblyTypes)
         {
             if (_services == null)
@@ -226,6 +240,9 @@ namespace Horse.Messaging.Client
             return this;
         }
 
+        /// <summary>
+        /// Adds all direct handler types in specified assemblies with singleton life time
+        /// </summary>
         public HorseClientBuilder AddSingletonDirectHandlers(params Type[] assemblyTypes)
         {
             DirectHandlerRegistrar registrar = new DirectHandlerRegistrar(_client.Direct);
@@ -241,6 +258,9 @@ namespace Horse.Messaging.Client
 
         #region Channel Subscribers
 
+        /// <summary>
+        /// Adds a channel subscriber with transient life time
+        /// </summary>
         public HorseClientBuilder AddTransientChannelSubscriber<THandler>() where THandler : class
         {
             if (_services == null)
@@ -254,6 +274,9 @@ namespace Horse.Messaging.Client
             return this;
         }
 
+        /// <summary>
+        /// Adds a channel subscriber with scoped life time
+        /// </summary>
         public HorseClientBuilder AddScopedChannelSubscriber<THandler>() where THandler : class
         {
             if (_services == null)
@@ -267,6 +290,9 @@ namespace Horse.Messaging.Client
             return this;
         }
 
+        /// <summary>
+        /// Adds a channel subscriber with singleton life time
+        /// </summary>
         public HorseClientBuilder AddSingletonChannelSubscriber<THandler>() where THandler : class
         {
             ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
@@ -278,7 +304,9 @@ namespace Horse.Messaging.Client
             return this;
         }
 
-
+        /// <summary>
+        /// Adds all channel susbcriber types in specified assemblies with transient life time
+        /// </summary>
         public HorseClientBuilder AddTransientChannelSubscribers(params Type[] assemblyTypes)
         {
             if (_services == null)
@@ -291,6 +319,9 @@ namespace Horse.Messaging.Client
             return this;
         }
 
+        /// <summary>
+        /// Adds all channel susbcriber types in specified assemblies with scoped life time
+        /// </summary>
         public HorseClientBuilder AddScopedChannelSubscribers(params Type[] assemblyTypes)
         {
             if (_services == null)
@@ -304,6 +335,9 @@ namespace Horse.Messaging.Client
             return this;
         }
 
+        /// <summary>
+        /// Adds all channel susbcriber types in specified assemblies with singleton life time
+        /// </summary>
         public HorseClientBuilder AddSingletonChannelSubscribers(params Type[] assemblyTypes)
         {
             ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
@@ -319,6 +353,9 @@ namespace Horse.Messaging.Client
 
         #region Queue Consumers
 
+        /// <summary>
+        /// Adds a queue consumer with transient life time
+        /// </summary>
         public HorseClientBuilder AddTransientConsumer<TConsumer>() where TConsumer : class
         {
             if (_services == null)
@@ -332,6 +369,9 @@ namespace Horse.Messaging.Client
             return this;
         }
 
+        /// <summary>
+        /// Adds a queue consumer with scoped life time
+        /// </summary>
         public HorseClientBuilder AddScopedConsumer<TConsumer>() where TConsumer : class
         {
             if (_services == null)
@@ -345,6 +385,9 @@ namespace Horse.Messaging.Client
             return this;
         }
 
+        /// <summary>
+        /// Adds a queue consumer with singleton life time
+        /// </summary>
         public HorseClientBuilder AddSingletonConsumer<TConsumer>() where TConsumer : class
         {
             QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
@@ -356,7 +399,9 @@ namespace Horse.Messaging.Client
             return this;
         }
 
-
+        /// <summary>
+        /// Adds all queue consumer types in specified assemblies with transient life time
+        /// </summary>
         public HorseClientBuilder AddTransientConsumers(params Type[] assemblyTypes)
         {
             if (_services == null)
@@ -369,6 +414,9 @@ namespace Horse.Messaging.Client
             return this;
         }
 
+        /// <summary>
+        /// Adds all queue consumer types in specified assemblies with scoped life time
+        /// </summary>
         public HorseClientBuilder AddScopedConsumers(params Type[] assemblyTypes)
         {
             if (_services == null)
@@ -382,6 +430,9 @@ namespace Horse.Messaging.Client
             return this;
         }
 
+        /// <summary>
+        /// Adds all queue consumer types in specified assemblies with singleton life time
+        /// </summary>
         public HorseClientBuilder AddSingletonConsumers(params Type[] assemblyTypes)
         {
             QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
@@ -426,6 +477,8 @@ namespace Horse.Messaging.Client
 
         #endregion
 
+        #region Configurations
+
         /// <summary>
         /// Uses queue name handler
         /// </summary>
@@ -453,5 +506,7 @@ namespace Horse.Messaging.Client
             cfg(configurator);
             return this;
         }
+
+        #endregion
     }
 }

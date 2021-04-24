@@ -9,24 +9,64 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Internal
 {
+    /// <summary>
+    /// Base class for executers
+    /// </summary>
     public abstract class ExecuterBase
     {
+        /// <summary>
+        /// If true, sends acknowledge when execute operation is completed successfuly
+        /// </summary>
         protected bool SendAck { get; private set; }
+        
+        /// <summary>
+        /// If true, sends negative acknowledge when execute operation throws an exception
+        /// </summary>
         protected bool SendNack { get; private set; }
+        
+        /// <summary>
+        /// If Negative acknowledge is sending, this value is the reason for it.
+        /// </summary>
         protected NackReason NackReason { get; private set; }
 
+        /// <summary>
+        /// Execution retry attribute
+        /// </summary>
         protected RetryAttribute Retry { get; private set; }
 
+        /// <summary>
+        /// Default push exception descriptors
+        /// </summary>
         protected TransportExceptionDescriptor DefaultPushException { get; private set; }
+        
+        /// <summary>
+        /// Additional push exception descriptors
+        /// </summary>
         protected List<TransportExceptionDescriptor> PushExceptions { get; private set; }
 
+        /// <summary>
+        /// Default publish exception descriptors
+        /// </summary>
         protected TransportExceptionDescriptor DefaultPublishException { get; private set; }
+        
+        /// <summary>
+        /// Additional publish exception descriptors
+        /// </summary>
         protected List<TransportExceptionDescriptor> PublishExceptions { get; private set; }
 
+        /// <summary>
+        /// Resolves type descriptor
+        /// </summary>
         public abstract void Resolve(object registration);
 
+        /// <summary>
+        /// Executes the message
+        /// </summary>
         public abstract Task Execute(HorseClient client, HorseMessage message, object model);
 
+        /// <summary>
+        /// Resolves base attributes
+        /// </summary>
         protected void ResolveAttributes(Type type)
         {
             if (!SendAck)
@@ -99,6 +139,9 @@ namespace Horse.Messaging.Client.Internal
             return client.SendNegativeAck(message, reason);
         }
 
+        /// <summary>
+        /// Sends exceptions to the server
+        /// </summary>
         protected async Task SendExceptions(HorseMessage consumingMessage, HorseClient client, Exception exception)
         {
             if (PushExceptions.Count == 0 && PublishExceptions.Count == 0 && DefaultPushException == null && DefaultPublishException == null)
@@ -166,7 +209,7 @@ namespace Horse.Messaging.Client.Internal
         }
 
 
-        /*
+        /* todo:
 
         public virtual void Resolve(ModelTypeConfigurator defaultOptions = null)
         {

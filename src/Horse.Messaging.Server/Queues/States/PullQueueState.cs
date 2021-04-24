@@ -103,7 +103,7 @@ namespace Horse.Messaging.Server.Queues.States
             bool sendInfo = FindInfoRequest(request);
             bool fifo = FindOrder(request);
 
-            Tuple<QueueMessage, int, int> messageTuple = await DequeueMessage(fifo, sendInfo, count == index ? clear : ClearDecision.None);
+            Tuple<QueueMessage, int, int> messageTuple = DequeueMessage(fifo, sendInfo, count == index ? clear : ClearDecision.None);
 
             //there is no pullable message
             if (messageTuple.Item1 == null)
@@ -135,12 +135,11 @@ namespace Horse.Messaging.Server.Queues.States
                     }
 
                     bool processed = await ProcessPull(client, request, message, headers);
-
                     if (!processed)
                         break;
 
                     index++;
-                    messageTuple = await DequeueMessage(fifo, sendInfo, count == index ? clear : ClearDecision.None);
+                    messageTuple = DequeueMessage(fifo, sendInfo, count == index ? clear : ClearDecision.None);
                     headers.Clear();
                 }
                 catch (Exception ex)
@@ -178,14 +177,13 @@ namespace Horse.Messaging.Server.Queues.States
         /// Finds and dequeues a message from the queue.
         /// If there is not message, returns null
         /// </summary>
-        private async Task<Tuple<QueueMessage, int, int>> DequeueMessage(bool fifo, bool getInfo, ClearDecision clear)
+        private Tuple<QueueMessage, int, int> DequeueMessage(bool fifo, bool getInfo, ClearDecision clear)
         {
-            
             int prioMessageCount = 0;
             int messageCount = 0;
 
             QueueMessage message = _queue.Store.GetNext(true, !fifo);
-            
+
             if (getInfo)
             {
                 prioMessageCount = _queue.Store.CountPriority();

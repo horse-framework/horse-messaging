@@ -12,11 +12,17 @@ namespace Horse.Messaging.Client.Channels
     {
         private readonly HorseClient _client;
         
+        /// <summary>
+        /// Creates new channel type resolver
+        /// </summary>
         public ChannelTypeResolver(HorseClient client)
         {
             _client = client;
         }
 
+        /// <summary>
+        /// Resolves channel type
+        /// </summary>
         public ChannelTypeDescriptor Resolve(Type type, ChannelTypeDescriptor defaultDescriptor)
         {
             ChannelTypeDescriptor descriptor = new ChannelTypeDescriptor();

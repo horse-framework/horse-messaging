@@ -1,6 +1,6 @@
 namespace Horse.Messaging.Client.Channels
 {
-    public class ChannelBus
+    internal class ChannelBus
     {
         
     }

@@ -6,6 +6,9 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Channels
 {
+    /// <summary>
+    /// Channel subscriber executer
+    /// </summary>
     public class ChannelSubscriberExecuter<TModel> : ExecuterBase
     {
         private readonly Type _subscriberType;
@@ -13,6 +16,9 @@ namespace Horse.Messaging.Client.Channels
         private readonly Func<IHandlerFactory> _subscriberFactoryCreator;
         private ChannelSubscriberRegistration _registration;
 
+        /// <summary>
+        /// Channel subscriber executer
+        /// </summary>
         public ChannelSubscriberExecuter(Type subscriberType, IChannelSubscriber<TModel> subscriber, Func<IHandlerFactory> subscriberFactoryCreator)
         {
             _subscriberType = subscriberType;
@@ -20,20 +26,20 @@ namespace Horse.Messaging.Client.Channels
             _subscriberFactoryCreator = subscriberFactoryCreator;
         }
 
+        /// <summary>
+        /// Resolves channel subscriber executer types
+        /// </summary>
         public override void Resolve(object registration)
         {
             ChannelSubscriberRegistration reg = registration as ChannelSubscriberRegistration;
             _registration = reg;
 
             ResolveAttributes(reg.SubscriberType);
-            ResolveChannelAttributes();
         }
 
-        private void ResolveChannelAttributes()
-        {
-            //todo: resolve consume attributes
-        }
-
+        /// <summary>
+        /// Executes the channel message
+        /// </summary>
         public override async Task Execute(HorseClient client, HorseMessage message, object model)
         {
             TModel t = (TModel) model;
@@ -53,15 +59,9 @@ namespace Horse.Messaging.Client.Channels
                 }
                 else
                     throw new ArgumentNullException("There is no consumer defined");
-
-                if (SendAck)
-                    await client.SendAck(message);
             }
             catch (Exception e)
             {
-                if (SendNack)
-                    await SendNegativeAck(message, client, e);
-
                 await SendExceptions(message, client, e);
             }
             finally
