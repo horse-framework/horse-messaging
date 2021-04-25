@@ -1,8 +1,9 @@
+using System;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Network;
-using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Security;
 
 namespace Horse.Messaging.Server.Events
@@ -33,94 +34,25 @@ namespace Horse.Messaging.Server.Events
 
         public Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
         {
-            string eventName = message.Target;
-            string queueName = message.FindHeader(HorseHeaders.QUEUE_NAME);
-            bool subscribe = message.ContentType == 1;
+            HorseEventType type = (HorseEventType) message.ContentType;
+            bool subscribe = true;
+            string s = message.FindHeader(HorseHeaders.SUBSCRIBE);
+            if (!string.IsNullOrEmpty(s) == s.Equals("NO", StringComparison.CurrentCultureIgnoreCase))
+                subscribe = false;
 
-            HorseQueue queue = !string.IsNullOrEmpty(queueName) ? _rider.Queue.Find(queueName) : null;
             if (subscribe)
             {
                 foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
                 {
-                    if (!authorization.CanSubscribeEvent(client, queue))
+                    if (!authorization.CanSubscribeEvent(client, type, message.Target))
                         return SendResponse(client, message, false);
                 }
             }
 
-            switch (eventName)
+            switch (type)
             {
-                case EventNames.MessageProduced:
-                    if (queue == null)
-                        return SendResponse(client, message, false);
-
-                    if (subscribe)
-                        queue.OnMessageProduced.Subscribe(client);
-                    else
-                        queue.OnMessageProduced.Unsubscribe(client);
-
-                    return SendResponse(client, message, true);
-
-                case EventNames.ClientConnected:
-                    if (subscribe)
-                        _rider.Client.OnClientConnected.Subscribe(client);
-                    else
-                        _rider.Client.OnClientConnected.Unsubscribe(client);
-
-                    return SendResponse(client, message, true);
-
-                case EventNames.ClientDisconnected:
-                    if (subscribe)
-                        _rider.Client.OnClientDisconnected.Subscribe(client);
-                    else
-                        _rider.Client.OnClientDisconnected.Unsubscribe(client);
-
-                    return SendResponse(client, message, true);
-
-                case EventNames.Subscribe:
-                    if (queue == null)
-                        return SendResponse(client, message, false);
-
-                    if (subscribe)
-                        queue.OnConsumerSubscribed.Subscribe(client);
-                    else
-                        queue.OnConsumerSubscribed.Unsubscribe(client);
-
-                    return SendResponse(client, message, true);
-
-                case EventNames.Unsubscribe:
-                    if (queue == null)
-                        return SendResponse(client, message, false);
-
-                    if (subscribe)
-                        queue.OnConsumerUnsubscribed.Subscribe(client);
-                    else
-                        queue.OnConsumerUnsubscribed.Unsubscribe(client);
-
-                    return SendResponse(client, message, true);
-
-                case EventNames.QueueCreated:
-                    if (subscribe)
-                        _rider.Queue.OnQueueCreated.Subscribe(client);
-                    else
-                        _rider.Queue.OnQueueCreated.Unsubscribe(client);
-
-                    return SendResponse(client, message, true);
-
-                case EventNames.QueueUpdated:
-                    if (subscribe)
-                        _rider.Queue.OnQueueUpdated.Subscribe(client);
-                    else
-                        _rider.Queue.OnQueueUpdated.Unsubscribe(client);
-
-                    return SendResponse(client, message, true);
-
-                case EventNames.QueueRemoved:
-                    if (subscribe)
-                        _rider.Queue.OnQueueRemoved.Subscribe(client);
-                    else
-                        _rider.Queue.OnQueueRemoved.Unsubscribe(client);
-
-                    return SendResponse(client, message, true);
+                case HorseEventType.CacheGet:
+                    break;
             }
 
             return Task.CompletedTask;

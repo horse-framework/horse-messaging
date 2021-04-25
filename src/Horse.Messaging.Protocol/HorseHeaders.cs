@@ -239,5 +239,10 @@ namespace Horse.Messaging.Protocol
         /// "Message-Size-Limit"
         /// </summary>
         public const string MESSAGE_SIZE_LIMIT = "Message-Size-Limit";
+        
+        /// <summary>
+        /// "Susbcribe"
+        /// </summary>
+        public const string SUBSCRIBE = "Susbcribe";
     }
 }

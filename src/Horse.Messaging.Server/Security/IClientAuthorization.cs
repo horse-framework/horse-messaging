@@ -1,7 +1,9 @@
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Protocol.Models;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
 
@@ -35,7 +37,7 @@ namespace Horse.Messaging.Server.Security
         /// <summary>
         /// Returns true, if client can subscribe to the event
         /// </summary>
-        bool CanSubscribeEvent(MessagingClient client, HorseQueue queue);
+        bool CanSubscribeEvent(MessagingClient client, HorseEventType eventType, string target);
 
         /// <summary>
         /// Returns true, if client can create a router

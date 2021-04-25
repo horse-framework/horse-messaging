@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Containers;
-using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Security;
 
 namespace Horse.Messaging.Server.Clients
@@ -37,16 +36,6 @@ namespace Horse.Messaging.Server.Clients
         public ArrayContainer<IAdminAuthorization> AdminAuthorizations { get; } = new ArrayContainer<IAdminAuthorization>();
 
         /// <summary>
-        /// Triggered when a client is connected 
-        /// </summary>
-        public ClientEventManager OnClientConnected { get; }
-
-        /// <summary>
-        /// Triggered when a client is disconnected 
-        /// </summary>
-        public ClientEventManager OnClientDisconnected { get; }
-
-        /// <summary>
         /// All connected clients in the server
         /// </summary>
         public IEnumerable<MessagingClient> Clients => _clients.GetAsClone();
@@ -69,8 +58,6 @@ namespace Horse.Messaging.Server.Clients
         internal ClientRider(HorseRider rider)
         {
             Rider = rider;
-            OnClientConnected = new ClientEventManager(EventNames.ClientConnected, rider);
-            OnClientDisconnected = new ClientEventManager(EventNames.ClientDisconnected, rider);
         }
 
         #region Actions
@@ -81,7 +68,6 @@ namespace Horse.Messaging.Server.Clients
         internal void Add(MessagingClient client)
         {
             _clients.Add(client);
-            OnClientConnected.Trigger(client);
         }
 
         /// <summary>
@@ -91,7 +77,6 @@ namespace Horse.Messaging.Server.Clients
         {
             _clients.Remove(client);
             client.UnsubscribeFromAllQueues();
-            OnClientDisconnected.Trigger(client);
         }
 
         /// <summary>

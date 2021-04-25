@@ -8,8 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Horse.Messaging.Client
 {
-    //todo: use tidentifier
-
     /// <summary>
     /// Horse Connector implementations
     /// </summary>
@@ -30,13 +28,6 @@ namespace Horse.Messaging.Client
             services.AddSingleton<IHorseQueueBus<TIdentifier>>(new HorseQueueBus<TIdentifier>(client));
             services.AddSingleton<IHorseRouteBus<TIdentifier>>(new HorseRouteBus<TIdentifier>(client));
             services.AddSingleton<IHorseDirectBus<TIdentifier>>(new HorseDirectBus<TIdentifier>(client));
-
-            /* todo: register bus
-            services.AddSingleton(connector.Bus);
-            services.AddSingleton(connector.Bus.Direct);
-            services.AddSingleton(connector.Bus.Queue);
-            services.AddSingleton(connector.Bus.Route);
-            */
 
             return services;
         }

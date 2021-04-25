@@ -1,4 +1,5 @@
 using System;
+using Horse.Messaging.Protocol.Events;
 
 namespace Horse.Messaging.Client.Events.Annotations
 {

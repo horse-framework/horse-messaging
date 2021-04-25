@@ -194,38 +194,5 @@ namespace Horse.Messaging.Client.Internal
 
             return client.Router.PublishJson(transportable);
         }
-
-        /* todo:
-
-        public virtual void Resolve(ModelTypeConfigurator defaultOptions = null)
-        {
-            if (defaultOptions == null)
-                return;
-
-            SendAck = defaultOptions.AutoAck;
-            SendNack = defaultOptions.AutoNack;
-            NackReason = defaultOptions.NackReason;
-            Retry = defaultOptions.Retry;
-            DefaultPublishException = defaultOptions.DefaultPublishException;
-            PushExceptions = defaultOptions.PushExceptions;
-            DefaultPublishException = defaultOptions.DefaultPublishException;
-            PublishExceptions = defaultOptions.PublishExceptions;
-
-            if (DefaultPushException != null && !typeof(ITransportableException).IsAssignableFrom(DefaultPushException.ModelType))
-                throw new InvalidCastException("PushException model type must implement ITransportableException interface");
-
-            foreach (TransportExceptionDescriptor item in PushExceptions)
-                if (item != null && !typeof(ITransportableException).IsAssignableFrom(item.ModelType))
-                    throw new InvalidCastException("PushException model type must implement ITransportableException interface");
-
-            if (DefaultPublishException != null && !typeof(ITransportableException).IsAssignableFrom(DefaultPublishException.ModelType))
-                throw new InvalidCastException("PublishException model type must implement ITransportableException interface");
-
-            foreach (TransportExceptionDescriptor item in PublishExceptions)
-                if (item != null && !typeof(ITransportableException).IsAssignableFrom(item.ModelType))
-                    throw new InvalidCastException("PublishException model type must implement ITransportableException interface");
-        }
-
-         */
     }
 }

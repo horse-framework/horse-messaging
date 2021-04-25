@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Containers;
-using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Queues.Delivery;
@@ -69,11 +68,6 @@ namespace Horse.Messaging.Server.Queues
         /// If null, queue default options will be used
         /// </summary>
         public QueueOptions Options { get; }
-
-        /// <summary>
-        /// Triggered when a message is produced 
-        /// </summary>
-        public MessageEventManager OnMessageProduced { get; private set; }
 
         /// <summary>
         /// Queue messaging handler.
@@ -153,16 +147,6 @@ namespace Horse.Messaging.Server.Queues
         private readonly SafeList<QueueClient> _clients;
 
         /// <summary>
-        /// Triggered when a client is subscribed 
-        /// </summary>
-        public SubscriptionEventManager OnConsumerSubscribed { get; private set; }
-
-        /// <summary>
-        /// Triggered when a client is unsubscribed 
-        /// </summary>
-        public SubscriptionEventManager OnConsumerUnsubscribed { get; private set; }
-
-        /// <summary>
         /// True if queue is destroyed
         /// </summary>
         public bool IsDestroyed { get; private set; }
@@ -179,10 +163,6 @@ namespace Horse.Messaging.Server.Queues
             Type = options.Type;
             _clients = new SafeList<QueueClient>(256);
             Status = QueueStatus.NotInitialized;
-
-            OnConsumerSubscribed = new SubscriptionEventManager(Rider, EventNames.Subscribe, this);
-            OnConsumerUnsubscribed = new SubscriptionEventManager(Rider, EventNames.Unsubscribe, this);
-            OnMessageProduced = new MessageEventManager(Rider, EventNames.MessageProduced, this);
         }
 
         /// <summary>
@@ -250,8 +230,6 @@ namespace Horse.Messaging.Server.Queues
                 if (TimeKeeper != null)
                     await TimeKeeper.Destroy();
 
-                OnMessageProduced.Dispose();
-
                 Store?.ClearAll();
 
                 if (_ackLock != null)
@@ -275,8 +253,6 @@ namespace Horse.Messaging.Server.Queues
             }
 
             _clients.Clear();
-            OnConsumerSubscribed.Dispose();
-            OnConsumerUnsubscribed.Dispose();
         }
 
         /// <summary>
@@ -554,11 +530,8 @@ namespace Horse.Messaging.Server.Queues
                 if (!allow)
                     return PushResult.Success;
 
-                //trigger message produced event
-                OnMessageProduced.Trigger(message);
-
                 AddMessage(message);
-                
+
                 return PushResult.Success;
             }
             catch (Exception ex)
@@ -981,7 +954,6 @@ namespace Horse.Messaging.Server.Queues
             if (State != null && State.TriggerSupported)
                 _ = Trigger();
 
-            OnConsumerSubscribed.Trigger(cc);
             return SubscriptionResult.Success;
         }
 
@@ -995,8 +967,6 @@ namespace Horse.Messaging.Server.Queues
 
             foreach (IQueueEventHandler handler in Rider.Queue.EventHandlers.All())
                 _ = handler.OnConsumerUnsubscribed(client);
-
-            OnConsumerUnsubscribed.Trigger(client);
         }
 
         /// <summary>
@@ -1008,8 +978,6 @@ namespace Horse.Messaging.Server.Queues
 
             foreach (IQueueEventHandler handler in Rider.Queue.EventHandlers.All())
                 _ = handler.OnConsumerUnsubscribed(client);
-
-            OnConsumerUnsubscribed.Trigger(client);
         }
 
         /// <summary>
@@ -1026,8 +994,7 @@ namespace Horse.Messaging.Server.Queues
 
             foreach (IQueueEventHandler handler in Rider.Queue.EventHandlers.All())
                 _ = handler.OnConsumerUnsubscribed(cc);
-
-            OnConsumerUnsubscribed.Trigger(cc);
+            
             return true;
         }
 

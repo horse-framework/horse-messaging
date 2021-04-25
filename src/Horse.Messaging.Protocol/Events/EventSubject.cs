@@ -1,4 +1,4 @@
-namespace Horse.Messaging.Client.Events
+namespace Horse.Messaging.Protocol.Events
 {
     /// <summary>
     /// Event subject model

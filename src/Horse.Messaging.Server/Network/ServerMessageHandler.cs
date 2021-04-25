@@ -355,7 +355,6 @@ namespace Horse.Messaging.Server.Network
 
             builder.Type = null;
             builder.ApplyToQueue(queue.Options);
-            _rider.Queue.OnQueueUpdated.Trigger(queue);
 
             //if creation successful, sends response
             if (message.WaitResponse)

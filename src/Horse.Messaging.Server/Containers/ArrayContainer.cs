@@ -87,6 +87,9 @@ namespace Horse.Messaging.Server.Containers
         /// </summary>
         public void Remove(T value)
         {
+            if (_items.Length == 0)
+                return;
+            
             _semaphore.Wait();
             
             try

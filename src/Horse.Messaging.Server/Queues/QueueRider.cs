@@ -50,21 +50,6 @@ namespace Horse.Messaging.Server.Queues
         internal Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> DeliveryHandlerFactory { get; set; }
 
         /// <summary>
-        /// Triggered when a queue is created 
-        /// </summary>
-        public QueueEventManager OnQueueCreated { get; set; }
-
-        /// <summary>
-        /// Triggered when a queue is updated 
-        /// </summary>
-        public QueueEventManager OnQueueUpdated { get; set; }
-
-        /// <summary>
-        /// Triggered when a queue is removed 
-        /// </summary>
-        public QueueEventManager OnQueueRemoved { get; set; }
-
-        /// <summary>
         /// Root horse rider object
         /// </summary>
         public HorseRider Rider { get; }
@@ -80,9 +65,6 @@ namespace Horse.Messaging.Server.Queues
         internal QueueRider(HorseRider rider)
         {
             Rider = rider;
-            OnQueueCreated = new QueueEventManager(rider, EventNames.QueueCreated);
-            OnQueueUpdated = new QueueEventManager(rider, EventNames.QueueUpdated);
-            OnQueueRemoved = new QueueEventManager(rider, EventNames.QueueRemoved);
         }
 
         #region Actions
@@ -216,7 +198,6 @@ namespace Horse.Messaging.Server.Queues
                 if (initialize)
                     handlerBuilder.TriggerAfterCompleted();
 
-                OnQueueCreated.Trigger(queue);
                 return queue;
             }
             catch (Exception e)
@@ -265,7 +246,6 @@ namespace Horse.Messaging.Server.Queues
                 foreach (IQueueEventHandler handler in EventHandlers.All())
                     _ = handler.OnRemoved(queue);
 
-                OnQueueRemoved.Trigger(queue);
                 await queue.Destroy();
             }
             catch (Exception e)

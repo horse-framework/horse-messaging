@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 
-namespace Horse.Messaging.Client.Events
+namespace Horse.Messaging.Protocol.Events
 {
     /// <summary>
     /// Horse event model
     /// </summary>
-    internal class HorseEvent
+    public class HorseEvent
     {
         /// <summary>
         /// Event type
