@@ -190,6 +190,15 @@ namespace Horse.Messaging.Server.Queues.States
                 messageCount = _queue.Store.CountRegular();
             }
 
+            if (clear == ClearDecision.All)
+                _queue.Store.ClearAll();
+
+            else if (clear == ClearDecision.HighPriority)
+                _queue.Store.ClearPriority();
+
+            else if (clear == ClearDecision.DefaultPriority)
+                _queue.Store.ClearRegular();
+            
             if (message != null)
                 ProcessingMessage = message;
 
