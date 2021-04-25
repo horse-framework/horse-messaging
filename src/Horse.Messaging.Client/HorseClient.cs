@@ -820,6 +820,25 @@ namespace Horse.Messaging.Client
                     }
                 }
             }
+
+            foreach (EventSubscriberRegistration registration in Event.Registrations)
+            {
+                HorseResult joinResult = await Event.Subscribe(registration.Type, registration.Target);
+                if (joinResult.Code == HorseResultCode.Ok)
+                    continue;
+
+                if (DisconnectionOnAutoJoinFailure)
+                {
+                    if (_socket != null)
+                    {
+                        _socket.Disconnect();
+                        _socket = null;
+
+                        Error?.Invoke(this, new HorseChannelException($"Can't subscribe to {registration.Type} event: {joinResult.Reason} ({joinResult.Code})"));
+                        return;
+                    }
+                }
+            }
         }
 
         internal void OnDisconnected()
