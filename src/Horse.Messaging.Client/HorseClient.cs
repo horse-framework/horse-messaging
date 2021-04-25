@@ -7,6 +7,7 @@ using Horse.Core;
 using Horse.Messaging.Client.Cache;
 using Horse.Messaging.Client.Channels;
 using Horse.Messaging.Client.Direct;
+using Horse.Messaging.Client.Events;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Exceptions;
 using Horse.Messaging.Client.Queues.Internal;
@@ -217,9 +218,9 @@ namespace Horse.Messaging.Client
         public RouterOperator Router { get; protected init; }
 
         /// <summary>
-        /// Event manage of the client
+        /// Horse Event Management object
         /// </summary>
-        internal EventManager Event { get; set; }
+        public EventOperator Event { get; protected init; }
 
         /// <summary>
         /// Serializer object for horse messages
@@ -249,7 +250,7 @@ namespace Horse.Messaging.Client
             Queue = new QueueOperator(this);
             Connection = new ConnectionOperator(this);
             Router = new RouterOperator(this);
-            Event = new EventManager();
+            Event = new EventOperator(this);
             Tracker = new MessageTracker(this);
             Tracker.Run();
         }
@@ -765,7 +766,7 @@ namespace Horse.Messaging.Client
                     break;
 
                 case MessageType.Event:
-                    _ = Event.TriggerEvents(this, message);
+                    _ = Event.OnEventMessage(message);
                     break;
             }
         }

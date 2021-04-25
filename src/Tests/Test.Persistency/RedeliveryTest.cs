@@ -75,14 +75,11 @@ namespace Test.Persistency
                     ShrinkInterval = TimeSpan.FromSeconds(60)
                 };
 
-                handler = (PersistentDeliveryHandler) await builder.CreatePersistentDeliveryHandler(o =>
-                {
-                    return new PersistentDeliveryHandler(builder.Queue,
-                                                         options,
-                                                         DeleteWhen.AfterSend,
-                                                         ProducerAckDecision.None,
-                                                         true);
-                });
+                handler = (PersistentDeliveryHandler) await builder.CreatePersistentDeliveryHandler(o => new PersistentDeliveryHandler(builder.Queue,
+                                                                                                                                       options,
+                                                                                                                                       DeleteWhen.AfterSend,
+                                                                                                                                       ProducerAckDecision.None,
+                                                                                                                                       true));
                 return handler;
             };
 
@@ -107,7 +104,7 @@ namespace Test.Persistency
             Assert.NotNull(queue2);
             Assert.NotEqual(0, queue2.MessageCount());
             QueueMessage loadedMsg = queue2.FindNextMessage(false);
-            
+
             Assert.NotNull(loadedMsg);
             Assert.Equal(1, loadedMsg.DeliveryCount);
         }

@@ -23,6 +23,11 @@ namespace Horse.Messaging.Client.Internal
         /// <summary>
         /// Message source is channel
         /// </summary>
-        Channel
+        Channel,
+        
+        /// <summary>
+        /// Message source si event
+        /// </summary>
+        Event
     }
 }

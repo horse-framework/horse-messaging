@@ -49,57 +49,5 @@ namespace Horse.Messaging.Client
         }
 
         #endregion
-
-        #region Client Events
-
-        /// <summary>
-        /// Triggers the action when a client is connected to the server
-        /// </summary>
-        public async Task<bool> OnClientConnected(Action<ClientEvent> action)
-        {
-            bool ok = await _client.EventSubscription(EventNames.ClientConnected, true, null);
-            if (ok)
-                _client.Event.Add(EventNames.ClientConnected, null, action, typeof(ClientEvent));
-
-            return ok;
-        }
-
-        /// <summary>
-        /// Unsubscribes from all client connected events
-        /// </summary>
-        public async Task<bool> OffClientConnected()
-        {
-            bool ok = await _client.EventSubscription(EventNames.ClientConnected, false, null);
-            if (ok)
-                _client.Event.Remove(EventNames.ClientConnected, null);
-
-            return ok;
-        }
-
-        /// <summary>
-        /// Triggers the action when a client is disconnected from the server
-        /// </summary>
-        public async Task<bool> OnClientDisconnected(Action<ClientEvent> action)
-        {
-            bool ok = await _client.EventSubscription(EventNames.ClientDisconnected, true, null);
-            if (ok)
-                _client.Event.Add(EventNames.ClientDisconnected, null, action, typeof(ClientEvent));
-
-            return ok;
-        }
-
-        /// <summary>
-        /// Unsubscribes from all client disconnected events
-        /// </summary>
-        public async Task<bool> OffClientDisconnected()
-        {
-            bool ok = await _client.EventSubscription(EventNames.ClientDisconnected, false, null);
-            if (ok)
-                _client.Event.Remove(EventNames.ClientDisconnected, null);
-
-            return ok;
-        }
-
-        #endregion
     }
 }

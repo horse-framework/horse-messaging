@@ -1,6 +1,7 @@
 using System;
 using Horse.Messaging.Client.Channels;
 using Horse.Messaging.Client.Direct;
+using Horse.Messaging.Client.Events;
 using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
@@ -486,6 +487,101 @@ namespace Horse.Messaging.Client
 
         #endregion
 
+        #region Horse Events
+
+        /// <summary>
+        /// Adds a event handler with transient life time
+        /// </summary>
+        public HorseClientBuilder AddTransientHorseEvent<TEventHandler>() where TEventHandler : IHorseEventHandler
+        {
+            if (_services == null)
+                throw new NotSupportedException("Transient handlers are not supported. " +
+                                                "If you want to use transient direct receivers " +
+                                                "Build HorseClient with IServiceCollection");
+
+            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(_client.Event);
+            registrar.RegisterHandler(typeof(TEventHandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient));
+
+            return this;
+        }
+
+        /// <summary>
+        /// Adds a event handler with scoped life time
+        /// </summary>
+        public HorseClientBuilder AddScopedHorseEvent<TEventHandler>() where TEventHandler : IHorseEventHandler
+        {
+            if (_services == null)
+                throw new NotSupportedException("Scoped handlers are not supported. " +
+                                                "If you want to use transient direct receivers " +
+                                                "Build HorseClient with IServiceCollection");
+
+            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(_client.Event);
+            registrar.RegisterHandler(typeof(TEventHandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped));
+
+            return this;
+        }
+
+        /// <summary>
+        /// Adds a event handler with singleton life time
+        /// </summary>
+        public HorseClientBuilder AddSingletonHorseEvent<TEventHandler>() where TEventHandler : IHorseEventHandler
+        {
+            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(_client.Event);
+            if (_services == null)
+                registrar.RegisterHandler(typeof(TEventHandler));
+            else
+                registrar.RegisterHandler(typeof(TEventHandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton));
+
+            return this;
+        }
+
+        /// <summary>
+        /// Adds all event handler types in specified assemblies with transient life time
+        /// </summary>
+        public HorseClientBuilder AddTransientHorseEvents(params Type[] assemblyTypes)
+        {
+            if (_services == null)
+                throw new NotSupportedException("Transient handlers are not supported. " +
+                                                "If you want to use transient direct receivers " +
+                                                "Build HorseClient with IServiceCollection");
+
+            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(_client.Event);
+            registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), assemblyTypes);
+            return this;
+        }
+
+        /// <summary>
+        /// Adds all event handler types in specified assemblies with scoped life time
+        /// </summary>
+        public HorseClientBuilder AddScopedHorseEvents(params Type[] assemblyTypes)
+        {
+            if (_services == null)
+                throw new NotSupportedException("Scoped handlers are not supported. " +
+                                                "If you want to use transient direct receivers " +
+                                                "Build HorseClient with IServiceCollection");
+
+            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(_client.Event);
+            registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), assemblyTypes);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Adds all event handler types in specified assemblies with singleton life time
+        /// </summary>
+        public HorseClientBuilder AddSingletonHorseEvents(params Type[] assemblyTypes)
+        {
+            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(_client.Event);
+            if (_services == null)
+                registrar.RegisterAssemblyHandlers(assemblyTypes);
+            else
+                registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), assemblyTypes);
+
+            return this;
+        }
+
+        #endregion
+        
         #region Events
 
         /// <summary>
