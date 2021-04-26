@@ -162,6 +162,7 @@ namespace Horse.Messaging.Server.Queues
             Options = options;
             Type = options.Type;
             _clients = new SafeList<QueueClient>(256);
+            Store = new LinkedMessageStore(this);
             Status = QueueStatus.NotInitialized;
         }
 
@@ -195,7 +196,6 @@ namespace Horse.Messaging.Server.Queues
 
                 var tuple = QueueStateFactory.Create(this, Options.Type);
                 State = tuple.Item1;
-                Store = tuple.Item2;
                 Type = Options.Type;
 
                 TimeKeeper = new QueueTimeKeeper(this);

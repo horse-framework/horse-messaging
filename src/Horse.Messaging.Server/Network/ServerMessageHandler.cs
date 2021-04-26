@@ -575,7 +575,7 @@ namespace Horse.Messaging.Server.Network
             }
 
             HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
-            message.ContentType = KnownContentTypes.ClientList;
+            response.ContentType = KnownContentTypes.ClientList;
             response.Serialize(list, _rider.MessageContentSerializer);
             await client.SendAsync(response);
         }

@@ -26,7 +26,7 @@ namespace Horse.Messaging.Client
 
             Data.Method = "CONNECT";
             Data.Path = "/";
-            data.SetProperties(data.Properties);
+            Data.SetProperties(data.Properties);
         }
 
         #region Ping - Pong
