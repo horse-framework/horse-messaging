@@ -1,12 +1,8 @@
-using System.IO;
-using System.Text;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Events;
 using Horse.Messaging.Protocol;
-using Horse.Messaging.Protocol.Events;
 using Test.Common;
-using Test.Events.Handlers.Direct;
 using Test.Events.Handlers.Queue;
 using Xunit;
 
@@ -109,5 +105,6 @@ namespace Test.Events
             await Task.Delay(250);
             Assert.Equal(1, QueueUnsubscribeHandler.Count);
         }
+        
     }
 }

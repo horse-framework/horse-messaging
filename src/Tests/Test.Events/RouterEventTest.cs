@@ -130,7 +130,7 @@ namespace Test.Events
             HorseResult createResult = await client.Router.Create("router", RouteMethod.Distribute);
             Assert.Equal(HorseResultCode.Ok, createResult.Code);
             
-            HorseResult result = await client.Event.Subscribe(HorseEventType.MessagePublishedToRouter, "router", true);
+            HorseResult result = await client.Event.Subscribe(HorseEventType.RouterPublish, "router", true);
             Assert.Equal(HorseResultCode.Ok, result.Code);
 
             await client.Router.Publish("router", "Hello, World!", false);

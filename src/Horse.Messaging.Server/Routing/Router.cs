@@ -68,7 +68,7 @@ namespace Horse.Messaging.Server.Routing
             IsEnabled = true;
             Name = name;
             Method = method;
-            PublishEvent = new EventManager(rider, HorseEventType.MessagePublishedToRouter, name);
+            PublishEvent = new EventManager(rider, HorseEventType.RouterPublish, name);
         }
 
         #region Add - Remove

@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Events;
 using Horse.Messaging.Protocol;
-using Horse.Messaging.Protocol.Events;
 using Test.Common;
 using Test.Events.Handlers.Direct;
 using Xunit;

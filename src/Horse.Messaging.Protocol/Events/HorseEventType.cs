@@ -63,7 +63,7 @@ namespace Horse.Messaging.Protocol.Events
         /// <summary>
         /// Triggered when a new message is pushed to a queue
         /// </summary>
-        MessagePushedToQueue = 206,
+        QueuePush = 206,
 
         /// <summary>
         /// Triggered when a queue message is acknowledged by it's consumer
@@ -108,7 +108,7 @@ namespace Horse.Messaging.Protocol.Events
         /// <summary>
         /// Triggered when a message is published to a router
         /// </summary>
-        MessagePublishedToRouter = 305,
+        RouterPublish = 305,
 
         /// <summary>
         /// Triggered when a direct message is received

@@ -196,7 +196,7 @@ namespace Horse.Messaging.Server.Queues
             Store = new LinkedMessageStore(this);
             Status = QueueStatus.NotInitialized;
 
-            PushEvent = new EventManager(rider, HorseEventType.MessagePushedToQueue, name);
+            PushEvent = new EventManager(rider, HorseEventType.QueuePush, name);
             MessageAckEvent = new EventManager(rider, HorseEventType.QueueMessageAck, name);
             MessageNackEvent = new EventManager(rider, HorseEventType.QueueMessageNack, name);
             MessageUnackEvent = new EventManager(rider, HorseEventType.QueueMessageUnack, name);

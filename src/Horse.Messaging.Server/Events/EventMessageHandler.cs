@@ -24,7 +24,7 @@ namespace Horse.Messaging.Server.Events
             HorseEventType.QueueMessageNack,
             HorseEventType.QueueMessageUnack,
             HorseEventType.QueueMessageTimeout,
-            HorseEventType.MessagePushedToQueue
+            HorseEventType.QueuePush
         };
 
         public EventMessageHandler(HorseRider rider)
@@ -277,7 +277,7 @@ namespace Horse.Messaging.Server.Events
                         queue.MessageTimeoutEvent.Subscribers.Remove(client);
                     break;
                 
-                case HorseEventType.MessagePushedToQueue:
+                case HorseEventType.QueuePush:
                     if (subscribe)
                         queue.PushEvent.Subscribers.Add(client, c => c == client);
                     else
@@ -312,7 +312,7 @@ namespace Horse.Messaging.Server.Events
                         _rider.Router.BindingRemoveEvent.Subscribers.Remove(client);
                     break;
 
-                case HorseEventType.MessagePublishedToRouter:
+                case HorseEventType.RouterPublish:
                     Router router = _rider.Router.Find(message.Target) as Router;
                     if (router == null)
                     {

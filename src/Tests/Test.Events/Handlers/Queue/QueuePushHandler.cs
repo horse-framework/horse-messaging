@@ -4,10 +4,10 @@ using Horse.Messaging.Client.Events;
 using Horse.Messaging.Client.Events.Annotations;
 using Horse.Messaging.Protocol.Events;
 
-namespace Test.Events.Handlers.Router
+namespace Test.Events.Handlers.Queue
 {
-    [HorseEvent(HorseEventType.RouterPublish, "router")]
-    public class RouterPublishHandler : IHorseEventHandler
+    [HorseEvent(HorseEventType.QueuePush, "test-queue")]
+    public class QueuePushHandler : IHorseEventHandler
     {
         public static int Count { get; private set; }
 
