@@ -23,7 +23,8 @@ namespace Horse.Messaging.Client.Events
 
         internal async Task OnEventMessage(HorseMessage message)
         {
-            EventSubscriberRegistration reg = Registrations.FirstOrDefault(x => (ushort) x.Type == message.ContentType && x.Target == message.Target);
+            EventSubscriberRegistration reg = Registrations.FirstOrDefault(x => (ushort) x.Type == message.ContentType &&
+                                                                                (string.IsNullOrEmpty(x.Target) || x.Target == message.Target));
             if (reg == null)
                 return;
 

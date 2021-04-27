@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
@@ -33,6 +34,9 @@ namespace Horse.Messaging.Server.Direct
                 if (target != null)
                 {
                     await target.SendAsync(message);
+                    
+                    _rider.Direct.ResponseEvent.Trigger(sender, message.Target,
+                                                        new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
                     return;
                 }
             }
@@ -52,6 +56,9 @@ namespace Horse.Messaging.Server.Direct
                 MessagingClient target = _rider.Client.Find(message.Target);
                 if (target != null)
                     await target.SendAsync(message);
+
+                _rider.Direct.ResponseEvent.Trigger(sender, message.Target,
+                                                    new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
             }
         }
     }

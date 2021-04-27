@@ -160,7 +160,7 @@ namespace Horse.Messaging.Server.Channels
                     _ = client.Client.SendAsync(messageData);
                 }
 
-                PublishEvent.Trigger();
+                PublishEvent.Trigger(Name);
                 return PushResult.Success;
             }
             catch (Exception ex)

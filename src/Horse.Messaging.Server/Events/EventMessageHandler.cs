@@ -47,7 +47,7 @@ namespace Horse.Messaging.Server.Events
             HorseEventType type = (HorseEventType) message.ContentType;
             bool subscribe = true;
             string s = message.FindHeader(HorseHeaders.SUBSCRIBE);
-            if (!string.IsNullOrEmpty(s) == s.Equals("NO", StringComparison.CurrentCultureIgnoreCase))
+            if (!string.IsNullOrEmpty(s) && s.Equals("NO", StringComparison.CurrentCultureIgnoreCase))
                 subscribe = false;
 
             if (subscribe)

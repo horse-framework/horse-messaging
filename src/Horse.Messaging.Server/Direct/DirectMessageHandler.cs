@@ -145,20 +145,13 @@ namespace Horse.Messaging.Server.Direct
             foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
             {
                 if (message.Type == MessageType.Response)
-                {
                     _ = handler.OnResponse(client, message, other);
-
-                    _rider.Direct.ResponseEvent.Trigger(client, message.Target,
-                                                        new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
-                }
                 else
-                {
                     _ = handler.OnDirect(client, message, new List<MessagingClient> {other});
-
-                    _rider.Direct.DirectEvent.Trigger(client, message.Target,
-                                                      new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
-                }
             }
+
+            _rider.Direct.DirectEvent.Trigger(client, message.Target,
+                                              new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
         }
     }
 }
