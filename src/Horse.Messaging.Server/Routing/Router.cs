@@ -96,7 +96,7 @@ namespace Horse.Messaging.Server.Routing
 
                 binding.Router = this;
                 Bindings = list.OrderByDescending(x => x.Priority).ToArray();
-                Rider.Router.RouterBindingAddEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
+                Rider.Router.BindingAddEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
                 return true;
             }
             catch (Exception e)
@@ -125,7 +125,7 @@ namespace Horse.Messaging.Server.Routing
 
                 binding.Router = null;
                 Bindings = list.OrderByDescending(x => x.Priority).ToArray();
-                Rider.Router.RouterBindingRemoveEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
+                Rider.Router.BindingRemoveEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
             }
             catch (Exception e)
             {
@@ -149,7 +149,7 @@ namespace Horse.Messaging.Server.Routing
 
                 list.Remove(binding);
                 Bindings = list.OrderByDescending(x => x.Priority).ToArray();
-                Rider.Router.RouterBindingRemoveEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
+                Rider.Router.BindingRemoveEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
             }
             catch (Exception e)
             {

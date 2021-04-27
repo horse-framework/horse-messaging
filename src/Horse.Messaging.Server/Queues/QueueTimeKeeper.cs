@@ -114,7 +114,7 @@ namespace Horse.Messaging.Server.Queues
                 foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                     _ = handler.MessageTimedOut(_queue, message);
 
-                _queue.QueueMessageTimeoutEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
+                _queue.MessageTimeoutEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
             }
 
             temp.Clear();
@@ -129,7 +129,7 @@ namespace Horse.Messaging.Server.Queues
                 foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                     _ = handler.MessageTimedOut(_queue, message);
                 
-                _queue.QueueMessageTimeoutEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
+                _queue.MessageTimeoutEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
             }
         }
 
@@ -218,7 +218,7 @@ namespace Horse.Messaging.Server.Queues
                         _queue.ReleaseAcknowledgeLock(false);
                     }
 
-                    _queue.QueueMessageUnackEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, delivery.Message.Message.MessageId));
+                    _queue.MessageUnackEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, delivery.Message.Message.MessageId));
                 }
             }
 

@@ -160,27 +160,27 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Event Manage for HorseEventType.MessagePushedToQueue
         /// </summary>
-        public EventManager MessagePushedToQueueEvent { get; }
+        public EventManager PushEvent { get; }
 
         /// <summary>
         /// Event Manage for HorseEventType.QueueMessageAck
         /// </summary>
-        public EventManager QueueMessageAckEvent { get; }
+        public EventManager MessageAckEvent { get; }
 
         /// <summary>
         /// Event Manage for HorseEventType.QueueMessageNack
         /// </summary>
-        public EventManager QueueMessageNackEvent { get; }
+        public EventManager MessageNackEvent { get; }
 
         /// <summary>
         /// Event Manage for HorseEventType.QueueMessageUnack
         /// </summary>
-        public EventManager QueueMessageUnackEvent { get; }
+        public EventManager MessageUnackEvent { get; }
 
         /// <summary>
         /// Event Manage for HorseEventType.QueueMessageTimeout
         /// </summary>
-        public EventManager QueueMessageTimeoutEvent { get; }
+        public EventManager MessageTimeoutEvent { get; }
 
         #endregion
 
@@ -196,11 +196,11 @@ namespace Horse.Messaging.Server.Queues
             Store = new LinkedMessageStore(this);
             Status = QueueStatus.NotInitialized;
 
-            MessagePushedToQueueEvent = new EventManager(rider, HorseEventType.MessagePushedToQueue, name);
-            QueueMessageAckEvent = new EventManager(rider, HorseEventType.QueueMessageAck, name);
-            QueueMessageNackEvent = new EventManager(rider, HorseEventType.QueueMessageNack, name);
-            QueueMessageUnackEvent = new EventManager(rider, HorseEventType.QueueMessageUnack, name);
-            QueueMessageTimeoutEvent = new EventManager(rider, HorseEventType.QueueMessageTimeout, name);
+            PushEvent = new EventManager(rider, HorseEventType.MessagePushedToQueue, name);
+            MessageAckEvent = new EventManager(rider, HorseEventType.QueueMessageAck, name);
+            MessageNackEvent = new EventManager(rider, HorseEventType.QueueMessageNack, name);
+            MessageUnackEvent = new EventManager(rider, HorseEventType.QueueMessageUnack, name);
+            MessageTimeoutEvent = new EventManager(rider, HorseEventType.QueueMessageTimeout, name);
         }
 
         /// <summary>
@@ -573,7 +573,7 @@ namespace Horse.Messaging.Server.Queues
 
                 AddMessage(message);
 
-                MessagePushedToQueueEvent.Trigger(sender, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
+                PushEvent.Trigger(sender, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
 
                 return PushResult.Success;
             }
@@ -941,9 +941,9 @@ namespace Horse.Messaging.Server.Queues
                 ReleaseAcknowledgeLock(true);
 
                 if (success)
-                    QueueMessageAckEvent.Trigger(from, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId));
+                    MessageAckEvent.Trigger(from, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId));
                 else
-                    QueueMessageNackEvent.Trigger(from,
+                    MessageNackEvent.Trigger(from,
                                                   new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId),
                                                   new KeyValuePair<string, string>(HorseHeaders.REASON, deliveryMessage.FindHeader(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON)));
             }

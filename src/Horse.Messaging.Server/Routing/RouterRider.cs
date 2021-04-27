@@ -34,22 +34,22 @@ namespace Horse.Messaging.Server.Routing
         /// <summary>
         /// Event Manage for HorseEventType.RouterCreate
         /// </summary>
-        public EventManager RouterCreateEvent { get; }
+        public EventManager CreateEvent { get; }
 
         /// <summary>
         /// Event Manage for HorseEventType.RouterRemove
         /// </summary>
-        public EventManager RouterRemoveEvent { get; }
+        public EventManager RemoveEvent { get; }
 
         /// <summary>
         /// Event Manage for HorseEventType.RouterBindingAdd
         /// </summary>
-        public EventManager RouterBindingAddEvent { get; }
+        public EventManager BindingAddEvent { get; }
 
         /// <summary>
         /// Event Manage for HorseEventType.RouterBindingRemove
         /// </summary>
-        public EventManager RouterBindingRemoveEvent { get; }
+        public EventManager BindingRemoveEvent { get; }
 
         /// <summary>
         /// Creates new queue rider
@@ -57,10 +57,10 @@ namespace Horse.Messaging.Server.Routing
         internal RouterRider(HorseRider rider)
         {
             Rider = rider;
-            RouterCreateEvent = new EventManager(rider, HorseEventType.RouterCreate);
-            RouterRemoveEvent = new EventManager(rider, HorseEventType.RouterRemove);
-            RouterBindingAddEvent = new EventManager(rider, HorseEventType.RouterBindingAdd);
-            RouterBindingRemoveEvent = new EventManager(rider, HorseEventType.RouterBindingRemove);
+            CreateEvent = new EventManager(rider, HorseEventType.RouterCreate);
+            RemoveEvent = new EventManager(rider, HorseEventType.RouterRemove);
+            BindingAddEvent = new EventManager(rider, HorseEventType.RouterBindingAdd);
+            BindingRemoveEvent = new EventManager(rider, HorseEventType.RouterBindingRemove);
         }
 
         /// <summary>
@@ -83,7 +83,7 @@ namespace Horse.Messaging.Server.Routing
                 Router router = new Router(Rider, name, method);
                 _routers.Add(router);
 
-                RouterCreateEvent.Trigger(name, new KeyValuePair<string, string>(HorseHeaders.ROUTE_METHOD, method.ToString()));
+                CreateEvent.Trigger(name, new KeyValuePair<string, string>(HorseHeaders.ROUTE_METHOD, method.ToString()));
 
                 return router;
             }
@@ -111,7 +111,7 @@ namespace Horse.Messaging.Server.Routing
                 if (_routers.Find(x => x.Name == router.Name) != null)
                     throw new DuplicateNameException();
 
-                RouterCreateEvent.Trigger(router.Name, new KeyValuePair<string, string>(HorseHeaders.ROUTE_METHOD, router.Method.ToString()));
+                CreateEvent.Trigger(router.Name, new KeyValuePair<string, string>(HorseHeaders.ROUTE_METHOD, router.Method.ToString()));
 
                 _routers.Add(router);
             }
@@ -128,7 +128,7 @@ namespace Horse.Messaging.Server.Routing
         public void Remove(IRouter router)
         {
             _routers.Remove(router);
-            RouterRemoveEvent.Trigger(router.Name);
+            RemoveEvent.Trigger(router.Name);
         }
 
         /// <summary>
