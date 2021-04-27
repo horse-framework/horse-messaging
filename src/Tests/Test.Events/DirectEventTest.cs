@@ -28,9 +28,6 @@ namespace Test.Events
 
             await client.ConnectAsync($"horse://localhost:{port}");
 
-            HorseResult result = await client.Event.Subscribe(HorseEventType.DirectMessage, null, true);
-            Assert.Equal(HorseResultCode.Ok, result.Code);
-
             HorseResult directResult = await client.Direct.SendByName("test-client", 0, new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!")), false);
             Assert.Equal(HorseResultCode.Ok, directResult.Code);
 
@@ -53,9 +50,6 @@ namespace Test.Events
             registrar.RegisterHandler<DirectResponseHandler>();
 
             await client.ConnectAsync($"horse://localhost:{port}");
-
-            HorseResult result = await client.Event.Subscribe(HorseEventType.DirectMessageResponse, null, true);
-            Assert.Equal(HorseResultCode.Ok, result.Code);
 
             await client.Direct.Request("@name:test-client", 0, new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!")));
 

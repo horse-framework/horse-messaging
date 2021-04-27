@@ -42,8 +42,8 @@ namespace Horse.Messaging.Protocol.Models
         /// <summary>
         /// Binding interaction type
         /// </summary>
-        [JsonProperty("Name")]
-        [JsonPropertyName("Name")]
+        [JsonProperty("Interaction")]
+        [JsonPropertyName("Interaction")]
         public BindingInteraction Interaction { get; set; }
 
         /// <summary>

@@ -25,9 +25,6 @@ namespace Test.Events
 
             await client.ConnectAsync($"horse://localhost:{port}");
 
-            HorseResult result = await client.Event.Subscribe(HorseEventType.CacheGet, null, true);
-            Assert.Equal(HorseResultCode.Ok, result.Code);
-
             HorseResult cacheResult = await client.Cache.SetString("cache-key", "Hello, World!");
             Assert.Equal(HorseResultCode.Ok, cacheResult.Code);
 
@@ -52,9 +49,6 @@ namespace Test.Events
 
             await client.ConnectAsync($"horse://localhost:{port}");
 
-            HorseResult result = await client.Event.Subscribe(HorseEventType.CacheGet, null, true);
-            Assert.Equal(HorseResultCode.Ok, result.Code);
-
             HorseResult cacheResult = await client.Cache.SetString("cache-key", "Hello, World!");
             Assert.Equal(HorseResultCode.Ok, cacheResult.Code);
 
@@ -75,9 +69,6 @@ namespace Test.Events
             registrar.RegisterHandler<CacheRemoveHandler>();
 
             await client.ConnectAsync($"horse://localhost:{port}");
-
-            HorseResult result = await client.Event.Subscribe(HorseEventType.CacheGet, null, true);
-            Assert.Equal(HorseResultCode.Ok, result.Code);
 
             HorseResult cacheResult = await client.Cache.SetString("cache-key", "Hello, World!");
             Assert.Equal(HorseResultCode.Ok, cacheResult.Code);
@@ -102,9 +93,6 @@ namespace Test.Events
             registrar.RegisterHandler<CachePurgeHandler>();
 
             await client.ConnectAsync($"horse://localhost:{port}");
-
-            HorseResult result = await client.Event.Subscribe(HorseEventType.CacheGet, null, true);
-            Assert.Equal(HorseResultCode.Ok, result.Code);
 
             HorseResult cacheResult = await client.Cache.SetString("cache-key", "Hello, World!");
             Assert.Equal(HorseResultCode.Ok, cacheResult.Code);

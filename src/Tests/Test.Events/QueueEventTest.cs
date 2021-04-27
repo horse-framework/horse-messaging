@@ -28,9 +28,6 @@ namespace Test.Events
 
             await client.ConnectAsync($"horse://localhost:{port}");
 
-            HorseResult result = await client.Event.Subscribe(HorseEventType.QueueCreate, null, true);
-            Assert.Equal(HorseResultCode.Ok, result.Code);
-
             HorseResult createResult = await client.Queue.Create("test-queue");
             Assert.Equal(HorseResultCode.Ok, createResult.Code);
 
@@ -51,9 +48,6 @@ namespace Test.Events
             registrar.RegisterHandler<QueueRemoveHandler>();
 
             await client.ConnectAsync($"horse://localhost:{port}");
-
-            HorseResult result = await client.Event.Subscribe(HorseEventType.QueueRemove, null, true);
-            Assert.Equal(HorseResultCode.Ok, result.Code);
 
             HorseResult createResult = await client.Queue.Create("test-queue");
             Assert.Equal(HorseResultCode.Ok, createResult.Code);
@@ -82,9 +76,6 @@ namespace Test.Events
 
             await client.ConnectAsync($"horse://localhost:{port}");
 
-            HorseResult result = await client.Event.Subscribe(HorseEventType.QueueSubscription, null, true);
-            Assert.Equal(HorseResultCode.Ok, result.Code);
-
             HorseResult subscribeResult = await client.Queue.Subscribe("test-queue", true);
             Assert.Equal(HorseResultCode.Ok, subscribeResult.Code);
 
@@ -105,9 +96,6 @@ namespace Test.Events
             registrar.RegisterHandler<QueueUnsubscribeHandler>();
 
             await client.ConnectAsync($"horse://localhost:{port}");
-
-            HorseResult result = await client.Event.Subscribe(HorseEventType.QueueUnsubscription, null, true);
-            Assert.Equal(HorseResultCode.Ok, result.Code);
 
             HorseResult subscribeResult = await client.Queue.Subscribe("test-queue", true);
             Assert.Equal(HorseResultCode.Ok, subscribeResult.Code);

@@ -25,9 +25,6 @@ namespace Test.Events
 
             await client.ConnectAsync($"horse://localhost:{port}");
 
-            HorseResult result = await client.Event.Subscribe(HorseEventType.ChannelCreate, null, true);
-            Assert.Equal(HorseResultCode.Ok, result.Code);
-
             HorseResult createResult = await client.Channel.Create("channel", null, true);
             Assert.Equal(HorseResultCode.Ok, createResult.Code);
 
@@ -48,9 +45,6 @@ namespace Test.Events
             registrar.RegisterHandler<ChannelRemoveHandler>();
 
             await client.ConnectAsync($"horse://localhost:{port}");
-
-            HorseResult result = await client.Event.Subscribe(HorseEventType.ChannelRemove, null, true);
-            Assert.Equal(HorseResultCode.Ok, result.Code);
 
             HorseResult createResult = await client.Channel.Create("channel", null, true);
             Assert.Equal(HorseResultCode.Ok, createResult.Code);
@@ -76,9 +70,6 @@ namespace Test.Events
 
             await client.ConnectAsync($"horse://localhost:{port}");
 
-            HorseResult result = await client.Event.Subscribe(HorseEventType.ChannelSubscribe, null, true);
-            Assert.Equal(HorseResultCode.Ok, result.Code);
-
             HorseResult subscribeResult = await client.Channel.Subscribe("channel", true);
             Assert.Equal(HorseResultCode.Ok, subscribeResult.Code);
 
@@ -99,9 +90,6 @@ namespace Test.Events
             registrar.RegisterHandler<ChannelUnsubscribeHandler>();
 
             await client.ConnectAsync($"horse://localhost:{port}");
-
-            HorseResult result = await client.Event.Subscribe(HorseEventType.ChannelUnsubscribe, null, true);
-            Assert.Equal(HorseResultCode.Ok, result.Code);
 
             HorseResult subscribeResult = await client.Channel.Subscribe("channel", true);
             Assert.Equal(HorseResultCode.Ok, subscribeResult.Code);
@@ -129,9 +117,6 @@ namespace Test.Events
             registrar.RegisterHandler<ChannelPublishHandler>();
 
             await client.ConnectAsync($"horse://localhost:{port}");
-
-            HorseResult result = await client.Event.Subscribe(HorseEventType.ChannelPublish, "channel", true);
-            Assert.Equal(HorseResultCode.Ok, result.Code);
 
             HorseResult subscribeResult = await client.Channel.PublishString("channel", "Hello, World!", true);
             Assert.Equal(HorseResultCode.Ok, subscribeResult.Code);

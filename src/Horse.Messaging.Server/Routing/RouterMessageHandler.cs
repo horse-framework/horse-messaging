@@ -46,15 +46,12 @@ namespace Horse.Messaging.Server.Routing
 
             await SendResponse(result, client, message);
 
-            if (result == RouterPublishResult.OkWillNotRespond || result == RouterPublishResult.OkAndWillBeRespond)
+            if (router is Router r)
             {
-                if (router is Router r)
-                {
-                    if (!string.IsNullOrEmpty(message.MessageId))
-                        r.PublishEvent.Trigger(client, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
-                    else
-                        r.PublishEvent.Trigger(client);
-                }
+                if (!string.IsNullOrEmpty(message.MessageId))
+                    r.PublishEvent.Trigger(client, router.Name, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
+                else
+                    r.PublishEvent.Trigger(client, router.Name);
             }
         }
 
