@@ -4,7 +4,10 @@ using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Protocol.Events;
+using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Containers;
+using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
 
 namespace Horse.Messaging.Server.Channels
@@ -48,6 +51,26 @@ namespace Horse.Messaging.Server.Channels
         /// </summary>
         public HorseRider Rider { get; }
 
+        /// <summary>
+        /// Event Manager for HorseEventType.ChannelCreate
+        /// </summary>
+        public EventManager CreateEvent { get; }
+
+        /// <summary>
+        /// Event Manager for HorseEventType.ChannelRemove
+        /// </summary>
+        public EventManager RemoveEvent { get; }
+
+        /// <summary>
+        /// Event Manager for HorseEventType.ChannelSubscribe
+        /// </summary>
+        public EventManager SubscribeEvent { get; }
+
+        /// <summary>
+        /// Event Manager for HorseEventType.ChannelUnsubscribe
+        /// </summary>
+        public EventManager UnsubscribeEvent { get; }
+
         #endregion
 
         /// <summary>
@@ -56,6 +79,10 @@ namespace Horse.Messaging.Server.Channels
         internal ChannelRider(HorseRider rider)
         {
             Rider = rider;
+            CreateEvent = new EventManager(rider, HorseEventType.ChannelCreate);
+            RemoveEvent = new EventManager(rider, HorseEventType.ChannelRemove);
+            SubscribeEvent = new EventManager(rider, HorseEventType.ChannelSubscribe);
+            UnsubscribeEvent = new EventManager(rider, HorseEventType.ChannelUnsubscribe);
         }
 
         #region Actions
@@ -137,7 +164,7 @@ namespace Horse.Messaging.Server.Channels
                 foreach (IChannelEventHandler handler in EventHandlers.All())
                     _ = handler.OnCreated(channel);
 
-                //OnQueueCreated.Trigger(queue);
+                CreateEvent.Trigger(channelName);
                 return channel;
             }
             catch (Exception e)
@@ -186,7 +213,7 @@ namespace Horse.Messaging.Server.Channels
                 foreach (IChannelEventHandler handler in EventHandlers.All())
                     _ = handler.OnRemoved(channel);
 
-                //OnQueueRemoved.Trigger(queue);
+                RemoveEvent.Trigger(channel.Name);
                 channel.Destroy();
             }
             catch (Exception e)

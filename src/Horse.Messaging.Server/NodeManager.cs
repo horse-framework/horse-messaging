@@ -4,8 +4,10 @@ using System.Data;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Containers;
+using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Network;
 using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Security;
@@ -47,6 +49,26 @@ namespace Horse.Messaging.Server
         /// </summary>
         internal NodeConnectionHandler ConnectionHandler { get; set; }
 
+        /// <summary>
+        /// Event Manager for HorseEventType.ConnectedToRemoteNode 
+        /// </summary>
+        public EventManager ConnectedToRemoteNodeEvent { get; }
+
+        /// <summary>
+        /// Event Manager for HorseEventType.DisconnectedFromRemoteNode 
+        /// </summary>
+        public EventManager DisconnectedFromRemoteNodeEvent { get; }
+
+        /// <summary>
+        /// Event Manager for HorseEventType.RemoteNodeConnect 
+        /// </summary>
+        public EventManager RemoteNodeConnectEvent { get; }
+
+        /// <summary>
+        /// Event Manager for HorseEventType.RemoteNodeDisconnect 
+        /// </summary>
+        public EventManager RemoteNodeDisconnectEvent { get; }
+
         private bool _subscribed;
         private HorseServer _nodeServer;
 
@@ -60,6 +82,10 @@ namespace Horse.Messaging.Server
         public NodeManager(HorseRider self)
         {
             Self = self;
+            ConnectedToRemoteNodeEvent = new EventManager(self, HorseEventType.ConnectedToRemoteNode);
+            DisconnectedFromRemoteNodeEvent = new EventManager(self, HorseEventType.DisconnectedFromRemoteNode);
+            RemoteNodeConnectEvent = new EventManager(self, HorseEventType.RemoteNodeConnect);
+            RemoteNodeDisconnectEvent = new EventManager(self, HorseEventType.RemoteNodeDisconnect);
         }
 
         /// <summary>
@@ -80,6 +106,8 @@ namespace Horse.Messaging.Server
                 client.SetClientName(options.Name);
                 client.SetClientType("server");
                 client.ReconnectWait = TimeSpan.FromMilliseconds(options.ReconnectWait);
+                client.Connected += _ => ConnectedToRemoteNodeEvent.Trigger(new EventSubject {Id = client.ClientId, Name = options.Name, Type = "server"});
+                client.Disconnected += _ => DisconnectedFromRemoteNodeEvent.Trigger(new EventSubject {Id = client.ClientId, Name = options.Name, Type = "server"});
 
                 if (!string.IsNullOrEmpty(options.Token))
                     client.SetClientToken(options.Token);

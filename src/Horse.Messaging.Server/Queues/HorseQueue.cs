@@ -4,8 +4,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Containers;
+using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Queues.Delivery;
@@ -153,6 +155,35 @@ namespace Horse.Messaging.Server.Queues
 
         #endregion
 
+        #region Events
+
+        /// <summary>
+        /// Event Manage for HorseEventType.MessagePushedToQueue
+        /// </summary>
+        public EventManager MessagePushedToQueueEvent { get; }
+
+        /// <summary>
+        /// Event Manage for HorseEventType.QueueMessageAck
+        /// </summary>
+        public EventManager QueueMessageAckEvent { get; }
+
+        /// <summary>
+        /// Event Manage for HorseEventType.QueueMessageNack
+        /// </summary>
+        public EventManager QueueMessageNackEvent { get; }
+
+        /// <summary>
+        /// Event Manage for HorseEventType.QueueMessageUnack
+        /// </summary>
+        public EventManager QueueMessageUnackEvent { get; }
+
+        /// <summary>
+        /// Event Manage for HorseEventType.QueueMessageTimeout
+        /// </summary>
+        public EventManager QueueMessageTimeoutEvent { get; }
+
+        #endregion
+
         #region Constructors - Destroy
 
         internal HorseQueue(HorseRider rider, string name, QueueOptions options)
@@ -164,6 +195,12 @@ namespace Horse.Messaging.Server.Queues
             _clients = new SafeList<QueueClient>(256);
             Store = new LinkedMessageStore(this);
             Status = QueueStatus.NotInitialized;
+
+            MessagePushedToQueueEvent = new EventManager(rider, HorseEventType.MessagePushedToQueue, name);
+            QueueMessageAckEvent = new EventManager(rider, HorseEventType.QueueMessageAck, name);
+            QueueMessageNackEvent = new EventManager(rider, HorseEventType.QueueMessageNack, name);
+            QueueMessageUnackEvent = new EventManager(rider, HorseEventType.QueueMessageUnack, name);
+            QueueMessageTimeoutEvent = new EventManager(rider, HorseEventType.QueueMessageTimeout, name);
         }
 
         /// <summary>
@@ -173,6 +210,10 @@ namespace Horse.Messaging.Server.Queues
         {
             if (newStatus == QueueStatus.NotInitialized)
                 return;
+
+            Rider.Queue.StatusChangeEvent.Trigger(Name,
+                                                       new KeyValuePair<string, string>($"Previous-{HorseHeaders.STATUS}", Status.ToString()),
+                                                       new KeyValuePair<string, string>($"Next-{HorseHeaders.STATUS}", newStatus.ToString()));
 
             Status = newStatus;
         }
@@ -531,6 +572,8 @@ namespace Horse.Messaging.Server.Queues
                     return PushResult.Success;
 
                 AddMessage(message);
+
+                MessagePushedToQueueEvent.Trigger(sender, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
 
                 return PushResult.Success;
             }
@@ -896,6 +939,13 @@ namespace Horse.Messaging.Server.Queues
                     _ = handler.OnAcknowledged(this, deliveryMessage, delivery, success);
 
                 ReleaseAcknowledgeLock(true);
+
+                if (success)
+                    QueueMessageAckEvent.Trigger(from, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId));
+                else
+                    QueueMessageNackEvent.Trigger(from,
+                                                  new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId),
+                                                  new KeyValuePair<string, string>(HorseHeaders.REASON, deliveryMessage.FindHeader(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON)));
             }
             catch (Exception e)
             {
@@ -954,6 +1004,8 @@ namespace Horse.Messaging.Server.Queues
             if (State != null && State.TriggerSupported)
                 _ = Trigger();
 
+            Rider.Queue.SubscriptionEvent.Trigger(client, Name);
+
             return SubscriptionResult.Success;
         }
 
@@ -967,6 +1019,8 @@ namespace Horse.Messaging.Server.Queues
 
             foreach (IQueueEventHandler handler in Rider.Queue.EventHandlers.All())
                 _ = handler.OnConsumerUnsubscribed(client);
+
+            Rider.Queue.UnsubscriptionEvent.Trigger(client.Client, Name);
         }
 
         /// <summary>
@@ -978,6 +1032,8 @@ namespace Horse.Messaging.Server.Queues
 
             foreach (IQueueEventHandler handler in Rider.Queue.EventHandlers.All())
                 _ = handler.OnConsumerUnsubscribed(client);
+
+            Rider.Queue.UnsubscriptionEvent.Trigger(client.Client, Name);
         }
 
         /// <summary>
@@ -994,7 +1050,9 @@ namespace Horse.Messaging.Server.Queues
 
             foreach (IQueueEventHandler handler in Rider.Queue.EventHandlers.All())
                 _ = handler.OnConsumerUnsubscribed(cc);
-            
+
+            Rider.Queue.UnsubscriptionEvent.Trigger(client, Name);
+
             return true;
         }
 

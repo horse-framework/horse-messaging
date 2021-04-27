@@ -51,44 +51,39 @@ namespace Horse.Messaging.Protocol.Events
         QueueStatusChange = 203,
 
         /// <summary>
-        /// Triggered when a queue options are updated
-        /// </summary>
-        QueueOptionsUpdate = 204,
-
-        /// <summary>
         /// Triggered when a client is subscribed to a queue
         /// </summary>
-        QueueSubscription = 205,
+        QueueSubscription = 204,
 
         /// <summary>
         /// Triggered when a client is unsubscribed from a queue
         /// </summary>
-        QueueUnsubscription = 206,
+        QueueUnsubscription = 205,
 
         /// <summary>
         /// Triggered when a new message is pushed to a queue
         /// </summary>
-        MessagePushedToQueue = 207,
+        MessagePushedToQueue = 206,
 
         /// <summary>
         /// Triggered when a queue message is acknowledged by it's consumer
         /// </summary>
-        QueueMessageAck = 208,
+        QueueMessageAck = 207,
 
         /// <summary>
         /// Triggered when a queue message is negatice acknowledged by it's consumer
         /// </summary>
-        QueueMessageNack = 209,
+        QueueMessageNack = 208,
 
         /// <summary>
         /// Triggered when a queue message acknowledge is timed out
         /// </summary>
-        QueueMessageUnack = 210,
+        QueueMessageUnack = 209,
 
         /// <summary>
         /// Triggered when a message is timed out and dequeued from a queue
         /// </summary>
-        QueueMessageTimeout = 211,
+        QueueMessageTimeout = 210,
 
         /// <summary>
         /// Triggered when new router is created

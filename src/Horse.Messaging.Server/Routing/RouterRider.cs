@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Containers;
+using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
 
 namespace Horse.Messaging.Server.Routing
@@ -30,11 +32,35 @@ namespace Horse.Messaging.Server.Routing
         public HorseRider Rider { get; }
 
         /// <summary>
+        /// Event Manage for HorseEventType.RouterCreate
+        /// </summary>
+        public EventManager RouterCreateEvent { get; }
+
+        /// <summary>
+        /// Event Manage for HorseEventType.RouterRemove
+        /// </summary>
+        public EventManager RouterRemoveEvent { get; }
+
+        /// <summary>
+        /// Event Manage for HorseEventType.RouterBindingAdd
+        /// </summary>
+        public EventManager RouterBindingAddEvent { get; }
+
+        /// <summary>
+        /// Event Manage for HorseEventType.RouterBindingRemove
+        /// </summary>
+        public EventManager RouterBindingRemoveEvent { get; }
+
+        /// <summary>
         /// Creates new queue rider
         /// </summary>
         internal RouterRider(HorseRider rider)
         {
             Rider = rider;
+            RouterCreateEvent = new EventManager(rider, HorseEventType.RouterCreate);
+            RouterRemoveEvent = new EventManager(rider, HorseEventType.RouterRemove);
+            RouterBindingAddEvent = new EventManager(rider, HorseEventType.RouterBindingAdd);
+            RouterBindingRemoveEvent = new EventManager(rider, HorseEventType.RouterBindingRemove);
         }
 
         /// <summary>
@@ -56,6 +82,9 @@ namespace Horse.Messaging.Server.Routing
 
                 Router router = new Router(Rider, name, method);
                 _routers.Add(router);
+
+                RouterCreateEvent.Trigger(name, new KeyValuePair<string, string>(HorseHeaders.ROUTE_METHOD, method.ToString()));
+
                 return router;
             }
             catch (Exception e)
@@ -82,6 +111,8 @@ namespace Horse.Messaging.Server.Routing
                 if (_routers.Find(x => x.Name == router.Name) != null)
                     throw new DuplicateNameException();
 
+                RouterCreateEvent.Trigger(router.Name, new KeyValuePair<string, string>(HorseHeaders.ROUTE_METHOD, router.Method.ToString()));
+
                 _routers.Add(router);
             }
             catch (Exception e)
@@ -97,6 +128,7 @@ namespace Horse.Messaging.Server.Routing
         public void Remove(IRouter router)
         {
             _routers.Remove(router);
+            RouterRemoveEvent.Trigger(router.Name);
         }
 
         /// <summary>

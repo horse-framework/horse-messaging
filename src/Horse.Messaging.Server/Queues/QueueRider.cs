@@ -4,6 +4,8 @@ using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Protocol.Events;
+using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
@@ -60,11 +62,41 @@ namespace Horse.Messaging.Server.Queues
         public QueueOptions Options { get; } = new QueueOptions();
 
         /// <summary>
+        /// Event Manage for HorseEventType.QueueCreate
+        /// </summary>
+        public EventManager CreateEvent { get; }
+        
+        /// <summary>
+        /// Event Manage for HorseEventType.QueueRemove
+        /// </summary>
+        public EventManager RemoveEvent { get; }
+        
+        /// <summary>
+        /// Event Manage for HorseEventType.QueueStatusChange
+        /// </summary>
+        public EventManager StatusChangeEvent { get; }
+
+        /// <summary>
+        /// Event Manage for HorseEventType.QueueSubscription
+        /// </summary>
+        public EventManager SubscriptionEvent { get; }
+
+        /// <summary>
+        /// Event Manage for HorseEventType.QueueUnsubscription
+        /// </summary>
+        public EventManager UnsubscriptionEvent { get; }
+
+        /// <summary>
         /// Creates new queue rider
         /// </summary>
         internal QueueRider(HorseRider rider)
         {
             Rider = rider;
+            CreateEvent = new EventManager(rider, HorseEventType.QueueCreate);
+            RemoveEvent = new EventManager(rider, HorseEventType.QueueRemove);
+            StatusChangeEvent = new EventManager(rider, HorseEventType.QueueStatusChange);
+            SubscriptionEvent = new EventManager(rider, HorseEventType.QueueSubscription);
+            UnsubscriptionEvent = new EventManager(rider, HorseEventType.QueueUnsubscription);
         }
 
         #region Actions
@@ -131,7 +163,8 @@ namespace Horse.Messaging.Server.Queues
                                                     HorseMessage requestMessage,
                                                     Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> asyncHandler,
                                                     bool hideException,
-                                                    bool returnIfExists)
+                                                    bool returnIfExists,
+                                                    MessagingClient client = null)
         {
             await _createLock.WaitAsync();
             try
@@ -198,6 +231,8 @@ namespace Horse.Messaging.Server.Queues
                 if (initialize)
                     handlerBuilder.TriggerAfterCompleted();
 
+                CreateEvent.Trigger(client, queue.Name);
+
                 return queue;
             }
             catch (Exception e)
@@ -247,6 +282,7 @@ namespace Horse.Messaging.Server.Queues
                     _ = handler.OnRemoved(queue);
 
                 await queue.Destroy();
+                RemoveEvent.Trigger(queue.Name);
             }
             catch (Exception e)
             {

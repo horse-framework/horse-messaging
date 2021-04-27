@@ -36,7 +36,7 @@ namespace Horse.Messaging.Server.Events
         /// Target is the queue name of the event.
         /// Content Type is the Queue Id of the event.
         /// </summary>
-        protected EventManager(HorseRider server, HorseEventType type, string target)
+        internal EventManager(HorseRider server, HorseEventType type, string target = null)
         {
             Type = type;
             Target = target;
@@ -57,7 +57,56 @@ namespace Horse.Messaging.Server.Events
         /// <summary>
         /// Triggers event and sends message to subscribers
         /// </summary>
-        protected void Trigger(MessagingClient subject, params KeyValuePair<string, string>[] parameters)
+        internal void Trigger(MessagingClient subject, params KeyValuePair<string, string>[] parameters)
+        {
+            Trigger(subject, null, parameters);
+        }
+
+        /// <summary>
+        /// Triggers event and sends message to subscribers
+        /// </summary>
+        internal void Trigger(MessagingClient subject, string target, params KeyValuePair<string, string>[] parameters)
+        {
+            EventSubject sub = null;
+            if (subject != null)
+                sub = new EventSubject
+                {
+                    Id = subject.UniqueId,
+                    Name = subject.Name,
+                    Type = subject.Type
+                };
+
+            Trigger(sub, target, parameters);
+        }
+
+        /// <summary>
+        /// Triggers event and sends message to subscribers
+        /// </summary>
+        internal void Trigger(EventSubject subject, params KeyValuePair<string, string>[] parameters)
+        {
+            Trigger(subject, null, parameters);
+        }
+
+        /// <summary>
+        /// Triggers event and sends message to subscribers
+        /// </summary>
+        internal void Trigger(string target, params KeyValuePair<string, string>[] parameters)
+        {
+            Trigger((EventSubject) null, target, parameters);
+        }
+
+        /// <summary>
+        /// Triggers event and sends message to subscribers
+        /// </summary>
+        internal void Trigger(params KeyValuePair<string, string>[] parameters)
+        {
+            Trigger((EventSubject) null, null, parameters);
+        }
+
+        /// <summary>
+        /// Triggers event and sends message to subscribers
+        /// </summary>
+        internal void Trigger(EventSubject subject, string target, params KeyValuePair<string, string>[] parameters)
         {
             if (Subscribers.Count() == 0)
                 return;
@@ -67,19 +116,12 @@ namespace Horse.Messaging.Server.Events
                 HorseEvent e = new HorseEvent
                 {
                     Type = Type,
-                    Target = Target,
+                    Target = target,
+                    Subject = subject,
                     Parameters = parameters
                 };
 
-                if (subject != null)
-                    e.Subject = new EventSubject
-                    {
-                        Id = subject.UniqueId,
-                        Name = subject.Name,
-                        Type = subject.Type
-                    };
-
-                HorseMessage message = new HorseMessage(MessageType.Event, Target, Convert.ToUInt16(Type));
+                HorseMessage message = new HorseMessage(MessageType.Event, target, Convert.ToUInt16(Type));
                 message.Serialize(e, _server.MessageContentSerializer);
                 byte[] data = HorseProtocolWriter.Create(message);
 

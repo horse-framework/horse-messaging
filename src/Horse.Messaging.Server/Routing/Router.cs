@@ -4,7 +4,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Events;
 
 namespace Horse.Messaging.Server.Routing
 {
@@ -50,6 +52,11 @@ namespace Horse.Messaging.Server.Routing
         /// </summary>
         private int _lastRoutedIndex = -1;
 
+        /// <summary>
+        /// Event Manage for HorseEventType.MessagePublishedToRouter
+        /// </summary>
+        public EventManager PublishEvent { get; }
+
         #endregion
 
         /// <summary>
@@ -61,6 +68,7 @@ namespace Horse.Messaging.Server.Routing
             IsEnabled = true;
             Name = name;
             Method = method;
+            PublishEvent = new EventManager(rider, HorseEventType.MessagePublishedToRouter, name);
         }
 
         #region Add - Remove
@@ -88,6 +96,7 @@ namespace Horse.Messaging.Server.Routing
 
                 binding.Router = this;
                 Bindings = list.OrderByDescending(x => x.Priority).ToArray();
+                Rider.Router.RouterBindingAddEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
                 return true;
             }
             catch (Exception e)
@@ -116,6 +125,7 @@ namespace Horse.Messaging.Server.Routing
 
                 binding.Router = null;
                 Bindings = list.OrderByDescending(x => x.Priority).ToArray();
+                Rider.Router.RouterBindingRemoveEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
             }
             catch (Exception e)
             {
@@ -139,6 +149,7 @@ namespace Horse.Messaging.Server.Routing
 
                 list.Remove(binding);
                 Bindings = list.OrderByDescending(x => x.Priority).ToArray();
+                Rider.Router.RouterBindingRemoveEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
             }
             catch (Exception e)
             {
@@ -148,7 +159,7 @@ namespace Horse.Messaging.Server.Routing
 
         #endregion
 
-        #region Push
+        #region Publish
 
         /// <summary>
         /// Pushes a message to router

@@ -63,6 +63,7 @@ namespace Horse.Messaging.Server.Network
             _node.IncomingNodes.Add(client);
 
             await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
+            _node.RemoteNodeConnectEvent.Trigger(client);
 
             return client;
         }
@@ -100,7 +101,7 @@ namespace Horse.Messaging.Server.Network
         {
             MessagingClient node = (MessagingClient) client;
             _node.IncomingNodes.Remove(node);
-
+            _node.RemoteNodeDisconnectEvent.Trigger(node);
             return Task.CompletedTask;
         }
 

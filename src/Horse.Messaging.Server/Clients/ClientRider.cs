@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Containers;
+using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Security;
 
 namespace Horse.Messaging.Server.Clients
@@ -49,6 +51,16 @@ namespace Horse.Messaging.Server.Clients
         /// Root horse rider object
         /// </summary>
         public HorseRider Rider { get; }
+        
+        /// <summary>
+        /// Event Manager for HorseEventType.ClientConnect 
+        /// </summary>
+        public EventManager ClientConnectEvent { get; }
+
+        /// <summary>
+        /// Event Manager for HorseEventType.ClientDisconnect 
+        /// </summary>
+        public EventManager ClientDisconnectEvent { get; }
 
         #endregion
 
@@ -58,6 +70,8 @@ namespace Horse.Messaging.Server.Clients
         internal ClientRider(HorseRider rider)
         {
             Rider = rider;
+            ClientConnectEvent = new EventManager(Rider, HorseEventType.ClientConnect);
+            ClientDisconnectEvent = new EventManager(Rider, HorseEventType.ClientDisconnect);
         }
 
         #region Actions
@@ -68,6 +82,7 @@ namespace Horse.Messaging.Server.Clients
         internal void Add(MessagingClient client)
         {
             _clients.Add(client);
+            ClientConnectEvent.Trigger(client);
         }
 
         /// <summary>
@@ -77,6 +92,7 @@ namespace Horse.Messaging.Server.Clients
         {
             _clients.Remove(client);
             client.UnsubscribeFromAllQueues();
+            ClientDisconnectEvent.Trigger(client);
         }
 
         /// <summary>

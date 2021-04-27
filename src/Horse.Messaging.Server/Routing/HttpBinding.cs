@@ -65,15 +65,15 @@ namespace Horse.Messaging.Server.Routing
                     }
 
                     case HttpBindingMethod.Post:
-                        response = client.PostAsync(Target, new StringContent(content, Encoding.UTF8, "application/json"));
+                        response = client.PostAsync(Target, new StringContent(content ?? "", Encoding.UTF8, "application/json"));
                         break;
 
                     case HttpBindingMethod.Put:
-                        response = client.PutAsync(Target, new StringContent(content, Encoding.UTF8, "application/json"));
+                        response = client.PutAsync(Target, new StringContent(content ?? "", Encoding.UTF8, "application/json"));
                         break;
 
                     case HttpBindingMethod.Patch:
-                        response = client.PatchAsync(Target, new StringContent(content, Encoding.UTF8, "application/json"));
+                        response = client.PatchAsync(Target, new StringContent(content ?? "", Encoding.UTF8, "application/json"));
                         break;
                 }
 

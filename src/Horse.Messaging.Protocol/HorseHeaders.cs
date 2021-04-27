@@ -31,6 +31,11 @@ namespace Horse.Messaging.Protocol
         public const string CLIENT_ACCEPT = "Client-Accept";
 
         /// <summary>
+        /// "Message-Id"
+        /// </summary>
+        public const string MESSAGE_ID = "Message-Id";
+
+        /// <summary>
         /// "Nack-Reason"
         /// </summary>
         public const string NEGATIVE_ACKNOWLEDGE_REASON = "Nack-Reason";
@@ -239,10 +244,15 @@ namespace Horse.Messaging.Protocol
         /// "Message-Size-Limit"
         /// </summary>
         public const string MESSAGE_SIZE_LIMIT = "Message-Size-Limit";
-        
+
         /// <summary>
         /// "Susbcribe"
         /// </summary>
         public const string SUBSCRIBE = "Susbcribe";
+        
+        /// <summary>
+        /// "Status"
+        /// </summary>
+        public const string STATUS = "Status";
     }
 }

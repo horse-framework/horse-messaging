@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 
-namespace Horse.Messaging.Server
+namespace Horse.Messaging.Server.Direct
 {
     /// <summary>
     /// Direct message event handler implementation (direct and response messages)

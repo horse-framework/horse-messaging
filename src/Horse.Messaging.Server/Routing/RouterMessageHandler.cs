@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
@@ -44,6 +45,17 @@ namespace Horse.Messaging.Server.Routing
             }
 
             await SendResponse(result, client, message);
+
+            if (result == RouterPublishResult.OkWillNotRespond || result == RouterPublishResult.OkAndWillBeRespond)
+            {
+                if (router is Router r)
+                {
+                    if (!string.IsNullOrEmpty(message.MessageId))
+                        r.PublishEvent.Trigger(client, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
+                    else
+                        r.PublishEvent.Trigger(client);
+                }
+            }
         }
 
         /// <summary>
@@ -58,8 +70,8 @@ namespace Horse.Messaging.Server.Routing
             if (message.WaitResponse)
             {
                 HorseMessage response = positive
-                                            ? message.CreateAcknowledge()
-                                            : message.CreateResponse(HorseResultCode.NotFound);
+                    ? message.CreateAcknowledge()
+                    : message.CreateResponse(HorseResultCode.NotFound);
 
                 return client.SendAsync(response);
             }

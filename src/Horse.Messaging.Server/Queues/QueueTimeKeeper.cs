@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Horse.Core;
+using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Queues.Delivery;
 
@@ -112,6 +113,8 @@ namespace Horse.Messaging.Server.Queues
 
                 foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                     _ = handler.MessageTimedOut(_queue, message);
+
+                _queue.QueueMessageTimeoutEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
             }
 
             temp.Clear();
@@ -125,6 +128,8 @@ namespace Horse.Messaging.Server.Queues
 
                 foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                     _ = handler.MessageTimedOut(_queue, message);
+                
+                _queue.QueueMessageTimeoutEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
             }
         }
 
@@ -212,6 +217,8 @@ namespace Horse.Messaging.Server.Queues
                         released = true;
                         _queue.ReleaseAcknowledgeLock(false);
                     }
+
+                    _queue.QueueMessageUnackEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, delivery.Message.Message.MessageId));
                 }
             }
 

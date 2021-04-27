@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Containers;
+using Horse.Messaging.Server.Events;
 
 namespace Horse.Messaging.Server.Cache
 {
@@ -32,6 +34,26 @@ namespace Horse.Messaging.Server.Cache
         /// </summary>
         public HorseRider Rider { get; }
 
+        /// <summary>
+        /// Event Manager for HorseEventType.CacheGet
+        /// </summary>
+        public EventManager GetEvent { get; }
+        
+        /// <summary>
+        /// Event Manager for HorseEventType.CacheSet
+        /// </summary>
+        public EventManager SetEvent { get; }
+        
+        /// <summary>
+        /// Event Manager for HorseEventType.CacheRemove
+        /// </summary>
+        public EventManager RemoveEvent { get; }
+        
+        /// <summary>
+        /// Event Manager for HorseEventType.CachePurge
+        /// </summary>
+        public EventManager PurgeEvent { get; }
+
         #endregion
 
         #region Initialization
@@ -42,6 +64,10 @@ namespace Horse.Messaging.Server.Cache
         public HorseCache(HorseRider rider)
         {
             Rider = rider;
+            GetEvent = new EventManager(rider, HorseEventType.CacheGet);
+            SetEvent = new EventManager(rider, HorseEventType.CacheSet);
+            RemoveEvent = new EventManager(rider, HorseEventType.CacheRemove);
+            PurgeEvent = new EventManager(rider, HorseEventType.CachePurge);
         }
 
         /// <summary>

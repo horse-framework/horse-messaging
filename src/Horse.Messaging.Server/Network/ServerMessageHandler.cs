@@ -141,7 +141,7 @@ namespace Horse.Messaging.Server.Network
             if (queue == null && _rider.Options.AutoQueueCreation)
             {
                 QueueOptions options = QueueOptions.CloneFrom(_rider.Queue.Options);
-                queue = await _rider.Queue.Create(message.Target, options, message, _rider.Queue.DeliveryHandlerFactory, true, true);
+                queue = await _rider.Queue.Create(message.Target, options, message, _rider.Queue.DeliveryHandlerFactory, true, true, client);
             }
 
             if (queue == null)
@@ -282,7 +282,7 @@ namespace Horse.Messaging.Server.Network
             if (builder != null)
                 builder.ApplyToQueue(options);
 
-            queue = await _rider.Queue.Create(message.Target, options, message, _rider.Queue.DeliveryHandlerFactory, true, false);
+            queue = await _rider.Queue.Create(message.Target, options, message, _rider.Queue.DeliveryHandlerFactory, true, false, client);
 
             //if creation successful, sends response
             if (message.WaitResponse)

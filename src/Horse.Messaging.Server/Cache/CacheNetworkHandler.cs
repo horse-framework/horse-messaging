@@ -33,7 +33,7 @@ namespace Horse.Messaging.Server.Cache
             }
         }
 
-        private Task HandleUnsafe(MessagingClient client, HorseMessage message)
+        private async Task HandleUnsafe(MessagingClient client, HorseMessage message)
         {
             switch (message.ContentType)
             {
@@ -43,17 +43,25 @@ namespace Horse.Messaging.Server.Cache
                     foreach (ICacheAuthorization authorization in _cache.Authorizations.All())
                     {
                         if (!authorization.CanGet(client, message.Target))
-                            return client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
+                        {
+                            await client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
+                            return;
+                        }
                     }
 
                     HorseCacheItem item = _cache.Get(message.Target);
                     if (item == null)
-                        return client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+                    {
+                        await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+                        return;
+                    }
 
                     HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
                     response.SetSource(message.Target);
                     response.Content = item.Value;
-                    return client.SendAsync(response);
+                    await client.SendAsync(response);
+                    _cache.GetEvent.Trigger(client, message.Target);
+                    return;
 
                 //set cache item
                 case KnownContentTypes.SetCache:
@@ -61,7 +69,10 @@ namespace Horse.Messaging.Server.Cache
                     foreach (ICacheAuthorization authorization in _cache.Authorizations.All())
                     {
                         if (!authorization.CanSet(client, message.Target, message.Content))
-                            return client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
+                        {
+                            await client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
+                            return;
+                        }
                     }
 
                     string messageTimeout = message.FindHeader(HorseHeaders.MESSAGE_TIMEOUT);
@@ -74,19 +85,25 @@ namespace Horse.Messaging.Server.Cache
                     switch (operation.Result)
                     {
                         case CacheResult.Ok:
-                            return client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
+                            await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
+                            _cache.SetEvent.Trigger(client, message.Target);
+                            return;
 
                         case CacheResult.KeyLimit:
-                            return client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
+                            await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
+                            return;
 
                         case CacheResult.KeySizeLimit:
-                            return client.SendAsync(message.CreateResponse(HorseResultCode.NameSizeLimit));
+                            await client.SendAsync(message.CreateResponse(HorseResultCode.NameSizeLimit));
+                            return;
 
                         case CacheResult.ItemSizeLimit:
-                            return client.SendAsync(message.CreateResponse(HorseResultCode.ValueSizeLimit));
-
+                            await client.SendAsync(message.CreateResponse(HorseResultCode.ValueSizeLimit));
+                            return;
+                        
                         default:
-                            return client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
+                            await client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
+                            return;
                     }
 
                 //remove cache item
@@ -95,11 +112,16 @@ namespace Horse.Messaging.Server.Cache
                     foreach (ICacheAuthorization authorization in _cache.Authorizations.All())
                     {
                         if (!authorization.CanRemove(client, message.Target))
-                            return client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
+                        {
+                            await client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
+                            return;
+                        }
                     }
 
                     _cache.Remove(message.Target);
-                    return client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
+                    await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
+                    _cache.RemoveEvent.Trigger(client, message.Target);
+                    return;
 
                 //purge all caches
                 case KnownContentTypes.PurgeCache:
@@ -107,14 +129,16 @@ namespace Horse.Messaging.Server.Cache
                     foreach (ICacheAuthorization authorization in _cache.Authorizations.All())
                     {
                         if (!authorization.CanPurge(client))
-                            return client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
+                        {
+                            await client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
+                            return;
+                        }
                     }
 
                     _cache.Purge();
-                    return client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
-
-                default:
-                    return Task.CompletedTask;
+                    await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
+                    _cache.PurgeEvent.Trigger(client);
+                    return;
             }
         }
     }
