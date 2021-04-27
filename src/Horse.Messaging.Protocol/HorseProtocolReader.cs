@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Horse.Messaging.Protocol
 {
     /// <summary>
-    /// HMQ Protocol reader
+    /// Horse Protocol reader
     /// </summary>
     public class HorseProtocolReader
     {
@@ -20,7 +20,7 @@ namespace Horse.Messaging.Protocol
         private const int REQUIRED_SIZE = 8;
 
         /// <summary>
-        /// Reads HMQ message from stream
+        /// Reads Horse message from stream
         /// </summary>
         public async Task<HorseMessage> Read(Stream stream)
         {

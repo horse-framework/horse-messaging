@@ -6,7 +6,7 @@ using Horse.Core;
 namespace Horse.Messaging.Protocol
 {
     /// <summary>
-    /// HMQ Protocol socket object for HMQ servers
+    /// Horse Protocol socket object for Horse servers
     /// </summary>
     public class HorseServerSocket : SocketBase
     {
@@ -25,7 +25,7 @@ namespace Horse.Messaging.Protocol
         private Action<HorseServerSocket> _cleanupAction;
 
         /// <summary>
-        /// Creates new HMQ Server-side socket client
+        /// Creates new Horse Server-side socket client
         /// </summary>
         public HorseServerSocket(IHorseServer server, IConnectionInfo info)
             : this(server, info, new DefaultUniqueIdGenerator())
@@ -33,7 +33,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Creates new HMQ Server-side socket client
+        /// Creates new Horse Server-side socket client
         /// </summary>
         public HorseServerSocket(IHorseServer server, IConnectionInfo info, IUniqueIdGenerator generator)
             : base(info)
@@ -45,7 +45,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Completed disconnect operations in hmq server-side client
+        /// Completed disconnect operations in Horse server-side client
         /// </summary>
         protected override void OnDisconnected()
         {
@@ -64,7 +64,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Sends HMQ ping message
+        /// Sends Horse ping message
         /// </summary>
         public override void Ping()
         {
@@ -72,7 +72,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Sends HMQ pong message
+        /// Sends Horse pong message
         /// </summary>
         public override void Pong(object pingMessage = null)
         {
@@ -80,7 +80,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Sends HMQ message to client
+        /// Sends Horse message to client
         /// </summary>
         public virtual bool Send(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
@@ -92,7 +92,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Sends HMQ message to client
+        /// Sends Horse message to client
         /// </summary>
         public virtual Task<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {

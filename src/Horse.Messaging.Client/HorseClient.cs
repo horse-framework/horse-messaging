@@ -44,7 +44,7 @@ namespace Horse.Messaging.Client
     }
 
     /// <summary>
-    /// HMQ Client class
+    /// Horse Client class
     /// Can be used directly with event subscriptions
     /// Or can be base class to a derived Client class and provides virtual methods for all events
     /// </summary>
@@ -193,27 +193,27 @@ namespace Horse.Messaging.Client
         public IHorseCache Cache { get; protected init; }
 
         /// <summary>
-        /// HMQ Client Direct message management object
+        /// Horse Client Direct message management object
         /// </summary>
         public DirectOperator Direct { get; protected init; }
 
         /// <summary>
-        /// HMQ Client Direct message management object
+        /// Horse Client Direct message management object
         /// </summary>
         public ChannelOperator Channel { get; protected init; }
 
         /// <summary>
-        /// HMQ Client Queue Management object
+        /// Horse Client Queue Management object
         /// </summary>
         public QueueOperator Queue { get; protected init; }
 
         /// <summary>
-        /// HMQ Client Connection Management object
+        /// Horse Client Connection Management object
         /// </summary>
         public ConnectionOperator Connection { get; protected init; }
 
         /// <summary>
-        /// HMQ Client Router Management object
+        /// Horse Client Router Management object
         /// </summary>
         public RouterOperator Router { get; protected init; }
 
@@ -464,7 +464,7 @@ namespace Horse.Messaging.Client
         #region Send
 
         /// <summary>
-        /// Sends a HMQ message
+        /// Sends a Horse message
         /// </summary>
         public bool Send(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
@@ -482,7 +482,7 @@ namespace Horse.Messaging.Client
         }
 
         /// <summary>
-        /// Sends a HMQ message
+        /// Sends a Horse message
         /// </summary>
         public async Task<HorseResult> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
@@ -509,7 +509,7 @@ namespace Horse.Messaging.Client
         }
 
         /// <summary>
-        /// Sends a HMQ message and waits for acknowledge
+        /// Sends a Horse message and waits for acknowledge
         /// </summary>
         public async Task<HorseResult> SendAndGetAck(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {

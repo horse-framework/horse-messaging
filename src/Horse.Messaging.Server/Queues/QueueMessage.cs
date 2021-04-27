@@ -7,7 +7,7 @@ using Horse.Messaging.Server.Queues.Delivery;
 namespace Horse.Messaging.Server.Queues
 {
     /// <summary>
-    /// Queue HMQ Message
+    /// Queue Horse Message
     /// </summary>
     public class QueueMessage
     {
@@ -22,7 +22,7 @@ namespace Horse.Messaging.Server.Queues
         public DateTime? Deadline { get; internal set; }
 
         /// <summary>
-        /// HMQ Message
+        /// Horse Message
         /// </summary>
         public HorseMessage Message { get; set; }
 
@@ -85,7 +85,7 @@ namespace Horse.Messaging.Server.Queues
         internal List<QueueClient> CurrentDeliveryReceivers { get; } = new List<QueueClient>();
         
         /// <summary>
-        /// Creates new QueueMessage from HmqMessage with save status
+        /// Creates new QueueMessage from HorseMessage with save status
         /// </summary>
         public QueueMessage(HorseMessage message, bool isSaved = false)
         {

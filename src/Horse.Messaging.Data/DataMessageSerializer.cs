@@ -15,7 +15,7 @@ namespace Horse.Messaging.Data
     public class DataMessageSerializer
     {
         /// <summary>
-        /// Default HMQ Protocol reader
+        /// Default Horse Protocol reader
         /// </summary>
         private readonly HorseProtocolReader _reader = new HorseProtocolReader();
 

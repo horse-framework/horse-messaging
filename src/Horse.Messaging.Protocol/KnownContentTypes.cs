@@ -3,7 +3,7 @@ using System.Security.Cryptography.X509Certificates;
 namespace Horse.Messaging.Protocol
 {
     /// <summary>
-    /// Known content types for MQ Server with HMQ protocol
+    /// Known content types for MQ Server with Horse protocol
     /// </summary>
     public class KnownContentTypes
     {

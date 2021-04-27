@@ -6,7 +6,7 @@ using Horse.Core.Protocols;
 namespace Horse.Messaging.Protocol
 {
     /// <summary>
-    /// Horse protocol class for HMQ Protocol
+    /// Horse protocol class for Horse Protocol
     /// </summary>
     public class HorseProtocol : IHorseProtocol
     {
@@ -26,7 +26,7 @@ namespace Horse.Messaging.Protocol
         private readonly IHorseServer _server;
 
         /// <summary>
-        /// Creates new HMQ Protocol handler
+        /// Creates new Horse Protocol handler
         /// </summary>
         public HorseProtocol(IHorseServer server, IProtocolConnectionHandler<HorseServerSocket, HorseMessage> handler)
         {
@@ -35,7 +35,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Checks if received data is a HMQ protocol message
+        /// Checks if received data is a Horse protocol message
         /// </summary>
         public async Task<ProtocolHandshakeResult> Handshake(IConnectionInfo info, byte[] data)
         {
@@ -99,7 +99,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Switching protocols to HMQ is not supported
+        /// Switching protocols to Horse is not supported
         /// </summary>
         public Task<ProtocolHandshakeResult> SwitchTo(IConnectionInfo info, ConnectionData data)
         {
@@ -107,7 +107,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Handles the connection and reads received HMQ messages
+        /// Handles the connection and reads received Horse messages
         /// </summary>
         public async Task HandleConnection(IConnectionInfo info, ProtocolHandshakeResult handshakeResult)
         {
@@ -159,7 +159,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Checks data if HMQ protocol data
+        /// Checks data if Horse protocol data
         /// </summary>
         private static ProtocolVersion CheckProtocol(byte[] data)
         {

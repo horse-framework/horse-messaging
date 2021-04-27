@@ -1,7 +1,7 @@
 namespace Horse.Messaging.Protocol
 {
     /// <summary>
-    /// Known header messages for HMQ Protocol
+    /// Known header messages for Horse Protocol
     /// </summary>
     public class HorseHeaders
     {

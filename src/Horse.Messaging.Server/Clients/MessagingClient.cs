@@ -11,7 +11,7 @@ using Horse.Messaging.Server.Channels;
 namespace Horse.Messaging.Server.Clients
 {
     /// <summary>
-    /// HMQ Server client for Horse MQ
+    /// Horse Server client
     /// </summary>
     public class MessagingClient : HorseServerSocket
     {

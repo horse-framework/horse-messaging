@@ -9,7 +9,7 @@ using Horse.Messaging.Protocol;
 namespace Horse.Messaging.Client.Direct
 {
     /// <summary>
-    /// Direct message manager object for hmq client
+    /// Direct message manager object for Horse client
     /// </summary>
     public class DirectOperator
     {

@@ -4,12 +4,12 @@ using Horse.Core.Protocols;
 namespace Horse.Messaging.Protocol
 {
     /// <summary>
-    /// Extension methods for HMQ Protocol
+    /// Extension methods for Horse Protocol
     /// </summary>
     public static class HmqExtensions
     {
         /// <summary>
-        /// Uses HMQ Protocol and accepts TCP connections.
+        /// Uses Horse Protocol and accepts TCP connections.
         /// </summary>
         public static IHorseServer UseHorseProtocol(this IHorseServer server, IProtocolConnectionHandler<HorseServerSocket, HorseMessage> handler)
         {
@@ -19,7 +19,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Uses HMQ Protocol and accepts TCP connections.
+        /// Uses Horse Protocol and accepts TCP connections.
         /// </summary>
         public static IHorseServer UseHorseProtocol(this IHorseServer server, HorseMessageHandler action)
         {

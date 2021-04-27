@@ -27,7 +27,7 @@ namespace Horse.Messaging.Client
         }
 
         /// <summary>
-        /// Builds new HmqStickyConnector with defined properties.
+        /// Builds new HorseClient with defined properties.
         /// </summary>
         public override HorseClient<TIdentifier> Build()
         {
@@ -77,7 +77,7 @@ namespace Horse.Messaging.Client
         }
 
         /// <summary>
-        /// Builds new HmqStickyConnector with defined properties.
+        /// Builds new HorseClient with defined properties.
         /// </summary>
         public virtual HorseClient Build()
         {

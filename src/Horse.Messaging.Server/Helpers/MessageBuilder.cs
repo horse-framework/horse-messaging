@@ -4,7 +4,7 @@ using Horse.Messaging.Protocol;
 namespace Horse.Messaging.Server.Helpers
 {
     /// <summary>
-    /// HMQ Header message builder
+    /// Horse Header message builder
     /// </summary>
     public class MessageBuilder
     {

@@ -9,7 +9,7 @@ namespace Horse.Messaging.Server
     public interface IClientHandler
     {
         /// <summary>
-        /// Called when a client is connected and HMQ protocol handshake is completed
+        /// Called when a client is connected and Horse protocol handshake is completed
         /// </summary>
         Task Connected(HorseRider server, MessagingClient client);
 

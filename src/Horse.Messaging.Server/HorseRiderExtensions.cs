@@ -24,7 +24,7 @@ namespace Horse.Messaging.Server
         /// </summary>
         public static HorseServer UseRider(this HorseServer server, HorseRider horseRider)
         {
-            HmqNetworkHandler handler = new HmqNetworkHandler(horseRider);
+            HorseNetworkHandler handler = new HorseNetworkHandler(horseRider);
             horseRider.Server = server;
 
             horseRider.NodeManager.ConnectionHandler = new NodeConnectionHandler(horseRider.NodeManager, handler);
@@ -42,7 +42,7 @@ namespace Horse.Messaging.Server
         public static HorseRider UseRider(this HorseServer server, Action<HorseRiderBuilder> cfg)
         {
             HorseRider rider = new HorseRider();
-            HmqNetworkHandler handler = new HmqNetworkHandler(rider);
+            HorseNetworkHandler handler = new HorseNetworkHandler(rider);
             rider.Server = server;
 
             rider.NodeManager.ConnectionHandler = new NodeConnectionHandler(rider.NodeManager, handler);

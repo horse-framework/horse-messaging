@@ -15,12 +15,12 @@ namespace Horse.Messaging.Server.Network
     internal class NodeConnectionHandler : IProtocolConnectionHandler<HorseServerSocket, HorseMessage>
     {
         private readonly NodeManager _node;
-        private readonly HmqNetworkHandler _connectionHandler;
+        private readonly HorseNetworkHandler _connectionHandler;
 
         /// <summary>
         /// 
         /// </summary>
-        internal NodeConnectionHandler(NodeManager node, HmqNetworkHandler connectionHandler)
+        internal NodeConnectionHandler(NodeManager node, HorseNetworkHandler connectionHandler)
         {
             _node = node;
             _connectionHandler = connectionHandler;

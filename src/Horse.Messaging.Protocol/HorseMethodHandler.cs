@@ -5,12 +5,12 @@ using Horse.Core.Protocols;
 namespace Horse.Messaging.Protocol
 {
     /// <summary>
-    /// HMQ Message received handler
+    /// Horse Message received handler
     /// </summary>
     public delegate Task HorseMessageHandler(HorseServerSocket socket, HorseMessage message);
 
     /// <summary>
-    /// HMQ message handler for action-based use
+    /// Horse message handler for action-based use
     /// </summary>
     public class HorseMethodHandler : IProtocolConnectionHandler<HorseServerSocket, HorseMessage>
     {
@@ -25,7 +25,7 @@ namespace Horse.Messaging.Protocol
         private readonly HorseMessageHandler _action;
 
         /// <summary>
-        /// Creates new HMQ protocol handler for action-based message handling use
+        /// Creates new Horse protocol handler for action-based message handling use
         /// </summary>
         /// <param name="action"></param>
         public HorseMethodHandler(HorseMessageHandler action)
@@ -34,7 +34,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Triggered when a HMQ client is connected. 
+        /// Triggered when a Horse client is connected. 
         /// </summary>
         public async Task<HorseServerSocket> Connected(IHorseServer server, IConnectionInfo connection, ConnectionData data)
         {
@@ -50,7 +50,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Triggered when a HMQ message received from client
+        /// Triggered when a Horse message received from client
         /// </summary>
         public async Task Received(IHorseServer server, IConnectionInfo info, HorseServerSocket client, HorseMessage message)
         {
@@ -58,7 +58,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Triggered when a HMQ client is connected. 
+        /// Triggered when a Horse client is connected. 
         /// </summary>
         public async Task Disconnected(IHorseServer server, HorseServerSocket client)
         {

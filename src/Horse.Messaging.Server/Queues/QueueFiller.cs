@@ -180,7 +180,7 @@ namespace Horse.Messaging.Server.Queues
         }
 
         /// <summary>
-        /// Fills HMQ Message objects to the queue
+        /// Fills Horse Message objects to the queue
         /// </summary>
         public PushResult FillMessage(IEnumerable<HorseMessage> messages, bool isSaved, Action<QueueMessage> actionPerMessage = null)
         {

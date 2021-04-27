@@ -11,7 +11,7 @@ using System.Text;
 namespace Horse.Messaging.Protocol
 {
     /// <summary>
-    /// HMQ Protocol message
+    /// Horse Protocol message
     /// </summary>
     public class HorseMessage
     {
@@ -99,14 +99,14 @@ namespace Horse.Messaging.Protocol
         #region Constructors
 
         /// <summary>
-        /// Creates new empty HMQ Protocol message
+        /// Creates new empty Horse Protocol message
         /// </summary>
         public HorseMessage()
         {
         }
 
         /// <summary>
-        /// Creates new HMQ Protocol message with specified type
+        /// Creates new Horse Protocol message with specified type
         /// </summary>
         public HorseMessage(MessageType type)
         {
@@ -114,7 +114,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Creates new HMQ Protocol message with specified type and target
+        /// Creates new Horse Protocol message with specified type and target
         /// </summary>
         public HorseMessage(MessageType type, string target)
         {
@@ -123,7 +123,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Creates new HMQ Protocol message with specified type and target
+        /// Creates new Horse Protocol message with specified type and target
         /// </summary>
         public HorseMessage(MessageType type, string target, ushort contentType)
         {

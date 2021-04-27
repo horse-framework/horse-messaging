@@ -18,7 +18,7 @@ namespace Horse.Messaging.Data
         public readonly string Id;
 
         /// <summary>
-        /// HMQ Message itself
+        /// Horse Message itself
         /// </summary>
         public readonly HorseMessage Message;
 

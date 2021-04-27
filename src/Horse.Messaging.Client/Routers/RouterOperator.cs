@@ -11,7 +11,7 @@ using Horse.Messaging.Protocol.Models;
 namespace Horse.Messaging.Client.Routers
 {
     /// <summary>
-    /// Router manager object for hmq client
+    /// Router manager object for Horse client
     /// </summary>
     public class RouterOperator
     {

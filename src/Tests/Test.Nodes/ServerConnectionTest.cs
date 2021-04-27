@@ -34,7 +34,7 @@ namespace Test.Nodes
         }
 
         /// <summary>
-        /// Connects to HMQ Server and does not send info message
+        /// Connects to Horse Server and does not send info message
         /// </summary>
         [Fact]
         public async Task ConnectWithoutInfo()

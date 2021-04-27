@@ -1,7 +1,7 @@
 namespace Horse.Messaging.Protocol
 {
     /// <summary>
-    /// HMQ Message types
+    /// Horse Message types
     /// </summary>
     public enum MessageType : byte
     {

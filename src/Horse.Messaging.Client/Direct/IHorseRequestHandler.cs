@@ -12,10 +12,10 @@ namespace Horse.Messaging.Client.Direct
     public interface IHorseRequestHandler<in TRequest, TResponse>
     {
         /// <summary>
-        /// Handles JSON HMQ request and sends JSON response
+        /// Handles JSON Horse request and sends JSON response
         /// </summary>
         /// <param name="request">Request model</param>
-        /// <param name="rawMessage">Raw HMQ messsage</param>
+        /// <param name="rawMessage">Raw Horse messsage</param>
         /// <param name="client">Horse MQ connection client</param>
         /// <returns></returns>
         Task<TResponse> Handle(TRequest request, HorseMessage rawMessage, HorseClient client);
@@ -25,7 +25,7 @@ namespace Horse.Messaging.Client.Direct
         /// </summary>
         /// <param name="exception">Thrown exception</param>
         /// <param name="request">Request model</param>
-        /// <param name="rawMessage">Raw HMQ messsage</param>
+        /// <param name="rawMessage">Raw Horse messsage</param>
         /// <param name="client">Horse MQ connection client</param>
         /// <returns></returns>
         Task<ErrorResponse> OnError(Exception exception, TRequest request, HorseMessage rawMessage, HorseClient client);

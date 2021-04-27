@@ -18,7 +18,7 @@ namespace Horse.Messaging.Client.Queues
     public delegate string QueueNameHandler(QueueNameHandlerContext context);
 
     /// <summary>
-    /// Queue manager object for hmq client
+    /// Queue manager object for Horse client
     /// </summary>
     public class QueueOperator : IDisposable
     {

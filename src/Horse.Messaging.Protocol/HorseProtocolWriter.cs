@@ -7,12 +7,12 @@ using System.Text;
 namespace Horse.Messaging.Protocol
 {
     /// <summary>
-    /// HMQ Message writer
+    /// Horse Message writer
     /// </summary>
     public class HorseProtocolWriter
     {
         /// <summary>
-        /// Writes a HMQ message to stream
+        /// Writes a Horse message to stream
         /// </summary>
         public static void Write(HorseMessage value, Stream stream, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
@@ -31,7 +31,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Creates byte array of HMQ message
+        /// Creates byte array of Horse message
         /// </summary>
         public static byte[] Create(HorseMessage value, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
@@ -49,7 +49,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Creates byte array of only HMQ message frame
+        /// Creates byte array of only Horse message frame
         /// </summary>
         public static byte[] CreateFrame(HorseMessage value)
         {
@@ -59,7 +59,7 @@ namespace Horse.Messaging.Protocol
         }
 
         /// <summary>
-        /// Creates byte array of only HMQ message content
+        /// Creates byte array of only Horse message content
         /// </summary>
         public static byte[] CreateContent(HorseMessage value)
         {

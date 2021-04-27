@@ -4,8 +4,8 @@
         <TargetFramework>net5.0</TargetFramework>
         <Title>Horse.Messaging.Client</Title>
         <Product>Horse.Messaging.Client</Product>
-        <Description>Horse Messaging Queue Client to connect all HMQ Servers</Description>
-        <PackageTags>horse,hmq,client,mq,messaging,queue</PackageTags>
+        <Description>Horse Messaging Client to connect all Horse Servers</Description>
+        <PackageTags>horse,client,messaging,queue,channel,cache</PackageTags>
         <AssemblyVersion>6.0.1</AssemblyVersion>
         <FileVersion>6.0.1</FileVersion>
         <PackageVersion>6.0.1-beta</PackageVersion>

@@ -275,7 +275,7 @@ namespace Horse.Messaging.Client
         }
 
         /// <summary>
-        /// Sends a HMQ message
+        /// Sends a Horse message
         /// </summary>
         public async Task<HorseResult> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
