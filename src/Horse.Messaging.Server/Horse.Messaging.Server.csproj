@@ -26,7 +26,6 @@
 
     <ItemGroup>
         <PackageReference Include="Horse.Server" Version="5.0.1" />
-        <PackageReference Include="Horse.Client.Connectors" Version="5.0.1" />
     </ItemGroup>
 
     <ItemGroup>
