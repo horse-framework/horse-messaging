@@ -5,9 +5,9 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Routers
 {
-    internal class HorseRouteBus<TIdentifier> : HorseRouteBus, IHorseRouteBus<TIdentifier>
+    internal class HorseRouterBus<TIdentifier> : HorseRouterBus, IHorseRouterBus<TIdentifier>
     {
-        public HorseRouteBus(HorseClient client) : base(client)
+        public HorseRouterBus(HorseClient client) : base(client)
         {
         }
     }
@@ -15,14 +15,14 @@ namespace Horse.Messaging.Client.Routers
     /// <summary>
     /// Implementation for route messages and requests
     /// </summary>
-    public class HorseRouteBus : IHorseRouteBus
+    public class HorseRouterBus : IHorseRouterBus
     {
         private readonly HorseClient _client;
 
         /// <summary>
         /// Creates new horse route bus
         /// </summary>
-        public HorseRouteBus(HorseClient client)
+        public HorseRouterBus(HorseClient client)
         {
             _client = client;
         }

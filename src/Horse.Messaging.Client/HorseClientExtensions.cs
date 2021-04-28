@@ -26,7 +26,7 @@ namespace Horse.Messaging.Client
             services.AddSingleton<IHorseCache<TIdentifier>>((HorseCache<TIdentifier>) client.Cache);
             services.AddSingleton<IHorseChannelBus<TIdentifier>>(new HorseChannelBus<TIdentifier>(client));
             services.AddSingleton<IHorseQueueBus<TIdentifier>>(new HorseQueueBus<TIdentifier>(client));
-            services.AddSingleton<IHorseRouteBus<TIdentifier>>(new HorseRouteBus<TIdentifier>(client));
+            services.AddSingleton<IHorseRouterBus<TIdentifier>>(new HorseRouterBus<TIdentifier>(client));
             services.AddSingleton<IHorseDirectBus<TIdentifier>>(new HorseDirectBus<TIdentifier>(client));
 
             return services;
@@ -45,7 +45,7 @@ namespace Horse.Messaging.Client
             services.AddSingleton<IHorseCache>(client.Cache);
             services.AddSingleton<IHorseChannelBus>(new HorseChannelBus(client));
             services.AddSingleton<IHorseQueueBus>(new HorseQueueBus(client));
-            services.AddSingleton<IHorseRouteBus>(new HorseRouteBus(client));
+            services.AddSingleton<IHorseRouterBus>(new HorseRouterBus(client));
             services.AddSingleton<IHorseDirectBus>(new HorseDirectBus(client));
 
             return services;

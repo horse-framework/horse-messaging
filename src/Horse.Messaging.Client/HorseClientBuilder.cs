@@ -43,7 +43,7 @@ namespace Horse.Messaging.Client
         #region Declaration
 
         private readonly HorseClient _client;
-        private readonly IServiceCollection _services;
+        private IServiceCollection _services;
 
         /// <summary>
         /// Creates Horse Connector Builder without IOC implementation
@@ -82,6 +82,15 @@ namespace Horse.Messaging.Client
         public virtual HorseClient Build()
         {
             return _client;
+        }
+
+        /// <summary>
+        /// Adds MSDI implementation
+        /// </summary>
+        public HorseClientBuilder AddServices(IServiceCollection services)
+        {
+            _services = services;
+            return this;
         }
 
         #endregion
@@ -210,7 +219,7 @@ namespace Horse.Messaging.Client
         public HorseClientBuilder AddTransientDirectHandler<THandler>() where THandler : class
         {
             if (_services == null)
-                throw new NotSupportedException("Transient handlers are not supported. " +
+                throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
                                                 "If you want to use transient direct receivers " +
                                                 "Build HorseClient with IServiceCollection");
 
@@ -226,8 +235,8 @@ namespace Horse.Messaging.Client
         public HorseClientBuilder AddScopedDirectHandler<THandler>() where THandler : class
         {
             if (_services == null)
-                throw new NotSupportedException("Scoped handlers are not supported. " +
-                                                "If you want to use transient direct receivers " +
+                throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                                "If you want to use scoped direct receivers " +
                                                 "Build HorseClient with IServiceCollection");
 
             DirectHandlerRegistrar registrar = new DirectHandlerRegistrar(_client.Direct);
@@ -256,7 +265,7 @@ namespace Horse.Messaging.Client
         public HorseClientBuilder AddTransientDirectHandlers(params Type[] assemblyTypes)
         {
             if (_services == null)
-                throw new NotSupportedException("Transient handlers are not supported. " +
+                throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
                                                 "If you want to use transient direct receivers " +
                                                 "Build HorseClient with IServiceCollection");
 
@@ -271,8 +280,8 @@ namespace Horse.Messaging.Client
         public HorseClientBuilder AddScopedDirectHandlers(params Type[] assemblyTypes)
         {
             if (_services == null)
-                throw new NotSupportedException("Scoped handlers are not supported. " +
-                                                "If you want to use transient direct receivers " +
+                throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                                "If you want to use scoped direct receivers " +
                                                 "Build HorseClient with IServiceCollection");
 
             DirectHandlerRegistrar registrar = new DirectHandlerRegistrar(_client.Direct);
@@ -305,8 +314,8 @@ namespace Horse.Messaging.Client
         public HorseClientBuilder AddTransientChannelSubscriber<THandler>() where THandler : class
         {
             if (_services == null)
-                throw new NotSupportedException("Transient handlers are not supported. " +
-                                                "If you want to use transient direct receivers " +
+                throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                                "If you want to use transient channel handlers " +
                                                 "Build HorseClient with IServiceCollection");
 
             ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
@@ -321,8 +330,8 @@ namespace Horse.Messaging.Client
         public HorseClientBuilder AddScopedChannelSubscriber<THandler>() where THandler : class
         {
             if (_services == null)
-                throw new NotSupportedException("Scoped handlers are not supported. " +
-                                                "If you want to use transient direct receivers " +
+                throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                                "If you want to use scoped channel handlers " +
                                                 "Build HorseClient with IServiceCollection");
 
             ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
@@ -351,8 +360,8 @@ namespace Horse.Messaging.Client
         public HorseClientBuilder AddTransientChannelSubscribers(params Type[] assemblyTypes)
         {
             if (_services == null)
-                throw new NotSupportedException("Transient handlers are not supported. " +
-                                                "If you want to use transient direct receivers " +
+                throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                                "If you want to use transient channel handlers " +
                                                 "Build HorseClient with IServiceCollection");
 
             ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
@@ -366,8 +375,8 @@ namespace Horse.Messaging.Client
         public HorseClientBuilder AddScopedChannelSubscribers(params Type[] assemblyTypes)
         {
             if (_services == null)
-                throw new NotSupportedException("Scoped handlers are not supported. " +
-                                                "If you want to use transient direct receivers " +
+                throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                                "If you want to use scoped channel handlers " +
                                                 "Build HorseClient with IServiceCollection");
 
             ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
@@ -400,8 +409,8 @@ namespace Horse.Messaging.Client
         public HorseClientBuilder AddTransientConsumer<TConsumer>() where TConsumer : class
         {
             if (_services == null)
-                throw new NotSupportedException("Transient handlers are not supported. " +
-                                                "If you want to use transient direct receivers " +
+                throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                                "If you want to use transient queue consumers " +
                                                 "Build HorseClient with IServiceCollection");
 
             QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
@@ -416,8 +425,8 @@ namespace Horse.Messaging.Client
         public HorseClientBuilder AddScopedConsumer<TConsumer>() where TConsumer : class
         {
             if (_services == null)
-                throw new NotSupportedException("Scoped handlers are not supported. " +
-                                                "If you want to use transient direct receivers " +
+                throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                                "If you want to use scoped queue consumers " +
                                                 "Build HorseClient with IServiceCollection");
 
             QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
@@ -446,8 +455,8 @@ namespace Horse.Messaging.Client
         public HorseClientBuilder AddTransientConsumers(params Type[] assemblyTypes)
         {
             if (_services == null)
-                throw new NotSupportedException("Transient handlers are not supported. " +
-                                                "If you want to use transient direct receivers " +
+                throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                                "If you want to use transient queue consumers " +
                                                 "Build HorseClient with IServiceCollection");
 
             QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
@@ -461,8 +470,8 @@ namespace Horse.Messaging.Client
         public HorseClientBuilder AddScopedConsumers(params Type[] assemblyTypes)
         {
             if (_services == null)
-                throw new NotSupportedException("Scoped handlers are not supported. " +
-                                                "If you want to use transient direct receivers " +
+                throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                                "If you want to use scoped queue consumers " +
                                                 "Build HorseClient with IServiceCollection");
 
             QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
@@ -495,8 +504,8 @@ namespace Horse.Messaging.Client
         public HorseClientBuilder AddTransientHorseEvent<TEventHandler>() where TEventHandler : IHorseEventHandler
         {
             if (_services == null)
-                throw new NotSupportedException("Transient handlers are not supported. " +
-                                                "If you want to use transient direct receivers " +
+                throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                                "If you want to use transient event handlers " +
                                                 "Build HorseClient with IServiceCollection");
 
             EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(_client.Event);
@@ -511,8 +520,8 @@ namespace Horse.Messaging.Client
         public HorseClientBuilder AddScopedHorseEvent<TEventHandler>() where TEventHandler : IHorseEventHandler
         {
             if (_services == null)
-                throw new NotSupportedException("Scoped handlers are not supported. " +
-                                                "If you want to use transient direct receivers " +
+                throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                                "If you want to use scoped event handlers " +
                                                 "Build HorseClient with IServiceCollection");
 
             EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(_client.Event);
@@ -541,8 +550,8 @@ namespace Horse.Messaging.Client
         public HorseClientBuilder AddTransientHorseEvents(params Type[] assemblyTypes)
         {
             if (_services == null)
-                throw new NotSupportedException("Transient handlers are not supported. " +
-                                                "If you want to use transient direct receivers " +
+                throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                                "If you want to use transient event handlers " +
                                                 "Build HorseClient with IServiceCollection");
 
             EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(_client.Event);
@@ -556,8 +565,8 @@ namespace Horse.Messaging.Client
         public HorseClientBuilder AddScopedHorseEvents(params Type[] assemblyTypes)
         {
             if (_services == null)
-                throw new NotSupportedException("Scoped handlers are not supported. " +
-                                                "If you want to use transient direct receivers " +
+                throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                                "If you want to use scoped event handlers " +
                                                 "Build HorseClient with IServiceCollection");
 
             EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(_client.Event);
@@ -581,7 +590,7 @@ namespace Horse.Messaging.Client
         }
 
         #endregion
-        
+
         #region Events
 
         /// <summary>

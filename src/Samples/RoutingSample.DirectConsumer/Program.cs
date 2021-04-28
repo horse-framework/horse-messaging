@@ -7,7 +7,7 @@ namespace RoutingSample.DirectConsumer
 {
     internal class Program
     {
-        public static IHorseRouteBus RouteBus;
+        public static IHorseRouterBus RouterBus;
 
         private static void Main(string[] args)
         {

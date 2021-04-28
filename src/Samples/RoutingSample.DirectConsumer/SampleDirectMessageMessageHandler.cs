@@ -13,7 +13,7 @@ namespace RoutingSample.DirectConsumer
 			{
 				Foo = "Hello from sample direct message consumer"
 			};
-			HorseResult<GiveMeGuidResponse> guidResponse = await Program.RouteBus.PublishRequestJson<GiveMeGuidRequest, GiveMeGuidResponse>(request);
+			HorseResult<GiveMeGuidResponse> guidResponse = await Program.RouterBus.PublishRequestJson<GiveMeGuidRequest, GiveMeGuidResponse>(request);
 			Console.WriteLine($"SAMPLE DIRECT MESSAGE CONSUMED [{guidResponse.Model.Guid}]");
 		}
 	}
