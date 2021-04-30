@@ -35,7 +35,7 @@ namespace Horse.Messaging.Client.Events
             }
             catch (Exception ex)
             {
-                Client.OnException("ChannelConsumer", ex, message);
+                Client.OnException(ex, message);
             }
         }
 

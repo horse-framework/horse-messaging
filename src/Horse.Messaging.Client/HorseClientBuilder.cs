@@ -610,6 +610,15 @@ namespace Horse.Messaging.Client
             _client.DisconnectedAction = action;
             return this;
         }
+        
+        /// <summary>
+        /// Action for message received events
+        /// </summary>
+        public HorseClientBuilder OnMessageReceived(Action<HorseMessage> action)
+        {
+            _client.MessageReceivedAction = action;
+            return this;
+        }
 
         /// <summary>
         /// Action for errors

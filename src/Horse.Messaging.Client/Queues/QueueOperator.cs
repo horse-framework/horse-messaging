@@ -77,7 +77,7 @@ namespace Horse.Messaging.Client.Queues
             }
             catch (Exception ex)
             {
-                Client.OnException("QueueConsumer", ex, message);
+                Client.OnException(ex, message);
             }
         }
 
