@@ -10,8 +10,6 @@ namespace Horse.Messaging.Client.Queues.Exceptions
         /// <summary>
         /// Created new HorseQueueException
         /// </summary>
-        public HorseQueueException(string message) : base(message)
-        {
-        }
+        public HorseQueueException(string message) : base(message) { }
     }
 }

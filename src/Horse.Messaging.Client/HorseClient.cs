@@ -95,6 +95,11 @@ namespace Horse.Messaging.Client
         internal Action<HorseClient> DisconnectedAction { get; set; }
 
         /// <summary>
+        /// Internal message received event
+        /// </summary>
+        internal Action<HorseMessage> MessageReceivedAction { get; set; } 
+        
+        /// <summary>
         /// Internal error event
         /// </summary>
         internal Action<Exception> ErrorAction { get; set; }
@@ -728,6 +733,7 @@ namespace Horse.Messaging.Client
 
                     await Queue.OnQueueMessage(message);
                     MessageReceived?.Invoke(this, message);
+                    MessageReceivedAction?.Invoke(message);
                     break;
 
                 case MessageType.DirectMessage:
@@ -737,6 +743,7 @@ namespace Horse.Messaging.Client
 
                     await Direct.OnDirectMessage(message);
                     MessageReceived?.Invoke(this, message);
+                    MessageReceivedAction?.Invoke(message);
                     break;
 
                 case MessageType.Server:
@@ -761,7 +768,10 @@ namespace Horse.Messaging.Client
                     Tracker.Process(message);
 
                     if (CatchResponseMessages)
+                    {
                         MessageReceived?.Invoke(this, message);
+                        MessageReceivedAction?.Invoke(message);
+                    }
 
                     break;
 
@@ -771,14 +781,16 @@ namespace Horse.Messaging.Client
             }
         }
 
-        internal void OnException(string hint, Exception e, HorseMessage message)
+        internal void OnException(Exception e, HorseMessage message)
         {
             Error?.Invoke(this, e);
+            ErrorAction?.Invoke(e);
         }
 
         internal async Task OnConnected()
         {
             Connected?.Invoke(this);
+            ConnectedAction?.Invoke(this);
 
             if (!AutoSubscribe)
                 return;
@@ -796,7 +808,9 @@ namespace Horse.Messaging.Client
                         _socket.Disconnect();
                         _socket = null;
 
-                        Error?.Invoke(this, new HorseQueueException($"Can't subscribe to {registration.QueueName} queue: {joinResult.Reason} ({joinResult.Code})"));
+                        HorseQueueException exception = new($"Can't subscribe to {registration.QueueName} queue: {joinResult.Reason} ({joinResult.Code})");
+                        Error?.Invoke(this, exception);
+                        ErrorAction?.Invoke(exception);
                         return;
                     }
                 }
@@ -815,7 +829,9 @@ namespace Horse.Messaging.Client
                         _socket.Disconnect();
                         _socket = null;
 
-                        Error?.Invoke(this, new HorseChannelException($"Can't subscribe to {registration.Name} channel: {joinResult.Reason} ({joinResult.Code})"));
+                        HorseChannelException exception = new($"Can't subscribe to {registration.Name} channel: {joinResult.Reason} ({joinResult.Code})");
+                        Error?.Invoke(this,exception);
+                        ErrorAction?.Invoke(exception);
                         return;
                     }
                 }
@@ -834,7 +850,9 @@ namespace Horse.Messaging.Client
                         _socket.Disconnect();
                         _socket = null;
 
-                        Error?.Invoke(this, new HorseChannelException($"Can't subscribe to {registration.Type} event: {joinResult.Reason} ({joinResult.Code})"));
+                        HorseChannelException exception = new($"Can't subscribe to {registration.Type} event: {joinResult.Reason} ({joinResult.Code})");
+                        Error?.Invoke(this, exception);
+                        ErrorAction?.Invoke(exception);
                         return;
                     }
                 }
@@ -845,6 +863,7 @@ namespace Horse.Messaging.Client
         {
             Tracker.MarkAllMessagesExpired();
             Disconnected?.Invoke(this);
+            DisconnectedAction?.Invoke(this);
         }
     }
 }

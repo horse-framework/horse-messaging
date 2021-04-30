@@ -40,7 +40,7 @@ namespace Horse.Messaging.Client.Direct
             }
             catch (Exception ex)
             {
-                _client.OnException("DirectConsumer", ex, message);
+                _client.OnException(ex, message);
             }
         }
 
