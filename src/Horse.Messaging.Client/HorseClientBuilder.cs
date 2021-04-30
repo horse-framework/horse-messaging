@@ -149,7 +149,7 @@ namespace Horse.Messaging.Client
         }
 
         /// <summary>
-        /// Sets reconnection interval if disconnects. Default is 1000 milliseconds.
+        /// Sets reconnection interval if disconnects. Default is 3000 milliseconds.
         /// </summary>
         public HorseClientBuilder SetReconnectWait(TimeSpan value)
         {
