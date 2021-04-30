@@ -68,6 +68,7 @@ namespace Horse.Messaging.Client
             set
             {
                 _reconnectWait = value;
+                if (_reconnectTimer is not null) throw new InvalidOperationException("Reconnect wait time cannot modify when client is connected.");
                 UpdateReconnectTimer();
             }
         }
@@ -275,7 +276,7 @@ namespace Horse.Messaging.Client
             if (_reconnectWait == TimeSpan.Zero)
                 return;
 
-            if (_reconnectTimer != null)
+            if (_reconnectTimer == null)
             {
                 int ms = Convert.ToInt32(_reconnectWait.TotalMilliseconds);
                 _reconnectTimer = new Timer(s =>
@@ -302,8 +303,7 @@ namespace Horse.Messaging.Client
             _autoConnect = value;
             if (value)
             {
-                if (_reconnectTimer != null)
-                    return;
+                if (_reconnectTimer != null) return;
 
                 UpdateReconnectTimer();
             }
