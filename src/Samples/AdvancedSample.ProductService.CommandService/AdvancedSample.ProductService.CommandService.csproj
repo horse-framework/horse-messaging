@@ -9,8 +9,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\AdvancedSample.Core.Service\AdvancedSample.Core.Service.csproj" />
-      <ProjectReference Include="..\AdvancedSample.DataAccess.Repository\AdvancedSample.DataAccess.Repository.csproj" />
-      <ProjectReference Include="..\AdvancedSample.ProductService.Domain\AdvancedSample.ProductService.Domain.csproj" />
+      <ProjectReference Include="..\AdvancedSample.ProductService.Core\AdvancedSample.ProductService.Core.csproj" />
       <ProjectReference Include="..\AdvancedSample.ProductService.Models\AdvancedSample.ProductService.Models.csproj" />
     </ItemGroup>
 

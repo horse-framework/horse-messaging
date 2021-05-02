@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net5.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\AdvancedSample.DataAccess.Repository\AdvancedSample.DataAccess.Repository.csproj" />
+      <ProjectReference Include="..\AdvancedSample.ProductService.Context\AdvancedSample.ProductService.Context.csproj" />
+      <ProjectReference Include="..\AdvancedSample.ProductService.Domain\AdvancedSample.ProductService.Domain.csproj" />
+      <ProjectReference Include="..\AdvancedSample.ProductService.Models\AdvancedSample.ProductService.Models.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="AutoMapper" Version="10.1.1" />
+    </ItemGroup>
+
+</Project>

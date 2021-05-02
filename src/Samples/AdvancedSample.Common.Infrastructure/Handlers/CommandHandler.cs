@@ -15,6 +15,6 @@ namespace AdvancedSample.Common.Infrastructure.Handlers
 			return Handle(model);
 		}
 
-		protected abstract Task Handle(T model);
+		protected abstract Task Handle(T command);
 	}
 }
