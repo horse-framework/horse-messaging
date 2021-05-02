@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Horse.Messaging.Client.Channels;
 using Horse.Messaging.Client.Direct;
 using Horse.Messaging.Client.Events;
@@ -225,7 +226,7 @@ namespace Horse.Messaging.Client
 
             DirectHandlerRegistrar registrar = new DirectHandlerRegistrar(_client.Direct);
             registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient));
-
+            _services.AddTransient<THandler>();
             return this;
         }
 
@@ -241,7 +242,7 @@ namespace Horse.Messaging.Client
 
             DirectHandlerRegistrar registrar = new DirectHandlerRegistrar(_client.Direct);
             registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped));
-
+            _services.AddScoped<THandler>();
             return this;
         }
 
@@ -254,7 +255,10 @@ namespace Horse.Messaging.Client
             if (_services == null)
                 registrar.RegisterHandler(typeof(THandler));
             else
+            {
                 registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton));
+                _services.AddSingleton<THandler>();
+            }
 
             return this;
         }
@@ -270,7 +274,8 @@ namespace Horse.Messaging.Client
                                                 "Build HorseClient with IServiceCollection");
 
             DirectHandlerRegistrar registrar = new DirectHandlerRegistrar(_client.Direct);
-            registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), assemblyTypes);
+            IEnumerable<Type> types = registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), assemblyTypes);
+            foreach (Type type in types) _services.AddTransient(type);
             return this;
         }
 
@@ -285,8 +290,8 @@ namespace Horse.Messaging.Client
                                                 "Build HorseClient with IServiceCollection");
 
             DirectHandlerRegistrar registrar = new DirectHandlerRegistrar(_client.Direct);
-            registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), assemblyTypes);
-
+            IEnumerable<Type> types = registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), assemblyTypes);
+            foreach (Type type in types) _services.AddScoped(type);
             return this;
         }
 
@@ -299,7 +304,10 @@ namespace Horse.Messaging.Client
             if (_services == null)
                 registrar.RegisterAssemblyHandlers(assemblyTypes);
             else
-                registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), assemblyTypes);
+            {
+                IEnumerable<Type> types = registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), assemblyTypes);
+                foreach (Type type in types) _services.AddSingleton(type);
+            }
 
             return this;
         }
@@ -320,7 +328,7 @@ namespace Horse.Messaging.Client
 
             ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
             registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient));
-
+            _services.AddTransient<THandler>();
             return this;
         }
 
@@ -336,7 +344,7 @@ namespace Horse.Messaging.Client
 
             ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
             registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped));
-
+            _services.AddScoped<THandler>();
             return this;
         }
 
@@ -349,8 +357,10 @@ namespace Horse.Messaging.Client
             if (_services == null)
                 registrar.RegisterHandler(typeof(THandler));
             else
+            {
                 registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton));
-
+                _services.AddSingleton<THandler>();
+            }
             return this;
         }
 
@@ -365,7 +375,8 @@ namespace Horse.Messaging.Client
                                                 "Build HorseClient with IServiceCollection");
 
             ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
-            registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), assemblyTypes);
+            IEnumerable<Type> types = registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), assemblyTypes);
+            foreach (Type type in types) _services.AddTransient(type);
             return this;
         }
 
@@ -380,8 +391,8 @@ namespace Horse.Messaging.Client
                                                 "Build HorseClient with IServiceCollection");
 
             ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
-            registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), assemblyTypes);
-
+            IEnumerable<Type> types = registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), assemblyTypes);
+            foreach (Type type in types) _services.AddScoped(type);
             return this;
         }
 
@@ -394,7 +405,10 @@ namespace Horse.Messaging.Client
             if (_services == null)
                 registrar.RegisterAssemblyHandlers(assemblyTypes);
             else
-                registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), assemblyTypes);
+            {
+                IEnumerable<Type> types = registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), assemblyTypes);
+                foreach (Type type in types) _services.AddSingleton(type);
+            }
 
             return this;
         }
@@ -415,7 +429,7 @@ namespace Horse.Messaging.Client
 
             QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
             registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient));
-
+            _services.AddTransient<TConsumer>();
             return this;
         }
 
@@ -431,7 +445,7 @@ namespace Horse.Messaging.Client
 
             QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
             registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped));
-
+            _services.AddScoped<TConsumer>();
             return this;
         }
 
@@ -444,7 +458,10 @@ namespace Horse.Messaging.Client
             if (_services == null)
                 registrar.RegisterConsumer(typeof(TConsumer));
             else
+            {
                 registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton));
+                _services.AddSingleton<TConsumer>();
+            }
 
             return this;
         }
@@ -460,7 +477,8 @@ namespace Horse.Messaging.Client
                                                 "Build HorseClient with IServiceCollection");
 
             QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
-            registrar.RegisterAssemblyConsumers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), assemblyTypes);
+            IEnumerable<Type> types = registrar.RegisterAssemblyConsumers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), assemblyTypes);
+            foreach (Type type in types) _services.AddTransient(type);
             return this;
         }
 
@@ -475,8 +493,8 @@ namespace Horse.Messaging.Client
                                                 "Build HorseClient with IServiceCollection");
 
             QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
-            registrar.RegisterAssemblyConsumers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), assemblyTypes);
-
+            IEnumerable<Type> types = registrar.RegisterAssemblyConsumers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), assemblyTypes);
+            foreach (Type type in types) _services.AddScoped(type);
             return this;
         }
 
@@ -489,7 +507,10 @@ namespace Horse.Messaging.Client
             if (_services == null)
                 registrar.RegisterAssemblyConsumers(assemblyTypes);
             else
-                registrar.RegisterAssemblyConsumers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), assemblyTypes);
+            {
+                IEnumerable<Type> types = registrar.RegisterAssemblyConsumers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), assemblyTypes);
+                foreach (Type type in types) _services.AddSingleton(type);
+            }
 
             return this;
         }
@@ -501,7 +522,7 @@ namespace Horse.Messaging.Client
         /// <summary>
         /// Adds a event handler with transient life time
         /// </summary>
-        public HorseClientBuilder AddTransientHorseEvent<TEventHandler>() where TEventHandler : IHorseEventHandler
+        public HorseClientBuilder AddTransientHorseEvent<TEventHandler>() where TEventHandler : class, IHorseEventHandler
         {
             if (_services == null)
                 throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
@@ -510,14 +531,14 @@ namespace Horse.Messaging.Client
 
             EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(_client.Event);
             registrar.RegisterHandler(typeof(TEventHandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient));
-
+            _services.AddTransient<TEventHandler>();
             return this;
         }
 
         /// <summary>
         /// Adds a event handler with scoped life time
         /// </summary>
-        public HorseClientBuilder AddScopedHorseEvent<TEventHandler>() where TEventHandler : IHorseEventHandler
+        public HorseClientBuilder AddScopedHorseEvent<TEventHandler>() where TEventHandler : class, IHorseEventHandler
         {
             if (_services == null)
                 throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
@@ -526,20 +547,23 @@ namespace Horse.Messaging.Client
 
             EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(_client.Event);
             registrar.RegisterHandler(typeof(TEventHandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped));
-
+            _services.AddScoped<TEventHandler>();
             return this;
         }
 
         /// <summary>
         /// Adds a event handler with singleton life time
         /// </summary>
-        public HorseClientBuilder AddSingletonHorseEvent<TEventHandler>() where TEventHandler : IHorseEventHandler
+        public HorseClientBuilder AddSingletonHorseEvent<TEventHandler>() where TEventHandler : class, IHorseEventHandler
         {
             EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(_client.Event);
             if (_services == null)
                 registrar.RegisterHandler(typeof(TEventHandler));
             else
+            {
                 registrar.RegisterHandler(typeof(TEventHandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton));
+                _services.AddSingleton<TEventHandler>();
+            }
 
             return this;
         }
@@ -555,7 +579,8 @@ namespace Horse.Messaging.Client
                                                 "Build HorseClient with IServiceCollection");
 
             EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(_client.Event);
-            registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), assemblyTypes);
+            IEnumerable<Type> types = registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), assemblyTypes);
+            foreach (Type type in types) _services.AddTransient(type);
             return this;
         }
 
@@ -570,8 +595,8 @@ namespace Horse.Messaging.Client
                                                 "Build HorseClient with IServiceCollection");
 
             EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(_client.Event);
-            registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), assemblyTypes);
-
+            IEnumerable<Type> types = registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), assemblyTypes);
+            foreach (Type type in types) _services.AddScoped(type);
             return this;
         }
 
@@ -584,7 +609,10 @@ namespace Horse.Messaging.Client
             if (_services == null)
                 registrar.RegisterAssemblyHandlers(assemblyTypes);
             else
-                registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), assemblyTypes);
+            {
+                IEnumerable<Type> types = registrar.RegisterAssemblyHandlers(() => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), assemblyTypes);
+                foreach (Type type in types) _services.AddSingleton(type);
+            }
 
             return this;
         }

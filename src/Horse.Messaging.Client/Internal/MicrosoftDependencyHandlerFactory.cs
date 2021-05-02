@@ -60,10 +60,10 @@ namespace Horse.Messaging.Client.Internal
             if (_lifetime == ServiceLifetime.Scoped)
             {
                 _scope = _client.Provider.CreateScope();
-                return new ProvidedHandler(_scope, _scope.ServiceProvider.GetService(consumerType));
+                return new ProvidedHandler(_scope, _scope.ServiceProvider.GetRequiredService(consumerType));
             }
 
-            return new ProvidedHandler(null, _client.Provider.GetService(consumerType));
+            return new ProvidedHandler(null, _client.Provider.GetRequiredService(consumerType));
         }
     }
 }
