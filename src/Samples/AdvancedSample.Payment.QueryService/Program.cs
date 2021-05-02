@@ -1,7 +1,6 @@
 ﻿using AdvancedSample.Core.Service;
 
-CoreService<Startup> service = new("payment-query-handler");
-service.Registrar.AddTransientConsumers();
-service.Start();
+CoreService service = new("payment-query-handler");
+service.Run();
 
-internal class Startup : IServiceStartup { };
+internal class Startup { };

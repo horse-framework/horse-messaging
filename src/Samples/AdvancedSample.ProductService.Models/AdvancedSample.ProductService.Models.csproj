@@ -1,12 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <OutputType>Exe</OutputType>
         <TargetFramework>net5.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\Horse.Messaging.Server\Horse.Messaging.Server.csproj" />
       <ProjectReference Include="..\AdvancedSample.Common.Infrastructure\AdvancedSample.Common.Infrastructure.csproj" />
     </ItemGroup>
 

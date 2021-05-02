@@ -1,4 +1,5 @@
-﻿using Horse.Messaging.Server;
+﻿using AdvancedSample.Messaging.Server;
+using Horse.Messaging.Server;
 using Horse.Messaging.Server.Handlers;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
@@ -15,6 +16,8 @@ HorseRider rider = HorseRiderBuilder.Create()
 													 })
 									.ConfigureClients(cfg => { cfg.Handlers.Add(new ClientHandler()); })
 									.Build();
+rider.Router.ConfigureRoutes();
+
 HorseServer server = new();
 server.UseRider(rider);
 server.Run(15500);
