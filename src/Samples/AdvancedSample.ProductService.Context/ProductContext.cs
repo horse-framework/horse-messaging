@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using AdvancedSample.ProductService.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +11,8 @@ namespace AdvancedSample.ProductService.Context
 
 		protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 		{
-			optionsBuilder.UseSqlite("Data Source=:memory:");
+			var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"AdvancedSample\products.db");
+			optionsBuilder.UseSqlite($@"Data Source={path}");
 		}
 	}
 }

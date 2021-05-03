@@ -6,7 +6,7 @@ using Horse.Messaging.Client.Routers.Annotations;
 namespace AdvancedSample.ProductService.Models.Commands
 {
 	[RouterName(ServiceRoutes.PRODUCT_COMMAND_SERVICE)]
-	[RouterContentType(1000)]
+	[DirectContentType(1000)]
 	public class CreateProductCommand : ServiceCommand
 	{
 		public string Name { get; set; }

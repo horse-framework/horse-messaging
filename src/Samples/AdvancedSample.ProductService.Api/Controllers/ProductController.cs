@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using AdvancedSample.ProductService.Models.Commands;
+using AdvancedSample.ProductService.Models.Queries;
 using Horse.Messaging.Client.Routers;
 using Horse.Messaging.Protocol;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AdvanvedSample.ProductService.Api.Controllers
 {
 	[ApiController]
-	[Route("api/[controller]")]
+	[Route("api/product")]
 	public class ProductController : Controller
 	{
 		private readonly IHorseRouterBus _bus;
@@ -18,7 +19,22 @@ namespace AdvanvedSample.ProductService.Api.Controllers
 			_bus = bus;
 		}
 
-		[HttpPost]
+		[HttpGet("list")]
+		public async Task<IActionResult> List()
+		{
+			GetAllProductsQuery query = new()
+			{
+				QueryId = Guid.NewGuid()
+			};
+			HorseResult<GetAllProductsQueryResult> result = await _bus.PublishRequestJson<GetAllProductsQuery, GetAllProductsQueryResult>(query);
+			return result.Code switch
+			{
+				HorseResultCode.Ok => Ok(result.Model),
+				_                  => Problem(result.Reason)
+			};
+		}
+
+		[HttpPost("create")]
 		public async Task<IActionResult> Create([FromBody] CreateProductCommand command)
 		{
 			command.CommandId = Guid.NewGuid();

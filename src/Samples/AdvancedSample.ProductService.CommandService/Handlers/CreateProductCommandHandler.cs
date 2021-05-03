@@ -10,7 +10,6 @@ using Newtonsoft.Json;
 
 namespace AdvancedSample.ProductService.CommandService.Handlers
 {
-	[DirectContentType(1000)]
 	public class CreateProductCommandHandler : CommandHandler<CreateProductCommand>
 	{
 		private readonly IProductBusinessManager _bm;

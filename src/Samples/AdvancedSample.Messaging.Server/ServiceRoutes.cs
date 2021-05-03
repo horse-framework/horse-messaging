@@ -13,13 +13,21 @@ namespace AdvancedSample.Messaging.Server
 
 		private static void ConfigureProductServiceRoutes(this RouterRider routerRider)
 		{
-			IRouter router = routerRider.Add(Common.Infrastructure.Definitions.ServiceRoutes.PRODUCT_COMMAND_SERVICE, RouteMethod.Distribute);
-			DirectBinding directBinding = new($"[binding]{ClientTypes.PRODUCT_COMMAND_SERVICE}",
+			IRouter commandsRouter = routerRider.Add(Common.Infrastructure.Definitions.ServiceRoutes.PRODUCT_COMMAND_SERVICE, RouteMethod.Distribute);
+			DirectBinding commandsBinding = new($"[binding]{ClientTypes.PRODUCT_COMMAND_SERVICE}",
 											  $"@type:{ClientTypes.PRODUCT_COMMAND_SERVICE}",
 											  1,
 											  BindingInteraction.Response,
 											  RouteMethod.RoundRobin);
-			router.AddBinding(directBinding);
+			commandsRouter.AddBinding(commandsBinding);
+			
+			IRouter queriesRouter = routerRider.Add(Common.Infrastructure.Definitions.ServiceRoutes.PRODUCT_QUERY_SERVICE, RouteMethod.Distribute);
+			DirectBinding queriesBinding = new($"[binding]{ClientTypes.PRODUCT_QUERY_SERVICE}",
+											  $"@type:{ClientTypes.PRODUCT_QUERY_SERVICE}",
+											  1,
+											  BindingInteraction.Response,
+											  RouteMethod.RoundRobin);
+			queriesRouter.AddBinding(queriesBinding);
 		}
 	}
 }
