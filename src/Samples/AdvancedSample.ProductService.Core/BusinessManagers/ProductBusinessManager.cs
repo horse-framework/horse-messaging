@@ -22,7 +22,7 @@ namespace AdvancedSample.ProductService.Core.BusinessManagers
 		public async ValueTask<EntityEntry<Product>> Create(ProductDTO product)
 		{
 			Product entity = _mapper.Map<Product>(product);
-			var entry = await _repository.AddAsync(entity);
+			EntityEntry<Product> entry = await _repository.AddAsync(entity);
 			return entry;
 		}
 	}
