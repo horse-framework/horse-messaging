@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Horse.Messaging.Client.Annotations;
+using Horse.Messaging.Client.Direct.Annotations;
 using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Client.Routers.Annotations;
@@ -46,7 +47,7 @@ namespace Horse.Messaging.Client.Routers
             if (prioAttr != null)
                 descriptor.HighPriority = true;
 
-            RouterContentTypeAttribute contentTypeAttr = type.GetCustomAttribute<RouterContentTypeAttribute>(true);
+            DirectContentTypeAttribute contentTypeAttr = type.GetCustomAttribute<DirectContentTypeAttribute>(true);
             if (contentTypeAttr != null)
                 descriptor.ContentType = contentTypeAttr.ContentType;
 

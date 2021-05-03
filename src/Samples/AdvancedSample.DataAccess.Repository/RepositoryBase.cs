@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
@@ -12,45 +11,77 @@ namespace AdvancedSample.DataAccess.Repository
 	internal abstract class RepositoryBase<T> : ICommandRepository<T>, IQueryRepository<T>
 		where T : class, IEntity
 	{
+		private readonly DbContext _context;
 		private readonly DbSet<T> _table;
 
-		protected RepositoryBase(DbContext context) => _table = context.Set<T>();
+		protected RepositoryBase(DbContext context)
+		{
+			_context = context;
+			_table = context.Set<T>();
+		}
 
-		public ValueTask<EntityEntry<T>> AddAsync(T entity)
+		public async ValueTask<EntityEntry<T>> AddAsync(T entity)
 		{
 			entity.CreatedAt = DateTime.Now;
-			return _table.AddAsync(entity);
+			EntityEntry<T> entry = await _table.AddAsync(entity);
+			await _context.SaveChangesAsync();
+			return entry;
 		}
 
-		public EntityEntry<T> Update(T entity)
+		public async Task<EntityEntry<T>> Update(T entity)
 		{
 			entity.UpdatedAt = DateTime.Now;
-			return _table.Update(entity);
+			EntityEntry<T> entry = _table.Update(entity);
+			await _context.SaveChangesAsync();
+			return entry;
 		}
 
-		public EntityEntry<T> Delete(T entity)
+		public async Task<EntityEntry<T>> Delete(T entity)
 		{
 			entity.IsDeleted = true;
 			entity.DeletedAt = DateTime.Now;
-			return _table.Update(entity);
+			EntityEntry<T> entry = _table.Update(entity);
+			await _context.SaveChangesAsync();
+			return entry;
 		}
 
 		public async Task<EntityEntry<T>> Delete(int id)
 		{
 			T entity = await _table.FindAsync(id);
-			return Delete(entity);
+			return await Delete(entity);
 		}
 
 		public async Task<EntityEntry<T>> DeletePermanently(int id)
 		{
 			T entity = await _table.FindAsync(id);
-			return DeletePermanently(entity);
+			return await DeletePermanently(entity);
 		}
 
-		public EntityEntry<T> DeletePermanently(T entity) => _table.Remove(entity);
-		public Task<List<T>> GetAll() => _table.ToListAsync();
-		public Task<List<T>> FindAll(Expression<Func<T, bool>> predicate) => _table.Where(predicate).ToListAsync();
-		public ValueTask<T> Get(int id) => _table.FindAsync(id);
-		public Task<T> Find(Expression<Func<T, bool>> predicate) => _table.FirstAsync(predicate);
+		public async Task<EntityEntry<T>> DeletePermanently(T entity)
+		{
+			EntityEntry<T> entry = _table.Remove(entity);
+			await _context.SaveChangesAsync();
+			return entry;
+		}
+
+		public IQueryable<T> GetAll()
+		{
+			return _table;
+		}
+
+		public IQueryable<T> FindAll(Expression<Func<T, bool>> predicate)
+		{
+			return _table.Where(predicate);
+		}
+
+		public ValueTask<T> Get(int id)
+		{
+			return _table.FindAsync(id);
+		}
+
+		public Task<T> Find(Expression<Func<T, bool>> predicate)
+		{
+			return _table.FirstAsync(predicate);
+		}
 	}
 }

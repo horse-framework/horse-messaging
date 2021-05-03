@@ -23,7 +23,7 @@ namespace Horse.Messaging.Client.Direct
         /// </summary>
         public DirectTypeDescriptor Resolve(Type type, DirectTypeDescriptor defaultDescriptor)
         {
-            DirectTypeDescriptor descriptor = new DirectTypeDescriptor();
+            DirectTypeDescriptor descriptor = new();
 
             if (defaultDescriptor != null)
                 ResolveDefaults(type, descriptor, defaultDescriptor);
@@ -36,7 +36,7 @@ namespace Horse.Messaging.Client.Direct
         /// <summary>
         /// Resolves default values from model type configurator
         /// </summary>
-        private void ResolveDefaults(Type type, DirectTypeDescriptor descriptor, DirectTypeDescriptor defaultConfigurator)
+        private static void ResolveDefaults(Type type, DirectTypeDescriptor descriptor, DirectTypeDescriptor defaultConfigurator)
         {
             if (defaultConfigurator.DirectTargetFactory != null)
             {
@@ -48,7 +48,7 @@ namespace Horse.Messaging.Client.Direct
                 descriptor.Headers.Add(func());
         }
 
-        private void ResolveDescriptor(Type type, DirectTypeDescriptor descriptor)
+        private static void ResolveDescriptor(Type type, DirectTypeDescriptor descriptor)
         {
             descriptor.Type = type;
 
@@ -64,11 +64,11 @@ namespace Horse.Messaging.Client.Direct
                         break;
 
                     case FindTargetBy.Name:
-                        descriptor.DirectTarget = "@name:" + targetAttribute.Value;
+                        descriptor.DirectTarget = $"@name:{targetAttribute.Value}";
                         break;
 
                     case FindTargetBy.Type:
-                        descriptor.DirectTarget = "@type:" + targetAttribute.Value;
+                        descriptor.DirectTarget = $"@type:{targetAttribute.Value}";
                         break;
                 }
             }
@@ -80,7 +80,7 @@ namespace Horse.Messaging.Client.Direct
             HighPriorityMessageAttribute prioAttr = type.GetCustomAttribute<HighPriorityMessageAttribute>(true);
             if (prioAttr != null)
                 descriptor.HighPriority = true;
-
+            
             IEnumerable<MessageHeaderAttribute> headerAttributes = type.GetCustomAttributes<MessageHeaderAttribute>(true);
             foreach (MessageHeaderAttribute headerAttribute in headerAttributes)
                 descriptor.Headers.Add(new KeyValuePair<string, string>(headerAttribute.Key, headerAttribute.Value));

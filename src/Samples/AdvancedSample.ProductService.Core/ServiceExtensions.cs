@@ -16,7 +16,6 @@ namespace AdvancedSample.ProductService.Core
 		{
 			services.AddMappers();
 			services.AddRepositories();
-			services.AddBusinessManagers();
 			services.AddDbContext<DbContext, ProductContext>();
 		}
 
@@ -25,7 +24,7 @@ namespace AdvancedSample.ProductService.Core
 			services.AddRepositories<Product>();
 		}
 
-		private static void AddBusinessManagers(this IServiceCollection services)
+		public static void AddBusinessManagers(this IServiceCollection services)
 		{
 			services.AddTransient<IProductBusinessManager, ProductBusinessManager>();
 		}

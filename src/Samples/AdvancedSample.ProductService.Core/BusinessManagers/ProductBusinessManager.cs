@@ -19,10 +19,11 @@ namespace AdvancedSample.ProductService.Core.BusinessManagers
 			_repository = repository;
 		}
 
-		public ValueTask<EntityEntry<Product>> Create(ProductDTO product)
+		public async ValueTask<EntityEntry<Product>> Create(ProductDTO product)
 		{
 			Product entity = _mapper.Map<Product>(product);
-			return _repository.AddAsync(entity);
+			var entry = await _repository.AddAsync(entity);
+			return entry;
 		}
 	}
 }
