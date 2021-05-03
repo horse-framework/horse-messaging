@@ -731,9 +731,8 @@ namespace Horse.Messaging.Client
                     if (message.WaitResponse && AutoAcknowledge)
                         await SendAsync(message.CreateAcknowledge());
 
+                    InvokeMessageReceived(message);
                     await Queue.OnQueueMessage(message);
-                    MessageReceived?.Invoke(this, message);
-                    MessageReceivedAction?.Invoke(message);
                     break;
 
                 case MessageType.DirectMessage:
@@ -741,9 +740,8 @@ namespace Horse.Messaging.Client
                     if (message.WaitResponse && AutoAcknowledge)
                         await SendAsync(message.CreateAcknowledge());
 
+                    InvokeMessageReceived(message);
                     await Direct.OnDirectMessage(message);
-                    MessageReceived?.Invoke(this, message);
-                    MessageReceivedAction?.Invoke(message);
                     break;
 
                 case MessageType.Server:
@@ -768,10 +766,7 @@ namespace Horse.Messaging.Client
                     Tracker.Process(message);
 
                     if (CatchResponseMessages)
-                    {
-                        MessageReceived?.Invoke(this, message);
-                        MessageReceivedAction?.Invoke(message);
-                    }
+                        InvokeMessageReceived(message);
 
                     break;
 
@@ -779,6 +774,20 @@ namespace Horse.Messaging.Client
                     _ = Event.OnEventMessage(message);
                     break;
             }
+        }
+
+        internal void InvokeMessageReceived(HorseMessage message)
+        {
+            try
+            {
+                MessageReceived?.Invoke(this, message);
+                MessageReceivedAction?.Invoke(message);
+            }
+            catch (Exception exception)
+            {
+                OnException(exception, message);
+            }
+            
         }
 
         internal void OnException(Exception e, HorseMessage message)

@@ -1,17 +1,16 @@
 using System;
-using System.Collections.Generic;
 using Horse.Messaging.Client;
-using Horse.Messaging.Protocol;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AdvancedSample.Core.Service
 {
-	internal class ServiceProviderFactory : IServiceProviderFactory<IServiceCollection>
+	internal class ServiceProviderFactory<T> : IServiceProviderFactory<IServiceCollection>
 	{
 		private readonly string _clientType;
 		private readonly string _host;
 		private IServiceProvider _provider;
-		private readonly List<Action<HorseClientBuilder>> _addHandlers = new();
 
 		public ServiceProviderFactory(string clientType)
 		{
@@ -21,6 +20,10 @@ namespace AdvancedSample.Core.Service
 
 		public IServiceCollection CreateBuilder(IServiceCollection services)
 		{
+			services.AddControllers()
+					.SetCompatibilityVersion(CompatibilityVersion.Latest)
+					.PartManager.ApplicationParts.Add(new AssemblyPart(typeof(T).Assembly));
+
 			services.AddHorseBus(BuildHorseClient);
 			return services;
 		}
@@ -32,34 +35,20 @@ namespace AdvancedSample.Core.Service
 			return _provider;
 		}
 
-		public void AddTransientHandlers<T>()
-		{
-			_addHandlers.Add((builder) => builder.AddTransientDirectHandlers(typeof(T)));
-		}
-
 		private void BuildHorseClient(HorseClientBuilder builder)
 		{
-			foreach (var handler in _addHandlers)
-				handler(builder);
-
 			builder.SetHost(_host)
 				   .SetClientType(_clientType)
 				   .SetReconnectWait(TimeSpan.FromSeconds(1))
 				   .UseNewtonsoftJsonSerializer()
 				   .OnConnected(OnConnected)
 				   .OnDisconnected(OnDisconnected)
-				   .OnMessageReceived(OnMessageReceived)
 				   .OnError(OnError);
 		}
 
 		private static void OnError(Exception exception)
 		{
 			_ = Console.Out.WriteLineAsync(exception.Message);
-		}
-
-		private static void OnMessageReceived(HorseMessage message)
-		{
-			_ = Console.Out.WriteLineAsync($"[RECEIVED] {message}");
 		}
 
 		private static void OnDisconnected(HorseClient client)
