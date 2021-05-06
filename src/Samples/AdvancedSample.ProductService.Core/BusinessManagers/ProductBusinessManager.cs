@@ -11,18 +11,18 @@ namespace AdvancedSample.ProductService.Core.BusinessManagers
 	internal class ProductBusinessManager : IProductBusinessManager
 	{
 		private readonly IMapper _mapper;
-		private readonly ICommandRepository<Product> _repository;
+		private readonly IUnitOfWork _uow;
 
-		public ProductBusinessManager(IMapper mapper, ICommandRepository<Product> repository)
+		public ProductBusinessManager(IMapper mapper, IUnitOfWork uow)
 		{
 			_mapper = mapper;
-			_repository = repository;
+			_uow = uow;
 		}
 
 		public async ValueTask<EntityEntry<Product>> Create(ProductDTO product)
 		{
 			Product entity = _mapper.Map<Product>(product);
-			EntityEntry<Product> entry = await _repository.AddAsync(entity);
+			EntityEntry<Product> entry = await _uow.Command<Product>().AddAsync(entity);
 			return entry;
 		}
 	}

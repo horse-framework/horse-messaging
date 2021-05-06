@@ -2,7 +2,7 @@
 
 namespace AdvancedSample.Common.Cqrs.Infrastructure
 {
-	public interface IServiceCommand
+	public interface IServiceCommand : IServiceMessage
 	{
 		public Guid CommandId { get; }
 	}

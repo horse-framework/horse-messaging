@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net5.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="AutoMapper" Version="10.1.1" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\AdvancedSample.DataAccess.Repository\AdvancedSample.DataAccess.Repository.csproj" />
+      <ProjectReference Include="..\AdvancedSample.OrderService.Context\AdvancedSample.OrderService.Context.csproj" />
+      <ProjectReference Include="..\AdvancedSample.OrderService.Domain\AdvancedSample.OrderService.Domain.csproj" />
+      <ProjectReference Include="..\AdvancedSample.OrderService.Models\AdvancedSample.OrderService.Models.csproj" />
+    </ItemGroup>
+
+</Project>

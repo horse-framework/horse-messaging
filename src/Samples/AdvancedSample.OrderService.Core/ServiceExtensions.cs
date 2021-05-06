@@ -1,13 +1,13 @@
 using AdvancedSample.DataAccess.Repository;
-using AdvancedSample.ProductService.Context;
-using AdvancedSample.ProductService.Core.BusinessManagers;
-using AdvancedSample.ProductService.Core.BusinessManagers.Interfaces;
-using AdvancedSample.ProductService.Core.Mappers;
+using AdvancedSample.OrderService.Context;
+using AdvancedSample.OrderService.Core.BusinessManagers;
+using AdvancedSample.OrderService.Core.BusinessManagers.Interfaces;
+using AdvancedSample.OrderService.Core.Mappers;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace AdvancedSample.ProductService.Core
+namespace AdvancedSample.OrderService.Core
 {
 	public static class ServiceExtensions
 	{
@@ -15,13 +15,12 @@ namespace AdvancedSample.ProductService.Core
 		{
 			services.AddMappers();
 			services.AddUnitOfWork();
-			services.AddDbContext<DbContext, ProductContext>();
+			services.AddDbContext<DbContext, OrderContext>();
 		}
-
 
 		public static void AddBusinessManagers(this IServiceCollection services)
 		{
-			services.AddTransient<IProductBusinessManager, ProductBusinessManager>();
+			services.AddTransient<IOrderBusinessManager, OrderBusinessManager>();
 		}
 
 		private static void AddMappers(this IServiceCollection services)
@@ -33,7 +32,7 @@ namespace AdvancedSample.ProductService.Core
 
 		private static void AddMapperProfiles(this IMapperConfigurationExpression cfg)
 		{
-			cfg.AddProfile<ProductMapperProfile>();
+			cfg.AddProfile<OrderMapperProfile>();
 		}
 	}
 }

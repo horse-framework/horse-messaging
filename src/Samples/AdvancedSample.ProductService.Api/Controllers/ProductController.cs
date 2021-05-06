@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using AdvancedSample.Common.Extensions;
 using AdvancedSample.ProductService.Models.Commands;
 using AdvancedSample.ProductService.Models.Queries;
 using Horse.Messaging.Client.Routers;
@@ -26,24 +27,16 @@ namespace AdvanvedSample.ProductService.Api.Controllers
 			{
 				QueryId = Guid.NewGuid()
 			};
-			HorseResult<GetAllProductsQueryResult> result = await _bus.PublishRequestJson<GetAllProductsQuery, GetAllProductsQueryResult>(query);
-			return result.Code switch
-			{
-				HorseResultCode.Ok => Ok(result.Model),
-				_                  => Problem(result.Reason)
-			};
+			GetAllProductsQueryResult result = await _bus.ExecuteQuery<GetAllProductsQuery, GetAllProductsQueryResult>(query);
+			return Ok(result);
 		}
 
 		[HttpPost("create")]
 		public async Task<IActionResult> Create([FromBody] CreateProductCommand command)
 		{
 			command.CommandId = Guid.NewGuid();
-			HorseResult result = await _bus.PublishJson(command, true);
-			return result.Code switch
-			{
-				HorseResultCode.Ok => Ok(),
-				_                  => Problem(result.Reason)
-			};
+			await _bus.ExecuteCommand(command);
+			return Ok();
 		}
 	}
 }
