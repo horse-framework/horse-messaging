@@ -253,7 +253,7 @@ namespace Horse.Messaging.Client
             if (SmartHealthCheck)
                 KeepAlive();
 
-            await _client.OnMessageReceived(message);
+            _ = _client.OnMessageReceived(message);
         }
 
         /// <summary>

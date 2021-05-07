@@ -225,8 +225,9 @@ namespace Horse.Messaging.Client.Routers
                                              IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             return PublishJson(null, model, null, waitForAcknowledge, null, messageHeaders);
-        }       /// <summary>
-        
+        }
+
+        /// <summary>
         /// Publishes a JSON object to a router
         /// </summary>
         public Task<HorseResult> PublishJson(string routerName, object model, bool waitForAcknowledge = false,
@@ -249,7 +250,7 @@ namespace Horse.Messaging.Client.Routers
 
             if (!string.IsNullOrEmpty(routerName))
                 descriptor.RouterName = routerName;
-            
+
             if (contentType.HasValue)
                 descriptor.ContentType = contentType.Value;
 
@@ -306,13 +307,13 @@ namespace Horse.Messaging.Client.Routers
                                                                                           IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             RouterTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(request.GetType());
-            
+
             if (!string.IsNullOrEmpty(routerName))
                 descriptor.RouterName = routerName;
-            
+
             if (contentType.HasValue)
                 descriptor.ContentType = contentType.Value;
-            
+
             HorseMessage message = descriptor.CreateMessage();
             message.WaitResponse = true;
             message.Serialize(request, _client.MessageSerializer);
