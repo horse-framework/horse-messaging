@@ -225,6 +225,14 @@ namespace Horse.Messaging.Client.Routers
                                              IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             return PublishJson(null, model, null, waitForAcknowledge, null, messageHeaders);
+        }       /// <summary>
+        
+        /// Publishes a JSON object to a router
+        /// </summary>
+        public Task<HorseResult> PublishJson(string routerName, object model, bool waitForAcknowledge = false,
+                                             IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        {
+            return PublishJson(routerName, model, null, waitForAcknowledge, null, messageHeaders);
         }
 
         /// <summary>

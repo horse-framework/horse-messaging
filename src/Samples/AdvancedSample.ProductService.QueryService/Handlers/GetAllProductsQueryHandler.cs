@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using AdvancedSample.Common.Infrastructure.Handlers;
 using AdvancedSample.DataAccess.Repository;
@@ -27,10 +28,10 @@ namespace AdvancedSample.ProductService.QueryService.Handlers
 		{
 			_ = Console.Out.WriteLineAsync($"[CONSUMED] {JsonConvert.SerializeObject(query)}");
 
-			var items = await _uow.Query<Product>()
-								  .GetAll()
-								  .ProjectTo<ProductDTO>(_mapper.ConfigurationProvider)
-								  .ToListAsync();
+			List<ProductDTO> items = await _uow.Query<Product>()
+											   .GetAll()
+											   .ProjectTo<ProductDTO>(_mapper.ConfigurationProvider)
+											   .ToListAsync();
 
 			return new GetAllProductsQueryResult(items);
 		}

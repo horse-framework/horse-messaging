@@ -1,7 +1,6 @@
 ﻿using System.Threading.Tasks;
 using AdvancedSample.Common.Cqrs.Infrastructure;
-using AdvancedSample.Common.Infrastructure.Definitions;
-using AdvancedSample.Common.Infrastructure.DirectContentTypes;
+using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Routers;
 
 namespace AdvancedSample.Common.Extensions
@@ -38,9 +37,19 @@ namespace AdvancedSample.Common.Extensions
 			return bus.TryPublishRequestJson<TQuery, TResult>(routerName, contentType, query);
 		}
 
-		public static Task SaveToOutbox<TEvent>(this IHorseRouterBus bus, TEvent @event) where TEvent : IServiceEvent
+		public static Task RaiseEvent(this IHorseQueueBus bus, object @event)
 		{
-			return bus.TryPublishJson(ServiceRoutes.OUTBOX_COMMAND_SERVICE, DirectContentTypes.Outbox.SAVE_TO_OUTBOX, @event);
+			return bus.TryPushJson(@event);
+		}
+
+		public static Task RaiseEvent<T>(this IHorseQueueBus bus, T @event) where T : IServiceEvent
+		{
+			return bus.TryPushJson(@event);
+		}
+
+		public static Task RaiseEvent<T>(this IHorseQueueBus bus, string queueName, T @event) where T : IServiceEvent
+		{
+			return bus.TryPushJson(queueName, @event);
 		}
 	}
 }

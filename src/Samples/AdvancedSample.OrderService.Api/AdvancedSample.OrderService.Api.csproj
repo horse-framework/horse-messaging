@@ -5,4 +5,10 @@
         <TargetFramework>net5.0</TargetFramework>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\AdvancedSample.Common.Extensions\AdvancedSample.Common.Extensions.csproj" />
+      <ProjectReference Include="..\AdvancedSample.Core.Api\AdvancedSample.Core.Api.csproj" />
+      <ProjectReference Include="..\AdvancedSample.OrderService.Models\AdvancedSample.OrderService.Models.csproj" />
+    </ItemGroup>
+
 </Project>

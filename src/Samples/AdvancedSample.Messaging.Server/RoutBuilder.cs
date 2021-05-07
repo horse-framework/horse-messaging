@@ -9,6 +9,7 @@ namespace AdvancedSample.Messaging.Server
 		public static void ConfigureRoutes(this RouterRider routerRider)
 		{
 			routerRider.ConfigureProductServiceRoutes();
+			routerRider.ConfigureOrderServiceRoutes();
 		}
 
 		private static void ConfigureProductServiceRoutes(this RouterRider routerRider)
@@ -24,6 +25,25 @@ namespace AdvancedSample.Messaging.Server
 			IRouter queriesRouter = routerRider.Add(ServiceRoutes.PRODUCT_QUERY_SERVICE, RouteMethod.Distribute);
 			DirectBinding queriesBinding = new($"[binding]{ClientTypes.PRODUCT_QUERY_SERVICE}",
 											   $"@type:{ClientTypes.PRODUCT_QUERY_SERVICE}",
+											   1,
+											   BindingInteraction.Response,
+											   RouteMethod.RoundRobin);
+			queriesRouter.AddBinding(queriesBinding);
+		}
+		
+		private static void ConfigureOrderServiceRoutes(this RouterRider routerRider)
+		{
+			IRouter commandsRouter = routerRider.Add(ServiceRoutes.ORDER_COMMAND_SERVICE, RouteMethod.Distribute);
+			DirectBinding commandsBinding = new($"[binding]{ClientTypes.ORDER_COMMAND_SERVICE}",
+												$"@type:{ClientTypes.ORDER_COMMAND_SERVICE}",
+												1,
+												BindingInteraction.Response,
+												RouteMethod.RoundRobin);
+			commandsRouter.AddBinding(commandsBinding);
+
+			IRouter queriesRouter = routerRider.Add(ServiceRoutes.ORDER_QUERY_SERVICE, RouteMethod.Distribute);
+			DirectBinding queriesBinding = new($"[binding]{ClientTypes.ORDER_QUERY_SERVICE}",
+											   $"@type:{ClientTypes.ORDER_QUERY_SERVICE}",
 											   1,
 											   BindingInteraction.Response,
 											   RouteMethod.RoundRobin);

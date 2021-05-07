@@ -1,24 +1,14 @@
-using System;
 using System.Threading.Tasks;
 using System.Transactions;
 using AdvancedSample.Core.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace AdvancedSample.DataAccess.Repository
 {
-	public interface IUnitOfWork : IDisposable
-	{
-		public IQueryRepository<T> Query<T>() where T : class, IEntity;
-		public ICommandRepository<T> Command<T>() where T : class, IEntity;
-		public Task<int> SaveChangesAsync();
-		public void BeginTransaction();
-		public void CommitTransaction();
-	}
-
-	public sealed class UnitOfWork : IUnitOfWork
+	internal sealed class UnitOfWork : IUnitOfWork
 	{
 		private readonly DbContext _context;
-		private TransactionScope _scope;
 
 		public UnitOfWork(DbContext context)
 		{
@@ -40,19 +30,13 @@ namespace AdvancedSample.DataAccess.Repository
 			return _context.SaveChangesAsync();
 		}
 
-		public void BeginTransaction()
+		public Task<IDbContextTransaction> BeginTransaction()
 		{
-			_scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-		}
-
-		public void CommitTransaction()
-		{
-			_scope?.Complete();
+			return _context.Database.BeginTransactionAsync();
 		}
 
 		public void Dispose()
 		{
-			_scope?.Dispose();
 			_context.Dispose();
 		}
 	}

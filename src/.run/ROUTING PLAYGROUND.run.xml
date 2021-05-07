@@ -1,8 +1,0 @@
-<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="ROUTING PLAYGROUND" type="CompoundRunConfigurationType">
-    <toRun name="CONSUMER" type="DotNetProject" />
-    <toRun name="SERVER" type="DotNetProject" />
-    <toRun name="PRODUCER" type="DotNetProject" />
-    <method v="2" />
-  </configuration>
-</component>

@@ -7,6 +7,7 @@ namespace AdvancedSample.OrderService.Core.BusinessManagers.Interfaces
 {
 	public interface IOrderBusinessManager
 	{
-		public ValueTask<EntityEntry<Order>> Create(OrderDTO product);
+		public ValueTask<Order> Create(OrderDTO order);
+		public ValueTask<OrderSnapshot> CreateSnapshot(OrderDTO order, ProductDTO product);
 	}
 }

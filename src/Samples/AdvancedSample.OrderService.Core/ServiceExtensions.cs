@@ -15,7 +15,7 @@ namespace AdvancedSample.OrderService.Core
 		{
 			services.AddMappers();
 			services.AddUnitOfWork();
-			services.AddDbContext<DbContext, OrderContext>();
+			services.AddDbContext<DbContext, OrderContext>(ServiceLifetime.Transient);
 		}
 
 		public static void AddBusinessManagers(this IServiceCollection services)

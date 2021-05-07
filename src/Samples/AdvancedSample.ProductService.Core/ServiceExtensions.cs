@@ -15,7 +15,7 @@ namespace AdvancedSample.ProductService.Core
 		{
 			services.AddMappers();
 			services.AddUnitOfWork();
-			services.AddDbContext<DbContext, ProductContext>();
+			services.AddDbContext<DbContext, ProductContext>(ServiceLifetime.Transient);
 		}
 
 

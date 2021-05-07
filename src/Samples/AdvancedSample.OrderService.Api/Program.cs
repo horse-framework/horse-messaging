@@ -1,12 +1,6 @@
-﻿using System;
+﻿using AdvancedSample.Core.Api;
 
-namespace AdvancedSample.OrderService.Api
-{
-	class Program
-	{
-		static void Main(string[] args)
-		{
-			Console.WriteLine("Hello World!");
-		}
-	}
-}
+CoreApi<Startup> api = new("order-api", 12002);
+api.Run();
+
+internal class Startup {}

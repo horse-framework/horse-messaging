@@ -20,20 +20,25 @@ namespace AdvancedSample.DataAccess.Repository
 
 		public ValueTask<EntityEntry<T>> AddAsync(T entity)
 		{
-			entity.CreatedAt = DateTime.Now;
+			if (entity is IAuditableEntity auditableEntity)
+				auditableEntity.CreatedAt = DateTime.Now;
 			return _table.AddAsync(entity);
 		}
 
 		public EntityEntry<T> Update(T entity)
 		{
-			entity.UpdatedAt = DateTime.Now;
+			if (entity is IAuditableEntity auditableEntity)
+				auditableEntity.CreatedAt = DateTime.Now;
 			return _table.Update(entity);
 		}
 
 		public EntityEntry<T> Delete(T entity)
 		{
-			entity.IsDeleted = true;
-			entity.DeletedAt = DateTime.Now;
+			if (entity is not ISoftDeletableEntity softDeletableEntity)
+				return _table.Update(entity);
+			softDeletableEntity.IsDeleted = true;
+			softDeletableEntity.DeletedAt = DateTime.Now;
+
 			return _table.Update(entity);
 		}
 

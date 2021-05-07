@@ -1,0 +1,14 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="ADVANCED_SAMPLE" type="CompoundRunConfigurationType">
+    <toRun name="AdvancedSample.OrderService.EventService" type="DotNetProject" />
+    <toRun name="AdvancedSample.OrderService.Api" type="DotNetProject" />
+    <toRun name="AdvancedSample.OrderService.Relay" type="DotNetProject" />
+    <toRun name="AdvancedSample.OrderService.QueryService" type="DotNetProject" />
+    <toRun name="AdvancedSample.ProductService.Api" type="DotNetProject" />
+    <toRun name="AdvancedSample.Product.CommandService" type="DotNetProject" />
+    <toRun name="AdvancedSample.Product.QueryService" type="DotNetProject" />
+    <toRun name="AdvancedSample.Messaging.Server" type="DotNetProject" />
+    <toRun name="AdvancedSample.OrderService.CommandService" type="DotNetProject" />
+    <method v="2" />
+  </configuration>
+</component>

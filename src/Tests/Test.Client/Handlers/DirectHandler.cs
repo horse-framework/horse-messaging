@@ -10,7 +10,7 @@ namespace Test.Client.Handlers
     [AutoResponse(AutoResponse.All)]
     public class DirectHandler : IDirectMessageHandler<ModelC>
     {
-        public Task Consume(HorseMessage message, ModelC model, HorseClient client)
+        public Task Handle(HorseMessage message, ModelC model, HorseClient client)
         {
             return Task.CompletedTask;
         }

@@ -1,13 +1,10 @@
-﻿using System;
+﻿using AdvancedSample.Common.Infrastructure.Definitions;
+using AdvancedSample.Core.Service;
+using AdvancedSample.OrderService.Core;
 
+CoreService service = new(ClientTypes.ORDER_QUERY_SERVICE);
+service.ConfigureServices(s => s.AddCoreServices());
+service.AddTransientHandlers<Startup>();
+service.Run();
 
-namespace AdvancedSample.OrderService.QueryService
-{
-	class Program
-	{
-		static void Main(string[] args)
-		{
-			Console.WriteLine("Hello World!");
-		}
-	}
-}
+internal class Startup { };

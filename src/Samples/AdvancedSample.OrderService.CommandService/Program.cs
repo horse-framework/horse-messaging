@@ -2,7 +2,7 @@
 using AdvancedSample.Core.Service;
 using AdvancedSample.OrderService.Core;
 
-CoreService service = new(ClientTypes.PRODUCT_COMMAND_SERVICE);
+CoreService service = new(ClientTypes.ORDER_COMMAND_SERVICE);
 service.ConfigureServices(s =>
 						  {
 							  s.AddCoreServices();

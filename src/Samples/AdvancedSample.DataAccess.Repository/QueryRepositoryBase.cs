@@ -18,6 +18,8 @@ namespace AdvancedSample.DataAccess.Repository
 			_table = table;
 		}
 
+		public IQueryable<T> Table => _table;
+
 		public IQueryable<T> GetAll()
 		{
 			return _table;
