@@ -157,6 +157,15 @@ namespace Horse.Messaging.Client
             _client.ReconnectWait = value;
             return this;
         }
+        
+        /// <summary>
+        /// Sets reconnection interval if disconnects. Default is 30 seconds.
+        /// </summary>
+        public HorseClientBuilder SetResponseTimeout(TimeSpan value)
+        {
+            _client.ResponseTimeout = value;
+            return this;
+        }
 
         /// <summary>
         /// If true, connector subscribes all consuming queues automatically right after connection established.

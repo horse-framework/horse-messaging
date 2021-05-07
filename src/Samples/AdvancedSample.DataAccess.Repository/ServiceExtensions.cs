@@ -5,11 +5,9 @@ namespace AdvancedSample.DataAccess.Repository
 {
 	public static class ServiceExtensions
 	{
-		public static void AddRepositories<TEntity>(this IServiceCollection services)
-			where TEntity : class, IEntity
+		public static void AddUnitOfWork(this IServiceCollection services)
 		{
-			services.AddTransient<ICommandRepository<TEntity>, Repository<TEntity>>();
-			services.AddTransient<IQueryRepository<TEntity>, Repository<TEntity>>();
+			services.AddTransient<IUnitOfWork, UnitOfWork>();
 		}
 	}
 }

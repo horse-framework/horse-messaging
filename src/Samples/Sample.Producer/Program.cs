@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
+using Sample.Consumer;
 
 namespace Sample.Producer
 {
@@ -23,8 +25,11 @@ namespace Sample.Producer
             {
                 HorseResult result = await client.Queue.PushJson(a, false);
                 Console.WriteLine($"Push: {result.Code}");
+
+                // var result = await client.Direct.RequestJson<ResponseModel>(new RequestModel());
+                // Console.WriteLine($"Push: {result.Code} ${JsonSerializer.Serialize(result.Model)}");
                 Console.ReadLine();
-                await Task.Delay(5000);
+                // await Task.Delay(5000);
             }
         }
     }

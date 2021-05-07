@@ -38,6 +38,8 @@ namespace Horse.Messaging.Client.Direct
         /// </summary>
         public IEnumerable<Type> RegisterAssemblyHandlers(Func<IHandlerFactory> consumerFactoryBuilder, params Type[] assemblyTypes)
         {
+            List<Type> list = new();
+            
             foreach (Type assemblyType in assemblyTypes)
             {
                 foreach (Type type in assemblyType.Assembly.GetTypes())
@@ -53,9 +55,11 @@ namespace Horse.Messaging.Client.Direct
                             _operator.Registrations.Add(registration);
                     }
 
-                    if (types.Count > 0) yield return type;
+                    if (types.Count > 0) list.Add(type);
                 }
             }
+
+            return list;
         }
 
         /// <summary>

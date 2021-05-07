@@ -6,8 +6,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\AdvancedSample.Common.Extensions\AdvancedSample.Common.Extensions.csproj" />
       <ProjectReference Include="..\AdvancedSample.ProductService.Models\AdvancedSample.ProductService.Models.csproj" />
-      <ProjectReference Include="..\AdvanvedSample.Core.Api\AdvanvedSample.Core.Api.csproj" />
+      <ProjectReference Include="..\AdvancedSample.Core.Api\AdvancedSample.Core.Api.csproj" />
     </ItemGroup>
 
 </Project>

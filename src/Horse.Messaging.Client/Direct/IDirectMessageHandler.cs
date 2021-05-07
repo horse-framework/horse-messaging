@@ -15,6 +15,6 @@ namespace Horse.Messaging.Client.Direct
         /// <param name="message">Raw Horse message</param>
         /// <param name="model">Deserialized model</param>
         /// <param name="client">Connection client object</param>
-        Task Consume(HorseMessage message, TModel model, HorseClient client);
+        Task Handle(HorseMessage message, TModel model, HorseClient client);
     }
 }

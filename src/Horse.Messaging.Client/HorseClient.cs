@@ -29,7 +29,7 @@ namespace Horse.Messaging.Client
     /// <summary>
     /// Delete for HorseClient Error event
     /// </summary>
-    public delegate void ClientErrorHandler(HorseClient client, Exception exception);
+    public delegate void ClientErrorHandler(HorseClient client, Exception exception, HorseMessage horseMessage = null);
 
     /// <inheritdoc />
     public class HorseClient<TIdentifier> : HorseClient
@@ -292,8 +292,7 @@ namespace Horse.Messaging.Client
                         _socket.Disconnect();
                     }
 
-                    _socket = new HorseSocket(this, _data);
-                    _ = _socket.ConnectAsync(RemoteHost);
+                    Connect(RemoteHost);
                 }, null, ms, ms);
             }
         }
@@ -411,8 +410,15 @@ namespace Horse.Messaging.Client
                 */
 
             SetAutoReconnect(true);
-            _socket = new HorseSocket(this, _data);
-            _socket.Connect(host);
+            try
+            {
+                _socket = new HorseSocket(this, _data);
+                _socket.Connect(host);
+            }
+            catch (Exception e)
+            {
+                OnException(e);
+            }
         }
 
         /// <summary>
@@ -790,9 +796,9 @@ namespace Horse.Messaging.Client
             
         }
 
-        internal void OnException(Exception e, HorseMessage message)
+        internal void OnException(Exception e, HorseMessage message = null)
         {
-            Error?.Invoke(this, e);
+            Error?.Invoke(this, e, message);
             ErrorAction?.Invoke(e);
         }
 

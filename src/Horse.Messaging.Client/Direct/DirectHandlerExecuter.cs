@@ -90,7 +90,7 @@ namespace Horse.Messaging.Client.Direct
         {
             if (Retry == null)
             {
-                await messageHandler.Consume(message, model, client);
+                await messageHandler.Handle(message, model, client);
                 return;
             }
 
@@ -99,7 +99,7 @@ namespace Horse.Messaging.Client.Direct
             {
                 try
                 {
-                    await messageHandler.Consume(message, model, client);
+                    await messageHandler.Handle(message, model, client);
                     return;
                 }
                 catch (Exception e)
