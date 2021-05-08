@@ -75,6 +75,11 @@ namespace Horse.Messaging.Protocol
         /// <summary>
         /// Pipe messages
         /// </summary>
-        Pipe = 0x20
+        Pipe = 0x20,
+        
+        /// <summary>
+        /// Transaction messages
+        /// </summary>
+        Transaction = 0x21
     }
 }

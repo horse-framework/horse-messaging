@@ -201,5 +201,20 @@ namespace Horse.Messaging.Protocol
         /// "686" Unsubscribes from a channel
         /// </summary>
         public const ushort ChannelUnsubscribe = 687;
+        
+        /// <summary>
+        /// "691" Create and begin new transaction
+        /// </summary>
+        public const ushort TransactionBegin = 691;
+        
+        /// <summary>
+        /// "692" Commit a transaction
+        /// </summary>
+        public const ushort TransactionCommit = 692;
+        
+        /// <summary>
+        /// "693" rollback a transaction
+        /// </summary>
+        public const ushort TransactionRollback = 693;
     }
 }

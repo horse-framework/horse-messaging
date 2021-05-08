@@ -9,6 +9,7 @@ using Horse.Messaging.Server.Direct;
 using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
+using Horse.Messaging.Server.Transactions;
 using Horse.Server;
 
 namespace Horse.Messaging.Server
@@ -49,6 +50,11 @@ namespace Horse.Messaging.Server
         /// Manages key value memory caches
         /// </summary>
         public HorseCache Cache { get; }
+
+        /// <summary>
+        /// Transaction rider object manages all transactions and their operations
+        /// </summary>
+        public TransactionRider Transaction { get; }
 
         /// <summary>
         /// Messaging Queue Server Options
@@ -106,6 +112,7 @@ namespace Horse.Messaging.Server
             Direct = new DirectRider(this);
             Router = new RouterRider(this);
             Channel = new ChannelRider(this);
+            Transaction = new TransactionRider(this);
             Cache = new HorseCache(this);
             NodeManager = new NodeManager(this);
 
