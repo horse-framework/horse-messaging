@@ -5,9 +5,9 @@ namespace Horse.Messaging.Server.Transactions
 {
     public class QueueTransactionEndpoint : IServerTransactionEndpoint
     {
-        private QueueRider _rider;
         private HorseQueue _queue;
-        private string _queueName;
+        private readonly QueueRider _rider;
+        private readonly string _queueName;
         
         public QueueTransactionEndpoint(HorseQueue queue)
         {

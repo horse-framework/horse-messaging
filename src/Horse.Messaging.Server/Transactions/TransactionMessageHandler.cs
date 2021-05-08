@@ -6,7 +6,7 @@ using Horse.Messaging.Server.Network;
 
 namespace Horse.Messaging.Server.Transactions
 {
-    public class TransactionMessageHandler : INetworkMessageHandler
+    internal class TransactionMessageHandler : INetworkMessageHandler
     {
         #region Fields
 

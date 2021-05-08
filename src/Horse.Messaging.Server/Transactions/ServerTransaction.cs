@@ -35,7 +35,7 @@ namespace Horse.Messaging.Server.Transactions
             internal set
             {
                 _status = value;
-                
+
                 if (Status == ServerTransactionStatus.None || Status == ServerTransactionStatus.Begin)
                     return;
 
@@ -72,14 +72,16 @@ namespace Horse.Messaging.Server.Transactions
                 try
                 {
                     int milliseconds = Convert.ToInt32((Deadline - DateTime.UtcNow).TotalMilliseconds);
-                    await Task.Delay(milliseconds, _waiterCancellation.Token);
+                    
+                    if (milliseconds > 0)
+                        await Task.Delay(milliseconds, _waiterCancellation.Token);
 
                     if (Status == ServerTransactionStatus.Begin)
                     {
                         _status = ServerTransactionStatus.Rollback;
                         TimeoutHandler.SetResult(this);
                     }
-                    
+
                     _waiterCancellation.Dispose();
                     _waiterTask.Dispose();
                 }

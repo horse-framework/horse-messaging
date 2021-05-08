@@ -131,6 +131,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdvancedSample.OrderService
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.DirectHandler", "Samples\Sample.DirectHandler\Sample.DirectHandler.csproj", "{9F9C0F3D-F6FB-4469-B259-4392A1339775}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Transaction", "Tests\Test.Transaction\Test.Transaction.csproj", "{C1F953E0-4684-4CDA-8AFD-3ABC58D55C11}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -345,6 +347,10 @@ Global
 		{9F9C0F3D-F6FB-4469-B259-4392A1339775}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9F9C0F3D-F6FB-4469-B259-4392A1339775}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9F9C0F3D-F6FB-4469-B259-4392A1339775}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C1F953E0-4684-4CDA-8AFD-3ABC58D55C11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C1F953E0-4684-4CDA-8AFD-3ABC58D55C11}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C1F953E0-4684-4CDA-8AFD-3ABC58D55C11}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C1F953E0-4684-4CDA-8AFD-3ABC58D55C11}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -407,6 +413,7 @@ Global
 		{6BC27874-66FA-4431-A8C0-02E253BF36CD} = {E4979515-1C9F-4A53-9298-EF6F6559FA0A}
 		{A0FB3988-B130-4212-B46A-29BE43E87E79} = {E4979515-1C9F-4A53-9298-EF6F6559FA0A}
 		{9F9C0F3D-F6FB-4469-B259-4392A1339775} = {2BAA30B9-6118-4C33-BD6B-AC6A5827EC7E}
+		{C1F953E0-4684-4CDA-8AFD-3ABC58D55C11} = {41761E68-E2ED-4BFE-BBE1-D294A3967EB4}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A73712E1-2BB7-4F7D-852F-ED8FE4ABA180}

@@ -2,7 +2,14 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <TargetFramework>net5.0</TargetFramework>
     </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Horse.Messaging.Client\Horse.Messaging.Client.csproj" />
+      <ProjectReference Include="..\..\Horse.Messaging.Data\Horse.Messaging.Data.csproj" />
+      <ProjectReference Include="..\..\Horse.Messaging.Protocol\Horse.Messaging.Protocol.csproj" />
+      <ProjectReference Include="..\..\Horse.Messaging.Server\Horse.Messaging.Server.csproj" />
+    </ItemGroup>
 
 </Project>

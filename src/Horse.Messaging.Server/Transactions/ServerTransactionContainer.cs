@@ -7,6 +7,9 @@ using Horse.Messaging.Server.Clients;
 
 namespace Horse.Messaging.Server.Transactions
 {
+    /// <summary>
+    /// Container for transactions with same name
+    /// </summary>
     public class ServerTransactionContainer
     {
         /// <summary>
@@ -39,6 +42,11 @@ namespace Horse.Messaging.Server.Transactions
 
         private readonly Dictionary<string, ServerTransaction> _transactions = new Dictionary<string, ServerTransaction>();
 
+        /// <summary>
+        /// Creates new server transaction handler
+        /// </summary>
+        /// <param name="name">Name for transactions</param>
+        /// <param name="timeout">Transaction timeout</param>
         public ServerTransactionContainer(string name, TimeSpan timeout)
         {
             Name = name;
@@ -70,31 +78,51 @@ namespace Horse.Messaging.Server.Transactions
         /// <param name="id">Transaction Id</param>
         /// <param name="deadline">Transaction deadline</param>
         /// <param name="messageContent">Message content for transaction</param>
-        public void Add(string id, DateTime deadline, MemoryStream messageContent)
+        public async Task<bool> Add(string id, DateTime deadline, MemoryStream messageContent)
         {
             HorseMessage message = new HorseMessage();
             message.MessageId = id;
             message.Content = messageContent;
 
             ServerTransaction transaction = new ServerTransaction(null, message, deadline);
+
+            if (Handler != null)
+            {
+                bool canCreate = await Handler.CanCreate(transaction);
+                if (!canCreate)
+                    return false;
+            }
+
             lock (_transactions)
                 _transactions.Add(message.MessageId, transaction);
 
-            transaction.TimeoutHandler.Task.ContinueWith(HandleTransaction);
+            _ = transaction.TimeoutHandler.Task.ContinueWith(HandleTransaction);
             transaction.Track();
+            
+            return true;
         }
 
         /// <summary>
         /// Creates new transaction from a request
         /// </summary>
-        public void Create(MessagingClient client, HorseMessage message)
+        public async Task<bool> Create(MessagingClient client, HorseMessage message)
         {
             ServerTransaction transaction = new ServerTransaction(client, message, DateTime.UtcNow.Add(Timeout));
+                
+            if (Handler != null)
+            {
+                bool canCreate = await Handler.CanCreate(transaction);
+                if (!canCreate)
+                    return false;
+            }
+
             lock (_transactions)
                 _transactions.Add(message.MessageId, transaction);
 
-            transaction.TimeoutHandler.Task.ContinueWith(HandleTransaction);
+            _ = transaction.TimeoutHandler.Task.ContinueWith(HandleTransaction);
             transaction.Track();
+            
+            return true;
         }
 
         /// <summary>
@@ -168,14 +196,21 @@ namespace Horse.Messaging.Server.Transactions
             await client.SendAsync(response);
         }
 
-        private void HandleTransaction(Task<ServerTransaction> task)
+        private async Task HandleTransaction(Task<ServerTransaction> task)
         {
-            if (task.Result.Status == ServerTransactionStatus.Timeout)
+            try
             {
-                Handler?.Timeout(task.Result);
-
-                //todo: if timeout endpoint is not available?
-                TimeoutEndpoint.Send(task.Result);
+                if (task.Result.Status == ServerTransactionStatus.Timeout)
+                {
+                    bool sent = await TimeoutEndpoint.Send(task.Result);
+                    if (sent)
+                        Handler?.Timeout(task.Result);
+                    else
+                        Handler?.TimeoutSendFailed(task.Result, TimeoutEndpoint);
+                }
+            }
+            catch
+            {
             }
         }
     }

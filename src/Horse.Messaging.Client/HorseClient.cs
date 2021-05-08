@@ -98,8 +98,8 @@ namespace Horse.Messaging.Client
         /// <summary>
         /// Internal message received event
         /// </summary>
-        internal Action<HorseMessage> MessageReceivedAction { get; set; } 
-        
+        internal Action<HorseMessage> MessageReceivedAction { get; set; }
+
         /// <summary>
         /// Internal error event
         /// </summary>
@@ -604,7 +604,9 @@ namespace Horse.Messaging.Client
         {
             message.WaitResponse = true;
             message.HighPriority = false;
-            message.SetMessageId(UniqueIdGenerator.Create());
+
+            if (string.IsNullOrEmpty(message.MessageId))
+                message.SetMessageId(UniqueIdGenerator.Create());
 
             Task<HorseMessage> task = Tracker.Track(message);
 
@@ -793,7 +795,6 @@ namespace Horse.Messaging.Client
             {
                 OnException(exception, message);
             }
-            
         }
 
         internal void OnException(Exception e, HorseMessage message = null)
@@ -845,7 +846,7 @@ namespace Horse.Messaging.Client
                         _socket = null;
 
                         HorseChannelException exception = new($"Can't subscribe to {registration.Name} channel: {joinResult.Reason} ({joinResult.Code})");
-                        Error?.Invoke(this,exception);
+                        Error?.Invoke(this, exception);
                         ErrorAction?.Invoke(exception);
                         return;
                     }
