@@ -15,7 +15,7 @@ namespace Sample.Server
 
         public Task Disconnected(HorseMq server, MqClient client)
         {
-            Console.WriteLine("Client dsconnected");
+            Console.WriteLine("Client disconnected");
             return Task.CompletedTask;
         }
     }
