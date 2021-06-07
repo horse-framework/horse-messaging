@@ -17,6 +17,7 @@ namespace Horse.Messaging.Server.Routing
         private DateTime _clientListUpdateTime;
         private MessagingClient[] _clients;
         private int _roundRobinIndex = -1;
+        private readonly object _lock = new object();
 
         /// <summary>
         /// Direct binding routing method
@@ -107,19 +108,21 @@ namespace Horse.Messaging.Server.Routing
 
         private Task<bool> SendRoundRobin(HorseMessage message)
         {
-            Interlocked.Increment(ref _roundRobinIndex);
-            int i = _roundRobinIndex;
-
-            if (i >= _clients.Length)
-            {
-                _roundRobinIndex = 0;
-                i = 0;
-            }
-
             if (_clients.Length == 0)
                 return Task.FromResult(false);
 
-            var client = _clients[i];
+            MessagingClient client;
+
+            lock (_lock)
+            {
+                _roundRobinIndex++;
+
+                if (_roundRobinIndex >= _clients.Length)
+                    _roundRobinIndex = 0;
+
+                client = _clients[_roundRobinIndex];
+            }
+
             return client.SendAsync(message);
         }
 
@@ -135,17 +138,23 @@ namespace Horse.Messaging.Server.Routing
                 if (Target.StartsWith("@type:", StringComparison.InvariantCultureIgnoreCase))
                 {
                     var list = Router.Rider.Client.FindByType(Target.Substring(6));
-                    _clients = list == null ? new MessagingClient[0] : list.ToArray();
+
+                    lock (_lock)
+                        _clients = list == null ? new MessagingClient[0] : list.ToArray();
                 }
                 else if (Target.StartsWith("@name:", StringComparison.InvariantCultureIgnoreCase))
                 {
                     var list = Router.Rider.Client.FindClientByName(Target.Substring(6));
-                    _clients = list == null ? new MessagingClient[0] : list.ToArray();
+
+                    lock (_lock)
+                        _clients = list == null ? new MessagingClient[0] : list.ToArray();
                 }
                 else
                 {
                     MessagingClient client = Router.Rider.Client.Find(Target);
-                    _clients = client == null ? new MessagingClient[0] : new[] {client};
+
+                    lock (_lock)
+                        _clients = client == null ? new MessagingClient[0] : new[] {client};
                 }
 
                 _clientListUpdateTime = DateTime.UtcNow;

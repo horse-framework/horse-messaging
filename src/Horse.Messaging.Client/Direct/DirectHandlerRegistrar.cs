@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using Horse.Messaging.Client.Internal;
 
 namespace Horse.Messaging.Client.Direct
@@ -39,11 +40,14 @@ namespace Horse.Messaging.Client.Direct
         public IEnumerable<Type> RegisterAssemblyHandlers(Func<IHandlerFactory> consumerFactoryBuilder, params Type[] assemblyTypes)
         {
             List<Type> list = new();
-            
+
             foreach (Type assemblyType in assemblyTypes)
             {
                 foreach (Type type in assemblyType.Assembly.GetTypes())
                 {
+                    if (type.IsInterface || type.IsAbstract)
+                        continue;
+                    
                     List<ModelTypeInfo> types = FindModelTypes(type);
                     foreach (ModelTypeInfo typeInfo in types)
                     {

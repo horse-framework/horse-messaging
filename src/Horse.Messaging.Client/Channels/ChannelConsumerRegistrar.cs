@@ -44,6 +44,9 @@ namespace Horse.Messaging.Client.Channels
             {
                 foreach (Type type in assemblyType.Assembly.GetTypes())
                 {
+                    if (type.IsInterface || type.IsAbstract)
+                        continue;
+
                     List<ModelTypeInfo> types = FindModelTypes(type);
                     foreach (ModelTypeInfo typeInfo in types)
                     {

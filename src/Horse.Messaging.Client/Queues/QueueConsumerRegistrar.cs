@@ -51,6 +51,9 @@ namespace Horse.Messaging.Client.Queues
             {
                 foreach (Type type in assemblyType.Assembly.GetTypes())
                 {
+                    if (type.IsInterface || type.IsAbstract)
+                        continue;
+
                     List<ModelTypeInfo> types = FindModelTypes(type);
                     foreach (ModelTypeInfo typeInfo in types)
                     {
@@ -126,8 +129,10 @@ namespace Horse.Messaging.Client.Queues
                                                                             consumerFactoryBuilder);
 
             string queueName = modelDescriptor.QueueName;
+            
             if (consumerDescriptor.HasQueueName && !string.IsNullOrEmpty(consumerDescriptor.QueueName))
                 queueName = consumerDescriptor.QueueName;
+            
             QueueConsumerRegistration registration = new QueueConsumerRegistration
             {
                 QueueName = queueName,

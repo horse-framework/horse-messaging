@@ -2,6 +2,7 @@
 using Horse.Messaging.Data;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Handlers;
+using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Transactions;
@@ -24,6 +25,16 @@ namespace Sample.Server
                 })
                .ConfigureClients(cfg => { cfg.Handlers.Add(new ClientHandler()); })
                .Build();
+
+            rider.NodeManager.AddRemoteNode(new NodeOptions
+            {
+                Host = "other-server-ip",
+                Name = "other-server-name-optional",
+                Token = "if authentication requried between servers",
+                ReconnectWait = 500 //ms for retry if connection fails
+            });
+            
+            
 
             //rider.LoadPersistentQueues();
 
