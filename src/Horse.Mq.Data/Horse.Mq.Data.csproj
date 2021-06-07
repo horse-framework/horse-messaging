@@ -6,9 +6,9 @@
         <Product>Horse.Mq.Data</Product>
         <Description>Persistant queue message data library for Horse MQ</Description>
         <PackageTags>horse,server,messaging,queue,mq,persistent,database,db</PackageTags>
-        <AssemblyVersion>5.0.13</AssemblyVersion>
-        <FileVersion>5.0.13</FileVersion>
-        <PackageVersion>5.0.13</PackageVersion>
+        <AssemblyVersion>5.0.14</AssemblyVersion>
+        <FileVersion>5.0.14</FileVersion>
+        <PackageVersion>5.0.14</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/horse-framework/horse-mq</PackageProjectUrl>
