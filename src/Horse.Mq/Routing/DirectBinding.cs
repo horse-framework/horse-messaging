@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Horse.Mq.Clients;
 using Horse.Protocols.Hmq;
@@ -17,6 +16,7 @@ namespace Horse.Mq.Routing
         private DateTime _clientListUpdateTime;
         private MqClient[] _clients;
         private int _roundRobinIndex = -1;
+        private readonly object _lock = new object();
 
         /// <summary>
         /// Direct binding routing method
@@ -107,19 +107,21 @@ namespace Horse.Mq.Routing
 
         private Task<bool> SendRoundRobin(HorseMessage message)
         {
-            Interlocked.Increment(ref _roundRobinIndex);
-            int i = _roundRobinIndex;
-
-            if (i >= _clients.Length)
-            {
-                _roundRobinIndex = 0;
-                i = 0;
-            }
-
             if (_clients.Length == 0)
                 return Task.FromResult(false);
 
-            var client = _clients[i];
+            MqClient client;
+
+            lock (_lock)
+            {
+                _roundRobinIndex++;
+
+                if (_roundRobinIndex >= _clients.Length)
+                    _roundRobinIndex = 0;
+
+                client = _clients[_roundRobinIndex];
+            }
+
             return client.SendAsync(message);
         }
 
@@ -135,17 +137,23 @@ namespace Horse.Mq.Routing
                 if (Target.StartsWith("@type:", StringComparison.InvariantCultureIgnoreCase))
                 {
                     var list = Router.Server.FindClientByType(Target.Substring(6));
-                    _clients = list == null ? new MqClient[0] : list.ToArray();
+
+                    lock (_lock)
+                        _clients = list == null ? new MqClient[0] : list.ToArray();
                 }
                 else if (Target.StartsWith("@name:", StringComparison.InvariantCultureIgnoreCase))
                 {
                     var list = Router.Server.FindClientByName(Target.Substring(6));
-                    _clients = list == null ? new MqClient[0] : list.ToArray();
+
+                    lock (_lock)
+                        _clients = list == null ? new MqClient[0] : list.ToArray();
                 }
                 else
                 {
                     MqClient client = Router.Server.FindClient(Target);
-                    _clients = client == null ? new MqClient[0] : new[] {client};
+
+                    lock (_lock)
+                        _clients = client == null ? new MqClient[0] : new[] {client};
                 }
 
                 _clientListUpdateTime = DateTime.UtcNow;
