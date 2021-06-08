@@ -3,24 +3,41 @@ using Horse.Messaging.Server.Queues;
 
 namespace Horse.Messaging.Server.Transactions
 {
+    /// <summary>
+    /// Queue transaction endpoint pushes the message to a queue
+    /// </summary>
     public class QueueTransactionEndpoint : IServerTransactionEndpoint
     {
         private HorseQueue _queue;
         private readonly QueueRider _rider;
         private readonly string _queueName;
-        
+
+        /// <summary>
+        /// Queue name
+        /// </summary>
+        public string InitParameter => _queue?.Name;
+
+        /// <summary>
+        /// Creates new queue transaction endpoint
+        /// </summary>
         public QueueTransactionEndpoint(HorseQueue queue)
         {
             _queue = queue;
         }
 
+        /// <summary>
+        /// Creates new queue transaction endpoint
+        /// </summary>
         public QueueTransactionEndpoint(QueueRider rider, string queueName)
         {
             _rider = rider;
             _queueName = queueName;
             _queue = rider.Find(queueName);
         }
-        
+
+        /// <summary>
+        /// Pushes a message into the target queue
+        /// </summary>
         public async Task<bool> Send(ServerTransaction transaction)
         {
             try

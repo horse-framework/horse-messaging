@@ -118,6 +118,7 @@ namespace Horse.Messaging.Server
 
             Cache.Initialize();
             NodeManager.Initialize();
+            Transaction.Initialize();
         }
 
         /// <summary>

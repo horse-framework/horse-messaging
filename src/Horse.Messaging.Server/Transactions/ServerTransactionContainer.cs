@@ -38,6 +38,9 @@ namespace Horse.Messaging.Server.Transactions
         /// </summary>
         public IServerTransactionEndpoint TimeoutEndpoint { get; set; }
 
+        /// <summary>
+        /// Custom transaction handler implementation for the container
+        /// </summary>
         public IServerTransactionHandler Handler { get; set; }
 
         private readonly Dictionary<string, ServerTransaction> _transactions = new Dictionary<string, ServerTransaction>();
