@@ -1,11 +1,11 @@
 using System.Threading.Tasks;
-using Twino.Core;
-using Twino.Core.Protocols;
+using Horse.Core;
+using Horse.Core.Protocols;
 using Horse.Mq.Clients;
 using Horse.Mq.Helpers;
 using Horse.Mq.Security;
 using Horse.Protocols.Hmq;
-using Twino.Protocols.WebSocket;
+using Horse.Protocols.WebSocket;
 
 namespace Horse.Mq.WebSocket.Server
 {
@@ -20,7 +20,7 @@ namespace Horse.Mq.WebSocket.Server
             _tmqProtocolHandler = tmqProtocolHandler;
         }
 
-        public async Task<WsServerSocket> Connected(ITwinoServer server, IConnectionInfo connection, ConnectionData data)
+        public async Task<WsServerSocket> Connected(IHorseServer server, IConnectionInfo connection, ConnectionData data)
         {
             string clientId;
             bool found = data.Properties.TryGetValue(HorseHeaders.CLIENT_ID, out clientId);
@@ -74,17 +74,17 @@ namespace Horse.Mq.WebSocket.Server
             return socket;
         }
 
-        public async Task Ready(ITwinoServer server, WsServerSocket client)
+        public async Task Ready(IHorseServer server, WsServerSocket client)
         {
             throw new System.NotImplementedException();
         }
 
-        public async Task Received(ITwinoServer server, IConnectionInfo info, WsServerSocket client, WebSocketMessage message)
+        public async Task Received(IHorseServer server, IConnectionInfo info, WsServerSocket client, WebSocketMessage message)
         {
             throw new System.NotImplementedException();
         }
 
-        public async Task Disconnected(ITwinoServer server, WsServerSocket client)
+        public async Task Disconnected(IHorseServer server, WsServerSocket client)
         {
             throw new System.NotImplementedException();
         }

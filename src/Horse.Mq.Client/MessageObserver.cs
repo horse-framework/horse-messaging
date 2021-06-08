@@ -243,12 +243,12 @@ namespace Horse.Mq.Client
         public void On<T>(string queueName, Action<T> action)
         {
             ReadSubscription subscription = new ReadSubscription
-                                            {
-                                                Source = ReadSource.Queue,
-                                                Queue = queueName,
-                                                MessageType = typeof(T),
-                                                Action = action
-                                            };
+            {
+                Source = ReadSource.Queue,
+                Queue = queueName,
+                MessageType = typeof(T),
+                Action = action
+            };
 
             lock (_subscriptions)
                 _subscriptions.Add(subscription);
@@ -260,13 +260,13 @@ namespace Horse.Mq.Client
         public void On(string queueName, Action<HorseMessage> action)
         {
             ReadSubscription subscription = new ReadSubscription
-                                            {
-                                                Source = ReadSource.Queue,
-                                                Queue = queueName,
-                                                MessageType = null,
-                                                Action = action,
-                                                HmqMessageParameter = true
-                                            };
+            {
+                Source = ReadSource.Queue,
+                Queue = queueName,
+                MessageType = null,
+                Action = action,
+                HmqMessageParameter = true
+            };
 
             lock (_subscriptions)
                 _subscriptions.Add(subscription);
@@ -294,13 +294,13 @@ namespace Horse.Mq.Client
         public void On<T>(string queueName, Action<T, HorseMessage> action)
         {
             ReadSubscription subscription = new ReadSubscription
-                                            {
-                                                Source = ReadSource.Queue,
-                                                Queue = queueName,
-                                                MessageType = typeof(T),
-                                                Action = action,
-                                                HmqMessageParameter = true
-                                            };
+            {
+                Source = ReadSource.Queue,
+                Queue = queueName,
+                MessageType = typeof(T),
+                Action = action,
+                HmqMessageParameter = true
+            };
 
             lock (_subscriptions)
                 _subscriptions.Add(subscription);
@@ -358,12 +358,12 @@ namespace Horse.Mq.Client
         public void OnDirect<T>(ushort contentType, Action<T> action)
         {
             ReadSubscription subscription = new ReadSubscription
-                                            {
-                                                Source = ReadSource.Direct,
-                                                ContentType = contentType,
-                                                MessageType = typeof(T),
-                                                Action = action
-                                            };
+            {
+                Source = ReadSource.Direct,
+                ContentType = contentType,
+                MessageType = typeof(T),
+                Action = action
+            };
 
             lock (_subscriptions)
                 _subscriptions.Add(subscription);
@@ -375,13 +375,13 @@ namespace Horse.Mq.Client
         public void OnDirect(ushort contentType, Action<HorseMessage> action)
         {
             ReadSubscription subscription = new ReadSubscription
-                                            {
-                                                Source = ReadSource.Direct,
-                                                ContentType = contentType,
-                                                MessageType = null,
-                                                Action = action,
-                                                HmqMessageParameter = true
-                                            };
+            {
+                Source = ReadSource.Direct,
+                ContentType = contentType,
+                MessageType = null,
+                Action = action,
+                HmqMessageParameter = true
+            };
 
             lock (_subscriptions)
                 _subscriptions.Add(subscription);
@@ -409,13 +409,13 @@ namespace Horse.Mq.Client
         public void OnDirect<T>(ushort contentType, Action<T, HorseMessage> action)
         {
             ReadSubscription subscription = new ReadSubscription
-                                            {
-                                                Source = ReadSource.Direct,
-                                                ContentType = contentType,
-                                                MessageType = typeof(T),
-                                                Action = action,
-                                                HmqMessageParameter = true
-                                            };
+            {
+                Source = ReadSource.Direct,
+                ContentType = contentType,
+                MessageType = typeof(T),
+                Action = action,
+                HmqMessageParameter = true
+            };
 
             lock (_subscriptions)
                 _subscriptions.Add(subscription);
@@ -456,15 +456,15 @@ namespace Horse.Mq.Client
         public void OnRequest<TRequest, TResponse>(ushort contentType, IHorseRequestHandler<TRequest, TResponse> handler)
         {
             ReadSubscription subscription = new ReadSubscription
-                                            {
-                                                Source = ReadSource.Request,
-                                                Queue = null,
-                                                ContentType = contentType,
-                                                MessageType = typeof(TRequest),
-                                                Action = null,
-                                                HmqMessageParameter = true,
-                                                ConsumerExecuter = new RequestHandlerExecuter<TRequest, TResponse>(handler.GetType(), handler, null)
-                                            };
+            {
+                Source = ReadSource.Request,
+                Queue = null,
+                ContentType = contentType,
+                MessageType = typeof(TRequest),
+                Action = null,
+                HmqMessageParameter = true,
+                ConsumerExecuter = new RequestHandlerExecuter<TRequest, TResponse>(handler.GetType(), handler, null)
+            };
 
             lock (_subscriptions)
                 _subscriptions.Add(subscription);
@@ -537,6 +537,9 @@ namespace Horse.Mq.Client
             {
                 foreach (Type type in assemblyType.Assembly.GetTypes())
                 {
+                    if (type.IsInterface || type.IsAbstract)
+                        continue;
+
                     List<ModelTypeInfo> types = FindModelTypes(type);
                     foreach (ModelTypeInfo typeInfo in types)
                     {
@@ -664,15 +667,15 @@ namespace Horse.Mq.Client
                 executer.Resolve(Configurator);
 
             ReadSubscription subscription = new ReadSubscription
-                                            {
-                                                Source = typeInfo.Source,
-                                                Queue = target.Item1,
-                                                ContentType = target.Item2,
-                                                MessageType = typeInfo.ModelType,
-                                                ResponseType = typeInfo.ResponseType,
-                                                Action = null,
-                                                ConsumerExecuter = executer
-                                            };
+            {
+                Source = typeInfo.Source,
+                Queue = target.Item1,
+                ContentType = target.Item2,
+                MessageType = typeInfo.ModelType,
+                ResponseType = typeInfo.ResponseType,
+                Action = null,
+                ConsumerExecuter = executer
+            };
 
             return subscription;
         }

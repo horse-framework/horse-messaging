@@ -20,7 +20,7 @@ namespace Horse.Protocols.Hmq
 
 			if (code != HorseResultCode.Ok)
 			{
-				if (message.Content != null && message.Length > 0)
+				if (message?.Content != null && message.Length > 0)
 					Reason = message.GetStringContent();
 			}
 		}

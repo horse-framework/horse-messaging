@@ -24,7 +24,7 @@ namespace RoutingSample.Server
 			sampleMessageRouter.AddBinding(sampleMessageDirectBinding);
 
 			var giveMeGuidRequestRouter = mq.AddRouter("GIVE-ME-REQUEST-ROUTER", RouteMethod.Distribute);
-			var giveMeGuidRequestHandler = new DirectBinding("sample-message-direct-binding", "@name:GIVE-ME-GUID-REQUEST-HANDLER-CONSUMER", 2, BindingInteraction.Response);
+			var giveMeGuidRequestHandler = new DirectBinding("sample-message-direct-binding", "@name:GIVE-ME-GUID-REQUEST-HANDLER-CONSUMER", 1, BindingInteraction.Response);
 			giveMeGuidRequestRouter.AddBinding(giveMeGuidRequestHandler);
 
 			HorseServer server = new HorseServer();
