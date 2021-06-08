@@ -557,10 +557,10 @@ namespace Horse.Mq
                     queue.UpdateOptionsByMessage(requestMessage);
 
                 DeliveryHandlerBuilder handlerBuilder = new DeliveryHandlerBuilder
-                                                        {
-                                                            Server = this,
-                                                            Queue = queue
-                                                        };
+                {
+                    Server = this,
+                    Queue = queue
+                };
                 if (requestMessage != null)
                 {
                     handlerBuilder.DeliveryHandlerHeader = requestMessage.FindHeader(HorseHeaders.DELIVERY_HANDLER);
@@ -673,7 +673,7 @@ namespace Horse.Mq
         /// </summary>
         public MqClient FindClient(string uniqueId)
         {
-            return _clients.Find(x => x.UniqueId == uniqueId);
+            return _clients.Find(x => x.UniqueId == uniqueId && x.IsConnected);
         }
 
         /// <summary>
@@ -681,7 +681,7 @@ namespace Horse.Mq
         /// </summary>
         public List<MqClient> FindClientByName(string name)
         {
-            return _clients.FindAll(x => x.Name == name);
+            return _clients.FindAll(x => x.Name == name && x.IsConnected);
         }
 
         /// <summary>
@@ -689,7 +689,7 @@ namespace Horse.Mq
         /// </summary>
         public List<MqClient> FindClientByType(string type)
         {
-            return _clients.FindAll(x => x.Type == type);
+            return _clients.FindAll(x => x.Type == type && x.IsConnected);
         }
 
         /// <summary>

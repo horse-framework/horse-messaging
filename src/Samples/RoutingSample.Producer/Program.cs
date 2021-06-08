@@ -23,19 +23,28 @@ namespace RoutingSample.Producer
 
 			while (true)
 			{
+				SampleMessage request = new SampleMessage
+				{
+					Content = "Hello"
+				};
+				
+				/*
 				GiveMeGuidRequest request = new()
 				{
 					Foo = "Hello from sample direct message consumer"
-				};
+				};*/
 				Dictionary<string, string> headers = new()
 				{
 					{ "RequestId", Guid.NewGuid().ToString() },
 					{ "UserId", "12" }
 				};
-				HorseResult<GiveMeGuidResponse> result = await routeBus.PublishRequestJson<GiveMeGuidRequest, GiveMeGuidResponse>(request, headers);
+				HorseResult<GiveMeGuidResponse> result = await routeBus.PublishRequestJson<SampleMessage, GiveMeGuidResponse>(request, headers);
 				if (result.Code == HorseResultCode.NotFound)
 					Debugger.Break();
+				
 				Console.WriteLine($"Push: {result.Code}");
+
+				Console.ReadLine();
 			}
 		}
 	}

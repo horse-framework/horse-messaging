@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Horse.Mq.Clients;
@@ -74,7 +75,8 @@ namespace Horse.Mq.Routing
                 switch (RouteMethod)
                 {
                     case RouteMethod.OnlyFirst:
-                        var first = clients.FirstOrDefault();
+                        MqClient first = clients.FirstOrDefault();
+
                         if (first == null)
                             return false;
 
@@ -82,6 +84,7 @@ namespace Horse.Mq.Routing
 
                     case RouteMethod.Distribute:
                         bool atLeastOneSent = false;
+
                         foreach (MqClient client in clients)
                         {
                             bool sent = await client.SendAsync(message);
@@ -92,7 +95,7 @@ namespace Horse.Mq.Routing
                         return atLeastOneSent;
 
                     case RouteMethod.RoundRobin:
-                        return await SendRoundRobin(message);
+                        return await SendRoundRobin(clients, message);
 
                     default:
                         return false;
@@ -105,22 +108,17 @@ namespace Horse.Mq.Routing
             }
         }
 
-        private Task<bool> SendRoundRobin(HorseMessage message)
+        private Task<bool> SendRoundRobin(MqClient[] clients, HorseMessage message)
         {
-            if (_clients.Length == 0)
-                return Task.FromResult(false);
-
-            MqClient client;
-
             lock (_lock)
             {
                 _roundRobinIndex++;
 
-                if (_roundRobinIndex >= _clients.Length)
+                if (_roundRobinIndex >= clients.Length)
                     _roundRobinIndex = 0;
-
-                client = _clients[_roundRobinIndex];
             }
+
+            MqClient client = clients[_roundRobinIndex];
 
             return client.SendAsync(message);
         }
@@ -130,36 +128,36 @@ namespace Horse.Mq.Routing
         /// </summary>
         private MqClient[] GetClients()
         {
+            MqClient[] clients;
+
             //using cache to prevent performance hurt thousands of message per second situations
             //receivers are reloded in every second while messages are receiving
             if (DateTime.UtcNow - _clientListUpdateTime > TimeSpan.FromMilliseconds(1000))
             {
                 if (Target.StartsWith("@type:", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    var list = Router.Server.FindClientByType(Target.Substring(6));
-
-                    lock (_lock)
-                        _clients = list == null ? new MqClient[0] : list.ToArray();
+                    List<MqClient> list = Router.Server.FindClientByType(Target.Substring(6));
+                    clients = list == null ? Array.Empty<MqClient>() : list.ToArray();
                 }
                 else if (Target.StartsWith("@name:", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    var list = Router.Server.FindClientByName(Target.Substring(6));
-
-                    lock (_lock)
-                        _clients = list == null ? new MqClient[0] : list.ToArray();
+                    List<MqClient> list = Router.Server.FindClientByName(Target.Substring(6));
+                    clients = list == null ? Array.Empty<MqClient>() : list.ToArray();
                 }
                 else
                 {
                     MqClient client = Router.Server.FindClient(Target);
-
-                    lock (_lock)
-                        _clients = client == null ? new MqClient[0] : new[] {client};
+                    clients = client == null ? Array.Empty<MqClient>() : new[] {client};
                 }
 
                 _clientListUpdateTime = DateTime.UtcNow;
             }
+            else
+                return _clients;
 
-            return _clients;
+            _clients = clients;
+
+            return clients;
         }
     }
 }

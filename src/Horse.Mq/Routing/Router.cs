@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Horse.Mq.Clients;
 using Horse.Protocols.Hmq;
@@ -49,6 +48,8 @@ namespace Horse.Mq.Routing
         /// The index value of the binding received last message.
         /// </summary>
         private int _lastRoutedIndex = -1;
+
+        private readonly object _rrlock = new object();
 
         #endregion
 
@@ -204,8 +205,8 @@ namespace Horse.Mq.Routing
 
                 if (sent)
                     result = binding.Interaction != BindingInteraction.None
-                                 ? RouterPublishResult.OkAndWillBeRespond
-                                 : RouterPublishResult.OkWillNotRespond;
+                        ? RouterPublishResult.OkAndWillBeRespond
+                        : RouterPublishResult.OkWillNotRespond;
 
                 index++;
             }
@@ -246,18 +247,27 @@ namespace Horse.Mq.Routing
             int len = Bindings.Length;
             for (int i = 0; i < len; i++)
             {
-                Interlocked.Increment(ref _lastRoutedIndex);
-                if (_lastRoutedIndex >= Bindings.Length)
-                    Interlocked.Exchange(ref _lastRoutedIndex, 0);
+                int index;
+                lock (_rrlock)
+                {
+                    _lastRoutedIndex++;
+                    if (_lastRoutedIndex >= Bindings.Length)
+                        _lastRoutedIndex = 0;
+                    
+                    index = _lastRoutedIndex;
+                }
 
-                Binding binding = Bindings[_lastRoutedIndex];
+                Binding binding = Bindings[index];
+                
                 bool waitResponse = message.WaitResponse;
                 bool sent = await binding.Send(sender, message);
+                
                 message.WaitResponse = waitResponse;
+                
                 if (sent)
                     return binding.Interaction != BindingInteraction.None
-                               ? RouterPublishResult.OkAndWillBeRespond
-                               : RouterPublishResult.OkWillNotRespond;
+                        ? RouterPublishResult.OkAndWillBeRespond
+                        : RouterPublishResult.OkWillNotRespond;
             }
 
             return RouterPublishResult.NoReceivers;
