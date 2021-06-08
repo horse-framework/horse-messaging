@@ -35,13 +35,13 @@ namespace Horse.Messaging.Server.Routing
         {
             try
             {
-                HorseQueue queue = GetQueue();
+                HorseQueue queue = await GetQueue(message);
                 if (queue == null)
                     return false;
 
                 string messageId = Interaction == BindingInteraction.None
-                                       ? Router.Rider.MessageIdGenerator.Create()
-                                       : message.MessageId;
+                    ? Router.Rider.MessageIdGenerator.Create()
+                    : message.MessageId;
 
                 HorseMessage msg = message.Clone(true, true, messageId);
 
@@ -67,17 +67,25 @@ namespace Horse.Messaging.Server.Routing
         /// If it's not cached, finds and caches it before returns.
         /// </summary>
         /// <returns></returns>
-        private HorseQueue GetQueue()
+        private async Task<HorseQueue> GetQueue(HorseMessage requestMessage)
         {
             if (_targetQueue != null && DateTime.UtcNow - _queueUpdateTime < TimeSpan.FromMinutes(1))
                 return _targetQueue;
 
             HorseQueue queue = Router.Rider.Queue.Find(Target);
-            if (queue == null)
-                return null;
 
-            _queueUpdateTime = DateTime.UtcNow;
-            _targetQueue = queue;
+            if (queue == null)
+            {
+                if (Router.Rider.Options.AutoQueueCreation)
+                    queue = await Router.Rider.Queue.Create(Target, Router.Rider.Queue.Options, requestMessage, Router.Rider.Queue.DeliveryHandlerFactory, true, true);
+            }
+
+            if (queue != null)
+            {
+                _queueUpdateTime = DateTime.UtcNow;
+                _targetQueue = queue;
+            }
+
             return _targetQueue;
         }
     }
