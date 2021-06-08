@@ -91,6 +91,8 @@ namespace Horse.Messaging.Server
         /// </summary>
         internal IMessageContentSerializer MessageContentSerializer { get; } = new NewtonsoftContentSerializer();
 
+        private bool _initialized;
+
         #endregion
 
         /// <summary>
@@ -118,6 +120,17 @@ namespace Horse.Messaging.Server
 
             Cache.Initialize();
             NodeManager.Initialize();
+        }
+
+        /// <summary>
+        /// Initializes late initialization required services
+        /// </summary>
+        internal void Initialize()
+        {
+            if (_initialized)
+                return;
+
+            _initialized = true;
             Transaction.Initialize();
         }
 

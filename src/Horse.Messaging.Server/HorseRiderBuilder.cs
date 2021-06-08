@@ -32,6 +32,7 @@ namespace Horse.Messaging.Server
         /// </summary>
         public HorseRider Build()
         {
+            Rider.Initialize();
             return Rider;
         }
     }

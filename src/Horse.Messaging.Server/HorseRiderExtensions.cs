@@ -55,6 +55,9 @@ namespace Horse.Messaging.Server
             builder.Rider = rider;
 
             cfg(builder);
+            
+            rider.Initialize();
+            
             return rider;
         }
 
