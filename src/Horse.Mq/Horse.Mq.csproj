@@ -6,9 +6,9 @@
         <Product>Horse.Mq</Product>
         <Description>Messaging Queue Server</Description>
         <PackageTags>horse,server,hmq,messaging,queue,mq</PackageTags>
-        <AssemblyVersion>5.0.14</AssemblyVersion>
-        <FileVersion>5.0.14</FileVersion>
-        <PackageVersion>5.0.14</PackageVersion>
+        <AssemblyVersion>5.0.15</AssemblyVersion>
+        <FileVersion>5.0.15</FileVersion>
+        <PackageVersion>5.0.15</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/horse-framework/horse-mq</PackageProjectUrl>

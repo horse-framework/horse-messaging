@@ -6,9 +6,9 @@
         <Product>Horse.Protocols.Hmq</Product>
         <Description>Horse Messaging Queue (HMQ) Protocol library and server extension for Horse Server</Description>
         <PackageTags>horse,tcp,server,http,messaging,queue,hmq,mq,protocol</PackageTags>
-        <AssemblyVersion>5.0.14</AssemblyVersion>
-        <FileVersion>5.0.14</FileVersion>
-        <PackageVersion>5.0.14</PackageVersion>
+        <AssemblyVersion>5.0.15</AssemblyVersion>
+        <FileVersion>5.0.15</FileVersion>
+        <PackageVersion>5.0.15</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/horse-framework/horse-mq</PackageProjectUrl>
