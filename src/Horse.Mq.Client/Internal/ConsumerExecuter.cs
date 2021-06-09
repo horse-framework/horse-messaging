@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Horse.Mq.Client.Annotations;
@@ -23,6 +24,9 @@ namespace Horse.Mq.Client.Internal
 
         protected TransportExceptionDescriptor DefaultPublishException { get; private set; }
         protected List<TransportExceptionDescriptor> PublishExceptions { get; private set; }
+        
+        protected List<InterceptorDescriptor> BeforeInterceptors { get; private set; }
+        protected List<InterceptorDescriptor> AfterInterceptors { get; private set; }
 
         #endregion
 
@@ -41,6 +45,8 @@ namespace Horse.Mq.Client.Internal
             PushExceptions = defaultOptions.PushExceptions;
             DefaultPublishException = defaultOptions.DefaultPublishException;
             PublishExceptions = defaultOptions.PublishExceptions;
+            BeforeInterceptors = defaultOptions.BeforeInterceptors;
+            AfterInterceptors = defaultOptions.AfterInterceptors;
 
             if (DefaultPushException != null && !typeof(ITransportableException).IsAssignableFrom(DefaultPushException.ModelType))
                 throw new InvalidCastException("PushException model type must implement ITransportableException interface");
@@ -55,11 +61,19 @@ namespace Horse.Mq.Client.Internal
             foreach (TransportExceptionDescriptor item in PublishExceptions)
                 if (item != null && !typeof(ITransportableException).IsAssignableFrom(item.ModelType))
                     throw new InvalidCastException("PublishException model type must implement ITransportableException interface");
+            
+            foreach (InterceptorDescriptor item in BeforeInterceptors)
+                if (item != null && !typeof(IHorseMessageInterceptor).IsAssignableFrom(item.ImplementedType))
+                    throw new InvalidCastException("HorseMessageInterceptor model type must implement IHorseMessageInterceptor interface");  
+            
+            foreach (InterceptorDescriptor item in AfterInterceptors)
+                if (item != null && !typeof(IHorseMessageInterceptor).IsAssignableFrom(item.ImplementedType))
+                    throw new InvalidCastException("HorseMessageInterceptor model type must implement IHorseMessageInterceptor interface");
         }
 
         public abstract Task Execute(HorseClient client, HorseMessage message, object model);
 
-        protected void ResolveAttributes(Type type, Type modelType)
+        protected void ResolveAttributes(Type type)
         {
             if (!SendAck)
             {
@@ -101,8 +115,79 @@ namespace Horse.Mq.Client.Internal
                 else
                     PublishExceptions.Add(new TransportExceptionDescriptor(attribute.ModelType, attribute.ExceptionType));
             }
+            
+            if (BeforeInterceptors is null)
+                BeforeInterceptors = new List<InterceptorDescriptor>();   
+            
+            if (AfterInterceptors is null)
+                AfterInterceptors = new List<InterceptorDescriptor>();           
+            
+            IEnumerable<HorseMessageInterceptorAttribute> interceptorAttributes = type.GetCustomAttributes<HorseMessageInterceptorAttribute>(true);
+            foreach (HorseMessageInterceptorAttribute attribute in interceptorAttributes)
+            {
+                if (attribute.Intercept == Intercept.Before)
+                    BeforeInterceptors.Add(new InterceptorDescriptor(attribute.ImplementedType, attribute.Intercept));
+                else
+                    AfterInterceptors.Add(new InterceptorDescriptor(attribute.ImplementedType, attribute.Intercept));
+            }
+
+        }
+        
+        protected async Task RunBeforeInterceptors(HorseMessage message, HorseClient client, IConsumerFactory consumerFactory = null)
+        {
+            if (BeforeInterceptors.Count == 0) return;
+            if (consumerFactory is null)
+            {
+                var interceptors = BeforeInterceptors.Select(m => (IHorseMessageInterceptor) Activator.CreateInstance(m.ImplementedType)).ToList();
+                foreach (var interceptor in interceptors)
+                    await interceptor.Intercept(message, client);
+            }
+            else
+            {
+                foreach (InterceptorDescriptor descriptor in BeforeInterceptors)
+                {
+                    var interceptor = await consumerFactory.CreateInterceptor(descriptor.ImplementedType);
+                    await interceptor.Intercept(message, client);
+                }
+            }
+        }
+        
+        protected async Task RunAfterInterceptors(HorseMessage message, HorseClient client, IConsumerFactory consumerFactory = null)
+        {
+            if (AfterInterceptors.Count == 0) return;
+
+         
+            if (consumerFactory is null)
+            {
+                var interceptors = AfterInterceptors.Select(m => (IHorseMessageInterceptor) Activator.CreateInstance(m.ImplementedType)).ToList();
+                foreach (var interceptor in interceptors)
+                    try
+                    {
+                        await interceptor.Intercept(message, client);
+                    }
+                    catch (Exception e)
+                    {
+                        // TODO : Should be send to client error handler.
+                    }
+            }
+            else
+            {
+                foreach (InterceptorDescriptor descriptor in AfterInterceptors)
+                {
+                    var interceptor = await consumerFactory.CreateInterceptor(descriptor.ImplementedType);
+                    try
+                    {
+                        await interceptor.Intercept(message, client);
+                    }
+                    catch (Exception e)
+                    {
+                        // TODO : Should be send to client error handler.
+                    }
+                }
+            }
         }
 
+        
         /// <summary>
         /// Sends negative ack
         /// </summary>
@@ -130,7 +215,7 @@ namespace Horse.Mq.Client.Internal
 
             return client.SendNegativeAck(message, reason);
         }
-
+        
         protected async Task SendExceptions(HorseMessage consumingMessage, HorseClient client, Exception exception)
         {
             if (PushExceptions.Count == 0 && PublishExceptions.Count == 0 && DefaultPushException == null && DefaultPublishException == null)

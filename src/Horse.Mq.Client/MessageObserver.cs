@@ -539,7 +539,7 @@ namespace Horse.Mq.Client
                 {
                     if (type.IsInterface || type.IsAbstract)
                         continue;
-
+                    
                     List<ModelTypeInfo> types = FindModelTypes(type);
                     foreach (ModelTypeInfo typeInfo in types)
                     {
@@ -557,8 +557,28 @@ namespace Horse.Mq.Client
             }
 
             return list;
+        }  
+        
+        /// <summary>
+        /// Registers all IQueueConsumers in assemblies
+        /// </summary>
+        public IEnumerable<Type> RegisterAssemblyInterceptors(params Type[] assemblyTypes)
+        {
+            List<Type> list = new List<Type>();
+            foreach (Type assemblyType in assemblyTypes)
+            {
+                foreach (Type type in assemblyType.Assembly.GetTypes())
+                {
+                    if (type.IsInterface || type.IsAbstract)
+                        continue;
+                    
+                    if(typeof(IHorseMessageInterceptor).IsAssignableFrom(type))
+                        list.Add(type);
+                }
+            }
+            return list;
         }
-
+        
         /// <summary>
         /// Registers a single consumer
         /// </summary>

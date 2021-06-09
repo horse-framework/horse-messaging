@@ -21,7 +21,7 @@ namespace Horse.Mq.Client.Internal
         public override void Resolve(ModelTypeConfigurator defaultOptions = null)
         {
             base.Resolve(defaultOptions);
-            ResolveAttributes(_consumerType, typeof(TModel));
+            ResolveAttributes(_consumerType);
         }
 
         public override async Task Execute(HorseClient client, HorseMessage message, object model)
@@ -33,14 +33,21 @@ namespace Horse.Mq.Client.Internal
             try
             {
                 if (_consumer != null)
+                {
+                    await RunBeforeInterceptors(message, client);
                     await Consume(_consumer, message, t, client);
+                    await RunAfterInterceptors(message, client);
+                }
                 
                 else if (_consumerFactoryCreator != null)
                 {
                     consumerFactory = _consumerFactoryCreator();
+                    consumerFactory.CreateScope();
                     object consumerObject = await consumerFactory.CreateConsumer(_consumerType);
                     IQueueConsumer<TModel> consumer = (IQueueConsumer<TModel>) consumerObject;
+                    await RunBeforeInterceptors(message, client, consumerFactory);
                     await Consume(consumer, message, t, client);
+                    await RunAfterInterceptors(message, client, consumerFactory);
                 }
                 else
                     throw new ArgumentNullException("There is no consumer defined");

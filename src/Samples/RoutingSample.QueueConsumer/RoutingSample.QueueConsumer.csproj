@@ -6,8 +6,14 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\Horse.Mq.Bus\Horse.Mq.Bus.csproj" />
       <ProjectReference Include="..\..\Horse.Mq.Client\Horse.Mq.Client.csproj" />
       <ProjectReference Include="..\RoutingSample.Models\RoutingSample.Models.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.1" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
     </ItemGroup>
 
 </Project>

@@ -21,7 +21,7 @@ namespace Horse.Mq.Client.Internal
         public override void Resolve(ModelTypeConfigurator defaultOptions = null)
         {
             base.Resolve(defaultOptions);
-            ResolveAttributes(_handlerType, typeof(TRequest));
+            ResolveAttributes(_handlerType);
         }
 
         public override async Task Execute(HorseClient client, HorseMessage message, object model)
@@ -40,6 +40,7 @@ namespace Horse.Mq.Client.Internal
                 else if (_handlerFactoryCreator != null)
                 {
                     consumerFactory = _handlerFactoryCreator();
+                    consumerFactory.CreateScope();
                     object consumerObject = await consumerFactory.CreateConsumer(_handlerType);
                     handler = (IHorseRequestHandler<TRequest, TResponse>) consumerObject;
                 }
@@ -48,6 +49,7 @@ namespace Horse.Mq.Client.Internal
 
                 try
                 {
+                    await RunBeforeInterceptors(message, client, consumerFactory);
                     TResponse responseModel = await Handle(handler, requestModel, message, client);
                     HorseResultCode code = responseModel is null ? HorseResultCode.NoContent : HorseResultCode.Ok;
                     HorseMessage responseMessage = message.CreateResponse(code);
@@ -57,6 +59,7 @@ namespace Horse.Mq.Client.Internal
 
                     respond = true;
                     await client.SendAsync(responseMessage);
+                    await RunAfterInterceptors(message, client, consumerFactory);
                 }
                 catch (Exception e)
                 {
