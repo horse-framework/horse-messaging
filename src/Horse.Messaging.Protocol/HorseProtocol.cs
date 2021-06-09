@@ -87,11 +87,11 @@ namespace Horse.Messaging.Protocol
 
             info.State = ConnectionStates.Pipe;
             handshakeResult.Socket = socket;
-            _server.HeartbeatManager.Add(socket);
+            _server.HeartbeatManager?.Add(socket);
 
             socket.SetCleanupAction(s =>
             {
-                _server.HeartbeatManager.Remove(socket);
+                _server.HeartbeatManager?.Remove(socket);
                 _handler.Disconnected(_server, s);
             });
 

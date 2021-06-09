@@ -18,8 +18,8 @@ namespace Sample.Cache
 
             client.Connect();
             
-            //client.Cache.Set<CacheModel>("modelA");
-            //client.Cache.Get<CacheModel>();
+            //client.Cache.Set<CacheModel>("modelA", null);
+           // client.Cache.Get<CacheModel>();
 
             Console.ReadLine();
         }

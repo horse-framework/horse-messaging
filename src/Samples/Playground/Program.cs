@@ -8,11 +8,11 @@ namespace Playground
         static async Task Main(string[] args)
         {
             HorseClient client = new HorseClient();
-
-
+            
             using (HorseTransaction transaction = new HorseTransaction(client, "TransactionName"))
             {
                 await transaction.Begin();
+
                 //todo: do something
                 bool commited = await transaction.Commit();
             }
@@ -25,6 +25,7 @@ namespace Playground
                 if (success)
                 {
                     bool commited = await transaction.Commit();
+                    
                 }
             }
         }

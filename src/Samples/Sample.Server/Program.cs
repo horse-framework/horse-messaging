@@ -33,18 +33,17 @@ namespace Sample.Server
                 Token = "if authentication requried between servers",
                 ReconnectWait = 500 //ms for retry if connection fails
             });
-            
-            
+
 
             //rider.LoadPersistentQueues();
 
 
-            ServerTransactionContainer container = rider.Transaction.CreateContainer("TransactionName", TimeSpan.FromSeconds(30),
-                                                                                     new QueueTransactionEndpoint(rider.Queue, "CommitQueue"),
-                                                                                     new QueueTransactionEndpoint(rider.Queue, "RollbackQueue"),
-                                                                                     new QueueTransactionEndpoint(rider.Queue, "TimeoutQueue"));
-            
-            
+            rider.Transaction.CreateContainer("TransactionName",
+                                              TimeSpan.FromSeconds(30),
+                                              new QueueTransactionEndpoint(rider.Queue, "CommitQueue"),
+                                              new QueueTransactionEndpoint(rider.Queue, "RollbackQueue"),
+                                              new QueueTransactionEndpoint(rider.Queue, "TimeoutQueue"));
+
 
             HorseServer server = new HorseServer();
             server.UseRider(rider);
