@@ -120,7 +120,13 @@ namespace Horse.Mq.Client.Internal
             if (AfterInterceptors is null)
                 AfterInterceptors = new List<InterceptorDescriptor>();           
             
-            IEnumerable<HorseMessageInterceptorAttribute> interceptorAttributes = type.GetCustomAttributes<HorseMessageInterceptorAttribute>(true);
+            ResolveInterceptorAttributes(type);
+        }
+
+        private void ResolveInterceptorAttributes(Type type)
+        {
+            if(type.BaseType is not null) ResolveInterceptorAttributes(type.BaseType);
+            IEnumerable<HorseMessageInterceptorAttribute> interceptorAttributes =  type.GetCustomAttributes<HorseMessageInterceptorAttribute>(false);
             foreach (HorseMessageInterceptorAttribute attribute in interceptorAttributes)
             {
                 if (attribute.Intercept == Intercept.Before)
@@ -128,7 +134,6 @@ namespace Horse.Mq.Client.Internal
                 else
                     AfterInterceptors.Add(new InterceptorDescriptor(attribute.ImplementedType, attribute.Intercept));
             }
-
         }
         
         protected async Task RunBeforeInterceptors(HorseMessage message, HorseClient client, IConsumerFactory consumerFactory = null)
