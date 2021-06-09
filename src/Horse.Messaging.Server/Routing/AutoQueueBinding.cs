@@ -82,7 +82,7 @@ namespace Horse.Messaging.Server.Routing
                 return _targetQueue;
             }
 
-            _targetQueue = await Router.Rider.Queue.Create(queueName, Router.Rider.Queue.Options, message, null, true, true);
+            _targetQueue = await Router.Rider.Queue.Create(queueName, Router.Rider.Queue.Options, message, Router.Rider.Queue.DeliveryHandlerFactory, true, true);
             return _targetQueue;
         }
     }
