@@ -20,22 +20,43 @@ namespace RoutingSample.Producer
 			connector.Run();
 
 			IHorseRouteBus routeBus = connector.Bus.Route;
+			IHorseQueueBus queueBus = connector.Bus.Queue;
 
+			int counter = 1;
 			while (true)
 			{
+				SampleMessage request = new SampleMessage
+				{
+					Content = "Hello"
+				};
+
+				/*
 				GiveMeGuidRequest request = new()
 				{
 					Foo = "Hello from sample direct message consumer"
-				};
+				};*/
+				// Dictionary<string, string> headers = new()
+				// {
+				// 	{ "RequestId", Guid.NewGuid().ToString() },
+				// 	{ "UserId", "12" }
+				// };
+				// HorseResult<GiveMeGuidResponse> result = await routeBus.PublishRequestJson<SampleMessage, GiveMeGuidResponse>(request, headers);
+				// if (result.Code == HorseResultCode.NotFound)
+				// 	Debugger.Break();
+				//
+				// Console.WriteLine($"Push: {result.Code}");
+
 				Dictionary<string, string> headers = new()
 				{
-					{ "RequestId", Guid.NewGuid().ToString() },
-					{ "UserId", "12" }
+					{ "Id", counter.ToString() },
 				};
-				HorseResult<GiveMeGuidResponse> result = await routeBus.PublishRequestJson<GiveMeGuidRequest, GiveMeGuidResponse>(request, headers);
-				if (result.Code == HorseResultCode.NotFound)
-					Debugger.Break();
-				Console.WriteLine($"Push: {result.Code}");
+
+				await queueBus.PushJson(new SampleMessage
+				{
+					Content = "Lorem ipsum dolor sit amet"
+				}, false, headers);
+				counter++;
+				Console.ReadLine();
 			}
 		}
 	}

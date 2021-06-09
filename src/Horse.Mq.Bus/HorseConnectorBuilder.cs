@@ -34,11 +34,14 @@ namespace Horse.Mq.Bus
         private ModelTypeConfigurator _configurator;
 
         private readonly List<Tuple<ServiceLifetime, Type>> _individualConsumers = new List<Tuple<ServiceLifetime, Type>>();
-        private readonly List<Tuple<ServiceLifetime, Type>> _assembyConsumers = new List<Tuple<ServiceLifetime, Type>>();
+        private readonly List<Tuple<ServiceLifetime, Type>> _assemblyConsumers = new List<Tuple<ServiceLifetime, Type>>();
+        private readonly List<Tuple<ServiceLifetime, Type>> _individualInterceptors = new List<Tuple<ServiceLifetime, Type>>();
+        private readonly List<Tuple<ServiceLifetime, Type>> _assemblyInterceptors = new List<Tuple<ServiceLifetime, Type>>();
 
         internal List<Tuple<ServiceLifetime, Type>> IndividualConsumers => _individualConsumers;
-
-        internal List<Tuple<ServiceLifetime, Type>> AssembyConsumers => _assembyConsumers;
+        internal List<Tuple<ServiceLifetime, Type>> AssemblyConsumers => _assemblyConsumers;
+        internal List<Tuple<ServiceLifetime, Type>> IndividualInterceptors => _individualInterceptors;
+        internal List<Tuple<ServiceLifetime, Type>> AssemblyInterceptors => _assemblyInterceptors;
 
         private readonly object _serviceContainer;
 
@@ -220,7 +223,7 @@ namespace Horse.Mq.Bus
         public HorseConnectorBuilder AddTransientConsumers(params Type[] assemblyTypes)
         {
             foreach (Type type in assemblyTypes)
-                _assembyConsumers.Add(new Tuple<ServiceLifetime, Type>(ServiceLifetime.Transient, type));
+                _assemblyConsumers.Add(new Tuple<ServiceLifetime, Type>(ServiceLifetime.Transient, type));
 
             return this;
         }
@@ -231,7 +234,7 @@ namespace Horse.Mq.Bus
         public HorseConnectorBuilder AddScopedConsumers(params Type[] assemblyTypes)
         {
             foreach (Type type in assemblyTypes)
-                _assembyConsumers.Add(new Tuple<ServiceLifetime, Type>(ServiceLifetime.Scoped, type));
+                _assemblyConsumers.Add(new Tuple<ServiceLifetime, Type>(ServiceLifetime.Scoped, type));
 
             return this;
         }
@@ -242,7 +245,71 @@ namespace Horse.Mq.Bus
         public HorseConnectorBuilder AddSingletonConsumers(params Type[] assemblyTypes)
         {
             foreach (Type type in assemblyTypes)
-                _assembyConsumers.Add(new Tuple<ServiceLifetime, Type>(ServiceLifetime.Singleton, type));
+                _assemblyConsumers.Add(new Tuple<ServiceLifetime, Type>(ServiceLifetime.Singleton, type));
+
+            return this;
+        }
+
+        #endregion
+        
+        #region Interceptors
+
+        /// <summary>
+        /// Registers new transient interceptor
+        /// </summary>
+        public HorseConnectorBuilder AddTransientInterceptor<TInterceptor>() where TInterceptor : class
+        {
+            _individualInterceptors.Add(new Tuple<ServiceLifetime, Type>(ServiceLifetime.Transient, typeof(TInterceptor)));
+            return this;
+        }
+
+        /// <summary>
+        /// Registers new scoped interceptor
+        /// </summary>
+        public HorseConnectorBuilder AddScopedInterceptor<TInterceptor>() where TInterceptor : class
+        {
+            _individualInterceptors.Add(new Tuple<ServiceLifetime, Type>(ServiceLifetime.Scoped, typeof(TInterceptor)));
+            return this;
+        }
+
+        /// <summary>
+        /// Registers new singleton interceptor
+        /// </summary>
+        public HorseConnectorBuilder AddSingletonInterceptor<TInterceptor>() where TInterceptor : class
+        {
+            _individualInterceptors.Add(new Tuple<ServiceLifetime, Type>(ServiceLifetime.Singleton, typeof(TInterceptor)));
+            return this;
+        }
+
+        /// <summary>
+        /// Registers all interceptors types with transient lifetime in type assemblies
+        /// </summary>
+        public HorseConnectorBuilder AddTransientInterceptors(params Type[] assemblyTypes)
+        {
+            foreach (Type type in assemblyTypes)
+                _assemblyInterceptors.Add(new Tuple<ServiceLifetime, Type>(ServiceLifetime.Transient, type));
+
+            return this;
+        }
+
+        /// <summary>
+        /// Registers all interceptors types with scoped lifetime in type assemblies
+        /// </summary>
+        public HorseConnectorBuilder AddScopedInterceptors(params Type[] assemblyTypes)
+        {
+            foreach (Type type in assemblyTypes)
+                _assemblyInterceptors.Add(new Tuple<ServiceLifetime, Type>(ServiceLifetime.Scoped, type));
+
+            return this;
+        }
+
+        /// <summary>
+        /// Registers all interceptors types with singleton lifetime in type assemblies
+        /// </summary>
+        public HorseConnectorBuilder AddSingletonInterceptors(params Type[] assemblyTypes)
+        {
+            foreach (Type type in assemblyTypes)
+                _assemblyInterceptors.Add(new Tuple<ServiceLifetime, Type>(ServiceLifetime.Singleton, type));
 
             return this;
         }
@@ -327,13 +394,15 @@ namespace Horse.Mq.Bus
             return _connector;
         }
 
+
+
         /// <summary>
         /// Registers all consumers.
         /// This method is called if implementation is done without ioc container.
         /// </summary>
         private void RegisterConsumers(HmqStickyConnector connector)
         {
-            foreach (Tuple<ServiceLifetime, Type> pair in _assembyConsumers)
+            foreach (Tuple<ServiceLifetime, Type> pair in _assemblyConsumers)
                 connector.Observer.RegisterAssemblyConsumers(pair.Item2);
 
             foreach (Tuple<ServiceLifetime, Type> pair in _individualConsumers)
@@ -375,7 +444,7 @@ namespace Horse.Mq.Bus
             _error = null;
             _enhance = null;
             _hosts.Clear();
-            _assembyConsumers.Clear();
+            _assemblyConsumers.Clear();
             _individualConsumers.Clear();
         }
 
