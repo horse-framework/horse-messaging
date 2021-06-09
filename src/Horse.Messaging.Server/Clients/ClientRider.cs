@@ -100,7 +100,7 @@ namespace Horse.Messaging.Server.Clients
         /// </summary>
         public MessagingClient Find(string uniqueId)
         {
-            return _clients.Find(x => x.UniqueId == uniqueId);
+            return _clients.Find(x => x.UniqueId == uniqueId && x.IsConnected);
         }
 
         /// <summary>
@@ -108,7 +108,7 @@ namespace Horse.Messaging.Server.Clients
         /// </summary>
         public List<MessagingClient> FindClientByName(string name)
         {
-            return _clients.FindAll(x => x.Name == name);
+            return _clients.FindAll(x => x.Name == name && x.IsConnected);
         }
 
         /// <summary>
@@ -116,7 +116,7 @@ namespace Horse.Messaging.Server.Clients
         /// </summary>
         public List<MessagingClient> FindByType(string type)
         {
-            return _clients.FindAll(x => x.Type == type);
+            return _clients.FindAll(x => x.Type == type && x.IsConnected);
         }
 
         /// <summary>

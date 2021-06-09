@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
@@ -56,7 +55,9 @@ namespace Horse.Messaging.Server.Routing
         /// Event Manage for HorseEventType.MessagePublishedToRouter
         /// </summary>
         public EventManager PublishEvent { get; }
-
+        
+        private readonly object _rrlock = new object();
+        
         #endregion
 
         /// <summary>
@@ -248,7 +249,7 @@ namespace Horse.Messaging.Server.Routing
 
             return result;
         }
-
+        
         /// <summary>
         /// Sends the message to only one binding within round robin algorithm
         /// </summary>
@@ -257,11 +258,18 @@ namespace Horse.Messaging.Server.Routing
             int len = Bindings.Length;
             for (int i = 0; i < len; i++)
             {
-                Interlocked.Increment(ref _lastRoutedIndex);
-                if (_lastRoutedIndex >= Bindings.Length)
-                    Interlocked.Exchange(ref _lastRoutedIndex, 0);
+                int index;
+                lock (_rrlock)
+                {
+                    _lastRoutedIndex++;
+                    if (_lastRoutedIndex >= Bindings.Length)
+                        _lastRoutedIndex = 0;
 
-                Binding binding = Bindings[_lastRoutedIndex];
+                    index = _lastRoutedIndex;
+                }
+                
+                Binding binding = Bindings[index];
+                
                 bool waitResponse = message.WaitResponse;
                 bool sent = await binding.Send(sender, message);
                 message.WaitResponse = waitResponse;
