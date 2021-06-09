@@ -31,7 +31,7 @@ namespace Horse.Messaging.Server.Transactions
         /// </summary>
         public MessagingClient Client { get; }
 
-        internal TaskCompletionSource<ServerTransaction> TimeoutHandler { get; } = new TaskCompletionSource<ServerTransaction>(TaskCreationOptions.LongRunning);
+        internal TaskCompletionSource<ServerTransaction> TimeoutHandler { get; } = new TaskCompletionSource<ServerTransaction>();
 
         private ServerTransactionStatus _status;
         private Task _waiterTask;
@@ -75,7 +75,7 @@ namespace Horse.Messaging.Server.Transactions
             Message = messsage;
             Id = messsage.MessageId;
             Deadline = deadline;
-            Status = ServerTransactionStatus.None;
+            Status = ServerTransactionStatus.Begin;
         }
 
         internal void Track()

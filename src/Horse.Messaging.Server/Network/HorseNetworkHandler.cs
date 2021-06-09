@@ -11,6 +11,7 @@ using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
 using Horse.Messaging.Server.Security;
+using Horse.Messaging.Server.Transactions;
 
 namespace Horse.Messaging.Server.Network
 {
@@ -36,6 +37,7 @@ namespace Horse.Messaging.Server.Network
         private readonly INetworkMessageHandler _channelHandler;
         private readonly INetworkMessageHandler _eventHandler;
         private readonly INetworkMessageHandler _cacheHandler;
+        private readonly INetworkMessageHandler _transactionHandler;
 
         public HorseNetworkHandler(HorseRider rider)
         {
@@ -50,6 +52,7 @@ namespace Horse.Messaging.Server.Network
             _eventHandler = new EventMessageHandler(rider);
             _cacheHandler = new CacheNetworkHandler(rider);
             _channelHandler = new ChannelNetworkHandler(rider);
+            _transactionHandler = new TransactionMessageHandler(rider);
         }
 
         #endregion
@@ -191,6 +194,9 @@ namespace Horse.Messaging.Server.Network
                     if (!fromNode)
                         _ = _instanceHandler.Handle(mc, message, false);
                     return _cacheHandler.Handle(mc, message, fromNode);
+                
+                case MessageType.Transaction:
+                    return _transactionHandler.Handle(mc, message, false);
 
                 case MessageType.QueuePullRequest:
                     return _pullRequestHandler.Handle(mc, message, fromNode);

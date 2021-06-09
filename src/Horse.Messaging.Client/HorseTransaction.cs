@@ -15,17 +15,17 @@ namespace Horse.Messaging.Client
         /// Transaction is not started
         /// </summary>
         None,
-        
+
         /// <summary>
         /// Transaction began
         /// </summary>
         Begin,
-        
+
         /// <summary>
         /// Transaction committed
         /// </summary>
         Commit,
-        
+
         /// <summary>
         /// Transaction rolled back
         /// </summary>
@@ -41,12 +41,12 @@ namespace Horse.Messaging.Client
         /// Transaction name
         /// </summary>
         public string Name { get; }
-        
+
         /// <summary>
         /// Unique transaction Id
         /// </summary>
         public string Id { get; }
-        
+
         /// <summary>
         /// Transaction client
         /// </summary>
@@ -126,7 +126,7 @@ namespace Horse.Messaging.Client
         {
             return Begin<object>(null);
         }
-        
+
         /// <summary>
         /// Begins new transactions
         /// </summary>
@@ -139,10 +139,10 @@ namespace Horse.Messaging.Client
         {
             if (Status != TransactionStatus.None)
                 throw new InvalidOperationException($"{Name} Transaction already began ({Id})");
-            
+
             HorseMessage message = new HorseMessage(MessageType.Transaction, Name, KnownContentTypes.TransactionBegin);
             message.SetMessageId(Id);
-            
+
             if (model != null)
                 Client.MessageSerializer.Serialize(message, model);
             else if (_transactionContent != null)
@@ -160,8 +160,8 @@ namespace Horse.Messaging.Client
             if (code == HorseResultCode.NotFound)
                 throw new KeyNotFoundException("Transaction Name is not defined in server: " + Name);
 
-            //if (code == HorseResultCode.Failed)
-            throw new Exception($"{Name} transaction begin operation is failed ({message.MessageId})");
+            if (code == HorseResultCode.Failed)
+                throw new Exception($"{Name} transaction begin operation is failed ({message.MessageId})");
         }
 
         /// <summary>
@@ -178,11 +178,11 @@ namespace Horse.Messaging.Client
 
             HorseMessage response = await Client.Request(message);
             HorseResultCode code = (HorseResultCode) response.ContentType;
-            
+
             bool success = code == HorseResultCode.Ok;
             if (success)
                 Status = TransactionStatus.Commit;
-            
+
             return success;
         }
 
@@ -194,17 +194,17 @@ namespace Horse.Messaging.Client
         {
             if (Status != TransactionStatus.Begin)
                 throw new InvalidOperationException($"{Name} Transaction in {Status} status cannot be rolled back ({Id})");
-            
+
             HorseMessage message = new HorseMessage(MessageType.Transaction, Name, KnownContentTypes.TransactionRollback);
             message.SetMessageId(Id);
 
             HorseMessage response = await Client.Request(message);
             HorseResultCode code = (HorseResultCode) response.ContentType;
-            
+
             bool success = code == HorseResultCode.Ok;
             if (success)
                 Status = TransactionStatus.Rollback;
-            
+
             return success;
         }
     }

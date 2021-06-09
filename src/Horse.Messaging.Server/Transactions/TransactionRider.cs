@@ -270,7 +270,7 @@ namespace Horse.Messaging.Server.Transactions
         /// <summary>
         /// Begins new transaction from remote
         /// </summary>
-        public Task Begin(MessagingClient client, HorseMessage message)
+        public async Task Begin(MessagingClient client, HorseMessage message)
         {
             ServerTransactionContainer container;
             lock (_containers)
@@ -278,10 +278,12 @@ namespace Horse.Messaging.Server.Transactions
 
             if (container == null)
             {
-                return client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+                await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+                return;
             }
 
-            return container.Create(client, message);
+            bool created = await container.Create(client, message);
+            await client.SendAsync(message.CreateResponse(created ? HorseResultCode.Ok : HorseResultCode.Failed));
         }
 
         /// <summary>
