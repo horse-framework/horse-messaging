@@ -1,6 +1,8 @@
 ﻿using System;
+using Horse.Mq.Bus;
 using Horse.Mq.Client;
 using Horse.Mq.Client.Connectors;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RoutingSample.QueueConsumer
 {
@@ -8,18 +10,21 @@ namespace RoutingSample.QueueConsumer
 	{
 		private static void Main(string[] args)
 		{
-			HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(2));
-			connector.AddHost("hmq://localhost:15500");
-			connector.ContentSerializer = new NewtonsoftContentSerializer();
-			connector.Observer.RegisterConsumer<SampleMessageQueueConsumer>();
-			connector.Connected += (c) =>
-			{
-				Console.WriteLine("CONNECTED");
-				_ = connector.GetClient().Queues.Subscribe("SAMPLE-MESSAGE-QUEUE", false);
-			};
-			connector.Disconnected += (c) => Console.WriteLine("DISCONNECTED");
-			connector.MessageReceived += (client, message) => Console.WriteLine("Queue message received");
-			connector.Run();
+			IServiceCollection services = new ServiceCollection();
+			services.AddScoped<IDenemeSession, DenemeSession>();
+			services.AddHorseBus(hmq =>
+								 {
+									 hmq.AddHost("hmq://localhost:15500");
+									 hmq.AddScopedConsumers(typeof(Program));
+									 hmq.AddScopedInterceptors(typeof(Program));
+									 hmq.UseNewtonsoftJsonSerializer();
+									 hmq.OnConnected(m => Console.WriteLine("CONNECTED"));
+									 hmq.OnDisconnected(m => Console.WriteLine("DISCONNECTED"));
+								 });
+
+			IServiceProvider provider = services.BuildServiceProvider();
+			provider.UseHorseBus();
+		
 
 			while (true)
 				Console.ReadLine();
