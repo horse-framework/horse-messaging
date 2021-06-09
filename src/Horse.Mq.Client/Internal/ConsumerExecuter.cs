@@ -24,9 +24,9 @@ namespace Horse.Mq.Client.Internal
 
         protected TransportExceptionDescriptor DefaultPublishException { get; private set; }
         protected List<TransportExceptionDescriptor> PublishExceptions { get; private set; }
-        
-        protected List<InterceptorDescriptor> BeforeInterceptors { get; private set; }
-        protected List<InterceptorDescriptor> AfterInterceptors { get; private set; }
+
+        protected List<InterceptorDescriptor> BeforeInterceptors { get; private set; } = new();
+        protected List<InterceptorDescriptor> AfterInterceptors { get; private set; } = new();
 
         #endregion
 
@@ -45,8 +45,6 @@ namespace Horse.Mq.Client.Internal
             PushExceptions = defaultOptions.PushExceptions;
             DefaultPublishException = defaultOptions.DefaultPublishException;
             PublishExceptions = defaultOptions.PublishExceptions;
-            BeforeInterceptors = defaultOptions.BeforeInterceptors;
-            AfterInterceptors = defaultOptions.AfterInterceptors;
 
             if (DefaultPushException != null && !typeof(ITransportableException).IsAssignableFrom(DefaultPushException.ModelType))
                 throw new InvalidCastException("PushException model type must implement ITransportableException interface");

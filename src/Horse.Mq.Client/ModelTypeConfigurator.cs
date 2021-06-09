@@ -37,7 +37,7 @@ namespace Horse.Mq.Client
         internal List<TransportExceptionDescriptor> PushExceptions { get; } = new List<TransportExceptionDescriptor>();
 
         internal TransportExceptionDescriptor DefaultPublishException { get; private set; }
-        internal List<TransportExceptionDescriptor> PublishExceptions { get; } = new List<TransportExceptionDescriptor>();
+        internal List<TransportExceptionDescriptor> PublishExceptions { get; } = new List<TransportExceptionDescriptor>(); 
 
         #endregion
 
