@@ -34,6 +34,11 @@ All features can be used over only once client and one connection full asynchron
   You can use all kind of messaging architectures with same code base.
 
 
+* **It's extremely extensible and customizable.**
+  Everything has an implementation and all operations are interceptable.
+  You can even use your custom SQL server to make your queues durable.
+  
+
 * **It's fast, uses low memory and cpu.**
   Queues can handle over 200k messages per second,
   Channels can handle over 350k messages per second.
