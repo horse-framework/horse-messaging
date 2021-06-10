@@ -26,16 +26,18 @@ All features can be used over only once client and one connection full asynchron
   On the other hand, if you want to use Horse Messaging Server with default implementations, 
   you can create very basic application with a few lines of code.
   
+  
+* **It's a complete communication framework.**
+  It's a bridge between your applications.
+  It's not just messaging queue or cache server.
+  Horse gives you unlimited communication possibilities.
+  You can use all kind of messaging architectures with same code base.
+
 
 * **It's fast, uses low memory and cpu.**
   Queues can handle over 200k messages per second,
   Channels can handle over 350k messages per second.
   There is no delay in Horse, latency depends on your network connection.
-
-
-* **It's a complete communication framework.**
-  It's a bridge between your applications.
-  Oou can use all kind of messaging architectures with same code base.
 
 
 ## Thanks
