@@ -9,12 +9,11 @@ namespace Horse.Messaging.Client.Channels
     /// <summary>
     /// Channel subscriber executer
     /// </summary>
-    public class ChannelSubscriberExecuter<TModel> : ExecuterBase
+    internal class ChannelSubscriberExecuter<TModel> : ExecuterBase
     {
         private readonly Type _subscriberType;
         private readonly IChannelSubscriber<TModel> _subscriber;
         private readonly Func<IHandlerFactory> _subscriberFactoryCreator;
-        private ChannelSubscriberRegistration _registration;
 
         /// <summary>
         /// Channel subscriber executer
@@ -32,9 +31,8 @@ namespace Horse.Messaging.Client.Channels
         public override void Resolve(object registration)
         {
             ChannelSubscriberRegistration reg = registration as ChannelSubscriberRegistration;
-            _registration = reg;
-
-            ResolveAttributes(reg.SubscriberType);
+            // TODO : Emre | reg null olma ihtimali var mı? 
+            ResolveAttributes(reg!.SubscriberType);
         }
 
         /// <summary>
@@ -48,17 +46,23 @@ namespace Horse.Messaging.Client.Channels
             try
             {
                 if (_subscriber != null)
+                {
+                    await RunBeforeInterceptors(message, client);
                     await Handle(_subscriber, message, t, client);
+                    await RunAfterInterceptors(message, client);
+                }
 
                 else if (_subscriberFactoryCreator != null)
                 {
                     IHandlerFactory handlerFactory = _subscriberFactoryCreator();
                     providedHandler = handlerFactory.CreateHandler(_subscriberType);
                     IChannelSubscriber<TModel> consumer = (IChannelSubscriber<TModel>) providedHandler.Service;
+                    await RunBeforeInterceptors(message, client, handlerFactory);
                     await Handle(consumer, message, t, client);
+                    await RunAfterInterceptors(message, client, handlerFactory);
                 }
                 else
-                    throw new ArgumentNullException("There is no consumer defined");
+                    throw new NullReferenceException("There is no consumer defined");
             }
             catch (Exception e)
             {
@@ -66,8 +70,7 @@ namespace Horse.Messaging.Client.Channels
             }
             finally
             {
-                if (providedHandler != null)
-                    providedHandler.Dispose();
+                providedHandler?.Dispose();
             }
         }
 
@@ -90,7 +93,7 @@ namespace Horse.Messaging.Client.Channels
                 catch (Exception e)
                 {
                     Type type = e.GetType();
-                    if (Retry.IgnoreExceptions != null && Retry.IgnoreExceptions.Length > 0)
+                    if (Retry.IgnoreExceptions is { Length: > 0 })
                     {
                         if (Retry.IgnoreExceptions.Any(x => x.IsAssignableFrom(type)))
                             throw;

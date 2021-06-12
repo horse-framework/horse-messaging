@@ -13,7 +13,6 @@ namespace Horse.Messaging.Client.Queues
         private readonly Type _consumerType;
         private readonly IQueueConsumer<TModel> _consumer;
         private readonly Func<IHandlerFactory> _consumerFactoryCreator;
-        private QueueConsumerRegistration _registration;
 
         public QueueConsumerExecuter(Type consumerType, IQueueConsumer<TModel> consumer, Func<IHandlerFactory> consumerFactoryCreator)
         {
@@ -25,9 +24,8 @@ namespace Horse.Messaging.Client.Queues
         public override void Resolve(object registration)
         {
             QueueConsumerRegistration reg = registration as QueueConsumerRegistration;
-            _registration = reg;
-
-            ResolveAttributes(reg.ConsumerType);
+            // TODO : Emre | reg null olma ihtimali var mı? 
+            ResolveAttributes(reg!.ConsumerType);
             ResolveQueueAttributes();
         }
 
@@ -43,7 +41,7 @@ namespace Horse.Messaging.Client.Queues
             {
                 AutoNackAttribute nackAttribute = _consumerType.GetCustomAttribute<AutoNackAttribute>();
                 SendNegativeResponse = nackAttribute != null;
-                NegativeReason = nackAttribute != null ? nackAttribute.Reason : NegativeReason.None;
+                NegativeReason = nackAttribute?.Reason ?? NegativeReason.None;
             }
         }
 
@@ -55,17 +53,23 @@ namespace Horse.Messaging.Client.Queues
             try
             {
                 if (_consumer != null)
+                {
+                    await RunBeforeInterceptors(message, client);
                     await Consume(_consumer, message, t, client);
+                    await RunAfterInterceptors(message, client);
+                }
 
                 else if (_consumerFactoryCreator != null)
                 {
                     IHandlerFactory handlerFactory = _consumerFactoryCreator();
                     providedHandler = handlerFactory.CreateHandler(_consumerType);
                     IQueueConsumer<TModel> consumer = (IQueueConsumer<TModel>) providedHandler.Service;
+                    await RunBeforeInterceptors(message, client, handlerFactory);
                     await Consume(consumer, message, t, client);
+                    await RunAfterInterceptors(message, client, handlerFactory);
                 }
                 else
-                    throw new ArgumentNullException("There is no consumer defined");
+                    throw new NullReferenceException("There is no consumer defined");
 
                 if (SendPositiveResponse)
                     await client.SendAck(message);
@@ -79,8 +83,7 @@ namespace Horse.Messaging.Client.Queues
             }
             finally
             {
-                if (providedHandler != null)
-                    providedHandler.Dispose();
+                providedHandler?.Dispose();
             }
         }
 
@@ -103,7 +106,7 @@ namespace Horse.Messaging.Client.Queues
                 catch (Exception e)
                 {
                     Type type = e.GetType();
-                    if (Retry.IgnoreExceptions != null && Retry.IgnoreExceptions.Length > 0)
+                    if (Retry.IgnoreExceptions is { Length: > 0 })
                     {
                         if (Retry.IgnoreExceptions.Any(x => x.IsAssignableFrom(type)))
                             throw;

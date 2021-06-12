@@ -65,5 +65,14 @@ namespace Horse.Messaging.Client.Internal
 
             return new ProvidedHandler(null, _client.Provider.GetRequiredService(consumerType));
         }
+
+        public IHorseInterceptor CreateInterceptor(Type interceptorType)
+        {
+            if (_lifetime == ServiceLifetime.Scoped)
+                return (IHorseInterceptor) _scope.ServiceProvider.GetService(interceptorType);
+
+            object interceptor = _scope.ServiceProvider.GetService(interceptorType);
+            return (IHorseInterceptor) interceptor;
+        }
     }
 }

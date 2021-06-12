@@ -11,7 +11,6 @@ namespace Horse.Messaging.Client.Direct
         private readonly Type _handlerType;
         private readonly IHorseRequestHandler<TRequest, TResponse> _handler;
         private readonly Func<IHandlerFactory> _handlerFactoryCreator;
-        private DirectHandlerRegistration _registration;
 
         public RequestHandlerExecuter(Type handlerType, IHorseRequestHandler<TRequest, TResponse> handler, Func<IHandlerFactory> handlerFactoryCreator)
         {
@@ -23,34 +22,34 @@ namespace Horse.Messaging.Client.Direct
         public override void Resolve(object registration)
         {
             DirectHandlerRegistration reg = registration as DirectHandlerRegistration;
-            _registration = reg;
-
-            ResolveAttributes(reg.ConsumerType);
+            // TODO : Emre | reg null olma ihtimali var mı? 
+            ResolveAttributes(reg!.ConsumerType);
         }
         
         public override async Task Execute(HorseClient client, HorseMessage message, object model)
         {
             bool respond = false;
             ProvidedHandler providedHandler = null;
-
+            IHandlerFactory handlerFactory = null;
+            
             try
             {
                 TRequest requestModel = (TRequest) model;
                 IHorseRequestHandler<TRequest, TResponse> handler;
 
-                if (_handler != null)
-                    handler = _handler;
+                if (_handler != null) handler = _handler;
                 else if (_handlerFactoryCreator != null)
                 {
-                    IHandlerFactory handlerFactory = _handlerFactoryCreator();
+                    handlerFactory = _handlerFactoryCreator();
                     providedHandler = handlerFactory.CreateHandler(_handlerType);
                     handler = (IHorseRequestHandler<TRequest, TResponse>) providedHandler.Service;
                 }
                 else
-                    throw new ArgumentNullException("There is no consumer defined");
+                    throw new NullReferenceException("There is no consumer defined");
 
                 try
                 {
+                    await RunBeforeInterceptors(message, client, handlerFactory);
                     TResponse responseModel = await Handle(handler, requestModel, message, client);
                     HorseResultCode code = responseModel is null ? HorseResultCode.NoContent : HorseResultCode.Ok;
                     HorseMessage responseMessage = message.CreateResponse(code);
@@ -60,6 +59,7 @@ namespace Horse.Messaging.Client.Direct
 
                     respond = true;
                     await client.SendAsync(responseMessage);
+                    await RunAfterInterceptors(message, client, handlerFactory);
                 }
                 catch (Exception e)
                 {
@@ -89,6 +89,7 @@ namespace Horse.Messaging.Client.Direct
                     }
                     catch
                     {
+                        // Ignored. Because we cant return response. Client will be timeout. Maybe we can retry mechanism to here.
                     }
                 }
 
@@ -96,8 +97,7 @@ namespace Horse.Messaging.Client.Direct
             }
             finally
             {
-                if (providedHandler != null)
-                    providedHandler.Dispose();
+                providedHandler?.Dispose();
             }
         }
 
@@ -116,7 +116,7 @@ namespace Horse.Messaging.Client.Direct
                 catch (Exception e)
                 {
                     Type type = e.GetType();
-                    if (Retry.IgnoreExceptions != null && Retry.IgnoreExceptions.Length > 0)
+                    if (Retry.IgnoreExceptions is { Length: > 0 })
                     {
                         if (Retry.IgnoreExceptions.Any(x => x.IsAssignableFrom(type)))
                             throw;

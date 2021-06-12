@@ -14,7 +14,6 @@ namespace Horse.Messaging.Client.Direct
         private readonly Type _consumerType;
         private readonly IDirectMessageHandler<TModel> _messageHandler;
         private readonly Func<IHandlerFactory> _consumerFactoryCreator;
-        private DirectHandlerRegistration _registration;
 
         public DirectHandlerExecuter(Type consumerType, IDirectMessageHandler<TModel> messageHandler, Func<IHandlerFactory> consumerFactoryCreator)
         {
@@ -26,9 +25,8 @@ namespace Horse.Messaging.Client.Direct
         public override void Resolve(object registration)
         {
             DirectHandlerRegistration reg = registration as DirectHandlerRegistration;
-            _registration = reg;
-
-            ResolveAttributes(reg.ConsumerType);
+            // TODO : Emre | reg null olma ihtimali var mı? 
+            ResolveAttributes(reg!.ConsumerType);
             ResolveDirectAttributes();
         }
 
@@ -56,17 +54,22 @@ namespace Horse.Messaging.Client.Direct
             try
             {
                 if (_messageHandler != null)
+                {
+                    await RunBeforeInterceptors(message, client);
                     await Consume(_messageHandler, message, t, client);
-
+                    await RunAfterInterceptors(message, client);
+                }
                 else if (_consumerFactoryCreator != null)
                 {
                     IHandlerFactory handlerFactory = _consumerFactoryCreator();
                     providedHandler = handlerFactory.CreateHandler(_consumerType);
                     IDirectMessageHandler<TModel> messageHandler = (IDirectMessageHandler<TModel>) providedHandler.Service;
+                    await RunBeforeInterceptors(message, client, handlerFactory);
                     await Consume(messageHandler, message, t, client);
+                    await RunAfterInterceptors(message, client, handlerFactory);
                 }
                 else
-                    throw new ArgumentNullException("There is no consumer defined");
+                    throw new NullReferenceException("There is no consumer defined");
 
 
                 if (SendPositiveResponse)
@@ -81,8 +84,7 @@ namespace Horse.Messaging.Client.Direct
             }
             finally
             {
-                if (providedHandler != null)
-                    providedHandler.Dispose();
+                providedHandler?.Dispose();
             }
         }
 
@@ -105,7 +107,7 @@ namespace Horse.Messaging.Client.Direct
                 catch (Exception e)
                 {
                     Type type = e.GetType();
-                    if (Retry.IgnoreExceptions != null && Retry.IgnoreExceptions.Length > 0)
+                    if (Retry.IgnoreExceptions is { Length: > 0 })
                     {
                         if (Retry.IgnoreExceptions.Any(x => x.IsAssignableFrom(type)))
                             throw;

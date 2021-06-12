@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Horse.Messaging.Client.Internal;
 
 namespace Horse.Messaging.Client
@@ -15,5 +16,14 @@ namespace Horse.Messaging.Client
         /// <param name="consumerType">Type of the consumer</param>
         /// <returns>Consumer instance</returns>
         ProvidedHandler CreateHandler(Type consumerType);
+        
+        /// <summary>
+        /// Creates new interceptor instance
+        /// </summary>
+        /// <param name="interceptorType">Type of the interceptor</param>
+        /// <returns>Interceptor instance</returns>
+        IHorseInterceptor CreateInterceptor(Type interceptorType);
     }
+    
+    
 }
