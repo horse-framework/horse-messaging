@@ -46,11 +46,11 @@ namespace Horse.Messaging.Client.Direct
         /// Direct message full target
         /// </summary>
         public string DirectTarget { get; set; }
-
-    
+        
         internal bool DirectTargetSpecified { get; set; }
 
         internal List<Func<KeyValuePair<string, string>>> HeaderFactories { get; } = new List<Func<KeyValuePair<string, string>>>();
+        
         internal Func<Type, string> DirectTargetFactory { get; private set; }
 
         /// <summary>

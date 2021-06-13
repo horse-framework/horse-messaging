@@ -33,8 +33,4 @@
       <ProjectReference Include="..\Horse.Messaging.Protocol\Horse.Messaging.Protocol.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Interceptors" />
-    </ItemGroup>
-
 </Project>

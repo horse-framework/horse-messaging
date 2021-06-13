@@ -161,7 +161,7 @@ namespace Horse.Messaging.Client.Direct
 				}
 			}
 
-			ushort contentType = modelDescriptor.ContentType.HasValue ? modelDescriptor.ContentType.Value : (ushort) 0;
+			ushort contentType = modelDescriptor.ContentType ?? 0;
 			if (consumerDescriptor.ContentType.HasValue)
 				contentType = consumerDescriptor.ContentType.Value;
 

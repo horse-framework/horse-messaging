@@ -30,7 +30,7 @@ namespace Horse.Messaging.Client.Direct
         /// <summary>
         /// Interceptor descriptors
         /// </summary>
-        public List<InterceptorTypeDescriptor> IntercetorDescriptors { get; } = new();
+        internal List<InterceptorTypeDescriptor> IntercetorDescriptors { get; } = new();
         
         /// <summary>
         /// Consumer executer
