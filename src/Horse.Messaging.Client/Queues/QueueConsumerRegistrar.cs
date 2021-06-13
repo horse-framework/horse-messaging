@@ -153,7 +153,7 @@ namespace Horse.Messaging.Client.Queues
 		private static IEnumerable<InterceptorTypeDescriptor> ResolveInterceptorAttributes(ModelTypeInfo typeInfo, bool createInstance)
 		{
 			List<InterceptorAttribute> consumerInterceptors = typeInfo.ConsumerType.GetCustomAttributes<InterceptorAttribute>(true).ToList();
-			List<InterceptorAttribute> modelInterceptors = typeInfo.ConsumerType.GetCustomAttributes<InterceptorAttribute>(true).ToList();
+			List<InterceptorAttribute> modelInterceptors = typeInfo.ModelType.GetCustomAttributes<InterceptorAttribute>(true).ToList();
 
 			foreach (InterceptorAttribute modelInterceptor in modelInterceptors)
 			{

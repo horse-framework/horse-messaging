@@ -183,7 +183,7 @@ namespace Horse.Messaging.Client.Direct
 		private static IEnumerable<InterceptorTypeDescriptor> ResolveInterceptorAttributes(ModelTypeInfo typeInfo, bool createInstance)
 		{
 			List<InterceptorAttribute> consumerInterceptors = typeInfo.ConsumerType.GetCustomAttributes<InterceptorAttribute>().ToList();
-			List<InterceptorAttribute> modelInterceptors = typeInfo.ConsumerType.GetCustomAttributes<InterceptorAttribute>().ToList();
+			List<InterceptorAttribute> modelInterceptors = typeInfo.ModelType.GetCustomAttributes<InterceptorAttribute>().ToList();
 
 			foreach (InterceptorAttribute modelInterceptor in modelInterceptors)
 			{
