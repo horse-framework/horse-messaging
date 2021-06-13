@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -24,10 +25,8 @@ namespace Horse.Messaging.Client.Queues
 
         public override void Resolve(object registration)
         {
-            QueueConsumerRegistration reg = registration as QueueConsumerRegistration;
-            _registration = reg;
-
-            ResolveAttributes(reg.ConsumerType);
+            _registration = registration as QueueConsumerRegistration;
+            ResolveAttributes(_registration!.ConsumerType);
             ResolveQueueAttributes();
         }
 
@@ -43,7 +42,7 @@ namespace Horse.Messaging.Client.Queues
             {
                 AutoNackAttribute nackAttribute = _consumerType.GetCustomAttribute<AutoNackAttribute>();
                 SendNegativeResponse = nackAttribute != null;
-                NegativeReason = nackAttribute != null ? nackAttribute.Reason : NegativeReason.None;
+                NegativeReason = nackAttribute?.Reason ?? NegativeReason.None;
             }
         }
 
@@ -55,17 +54,23 @@ namespace Horse.Messaging.Client.Queues
             try
             {
                 if (_consumer != null)
+                {
+                    await RunBeforeInterceptors(message, client);
                     await Consume(_consumer, message, t, client);
+                    await RunAfterInterceptors(message, client);
+                }
 
                 else if (_consumerFactoryCreator != null)
                 {
                     IHandlerFactory handlerFactory = _consumerFactoryCreator();
                     providedHandler = handlerFactory.CreateHandler(_consumerType);
                     IQueueConsumer<TModel> consumer = (IQueueConsumer<TModel>) providedHandler.Service;
+                    await RunBeforeInterceptors(message, client, handlerFactory);
                     await Consume(consumer, message, t, client);
+                    await RunAfterInterceptors(message, client, handlerFactory);
                 }
                 else
-                    throw new ArgumentNullException("There is no consumer defined");
+                    throw new NullReferenceException("There is no consumer defined");
 
                 if (SendPositiveResponse)
                     await client.SendAck(message);
@@ -79,8 +84,7 @@ namespace Horse.Messaging.Client.Queues
             }
             finally
             {
-                if (providedHandler != null)
-                    providedHandler.Dispose();
+                providedHandler?.Dispose();
             }
         }
 
@@ -103,7 +107,7 @@ namespace Horse.Messaging.Client.Queues
                 catch (Exception e)
                 {
                     Type type = e.GetType();
-                    if (Retry.IgnoreExceptions != null && Retry.IgnoreExceptions.Length > 0)
+                    if (Retry.IgnoreExceptions is { Length: > 0 })
                     {
                         if (Retry.IgnoreExceptions.Any(x => x.IsAssignableFrom(type)))
                             throw;
@@ -116,6 +120,49 @@ namespace Horse.Messaging.Client.Queues
                         throw;
                 }
             }
+        }
+        
+        /// <summary>
+        /// Run before interceptors
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="client"></param>
+        /// <param name="handlerFactory"></param>
+        protected async Task RunBeforeInterceptors(HorseMessage message, HorseClient client, IHandlerFactory handlerFactory = null)
+        {
+            if (_registration.IntercetorDescriptors.Count == 0) return;
+            var beforeInterceptors = _registration.IntercetorDescriptors.Where(m => m.RunBefore);
+            IEnumerable<IHorseInterceptor> interceptors = handlerFactory is null
+                ? beforeInterceptors.Select(m => m.Instance)
+                : beforeInterceptors.Select(m => handlerFactory.CreateInterceptor(m.InterceptorType));
+
+            foreach (var interceptor in interceptors)
+                await interceptor!.Intercept(message, client);
+        }
+
+        /// <summary>
+        /// Run after interceptors
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="client"></param>
+        /// <param name="handlerFactory"></param>
+        protected async Task RunAfterInterceptors(HorseMessage message, HorseClient client, IHandlerFactory handlerFactory = null)
+        {
+            if (_registration.IntercetorDescriptors.Count == 0) return;
+            var afterInterceptors = _registration.IntercetorDescriptors.Where(m => !m.RunBefore);
+            IEnumerable<IHorseInterceptor> interceptors = handlerFactory is null
+                ? afterInterceptors.Select(m => m.Instance)
+                : afterInterceptors.Select(m => handlerFactory.CreateInterceptor(m.InterceptorType));
+
+            foreach (var interceptor in interceptors)
+                try
+                {
+                    await interceptor!.Intercept(message, client);
+                }
+                catch (Exception e)
+                {
+                    client.OnException(e, message);
+                }
         }
     }
 }

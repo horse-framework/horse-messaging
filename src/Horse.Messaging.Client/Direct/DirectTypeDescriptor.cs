@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Direct.Annotations;
 using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Protocol;
@@ -46,6 +47,7 @@ namespace Horse.Messaging.Client.Direct
         /// </summary>
         public string DirectTarget { get; set; }
 
+    
         internal bool DirectTargetSpecified { get; set; }
 
         internal List<Func<KeyValuePair<string, string>>> HeaderFactories { get; } = new List<Func<KeyValuePair<string, string>>>();

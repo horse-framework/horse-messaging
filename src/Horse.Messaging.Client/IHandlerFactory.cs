@@ -15,5 +15,13 @@ namespace Horse.Messaging.Client
         /// <param name="consumerType">Type of the consumer</param>
         /// <returns>Consumer instance</returns>
         ProvidedHandler CreateHandler(Type consumerType);
+        
+        /// <summary>
+        /// Creates new interceptor instance
+        /// </summary>
+        /// <param name="interceptorType">Type of the interceptor</param>
+        /// <returns>Interceptor instance</returns>
+        IHorseInterceptor CreateInterceptor(Type interceptorType);
     }
+    
 }
