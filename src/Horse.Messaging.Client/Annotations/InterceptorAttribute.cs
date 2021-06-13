@@ -3,25 +3,10 @@ using System;
 namespace Horse.Messaging.Client.Annotations
 {
 	/// <summary>
-	///     Horse message interceptor method
-	/// </summary>
-	public enum Intercept
-	{
-		/// <summary>
-		///     Intercept before
-		/// </summary>
-		Before,
-		/// <summary>
-		///     Intercept after
-		/// </summary>
-		After
-	}
-
-	/// <summary>
 	///     Used to intercept messages before or after handler
 	/// </summary>
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-	public class InterceptorAttribute: Attribute
+	public sealed class InterceptorAttribute : Attribute
 	{
 		/// <summary>
 		///     Type of interceptor, it's should derived from IHorseInterceptor interface.
@@ -29,19 +14,26 @@ namespace Horse.Messaging.Client.Annotations
 		public Type InterceptorType { get; }
 
 		/// <summary>
-		///     Interception method
+		///     Is interceptor run before?
 		/// </summary>
-		public Intercept Intercept { get; }
+		public bool RunBefore { get; set; }
+
+		/// <summary>
+		///     Execution order
+		/// </summary>
+		public int Order { get; set; }
 
 		/// <summary>
 		///     Creates new HorseMessageInterceptorAttribute
 		/// </summary>
 		/// <param name="interceptorType">Interceptor type</param>
-		/// <param name="intercept">Interception method</param>
-		public InterceptorAttribute(Type interceptorType, Intercept intercept = Intercept.Before)
+		/// <param name="order">Execution order</param>
+		/// <param name="runBefore">Interception method</param>
+		public InterceptorAttribute(Type interceptorType, int order = 0,  bool runBefore = true)
 		{
 			InterceptorType = interceptorType;
-			Intercept = intercept;
+			RunBefore = runBefore;
+			Order = order;
 		}
 	}
 }

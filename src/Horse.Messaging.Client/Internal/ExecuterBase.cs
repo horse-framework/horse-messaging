@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Horse.Messaging.Client.Annotations;
@@ -66,16 +65,6 @@ namespace Horse.Messaging.Client.Internal
 		public abstract Task Execute(HorseClient client, HorseMessage message, object model);
 
 		/// <summary>
-		/// Interceptors before handler
-		/// </summary>
-		protected List<InterceptorDescriptor> BeforeInterceptors { get; } = new();
-
-		/// <summary>
-		/// Interceptors after handler
-		/// </summary>
-		protected List<InterceptorDescriptor> AfterInterceptors { get; } = new();
-
-		/// <summary>
 		/// Sends negative ack
 		/// </summary>
 		protected Task SendNegativeAck(HorseMessage message, HorseClient client, Exception exception)
@@ -98,7 +87,6 @@ namespace Horse.Messaging.Client.Internal
 		{
 			ResolveRetryAttribute(type);
 			ResolveSendExceptionsAttributes(type);
-			ResolveInterceptorAttributes(type);
 		}
 
 		private void ResolveRetryAttribute(MemberInfo type)
@@ -194,65 +182,6 @@ namespace Horse.Messaging.Client.Internal
 			});
 
 			return client.Router.PublishJson(transportable);
-		}
-
-		#endregion
-
-		#region INTERCEPTORS
-
-		private void ResolveInterceptorAttributes(Type type)
-		{
-			if (type.BaseType is not null) ResolveInterceptorAttributes(type.BaseType);
-			IEnumerable<InterceptorAttribute> attrs = type.GetCustomAttributes<InterceptorAttribute>(false);
-			foreach (InterceptorAttribute attr in attrs)
-			{
-				if (attr.Intercept == Intercept.Before)
-					BeforeInterceptors.Add(new InterceptorDescriptor(attr.InterceptorType, attr.Intercept));
-				else
-					AfterInterceptors.Add(new InterceptorDescriptor(attr.InterceptorType, attr.Intercept));
-			}
-		}
-
-		/// <summary>
-		/// Run before interceptors
-		/// </summary>
-		/// <param name="message"></param>
-		/// <param name="client"></param>
-		/// <param name="handlerFactory"></param>
-		protected async Task RunBeforeInterceptors(HorseMessage message, HorseClient client, IHandlerFactory handlerFactory = null)
-		{
-			if (BeforeInterceptors.Count == 0) return;
-			List<IHorseInterceptor> interceptors = handlerFactory is null
-				? BeforeInterceptors.Select(m => (IHorseInterceptor) Activator.CreateInstance(m.InterceptorType)).ToList()
-				: BeforeInterceptors.Select(m => handlerFactory.CreateInterceptor(m.InterceptorType)).ToList();
-
-			foreach (var interceptor in interceptors)
-				await interceptor.Intercept(message, client);
-		}
-
-		/// <summary>
-		/// Run after interceptors
-		/// </summary>
-		/// <param name="message"></param>
-		/// <param name="client"></param>
-		/// <param name="handlerFactory"></param>
-		protected async Task RunAfterInterceptors(HorseMessage message, HorseClient client, IHandlerFactory handlerFactory = null)
-		{
-			if (AfterInterceptors.Count == 0) return;
-
-			List<IHorseInterceptor> interceptors = handlerFactory is null
-				? AfterInterceptors.Select(m => (IHorseInterceptor) Activator.CreateInstance(m.InterceptorType)).ToList()
-				: AfterInterceptors.Select(m => handlerFactory.CreateInterceptor(m.InterceptorType)).ToList();
-
-			foreach (var interceptor in interceptors)
-				try
-				{
-					await interceptor.Intercept(message, client);
-				}
-				catch (Exception e)
-				{
-					client.OnException(e, message);
-				}
 		}
 
 		#endregion

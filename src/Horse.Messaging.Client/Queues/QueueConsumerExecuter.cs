@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ namespace Horse.Messaging.Client.Queues
         private readonly Type _consumerType;
         private readonly IQueueConsumer<TModel> _consumer;
         private readonly Func<IHandlerFactory> _consumerFactoryCreator;
+        private QueueConsumerRegistration _registration;
 
         public QueueConsumerExecuter(Type consumerType, IQueueConsumer<TModel> consumer, Func<IHandlerFactory> consumerFactoryCreator)
         {
@@ -23,9 +25,8 @@ namespace Horse.Messaging.Client.Queues
 
         public override void Resolve(object registration)
         {
-            QueueConsumerRegistration reg = registration as QueueConsumerRegistration;
-            // TODO : Emre | reg null olma ihtimali var mı? 
-            ResolveAttributes(reg!.ConsumerType);
+            _registration = registration as QueueConsumerRegistration;
+            ResolveAttributes(_registration!.ConsumerType);
             ResolveQueueAttributes();
         }
 
@@ -119,6 +120,49 @@ namespace Horse.Messaging.Client.Queues
                         throw;
                 }
             }
+        }
+        
+        /// <summary>
+        /// Run before interceptors
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="client"></param>
+        /// <param name="handlerFactory"></param>
+        protected async Task RunBeforeInterceptors(HorseMessage message, HorseClient client, IHandlerFactory handlerFactory = null)
+        {
+            if (_registration.IntercetorDescriptors.Count == 0) return;
+            var beforeInterceptors = _registration.IntercetorDescriptors.Where(m => m.RunBefore);
+            IEnumerable<IHorseInterceptor> interceptors = handlerFactory is null
+                ? beforeInterceptors.Select(m => m.Instance)
+                : beforeInterceptors.Select(m => handlerFactory.CreateInterceptor(m.InterceptorType));
+
+            foreach (var interceptor in interceptors)
+                await interceptor!.Intercept(message, client);
+        }
+
+        /// <summary>
+        /// Run after interceptors
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="client"></param>
+        /// <param name="handlerFactory"></param>
+        protected async Task RunAfterInterceptors(HorseMessage message, HorseClient client, IHandlerFactory handlerFactory = null)
+        {
+            if (_registration.IntercetorDescriptors.Count == 0) return;
+            var afterInterceptors = _registration.IntercetorDescriptors.Where(m => !m.RunBefore);
+            IEnumerable<IHorseInterceptor> interceptors = handlerFactory is null
+                ? afterInterceptors.Select(m => m.Instance)
+                : afterInterceptors.Select(m => handlerFactory.CreateInterceptor(m.InterceptorType));
+
+            foreach (var interceptor in interceptors)
+                try
+                {
+                    await interceptor!.Intercept(message, client);
+                }
+                catch (Exception e)
+                {
+                    client.OnException(e, message);
+                }
         }
     }
 }

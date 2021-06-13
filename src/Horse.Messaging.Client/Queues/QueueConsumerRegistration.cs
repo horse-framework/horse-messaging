@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Internal;
 
 namespace Horse.Messaging.Client.Queues
@@ -19,6 +21,11 @@ namespace Horse.Messaging.Client.Queues
         /// Direct message type
         /// </summary>
         public Type MessageType { get; set; }
+        
+        /// <summary>
+        /// Interceptor descriptors
+        /// </summary>
+        public List<InterceptorTypeDescriptor> IntercetorDescriptors { get; } = new();
 
         /// <summary>
         /// Consumer executer

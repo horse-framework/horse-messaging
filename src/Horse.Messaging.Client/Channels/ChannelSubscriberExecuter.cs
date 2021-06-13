@@ -31,7 +31,6 @@ namespace Horse.Messaging.Client.Channels
         public override void Resolve(object registration)
         {
             ChannelSubscriberRegistration reg = registration as ChannelSubscriberRegistration;
-            // TODO : Emre | reg null olma ihtimali var mı? 
             ResolveAttributes(reg!.SubscriberType);
         }
 
@@ -46,20 +45,14 @@ namespace Horse.Messaging.Client.Channels
             try
             {
                 if (_subscriber != null)
-                {
-                    await RunBeforeInterceptors(message, client);
                     await Handle(_subscriber, message, t, client);
-                    await RunAfterInterceptors(message, client);
-                }
 
                 else if (_subscriberFactoryCreator != null)
                 {
                     IHandlerFactory handlerFactory = _subscriberFactoryCreator();
                     providedHandler = handlerFactory.CreateHandler(_subscriberType);
                     IChannelSubscriber<TModel> consumer = (IChannelSubscriber<TModel>) providedHandler.Service;
-                    await RunBeforeInterceptors(message, client, handlerFactory);
                     await Handle(consumer, message, t, client);
-                    await RunAfterInterceptors(message, client, handlerFactory);
                 }
                 else
                     throw new NullReferenceException("There is no consumer defined");

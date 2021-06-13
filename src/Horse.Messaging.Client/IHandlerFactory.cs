@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using Horse.Messaging.Client.Internal;
 
 namespace Horse.Messaging.Client
@@ -24,6 +23,5 @@ namespace Horse.Messaging.Client
         /// <returns>Interceptor instance</returns>
         IHorseInterceptor CreateInterceptor(Type interceptorType);
     }
-    
     
 }
