@@ -9,6 +9,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\Horse.Messaging.Extensions.Client\Horse.Messaging.Extensions.Client.csproj" />
       <ProjectReference Include="..\AdvancedSample.Core\AdvancedSample.Core.csproj" />
     </ItemGroup>
 

@@ -37,12 +37,11 @@ namespace Horse.Messaging.Client
         /// </summary>
         public static IServiceCollection AddHorseBus(this IServiceCollection services, Action<HorseClientBuilder> config)
         {
-            HorseClientBuilder builder = new HorseClientBuilder(services);
+            HorseClientBuilder builder = new(services);
             config(builder);
             HorseClient client = builder.Build();
             services.AddSingleton(client);
-
-            services.AddSingleton<IHorseCache>(client.Cache);
+            services.AddSingleton(client.Cache);
             services.AddSingleton<IHorseChannelBus>(new HorseChannelBus(client));
             services.AddSingleton<IHorseQueueBus>(new HorseQueueBus(client));
             services.AddSingleton<IHorseRouterBus>(new HorseRouterBus(client));
@@ -56,7 +55,7 @@ namespace Horse.Messaging.Client
         /// </summary>
         public static IServiceProvider UseHorseBus(this IServiceProvider provider)
         {
-            HorseClient client = provider.GetService<HorseClient>();
+            HorseClient client = provider.GetRequiredService<HorseClient>();
             client.Provider = provider;
             client.Connect();
             return provider;

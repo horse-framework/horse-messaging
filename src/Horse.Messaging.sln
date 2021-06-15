@@ -79,6 +79,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Playground", "Playground", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestService", "Samples\TestService\TestService.csproj", "{4BDCB0C5-B9FC-4C05-B30F-498BDC301518}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Messaging.Extensions.Client", "Horse.Messaging.Extensions.Client\Horse.Messaging.Extensions.Client.csproj", "{A5AEC2D1-50D6-48AC-9FFE-09EDBC99F133}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -213,6 +215,10 @@ Global
 		{4BDCB0C5-B9FC-4C05-B30F-498BDC301518}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4BDCB0C5-B9FC-4C05-B30F-498BDC301518}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4BDCB0C5-B9FC-4C05-B30F-498BDC301518}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A5AEC2D1-50D6-48AC-9FFE-09EDBC99F133}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5AEC2D1-50D6-48AC-9FFE-09EDBC99F133}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A5AEC2D1-50D6-48AC-9FFE-09EDBC99F133}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A5AEC2D1-50D6-48AC-9FFE-09EDBC99F133}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
