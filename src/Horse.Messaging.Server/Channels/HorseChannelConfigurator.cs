@@ -10,17 +10,17 @@ namespace Horse.Messaging.Server.Channels
         /// <summary>
         /// Default channel options
         /// </summary>
-        private HorseChannelOptions Options => _rider.Channel.Options;
+        public HorseChannelOptions Options => _rider.Channel.Options;
 
         /// <summary>
         /// Event handlers to track channel events
         /// </summary>
-        private ArrayContainer<IChannelEventHandler> EventHandlers => _rider.Channel.EventHandlers;
+        public ArrayContainer<IChannelEventHandler> EventHandlers => _rider.Channel.EventHandlers;
 
         /// <summary>
         /// Channel authenticators
         /// </summary>
-        private ArrayContainer<IChannelAuthorization> Authenticators => _rider.Channel.Authenticators;
+        public ArrayContainer<IChannelAuthorization> Authenticators => _rider.Channel.Authenticators;
 
         private readonly HorseRider _rider;
 
