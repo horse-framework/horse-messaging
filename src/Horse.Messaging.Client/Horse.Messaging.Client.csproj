@@ -6,9 +6,9 @@
         <Product>Horse.Messaging.Client</Product>
         <Description>Horse Messaging Client to connect all Horse Servers</Description>
         <PackageTags>horse,client,messaging,queue,channel,cache</PackageTags>
-        <AssemblyVersion>6.0.3</AssemblyVersion>
-        <FileVersion>6.0.3</FileVersion>
-        <PackageVersion>6.0.3-beta</PackageVersion>
+        <AssemblyVersion>6.0.4</AssemblyVersion>
+        <FileVersion>6.0.4</FileVersion>
+        <PackageVersion>6.0.4</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>
