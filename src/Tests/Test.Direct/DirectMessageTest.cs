@@ -1,8 +1,8 @@
 using System;
 using System.Threading.Tasks;
+using Horse.Messaging.Client;
+using Horse.Messaging.Protocol;
 using Test.Common;
-using Horse.Mq.Client;
-using Horse.Protocols.Hmq;
 using Xunit;
 
 namespace Test.Direct
@@ -15,7 +15,7 @@ namespace Test.Direct
         [Fact]
         public async Task WithoutAnyResponse()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
@@ -25,8 +25,8 @@ namespace Test.Direct
             client1.ClientId = "client-1";
             client2.ClientId = "client-2";
 
-            await client1.ConnectAsync("hmq://localhost:" + port);
-            await client2.ConnectAsync("hmq://localhost:" + port);
+            await client1.ConnectAsync("horse://localhost:" + port);
+            await client2.ConnectAsync("horse://localhost:" + port);
 
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
@@ -49,7 +49,7 @@ namespace Test.Direct
         [Fact]
         public async Task WithAcknowledge()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
@@ -61,8 +61,8 @@ namespace Test.Direct
             client2.AutoAcknowledge = true;
             client1.ResponseTimeout = TimeSpan.FromSeconds(14);
 
-            await client1.ConnectAsync("hmq://localhost:" + port);
-            await client2.ConnectAsync("hmq://localhost:" + port);
+            await client1.ConnectAsync("horse://localhost:" + port);
+            await client2.ConnectAsync("horse://localhost:" + port);
 
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);
@@ -84,7 +84,7 @@ namespace Test.Direct
         [Fact]
         public async Task WithResponse()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
@@ -95,8 +95,8 @@ namespace Test.Direct
             client2.ClientId = "client-2";
             client2.AutoAcknowledge = true;
 
-            await client1.ConnectAsync("hmq://localhost:" + port);
-            await client2.ConnectAsync("hmq://localhost:" + port);
+            await client1.ConnectAsync("horse://localhost:" + port);
+            await client2.ConnectAsync("horse://localhost:" + port);
 
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);

@@ -1,31 +1,31 @@
 using System;
 using System.Reflection.Metadata.Ecma335;
 using System.Threading.Tasks;
-using Horse.Mq;
-using Horse.Mq.Clients;
+using Horse.Messaging.Server;
+using Horse.Messaging.Server.Clients;
 
 namespace Test.Common.Handlers
 {
     public class TestClientHandler : IClientHandler
     {
-        private readonly TestHorseMq _mq;
+        private readonly TestHorseRider _rider;
 
-        public TestClientHandler(TestHorseMq mq)
+        public TestClientHandler(TestHorseRider rider)
         {
-            _mq = mq;
+            _rider = rider;
         }
 
-        public Task Connected(HorseMq server, MqClient client)
+        public Task Connected(HorseRider server, MessagingClient client)
         {
             Console.WriteLine("Client Connected");
-            _mq.ClientConnected++;
+            _rider.ClientConnected++;
             return Task.CompletedTask;
         }
 
-        public Task Disconnected(HorseMq server, MqClient client)
+        public Task Disconnected(HorseRider server, MessagingClient client)
         {
             Console.WriteLine("Client Disconnected");
-            _mq.ClientDisconnected++;
+            _rider.ClientDisconnected++;
             return Task.CompletedTask;
         }
     }

@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Horse.Mq;
-using Horse.Mq.Data;
-using Horse.Mq.Data.Configuration;
-using Horse.Mq.Queues;
-using Horse.Protocols.Hmq;
+using Horse.Messaging.Data;
+using Horse.Messaging.Data.Configuration;
+using Horse.Messaging.Protocol;
+using Horse.Messaging.Server;
+using Horse.Messaging.Server.Queues;
 using Horse.Server;
 using Xunit;
 
@@ -19,28 +19,31 @@ namespace Test.Persistency
             ConfigurationFactory.Destroy();
             PersistentDeliveryHandler handler = null;
             HorseServer server = new HorseServer();
-            HorseMq mq = server.UseHorseMq(cfg => cfg
-                                                  .AddPersistentQueues(q => q.KeepLastBackup())
-                                                  .UseDeliveryHandler(async builder =>
-                                                  {
-                                                      DatabaseOptions options = new DatabaseOptions
-                                                                                {
-                                                                                    Filename = "redelivery-test.tdb",
-                                                                                    InstantFlush = true,
-                                                                                    CreateBackupOnShrink = false,
-                                                                                    ShrinkInterval = TimeSpan.FromSeconds(60)
-                                                                                };
+            HorseRider rider = server.UseRider(cfg => cfg
+                                                  .ConfigureQueues(q =>
+                                                   {
+                                                       q.AddPersistentQueues(q => q.KeepLastBackup());
+                                                       q.UseDeliveryHandler(async builder =>
+                                                       {
+                                                           DatabaseOptions options = new DatabaseOptions
+                                                           {
+                                                               Filename = "redelivery-test.tdb",
+                                                               InstantFlush = true,
+                                                               CreateBackupOnShrink = false,
+                                                               ShrinkInterval = TimeSpan.FromSeconds(60)
+                                                           };
 
-                                                      handler = new PersistentDeliveryHandler(builder.Queue,
-                                                                                              options,
-                                                                                              DeleteWhen.AfterSend,
-                                                                                              ProducerAckDecision.None,
-                                                                                              true);
-                                                      await handler.Initialize();
-                                                      return handler;
-                                                  }));
+                                                           handler = new PersistentDeliveryHandler(builder.Queue,
+                                                                                                   options,
+                                                                                                   DeleteWhen.AfterSend,
+                                                                                                   ProducerAckDecision.None,
+                                                                                                   true);
+                                                           await handler.Initialize();
+                                                           return handler;
+                                                       });
+                                                   }));
 
-            HorseQueue queue = await mq.CreateQueue("test");
+            HorseQueue queue = await rider.Queue.Create("test");
 
             HorseMessage message = new HorseMessage(MessageType.QueueMessage, "test");
             message.SetMessageId("id");

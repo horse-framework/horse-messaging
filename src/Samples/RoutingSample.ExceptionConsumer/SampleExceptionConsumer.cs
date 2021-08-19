@@ -1,15 +1,15 @@
 using System;
 using System.Threading.Tasks;
+using Horse.Messaging.Client;
+using Horse.Messaging.Client.Queues;
+using Horse.Messaging.Client.Queues.Annotations;
+using Horse.Messaging.Protocol;
 using Newtonsoft.Json;
-using Horse.Mq.Client;
-using Horse.Mq.Client.Annotations;
-using Horse.Mq.Client.Models;
-using Horse.Protocols.Hmq;
 
 namespace RoutingSample.ExceptionConsumer
 {
 	[QueueName("SAMPLE-EXCEPTION-QUEUE")]
-	[QueueStatus(MessagingQueueStatus.Push)]
+	[QueueType(MessagingQueueType.Push)]
 	[AutoAck]
 	public class SampleExceptionConsumer : IQueueConsumer<string>
 	{

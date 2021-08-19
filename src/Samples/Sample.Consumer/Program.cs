@@ -1,28 +1,28 @@
 ﻿using System;
-using Horse.Mq.Bus;
-using Horse.Mq.Client;
-using Horse.Mq.Client.Connectors;
+using Horse.Messaging.Client;
 
 namespace Sample.Consumer
 {
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            HorseConnectorBuilder builder = new HorseConnectorBuilder();
+	class Program
+	{
+		static void Main(string[] args)
+		{
+			HorseClientBuilder builder = new HorseClientBuilder();
 
-            builder.AddHost("hmq://localhost:26222")
-                   .AddTransientConsumers(typeof(Program))
-                   .ConfigureModels(cfg => cfg.UseQueueName(type => "Username1")
-                                              .UseConsumerAck()
-                                              .AddMessageHeader("Sender-Client-Name", "MyName")
-                                              .SetPutBackDelay(TimeSpan.FromSeconds(10)))
-                   .Build()
-                   .Run();
+			HorseClient client = builder.SetHost("horse://localhost:9999")
+										.AddSingletonConsumers(typeof(Program))
+										.AddSingletonConsumers(typeof(Program))
+										 /*
+										.ConfigureModels(cfg => //cfg.UseQueueName(type => "Username1")
+															cfg.UseConsumerAck()
+															.AddMessageHeader("Sender-Client-Name", "MyName")
+															.SetPutBackDelay(TimeSpan.FromSeconds(10)))*/
+										.Build();
 
+			client.Connect();
 
-            while (true)
-                Console.ReadLine();
-        }
-    }
+			while (true)
+				Console.ReadLine();
+		}
+	}
 }

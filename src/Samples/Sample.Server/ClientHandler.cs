@@ -1,19 +1,19 @@
 using System;
 using System.Threading.Tasks;
-using Horse.Mq;
-using Horse.Mq.Clients;
+using Horse.Messaging.Server;
+using Horse.Messaging.Server.Clients;
 
 namespace Sample.Server
 {
     public class ClientHandler : IClientHandler
     {
-        public Task Connected(HorseMq server, MqClient client)
+        public Task Connected(HorseRider server, MessagingClient client)
         {
             Console.WriteLine("Client connected");
             return Task.CompletedTask;
         }
 
-        public Task Disconnected(HorseMq server, MqClient client)
+        public Task Disconnected(HorseRider server, MessagingClient client)
         {
             Console.WriteLine("Client disconnected");
             return Task.CompletedTask;

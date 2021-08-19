@@ -1,31 +1,28 @@
 ﻿using System;
-using Horse.Mq.Client;
-using Horse.Mq.Client.Connectors;
+using Horse.Messaging.Client;
+using Horse.Messaging.Client.Direct;
 
 namespace RoutingSample.InternalService
 {
-	class Program
-	{
-		static void Main(string[] args)
-		{
-			HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(2), () =>
-			{
-				HorseClient client = new HorseClient();
-				client.SetClientName("GIVE-ME-GUID-REQUEST-HANDLER-CONSUMER");
-				return client;
-			});
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            HorseClient client = new HorseClient();
+            client.SetClientName("GIVE-ME-GUID-REQUEST-HANDLER-CONSUMER");
+            client.MessageSerializer = new NewtonsoftContentSerializer();
 
+            DirectHandlerRegistrar registrar = new DirectHandlerRegistrar(client.Direct);
+            registrar.RegisterHandler<GiveMeGuidRequestHandler>();
 
-			connector.AddHost("hmq://localhost:15500");
-			connector.ContentSerializer = new NewtonsoftContentSerializer();
-			connector.Observer.RegisterConsumer<GiveMeGuidRequestHandler>();
-			connector.Connected += (c) => { Console.WriteLine("CONNECTED"); };
-			connector.Disconnected += (c) => Console.WriteLine("DISCONNECTED");
-			connector.MessageReceived += (client, message) => Console.WriteLine("Direct message received");
-			connector.Run();
+            client.Connected += (c) => { Console.WriteLine("CONNECTED"); };
+            client.Disconnected += (c) => Console.WriteLine("DISCONNECTED");
+            client.MessageReceived += (client, message) => Console.WriteLine("Direct message received");
 
-			while (true)
-				Console.ReadLine();
-		}
-	}
+            client.Connect("horse://localhost:15500");
+
+            while (true)
+                Console.ReadLine();
+        }
+    }
 }

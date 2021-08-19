@@ -1,10 +1,11 @@
 using System;
-using Horse.Mq.Client.Annotations;
+using Horse.Messaging.Client.Direct.Annotations;
+using Horse.Messaging.Client.Routers.Annotations;
 
 namespace RoutingSample.Models
 {
 	[RouterName("GIVE-ME-REQUEST-ROUTER")]
-	[ContentType(1002)]
+	[DirectContentType(1002)]
 	public class GiveMeGuidRequest
 	{
 		public string Foo { get; set; }

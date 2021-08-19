@@ -3,7 +3,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Test.Common;
 using Test.Common.Models;
-using Horse.Mq.Queues;
+using Horse.Messaging.Server.Queues;
 using Xunit;
 
 namespace Test.Persistency
@@ -17,24 +17,19 @@ namespace Test.Persistency
             for (int i = 0; i < 10; i++)
                 items.Add(new QueueMessageA("No #" + i));
 
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             server.Start(300, 300);
 
-            HorseQueue route = server.Server.FindQueue("broadcast-a");
-            HorseQueue push = server.Server.FindQueue("push-a");
-            Assert.NotNull(route);
+            HorseQueue push = server.Rider.Queue.Find("push-a");
             Assert.NotNull(push);
 
-            QueueFiller fillerRouteA = new QueueFiller(route);
             QueueFiller fillerPushA = new QueueFiller(push);
 
-            fillerRouteA.FillJson(items, false, false);
             fillerPushA.FillJson(items, false, false);
 
             await Task.Delay(500);
-            Assert.NotEmpty(route.Messages);
-            Assert.NotEmpty(push.Messages);
+            Assert.NotEqual(0, push.MessageCount());
         }
 
         [Fact]
@@ -44,11 +39,11 @@ namespace Test.Persistency
             for (int i = 0; i < 10; i++)
                 items.Add("No #" + i);
 
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             server.Start(300, 300);
 
-            HorseQueue queue = server.Server.FindQueue("push-a");
+            HorseQueue queue = server.Rider.Queue.Find("push-a");
             Assert.NotNull(queue);
 
             QueueFiller filler = new QueueFiller(queue);
@@ -56,8 +51,8 @@ namespace Test.Persistency
             filler.FillString(items, false, false);
 
             await Task.Delay(500);
-            Assert.NotEmpty(queue.PriorityMessages);
-            Assert.NotEmpty(queue.Messages);
+            Assert.NotEqual(0, queue.PriorityMessageCount());
+            Assert.NotEqual(0, queue.MessageCount());
         }
 
         [Fact]
@@ -67,11 +62,11 @@ namespace Test.Persistency
             for (int i = 0; i < 10; i++)
                 items.Add(Encoding.UTF8.GetBytes("No #" + i));
 
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             server.Start(300, 300);
 
-            HorseQueue queue = server.Server.FindQueue("push-a");
+            HorseQueue queue = server.Rider.Queue.Find("push-a");
             Assert.NotNull(queue);
 
             QueueFiller filler = new QueueFiller(queue);
@@ -79,8 +74,8 @@ namespace Test.Persistency
             filler.FillData(items, false, false);
 
             await Task.Delay(500);
-            Assert.NotEmpty(queue.PriorityMessages);
-            Assert.NotEmpty(queue.Messages);
+            Assert.NotEqual(0, queue.PriorityMessageCount());
+            Assert.NotEqual(0, queue.MessageCount());
         }
     }
 }

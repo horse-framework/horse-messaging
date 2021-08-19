@@ -1,13 +1,15 @@
-﻿using Horse.Mq.Client.Annotations;
-using Horse.Mq.Client.Models;
-using Horse.Protocols.Hmq;
+﻿using Horse.Messaging.Client.Direct.Annotations;
+using Horse.Messaging.Client.Queues;
+using Horse.Messaging.Client.Queues.Annotations;
+using Horse.Messaging.Client.Routers.Annotations;
+using Horse.Messaging.Protocol;
 
 namespace RoutingSample.Models
 {
 	[RouterName("SAMPLE-MESSAGE-ROUTER")]
 	[QueueName("SAMPLE-MESSAGE-QUEUE")] // FOR QUEUE PUSH
-	[ContentType(1001)]                 // FOR DIRECT PUSH
-	[QueueStatus(MessagingQueueStatus.Push)]
+	[DirectContentType(1001)]                 // FOR DIRECT PUSH
+	[QueueType(MessagingQueueType.Push)]
 	[Acknowledge(QueueAckDecision.WaitForAcknowledge)]
 	public class SampleMessage
 	{

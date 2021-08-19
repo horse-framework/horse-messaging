@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Horse.Mq.Client;
-using Horse.Mq.Client.Bus;
-using Horse.Mq.Client.Connectors;
-using Horse.Protocols.Hmq;
+using Horse.Messaging.Client;
+using Horse.Messaging.Protocol;
+using Sample.Consumer;
 
 namespace Sample.Producer
 {
@@ -11,12 +11,11 @@ namespace Sample.Producer
     {
         static async Task Main(string[] args)
         {
-            HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(2));
-            connector.AddHost("hmq://localhost:26222");
-            connector.ContentSerializer = new NewtonsoftContentSerializer();
-            connector.Run();
-
-            IHorseQueueBus queueBus = connector.Bus.Queue;
+            HorseClientBuilder builder = new HorseClientBuilder();
+            builder.SetHost("horse://localhost:9999");
+            builder.UseNewtonsoftJsonSerializer();
+            HorseClient client = builder.Build();
+            client.Connect();
 
             ModelA a = new ModelA();
             a.Foo = "foo";
@@ -24,9 +23,13 @@ namespace Sample.Producer
 
             while (true)
             {
-                HorseResult result = await queueBus.PushJson(a);
+                HorseResult result = await client.Queue.PushJson(a, false);
                 Console.WriteLine($"Push: {result.Code}");
-                await Task.Delay(5000);
+
+                // var result = await client.Direct.RequestJson<ResponseModel>(new RequestModel());
+                // Console.WriteLine($"Push: {result.Code} ${JsonSerializer.Serialize(result.Model)}");
+                Console.ReadLine();
+                // await Task.Delay(5000);
             }
         }
     }

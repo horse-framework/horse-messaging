@@ -1,120 +1,48 @@
-# Horse MQ
+# Horse Messaging
 
-[![NuGet](https://img.shields.io/nuget/v/Horse.MQ?label=server%20nuget)](https://www.nuget.org/packages/Horse.MQ)
-[![NuGet](https://img.shields.io/nuget/v/Horse.MQ.Client?label=client%20nuget)](https://www.nuget.org/packages/Horse.MQ.Client)
-[![NuGet](https://img.shields.io/nuget/v/Horse.MQ.Bus?label=bus%20nuget)](https://www.nuget.org/packages/Horse.MQ.Bus)
+[![NuGet](https://img.shields.io/nuget/v/Horse.Messaging.Server?label=Server%20NuGet)](https://www.nuget.org/packages/Horse.Messaging.Serer)
+[![NuGet](https://img.shields.io/nuget/v/Horse.Messaging.Client?label=Client%20NuGet)](https://www.nuget.org/packages/Horse.Messaging.Client)
 
-* Horse MQ is a .NET Core messaging queue and communication framework.
-* Horse MQ is not only queue messaging server. In provides direct messages, requests, responses and getting server and client informations.
-* Horse MQ has many queue messaging structure: Broadcast, Push, Pull, Cache.
-* Clients can subscribe events and gets information when another client is connected or does something.
+## What's Horse Messaging
 
-### Very Quick Messaging Queue Server Example
+Horse Messaging is a communcation framework. It provides many features.
+All features can be used over only once client and one connection full asynchronously. 
 
-```C#
-class Program
-{
-    static void Main(string[] args)
-    {
-        HorseServer server = new HorseServer();
-        server.UseHorseMq(cfg => cfg.UseJustAllowDeliveryHandler());
-        server.Run(22200);
-    }
-}
-```
+* Push State Messaging Queues (supports persistent queues)
+* Pull State Messaging Queues (supports persistent queues)
+* Message Broadcasting over Channels
+* Distributed Cache Management
+* Direct Messaging Between Clients
+* Proxy for Request and Response Messaging
+* Remote Transactions
+* Event Management
+* Message Routing
 
-### Very Quick Server Example with Persistent Queues
+## Why should I use it ?
 
-```C#
-class Program
-{
-    static async Task Main(string[] args)
-    {
-        HorseServer server = new HorseServer();
-        HorseMq mq = server.UseHorseMq(cfg => cfg
-                                              .AddPersistentQueues(q => q.KeepLastBackup())
-                                              .UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterReceived));
-
-        await mq.LoadPersistentQueues();
-        server.Run(22200);
-    }
-}
-```    
-
-### Consumer without Horse.Extensions.Bus
-
-Implementation
-
-```C#
-static async Task Main(string[] args)
-{
-    HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(1));
-    connector.AutoSubscribe = true;
-    connector.ContentSerializer = new NewtonsoftContentSerializer();
-    connector.Observer.RegisterAssemblyConsumers(typeof(Program));
-    connector.AddHost("tmq://127.0.0.1:22200");
-    connector.Run();
-    while (true)
-        await Task.Delay(1000);
-}
-```
-
-Model
-
-```C#
-[QueueName("model-a")]
-public class ModelA
-{
-    public string Foo { get; set; }
-}
-```
-
-Consumer
-
-```C#
-[AutoAck]
-[AutoNack]
-public class QueueConsumerA : IQueueConsumer<ModelA>
-{
-    public Task Consume(HorseMessage message, ModelA model, HorseClient client)
-    {
-        Console.WriteLine("Model A Consumed");
-        return Task.CompletedTask;
-    }
-}
-```
+* First or all, **Horse Messaging is a framework, not an application.**
+  That gives you unlimited customization opportunity. 
+  Horse Messaging Server provides you many many implementation options to customize everything in it. 
+  On the other hand, if you want to use Horse Messaging Server with default implementations, 
+  you can create very basic application with a few lines of code.
+  
+  
+* **It's a complete communication framework.**
+  It's a bridge between your applications.
+  It's not just messaging queue or cache server.
+  Horse gives you unlimited communication possibilities.
+  You can use all kind of messaging architectures with same code base.
 
 
-### Consumer with Horse.Extensions.Bus
+* **It's extremely extensible and customizable.**
+  Everything has an implementation and all operations are interceptable.
+  You can even use your custom SQL server to make your queues durable.
+  
 
-Model and Consumer same with example above. The Implementation change is here:
-
-    services.UseHorseBus(cfg => cfg.AddHost("tmq://127.0.0.1:22200")
-                                   .AddTransientConsumers(typeof(Program)));
-
-
-If you use a service provider, you can inject other services to consumer objects.
-
-
-### Sending Messages as Producer
-
-Horse accepts producers and consumers as client. Each client can be producer and consumer at same time. With ConsumerFactory implementation, you can inject IHorseBus interface for being producer at same time. If you want to create only producer, you can skip Add..Consumers methods.
-
-```C#
- IHorseQueueBus queueBus;   //injected
- IHorseRouteBus routeBus;   //injected
- IHorseDirectBus directBus; //injected
-
- //push to a queue
- await queueBus.PushJson(new ModelA());
-
- //publish to a router
- await routeBus.PublishJson(new ModelA());
-
- //to a direct target, ModelA requires DirectTarget attribute
- //and ContentType attribute will be useful to recognize message type by receiver
- directBus.SendJson(new ModelA());
-```
+* **It's fast, uses low memory and cpu.**
+  Queues can handle over 200k messages per second,
+  Channels can handle over 350k messages per second.
+  There is no delay in Horse, latency depends on your network connection.
 
 
 ## Thanks

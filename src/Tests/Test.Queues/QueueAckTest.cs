@@ -1,8 +1,8 @@
 using System.Threading;
 using System.Threading.Tasks;
+using Horse.Messaging.Client;
+using Horse.Messaging.Protocol;
 using Test.Common;
-using Horse.Mq.Client;
-using Horse.Protocols.Hmq;
 using Xunit;
 
 namespace Test.Queues
@@ -12,15 +12,15 @@ namespace Test.Queues
         [Fact]
         public async Task AckTimeout()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start(300, 300);
 
             HorseClient producer = new HorseClient();
-            await producer.ConnectAsync("hmq://localhost:" + port);
+            await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            await producer.Queues.Push("push-a", "Hello, World!", false);
+            await producer.Queue.Push("push-a", "Hello, World!", false);
             await Task.Delay(100);
 
             HorseClient consumer = new HorseClient();
@@ -30,10 +30,10 @@ namespace Test.Queues
             int msgReceived = 0;
             consumer.MessageReceived += (c, m) => Interlocked.Increment(ref msgReceived);
 
-            await consumer.ConnectAsync("hmq://localhost:" + port);
+            await consumer.ConnectAsync("horse://localhost:" + port);
             Assert.True(consumer.IsConnected);
 
-            HorseResult joined = await consumer.Queues.Subscribe("push-a", true);
+            HorseResult joined = await consumer.Queue.Subscribe("push-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             await Task.Delay(100);

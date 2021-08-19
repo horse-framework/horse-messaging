@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net5.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\AdvancedSample.Common.Infrastructure\AdvancedSample.Common.Infrastructure.csproj" />
+      <ProjectReference Include="..\AdvancedSample.Core.Service\AdvancedSample.Core.Service.csproj" />
+      <ProjectReference Include="..\AdvancedSample.DataAccess.Repository\AdvancedSample.DataAccess.Repository.csproj" />
+      <ProjectReference Include="..\AdvancedSample.OrderService.Core\AdvancedSample.OrderService.Core.csproj" />
+      <ProjectReference Include="..\AdvancedSample.OrderService.Domain\AdvancedSample.OrderService.Domain.csproj" />
+      <ProjectReference Include="..\AdvancedSample.OrderService.Models\AdvancedSample.OrderService.Models.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="AutoMapper" Version="10.1.1" />
+    </ItemGroup>
+
+</Project>

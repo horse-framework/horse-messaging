@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net5.0</TargetFramework>
+        <Title>Horse.Messaging.Server</Title>
+        <Product>Horse.Messaging.Server</Product>
+        <Description>Horse Messaging Server</Description>
+        <PackageTags>horse,server,messaging,queue,channel,cache</PackageTags>
+        <AssemblyVersion>6.0.5</AssemblyVersion>
+        <FileVersion>6.0.5</FileVersion>
+        <PackageVersion>6.0.5</PackageVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
+        <PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/horse-framework/horse-messaging/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/horse-framework/horse-messaging</RepositoryUrl>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <DocumentationFile>bin\Release\Horse.Messaging.Server.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+        <DocumentationFile>bin\Debug\Horse.Messaging.Server.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Horse.Server" Version="5.0.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Horse.Messaging.Client\Horse.Messaging.Client.csproj" />
+        <ProjectReference Include="..\Horse.Messaging.Protocol\Horse.Messaging.Protocol.csproj" />
+    </ItemGroup>
+
+</Project>

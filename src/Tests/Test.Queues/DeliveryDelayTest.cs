@@ -1,8 +1,8 @@
 using System.Threading.Tasks;
+using Horse.Messaging.Client;
+using Horse.Messaging.Protocol;
 using Test.Common;
-using Horse.Mq.Client;
-using Horse.Mq.Queues;
-using Horse.Protocols.Hmq;
+using Horse.Messaging.Server.Queues;
 using Xunit;
 
 namespace Test.Queues
@@ -12,30 +12,30 @@ namespace Test.Queues
         [Fact]
         public async Task Delay()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start(300, 300);
 
-            HorseQueue queue = server.Server.FindQueue("push-a");
+            HorseQueue queue = server.Rider.Queue.Find("push-a");
             queue.Options.Acknowledge = QueueAckDecision.None;
             queue.Options.DelayBetweenMessages = 100;
 
             HorseClient producer = new HorseClient();
-            await producer.ConnectAsync("hmq://localhost:" + port);
+            await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
             int receivedMessages = 0;
             HorseClient consumer = new HorseClient();
             consumer.ClientId = "consumer";
-            await consumer.ConnectAsync("hmq://localhost:" + port);
+            await consumer.ConnectAsync("horse://localhost:" + port);
             Assert.True(consumer.IsConnected);
             consumer.MessageReceived += (c, m) => receivedMessages++;
 
-            HorseResult joined = await consumer.Queues.Subscribe("push-a", true);
+            HorseResult joined = await consumer.Queue.Subscribe("push-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             for (int i = 0; i < 30; i++)
-                await producer.Queues.Push("push-a", "Hello, World!", false);
+                await producer.Queue.Push("push-a", "Hello, World!", false);
 
             await Task.Delay(500);
             Assert.True(receivedMessages > 4);

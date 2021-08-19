@@ -1,59 +1,13 @@
-using System.IO;
-using System.Text;
 using System.Threading.Tasks;
+using Horse.Messaging.Client;
+using Horse.Messaging.Protocol;
 using Test.Common;
-using Test.Common.Models;
-using Horse.Mq.Client;
-using Horse.Protocols.Hmq;
 using Xunit;
 
 namespace Test.Direct
 {
     public class ClientOptionsTest
     {
-        /// <summary>
-        /// If true, every message must have an id even user does not set
-        /// </summary>
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task UseUniqueMessageId(bool enabled)
-        {
-            TestHorseMq server = new TestHorseMq();
-            await server.Initialize();
-            server.Server.Options.UseMessageId = enabled;
-            server.Server.FindQueue("push-a").Options.UseMessageId = false;
-            int port = server.Start();
-
-            HorseClient client = new HorseClient();
-            client.UseUniqueMessageId = false;
-
-            await client.ConnectAsync("hmq://localhost:" + port);
-            Assert.True(client.IsConnected);
-
-            HorseResult joined = await client.Queues.Subscribe("push-a", true);
-            Assert.Equal(HorseResultCode.Ok, joined.Code);
-            await Task.Delay(250);
-
-            HorseMessage received = null;
-            client.MessageReceived += (c, m) => received = m;
-
-            QueueMessageA a = new QueueMessageA("A");
-            string serialized = Newtonsoft.Json.JsonConvert.SerializeObject(a);
-            MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(serialized));
-            HorseResult sent = await client.Queues.Push("push-a", ms, false);
-            Assert.Equal(HorseResultCode.Ok, sent.Code);
-
-            await Task.Delay(1000);
-
-            Assert.NotNull(received);
-
-            if (enabled)
-                Assert.NotNull(received.MessageId);
-            else
-                Assert.Null(received.MessageId);
-        }
-
         /// <summary>
         /// Subscribes message received event of HorseClient.
         /// Sends a message and waits for response.
@@ -64,7 +18,7 @@ namespace Test.Direct
         [InlineData(false)]
         public async Task CatchResponseMessages(bool enabled)
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
@@ -75,8 +29,8 @@ namespace Test.Direct
             client2.ClientId = "client-2";
             client1.CatchResponseMessages = enabled;
 
-            await client1.ConnectAsync("hmq://localhost:" + port);
-            await client2.ConnectAsync("hmq://localhost:" + port);
+            await client1.ConnectAsync("horse://localhost:" + port);
+            await client2.ConnectAsync("horse://localhost:" + port);
 
             Assert.True(client1.IsConnected);
             Assert.True(client2.IsConnected);

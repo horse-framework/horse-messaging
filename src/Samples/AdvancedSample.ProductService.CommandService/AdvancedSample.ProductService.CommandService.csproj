@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net5.0</TargetFramework>
+        <AssemblyName>AdvancedSample.ProductService.CommandService</AssemblyName>
+        <RootNamespace>AdvancedSample.ProductService.CommandService</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\AdvancedSample.Core.Service\AdvancedSample.Core.Service.csproj" />
+      <ProjectReference Include="..\AdvancedSample.ProductService.Core\AdvancedSample.ProductService.Core.csproj" />
+      <ProjectReference Include="..\AdvancedSample.ProductService.Models\AdvancedSample.ProductService.Models.csproj" />
+    </ItemGroup>
+
+</Project>

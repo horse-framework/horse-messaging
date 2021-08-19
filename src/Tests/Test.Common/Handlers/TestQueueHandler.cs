@@ -1,46 +1,46 @@
 using System.Threading.Tasks;
-using Horse.Mq;
-using Horse.Mq.Clients;
-using Horse.Mq.Queues;
+using Horse.Messaging.Server;
+using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Queues;
 
 namespace Test.Common.Handlers
 {
     public class TestQueueHandler : IQueueEventHandler
     {
-        private readonly TestHorseMq _mq;
+        private readonly TestHorseRider _rider;
 
-        public TestQueueHandler(TestHorseMq mq)
+        public TestQueueHandler(TestHorseRider rider)
         {
-            _mq = mq;
+            _rider = rider;
         }
 
         public Task OnCreated(HorseQueue queue)
         {
-            _mq.OnQueueCreated++;
+            _rider.OnQueueCreated++;
             return Task.CompletedTask;
         }
 
         public Task OnRemoved(HorseQueue queue)
         {
-            _mq.OnQueueRemoved++;
+            _rider.OnQueueRemoved++;
             return Task.CompletedTask;
         }
 
         public Task OnConsumerSubscribed(QueueClient client)
         {
-            _mq.OnSubscribed++;
+            _rider.OnSubscribed++;
             return Task.CompletedTask;
         }
 
         public Task OnConsumerUnsubscribed(QueueClient client)
         {
-            _mq.OnUnsubscribed++;
+            _rider.OnUnsubscribed++;
             return Task.CompletedTask;
         }
 
         public Task OnStatusChanged(HorseQueue queue, QueueStatus @from, QueueStatus to)
         {
-            _mq.OnQueueStatusChanged++;
+            _rider.OnQueueStatusChanged++;
             return Task.CompletedTask;
         }
     }

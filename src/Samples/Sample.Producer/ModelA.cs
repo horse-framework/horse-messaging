@@ -1,15 +1,18 @@
 using System.Text.Json.Serialization;
+using Horse.Messaging.Client.Annotations;
+using Horse.Messaging.Client.Queues;
+using Horse.Messaging.Client.Queues.Annotations;
+using Horse.Messaging.Protocol;
 using Newtonsoft.Json;
-using Horse.Mq.Client.Annotations;
-using Horse.Mq.Client.Models;
-using Horse.Protocols.Hmq;
 
 namespace Sample.Producer
 {
- //   [QueueName("model-a")]
+    [QueueName("model-a")]
     [DeliveryHandler("dhand")]
-    [QueueStatus(MessagingQueueStatus.Push)]
+    [QueueType(MessagingQueueType.Push)]
     [Acknowledge(QueueAckDecision.JustRequest)]
+    [Interceptor(typeof(TestModelInterceptor1))]
+
     public class ModelA
     {
         [JsonProperty("no")]

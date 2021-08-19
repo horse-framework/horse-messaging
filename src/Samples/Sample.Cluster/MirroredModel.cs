@@ -1,10 +1,10 @@
-using Horse.Mq.Client.Annotations;
-using Horse.Mq.Client.Models;
+using Horse.Messaging.Client.Queues;
+using Horse.Messaging.Client.Queues.Annotations;
 
 namespace Sample.Cluster
 {
     [QueueName("Mirror")]
-    [QueueStatus(MessagingQueueStatus.Push)]
+    [QueueType(MessagingQueueType.Push)]
     public class MirroredModel
     {
         public string Foo { get; set; }

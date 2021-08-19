@@ -1,14 +1,12 @@
 ﻿using System;
-using System.Runtime.Serialization;
 using System.Threading.Tasks;
-using Horse.Mq;
-using Horse.Mq.Client;
-using Horse.Mq.Client.Connectors;
-using Horse.Mq.Delivery;
-using Horse.Mq.Handlers;
-using Horse.Mq.Options;
-using Horse.Mq.Queues;
-using Horse.Protocols.Hmq;
+using Horse.Messaging.Client;
+using Horse.Messaging.Client.Queues;
+using Horse.Messaging.Protocol;
+using Horse.Messaging.Server;
+using Horse.Messaging.Server.Handlers;
+using Horse.Messaging.Server.Options;
+using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Server;
 
 namespace Sample.Cluster
@@ -28,57 +26,51 @@ namespace Sample.Cluster
             Console.ReadLine();
         }
 
-        static HorseMq StartServer1()
+        static HorseRider StartServer1()
         {
-            HorseMq mq = HorseMqBuilder.Create()
-                                       .AddOptions(o => o.Status = QueueStatus.Push)
-                                       .UseAckDeliveryHandler(AcknowledgeWhen.AfterReceived, PutBackDecision.No)
-                                       .Build();
+            HorseRider rider = HorseRiderBuilder.Create()
+               .ConfigureQueues(q => q.UseAckDeliveryHandler(AcknowledgeWhen.AfterReceived, PutBackDecision.No))
+               .Build();
 
-            mq.NodeManager.SetHost(new HostOptions {Port = 26101});
-            mq.NodeManager.AddRemoteNode(new NodeOptions
-                                         {
-                                             Host = "hmq://localhost:26100",
-                                             Name = "Node-2",
-                                             KeepMessages = false,
-                                             ReconnectWait = 500
-                                         });
+            rider.NodeManager.SetHost(new HostOptions {Port = 26101});
+            rider.NodeManager.AddRemoteNode(new NodeOptions
+            {
+                Host = "horse://localhost:26100",
+                Name = "Node-2",
+                ReconnectWait = 500
+            });
 
             HorseServer server = new HorseServer();
-            server.UseHorseMq(mq);
+            server.UseRider(rider);
             server.Start(26001);
-            return mq;
+            return rider;
         }
 
-        static HorseMq StartServer2()
+        static HorseRider StartServer2()
         {
-            HorseMq mq = HorseMqBuilder.Create()
-                                       .AddOptions(o => o.Status = QueueStatus.Push)
-                                       .UseAckDeliveryHandler(AcknowledgeWhen.AfterReceived, PutBackDecision.No)
-                                       .Build();
+            HorseRider rider = HorseRiderBuilder.Create()
+               .ConfigureQueues(q => q.UseAckDeliveryHandler(AcknowledgeWhen.AfterReceived, PutBackDecision.No))
+               .Build();
 
-            mq.NodeManager.SetHost(new HostOptions {Port = 26100});
-            mq.NodeManager.AddRemoteNode(new NodeOptions
-                                         {
-                                             Host = "hmq://localhost:26101",
-                                             Name = "Node-1",
-                                             KeepMessages = false,
-                                             ReconnectWait = 500
-                                         });
+            rider.NodeManager.SetHost(new HostOptions {Port = 26100});
+            rider.NodeManager.AddRemoteNode(new NodeOptions
+            {
+                Host = "horse://localhost:26101",
+                Name = "Node-1",
+                ReconnectWait = 500
+            });
 
             HorseServer server = new HorseServer();
-            server.UseHorseMq(mq);
+            server.UseRider(rider);
             server.Start(26002);
-            return mq;
+            return rider;
         }
 
         static void ConnectToServer1AsProducer()
         {
-            HmqStickyConnector producer = new HmqStickyConnector(TimeSpan.FromSeconds(2));
-            producer.AddHost("hmq://localhost:26002");
-
-            producer.ContentSerializer = new NewtonsoftContentSerializer();
-            producer.Run();
+            HorseClient client = new HorseClient();
+            client.MessageSerializer = new NewtonsoftContentSerializer();
+            client.Connect("horse://localhost:26002");
 
             Task.Run(async () =>
             {
@@ -90,7 +82,7 @@ namespace Sample.Cluster
                     MirroredModel model = new MirroredModel();
                     model.Foo = $"Foo #{counter}";
 
-                    HorseResult pushResult = await producer.Bus.Queue.PushJson(model, true);
+                    HorseResult pushResult = await client.Queue.PushJson(model, true);
                     Console.WriteLine($"Push Result: {pushResult.Code}");
 
                     counter++;
@@ -101,18 +93,18 @@ namespace Sample.Cluster
         static void ConnectToServer2AsConsumer()
         {
             //that client is connected to same node with producer
-            HmqStickyConnector consumer1 = new HmqStickyConnector(TimeSpan.FromSeconds(2));
-            consumer1.AddHost("hmq://localhost:26002");
-            consumer1.ContentSerializer = new NewtonsoftContentSerializer();
-            consumer1.Observer.RegisterConsumer<MirroredModelConsumer>();
-            consumer1.Run();
+            HorseClient client1 = new HorseClient();
+            client1.MessageSerializer = new NewtonsoftContentSerializer();
+            QueueConsumerRegistrar registrar1 = new QueueConsumerRegistrar(client1.Queue);
+            registrar1.RegisterConsumer<MirroredModelConsumer>();
+            client1.Connect("horse://localhost:26002");
 
             //that client is connected to other node
-            HmqStickyConnector consumer2 = new HmqStickyConnector(TimeSpan.FromSeconds(2));
-            consumer2.AddHost("hmq://localhost:26001");
-            consumer2.ContentSerializer = new NewtonsoftContentSerializer();
-            consumer2.Observer.RegisterConsumer<MirroredModelConsumer>();
-            consumer2.Run();
+            HorseClient client2 = new HorseClient();
+            client2.MessageSerializer = new NewtonsoftContentSerializer();
+            QueueConsumerRegistrar registrar2 = new QueueConsumerRegistrar(client2.Queue);
+            registrar2.RegisterConsumer<MirroredModelConsumer>();
+            client2.Connect("horse://localhost:26001");
         }
     }
 }

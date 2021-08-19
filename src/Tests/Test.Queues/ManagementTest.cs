@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Horse.Messaging.Client;
+using Horse.Messaging.Client.Queues;
+using Horse.Messaging.Protocol;
 using Test.Common;
-using Horse.Mq.Client;
-using Horse.Mq.Client.Models;
-using Horse.Mq.Clients;
-using Horse.Mq.Queues;
-using Horse.Protocols.Hmq;
+using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Queues;
 using Xunit;
 
 namespace Test.Queues
@@ -20,17 +20,17 @@ namespace Test.Queues
         [Fact]
         public async Task SubscribeToQueue()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + port);
 
-            HorseResult joined = await client.Queues.Subscribe("broadcast-a", true);
+            HorseResult joined = await client.Queue.Subscribe("push-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
-            HorseQueue queue = server.Server.Queues.FirstOrDefault();
+            HorseQueue queue = server.Rider.Queue.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
             List<QueueClient> clients = queue.ClientsClone;
@@ -43,20 +43,20 @@ namespace Test.Queues
         [Fact]
         public async Task UnsubscribeToQueue()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + port);
 
-            HorseResult joined = await client.Queues.Subscribe("broadcast-a", true);
+            HorseResult joined = await client.Queue.Subscribe("broadcast-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
-            HorseResult left = await client.Queues.Unsubscribe("broadcast-a", true);
+            HorseResult left = await client.Queue.Unsubscribe("broadcast-a", true);
             Assert.Equal(HorseResultCode.Ok, left.Code);
 
-            HorseQueue queue = server.Server.Queues.FirstOrDefault();
+            HorseQueue queue = server.Rider.Queue.Queues.FirstOrDefault();
             Assert.NotNull(queue);
 
             List<QueueClient> clients = queue.ClientsClone;
@@ -70,17 +70,17 @@ namespace Test.Queues
         [Fact]
         public async Task Create()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + port);
 
-            HorseResult created = await client.Queues.Create("queue-new");
+            HorseResult created = await client.Queue.Create("queue-new");
             Assert.Equal(HorseResultCode.Ok, created.Code);
 
-            HorseQueue queue = server.Server.Queues.FirstOrDefault(x => x.Name == "queue-new");
+            HorseQueue queue = server.Rider.Queue.Queues.FirstOrDefault(x => x.Name == "queue-new");
             Assert.NotNull(queue);
             Assert.Equal("queue-new", queue.Name);
         }
@@ -88,45 +88,45 @@ namespace Test.Queues
         [Fact]
         public async Task CreateWithProperties()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            HorseResult created = await client.Queues.Create("queue-test", o =>
+            HorseResult created = await client.Queue.Create("queue-test", o =>
             {
                 o.AcknowledgeTimeout = 33000;
-                o.Status = MessagingQueueStatus.Pull;
+                o.Type = MessagingQueueType.Pull;
             });
             Assert.Equal(HorseResultCode.Ok, created.Code);
 
-            HorseQueue queue = server.Server.FindQueue("queue-test");
+            HorseQueue queue = server.Rider.Queue.Find("queue-test");
             Assert.NotNull(queue);
 
             Assert.Equal(TimeSpan.FromSeconds(33), queue.Options.AcknowledgeTimeout);
-            Assert.Equal(QueueStatus.Pull, queue.Status);
+            Assert.Equal(QueueType.Pull, queue.Type);
         }
 
         [Fact]
         public async Task Update()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
-            HorseQueue queue = server.Server.FindQueue("broadcast-a");
+            HorseQueue queue = server.Rider.Queue.Find("push-a");
             Assert.NotNull(queue);
 
             Assert.Equal(TimeSpan.FromSeconds(12), queue.Options.MessageTimeout);
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            HorseResult updated = await client.Queues.SetOptions("broadcast-a", o => o.MessageTimeout = 666000);
+            HorseResult updated = await client.Queue.SetOptions("push-a", o => o.MessageTimeout = 666000);
             Assert.Equal(HorseResultCode.Ok, updated.Code);
 
             Assert.Equal(TimeSpan.FromSeconds(666), queue.Options.MessageTimeout);
@@ -135,35 +135,35 @@ namespace Test.Queues
         [Fact]
         public async Task Delete()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
-            HorseQueue queue = server.Server.FindQueue("broadcast-a");
+            HorseQueue queue = server.Rider.Queue.Find("push-a");
             Assert.NotNull(queue);
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            HorseResult done = await client.Queues.Remove("broadcast-a");
+            HorseResult done = await client.Queue.Remove("push-a");
             Assert.Equal(HorseResultCode.Ok, done.Code);
 
-            queue = server.Server.FindQueue("broadcast-a");
+            queue = server.Rider.Queue.Find("push-a");
             Assert.Null(queue);
         }
 
         [Fact]
         public async Task GetQueueInfo()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + port);
 
-            var queues = await client.Queues.List("push-a");
+            var queues = await client.Queue.List("push-a");
             Assert.Equal(HorseResultCode.Ok, queues.Result.Code);
             Assert.NotNull(queues.Model);
             var pushQueue = queues.Model.FirstOrDefault(x => x.Name == "push-a");
@@ -173,14 +173,14 @@ namespace Test.Queues
         [Fact]
         public async Task GetQueueList()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + port);
 
-            var result = await client.Queues.List();
+            var result = await client.Queue.List();
             Assert.Equal(HorseResultCode.Ok, result.Result.Code);
             Assert.NotNull(result.Model);
             var queue = result.Model.FirstOrDefault();
@@ -196,30 +196,30 @@ namespace Test.Queues
         [InlineData(false, true)]
         public async Task ClearMessages(bool priorityMessages, bool messages)
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
             int port = server.Start();
 
-            HorseQueue queue = server.Server.FindQueue("push-a");
+            HorseQueue queue = server.Rider.Queue.Find("push-a");
             await queue.Push("Hello, World");
             await queue.Push("Hello, World", true);
             await Task.Delay(500);
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
+            await client.ConnectAsync("horse://localhost:" + port);
 
-            var result = await client.Queues.ClearMessages("push-a", priorityMessages, messages);
+            var result = await client.Queue.ClearMessages("push-a", priorityMessages, messages);
             Assert.Equal(HorseResultCode.Ok, result.Code);
 
             if (priorityMessages)
-                Assert.Empty(queue.PriorityMessages);
+                Assert.Equal(0, queue.PriorityMessageCount());
             else
-                Assert.NotEmpty(queue.PriorityMessages);
+                Assert.NotEqual(0, queue.PriorityMessageCount());
 
             if (messages)
-                Assert.Empty(queue.Messages);
+                Assert.Equal(0, queue.MessageCount());
             else
-                Assert.NotEmpty(queue.Messages);
+                Assert.NotEqual(0, queue.MessageCount());
         }
     }
 }

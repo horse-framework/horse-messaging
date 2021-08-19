@@ -1,7 +1,9 @@
 using System.Threading.Tasks;
+using Horse.Messaging.Client;
+using Horse.Messaging.Client.Events;
+using Horse.Messaging.Protocol;
 using Test.Common;
-using Horse.Mq.Client;
-using Horse.Protocols.Hmq;
+using Test.Events.Handlers.Queue;
 using Xunit;
 
 namespace Test.Events
@@ -9,109 +11,100 @@ namespace Test.Events
     public class QueueEventTest
     {
         [Fact]
-        public async Task QueueCreated()
+        public async Task QueueCreate()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
-            int port = server.Start(3000, 3000);
+            int port = server.Start(300, 300);
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
-            Assert.True(client.IsConnected);
-            bool received = false;
-            bool subscribed = await client.Queues.OnCreated(q =>
-            {
-                Assert.Equal("pull-b", q.Name);
-                received = true;
-            });
-            Assert.True(subscribed);
 
-            var result = await client.Queues.Create("pull-b");
-            Assert.Equal(HorseResultCode.Ok, result.Code);
+            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
+            registrar.RegisterHandler<QueueCreateHandler>();
+
+            await client.ConnectAsync($"horse://localhost:{port}");
+
+            HorseResult createResult = await client.Queue.Create("test-queue");
+            Assert.Equal(HorseResultCode.Ok, createResult.Code);
+
             await Task.Delay(250);
-            Assert.True(received);
-            received = false;
-
-            bool unsubscribed = await client.Queues.OffCreated();
-            Assert.True(unsubscribed);
-
-            result = await client.Queues.Create("pull-c");
-            Assert.Equal(HorseResultCode.Ok, result.Code);
-            await Task.Delay(250);
-            Assert.False(received);
+            Assert.Equal(1, QueueCreateHandler.Count);
         }
 
         [Fact]
-        public async Task QueueUpdated()
+        public async Task QueueRemove()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
-            int port = server.Start(3000, 3000);
+            int port = server.Start(300, 300);
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
-            Assert.True(client.IsConnected);
-            bool received = false;
-            bool subscribed = await client.Queues.OnUpdated(q =>
-            {
-                Assert.Equal("pull-a", q.Name);
-                received = true;
-            });
-            Assert.True(subscribed);
 
-            var result = await client.Queues.SetOptions("pull-a", opt => { opt.MessageLimit = 666; });
-            Assert.Equal(HorseResultCode.Ok, result.Code);
+            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
+            registrar.RegisterHandler<QueueRemoveHandler>();
+
+            await client.ConnectAsync($"horse://localhost:{port}");
+
+            HorseResult createResult = await client.Queue.Create("test-queue");
+            Assert.Equal(HorseResultCode.Ok, createResult.Code);
+
             await Task.Delay(250);
-            Assert.True(received);
+            Assert.Equal(0, QueueRemoveHandler.Count);
+
+            HorseResult removeResult = await client.Queue.Remove("test-queue");
+            Assert.Equal(HorseResultCode.Ok, removeResult.Code);
+
+            await Task.Delay(250);
+            Assert.Equal(1, QueueRemoveHandler.Count);
         }
 
         [Fact]
-        public async Task QueueRemoved()
+        public async Task QueueSubscribe()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
-            int port = server.Start(3000, 3000);
+            int port = server.Start(300, 300);
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
-            Assert.True(client.IsConnected);
-            bool received = false;
-            bool subscribed = await client.Queues.OnRemoved(q =>
-            {
-                Assert.Equal("pull-a", q.Name);
-                received = true;
-            });
-            Assert.True(subscribed);
 
-            var result = await client.Queues.Remove("pull-a");
-            Assert.Equal(HorseResultCode.Ok, result.Code);
+            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
+            registrar.RegisterHandler<QueueSubscribeHandler>();
+
+            await client.ConnectAsync($"horse://localhost:{port}");
+
+            HorseResult subscribeResult = await client.Queue.Subscribe("test-queue", true);
+            Assert.Equal(HorseResultCode.Ok, subscribeResult.Code);
+
             await Task.Delay(250);
-            Assert.True(received);
+            Assert.Equal(1, QueueSubscribeHandler.Count);
         }
 
         [Fact]
-        public async Task MessageProduced()
+        public async Task QueueUnsubscribe()
         {
-            TestHorseMq server = new TestHorseMq();
+            TestHorseRider server = new TestHorseRider();
             await server.Initialize();
-            int port = server.Start(3000, 3000);
-            server.SendAcknowledgeFromMQ = true;
+            int port = server.Start(300, 300);
 
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:" + port);
-            Assert.True(client.IsConnected);
-            bool received = false;
-            bool subscribed = await client.Queues.OnMessageProduced("pull-a",q =>
-            {
-                Assert.Equal("pull-a", q.Queue);
-                received = true;
-            });
-            Assert.True(subscribed);
 
-            var result = await client.Queues.Push("pull-a", "Hello, World!", true);
-            Assert.Equal(HorseResultCode.Ok, result.Code);
+            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
+            registrar.RegisterHandler<QueueUnsubscribeHandler>();
+
+            await client.ConnectAsync($"horse://localhost:{port}");
+
+            HorseResult subscribeResult = await client.Queue.Subscribe("test-queue", true);
+            Assert.Equal(HorseResultCode.Ok, subscribeResult.Code);
+
             await Task.Delay(250);
-            Assert.True(received);
+            Assert.Equal(0, QueueUnsubscribeHandler.Count);
+
+            HorseResult unsubscribeResult = await client.Queue.Unsubscribe("test-queue", true);
+            Assert.Equal(HorseResultCode.Ok, unsubscribeResult.Code);
+
+            await Task.Delay(250);
+            Assert.Equal(1, QueueUnsubscribeHandler.Count);
         }
+        
     }
 }

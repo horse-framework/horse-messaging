@@ -1,35 +1,31 @@
 ﻿using System;
-using Horse.Mq.Client;
-using Horse.Mq.Client.Bus;
-using Horse.Mq.Client.Connectors;
+using Horse.Messaging.Client;
+using Horse.Messaging.Client.Direct;
+using Horse.Messaging.Client.Routers;
 
 namespace RoutingSample.DirectConsumer
 {
-	internal class Program
-	{
-		public static IHorseRouteBus RouteBus;
+    internal class Program
+    {
+        public static IHorseRouterBus RouterBus;
 
-		private static void Main(string[] args)
-		{
-			HmqStickyConnector connector = new HmqStickyConnector(TimeSpan.FromSeconds(2), () =>
-			{
-				HorseClient client = new HorseClient();
-				client.SetClientType("SAMPLE-MESSAGE-CONSUMER");
-				return client;
-			});
+        private static void Main(string[] args)
+        {
+            HorseClient client = new HorseClient();
+            client.SetClientType("SAMPLE-MESSAGE-CONSUMER");
 
-			connector.AddHost("hmq://localhost:15500");
-			connector.ContentSerializer = new NewtonsoftContentSerializer();
-			connector.Observer.RegisterConsumer<SampleDirectMessageConsumer>();
-			connector.Connected += (c) => { Console.WriteLine("CONNECTED"); };
-			connector.Disconnected += (c) => Console.WriteLine("DISCONNECTED");
-			connector.MessageReceived += (client, message) => Console.WriteLine("Direct message received");
-			connector.Run();
+            DirectHandlerRegistrar registrar = new DirectHandlerRegistrar(client.Direct);
+            registrar.RegisterHandler<SampleDirectMessageMessageHandler>();
 
-			RouteBus = connector.Bus.Route;
-			
-			while (true)
-				Console.ReadLine();
-		}
-	}
+            client.MessageSerializer = new NewtonsoftContentSerializer();
+            client.Connected += (c) => { Console.WriteLine("CONNECTED"); };
+            client.Disconnected += (c) => Console.WriteLine("DISCONNECTED");
+            client.MessageReceived += (client, message) => Console.WriteLine("Direct message received");
+
+            client.Connect("horse://localhost:15500");
+
+            while (true)
+                Console.ReadLine();
+        }
+    }
 }

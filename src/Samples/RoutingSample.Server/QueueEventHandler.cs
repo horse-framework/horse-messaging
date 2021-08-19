@@ -1,8 +1,8 @@
 using System;
 using System.Threading.Tasks;
-using Horse.Mq;
-using Horse.Mq.Clients;
-using Horse.Mq.Queues;
+using Horse.Messaging.Server;
+using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Queues;
 
 namespace Sample.Server
 {
