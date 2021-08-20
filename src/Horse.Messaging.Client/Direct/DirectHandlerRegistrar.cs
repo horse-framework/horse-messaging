@@ -143,9 +143,9 @@ namespace Horse.Messaging.Client.Direct
 					Type executerType = typeof(DirectHandlerExecuter<>);
 					Type executerGenericType = executerType.MakeGenericType(typeInfo.ModelType);
 					executer = (ExecuterBase) Activator.CreateInstance(executerGenericType,
-																	   typeInfo.ConsumerType,
-																	   consumerInstance,
-																	   consumerFactoryBuilder);
+						typeInfo.ConsumerType,
+						consumerInstance,
+						consumerFactoryBuilder);
 					break;
 				}
 
@@ -154,9 +154,9 @@ namespace Horse.Messaging.Client.Direct
 					Type executerType = typeof(RequestHandlerExecuter<,>);
 					Type executerGenericType = executerType.MakeGenericType(typeInfo.ModelType, typeInfo.ResponseType);
 					executer = (ExecuterBase) Activator.CreateInstance(executerGenericType,
-																	   typeInfo.ConsumerType,
-																	   consumerInstance,
-																	   consumerFactoryBuilder);
+						typeInfo.ConsumerType,
+						consumerInstance,
+						consumerFactoryBuilder);
 					break;
 				}
 			}
@@ -173,12 +173,12 @@ namespace Horse.Messaging.Client.Direct
 				ConsumerType = typeInfo.ConsumerType,
 				ConsumerExecuter = executer
 			};
-			
+
 			registration.IntercetorDescriptors.AddRange(ResolveInterceptorAttributes(typeInfo, !useConsumerFactory));
 			executer?.Resolve(registration);
 
 			return registration;
-		}
+		}	
 
 		private static IEnumerable<InterceptorTypeDescriptor> ResolveInterceptorAttributes(ModelTypeInfo typeInfo, bool createInstance)
 		{
