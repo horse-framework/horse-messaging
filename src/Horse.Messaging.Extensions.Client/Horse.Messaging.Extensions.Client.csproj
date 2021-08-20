@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net5.0</TargetFramework>
+        <Title>Horse.Messaging.Data</Title>
+        <Product>Horse.Messaging.Data</Product>
+        <Description>Horse messaging extensions library</Description>
+        <PackageTags>horse,server,messaging,queue,mq,persistent,database,db</PackageTags>
+        <AssemblyVersion>6.0.5</AssemblyVersion>
+        <FileVersion>6.0.5</FileVersion>
+        <PackageVersion>6.0.5</PackageVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
+        <PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/horse-framework/horse-messaging/blob/master/LICENSE</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/horse-framework/horse-messaging</RepositoryUrl>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+        <DocumentationFile>bin\Debug\Horse.Messaging.Extensions.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <DocumentationFile>bin\Release\Horse.Messaging.Extensions.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="5.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Horse.Messaging.Client\Horse.Messaging.Client.csproj" />
+    </ItemGroup>
+
+</Project>
