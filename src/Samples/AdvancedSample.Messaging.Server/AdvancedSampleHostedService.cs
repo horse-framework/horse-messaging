@@ -66,7 +66,7 @@ namespace AdvancedSample.Messaging.Server
 																					 q.UseAutoFlush(TimeSpan.FromMilliseconds(500));
 																					 q.KeepLastBackup();
 																				 });
-														 cfg.Options.AcknowledgeTimeout = TimeSpan.FromMinutes(1);
+														 cfg.Options.AcknowledgeTimeout = TimeSpan.FromMinutes(3);
 														 cfg.Options.Type = QueueType.RoundRobin;
 													 })
 									.ConfigureClients(cfg => { cfg.Handlers.Add(_clientHandler); })

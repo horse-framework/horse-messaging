@@ -91,6 +91,7 @@ namespace AdvancedSample.Service
 			_clientBuilderDelegate?.Invoke(builder);
 			builder.SetHost(_hostname)
 				   .SetClientType(_clientType)
+				   .SetResponseTimeout(TimeSpan.FromSeconds(15))
 				   .OnConnected(OnConnected)
 				   .OnDisconnected(OnDisctonnected)
 				   .OnMessageReceived(OnMessageReceived)

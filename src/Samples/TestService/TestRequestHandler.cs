@@ -6,7 +6,7 @@ using Horse.Messaging.Protocol;
 
 namespace TestService
 {
-	public class TestHandler : RequestHandler<SampleTestQuery, SampleTestQueryResult>
+	public class TestRequestHandler : RequestHandler<SampleTestQuery, SampleTestQueryResult>
 	{
 		protected override Task<SampleTestQueryResult> Handle(SampleTestQuery query, HorseMessage message)
 		{
