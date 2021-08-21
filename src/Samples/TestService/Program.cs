@@ -1,6 +1,8 @@
-﻿using AdvancedSample.Service;
+﻿using AdvancedSample.Messaging.Common;
+using AdvancedSample.Service;
 
-SampleService<Program> service = new SampleService<Program>("testClient", args);
+SampleService<Program> service = new(AdvancedSampleServiceClientTypes.TestService, args);
 service.Run();
 
-internal class Program {}
+internal class Program { }
+

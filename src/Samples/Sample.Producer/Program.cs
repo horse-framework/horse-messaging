@@ -7,12 +7,20 @@ using Sample.Consumer;
 
 namespace Sample.Producer
 {
+    public class TestQuery
+    {
+        public string Foo { get; set; }
+    }
+    public class TestQueryResult
+    {
+        public string Bar { get; set; }
+    }
     class Program
     {
         static async Task Main(string[] args)
         {
             HorseClientBuilder builder = new HorseClientBuilder();
-            builder.SetHost("horse://localhost:9999");
+            builder.SetHost("horse://localhost:15500");
             builder.UseNewtonsoftJsonSerializer();
             HorseClient client = builder.Build();
             client.Connect();
@@ -21,9 +29,14 @@ namespace Sample.Producer
             a.Foo = "foo";
             a.No = 123;
 
+            TestQuery query = new()
+            {
+                Foo = "Foo"
+            };
             while (true)
             {
-                HorseResult result = await client.Queue.PushJson(a, false);
+
+                HorseResult result = await client.Router.PublishRequestJson<TestQuery, TestQueryResult>("test-service-route", query, 1);
                 Console.WriteLine($"Push: {result.Code}");
 
                 // var result = await client.Direct.RequestJson<ResponseModel>(new RequestModel());

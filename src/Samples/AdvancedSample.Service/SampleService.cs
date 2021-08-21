@@ -55,11 +55,13 @@ namespace AdvancedSample.Service
 
 		private void ConfigureHorseClient(HostBuilderContext hostContext, HorseClientBuilder builder)
 		{
-			HorseSettings horseSettings = hostContext.Configuration.GetSection(nameof(HorseSettings)).Get<HorseSettings>();
-			_hostname = horseSettings.ToString();
+			HorseOptions horseOptions = hostContext.Configuration.GetSection(nameof(HorseOptions)).Get<HorseOptions>();
+			_hostname = horseOptions.ToString();
 			_clientBuilderDelegate?.Invoke(builder);
 			builder.SetHost(_hostname)
 				   .SetClientType(_clientType)
+				   .AddScopedConsumers(typeof(T))
+				   .AddScopedDirectHandlers(typeof(T))
 				   .OnConnected(OnConnected)
 				   .OnDisconnected(OnDisctonnected)
 				   .OnMessageReceived(OnMessageReceived)
