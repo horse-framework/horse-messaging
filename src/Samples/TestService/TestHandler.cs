@@ -1,28 +1,19 @@
 using System;
 using System.Threading.Tasks;
+using AdvancedSample.Service.Handlers;
 using AdvancedSample.ServiceModels;
-using Horse.Messaging.Client;
-using Horse.Messaging.Client.Direct;
 using Horse.Messaging.Protocol;
 
 namespace TestService
 {
-	public class TestHandler : IHorseRequestHandler<SampleTestQuery, SampleTestQueryResult>
+	public class TestHandler : RequestHandler<SampleTestQuery, SampleTestQueryResult>
 	{
-		public Task<SampleTestQueryResult> Handle(SampleTestQuery request, HorseMessage rawMessage, HorseClient client)
+		protected override Task<SampleTestQueryResult> Handle(SampleTestQuery query, HorseMessage message)
 		{
+			Console.WriteLine("HANDLE");
 			return Task.FromResult(new SampleTestQueryResult
 			{
 				Bar = "Bar"
-			});
-		}
-
-		public Task<ErrorResponse> OnError(Exception exception, SampleTestQuery request, HorseMessage rawMessage, HorseClient client)
-		{
-			return Task.FromResult(new ErrorResponse
-			{
-				Reason = exception.Message,
-				ResultCode = HorseResultCode.InternalServerError
 			});
 		}
 	}
