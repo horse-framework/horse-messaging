@@ -13,9 +13,9 @@ namespace Horse.Messaging.Client.Direct
         public ushort ContentType { get; set; }
 
         /// <summary>
-        /// Direct Consumer type
+        /// Direct Handler type
         /// </summary>
-        public Type ConsumerType { get; set; }
+        public Type HandlerType { get; set; }
 
         /// <summary>
         /// Direct message type
