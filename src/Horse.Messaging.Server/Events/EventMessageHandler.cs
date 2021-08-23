@@ -68,7 +68,7 @@ namespace Horse.Messaging.Server.Events
                 queue = _rider.Queue.Find(message.Target);
                 if (queue == null)
                 {
-                    if (_rider.Options.AutoQueueCreation)
+                    if (_rider.Queue.Options.AutoQueueCreation)
                         queue = await _rider.Queue.Create(message.Target);
                 }
 

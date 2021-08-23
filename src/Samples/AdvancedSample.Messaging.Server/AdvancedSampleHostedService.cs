@@ -68,13 +68,10 @@ namespace AdvancedSample.Messaging.Server
 																				 });
 														 cfg.Options.AcknowledgeTimeout = TimeSpan.FromMinutes(3);
 														 cfg.Options.Type = QueueType.RoundRobin;
+														 cfg.Options.AutoQueueCreation = true;
 													 })
 									.ConfigureClients(cfg => { cfg.Handlers.Add(_clientHandler); })
-									.ConfigureOptions(options =>
-													  {
-														  options.AutoQueueCreation = true;
-														  options.Name = "SAMPLE";
-													  })
+									.ConfigureOptions(options => { options.Name = "SAMPLE"; })
 									.AddErrorHandler(_errorHandler);
 		}
 
