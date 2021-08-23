@@ -6,18 +6,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\AdvancedSample.Messaging.Common\AdvancedSample.Messaging.Common.csproj" />
+        <ProjectReference Include="..\AdvancedSample.ServiceModels\AdvancedSample.ServiceModels.csproj" />
         <ProjectReference Include="..\AdvancedSample.Service\AdvancedSample.Service.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <Content Include="appsettings.Development.json">
-          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-          <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-        </Content>
-        <Content Include="appsettings.json">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-        </Content>
     </ItemGroup>
 
 

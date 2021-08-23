@@ -31,7 +31,7 @@ namespace Horse.Messaging.Server.Queues
             HorseQueue queue = _rider.Queue.Find(name);
 
             //if auto creation active, try to create queue
-            if (queue == null && _rider.Options.AutoQueueCreation)
+            if (queue == null && _rider.Queue.Options.AutoQueueCreation)
             {
                 QueueOptions options = QueueOptions.CloneFrom(_rider.Queue.Options);
                 queue = await _rider.Queue.Create(name, options, message, _rider.Queue.DeliveryHandlerFactory, true, true);

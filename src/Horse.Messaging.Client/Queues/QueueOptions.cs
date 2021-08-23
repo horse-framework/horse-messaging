@@ -43,7 +43,7 @@ namespace Horse.Messaging.Client.Queues
         /// <summary>
         /// Default type for the queue
         /// </summary>
-        [JsonPropertyName("Type")]
+        [JsonPropertyName("Type")] 
         public MessagingQueueType? Type { get; set; }
 
         /// <summary>

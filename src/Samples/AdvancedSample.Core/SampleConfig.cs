@@ -5,11 +5,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-[assembly: InternalsVisibleTo("AdvancedSample.Service")]
 
 namespace AdvancedSample.Core
 {
-	internal static class SampleConfig
+	public static class SampleConfig
 	{
 		public static IConfigurationRoot Configure(string[] args)
 		{
@@ -46,8 +45,10 @@ namespace AdvancedSample.Core
 			// Bizim kurguladığımız yapıda zorunlu. Bu nedenle eziyoruz.
 			return builder
 				  .SetBasePath(Directory.GetCurrentDirectory())
-				  .AddJsonFile("appsettings.json", false, true)
-				  .AddJsonFile($"appsettings.{environment}.json", false, true);
+				  .AddJsonFile("appsettings-base.json", true)
+				  .AddJsonFile($"appsettings-base.{environment}.json", true)
+				  .AddJsonFile("appsettings.json", true, true)
+				  .AddJsonFile($"appsettings.{environment}.json", true, true);
 		}
 
 		public static void ConfigureLogging(this ILoggingBuilder builder, HostBuilderContext hostContext)

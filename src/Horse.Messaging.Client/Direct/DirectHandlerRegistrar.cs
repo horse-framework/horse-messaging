@@ -170,7 +170,7 @@ namespace Horse.Messaging.Client.Direct
 				ContentType = contentType,
 				MessageType = typeInfo.ModelType,
 				ResponseType = typeInfo.ResponseType,
-				ConsumerType = typeInfo.ConsumerType,
+				HandlerType = typeInfo.ConsumerType,
 				ConsumerExecuter = executer
 			};
 

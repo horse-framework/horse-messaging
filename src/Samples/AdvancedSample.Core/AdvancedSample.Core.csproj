@@ -22,4 +22,15 @@
         <ProjectReference Include="..\..\Horse.Messaging.Client\Horse.Messaging.Client.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <Content Include="appsettings-base.Development.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        </Content>
+        <Content Include="appsettings-base.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        </Content>
+    </ItemGroup>
+
 </Project>

@@ -63,6 +63,12 @@ namespace Horse.Messaging.Server.Options
         /// Queue auto destroy options. Default value is NoMessagesAndConsumers.
         /// </summary>
         public QueueDestroy AutoDestroy { get; set; } = QueueDestroy.Disabled;
+        
+        /// <summary>
+        /// If true, queue will be created automatically with default options
+        /// when a client tries to subscribe or push a message to not existing queue.
+        /// </summary>
+        public bool AutoQueueCreation { get; set; } = true;
 
         /// <summary>
         /// Creates clone of the object

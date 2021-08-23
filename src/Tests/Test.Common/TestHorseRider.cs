@@ -44,13 +44,13 @@ namespace Test.Common
         public async Task Initialize()
         {
             Rider = HorseRiderBuilder.Create()
-               .ConfigureOptions(o => o.AutoQueueCreation = true)
                .ConfigureQueues(q =>
                 {
                     q.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
                     q.Options.MessageTimeout = TimeSpan.FromSeconds(12);
                     q.Options.Type = QueueType.Push;
-
+                    q.Options.AutoQueueCreation = true;
+                    
                     q.EventHandlers.Add(new TestQueueHandler(this));
                     q.UseDeliveryHandler(_ => Task.FromResult<IMessageDeliveryHandler>(new TestDeliveryHandler(this)));
                 })
