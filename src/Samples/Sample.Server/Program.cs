@@ -10,34 +10,33 @@ using Horse.Server;
 
 namespace Sample.Server
 {
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            HorseRider rider = HorseRiderBuilder.Create()
-               .ConfigureQueues(cfg =>
-                {
-                    cfg.Options.Type = QueueType.Push;
-                    cfg.EventHandlers.Add(new QueueEventHandler());
-                    cfg.UseAckDeliveryHandler(AcknowledgeWhen.AfterReceived, PutBackDecision.No);
-                    //   cfg.AddPersistentQueues();
-                    //   cfg.UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterSaved);
-                })
-               .ConfigureClients(cfg => { cfg.Handlers.Add(new ClientHandler()); })
-               .Build();
+	class Program
+	{
+		static void Main(string[] args)
+		{
+			HorseRider rider = HorseRiderBuilder.Create()
+												.ConfigureQueues(cfg =>
+																 {
+																	 cfg.Options.Type = QueueType.Push;
+																	 cfg.EventHandlers.Add(new QueueEventHandler());
+																	 cfg.UseAckDeliveryHandler(AcknowledgeWhen.AfterReceived, PutBackDecision.No);
+																	 cfg.AddPersistentQueues();
+																	 cfg.UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterSaved);
+																 })
+												.ConfigureClients(cfg => { cfg.Handlers.Add(new ClientHandler()); })
+												.Build();
+			rider.LoadPersistentQueues().GetAwaiter().GetResult();
 
-            //rider.LoadPersistentQueues();
-
-            rider.Transaction.CreateContainer("TransactionName",
-                                              TimeSpan.FromSeconds(30),
-                                              new QueueTransactionEndpoint(rider.Queue, "CommitQueue"),
-                                              new QueueTransactionEndpoint(rider.Queue, "RollbackQueue"),
-                                              new QueueTransactionEndpoint(rider.Queue, "TimeoutQueue"));
+			rider.Transaction.CreateContainer("TransactionName",
+											  TimeSpan.FromSeconds(30),
+											  new QueueTransactionEndpoint(rider.Queue, "CommitQueue"),
+											  new QueueTransactionEndpoint(rider.Queue, "RollbackQueue"),
+											  new QueueTransactionEndpoint(rider.Queue, "TimeoutQueue"));
 
 
-            HorseServer server = new HorseServer();
-            server.UseRider(rider);
-            server.Run(9999);
-        }
-    }
+			HorseServer server = new HorseServer();
+			server.UseRider(rider);
+			server.Run(9999);
+		}
+	}
 }

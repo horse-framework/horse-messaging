@@ -6,8 +6,29 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\Horse.Messaging.Server\Horse.Messaging.Server.csproj" />
-      <ProjectReference Include="..\AdvancedSample.Common.Infrastructure\AdvancedSample.Common.Infrastructure.csproj" />
+        <PackageReference Include="Horse.Server" Version="5.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="5.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Options" Version="5.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Horse.Messaging.Data\Horse.Messaging.Data.csproj" />
+        <ProjectReference Include="..\..\Horse.Messaging.Server\Horse.Messaging.Server.csproj" />
+        <ProjectReference Include="..\AdvancedSample.Core\AdvancedSample.Core.csproj" />
+        <ProjectReference Include="..\AdvancedSample.Messaging.Common\AdvancedSample.Messaging.Common.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="appsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        </Content>
+        <Content Include="appsettings.Development.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        </Content>
     </ItemGroup>
 
 </Project>

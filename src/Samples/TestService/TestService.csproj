@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net5.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\AdvancedSample.Messaging.Common\AdvancedSample.Messaging.Common.csproj" />
+        <ProjectReference Include="..\AdvancedSample.ServiceModels\AdvancedSample.ServiceModels.csproj" />
+        <ProjectReference Include="..\AdvancedSample.Service\AdvancedSample.Service.csproj" />
+    </ItemGroup>
+
+
+</Project>

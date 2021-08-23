@@ -24,7 +24,7 @@ namespace Horse.Messaging.Client.Direct
 		public override void Resolve(object registration)
 		{
 			_registration = registration as DirectHandlerRegistration;
-			ResolveAttributes(_registration!.ConsumerType);
+			ResolveAttributes(_registration!.HandlerType);
 		}
 
 		public override async Task Execute(HorseClient client, HorseMessage message, object model)
