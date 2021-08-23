@@ -29,28 +29,10 @@ namespace Horse.Messaging.Client.Queues
         public int? MessageTimeout { get; set; }
 
         /// <summary>
-        /// If true, server creates unique id for each message.
-        /// </summary>
-        [JsonPropertyName("UseMessageId")]
-        public bool? UseMessageId { get; set; } = true;
-
-        /// <summary>
-        /// If true, server doesn't send client name to receivers in queueus.
-        /// </summary>
-        [JsonPropertyName("HideClientNames")]
-        public bool? HideClientNames { get; set; }
-
-        /// <summary>
         /// Default type for the queue
         /// </summary>
         [JsonPropertyName("Type")] 
         public MessagingQueueType? Type { get; set; }
-
-        /// <summary>
-        /// Registry key for message delivery handler
-        /// </summary>
-        [JsonPropertyName("MessageDeliveryHandler")]
-        public string MessageDeliveryHandler { get; set; }
 
         /// <summary>
         /// Maximum message limit of the queue
