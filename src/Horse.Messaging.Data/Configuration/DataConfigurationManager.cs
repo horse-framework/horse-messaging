@@ -115,6 +115,18 @@ namespace Horse.Messaging.Data.Configuration
                 HorseQueue queue = rider.Queue.Find(queueConfiguration.Name);
                 if (queue == null)
                 {
+                    var func = rider.Queue.DeliveryHandlerFactories["PERSISTENT_RELOAD"];
+
+                    /*
+                        queue = await rider.Queue.Create(queueConfiguration.Name,
+                                                         queueConfiguration.Configuration.ToOptions(),
+                            null,
+                            false,
+                            false,
+                            null,
+                            "PERSISTENT_RELOAD");
+                            */
+                    
                     if (rider.Queue.DefaultDeliveryHandlerFactory != null)
                         queue = await rider.Queue.Create(queueConfiguration.Name,
                                                          queueConfiguration.Configuration.ToOptions(),

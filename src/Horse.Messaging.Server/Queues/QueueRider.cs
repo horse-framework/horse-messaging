@@ -150,9 +150,16 @@ namespace Horse.Messaging.Server.Queues
                                                HorseMessage requestMessage,
                                                bool hideException,
                                                bool returnIfExists,
-                                               MessagingClient client = null)
+                                               MessagingClient client = null,
+                                               string customHandlerName = null)
         {
-            string handlerName = requestMessage != null ? requestMessage.FindHeader(HorseHeaders.DELIVERY_HANDLER) : "Default";
+            string handlerName;
+            
+            if (!string.IsNullOrEmpty(customHandlerName))
+                handlerName = customHandlerName;
+            else
+                handlerName = requestMessage != null ? requestMessage.FindHeader(HorseHeaders.DELIVERY_HANDLER) : "Default";
+            
             if (string.IsNullOrEmpty(handlerName))
                 handlerName = "Default";
 
