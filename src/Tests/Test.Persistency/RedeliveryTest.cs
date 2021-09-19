@@ -64,26 +64,16 @@ namespace Test.Persistency
                 System.IO.File.Delete("data/reload-test.tdb.delivery");
 
             HorseServer server = new HorseServer();
-            PersistentDeliveryHandler handler = null;
-            Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> fac = async builder =>
+
+            HorseRider rider = server.UseRider(cfg => cfg.ConfigureQueues(c =>
             {
-                DatabaseOptions options = new DatabaseOptions
-                {
-                    Filename = "data/reload-test.tdb",
-                    InstantFlush = true,
-                    CreateBackupOnShrink = false,
-                    ShrinkInterval = TimeSpan.FromSeconds(60)
-                };
-
-                handler = (PersistentDeliveryHandler) await builder.CreatePersistentDeliveryHandler(o => new PersistentDeliveryHandler(builder.Queue,
-                                                                                                                                       options,
-                                                                                                                                       DeleteWhen.AfterSend,
-                                                                                                                                       ProducerAckDecision.None,
-                                                                                                                                       true));
-                return handler;
-            };
-
-            HorseRider rider = server.UseRider(cfg => cfg.ConfigureQueues(c => c.AddPersistentQueues(q => q.KeepLastBackup()).UseDeliveryHandler(fac)));
+                c.UsePersistentDeliveryHandler(
+                    c =>
+                    {
+                        c.UseInstantFlush()
+                            .SetAutoShrink(true, TimeSpan.FromSeconds(60));
+                    }, DeleteWhen.AfterSend, ProducerAckDecision.None, true);
+            }));
 
             HorseQueue queue = await rider.Queue.Create("reload-test", o => o.Type = QueueType.Push);
 
@@ -93,12 +83,19 @@ namespace Test.Persistency
             await queue.Push(msg);
 
             QueueMessage queueMsg = queue.FindNextMessage(false);
+            
+            PersistentDeliveryHandler handler = (PersistentDeliveryHandler) queue.DeliveryHandler;
             await handler.BeginSend(queue, queueMsg);
 
             await handler.RedeliveryService.Close();
             ConfigurationFactory.Destroy();
 
-            rider = server.UseRider(cfg => cfg.ConfigureQueues(c => c.AddPersistentQueues(q => q.KeepLastBackup()).UseDeliveryHandler(fac)));
+            rider = server.UseRider(cfg => cfg.ConfigureQueues(c =>
+            {
+                c.UsePersistentDeliveryHandler(
+                    c => { c.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
+                    DeleteWhen.AfterSend, ProducerAckDecision.None, true);
+            }));
             await rider.LoadPersistentQueues();
             HorseQueue queue2 = rider.Queue.Find("reload-test");
             Assert.NotNull(queue2);

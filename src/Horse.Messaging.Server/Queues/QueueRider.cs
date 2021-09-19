@@ -102,6 +102,16 @@ namespace Horse.Messaging.Server.Queues
         #region Actions
 
         /// <summary>
+        /// Finds message delivery handler by name
+        /// </summary>
+        /// <param name="name">Delivery handler name</param>
+        public Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> FindDeliveryHandlerFactory(string name)
+        {
+            DeliveryHandlerFactories.TryGetValue(name, out var handler);
+            return handler;
+        }
+
+        /// <summary>
         /// Finds queue by name
         /// </summary>
         public HorseQueue Find(string name)
@@ -154,12 +164,12 @@ namespace Horse.Messaging.Server.Queues
                                                string customHandlerName = null)
         {
             string handlerName;
-            
+
             if (!string.IsNullOrEmpty(customHandlerName))
                 handlerName = customHandlerName;
             else
                 handlerName = requestMessage != null ? requestMessage.FindHeader(HorseHeaders.DELIVERY_HANDLER) : "Default";
-            
+
             if (string.IsNullOrEmpty(handlerName))
                 handlerName = "Default";
 

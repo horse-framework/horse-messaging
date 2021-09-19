@@ -23,11 +23,6 @@ namespace Horse.Messaging.Data
         public HorseQueue Queue { get; }
 
         /// <summary>
-        /// Key for delivery handler attribute
-        /// </summary>
-        public string Key { get; protected set; }
-
-        /// <summary>
         /// Database Filename
         /// </summary>
         public string DbFilename => Database.File.Filename;
@@ -73,17 +68,13 @@ namespace Horse.Messaging.Data
                                          DatabaseOptions options,
                                          DeleteWhen deleteWhen,
                                          ProducerAckDecision producerAckDecision,
-                                         bool useRedelivery = false,
-                                         string key = "default")
+                                         bool useRedelivery = false)
         {
             Queue = queue;
             DeleteWhen = deleteWhen;
             ProducerAckDecision = producerAckDecision;
             Database = new Database(options);
             UseRedelivery = useRedelivery;
-            Key = key;
-            if (string.IsNullOrEmpty(Key))
-                Key = "default";
         }
 
         /// <summary>

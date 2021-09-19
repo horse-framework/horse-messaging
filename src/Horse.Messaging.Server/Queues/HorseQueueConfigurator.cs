@@ -62,6 +62,10 @@ namespace Horse.Messaging.Server.Queues
                 throw new DuplicateNameException($"There is already registered delivery handler with same name: {name}");
 
             Rider.Queue.DeliveryHandlerFactories.Add(name, deliveryHandler);
+
+            if (!name.Equals("DEFAULT", StringComparison.InvariantCultureIgnoreCase) && !Rider.Queue.DeliveryHandlerFactories.ContainsKey("DEFAULT"))
+                Rider.Queue.DeliveryHandlerFactories.Add("DEFAULT", Rider.Queue.DeliveryHandlerFactories[name]);
+
             return this;
         }
 
@@ -69,12 +73,16 @@ namespace Horse.Messaging.Server.Queues
         /// Implements non-durable basic delivery handler
         /// </summary>
         /// <param name="name">Delivery handler name</param>
-        public HorseQueueConfigurator UseJustAllowDeliveryHandler(string name = "Default")
+        public HorseQueueConfigurator UseJustAllowDeliveryHandler(string name = "DEFAULT")
         {
             if (Rider.Queue.DeliveryHandlerFactories.ContainsKey(name))
                 throw new DuplicateNameException($"There is already registered Just Allow delivery handler with same name: {name}");
 
             Rider.Queue.DeliveryHandlerFactories.Add(name, _ => Task.FromResult<IMessageDeliveryHandler>(new JustAllowDeliveryHandler()));
+
+            if (!name.Equals("DEFAULT", StringComparison.InvariantCultureIgnoreCase) && !Rider.Queue.DeliveryHandlerFactories.ContainsKey("DEFAULT"))
+                Rider.Queue.DeliveryHandlerFactories.Add("DEFAULT", Rider.Queue.DeliveryHandlerFactories[name]);
+
             return this;
         }
 
@@ -100,6 +108,10 @@ namespace Horse.Messaging.Server.Queues
                 throw new DuplicateNameException($"There is already registered Ack delivery handler with same name: {name}");
 
             Rider.Queue.DeliveryHandlerFactories.Add(name, _ => Task.FromResult<IMessageDeliveryHandler>(new AckDeliveryHandler(producerAck, consumerAckFail)));
+
+            if (!name.Equals("DEFAULT", StringComparison.InvariantCultureIgnoreCase) && !Rider.Queue.DeliveryHandlerFactories.ContainsKey("DEFAULT"))
+                Rider.Queue.DeliveryHandlerFactories.Add("DEFAULT", Rider.Queue.DeliveryHandlerFactories[name]);
+
             return this;
         }
     }
