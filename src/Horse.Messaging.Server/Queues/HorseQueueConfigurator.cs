@@ -1,4 +1,5 @@
 using System;
+using System.Data;
 using System.Threading.Tasks;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Handlers;
@@ -48,16 +49,32 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         public HorseQueueConfigurator UseDeliveryHandler(Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> deliveryHandler)
         {
-            Rider.Queue.DeliveryHandlerFactory = deliveryHandler;
+            return UseDeliveryHandler("Default", deliveryHandler);
+        }
+
+        /// <summary>
+        /// Implements a message delivery handler factory
+        /// </summary>
+        /// <param name="name">Delivery handler name</param>
+        public HorseQueueConfigurator UseDeliveryHandler(string name, Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> deliveryHandler)
+        {
+            if (Rider.Queue.DeliveryHandlerFactories.ContainsKey(name))
+                throw new DuplicateNameException($"There is already registered delivery handler with same name: {name}");
+
+            Rider.Queue.DeliveryHandlerFactories.Add(name, deliveryHandler);
             return this;
         }
 
         /// <summary>
         /// Implements non-durable basic delivery handler
         /// </summary>
-        public HorseQueueConfigurator UseJustAllowDeliveryHandler()
+        /// <param name="name">Delivery handler name</param>
+        public HorseQueueConfigurator UseJustAllowDeliveryHandler(string name = "Default")
         {
-            Rider.Queue.DeliveryHandlerFactory = _ => Task.FromResult<IMessageDeliveryHandler>(new JustAllowDeliveryHandler());
+            if (Rider.Queue.DeliveryHandlerFactories.ContainsKey(name))
+                throw new DuplicateNameException($"There is already registered Just Allow delivery handler with same name: {name}");
+
+            Rider.Queue.DeliveryHandlerFactories.Add(name, _ => Task.FromResult<IMessageDeliveryHandler>(new JustAllowDeliveryHandler()));
             return this;
         }
 
@@ -68,7 +85,21 @@ namespace Horse.Messaging.Server.Queues
         /// <param name="consumerAckFail">Decision, what will be done if consumer sends nack or doesn't send ack in time</param>
         public HorseQueueConfigurator UseAckDeliveryHandler(AcknowledgeWhen producerAck, PutBackDecision consumerAckFail)
         {
-            Rider.Queue.DeliveryHandlerFactory = _ => Task.FromResult<IMessageDeliveryHandler>(new AckDeliveryHandler(producerAck, consumerAckFail));
+            return UseAckDeliveryHandler(producerAck, consumerAckFail);
+        }
+
+        /// <summary>
+        /// Implements non-durable basic delivery handler with ack
+        /// </summary>
+        /// <param name="name">Delivery handler name</param>
+        /// <param name="producerAck">Decision, when producer will receive acknowledge (or confirm)</param>
+        /// <param name="consumerAckFail">Decision, what will be done if consumer sends nack or doesn't send ack in time</param>
+        public HorseQueueConfigurator UseAckDeliveryHandler(string name, AcknowledgeWhen producerAck, PutBackDecision consumerAckFail)
+        {
+            if (Rider.Queue.DeliveryHandlerFactories.ContainsKey(name))
+                throw new DuplicateNameException($"There is already registered Ack delivery handler with same name: {name}");
+
+            Rider.Queue.DeliveryHandlerFactories.Add(name, _ => Task.FromResult<IMessageDeliveryHandler>(new AckDeliveryHandler(producerAck, consumerAckFail)));
             return this;
         }
     }

@@ -39,8 +39,8 @@ namespace Horse.Messaging.Server.Routing
                     return false;
 
                 string messageId = Interaction == BindingInteraction.None
-                                       ? Router.Rider.MessageIdGenerator.Create()
-                                       : message.MessageId;
+                    ? Router.Rider.MessageIdGenerator.Create()
+                    : message.MessageId;
 
                 HorseMessage msg = message.Clone(true, true, messageId);
 
@@ -82,7 +82,7 @@ namespace Horse.Messaging.Server.Routing
                 return _targetQueue;
             }
 
-            _targetQueue = await Router.Rider.Queue.Create(queueName, Router.Rider.Queue.Options, message, Router.Rider.Queue.DeliveryHandlerFactory, true, true);
+            _targetQueue = await Router.Rider.Queue.Create(queueName, Router.Rider.Queue.Options, message, true, true);
             return _targetQueue;
         }
     }

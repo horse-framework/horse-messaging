@@ -141,7 +141,7 @@ namespace Horse.Messaging.Server.Network
             if (queue == null && _rider.Queue.Options.AutoQueueCreation)
             {
                 QueueOptions options = QueueOptions.CloneFrom(_rider.Queue.Options);
-                queue = await _rider.Queue.Create(message.Target, options, message, _rider.Queue.DeliveryHandlerFactory, true, true, client);
+                queue = await _rider.Queue.Create(message.Target, options, message, true, true, client);
             }
 
             if (queue == null)
@@ -230,13 +230,13 @@ namespace Horse.Messaging.Server.Network
 
             foreach (QueueClient cc in queue.ClientsClone)
                 list.Add(new ClientInformation
-                         {
-                             Id = cc.Client.UniqueId,
-                             Name = cc.Client.Name,
-                             Type = cc.Client.Type,
-                             IsAuthenticated = cc.Client.IsAuthenticated,
-                             Online = cc.JoinDate.LifetimeMilliseconds(),
-                         });
+                {
+                    Id = cc.Client.UniqueId,
+                    Name = cc.Client.Name,
+                    Type = cc.Client.Type,
+                    IsAuthenticated = cc.Client.IsAuthenticated,
+                    Online = cc.JoinDate.LifetimeMilliseconds(),
+                });
 
             HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
             message.ContentType = KnownContentTypes.QueueConsumers;
@@ -282,7 +282,7 @@ namespace Horse.Messaging.Server.Network
             if (builder != null)
                 builder.ApplyToQueue(options);
 
-            queue = await _rider.Queue.Create(message.Target, options, message, _rider.Queue.DeliveryHandlerFactory, true, false, client);
+            queue = await _rider.Queue.Create(message.Target, options, message, true, false, client);
 
             //if creation successful, sends response
             if (message.WaitResponse)
@@ -434,30 +434,30 @@ namespace Horse.Messaging.Server.Network
                     ack = "wait";
 
                 list.Add(new QueueInformation
-                         {
-                             Name = queue.Name,
-                             Topic = queue.Topic,
-                             Status = queue.Status.ToString().Trim().ToLower(),
-                             PriorityMessages = queue.Store.CountPriority(),
-                             Messages = queue.Store.CountRegular(),
-                             Acknowledge = ack,
-                             AcknowledgeTimeout = Convert.ToInt32(queue.Options.AcknowledgeTimeout.TotalMilliseconds),
-                             MessageTimeout = Convert.ToInt32(queue.Options.MessageTimeout.TotalMilliseconds),
-                             ReceivedMessages = queue.Info.ReceivedMessages,
-                             SentMessages = queue.Info.SentMessages,
-                             Deliveries = queue.Info.Deliveries,
-                             NegativeAcks = queue.Info.NegativeAcknowledge,
-                             Acks = queue.Info.Acknowledges,
-                             TimeoutMessages = queue.Info.TimedOutMessages,
-                             SavedMessages = queue.Info.MessageSaved,
-                             RemovedMessages = queue.Info.MessageRemoved,
-                             Errors = queue.Info.ErrorCount,
-                             LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
-                             LastMessageSent = queue.Info.GetLastMessageSendUnix(),
-                             MessageLimit = queue.Options.MessageLimit,
-                             MessageSizeLimit = queue.Options.MessageSizeLimit,
-                             DelayBetweenMessages = queue.Options.DelayBetweenMessages
-                         });
+                {
+                    Name = queue.Name,
+                    Topic = queue.Topic,
+                    Status = queue.Status.ToString().Trim().ToLower(),
+                    PriorityMessages = queue.Store.CountPriority(),
+                    Messages = queue.Store.CountRegular(),
+                    Acknowledge = ack,
+                    AcknowledgeTimeout = Convert.ToInt32(queue.Options.AcknowledgeTimeout.TotalMilliseconds),
+                    MessageTimeout = Convert.ToInt32(queue.Options.MessageTimeout.TotalMilliseconds),
+                    ReceivedMessages = queue.Info.ReceivedMessages,
+                    SentMessages = queue.Info.SentMessages,
+                    Deliveries = queue.Info.Deliveries,
+                    NegativeAcks = queue.Info.NegativeAcknowledge,
+                    Acks = queue.Info.Acknowledges,
+                    TimeoutMessages = queue.Info.TimedOutMessages,
+                    SavedMessages = queue.Info.MessageSaved,
+                    RemovedMessages = queue.Info.MessageRemoved,
+                    Errors = queue.Info.ErrorCount,
+                    LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
+                    LastMessageSent = queue.Info.GetLastMessageSendUnix(),
+                    MessageLimit = queue.Options.MessageLimit,
+                    MessageSizeLimit = queue.Options.MessageSizeLimit,
+                    DelayBetweenMessages = queue.Options.DelayBetweenMessages
+                });
             }
 
             HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
@@ -494,14 +494,14 @@ namespace Horse.Messaging.Server.Network
             foreach (MessagingClient slave in slaves)
             {
                 list.Add(new NodeInformation
-                         {
-                             IsSlave = true,
-                             Host = slave.RemoteHost,
-                             IsConnected = slave.IsConnected,
-                             Id = slave.UniqueId,
-                             Name = slave.Name,
-                             Lifetime = slave.ConnectedDate.LifetimeMilliseconds()
-                         });
+                {
+                    IsSlave = true,
+                    Host = slave.RemoteHost,
+                    IsConnected = slave.IsConnected,
+                    Id = slave.UniqueId,
+                    Name = slave.Name,
+                    Lifetime = slave.ConnectedDate.LifetimeMilliseconds()
+                });
             }
 
             //outgoing nodes
@@ -513,14 +513,14 @@ namespace Horse.Messaging.Server.Network
                 NodeOptions options = node.Client.Tag as NodeOptions;
 
                 list.Add(new NodeInformation
-                         {
-                             IsSlave = false,
-                             Host = options?.Host,
-                             IsConnected = node.Client.IsConnected,
-                             Id = node.Client.ClientId,
-                             Name = options?.Name,
-                             Lifetime = Convert.ToInt64(node.Client.Lifetime.TotalMilliseconds)
-                         });
+                {
+                    IsSlave = false,
+                    Host = options?.Host,
+                    IsConnected = node.Client.IsConnected,
+                    Id = node.Client.ClientId,
+                    Name = options?.Name,
+                    Lifetime = Convert.ToInt64(node.Client.Lifetime.TotalMilliseconds)
+                });
             }
 
             HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
@@ -565,13 +565,13 @@ namespace Horse.Messaging.Server.Network
                 }
 
                 list.Add(new ClientInformation
-                         {
-                             Id = mc.UniqueId,
-                             Name = mc.Name,
-                             Type = mc.Type,
-                             IsAuthenticated = mc.IsAuthenticated,
-                             Online = mc.ConnectedDate.LifetimeMilliseconds(),
-                         });
+                {
+                    Id = mc.UniqueId,
+                    Name = mc.Name,
+                    Type = mc.Type,
+                    IsAuthenticated = mc.IsAuthenticated,
+                    Online = mc.ConnectedDate.LifetimeMilliseconds(),
+                });
             }
 
             HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
@@ -652,10 +652,10 @@ namespace Horse.Messaging.Server.Network
             foreach (IRouter router in _rider.Router.Routers)
             {
                 RouterInformation info = new RouterInformation
-                                         {
-                                             Name = router.Name,
-                                             IsEnabled = router.IsEnabled
-                                         };
+                {
+                    Name = router.Name,
+                    IsEnabled = router.IsEnabled
+                };
 
                 if (router is Router r)
                     info.Method = r.Method;
@@ -773,13 +773,13 @@ namespace Horse.Messaging.Server.Network
             foreach (Binding binding in router.GetBindings())
             {
                 BindingInformation info = new BindingInformation
-                                          {
-                                              Name = binding.Name,
-                                              Target = binding.Target,
-                                              Priority = binding.Priority,
-                                              ContentType = binding.ContentType,
-                                              Interaction = binding.Interaction
-                                          };
+                {
+                    Name = binding.Name,
+                    Target = binding.Target,
+                    Priority = binding.Priority,
+                    ContentType = binding.ContentType,
+                    Interaction = binding.Interaction
+                };
 
                 if (binding is QueueBinding)
                     info.BindingType = BindingType.Queue;

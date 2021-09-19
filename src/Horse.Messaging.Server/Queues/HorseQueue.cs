@@ -212,8 +212,8 @@ namespace Horse.Messaging.Server.Queues
                 return;
 
             Rider.Queue.StatusChangeEvent.Trigger(Name,
-                                                       new KeyValuePair<string, string>($"Previous-{HorseHeaders.STATUS}", Status.ToString()),
-                                                       new KeyValuePair<string, string>($"Next-{HorseHeaders.STATUS}", newStatus.ToString()));
+                                                  new KeyValuePair<string, string>($"Previous-{HorseHeaders.STATUS}", Status.ToString()),
+                                                  new KeyValuePair<string, string>($"Next-{HorseHeaders.STATUS}", newStatus.ToString()));
 
             Status = newStatus;
         }
@@ -510,7 +510,12 @@ namespace Horse.Messaging.Server.Queues
                         DeliveryHandlerHeader = message.Message.FindHeader(HorseHeaders.DELIVERY_HANDLER)
                     };
 
-                    IMessageDeliveryHandler deliveryHandler = await Rider.Queue.DeliveryHandlerFactory(handlerBuilder);
+                    if (string.IsNullOrEmpty(handlerBuilder.DeliveryHandlerHeader))
+                        handlerBuilder.DeliveryHandlerHeader = "Default";
+
+                    Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> factory = Rider.Queue.DeliveryHandlerFactories[handlerBuilder.DeliveryHandlerHeader];
+                    IMessageDeliveryHandler deliveryHandler = await factory(handlerBuilder);
+                    
                     await InitializeQueue(deliveryHandler);
 
                     handlerBuilder.TriggerAfterCompleted();
@@ -944,8 +949,8 @@ namespace Horse.Messaging.Server.Queues
                     MessageAckEvent.Trigger(from, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId));
                 else
                     MessageNackEvent.Trigger(from,
-                                                  new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId),
-                                                  new KeyValuePair<string, string>(HorseHeaders.REASON, deliveryMessage.FindHeader(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON)));
+                                             new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId),
+                                             new KeyValuePair<string, string>(HorseHeaders.REASON, deliveryMessage.FindHeader(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON)));
             }
             catch (Exception e)
             {

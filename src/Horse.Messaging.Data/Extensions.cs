@@ -85,7 +85,7 @@ namespace Horse.Messaging.Data
                                                                           PutBackDecision ackTimeoutPutback = PutBackDecision.End,
                                                                           PutBackDecision nackPutback = PutBackDecision.End)
         {
-            cfg.Rider.Queue.DeliveryHandlerFactory = async (dh) =>
+            cfg.Rider.Queue.DefaultDeliveryHandlerFactory = async (dh) =>
             {
                 DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(dh.Queue);
                 PersistentDeliveryHandler handler = new PersistentDeliveryHandler(dh.Queue, databaseOptions,

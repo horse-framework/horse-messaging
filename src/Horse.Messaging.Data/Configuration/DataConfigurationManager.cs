@@ -115,13 +115,13 @@ namespace Horse.Messaging.Data.Configuration
                 HorseQueue queue = rider.Queue.Find(queueConfiguration.Name);
                 if (queue == null)
                 {
-                    if (rider.Queue.DeliveryHandlerFactory != null)
+                    if (rider.Queue.DefaultDeliveryHandlerFactory != null)
                         queue = await rider.Queue.Create(queueConfiguration.Name,
                                                          queueConfiguration.Configuration.ToOptions(),
                                                          async builder =>
                                                          {
                                                              builder.DeliveryHandlerHeader = queueConfiguration.DeliveryHandler;
-                                                             IMessageDeliveryHandler handler = await rider.Queue.DeliveryHandlerFactory(builder);
+                                                             IMessageDeliveryHandler handler = await rider.Queue.DefaultDeliveryHandlerFactory(builder);
                                                              builder.OnAfterCompleted(_ => { }); //don't trigger created events, it's already created and reloading
                                                              return handler;
                                                          });
