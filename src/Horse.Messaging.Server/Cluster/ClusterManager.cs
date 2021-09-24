@@ -36,6 +36,9 @@ namespace Horse.Messaging.Server.Cluster
 
         private int _requiredApprovement = 0;
         private int _recievedApprovement = 0;
+        private bool _askingForMain = false;
+        private DateTime _askingForMainExpiration = DateTime.UtcNow;
+        private object _askLock = new object();
 
         #endregion
 
@@ -116,6 +119,17 @@ namespace Horse.Messaging.Server.Cluster
         /// </summary>
         public async Task AskForMain()
         {
+            lock (_askLock)
+            {
+                if (_askingForMain)
+                {
+                    if (_askingForMainExpiration > DateTime.UtcNow)
+                        return;
+                }
+
+                _askingForMain = true;
+            }
+
             _requiredApprovement = Clients.Count(x => x.IsConnected);
             _recievedApprovement = 0;
 
@@ -123,6 +137,7 @@ namespace Horse.Messaging.Server.Cluster
 
             foreach (NodeClient client in Clients)
             {
+                client.ApprovedMainity = false;
                 if (client.IsConnected)
                     await client.SendMessage(message);
             }
@@ -199,8 +214,7 @@ namespace Horse.Messaging.Server.Cluster
                     return AskForMain();
 
                 //prod the next replica for being main
-                HorseMessage message = new HorseMessage(MessageType.Cluster, Id, KnownContentTypes.ProdForMainAnnouncement);
-                return firstReplica.SendMessage(message);
+                return firstReplica.SendMessage(new HorseMessage(MessageType.Cluster, Id, KnownContentTypes.ProdForMainAnnouncement));
             }
 
             return Task.CompletedTask;
@@ -209,26 +223,26 @@ namespace Horse.Messaging.Server.Cluster
         internal Task OnProdForAnnouncement()
         {
             UpdateState();
-            
+
             //ignore, if main still there
             if (MainNode != null)
             {
                 NodeClient mainClient = Clients.FirstOrDefault(x => x.Info.Id == MainNode.Id);
-                
+
                 if (mainClient.IsConnected)
                     return Task.CompletedTask;
             }
-            
+
             return AskForMain();
         }
 
-        internal Task OnSuccessorDown()
+        internal Task OnSuccessorDown(NodeClient successor)
         {
             UpdateState();
-            
+
             if (State == NodeState.Main)
                 return AnnounceMainity();
-            
+
             return Task.CompletedTask;
         }
 
@@ -237,13 +251,31 @@ namespace Horse.Messaging.Server.Cluster
             return AnswerMainRequest(requestedClient);
         }
 
-        internal Task OnRequestAnswered()
+        internal Task OnRequestAnswered(NodeClient client, bool approved)
         {
-            if (_recievedApprovement == _requiredApprovement && (State == NodeState.Main || State == NodeState.Successor))
-                return AnnounceMainity();
+            lock (_askLock)
+            {
+                if (!approved)
+                {
+                    _askingForMain = false;
+                    client.ApprovedMainity = false;
+                    return Task.CompletedTask;
+                }
+
+                if (client.ApprovedMainity)
+                    return Task.CompletedTask;
+
+                client.ApprovedMainity = true;
+                _recievedApprovement++;
+
+                if (_recievedApprovement == _requiredApprovement && (State == NodeState.Main || State == NodeState.Successor))
+                    return AnnounceMainity();
+
+                return Task.CompletedTask;
+            }
         }
 
-        internal Task OnMainAnnounced(NodeClient announcer, MainNodeAnnouncement announcement)
+        internal void OnMainAnnounced(NodeClient announcer, MainNodeAnnouncement announcement)
         {
             MainNode = announcement.Main;
             SuccessorNode = announcement.Successor;

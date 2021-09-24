@@ -14,6 +14,7 @@ namespace Horse.Messaging.Server.Cluster
 
         public NodeInfo Info { get; }
         public HorseRider Rider { get; }
+        internal bool ApprovedMainity { get; set; }
 
         public bool IsConnected
         {
@@ -54,11 +55,6 @@ namespace Horse.Messaging.Server.Cluster
             throw new NotImplementedException();
         }
 
-        private void OutgoingClientOnDisconnected(HorseClient client)
-        {
-            throw new NotImplementedException();
-        }
-
         internal void IncomingClientConnected(MessagingClient incomingClient)
         {
             _incomingClient = incomingClient;
@@ -67,41 +63,75 @@ namespace Horse.Messaging.Server.Cluster
             incomingClient.Disconnected += IncomingClientOnDisconnected;
         }
 
+        private void OutgoingClientOnDisconnected(HorseClient client)
+        {
+            if (_incomingClient == null || !_incomingClient.IsConnected)
+                ProcessDisconnection();
+        }
+
         private void IncomingClientOnDisconnected(SocketBase client)
         {
-            throw new NotImplementedException();
+            if (_outgoingClient == null || !_outgoingClient.IsConnected)
+                ProcessDisconnection();
+        }
+
+        private void ProcessDisconnection()
+        {
+            ClusterManager cluster = Rider.Cluster;
+
+            if (cluster.MainNode != null && cluster.MainNode.Id == Info?.Id)
+                _ = cluster.OnMainDown(this);
+
+            else if (cluster.SuccessorNode != null && cluster.SuccessorNode.Id == Info?.Id)
+                _ = cluster.OnSuccessorDown(this);
         }
 
         internal void ProcessReceivedMessage(HorseClient client, HorseMessage message)
         {
-            ProcessMessage(message);
+            ProcessMessage(message, false);
         }
 
         internal void ProcessReceivedMessage(MessagingClient client, HorseMessage message)
         {
-            ProcessMessage(message);
+            ProcessMessage(message, true);
         }
 
-        private void ProcessMessage(HorseMessage message)
+        private void ProcessMessage(HorseMessage message, bool fromIncomingClient)
         {
+            ClusterManager cluster = Rider.Cluster;
             switch (message.ContentType)
             {
                 #region Node Management
 
                 case KnownContentTypes.NodeHandshake:
-                    throw new NotImplementedException();
+                    Info.Id = message.MessageId;
+                    Info.Name = message.Target;
+
+                    //todo: if both main, connector will prod for announcement
+                    if (cluster.State == NodeState.Main)
+                    {
+                    }
+
                     break;
 
                 case KnownContentTypes.MainNodeAnnouncement:
-                    throw new NotImplementedException();
+                {
+                    MainNodeAnnouncement msg = System.Text.Json.JsonSerializer.Deserialize<MainNodeAnnouncement>(message.GetStringContent());
+                    cluster.OnMainAnnounced(this, msg);
                     break;
+                }
 
                 case KnownContentTypes.MainAnnouncementAnswer:
-                    throw new NotImplementedException();
+                    bool approved = message.GetStringContent().Trim() == "1";
+                    _ = cluster.OnRequestAnswered(this, approved);
+                    break;
+
+                case KnownContentTypes.ProdForMainAnnouncement:
+                    _ = cluster.OnProdForAnnouncement();
                     break;
 
                 case KnownContentTypes.AskForMainPermission:
-                    throw new NotImplementedException();
+                    _ = cluster.OnMainRequested(this);
                     break;
 
                 #endregion
@@ -140,12 +170,15 @@ namespace Horse.Messaging.Server.Cluster
             }
         }
 
-        public Task SendMessage(HorseMessage message)
+        internal Task SendMessage(HorseMessage message)
         {
             if (_outgoingClient != null && _outgoingClient.IsConnected)
                 return _outgoingClient.SendAsync(message);
-            else if (_incomingClient != null && _incomingClient.IsConnected)
+
+            if (_incomingClient != null && _incomingClient.IsConnected)
                 return _incomingClient.SendAsync(message);
+
+            return Task.CompletedTask;
         }
     }
 }
