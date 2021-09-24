@@ -80,6 +80,11 @@ namespace Horse.Messaging.Protocol
         /// <summary>
         /// Transaction messages
         /// </summary>
-        Transaction = 0x1B
+        Transaction = 0x1B,
+        
+        /// <summary>
+        /// Clustering and node messages
+        /// </summary>
+        Cluster = 0x1C
     }
 }

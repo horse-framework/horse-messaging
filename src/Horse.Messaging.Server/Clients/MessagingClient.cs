@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Horse.Core;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Channels;
+using Horse.Messaging.Server.Cluster;
 
 [assembly: InternalsVisibleTo("Horse.Messaging.Server.WebSocket.Server")]
 
@@ -63,6 +64,13 @@ namespace Horse.Messaging.Server.Clients
         /// If you want to keep some data belong the client, you can use this property.
         /// </summary>
         public object Tag { get; set; }
+        
+        /// <summary>
+        /// True, if client is another node
+        /// </summary>
+        internal bool IsNodeClient { get; set; }
+        
+        internal NodeClient NodeClient { get; set; }
 
         /// <summary>
         /// Messaging queue server

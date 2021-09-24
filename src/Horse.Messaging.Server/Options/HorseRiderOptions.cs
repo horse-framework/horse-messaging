@@ -1,3 +1,4 @@
+using Horse.Messaging.Server.Cluster;
 using Horse.Server;
 
 namespace Horse.Messaging.Server.Options
@@ -40,15 +41,5 @@ namespace Horse.Messaging.Server.Options
 		/// Zero is unlimited.
 		/// </summary>
 		public int RouterLimit { get; set; }
-
-		/// <summary>
-		/// Other server node informations that will be connected
-		/// </summary>
-		public NodeOptions[] Nodes { get; set; }
-
-		/// <summary>
-		/// Node server host options
-		/// </summary>
-		public HostOptions NodeHost { get; set; }
 	}
 }

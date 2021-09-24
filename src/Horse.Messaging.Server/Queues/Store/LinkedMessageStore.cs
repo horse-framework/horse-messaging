@@ -64,6 +64,20 @@ namespace Horse.Messaging.Server.Queues.Store
             }
         }
 
+        public IEnumerable<string> GetMessageIdList(bool priorityMessages)
+        {
+            if (priorityMessages)
+            {
+                foreach (QueueMessage msg in _messagesPrio)
+                    yield return msg.Message.MessageId;
+            }
+            else
+            {
+                foreach (QueueMessage msg in _messages)
+                    yield return msg.Message.MessageId;
+            }
+        }
+
         public QueueMessage GetNext(bool remove, bool fromEnd = false)
         {
             QueueMessage message = GetPriorityNext(remove, fromEnd);
@@ -250,7 +264,7 @@ namespace Horse.Messaging.Server.Queues.Store
         public List<QueueMessage> FindAndRemovePriority(Func<QueueMessage, bool> predicate)
         {
             List<QueueMessage> messages = new List<QueueMessage>();
-            
+
             lock (_messagesPrio)
             {
                 if (_messagesPrio.Count == 0)

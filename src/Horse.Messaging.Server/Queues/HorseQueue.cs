@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
@@ -152,6 +153,10 @@ namespace Horse.Messaging.Server.Queues
         /// True if queue is destroyed
         /// </summary>
         public bool IsDestroyed { get; private set; }
+
+        private DateTime _syncStartDate;
+        private NodeClient _syncClient;
+        private Dictionary<string, MessageSyncMethod> _syncMethods;
 
         #endregion
 
@@ -410,6 +415,18 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         internal void AddMessage(QueueMessage message, bool toEnd = true)
         {
+            if (Status == QueueStatus.Syncing)
+            {
+                try
+                {
+                    _lock.Wait();
+                }
+                finally
+                {
+                    _lock.Release();
+                }
+            }
+
             Store.Put(message, toEnd);
 
             if (State != null && State.TriggerSupported && !_triggering)
@@ -515,7 +532,7 @@ namespace Horse.Messaging.Server.Queues
 
                     Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> factory = Rider.Queue.DeliveryHandlerFactories[handlerBuilder.DeliveryHandlerHeader];
                     IMessageDeliveryHandler deliveryHandler = await factory(handlerBuilder);
-                    
+
                     await InitializeQueue(deliveryHandler);
 
                     handlerBuilder.TriggerAfterCompleted();
@@ -560,6 +577,18 @@ namespace Horse.Messaging.Server.Queues
             //time keeper will check this value and if message time is up, it will remove message from the queue.
             if (Options.MessageTimeout > TimeSpan.Zero)
                 message.Deadline = DateTime.UtcNow.Add(Options.MessageTimeout);
+
+            if (Status == QueueStatus.Syncing)
+            {
+                try
+                {
+                    await _lock.WaitAsync();
+                }
+                finally
+                {
+                    _lock.Release();
+                }
+            }
 
             try
             {
@@ -827,39 +856,6 @@ namespace Horse.Messaging.Server.Queues
             return message.IsSaved;
         }
 
-        /// <summary>
-        /// Sends decision to all connected master nodes
-        /// </summary>
-        public void SendDecisionToNodes(QueueMessage queueMessage, Decision decision)
-        {
-            HorseMessage msg = new HorseMessage(MessageType.Server, null, 10);
-            DecisionOverNode model = new DecisionOverNode
-            {
-                Queue = Name,
-                MessageId = queueMessage.Message.MessageId,
-                Acknowledge = decision.Acknowledge,
-                Allow = decision.Allow,
-                PutBack = decision.PutBack,
-                SaveMessage = decision.SaveMessage
-            };
-
-            msg.Serialize(model, Rider.MessageContentSerializer);
-            Rider.NodeManager.SendMessageToNodes(msg);
-        }
-
-        /// <summary>
-        /// Applies decision over node to the queue
-        /// </summary>
-        internal async Task ApplyDecisionOverNode(string messageId, Decision decision)
-        {
-            QueueMessage message = Store.FindAndRemove(x => x.Message.MessageId == messageId);
-
-            if (message == null)
-                return;
-
-            await ApplyDecision(decision, message);
-        }
-
         #endregion
 
         #region Acknowledge
@@ -1075,6 +1071,80 @@ namespace Horse.Messaging.Server.Queues
         public QueueClient FindClient(MessagingClient client)
         {
             return _clients.Find(x => x.Client == client);
+        }
+
+        #endregion
+
+        #region Sync
+
+        internal async Task StartSync(NodeClient replica)
+        {
+            if (Status == QueueStatus.Syncing)
+                return;
+
+            try
+            {
+                await _lock.WaitAsync();
+            }
+            catch
+            {
+                _lock.Release();
+                return;
+            }
+
+            _syncStartDate = DateTime.UtcNow;
+            _syncClient = replica;
+        }
+
+        internal void FinishSync()
+        {
+            if (Status != QueueStatus.Syncing)
+                return;
+            
+            _syncClient = null;
+            _syncStartDate = DateTime.UtcNow;
+            _syncMethods = null;
+            _lock.Release();
+        }
+        
+        internal IEnumerable<string> GetQueueMessageIdList()
+        {
+            if (Status != QueueStatus.Syncing)
+                yield break;
+
+            IEnumerable<string> priority = Store.GetMessageIdList(true);
+            foreach (string id in priority)
+                yield return id;
+
+            yield return String.Empty;
+
+            IEnumerable<string> regular = Store.GetMessageIdList(false);
+            foreach (string id in regular)
+                yield return id;
+        }
+
+        internal IEnumerable<string> CheckSync(List<string> mainPrioMessages, List<string> mainMessages)
+        {
+            _syncMethods = new Dictionary<string, MessageSyncMethod>();
+            
+            //todo: calculate and generate sync methods
+            //todo: return sync method message id list
+            
+            if (_syncMethods.All(x => x.Value.Method == SyncMethod.Completed))
+                FinishSync();
+
+            //return _syncMethods.Keys;
+            throw new NotImplementedException();
+        }
+
+        internal void SyncMessage(HorseMessage message)
+        {
+            //todo: find sync method and add the message
+
+            if (_syncMethods.All(x => x.Value.Method == SyncMethod.Completed))
+                FinishSync();
+            
+            throw new NotImplementedException();
         }
 
         #endregion

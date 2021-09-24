@@ -28,6 +28,11 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// All push and consume operations are paused
         /// </summary>
-        Paused
+        Paused,
+        
+        /// <summary>
+        /// Queue messages are being synced
+        /// </summary>
+        Syncing
     }
 }

@@ -1,5 +1,3 @@
-using System.Security.Cryptography.X509Certificates;
-
 namespace Horse.Messaging.Protocol
 {
     /// <summary>
@@ -216,5 +214,65 @@ namespace Horse.Messaging.Protocol
         /// "693" rollback a transaction
         /// </summary>
         public const ushort TransactionRollback = 693;
+
+        /// <summary>
+        /// "700" Node handshake
+        /// </summary>
+        public const ushort NodeHandshake = 700;
+
+        /// <summary>
+        /// "701" Main node announcement
+        /// </summary>
+        public const ushort MainNodeAnnouncement = 701;
+        
+        /// <summary>
+        /// "702" Main announcement answer
+        /// </summary>
+        public const ushort MainAnnouncementAnswer = 702;
+        
+        /// <summary>
+        /// "703" Ask for Main permission
+        /// </summary>
+        public const ushort AskForMainPermission = 703;
+
+        /// <summary>
+        /// "704" Prod for main announcement
+        /// </summary>
+        public const ushort ProdForMainAnnouncement = 704;
+
+        /// <summary>
+        /// "711" Node queue list request
+        /// </summary>
+        public const ushort NodeQueueListRequest = 711;
+
+        /// <summary>
+        /// "712" Node queue list response
+        /// </summary>
+        public const ushort NodeQueueListResponse = 712;
+
+        /// <summary>
+        /// "713" Node queue sync request
+        /// </summary>
+        public const ushort NodeQueueSyncRequest = 713;
+
+        /// <summary>
+        /// "714" Node queue message id list
+        /// </summary>
+        public const ushort NodeQueueMessageIdList = 714;
+
+        /// <summary>
+        /// "715" Node queue message request
+        /// </summary>
+        public const ushort NodeQueueMessageRequest = 715;
+
+        /// <summary>
+        /// "716" Node queue message response
+        /// </summary>
+        public const ushort NodeQueueMessageResponse = 716;
+
+        /// <summary>
+        /// "717" Node queue sync completion
+        /// </summary>
+        public const ushort NodeQueueSyncCompletion = 717;
     }
 }

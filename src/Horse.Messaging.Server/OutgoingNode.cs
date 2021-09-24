@@ -1,4 +1,5 @@
 using Horse.Messaging.Client;
+using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Options;
 
 namespace Horse.Messaging.Server

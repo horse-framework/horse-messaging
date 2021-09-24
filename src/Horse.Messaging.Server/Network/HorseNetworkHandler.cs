@@ -5,6 +5,7 @@ using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Cache;
 using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Direct;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
@@ -173,46 +174,86 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         internal Task RouteToHandler(MessagingClient mc, HorseMessage message, bool fromNode)
         {
+            ClusterMode clusterMode = _rider.Cluster.Options.Mode;
+            bool isReplica = _rider.Cluster.Options.Mode == ClusterMode.HighAvailability &&
+                             (_rider.Cluster.State == NodeState.Replica || _rider.Cluster.State == NodeState.Successor);
+            
             switch (message.Type)
             {
                 case MessageType.Channel:
-                    if (!fromNode)
+                    if (!fromNode && clusterMode == ClusterMode.HorizontalScale)
                         _ = _instanceHandler.Handle(mc, message, false);
+                    
+                    if (isReplica)
+                        return Task.CompletedTask;
+                    
                     return _channelHandler.Handle(mc, message, fromNode);
                 
                 case MessageType.QueueMessage:
-                    if (!fromNode)
-                        _ = _instanceHandler.Handle(mc, message, false);
+                    
+                    if (isReplica)
+                        return Task.CompletedTask;
+
                     return _queueMessageHandler.Handle(mc, message, fromNode);
 
                 case MessageType.Router:
-                    if (!fromNode)
-                        _ = _instanceHandler.Handle(mc, message, false);
+                    
+                    if (isReplica)
+                        return Task.CompletedTask;
+
                     return _routerMessageHandler.Handle(mc, message, fromNode);
 
                 case MessageType.Cache:
-                    if (!fromNode)
+
+                    if (!fromNode && clusterMode == ClusterMode.HorizontalScale)
                         _ = _instanceHandler.Handle(mc, message, false);
+                    
+                    if (isReplica)
+                        return Task.CompletedTask;
+
                     return _cacheHandler.Handle(mc, message, fromNode);
                 
                 case MessageType.Transaction:
+                    
+                    if (isReplica)
+                        return Task.CompletedTask;
+
                     return _transactionHandler.Handle(mc, message, false);
 
                 case MessageType.QueuePullRequest:
+                    
+                    if (isReplica)
+                        return Task.CompletedTask;
+
                     return _pullRequestHandler.Handle(mc, message, fromNode);
 
                 case MessageType.DirectMessage:
-                    if (!fromNode)
+                    
+                    if (!fromNode && clusterMode == ClusterMode.HorizontalScale)
                         _ = _instanceHandler.Handle(mc, message, false);
+                    
+                    if (isReplica)
+                        return Task.CompletedTask;
+
                     return _clientHandler.Handle(mc, message, fromNode);
 
                 case MessageType.Response:
-                    if (!fromNode)
+                    if (!fromNode && clusterMode == ClusterMode.HorizontalScale)
                         _ = _instanceHandler.Handle(mc, message, false);
+                    
+                    if (isReplica)
+                        return Task.CompletedTask;
+
                     return _responseHandler.Handle(mc, message, fromNode);
 
                 case MessageType.Server:
                     return _serverHandler.Handle(mc, message, fromNode);
+                
+                case MessageType.Cluster:
+                    
+                    //todo:
+                    
+                    break;
 
                 case MessageType.Event:
                     return _eventHandler.Handle(mc, message, fromNode);

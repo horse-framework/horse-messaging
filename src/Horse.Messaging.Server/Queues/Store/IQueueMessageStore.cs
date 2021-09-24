@@ -32,6 +32,11 @@ namespace Horse.Messaging.Server.Queues.Store
         void Put(QueueMessage message, bool toEnd);
 
         /// <summary>
+        /// Returns id list of all messages
+        /// </summary>
+        IEnumerable<string> GetMessageIdList(bool priorityMessages);
+
+        /// <summary>
         /// Gets next message from store
         /// </summary>
         QueueMessage GetNext(bool remove, bool fromEnd = false);

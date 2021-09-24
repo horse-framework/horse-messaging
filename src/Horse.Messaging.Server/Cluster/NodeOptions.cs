@@ -1,4 +1,4 @@
-namespace Horse.Messaging.Server.Options
+namespace Horse.Messaging.Server.Cluster
 {
     /// <summary>
     /// Distributed node options
@@ -16,13 +16,13 @@ namespace Horse.Messaging.Server.Options
         public string Host { get; set; }
 
         /// <summary>
+        /// Instance public hostname
+        /// </summary>
+        public string PublicHost { get; set; }
+
+        /// <summary>
         /// Authentication token for the node
         /// </summary>
         public string Token { get; set; }
-
-        /// <summary>
-        /// How many milliseconds should wait to try reconnect
-        /// </summary>
-        public int ReconnectWait { get; set; }
     }
 }
