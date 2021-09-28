@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Horse.Core;
 using Horse.Core.Protocols;
@@ -34,7 +36,6 @@ namespace Horse.Messaging.Server.Network
         private readonly INetworkMessageHandler _pullRequestHandler;
         private readonly INetworkMessageHandler _clientHandler;
         private readonly INetworkMessageHandler _responseHandler;
-        private readonly INetworkMessageHandler _instanceHandler;
         private readonly INetworkMessageHandler _channelHandler;
         private readonly INetworkMessageHandler _eventHandler;
         private readonly INetworkMessageHandler _cacheHandler;
@@ -49,7 +50,6 @@ namespace Horse.Messaging.Server.Network
             _pullRequestHandler = new PullRequestMessageHandler(rider);
             _clientHandler = new DirectMessageHandler(rider);
             _responseHandler = new ResponseMessageHandler(rider);
-            _instanceHandler = new NodeMessageHandler(rider);
             _eventHandler = new EventMessageHandler(rider);
             _cacheHandler = new CacheNetworkHandler(rider);
             _channelHandler = new ChannelNetworkHandler(rider);
@@ -78,7 +78,10 @@ namespace Horse.Messaging.Server.Network
                 return null;
             }
 
-            if (_rider.Options.ClientLimit > 0 && _rider.Client.GetOnlineClients() >= _rider.Options.ClientLimit)
+            string nodeValue = data.Properties.GetStringValue(HorseHeaders.HORSE_NODE);
+            bool isNode = nodeValue != null && nodeValue.Equals(HorseHeaders.YES, StringComparison.InvariantCultureIgnoreCase);
+
+            if (!isNode && _rider.Options.ClientLimit > 0 && _rider.Client.GetOnlineClients() >= _rider.Options.ClientLimit)
                 return null;
 
             //creates new mq client object 
@@ -88,6 +91,26 @@ namespace Horse.Messaging.Server.Network
             client.Token = data.Properties.GetStringValue(HorseHeaders.CLIENT_TOKEN);
             client.Name = data.Properties.GetStringValue(HorseHeaders.CLIENT_NAME);
             client.Type = data.Properties.GetStringValue(HorseHeaders.CLIENT_TYPE);
+
+            if (isNode)
+            {
+                if (_rider.Cluster.Options.SharedSecret != client.Token)
+                {
+                    await client.SendAsync(MessageBuilder.Unauthorized());
+                    return null;
+                }
+
+                NodeClient nodeClient = _rider.Cluster.Clients.FirstOrDefault(x => x.Info.Name == client.Name);
+                if (nodeClient == null)
+                {
+                    await client.SendAsync(MessageBuilder.NotFound());
+                    return null;
+                }
+
+                client.Tag = nodeClient;
+                nodeClient.IncomingClientConnected(client);
+                return client;
+            }
 
             //authenticates client
             foreach (IClientAuthenticator authenticator in _rider.Client.Authenticators.All())
@@ -127,6 +150,12 @@ namespace Horse.Messaging.Server.Network
         public Task Disconnected(IHorseServer server, HorseServerSocket client)
         {
             MessagingClient messagingClient = (MessagingClient) client;
+
+            if (messagingClient.IsNodeClient)
+            {
+                return Task.CompletedTask;
+            }
+
             _rider.Client.Remove(messagingClient);
             foreach (IClientHandler handler in _rider.Client.Handlers.All())
                 _ = handler.Disconnected(_rider, messagingClient);
@@ -175,29 +204,29 @@ namespace Horse.Messaging.Server.Network
         internal Task RouteToHandler(MessagingClient mc, HorseMessage message, bool fromNode)
         {
             ClusterMode clusterMode = _rider.Cluster.Options.Mode;
-            bool isReplica = _rider.Cluster.Options.Mode == ClusterMode.HighAvailability &&
+            bool isReplica = _rider.Cluster.Options.Mode == ClusterMode.Reilable &&
                              (_rider.Cluster.State == NodeState.Replica || _rider.Cluster.State == NodeState.Successor);
-            
+
             switch (message.Type)
             {
                 case MessageType.Channel:
-                    if (!fromNode && clusterMode == ClusterMode.HorizontalScale)
-                        _ = _instanceHandler.Handle(mc, message, false);
-                    
+                    if (!fromNode && clusterMode == ClusterMode.Scaled)
+                        _ = _rider.Cluster.ProcessMessageFromClient(mc, message);
+
                     if (isReplica)
                         return Task.CompletedTask;
-                    
+
                     return _channelHandler.Handle(mc, message, fromNode);
-                
+
                 case MessageType.QueueMessage:
-                    
+
                     if (isReplica)
                         return Task.CompletedTask;
 
                     return _queueMessageHandler.Handle(mc, message, fromNode);
 
                 case MessageType.Router:
-                    
+
                     if (isReplica)
                         return Task.CompletedTask;
 
@@ -205,42 +234,42 @@ namespace Horse.Messaging.Server.Network
 
                 case MessageType.Cache:
 
-                    if (!fromNode && clusterMode == ClusterMode.HorizontalScale)
-                        _ = _instanceHandler.Handle(mc, message, false);
-                    
+                    if (!fromNode && clusterMode == ClusterMode.Scaled)
+                        _ = _rider.Cluster.ProcessMessageFromClient(mc, message);
+
                     if (isReplica)
                         return Task.CompletedTask;
 
                     return _cacheHandler.Handle(mc, message, fromNode);
-                
+
                 case MessageType.Transaction:
-                    
+
                     if (isReplica)
                         return Task.CompletedTask;
 
                     return _transactionHandler.Handle(mc, message, false);
 
                 case MessageType.QueuePullRequest:
-                    
+
                     if (isReplica)
                         return Task.CompletedTask;
 
                     return _pullRequestHandler.Handle(mc, message, fromNode);
 
                 case MessageType.DirectMessage:
-                    
-                    if (!fromNode && clusterMode == ClusterMode.HorizontalScale)
-                        _ = _instanceHandler.Handle(mc, message, false);
-                    
+
+                    if (!fromNode && clusterMode == ClusterMode.Scaled)
+                        _ = _rider.Cluster.ProcessMessageFromClient(mc, message);
+
                     if (isReplica)
                         return Task.CompletedTask;
 
                     return _clientHandler.Handle(mc, message, fromNode);
 
                 case MessageType.Response:
-                    if (!fromNode && clusterMode == ClusterMode.HorizontalScale)
-                        _ = _instanceHandler.Handle(mc, message, false);
-                    
+                    if (!fromNode && clusterMode == ClusterMode.Scaled)
+                        _ = _rider.Cluster.ProcessMessageFromClient(mc, message);
+
                     if (isReplica)
                         return Task.CompletedTask;
 
@@ -248,12 +277,12 @@ namespace Horse.Messaging.Server.Network
 
                 case MessageType.Server:
                     return _serverHandler.Handle(mc, message, fromNode);
-                
+
                 case MessageType.Cluster:
+                    if (mc.IsNodeClient && mc.NodeClient != null)
+                        mc.NodeClient.ProcessReceivedMessage(mc, message);
                     
-                    //todo:
-                    
-                    break;
+                    return Task.CompletedTask;
 
                 case MessageType.Event:
                     return _eventHandler.Handle(mc, message, fromNode);

@@ -15,6 +15,7 @@ namespace Horse.Messaging.Server.Cluster
         public NodeInfo Info { get; }
         public HorseRider Rider { get; }
         internal bool ApprovedMainity { get; set; }
+        public DateTime ConnectedDate { get; private set; }
 
         public bool IsConnected
         {
@@ -52,6 +53,9 @@ namespace Horse.Messaging.Server.Cluster
 
         private void OutgoingClientOnConnected(HorseClient client)
         {
+            if (_incomingClient == null || !_incomingClient.IsConnected)
+                ConnectedDate = DateTime.UtcNow;
+
             throw new NotImplementedException();
         }
 
@@ -60,6 +64,10 @@ namespace Horse.Messaging.Server.Cluster
             _incomingClient = incomingClient;
             incomingClient.NodeClient = this;
             incomingClient.IsNodeClient = true;
+            
+            if (_outgoingClient == null || !_outgoingClient.IsConnected)
+                ConnectedDate = DateTime.UtcNow;
+            
             incomingClient.Disconnected += IncomingClientOnDisconnected;
         }
 
@@ -88,21 +96,41 @@ namespace Horse.Messaging.Server.Cluster
 
         internal void ProcessReceivedMessage(HorseClient client, HorseMessage message)
         {
-            ProcessMessage(message, false);
+            if (message.Type == MessageType.Cluster)
+                ProcessClusterMessage(message, false);
+            else
+                ProcessScaledMessage(message);
+            
         }
 
         internal void ProcessReceivedMessage(MessagingClient client, HorseMessage message)
         {
-            ProcessMessage(message, true);
+            if (message.Type == MessageType.Cluster)
+                ProcessClusterMessage(message, true);
+            else
+                ProcessScaledMessage(message);
         }
 
-        private void ProcessMessage(HorseMessage message, bool fromIncomingClient)
+        private void ProcessScaledMessage(HorseMessage message)
+        {
+            switch (message.Type)
+            {
+                case MessageType.Channel:
+                case MessageType.Cache:
+                case MessageType.DirectMessage:
+                case MessageType.Response:
+                    break;
+            }
+        }
+
+        private void ProcessClusterMessage(HorseMessage message, bool fromIncomingClient)
         {
             ClusterManager cluster = Rider.Cluster;
             switch (message.ContentType)
             {
                 #region Node Management
 
+                /*todo: 
                 case KnownContentTypes.NodeHandshake:
                     Info.Id = message.MessageId;
                     Info.Name = message.Target;
@@ -113,7 +141,8 @@ namespace Horse.Messaging.Server.Cluster
                     }
 
                     break;
-
+*/
+                
                 case KnownContentTypes.MainNodeAnnouncement:
                 {
                     MainNodeAnnouncement msg = System.Text.Json.JsonSerializer.Deserialize<MainNodeAnnouncement>(message.GetStringContent());

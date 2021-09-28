@@ -30,14 +30,18 @@ namespace Horse.Messaging.Protocol.Models
         public string Host { get; set; }
 
         /// <summary>
-        /// If true, connection is outgoing.
-        /// This server is sending data to remote.
-        /// If false, connection is incoming.
-        /// Remote server is sending data tis server.
+        /// Node public host name
         /// </summary>
-        [JsonProperty("Slave")]
-        [JsonPropertyName("Slave")]
-        public bool IsSlave { get; set; }
+        [JsonProperty("PublicHost")]
+        [JsonPropertyName("PublicHost")]
+        public string PublicHost { get; set; }
+        
+        /// <summary>
+        /// Node States: Main, Successor, Replica, Single
+        /// </summary>
+        [JsonProperty("State")]
+        [JsonPropertyName("State")]
+        public string State { get; set; }
 
         /// <summary>
         /// True, if connection is alive

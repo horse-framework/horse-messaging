@@ -101,19 +101,14 @@ namespace Horse.Messaging.Protocol
         public const ushort QueueList = 616;
 
         /// <summary>
-        /// "621" Gets active instance list
+        /// "621" Gets active node list
         /// </summary>
-        public const ushort InstanceList = 621;
+        public const ushort NodeList = 621;
 
         /// <summary>
         /// "631" Gets all connected clients
         /// </summary>
         public const ushort ClientList = 631;
-
-        /// <summary>
-        /// "641" Node instance sends a decision to other nodes
-        /// </summary>
-        public const ushort DecisionOverNode = 641;
 
         /// <summary>
         /// "651" Gets all rouuters
@@ -214,11 +209,6 @@ namespace Horse.Messaging.Protocol
         /// "693" rollback a transaction
         /// </summary>
         public const ushort TransactionRollback = 693;
-
-        /// <summary>
-        /// "700" Node handshake
-        /// </summary>
-        public const ushort NodeHandshake = 700;
 
         /// <summary>
         /// "701" Main node announcement

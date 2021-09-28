@@ -28,7 +28,7 @@ namespace Horse.Messaging.Client
 			HorseMessage message = new()
 			{
 				Type = MessageType.Server,
-				ContentType = KnownContentTypes.InstanceList
+				ContentType = KnownContentTypes.NodeList
 			};
 
 			return _client.SendAndGetJson<List<NodeInformation>>(message);

@@ -248,11 +248,32 @@ namespace Horse.Messaging.Protocol
         /// <summary>
         /// "Susbcribe"
         /// </summary>
-        public const string SUBSCRIBE = "Susbcribe";
+        public const string SUBSCRIBE = "Subscribe";
         
         /// <summary>
         /// "Status"
         /// </summary>
         public const string STATUS = "Status";
+        
+        /// <summary>
+        /// "Horse-Node"
+        /// </summary>
+        public const string HORSE_NODE = "Horse-Node";
+
+        /// <summary>
+        /// "Node-Host"
+        /// </summary>
+        public const string NODE_HOST = "Node-Host";
+        
+        /// <summary>
+        /// "Node-Public-Host"
+        /// </summary>
+        public const string NODE_PUBLIC_HOST = "Node-Public-Host";
+        
+        /// <summary>
+        /// "Yes"
+        /// </summary>
+        public const string YES = "Yes";
+
     }
 }

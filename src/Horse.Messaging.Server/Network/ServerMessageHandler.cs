@@ -87,8 +87,8 @@ namespace Horse.Messaging.Server.Network
                     return GetQueueList(client, message);
 
                 //get queue information
-                case KnownContentTypes.InstanceList:
-                    return GetInstanceList(client, message);
+                case KnownContentTypes.NodeList:
+                    return GetNodeList(client, message);
 
                 //get client information list
                 case KnownContentTypes.ClientList:
@@ -474,7 +474,7 @@ namespace Horse.Messaging.Server.Network
         /// <summary>
         /// Gets connected instance list
         /// </summary>
-        private async Task GetInstanceList(MessagingClient client, HorseMessage message)
+        private async Task GetNodeList(MessagingClient client, HorseMessage message)
         {
             foreach (IAdminAuthorization authorization in _rider.Client.AdminAuthorizations.All())
             {
@@ -490,42 +490,29 @@ namespace Horse.Messaging.Server.Network
 
             List<NodeInformation> list = new List<NodeInformation>();
 
-            //slave instances
-            List<MessagingClient> slaves = _rider.NodeManager.IncomingNodes.GetAsClone();
-            foreach (MessagingClient slave in slaves)
-            {
-                list.Add(new NodeInformation
-                {
-                    IsSlave = true,
-                    Host = slave.RemoteHost,
-                    IsConnected = slave.IsConnected,
-                    Id = slave.UniqueId,
-                    Name = slave.Name,
-                    Lifetime = slave.ConnectedDate.LifetimeMilliseconds()
-                });
-            }
-
             //outgoing nodes
-            foreach (OutgoingNode node in _rider.NodeManager.OutgoingNodes)
+            foreach (NodeClient node in _rider.Cluster.Clients)
             {
-                if (node?.Client == null)
-                    continue;
-
-                NodeOptions options = node.Client.Tag as NodeOptions;
+                string state = NodeState.Replica.ToString();
+                if (node.Info.Id == _rider.Cluster.MainNode?.Id)
+                    state = NodeState.Main.ToString();
+                else if (node.Info.Id == _rider.Cluster.SuccessorNode?.Id)
+                    state = NodeState.Successor.ToString();
 
                 list.Add(new NodeInformation
                 {
-                    IsSlave = false,
-                    Host = options?.Host,
-                    IsConnected = node.Client.IsConnected,
-                    Id = node.Client.ClientId,
-                    Name = options?.Name,
-                    Lifetime = Convert.ToInt64(node.Client.Lifetime.TotalMilliseconds)
+                    Id = node.Info.Id,
+                    Name = node.Info.Name,
+                    Host = node.Info.Host,
+                    PublicHost = node.Info.PublicHost,
+                    State = state,
+                    IsConnected = node.IsConnected,
+                    Lifetime = Convert.ToInt64((DateTime.UtcNow - node.ConnectedDate).TotalMilliseconds)
                 });
             }
 
             HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
-            message.ContentType = KnownContentTypes.InstanceList;
+            message.ContentType = KnownContentTypes.NodeList;
             response.Serialize(list, _rider.MessageContentSerializer);
             await client.SendAsync(response);
         }

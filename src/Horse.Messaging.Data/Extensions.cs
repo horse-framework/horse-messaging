@@ -108,7 +108,6 @@ namespace Horse.Messaging.Data
         /// <param name="deleteWhen">Decision when messages are deleted from disk</param>
         /// <param name="producerAckDecision">Decision when producer receives acknowledge</param>
         /// <param name="useRedelivery">True if want to keep redelivery data and send to consumers with message headers</param>
-        /// <param name="key">Definition key for delivery handler. You can manage with that key, how the queue will be reloaded.</param>
         /// <param name="ackTimeoutPutback">Putback decision when ack message isn't received</param>
         /// <param name="nackPutback">Putback decision when negative ack is received</param>
         /// <returns></returns>

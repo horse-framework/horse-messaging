@@ -120,7 +120,7 @@ namespace Horse.Messaging.Server
             Cluster = new ClusterManager(this);
 
             Cache.Initialize();
-            NodeManager.Initialize();
+            Cluster.Initialize();
         }
 
         /// <summary>

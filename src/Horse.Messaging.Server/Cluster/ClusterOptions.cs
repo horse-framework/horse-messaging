@@ -3,8 +3,8 @@
     public enum ClusterMode
     {
         Single,
-        HighAvailability,
-        HorizontalScale
+        Reilable,
+        Scaled
     }
     
     public class ClusterOptions

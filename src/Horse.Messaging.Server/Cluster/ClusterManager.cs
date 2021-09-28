@@ -6,6 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Protocol.Events;
+using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Queues;
 
 namespace Horse.Messaging.Server.Cluster
@@ -34,6 +37,26 @@ namespace Horse.Messaging.Server.Cluster
 
         public NodeClient[] Clients { get; private set; }
 
+        /// <summary>
+        /// Event Manager for HorseEventType.ConnectedToRemoteNode 
+        /// </summary>
+        public EventManager ConnectedToRemoteNodeEvent { get; }
+
+        /// <summary>
+        /// Event Manager for HorseEventType.DisconnectedFromRemoteNode 
+        /// </summary>
+        public EventManager DisconnectedFromRemoteNodeEvent { get; }
+
+        /// <summary>
+        /// Event Manager for HorseEventType.RemoteNodeConnect 
+        /// </summary>
+        public EventManager RemoteNodeConnectEvent { get; }
+
+        /// <summary>
+        /// Event Manager for HorseEventType.RemoteNodeDisconnect 
+        /// </summary>
+        public EventManager RemoteNodeDisconnectEvent { get; }
+        
         private int _requiredApprovement = 0;
         private int _recievedApprovement = 0;
         private bool _askingForMain = false;
@@ -46,6 +69,26 @@ namespace Horse.Messaging.Server.Cluster
         {
             Id = Guid.NewGuid().ToString();
             Rider = rider;
+            
+            ConnectedToRemoteNodeEvent = new EventManager(rider, HorseEventType.ConnectedToRemoteNode);
+            DisconnectedFromRemoteNodeEvent = new EventManager(rider, HorseEventType.DisconnectedFromRemoteNode);
+            RemoteNodeConnectEvent = new EventManager(rider, HorseEventType.RemoteNodeConnect);
+            RemoteNodeDisconnectEvent = new EventManager(rider, HorseEventType.RemoteNodeDisconnect);
+        }
+
+        internal void Initialize()
+        {
+            //todo: #
+        }
+
+        internal void Start()
+        {
+            //todo: #
+        }
+
+        internal Task ProcessMessageFromClient(MessagingClient client, HorseMessage message)
+        {
+            throw new NotImplementedException();
         }
 
         #region Node Management
