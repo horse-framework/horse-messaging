@@ -236,6 +236,11 @@ namespace Horse.Messaging.Protocol
         public const ushort ProdForMainAnnouncement = 704;
 
         /// <summary>
+        /// "705" Who is main node
+        /// </summary>
+        public const ushort WhoIsMainNode = 705;
+
+        /// <summary>
         /// "711" Node queue list request
         /// </summary>
         public const ushort NodeQueueListRequest = 711;

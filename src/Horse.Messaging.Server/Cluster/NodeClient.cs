@@ -41,8 +41,8 @@ namespace Horse.Messaging.Server.Cluster
             _outgoingClient.ReconnectWait = TimeSpan.FromMilliseconds(500);
             _outgoingClient.RemoteHost = info.Host;
 
-            _outgoingClient.SetClientName(Rider.Options.Name);
-            _outgoingClient.SetClientType(Rider.Options.Type);
+            _outgoingClient.SetClientName(Rider.Cluster.Options.Name);
+            _outgoingClient.SetClientType("Node");
             _outgoingClient.SetClientToken(rider.Cluster.Options.SharedSecret);
 
             _outgoingClient.AddProperty(HorseHeaders.HORSE_NODE, HorseHeaders.YES);
@@ -64,6 +64,8 @@ namespace Horse.Messaging.Server.Cluster
         {
             if (_incomingClient == null || !_incomingClient.IsConnected)
                 ConnectedDate = DateTime.UtcNow;
+
+            Rider.Server.Logger?.LogEvent("CLUSTER", $"Connected to remote client: {Info.Name}");
         }
 
         internal void IncomingClientConnected(MessagingClient incomingClient, ConnectionData data)
@@ -81,7 +83,7 @@ namespace Horse.Messaging.Server.Cluster
 
             incomingClient.Disconnected += IncomingClientOnDisconnected;
 
-            HorseMessage infoMessage = new HorseMessage(MessageType.Cluster, Rider.Options.Name, KnownContentTypes.NodeInformation);
+            HorseMessage infoMessage = new HorseMessage(MessageType.Cluster, Rider.Cluster.Options.Name, KnownContentTypes.NodeInformation);
             infoMessage.AddHeader(HorseHeaders.CLIENT_NAME, Rider.Cluster.Options.Name);
             infoMessage.AddHeader(HorseHeaders.NODE_ID, Rider.Cluster.Id);
             infoMessage.AddHeader(HorseHeaders.NODE_PUBLIC_HOST, Rider.Cluster.Options.PublicHost);
@@ -90,29 +92,58 @@ namespace Horse.Messaging.Server.Cluster
 
             if (Rider.Cluster.State == NodeState.Main)
                 _ = Rider.Cluster.AnnounceMainity();
+            else if (Rider.Cluster.State == NodeState.Single)
+            {
+                HorseMessage whoIsMain = new HorseMessage(MessageType.Cluster, Rider.Cluster.Options.Name, KnownContentTypes.WhoIsMainNode);
+                incomingClient.Send(whoIsMain);
+
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        await Task.Delay(new Random().Next(250, 1000));
+                        if (Rider.Cluster.MainNode == null)
+                            _ = Rider.Cluster.AskForMain();
+                    }
+                    catch
+                    {
+                    }
+                });
+            }
+
+            Rider.Server.Logger?.LogEvent("CLUSTER", $"Remote client is connected: {Info.Name}");
         }
 
         private void OutgoingClientOnDisconnected(HorseClient client)
         {
             if (_incomingClient == null || !_incomingClient.IsConnected)
-                ProcessDisconnection();
+                _ = ProcessDisconnection();
+
+            Rider.Server.Logger?.LogEvent("CLUSTER", $"Disconnected from remote client: {Info.Name}");
         }
 
         private void IncomingClientOnDisconnected(SocketBase client)
         {
             if (_outgoingClient == null || !_outgoingClient.IsConnected)
-                ProcessDisconnection();
+                _ = ProcessDisconnection();
+
+            Rider.Server.Logger?.LogEvent("CLUSTER", $"Remote client is disconnected: {Info.Name}");
         }
 
-        private void ProcessDisconnection()
+        private async Task ProcessDisconnection()
         {
+            if (IsConnected)
+                return;
+
             ClusterManager cluster = Rider.Cluster;
 
             if (cluster.MainNode != null && cluster.MainNode.Id == Info?.Id)
-                _ = cluster.OnMainDown(this);
+                await cluster.OnMainDown(this);
 
             else if (cluster.SuccessorNode != null && cluster.SuccessorNode.Id == Info?.Id)
-                _ = cluster.OnSuccessorDown(this);
+                await cluster.OnSuccessorDown(this);
+
+            cluster.UpdateState();
         }
 
         internal void ProcessReceivedMessage(HorseClient client, HorseMessage message)
@@ -158,6 +189,14 @@ namespace Horse.Messaging.Server.Cluster
                     Info.Id = message.FindHeader(HorseHeaders.NODE_ID);
                     Info.PublicHost = message.FindHeader(HorseHeaders.NODE_PUBLIC_HOST);
                     Info.Name = message.FindHeader(HorseHeaders.CLIENT_NAME);
+                    break;
+                }
+
+                case KnownContentTypes.WhoIsMainNode:
+                {
+                    if (cluster.State == NodeState.Main)
+                        _ = cluster.AnnounceMainity();
+
                     break;
                 }
 

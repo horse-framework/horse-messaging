@@ -280,5 +280,15 @@ namespace Horse.Messaging.Protocol
         /// </summary>
         public const string YES = "Yes";
 
+        /// <summary>
+        /// "Main-Node"
+        /// </summary>
+        public const string MAIN_NODE = "Main-Node";
+        
+        /// <summary>
+        /// "Successor-Node"
+        /// </summary>
+        public const string SUCCESSOR_NODE = "Successor-Node";
+
     }
 }

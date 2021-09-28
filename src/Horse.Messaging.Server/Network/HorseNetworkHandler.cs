@@ -107,7 +107,9 @@ namespace Horse.Messaging.Server.Network
                     return null;
                 }
 
-                nodeClient.IncomingClientConnected(client, data);
+                client.IsNodeClient = true;
+                client.NodeClient = nodeClient;
+                
                 return client;
             }
 
@@ -140,6 +142,11 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         public Task Ready(IHorseServer server, HorseServerSocket client)
         {
+            MessagingClient mc = (MessagingClient) client;
+            
+            if (mc.IsNodeClient && mc.NodeClient != null)
+                mc.NodeClient.IncomingClientConnected(mc, mc.Data);
+            
             return Task.CompletedTask;
         }
 
