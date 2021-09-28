@@ -4,6 +4,7 @@ using Horse.Core;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Helpers;
 
 namespace Horse.Messaging.Server.Cluster
 {
@@ -44,10 +45,18 @@ namespace Horse.Messaging.Server.Cluster
             _outgoingClient.SetClientType(Rider.Options.Type);
             _outgoingClient.SetClientToken(rider.Cluster.Options.SharedSecret);
 
+            _outgoingClient.AddProperty(HorseHeaders.HORSE_NODE, HorseHeaders.YES);
+            _outgoingClient.AddProperty(HorseHeaders.NODE_ID, rider.Cluster.Id);
+            _outgoingClient.AddProperty(HorseHeaders.NODE_HOST, rider.Cluster.Options.NodeHost);
+            _outgoingClient.AddProperty(HorseHeaders.NODE_PUBLIC_HOST, rider.Cluster.Options.PublicHost);
+
             _outgoingClient.MessageReceived += ProcessReceivedMessage;
             _outgoingClient.Disconnected += OutgoingClientOnDisconnected;
             _outgoingClient.Connected += OutgoingClientOnConnected;
+        }
 
+        internal void Start()
+        {
             _ = _outgoingClient.ConnectAsync();
         }
 
@@ -55,20 +64,32 @@ namespace Horse.Messaging.Server.Cluster
         {
             if (_incomingClient == null || !_incomingClient.IsConnected)
                 ConnectedDate = DateTime.UtcNow;
-
-            throw new NotImplementedException();
         }
 
-        internal void IncomingClientConnected(MessagingClient incomingClient)
+        internal void IncomingClientConnected(MessagingClient incomingClient, ConnectionData data)
         {
             _incomingClient = incomingClient;
             incomingClient.NodeClient = this;
             incomingClient.IsNodeClient = true;
-            
+            Info.Name = incomingClient.Name;
+
+            Info.Id = data.Properties.GetStringValue(HorseHeaders.NODE_ID);
+            Info.PublicHost = data.Properties.GetStringValue(HorseHeaders.NODE_PUBLIC_HOST);
+
             if (_outgoingClient == null || !_outgoingClient.IsConnected)
                 ConnectedDate = DateTime.UtcNow;
-            
+
             incomingClient.Disconnected += IncomingClientOnDisconnected;
+
+            HorseMessage infoMessage = new HorseMessage(MessageType.Cluster, Rider.Options.Name, KnownContentTypes.NodeInformation);
+            infoMessage.AddHeader(HorseHeaders.CLIENT_NAME, Rider.Cluster.Options.Name);
+            infoMessage.AddHeader(HorseHeaders.NODE_ID, Rider.Cluster.Id);
+            infoMessage.AddHeader(HorseHeaders.NODE_PUBLIC_HOST, Rider.Cluster.Options.PublicHost);
+
+            incomingClient.Send(infoMessage);
+
+            if (Rider.Cluster.State == NodeState.Main)
+                _ = Rider.Cluster.AnnounceMainity();
         }
 
         private void OutgoingClientOnDisconnected(HorseClient client)
@@ -100,7 +121,6 @@ namespace Horse.Messaging.Server.Cluster
                 ProcessClusterMessage(message, false);
             else
                 ProcessScaledMessage(message);
-            
         }
 
         internal void ProcessReceivedMessage(MessagingClient client, HorseMessage message)
@@ -130,19 +150,17 @@ namespace Horse.Messaging.Server.Cluster
             {
                 #region Node Management
 
-                /*todo: 
-                case KnownContentTypes.NodeHandshake:
-                    Info.Id = message.MessageId;
-                    Info.Name = message.Target;
+                case KnownContentTypes.NodeInformation:
+                {
+                    if (fromIncomingClient)
+                        return;
 
-                    //todo: if both main, connector will prod for announcement
-                    if (cluster.State == NodeState.Main)
-                    {
-                    }
-
+                    Info.Id = message.FindHeader(HorseHeaders.NODE_ID);
+                    Info.PublicHost = message.FindHeader(HorseHeaders.NODE_PUBLIC_HOST);
+                    Info.Name = message.FindHeader(HorseHeaders.CLIENT_NAME);
                     break;
-*/
-                
+                }
+
                 case KnownContentTypes.MainNodeAnnouncement:
                 {
                     MainNodeAnnouncement msg = System.Text.Json.JsonSerializer.Deserialize<MainNodeAnnouncement>(message.GetStringContent());

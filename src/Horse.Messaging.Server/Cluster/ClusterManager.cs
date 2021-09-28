@@ -5,6 +5,7 @@ using System.IO.Pipes;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Horse.Core;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Clients;
@@ -13,14 +14,6 @@ using Horse.Messaging.Server.Queues;
 
 namespace Horse.Messaging.Server.Cluster
 {
-    public enum NodeState
-    {
-        Single,
-        Main,
-        Successor,
-        Replica
-    }
-
     public class ClusterManager
     {
         #region Properties
@@ -56,7 +49,7 @@ namespace Horse.Messaging.Server.Cluster
         /// Event Manager for HorseEventType.RemoteNodeDisconnect 
         /// </summary>
         public EventManager RemoteNodeDisconnectEvent { get; }
-        
+
         private int _requiredApprovement = 0;
         private int _recievedApprovement = 0;
         private bool _askingForMain = false;
@@ -69,7 +62,7 @@ namespace Horse.Messaging.Server.Cluster
         {
             Id = Guid.NewGuid().ToString();
             Rider = rider;
-            
+
             ConnectedToRemoteNodeEvent = new EventManager(rider, HorseEventType.ConnectedToRemoteNode);
             DisconnectedFromRemoteNodeEvent = new EventManager(rider, HorseEventType.DisconnectedFromRemoteNode);
             RemoteNodeConnectEvent = new EventManager(rider, HorseEventType.RemoteNodeConnect);
@@ -78,17 +71,19 @@ namespace Horse.Messaging.Server.Cluster
 
         internal void Initialize()
         {
-            //todo: #
         }
 
         internal void Start()
         {
-            //todo: #
-        }
+            List<NodeClient> clients = new List<NodeClient>();
 
-        internal Task ProcessMessageFromClient(MessagingClient client, HorseMessage message)
-        {
-            throw new NotImplementedException();
+            foreach (NodeInfo nodeInfo in Options.Nodes)
+                clients.Add(new NodeClient(Rider, nodeInfo));
+
+            Clients = clients.ToArray();
+
+            foreach (NodeClient client in Clients)
+                client.Start();
         }
 
         #region Node Management
@@ -154,7 +149,10 @@ namespace Horse.Messaging.Server.Cluster
 
             MainNode = announcement.Main;
             SuccessorNode = announcement.Successor;
+
             UpdateState();
+
+            Rider.Server.Logger?.LogEvent("CLUSTER", "The node has become Main");
         }
 
         /// <summary>
@@ -184,6 +182,8 @@ namespace Horse.Messaging.Server.Cluster
                 if (client.IsConnected)
                     await client.SendMessage(message);
             }
+
+            Rider.Server.Logger?.LogEvent("CLUSTER", "The node is asking for becoming Main");
         }
 
         /// <summary>
@@ -205,6 +205,8 @@ namespace Horse.Messaging.Server.Cluster
             message.SetStringContent(approve ? "1" : "0");
 
             await successor.SendMessage(message);
+
+            Rider.Server.Logger?.LogEvent("CLUSTER", $"Main request of {successor.Info.Name} has {(approve ? "approved" : "rejected")}");
         }
 
         #endregion
@@ -214,6 +216,7 @@ namespace Horse.Messaging.Server.Cluster
         internal Task OnMainDown(NodeClient mainClient)
         {
             MainNode = null;
+            Rider.Server.Logger?.LogEvent("CLUSTER", $"Main node is down: {mainClient.Info.Name}");
 
             //if the node should be the next main
             if (State == NodeState.Successor || SuccessorNode?.Id == Id)
@@ -281,6 +284,8 @@ namespace Horse.Messaging.Server.Cluster
 
         internal Task OnSuccessorDown(NodeClient successor)
         {
+            Rider.Server.Logger?.LogEvent("CLUSTER", $"Successor node is down: {successor.Info.Name}");
+
             UpdateState();
 
             if (State == NodeState.Main)
@@ -323,6 +328,34 @@ namespace Horse.Messaging.Server.Cluster
             MainNode = announcement.Main;
             SuccessorNode = announcement.Successor;
             UpdateState();
+
+            Rider.Server.Logger?.LogEvent("CLUSTER", $"New Main node is announce by {announcement.Main.Name} with successor {announcement.Successor?.Name}");
+        }
+
+        #endregion
+
+        #region Messaging Operations
+
+        internal void ProcessMessageFromClient(MessagingClient client, HorseMessage message)
+        {
+            if (Options.Mode == ClusterMode.Scaled)
+                foreach (NodeClient node in Clients)
+                    _ = node.SendMessage(message);
+        }
+
+        internal Task SendQueueMessageToNodes()
+        {
+            throw new NotImplementedException();
+        }
+
+        internal Task SendPutBackToNodes()
+        {
+            throw new NotImplementedException();
+        }
+
+        internal Task SendMessageRemovalToNodes()
+        {
+            throw new NotImplementedException();
         }
 
         #endregion

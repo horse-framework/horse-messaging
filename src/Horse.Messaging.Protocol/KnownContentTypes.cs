@@ -211,6 +211,11 @@ namespace Horse.Messaging.Protocol
         public const ushort TransactionRollback = 693;
 
         /// <summary>
+        /// "700" Node information
+        /// </summary>
+        public const ushort NodeInformation = 700;
+
+        /// <summary>
         /// "701" Main node announcement
         /// </summary>
         public const ushort MainNodeAnnouncement = 701;

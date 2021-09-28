@@ -256,6 +256,11 @@ namespace Horse.Messaging.Protocol
         public const string STATUS = "Status";
         
         /// <summary>
+        /// "Node-Id"
+        /// </summary>
+        public const string NODE_ID = "Node-Id";
+
+        /// <summary>
         /// "Horse-Node"
         /// </summary>
         public const string HORSE_NODE = "Horse-Node";

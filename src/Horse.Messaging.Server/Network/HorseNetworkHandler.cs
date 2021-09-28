@@ -107,8 +107,7 @@ namespace Horse.Messaging.Server.Network
                     return null;
                 }
 
-                client.Tag = nodeClient;
-                nodeClient.IncomingClientConnected(client);
+                nodeClient.IncomingClientConnected(client, data);
                 return client;
             }
 
@@ -211,7 +210,7 @@ namespace Horse.Messaging.Server.Network
             {
                 case MessageType.Channel:
                     if (!fromNode && clusterMode == ClusterMode.Scaled)
-                        _ = _rider.Cluster.ProcessMessageFromClient(mc, message);
+                        _rider.Cluster.ProcessMessageFromClient(mc, message);
 
                     if (isReplica)
                         return Task.CompletedTask;
@@ -235,7 +234,7 @@ namespace Horse.Messaging.Server.Network
                 case MessageType.Cache:
 
                     if (!fromNode && clusterMode == ClusterMode.Scaled)
-                        _ = _rider.Cluster.ProcessMessageFromClient(mc, message);
+                        _rider.Cluster.ProcessMessageFromClient(mc, message);
 
                     if (isReplica)
                         return Task.CompletedTask;
@@ -259,7 +258,7 @@ namespace Horse.Messaging.Server.Network
                 case MessageType.DirectMessage:
 
                     if (!fromNode && clusterMode == ClusterMode.Scaled)
-                        _ = _rider.Cluster.ProcessMessageFromClient(mc, message);
+                        _rider.Cluster.ProcessMessageFromClient(mc, message);
 
                     if (isReplica)
                         return Task.CompletedTask;
@@ -268,7 +267,7 @@ namespace Horse.Messaging.Server.Network
 
                 case MessageType.Response:
                     if (!fromNode && clusterMode == ClusterMode.Scaled)
-                        _ = _rider.Cluster.ProcessMessageFromClient(mc, message);
+                        _rider.Cluster.ProcessMessageFromClient(mc, message);
 
                     if (isReplica)
                         return Task.CompletedTask;
@@ -281,7 +280,7 @@ namespace Horse.Messaging.Server.Network
                 case MessageType.Cluster:
                     if (mc.IsNodeClient && mc.NodeClient != null)
                         mc.NodeClient.ProcessReceivedMessage(mc, message);
-                    
+
                     return Task.CompletedTask;
 
                 case MessageType.Event:
