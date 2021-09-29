@@ -8,17 +8,39 @@ using Horse.Messaging.Server.Helpers;
 
 namespace Horse.Messaging.Server.Cluster
 {
+    /// <summary>
+    /// Describes a remote node
+    /// </summary>
     public class NodeClient
     {
         private readonly HorseClient _outgoingClient;
         private MessagingClient _incomingClient;
 
+        /// <summary>
+        /// Node Info
+        /// </summary>
         public NodeInfo Info { get; }
+        
+        /// <summary>
+        /// Rider object
+        /// </summary>
         public HorseRider Rider { get; }
+        
+        /// <summary>
+        /// When mainity is asked, the answer of the remote node.
+        /// True, if approved.
+        /// </summary>
         internal bool ApprovedMainity { get; set; }
+        
+        /// <summary>
+        /// Node connected date
+        /// </summary>
         public DateTime ConnectedDate { get; private set; }
 
-        public bool IsConnected
+        /// <summary>
+        /// Returns true if there is active connection to the node
+        /// </summary>
+        internal bool IsConnected
         {
             get
             {
@@ -31,7 +53,10 @@ namespace Horse.Messaging.Server.Cluster
                 return false;
             }
         }
-
+        
+        /// <summary>
+        /// Creates new node client
+        /// </summary>
         public NodeClient(HorseRider rider, NodeInfo info)
         {
             Rider = rider;

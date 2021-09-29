@@ -55,7 +55,6 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Implements a message delivery handler factory
         /// </summary>
-        /// <param name="name">Delivery handler name</param>
         public HorseQueueConfigurator UseDeliveryHandler(string name, Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> deliveryHandler)
         {
             if (Rider.Queue.DeliveryHandlerFactories.ContainsKey(name))

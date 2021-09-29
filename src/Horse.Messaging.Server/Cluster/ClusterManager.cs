@@ -12,20 +12,46 @@ using Horse.Messaging.Server.Queues;
 
 namespace Horse.Messaging.Server.Cluster
 {
+    /// <summary>
+    /// Horse Cluster Manager
+    /// </summary>
     public class ClusterManager
     {
         #region Properties
 
+        /// <summary>
+        /// Node unique id
+        /// </summary>
         public string Id { get; }
+
+        /// <summary>
+        /// Rider object
+        /// </summary>
         public HorseRider Rider { get; }
 
+        /// <summary>
+        /// Cluster Options
+        /// </summary>
         public ClusterOptions Options { get; } = new();
 
+        /// <summary>
+        /// Node state
+        /// </summary>
         public NodeState State { get; private set; }
 
+        /// <summary>
+        /// Cluster's main node information
+        /// </summary>
         public NodeInfo MainNode { get; set; }
+
+        /// <summary>
+        /// Cluster's successor node information
+        /// </summary>
         public NodeInfo SuccessorNode { get; set; }
 
+        /// <summary>
+        /// Other nodes in cluster
+        /// </summary>
         public NodeClient[] Clients { get; private set; }
 
         /// <summary>
@@ -48,9 +74,9 @@ namespace Horse.Messaging.Server.Cluster
         /// </summary>
         public EventManager RemoteNodeDisconnectEvent { get; }
 
-        private bool _askingForMain = false;
+        private bool _askingForMain;
         private DateTime _askingForMainExpiration = DateTime.UtcNow;
-        private readonly object _askLock = new object();
+        private readonly object _askLock = new();
         private Thread _stateThread;
 
         #endregion
@@ -85,6 +111,9 @@ namespace Horse.Messaging.Server.Cluster
                                 _ = AskForMain();
                         }
                     }
+
+                    if (Rider?.Server != null && !Rider.Server.IsRunning)
+                        break;
                 }
             });
 
@@ -111,13 +140,8 @@ namespace Horse.Messaging.Server.Cluster
             NodeState prev = State;
 
             if (Clients.Length == 0 || Clients.All(x => !x.IsConnected))
-            {
                 State = NodeState.Single;
-                Rider.Server.Logger?.LogEvent("CLUSTER", $"The Node is {State}");
-                return;
-            }
-
-            if (MainNode != null && MainNode.Id == Id)
+            else if (MainNode != null && MainNode.Id == Id)
                 State = NodeState.Main;
             else if (SuccessorNode != null && SuccessorNode.Id == Id)
                 State = NodeState.Successor;
@@ -125,7 +149,12 @@ namespace Horse.Messaging.Server.Cluster
                 State = NodeState.Replica;
 
             if (State != prev)
+            {
+                if (State == NodeState.Replica || State == NodeState.Successor)
+                    Rider.Client.DisconnectAllClients();
+
                 Rider.Server.Logger?.LogEvent("CLUSTER", $"The Node is {State}");
+            }
 
             if (MainNode != null)
             {

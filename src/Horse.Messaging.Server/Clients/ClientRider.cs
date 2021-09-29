@@ -96,6 +96,20 @@ namespace Horse.Messaging.Server.Clients
         }
 
         /// <summary>
+        /// Removes all connected clients
+        /// </summary>
+        internal void DisconnectAllClients()
+        {
+            foreach (MessagingClient client in _clients.GetAsClone())
+            {
+                client.UnsubscribeFromAllQueues();
+                client.Disconnect();
+            }
+            
+            _clients.Clear();
+        }
+
+        /// <summary>
         /// Finds client from unique id
         /// </summary>
         public MessagingClient Find(string uniqueId)

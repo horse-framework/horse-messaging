@@ -210,7 +210,7 @@ namespace Horse.Messaging.Server.Network
         internal Task RouteToHandler(MessagingClient mc, HorseMessage message, bool fromNode)
         {
             ClusterMode clusterMode = _rider.Cluster.Options.Mode;
-            bool isReplica = _rider.Cluster.Options.Mode == ClusterMode.Reilable &&
+            bool isReplica = _rider.Cluster.Options.Mode == ClusterMode.Reliable &&
                              (_rider.Cluster.State == NodeState.Replica || _rider.Cluster.State == NodeState.Successor);
 
             switch (message.Type)
