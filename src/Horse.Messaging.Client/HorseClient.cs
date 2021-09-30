@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Core;
@@ -84,6 +85,24 @@ namespace Horse.Messaging.Client
         /// If Connect methods are used with remote host parameter, this value is updated.
         /// </summary>
         public string RemoteHost { get; set; }
+
+        /// <summary>
+        /// Defined alternative remote host.
+        /// For reliable servers, that adress most probably successor node's address.
+        /// </summary>
+        public string AlternateHost { get; set; }
+
+        /// <summary>
+        /// Host name client is currently connected
+        /// </summary>
+        public string ConnectedHost { get; private set; }
+
+        /// <summary>
+        /// Other defined hosts.
+        /// These hosts with lowest priority.
+        /// If both remote and alternate is down, client will try to connect to these hosts. 
+        /// </summary>
+        public List<string> ReplicaHosts { get; private set; } = new();
 
         /// <summary>
         /// Internal connected event
@@ -270,7 +289,6 @@ namespace Horse.Messaging.Client
             Queue.Dispose();
         }
 
-
         private void UpdateReconnectTimer()
         {
             if (_reconnectWait == TimeSpan.Zero)
@@ -292,9 +310,47 @@ namespace Horse.Messaging.Client
                         _socket.Disconnect();
                     }
 
-                    Connect(RemoteHost);
+                    ConnectedHost = FindNextTargetHost();
+                    Connect(ConnectedHost);
                 }, null, ms, ms);
             }
+        }
+
+        private string FindNextTargetHost()
+        {
+            string targetHost = RemoteHost;
+
+            if (!string.IsNullOrEmpty(ConnectedHost))
+            {
+                if (ConnectedHost == RemoteHost)
+                {
+                    if (!string.IsNullOrEmpty(AlternateHost))
+                        ConnectedHost = AlternateHost;
+                    else if (ReplicaHosts.Count > 0)
+                        ConnectedHost = ReplicaHosts[0];
+                }
+                else if (ConnectedHost == AlternateHost)
+                {
+                    if (ReplicaHosts.Count > 0)
+                        targetHost = ReplicaHosts[0];
+                }
+                else if (ReplicaHosts.Count > 0)
+                {
+                    for (int i = 0; i < ReplicaHosts.Count; i++)
+                    {
+                        string replicaHost = ReplicaHosts[i];
+                        if (ConnectedHost == replicaHost)
+                        {
+                            if (i < ReplicaHosts.Count - 1)
+                                targetHost = ReplicaHosts[i + 1];
+
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return targetHost;
         }
 
         private void SetAutoReconnect(bool value)
@@ -404,7 +460,7 @@ namespace Horse.Messaging.Client
             if (string.IsNullOrEmpty(_clientId))
                 _clientId = UniqueIdGenerator.Create();
 
-            /* todo
+            /*
             if (host.Protocol != Core.Protocol.Hmq)
                 throw new NotSupportedException("Only Horse protocol is supported");
                 */
@@ -446,14 +502,22 @@ namespace Horse.Messaging.Client
             if (string.IsNullOrEmpty(_clientId))
                 _clientId = UniqueIdGenerator.Create();
 
-            /* todo
+            /*
             if (host.Protocol != Core.Protocol.Hmq)
                 throw new NotSupportedException("Only Horse protocol is supported");
                 */
 
             SetAutoReconnect(true);
-            _socket = new HorseSocket(this, _data);
-            return _socket.ConnectAsync(host);
+            try
+            {
+                _socket = new HorseSocket(this, _data);
+                return _socket.ConnectAsync(host);
+            }
+            catch (Exception e)
+            {
+                OnException(e);
+                return Task.CompletedTask;
+            }
         }
 
         /// <summary>
@@ -755,6 +819,30 @@ namespace Horse.Messaging.Client
                 case MessageType.Server:
                     if (message.ContentType == KnownContentTypes.Accepted)
                         SetClientId(message.Target);
+                    
+                    if (message.ContentType == KnownContentTypes.Found)
+                    {
+                        string mainHost = message.FindHeader(HorseHeaders.NODE_PUBLIC_HOST);
+                        string successorHost = message.FindHeader(HorseHeaders.SUCCESSOR_NODE);
+                        string prev = RemoteHost;
+
+                        RemoteHost = mainHost;
+                        AlternateHost = string.IsNullOrEmpty(successorHost) ? prev : successorHost;
+                    }
+
+                    if (message.ContentType == KnownContentTypes.Accepted || message.ContentType == KnownContentTypes.ResetContent)
+                    {
+                        string successorHost = message.FindHeader(HorseHeaders.SUCCESSOR_NODE);
+                        if (!string.IsNullOrEmpty(successorHost))
+                            AlternateHost = successorHost;
+
+                        string replaceNodes = message.FindHeader(HorseHeaders.REPLICA_NODE);
+                        if (!string.IsNullOrEmpty(replaceNodes))
+                        {
+                            ReplicaHosts = replaceNodes.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+                        }
+                    }
+
                     break;
 
                 case MessageType.Terminate:

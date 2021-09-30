@@ -82,6 +82,16 @@ namespace Horse.Messaging.Server.Queues
         /// Queue statistics and information
         /// </summary>
         public QueueInfo Info { get; } = new QueueInfo();
+        
+        /// <summary>
+        /// Queue delivery handler name
+        /// </summary>
+        internal string HandlerName { get; set; }
+        
+        /// <summary>
+        /// Message header data which triggers the initialization of the queue
+        /// </summary>
+        internal IEnumerable<KeyValuePair<string,string>> InitializationMessageHeaders { get; set; }
 
         /// <summary>
         /// Returns currently processing message.
@@ -524,13 +534,13 @@ namespace Horse.Messaging.Server.Queues
                         Server = Rider,
                         Queue = this,
                         Headers = message.Message.Headers,
-                        DeliveryHandlerHeader = message.Message.FindHeader(HorseHeaders.DELIVERY_HANDLER)
+                        HandlerName = message.Message.FindHeader(HorseHeaders.DELIVERY_HANDLER)
                     };
 
-                    if (string.IsNullOrEmpty(handlerBuilder.DeliveryHandlerHeader))
-                        handlerBuilder.DeliveryHandlerHeader = "Default";
+                    if (string.IsNullOrEmpty(handlerBuilder.HandlerName))
+                        handlerBuilder.HandlerName = "Default";
 
-                    Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> factory = Rider.Queue.DeliveryHandlerFactories[handlerBuilder.DeliveryHandlerHeader];
+                    Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> factory = Rider.Queue.DeliveryHandlerFactories[handlerBuilder.HandlerName];
                     IMessageDeliveryHandler deliveryHandler = await factory(handlerBuilder);
 
                     await InitializeQueue(deliveryHandler);
@@ -1094,6 +1104,8 @@ namespace Horse.Messaging.Server.Queues
 
             _syncStartDate = DateTime.UtcNow;
             _syncClient = replica;
+            IEnumerable<string> messageIdList = GetQueueMessageIdList();
+            await Rider.Cluster.SendQueueMessageIdList(replica, Name, messageIdList);
         }
 
         internal void FinishSync()

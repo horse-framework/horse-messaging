@@ -21,9 +21,19 @@ namespace Horse.Messaging.Protocol
         public const ushort Accepted = 202;
 
         /// <summary>
+        /// "204" Reset content
+        /// </summary>
+        public const ushort ResetContent = 205;
+
+        /// <summary>
         /// "204" No content
         /// </summary>
         public const ushort NoContent = 204;
+
+        /// <summary>
+        /// "302" Found
+        /// </summary>
+        public const ushort Found = 302;
 
         /// <summary>
         /// "400" Message has invalid content
@@ -194,17 +204,17 @@ namespace Horse.Messaging.Protocol
         /// "686" Unsubscribes from a channel
         /// </summary>
         public const ushort ChannelUnsubscribe = 687;
-        
+
         /// <summary>
         /// "691" Create and begin new transaction
         /// </summary>
         public const ushort TransactionBegin = 691;
-        
+
         /// <summary>
         /// "692" Commit a transaction
         /// </summary>
         public const ushort TransactionCommit = 692;
-        
+
         /// <summary>
         /// "693" rollback a transaction
         /// </summary>
@@ -219,12 +229,12 @@ namespace Horse.Messaging.Protocol
         /// "701" Main node announcement
         /// </summary>
         public const ushort MainNodeAnnouncement = 701;
-        
+
         /// <summary>
         /// "702" Main announcement answer
         /// </summary>
         public const ushort MainAnnouncementAnswer = 702;
-        
+
         /// <summary>
         /// "703" Ask for Main permission
         /// </summary>
@@ -274,5 +284,20 @@ namespace Horse.Messaging.Protocol
         /// "717" Node queue sync completion
         /// </summary>
         public const ushort NodeQueueSyncCompletion = 717;
+
+        /// <summary>
+        /// "715" Node push queue message
+        /// </summary>
+        public const ushort NodePushQueueMessage = 715;
+        
+        /// <summary>
+        /// "716" Node put back queue message
+        /// </summary>
+        public const ushort NodePutBackQueueMessage = 716;
+        
+        /// <summary>
+        /// "717" Node remove queue message
+        /// </summary>
+        public const ushort NodeRemoveQueueMessage = 717;
     }
 }

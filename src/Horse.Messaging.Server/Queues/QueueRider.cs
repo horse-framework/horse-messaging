@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
@@ -206,6 +208,7 @@ namespace Horse.Messaging.Server.Queues
                 }
 
                 queue = new HorseQueue(Rider, queueName, options);
+
                 if (requestMessage != null)
                     queue.UpdateOptionsByMessage(requestMessage);
 
@@ -214,11 +217,15 @@ namespace Horse.Messaging.Server.Queues
                     Server = Rider,
                     Queue = queue
                 };
+
                 if (requestMessage != null)
                 {
-                    handlerBuilder.DeliveryHandlerHeader = requestMessage.FindHeader(HorseHeaders.DELIVERY_HANDLER);
+                    handlerBuilder.HandlerName = handlerName;
                     handlerBuilder.Headers = requestMessage.Headers;
                 }
+
+                queue.HandlerName = handlerBuilder.HandlerName;
+                queue.InitializationMessageHeaders = handlerBuilder.Headers;
 
                 bool initialize;
                 //if queue creation is triggered by consumer subscription, we might skip initialization
@@ -250,6 +257,79 @@ namespace Horse.Messaging.Server.Queues
 
                 if (!hideException)
                     throw;
+
+                return null;
+            }
+            finally
+            {
+                try
+                {
+                    _createLock.Release();
+                }
+                catch
+                {
+                }
+            }
+        }
+
+
+        internal async Task<HorseQueue> CreateReplica(NodeQueueInfo info)
+        {
+            DeliveryHandlerFactories.TryGetValue(info.HandlerName, out Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> deliveryHandlerFactory);
+
+            await _createLock.WaitAsync();
+            try
+            {
+                QueueType queueType = Options.Type;
+                if (!string.IsNullOrEmpty(info.QueueType))
+                    queueType = info.QueueType.ToQueueType();
+
+                QueueOptions options = new QueueOptions
+                {
+                    Type = queueType,
+                    //todo:
+                    //Acknowledge =
+                    //AcknowledgeTimeout =
+                    //AutoDestroy =
+                    //ClientLimit =
+                    //MessageLimit =
+                    //MessageTimeout = 
+                    //DelayBetweenMessages =
+                    //MessageSizeLimit =
+                    //PutBackDelay = 
+                };
+
+                HorseQueue queue = new HorseQueue(Rider, info.Name, options);
+
+                DeliveryHandlerBuilder handlerBuilder = new DeliveryHandlerBuilder
+                {
+                    Server = Rider,
+                    Queue = queue,
+                    HandlerName = info.HandlerName
+                };
+
+                if (info.Headers != null)
+                    handlerBuilder.Headers = info.Headers.Select(x => new KeyValuePair<string, string>(x.Key, x.Value));
+
+                queue.HandlerName = handlerBuilder.HandlerName;
+                queue.InitializationMessageHeaders = handlerBuilder.Headers;
+
+                if (info.Initialized && deliveryHandlerFactory != null)
+                {
+                    IMessageDeliveryHandler deliveryHandler = await deliveryHandlerFactory(handlerBuilder);
+                    await queue.InitializeQueue(deliveryHandler);
+                }
+
+                _queues.Add(queue);
+                
+                if (info.Initialized)
+                    handlerBuilder.TriggerAfterCompleted();
+
+                return queue;
+            }
+            catch (Exception e)
+            {
+                Rider.SendError("CREATE_QUEUE", e, $"Replicated Queue:{info.Name}");
 
                 return null;
             }

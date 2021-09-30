@@ -5,6 +5,7 @@ using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Queues;
 
 namespace Horse.Messaging.Server.Cluster
 {
@@ -20,18 +21,18 @@ namespace Horse.Messaging.Server.Cluster
         /// Node Info
         /// </summary>
         public NodeInfo Info { get; }
-        
+
         /// <summary>
         /// Rider object
         /// </summary>
         public HorseRider Rider { get; }
-        
+
         /// <summary>
         /// When mainity is asked, the answer of the remote node.
         /// True, if approved.
         /// </summary>
         internal bool ApprovedMainity { get; set; }
-        
+
         /// <summary>
         /// Node connected date
         /// </summary>
@@ -53,7 +54,7 @@ namespace Horse.Messaging.Server.Cluster
                 return false;
             }
         }
-        
+
         /// <summary>
         /// Creates new node client
         /// </summary>
@@ -115,25 +116,28 @@ namespace Horse.Messaging.Server.Cluster
 
             incomingClient.Send(infoMessage);
 
-            if (Rider.Cluster.State == NodeState.Main)
-                _ = Rider.Cluster.AnnounceMainity();
-            else if (Rider.Cluster.State == NodeState.Single)
+            if (Rider.Cluster.Options.Mode == ClusterMode.Reliable)
             {
-                HorseMessage whoIsMain = new HorseMessage(MessageType.Cluster, Rider.Cluster.Options.Name, KnownContentTypes.WhoIsMainNode);
-                incomingClient.Send(whoIsMain);
-
-                Task.Run(async () =>
+                if (Rider.Cluster.State == NodeState.Main)
+                    _ = Rider.Cluster.AnnounceMainity();
+                else if (Rider.Cluster.State == NodeState.Single)
                 {
-                    try
+                    HorseMessage whoIsMain = new HorseMessage(MessageType.Cluster, Rider.Cluster.Options.Name, KnownContentTypes.WhoIsMainNode);
+                    incomingClient.Send(whoIsMain);
+
+                    Task.Run(async () =>
                     {
-                        await Task.Delay(new Random().Next(250, 1000));
-                        if (Rider.Cluster.MainNode == null)
-                            _ = Rider.Cluster.AskForMain();
-                    }
-                    catch
-                    {
-                    }
-                });
+                        try
+                        {
+                            await Task.Delay(new Random().Next(250, 1000));
+                            if (Rider.Cluster.MainNode == null)
+                                _ = Rider.Cluster.AskForMain();
+                        }
+                        catch
+                        {
+                        }
+                    });
+                }
             }
 
             Rider.Server.Logger?.LogEvent("CLUSTER", $"Remote client is connected: {Info.Name}");
@@ -161,6 +165,9 @@ namespace Horse.Messaging.Server.Cluster
                 return;
 
             ClusterManager cluster = Rider.Cluster;
+
+            if (cluster.Options.Mode == ClusterMode.Scaled)
+                return;
 
             if (cluster.MainNode != null && cluster.MainNode.Id == Info?.Id)
                 await cluster.OnMainDown(this);
@@ -219,7 +226,7 @@ namespace Horse.Messaging.Server.Cluster
 
                 case KnownContentTypes.WhoIsMainNode:
                 {
-                    if (cluster.State == NodeState.Main)
+                    if (cluster.Options.Mode == ClusterMode.Reliable && cluster.State == NodeState.Main)
                         _ = cluster.AnnounceMainity();
 
                     break;
@@ -250,6 +257,12 @@ namespace Horse.Messaging.Server.Cluster
                 #region Queue Sync
 
                 case KnownContentTypes.NodeQueueListRequest:
+
+                    if (cluster.State == NodeState.Main)
+                    {
+                        //todo: send queue list with detailed options
+                    }
+                    
                     throw new NotImplementedException();
                     break;
 
@@ -258,8 +271,16 @@ namespace Horse.Messaging.Server.Cluster
                     break;
 
                 case KnownContentTypes.NodeQueueSyncRequest:
-                    throw new NotImplementedException();
+                {
+                    HorseQueue queue = Rider.Queue.Find(message.Target);
+                    
+                    if (queue != null)
+                        _ = queue.StartSync(this);
+                    else
+                        SendMessage(new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.NodeQueueMessageIdList));
+                    
                     break;
+                }
 
                 case KnownContentTypes.NodeQueueMessageIdList:
                     throw new NotImplementedException();
@@ -274,8 +295,12 @@ namespace Horse.Messaging.Server.Cluster
                     break;
 
                 case KnownContentTypes.NodeQueueSyncCompletion:
-                    throw new NotImplementedException();
+                {
+                    HorseQueue queue = Rider.Queue.Find(message.Target);
+                    if (queue != null)
+                        queue.FinishSync();
                     break;
+                }
 
                 #endregion
             }
@@ -290,6 +315,11 @@ namespace Horse.Messaging.Server.Cluster
                 return _incomingClient.SendAsync(message);
 
             return Task.CompletedTask;
+        }
+
+        internal Task<bool> SendMessageAndWaitAck(HorseMessage message)
+        {
+            throw new NotImplementedException();
         }
     }
 }

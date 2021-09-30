@@ -109,7 +109,7 @@ namespace Horse.Messaging.Server.Network
 
                 client.IsNodeClient = true;
                 client.NodeClient = nodeClient;
-                
+
                 return client;
             }
 
@@ -124,12 +124,52 @@ namespace Horse.Messaging.Server.Network
                 }
             }
 
+            if (_rider.Cluster.Options.Mode == ClusterMode.Reliable && _rider.Cluster.State != NodeState.Main)
+            {
+                HorseMessage message = MessageBuilder.StatusCodeMessage(KnownContentTypes.Found, client.UniqueId);
+                if (_rider.Cluster.MainNode != null)
+                {
+                    message.AddHeader(HorseHeaders.NODE_ID, _rider.Cluster.MainNode.Id);
+                    message.AddHeader(HorseHeaders.NODE_NAME, _rider.Cluster.MainNode.Name);
+                    message.AddHeader(HorseHeaders.NODE_PUBLIC_HOST, _rider.Cluster.MainNode.PublicHost);
+
+                    if (_rider.Cluster.SuccessorNode != null)
+                        message.AddHeader(HorseHeaders.SUCCESSOR_NODE, _rider.Cluster.SuccessorNode.PublicHost);
+                }
+
+                await client.SendAsync(message);
+                return null;
+            }
+
             //client authenticated, add it into the connected clients list
             _rider.Client.Add(client);
 
             //send response message to the client, client should check unique id,
             //if client's unique id isn't permitted, server will create new id for client and send it as response
-            await client.SendAsync(MessageBuilder.Accepted(client.UniqueId));
+            HorseMessage accepted = MessageBuilder.Accepted(client.UniqueId);
+
+            if (_rider.Cluster.Options.Mode == ClusterMode.Reliable && _rider.Cluster.State == NodeState.Main)
+            {
+                if (_rider.Cluster.SuccessorNode != null)
+                    accepted.AddHeader(HorseHeaders.SUCCESSOR_NODE, _rider.Cluster.SuccessorNode.PublicHost);
+
+                string alternate = string.Empty;
+                foreach (NodeClient nodeClient in _rider.Cluster.Clients)
+                {
+                    if (!nodeClient.IsConnected)
+                        continue;
+
+                    if (nodeClient.Info.Id == _rider.Cluster.SuccessorNode?.Id)
+                        continue;
+
+                    alternate += alternate.Length == 0 ? nodeClient.Info.PublicHost : $",{nodeClient.Info.PublicHost}";
+                }
+
+                if (!string.IsNullOrEmpty(alternate))
+                    accepted.AddHeader(HorseHeaders.REPLICA_NODE, alternate);
+            }
+
+            await client.SendAsync(accepted);
 
             foreach (IClientHandler handler in _rider.Client.Handlers.All())
                 _ = handler.Connected(_rider, client);
@@ -143,10 +183,10 @@ namespace Horse.Messaging.Server.Network
         public Task Ready(IHorseServer server, HorseServerSocket client)
         {
             MessagingClient mc = (MessagingClient) client;
-            
+
             if (mc.IsNodeClient && mc.NodeClient != null)
                 mc.NodeClient.IncomingClientConnected(mc, mc.Data);
-            
+
             return Task.CompletedTask;
         }
 

@@ -20,11 +20,10 @@ namespace Horse.Messaging.Server
         public HorseQueue Queue { get; internal set; }
 
         /// <summary>
-        /// Header information for delivery handler.
-        /// The value of "Delivery-Handler" key.
+        /// Delivery Handler name.
         /// Used when the factory method is triggered over network by a client.
         /// </summary>
-        public string DeliveryHandlerHeader { get; set; }
+        public string HandlerName { get; set; }
         
         /// <summary>
         /// All header data of the message that is received over network from a client.

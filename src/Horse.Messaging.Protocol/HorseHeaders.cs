@@ -261,6 +261,11 @@ namespace Horse.Messaging.Protocol
         public const string NODE_ID = "Node-Id";
 
         /// <summary>
+        /// "Node-Name"
+        /// </summary>
+        public const string NODE_NAME = "Node-Name";
+
+        /// <summary>
         /// "Horse-Node"
         /// </summary>
         public const string HORSE_NODE = "Horse-Node";
@@ -289,6 +294,11 @@ namespace Horse.Messaging.Protocol
         /// "Successor-Node"
         /// </summary>
         public const string SUCCESSOR_NODE = "Successor-Node";
+
+        /// <summary>
+        /// "Replica-Node"
+        /// </summary>
+        public const string REPLICA_NODE = "Replica-Node";
 
     }
 }
