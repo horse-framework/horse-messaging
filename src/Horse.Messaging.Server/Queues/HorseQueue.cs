@@ -82,16 +82,16 @@ namespace Horse.Messaging.Server.Queues
         /// Queue statistics and information
         /// </summary>
         public QueueInfo Info { get; } = new QueueInfo();
-        
+
         /// <summary>
         /// Queue delivery handler name
         /// </summary>
         internal string HandlerName { get; set; }
-        
+
         /// <summary>
         /// Message header data which triggers the initialization of the queue
         /// </summary>
-        internal IEnumerable<KeyValuePair<string,string>> InitializationMessageHeaders { get; set; }
+        internal IEnumerable<KeyValuePair<string, string>> InitializationMessageHeaders { get; set; }
 
         /// <summary>
         /// Returns currently processing message.
@@ -410,6 +410,9 @@ namespace Horse.Messaging.Server.Queues
                 return false;
 
             Store.Remove(message);
+            
+            if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                Rider.Cluster.SendMessageRemovalToNodes(this, message.Message);
 
             if (!silent)
             {
@@ -602,6 +605,13 @@ namespace Horse.Messaging.Server.Queues
 
             try
             {
+                if (Rider.Cluster.Options.Mode == ClusterMode.Reliable && Rider.Cluster.State == NodeState.Main)
+                {
+                    bool ack = await Rider.Cluster.SendQueueMessageToNodes(message.Message);
+                    if (!ack)
+                        return PushResult.Error;
+                }
+
                 //fire message receive event
                 Info.AddMessageReceive();
                 Decision decision = await DeliveryHandler.ReceivedFromProducer(this, message, sender);
@@ -813,6 +823,10 @@ namespace Horse.Messaging.Server.Queues
                             try
                             {
                                 await Task.Delay(Options.PutBackDelay);
+                                
+                                if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                                    Rider.Cluster.SendPutBackToNodes(this, message.Message, false);
+                                
                                 AddMessage(message, false);
                             }
                             catch (Exception e)
@@ -831,6 +845,10 @@ namespace Horse.Messaging.Server.Queues
                             try
                             {
                                 await Task.Delay(Math.Max(forceDelay, Options.PutBackDelay));
+                                
+                                if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                                    Rider.Cluster.SendPutBackToNodes(this, message.Message, true);
+
                                 AddMessage(message);
                             }
                             catch (Exception e)
@@ -1112,13 +1130,13 @@ namespace Horse.Messaging.Server.Queues
         {
             if (Status != QueueStatus.Syncing)
                 return;
-            
+
             _syncClient = null;
             _syncStartDate = DateTime.UtcNow;
             _syncMethods = null;
             _lock.Release();
         }
-        
+
         internal IEnumerable<string> GetQueueMessageIdList()
         {
             if (Status != QueueStatus.Syncing)
@@ -1138,10 +1156,10 @@ namespace Horse.Messaging.Server.Queues
         internal IEnumerable<string> CheckSync(List<string> mainPrioMessages, List<string> mainMessages)
         {
             _syncMethods = new Dictionary<string, MessageSyncMethod>();
-            
+
             //todo: calculate and generate sync methods
             //todo: return sync method message id list
-            
+
             if (_syncMethods.All(x => x.Value.Method == SyncMethod.Completed))
                 FinishSync();
 
@@ -1155,7 +1173,7 @@ namespace Horse.Messaging.Server.Queues
 
             if (_syncMethods.All(x => x.Value.Method == SyncMethod.Completed))
                 FinishSync();
-            
+
             throw new NotImplementedException();
         }
 

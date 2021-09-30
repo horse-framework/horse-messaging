@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO.Pipes;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -476,6 +475,9 @@ namespace Horse.Messaging.Server.Cluster
 
         internal async Task<bool> SendQueueMessageToNodes(HorseMessage message)
         {
+            if (State == NodeState.Single)
+                return true;
+            
             HorseMessage clone = message.Clone(true, true, message.MessageId);
             
             clone.Type = MessageType.Cluster;
