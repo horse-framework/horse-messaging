@@ -249,6 +249,8 @@ namespace Horse.Messaging.Server.Queues
 
                 CreateEvent.Trigger(client, queue.Name);
 
+                Rider.Cluster.SendQueueCreated(queue);
+                
                 return queue;
             }
             catch (Exception e)
@@ -272,6 +274,20 @@ namespace Horse.Messaging.Server.Queues
             }
         }
 
+        internal void FillQueueOptions(QueueOptions options, NodeQueueInfo info)
+        {
+            options.Acknowledge = info.Acknowledge.ToAckDecision();
+            options.Type = info.QueueType.ToQueueType();
+            options.PutBackDelay = Convert.ToInt32(info.PutBackDelay);
+            options.MessageTimeout = TimeSpan.FromSeconds(Convert.ToInt32(info.MessageTimeout));
+            options.AcknowledgeTimeout = TimeSpan.FromSeconds(Convert.ToInt32(info.AcknowledgeTimeout));
+            options.DelayBetweenMessages = Convert.ToInt32(info.DelayBetweenMessages);
+            options.AutoDestroy = info.AutoDestroy.ToQueueDestroy();
+
+            options.ClientLimit = info.ClientLimit;
+            options.MessageLimit = info.MessageLimit;
+            options.MessageSizeLimit = info.MessageSizeLimit;
+        }
 
         internal async Task<HorseQueue> CreateReplica(NodeQueueInfo info)
         {
@@ -280,24 +296,8 @@ namespace Horse.Messaging.Server.Queues
             await _createLock.WaitAsync();
             try
             {
-                QueueType queueType = Options.Type;
-                if (!string.IsNullOrEmpty(info.QueueType))
-                    queueType = info.QueueType.ToQueueType();
-
-                QueueOptions options = new QueueOptions
-                {
-                    Type = queueType,
-                    //todo:
-                    //Acknowledge =
-                    //AcknowledgeTimeout =
-                    //AutoDestroy =
-                    //ClientLimit =
-                    //MessageLimit =
-                    //MessageTimeout = 
-                    //DelayBetweenMessages =
-                    //MessageSizeLimit =
-                    //PutBackDelay = 
-                };
+                QueueOptions options = QueueOptions.CloneFrom(Options);
+                FillQueueOptions(options, info);
 
                 HorseQueue queue = new HorseQueue(Rider, info.Name, options);
 
@@ -311,6 +311,7 @@ namespace Horse.Messaging.Server.Queues
                 if (info.Headers != null)
                     handlerBuilder.Headers = info.Headers.Select(x => new KeyValuePair<string, string>(x.Key, x.Value));
 
+                queue.Topic = info.Topic;
                 queue.HandlerName = handlerBuilder.HandlerName;
                 queue.InitializationMessageHeaders = handlerBuilder.Headers;
 
@@ -321,7 +322,7 @@ namespace Horse.Messaging.Server.Queues
                 }
 
                 _queues.Add(queue);
-                
+
                 if (info.Initialized)
                     handlerBuilder.TriggerAfterCompleted();
 
@@ -330,7 +331,6 @@ namespace Horse.Messaging.Server.Queues
             catch (Exception e)
             {
                 Rider.SendError("CREATE_QUEUE", e, $"Replicated Queue:{info.Name}");
-
                 return null;
             }
             finally

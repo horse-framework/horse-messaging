@@ -360,6 +360,8 @@ namespace Horse.Messaging.Server.Network
             //if creation successful, sends response
             if (message.WaitResponse)
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
+            
+            _rider.Cluster.SendQueueUpdated(queue);
         }
 
         /// <summary>

@@ -477,9 +477,9 @@ namespace Horse.Messaging.Server.Cluster
         {
             if (State == NodeState.Single)
                 return true;
-            
+
             HorseMessage clone = message.Clone(true, true, message.MessageId);
-            
+
             clone.Type = MessageType.Cluster;
             clone.ContentType = KnownContentTypes.NodePushQueueMessage;
 
@@ -492,7 +492,7 @@ namespace Horse.Messaging.Server.Cluster
                     return true;
 
                 case ReplicaAcknowledge.OnlySuccessor:
-
+                {
                     if (SuccessorNode == null)
                         return false;
 
@@ -511,14 +511,27 @@ namespace Horse.Messaging.Server.Cluster
                     }
 
                     return ack;
+                }
 
                 case ReplicaAcknowledge.AllNodes:
+                {
+                    if (SuccessorNode == null)
+                        return false;
+
+                    NodeClient successorClient = Clients.FirstOrDefault(x => x.Info.Id == SuccessorNode.Id);
+
+                    if (successorClient == null || !successorClient.IsConnected)
+                        return false;
+
+                    bool successorAck = await successorClient.SendMessageAndWaitAck(clone);
+                    if (!successorAck)
+                        return false;
 
                     List<Task<bool>> tasks = new List<Task<bool>>();
 
                     foreach (NodeClient client in Clients)
                     {
-                        if (!client.IsConnected)
+                        if (!client.IsConnected || client == successorClient)
                             continue;
 
                         Task<bool> task = client.SendMessageAndWaitAck(clone);
@@ -526,7 +539,8 @@ namespace Horse.Messaging.Server.Cluster
                     }
 
                     await Task.WhenAll(tasks);
-                    return tasks.All(x => x.Result);
+                    return true;
+                }
 
                 default:
                     return false;
@@ -562,6 +576,58 @@ namespace Horse.Messaging.Server.Cluster
             }
         }
 
+        internal void SendQueueCreated(HorseQueue queue)
+        {
+            if (Options.Mode != ClusterMode.Reliable || State != NodeState.Main)
+                return;
+
+            NodeQueueInfo info = queue.CreateNodeQueueInfo();
+            HorseMessage msg = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.CreateQueue);
+            msg.SetStringContent(System.Text.Json.JsonSerializer.Serialize(info));
+
+            foreach (NodeClient client in Clients)
+            {
+                if (!client.IsConnected)
+                    continue;
+
+                _ = client.SendMessage(msg);
+            }
+        }
+
+        internal void SendQueueUpdated(HorseQueue queue)
+        {
+            if (Options.Mode != ClusterMode.Reliable || State != NodeState.Main)
+                return;
+
+            NodeQueueInfo info = queue.CreateNodeQueueInfo();
+            HorseMessage msg = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.UpdateQueue);
+            msg.SetStringContent(System.Text.Json.JsonSerializer.Serialize(info));
+
+            foreach (NodeClient client in Clients)
+            {
+                if (!client.IsConnected)
+                    continue;
+
+                _ = client.SendMessage(msg);
+            }
+        }
+
+        internal void SendQueueRemoved(HorseQueue queue)
+        {
+            if (Options.Mode != ClusterMode.Reliable || State != NodeState.Main)
+                return;
+
+            HorseMessage msg = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.RemoveQueue);
+            
+            foreach (NodeClient client in Clients)
+            {
+                if (!client.IsConnected)
+                    continue;
+
+                _ = client.SendMessage(msg);
+            }
+        }
+        
         #endregion
 
         #region Queue Sync

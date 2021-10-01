@@ -309,6 +309,8 @@ namespace Horse.Messaging.Server.Queues
             }
 
             _clients.Clear();
+            
+            Rider.Cluster.SendQueueRemoved(this);
         }
 
         /// <summary>
@@ -339,6 +341,32 @@ namespace Horse.Messaging.Server.Queues
 
                     break;
             }
+        }
+
+        internal NodeQueueInfo CreateNodeQueueInfo()
+        {
+            return new NodeQueueInfo
+            {
+                Name = Name,
+                Topic = Topic,
+                HandlerName = HandlerName,
+                Initialized = Status != QueueStatus.NotInitialized,
+                PutBackDelay = Options.PutBackDelay,
+                MessageSizeLimit = Options.MessageSizeLimit,
+                MessageLimit = Options.MessageLimit,
+                ClientLimit = Options.ClientLimit,
+                MessageTimeout = Convert.ToInt32(Options.MessageTimeout.TotalSeconds),
+                AcknowledgeTimeout = Convert.ToInt32(Options.AcknowledgeTimeout),
+                DelayBetweenMessages = Convert.ToInt32(Options.DelayBetweenMessages),
+                Acknowledge = Options.Acknowledge.FromAckDecision(),
+                AutoDestroy = Options.AutoDestroy.FromQueueDestroy(),
+                QueueType = Options.Type.FromQueueType(),
+                Headers = InitializationMessageHeaders?.Select(x => new NodeQueueHandlerHeader
+                {
+                    Key = x.Key,
+                    Value = x.Value
+                }).ToArray()
+            };
         }
 
         #endregion
@@ -410,7 +438,7 @@ namespace Horse.Messaging.Server.Queues
                 return false;
 
             Store.Remove(message);
-            
+
             if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
                 Rider.Cluster.SendMessageRemovalToNodes(this, message.Message);
 
@@ -458,20 +486,7 @@ namespace Horse.Messaging.Server.Queues
             foreach (KeyValuePair<string, string> pair in message.Headers)
             {
                 if (pair.Key.Equals(HorseHeaders.ACKNOWLEDGE, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    switch (pair.Value.Trim().ToLower())
-                    {
-                        case "none":
-                            Options.Acknowledge = QueueAckDecision.None;
-                            break;
-                        case "request":
-                            Options.Acknowledge = QueueAckDecision.JustRequest;
-                            break;
-                        case "wait":
-                            Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-                            break;
-                    }
-                }
+                    Options.Acknowledge = pair.Value.ToAckDecision();
 
                 else if (pair.Key.Equals(HorseHeaders.QUEUE_TYPE, StringComparison.InvariantCultureIgnoreCase))
                     Options.Type = pair.Value.ToQueueType();
@@ -823,10 +838,10 @@ namespace Horse.Messaging.Server.Queues
                             try
                             {
                                 await Task.Delay(Options.PutBackDelay);
-                                
+
                                 if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
                                     Rider.Cluster.SendPutBackToNodes(this, message.Message, false);
-                                
+
                                 AddMessage(message, false);
                             }
                             catch (Exception e)
@@ -845,7 +860,7 @@ namespace Horse.Messaging.Server.Queues
                             try
                             {
                                 await Task.Delay(Math.Max(forceDelay, Options.PutBackDelay));
-                                
+
                                 if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
                                     Rider.Cluster.SendPutBackToNodes(this, message.Message, true);
 
