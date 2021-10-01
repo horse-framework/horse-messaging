@@ -53,6 +53,7 @@ namespace Test.Direct
             Assert.NotNull(response);
             Assert.Equal(msg.MessageId, response.MessageId);
             Assert.Equal(enabled, responseCaught);
+            server.Stop();
         }
     }
 }

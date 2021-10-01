@@ -45,6 +45,7 @@ namespace Test.Queues.Types
             await producer.Queue.Push("push-a", "Hello, World!", false);
             await Task.Delay(1500);
             Assert.Equal(onlineConsumerCount, msgReceived);
+            server.Stop();
         }
 
         [Fact]
@@ -76,6 +77,7 @@ namespace Test.Queues.Types
 
             await Task.Delay(800);
             Assert.True(msgReceived);
+            server.Stop();
         }
 
         [Theory]
@@ -106,6 +108,7 @@ namespace Test.Queues.Types
 
             HorseResult ack = await producer.Queue.Push("push-a", "Hello, World!", true);
             Assert.Equal(queueAckIsActive, ack.Code == HorseResultCode.Ok);
+            server.Stop();
         }
 
         /// <summary>
@@ -153,6 +156,7 @@ namespace Test.Queues.Types
 
             Assert.Equal(1, consumer1Msgs);
             Assert.Equal(1, consumer2Msgs);
+            server.Stop();
         }
     }
 }

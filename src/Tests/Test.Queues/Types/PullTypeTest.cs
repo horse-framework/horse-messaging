@@ -51,6 +51,7 @@ namespace Test.Queues.Types
             PullContainer container2 = await consumer.Queue.Pull(request);
             Assert.Equal(PullProcess.Empty, container2.Status);
             Assert.Empty(container2.ReceivedMessages);
+            server.Stop();
         }
 
         [Fact]
@@ -95,6 +96,7 @@ namespace Test.Queues.Types
             Assert.Equal(PullProcess.Completed, pull.Status);
             Assert.Equal(1, pull.ReceivedCount);
             Assert.NotEmpty(pull.ReceivedMessages);
+            server.Stop();
         }
 
         /// <summary>
@@ -137,6 +139,8 @@ namespace Test.Queues.Types
                 Assert.Equal("Second Message", content);
             else
                 Assert.Equal("First Message", content);
+            
+            server.Stop();
         }
 
         /// <summary>
@@ -170,6 +174,7 @@ namespace Test.Queues.Types
             PullContainer container = await client.Queue.Pull(request);
             Assert.Equal(count, container.ReceivedCount);
             Assert.Equal(PullProcess.Completed, container.Status);
+            server.Stop();
         }
 
         /// <summary>
@@ -222,6 +227,8 @@ namespace Test.Queues.Types
 
             if (messages)
                 Assert.Equal(0, queue.MessageCount());
+            
+            server.Stop();
         }
     }
 }

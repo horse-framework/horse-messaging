@@ -28,6 +28,7 @@ namespace Test.Events
             
             await Task.Delay(250);
             Assert.Equal(1, ClientConnectHandler.Count);
+            server.Stop();
         }
         
         
@@ -55,6 +56,7 @@ namespace Test.Events
             
             await Task.Delay(250);
             Assert.Equal(1, ClientDisconnectHandler.Count);
+            server.Stop();
         }
     }
 }

@@ -53,6 +53,7 @@ namespace Test.Queues
             Assert.Equal(1, queue.MessageCount());
             await Task.Delay(3000);
             Assert.Equal(2, queue.MessageCount());
+            server.Stop();
         }
 
         [Fact]
@@ -96,6 +97,7 @@ namespace Test.Queues
             await Task.Delay(1500);
             Assert.Equal(1, receivedMessages);
             Assert.Equal(2, queue.MessageCount());
+            server.Stop();
         }
     }
 }

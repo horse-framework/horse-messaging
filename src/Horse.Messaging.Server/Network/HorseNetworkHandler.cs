@@ -124,7 +124,7 @@ namespace Horse.Messaging.Server.Network
                 }
             }
 
-            if (_rider.Cluster.Options.Mode == ClusterMode.Reliable && _rider.Cluster.State != NodeState.Main)
+            if (_rider.Cluster.Options.Mode == ClusterMode.Reliable && _rider.Cluster.State > NodeState.Main)
             {
                 HorseMessage message = MessageBuilder.StatusCodeMessage(KnownContentTypes.Found, client.UniqueId);
                 if (_rider.Cluster.MainNode != null)
@@ -148,9 +148,9 @@ namespace Horse.Messaging.Server.Network
             //if client's unique id isn't permitted, server will create new id for client and send it as response
             HorseMessage accepted = MessageBuilder.Accepted(client.UniqueId);
 
-            if (_rider.Cluster.Options.Mode == ClusterMode.Reliable && _rider.Cluster.State == NodeState.Main)
+            if (_rider.Cluster.Options.Mode == ClusterMode.Reliable && _rider.Cluster.State <= NodeState.Main)
             {
-                if (_rider.Cluster.SuccessorNode != null)
+                if (_rider.Cluster.SuccessorNode?.PublicHost != null)
                     accepted.AddHeader(HorseHeaders.SUCCESSOR_NODE, _rider.Cluster.SuccessorNode.PublicHost);
 
                 string alternate = string.Empty;

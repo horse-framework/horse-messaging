@@ -53,7 +53,7 @@ namespace Horse.Messaging.Server.Cluster
         /// <summary>
         /// Other nodes in cluster
         /// </summary>
-        public NodeClient[] Clients { get; private set; }
+        public NodeClient[] Clients { get; private set; } = Array.Empty<NodeClient>();
 
         /// <summary>
         /// Event Manager for HorseEventType.ConnectedToRemoteNode 

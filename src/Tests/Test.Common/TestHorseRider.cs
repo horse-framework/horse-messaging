@@ -40,26 +40,27 @@ namespace Test.Common
 
         public PutBackDecision PutBack { get; set; }
 
+        public HorseServer Server { get; private set; }
 
         public async Task Initialize()
         {
             Rider = HorseRiderBuilder.Create()
-               .ConfigureQueues(q =>
+                .ConfigureQueues(q =>
                 {
                     q.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
                     q.Options.MessageTimeout = TimeSpan.FromSeconds(12);
                     q.Options.Type = QueueType.Push;
                     q.Options.AutoQueueCreation = true;
-                    
+
                     q.EventHandlers.Add(new TestQueueHandler(this));
                     q.UseDeliveryHandler(_ => Task.FromResult<IMessageDeliveryHandler>(new TestDeliveryHandler(this)));
                 })
-               .ConfigureClients(c =>
+                .ConfigureClients(c =>
                 {
                     c.Handlers.Add(new TestClientHandler(this));
                     c.AdminAuthorizations.Add(new TestAdminAuthorization());
                 })
-               .Build();
+                .Build();
 
             await Rider.Queue.Create("push-a", o => o.Type = QueueType.Push);
             await Rider.Queue.Create("push-a-cc", o => o.Type = QueueType.Push);
@@ -81,9 +82,9 @@ namespace Test.Common
                     serverOptions.PingInterval = pingInterval;
                     serverOptions.RequestTimeout = requestTimeout;
 
-                    HorseServer server = new HorseServer(serverOptions);
-                    server.UseRider(Rider);
-                    server.Start();
+                    Server = new HorseServer(serverOptions);
+                    Server.UseRider(Rider);
+                    Server.Start();
                     Port = port;
                     return port;
                 }
@@ -94,6 +95,11 @@ namespace Test.Common
             }
 
             return 0;
+        }
+
+        public void Stop()
+        {
+            Server.Stop();
         }
     }
 }

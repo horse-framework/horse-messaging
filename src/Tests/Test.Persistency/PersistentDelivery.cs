@@ -66,6 +66,7 @@ namespace Test.Persistency
             await handler.EndSend(queue, queueMessage);
             deliveries = handler.RedeliveryService.GetDeliveries();
             Assert.Empty(deliveries);
+            server.Stop();
         }
     }
 }

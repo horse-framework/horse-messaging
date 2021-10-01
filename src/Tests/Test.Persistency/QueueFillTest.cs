@@ -30,6 +30,7 @@ namespace Test.Persistency
 
             await Task.Delay(500);
             Assert.NotEqual(0, push.MessageCount());
+            server.Stop();
         }
 
         [Fact]
@@ -53,6 +54,7 @@ namespace Test.Persistency
             await Task.Delay(500);
             Assert.NotEqual(0, queue.PriorityMessageCount());
             Assert.NotEqual(0, queue.MessageCount());
+            server.Stop();
         }
 
         [Fact]
@@ -76,6 +78,7 @@ namespace Test.Persistency
             await Task.Delay(500);
             Assert.NotEqual(0, queue.PriorityMessageCount());
             Assert.NotEqual(0, queue.MessageCount());
+            server.Stop();
         }
     }
 }

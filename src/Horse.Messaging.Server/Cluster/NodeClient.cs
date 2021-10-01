@@ -65,7 +65,7 @@ namespace Horse.Messaging.Server.Cluster
 
             _outgoingClient = new HorseClient();
             _outgoingClient.ReconnectWait = TimeSpan.FromMilliseconds(500);
-            _outgoingClient.RemoteHost = info.Host;
+            _outgoingClient.AddHost(info.Host);
 
             _outgoingClient.SetClientName(Rider.Cluster.Options.Name);
             _outgoingClient.SetClientType("Node");

@@ -42,6 +42,7 @@ namespace Test.Queues
 
             await Task.Delay(1500);
             Assert.Equal(1, server.OnAcknowledgeTimeUp);
+            server.Stop();
         }
     }
 }

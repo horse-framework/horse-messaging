@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Core;
@@ -81,28 +82,12 @@ namespace Horse.Messaging.Client
         public TimeSpan Lifetime { get; set; }
 
         /// <summary>
-        /// Defined remote host.
+        /// Defined remote hosts.
         /// If Connect methods are used with remote host parameter, this value is updated.
         /// </summary>
-        public string RemoteHost { get; set; }
+        internal List<string> RemoteHosts { get; } = new();
 
-        /// <summary>
-        /// Defined alternative remote host.
-        /// For reliable servers, that adress most probably successor node's address.
-        /// </summary>
-        public string AlternateHost { get; set; }
-
-        /// <summary>
-        /// Host name client is currently connected
-        /// </summary>
-        public string ConnectedHost { get; private set; }
-
-        /// <summary>
-        /// Other defined hosts.
-        /// These hosts with lowest priority.
-        /// If both remote and alternate is down, client will try to connect to these hosts. 
-        /// </summary>
-        public List<string> ReplicaHosts { get; private set; } = new();
+        private int _hostIndex = -1;
 
         /// <summary>
         /// Internal connected event
@@ -310,47 +295,40 @@ namespace Horse.Messaging.Client
                         _socket.Disconnect();
                     }
 
-                    ConnectedHost = FindNextTargetHost();
-                    Connect(ConnectedHost);
+                    Connect(FindNextTargetHost());
                 }, null, ms, ms);
+            }
+        }
+
+        /// <summary>
+        /// Adds new remote host to connect
+        /// </summary>
+        /// <param name="hostname">Host name with protocol horse://... or horses://...</param>
+        public void AddHost(string hostname)
+        {
+            if (string.IsNullOrEmpty(hostname))
+                throw new Exception("Remote host name is empty");
+
+            lock (RemoteHosts)
+            {
+                if (!RemoteHosts.Contains(hostname, StringComparer.InvariantCultureIgnoreCase))
+                    RemoteHosts.Add(hostname);
             }
         }
 
         private string FindNextTargetHost()
         {
-            string targetHost = RemoteHost;
-
-            if (!string.IsNullOrEmpty(ConnectedHost))
+            lock (RemoteHosts)
             {
-                if (ConnectedHost == RemoteHost)
-                {
-                    if (!string.IsNullOrEmpty(AlternateHost))
-                        ConnectedHost = AlternateHost;
-                    else if (ReplicaHosts.Count > 0)
-                        ConnectedHost = ReplicaHosts[0];
-                }
-                else if (ConnectedHost == AlternateHost)
-                {
-                    if (ReplicaHosts.Count > 0)
-                        targetHost = ReplicaHosts[0];
-                }
-                else if (ReplicaHosts.Count > 0)
-                {
-                    for (int i = 0; i < ReplicaHosts.Count; i++)
-                    {
-                        string replicaHost = ReplicaHosts[i];
-                        if (ConnectedHost == replicaHost)
-                        {
-                            if (i < ReplicaHosts.Count - 1)
-                                targetHost = ReplicaHosts[i + 1];
+                if (RemoteHosts.Count == 0)
+                    throw new Exception("There is no host to connect");
 
-                            break;
-                        }
-                    }
-                }
+                _hostIndex++;
+                if (_hostIndex >= RemoteHosts.Count)
+                    _hostIndex = 0;
+
+                return RemoteHosts[_hostIndex];
             }
-
-            return targetHost;
         }
 
         private void SetAutoReconnect(bool value)
@@ -440,7 +418,7 @@ namespace Horse.Messaging.Client
         /// </summary>
         public void Connect()
         {
-            Connect(RemoteHost);
+            Connect(FindNextTargetHost());
         }
 
         /// <summary>
@@ -448,6 +426,13 @@ namespace Horse.Messaging.Client
         /// </summary>
         public void Connect(string host)
         {
+            if (string.IsNullOrEmpty(host))
+                throw new Exception("Remote host name is empty");
+
+            lock (RemoteHosts)
+                if (!RemoteHosts.Contains(host, StringComparer.InvariantCultureIgnoreCase))
+                    RemoteHosts.Add(host);
+
             DnsResolver resolver = new DnsResolver();
             Connect(resolver.Resolve(host));
         }
@@ -455,7 +440,7 @@ namespace Horse.Messaging.Client
         /// <summary>
         /// Connects to well defined remote host
         /// </summary>
-        public void Connect(DnsInfo host)
+        internal void Connect(DnsInfo host)
         {
             if (string.IsNullOrEmpty(_clientId))
                 _clientId = UniqueIdGenerator.Create();
@@ -482,7 +467,7 @@ namespace Horse.Messaging.Client
         /// </summary>
         public Task ConnectAsync()
         {
-            return ConnectAsync(RemoteHost);
+            return ConnectAsync(FindNextTargetHost());
         }
 
         /// <summary>
@@ -490,6 +475,13 @@ namespace Horse.Messaging.Client
         /// </summary>
         public Task ConnectAsync(string host)
         {
+            if (string.IsNullOrEmpty(host))
+                throw new Exception("Remote host name is empty");
+
+            lock (RemoteHosts)
+                if (!RemoteHosts.Contains(host, StringComparer.InvariantCultureIgnoreCase))
+                    RemoteHosts.Add(host);
+
             DnsResolver resolver = new DnsResolver();
             return ConnectAsync(resolver.Resolve(host));
         }
@@ -497,7 +489,7 @@ namespace Horse.Messaging.Client
         /// <summary>
         /// Connects to well defined remote host
         /// </summary>
-        public Task ConnectAsync(DnsInfo host)
+        internal Task ConnectAsync(DnsInfo host)
         {
             if (string.IsNullOrEmpty(_clientId))
                 _clientId = UniqueIdGenerator.Create();
@@ -819,27 +811,45 @@ namespace Horse.Messaging.Client
                 case MessageType.Server:
                     if (message.ContentType == KnownContentTypes.Accepted)
                         SetClientId(message.Target);
-                    
+
                     if (message.ContentType == KnownContentTypes.Found)
                     {
                         string mainHost = message.FindHeader(HorseHeaders.NODE_PUBLIC_HOST);
                         string successorHost = message.FindHeader(HorseHeaders.SUCCESSOR_NODE);
-                        string prev = RemoteHost;
 
-                        RemoteHost = mainHost;
-                        AlternateHost = string.IsNullOrEmpty(successorHost) ? prev : successorHost;
+                        lock (RemoteHosts)
+                        {
+                            if (!string.IsNullOrEmpty(mainHost) &&
+                                !RemoteHosts.Contains(mainHost, StringComparer.InvariantCultureIgnoreCase))
+                                RemoteHosts.Add(mainHost);
+
+                            if (!string.IsNullOrEmpty(successorHost) &&
+                                !RemoteHosts.Contains(successorHost, StringComparer.InvariantCultureIgnoreCase))
+                                RemoteHosts.Add(successorHost);
+                        }
                     }
 
                     if (message.ContentType == KnownContentTypes.Accepted || message.ContentType == KnownContentTypes.ResetContent)
                     {
                         string successorHost = message.FindHeader(HorseHeaders.SUCCESSOR_NODE);
-                        if (!string.IsNullOrEmpty(successorHost))
-                            AlternateHost = successorHost;
-
                         string replaceNodes = message.FindHeader(HorseHeaders.REPLICA_NODE);
-                        if (!string.IsNullOrEmpty(replaceNodes))
+
+                        lock (RemoteHosts)
                         {
-                            ReplicaHosts = replaceNodes.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList();
+                            if (!string.IsNullOrEmpty(successorHost) &&
+                                !RemoteHosts.Contains(successorHost, StringComparer.InvariantCultureIgnoreCase))
+                                RemoteHosts.Add(successorHost);
+
+                            if (!string.IsNullOrEmpty(replaceNodes))
+                            {
+                                string[] replicaHosts = replaceNodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                                foreach (string replicaHost in replicaHosts)
+                                {
+                                    if (!string.IsNullOrEmpty(replicaHost) &&
+                                        !RemoteHosts.Contains(replicaHost, StringComparer.InvariantCultureIgnoreCase))
+                                        RemoteHosts.Add(replicaHost);
+                                }
+                            }
                         }
                     }
 

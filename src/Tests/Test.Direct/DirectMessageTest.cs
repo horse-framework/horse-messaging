@@ -41,6 +41,7 @@ namespace Test.Direct
             Assert.Equal(HorseResultCode.Ok, sent.Code);
             await Task.Delay(1000);
             Assert.True(received);
+            server.Stop();
         }
 
         /// <summary>
@@ -76,6 +77,7 @@ namespace Test.Direct
             HorseResult sent = await client1.SendAndGetAck(message);
             Assert.Equal(HorseResultCode.Ok, sent.Code);
             Assert.True(received);
+            server.Stop();
         }
 
         /// <summary>
@@ -117,6 +119,7 @@ namespace Test.Direct
             HorseMessage response = await client1.Request(message);
             Assert.NotNull(response);
             Assert.Equal(0, response.ContentType);
+            server.Stop();
         }
     }
 }

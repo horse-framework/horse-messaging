@@ -59,6 +59,7 @@ namespace Test.Routers
 
             Assert.Equal(4, client2Received);
             Assert.Equal(4, client1Received);
+            server.Stop();
         }
 
         [Fact]
@@ -110,6 +111,7 @@ namespace Test.Routers
 
             Assert.Equal(1, client2Received);
             Assert.Equal(2, client1Received);
+            server.Stop();
         }
 
         [Fact]
@@ -161,6 +163,7 @@ namespace Test.Routers
 
             Assert.Equal(0, client1Received);
             Assert.Equal(0, client2Received);
+            server.Stop();
         }
 
         [Fact]
@@ -187,6 +190,7 @@ namespace Test.Routers
 
             Assert.Equal(1, queue1.MessageCount());
             Assert.Equal(1, queue2.MessageCount());
+            server.Stop();
         }
 
         [Fact]
@@ -226,6 +230,7 @@ namespace Test.Routers
 
             Assert.True(client1Received);
             Assert.True(client2Received);
+            server.Stop();
         }
 
         [Fact]
@@ -246,6 +251,7 @@ namespace Test.Routers
 
             HorseResult result = await producer.Router.Publish("router", "Hello, World!", true);
             Assert.Equal(HorseResultCode.NotFound, result.Code);
+            server.Stop();
         }
 
         [Fact]
@@ -279,6 +285,7 @@ namespace Test.Routers
 
             Assert.Equal(1, queue1.MessageCount());
             Assert.True(client1Received);
+            server.Stop();
         }
 
         [Fact]
@@ -326,6 +333,7 @@ namespace Test.Routers
 
             Assert.True(client1Received);
             Assert.True(client2Received);
+            server.Stop();
         }
 
         [Fact]
@@ -360,6 +368,7 @@ namespace Test.Routers
             await Task.Delay(500);
             Assert.Equal(1, queue1.MessageCount());
             Assert.True(client1Received);
+            server.Stop();
         }
 
         [Fact]
@@ -395,6 +404,7 @@ namespace Test.Routers
             Assert.NotNull(message);
             Assert.Equal("Response", message.GetStringContent());
             Assert.Equal(1, queue1.MessageCount());
+            server.Stop();
         }
     }
 }

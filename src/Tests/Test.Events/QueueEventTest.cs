@@ -29,6 +29,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, QueueCreateHandler.Count);
+            server.Stop();
         }
 
         [Fact]
@@ -56,6 +57,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, QueueRemoveHandler.Count);
+            server.Stop();
         }
 
         [Fact]
@@ -77,6 +79,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, QueueSubscribeHandler.Count);
+            server.Stop();
         }
 
         [Fact]
@@ -104,6 +107,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, QueueUnsubscribeHandler.Count);
+            server.Stop();
         }
         
     }

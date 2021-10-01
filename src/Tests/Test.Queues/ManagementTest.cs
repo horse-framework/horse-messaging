@@ -35,6 +35,7 @@ namespace Test.Queues
 
             List<QueueClient> clients = queue.ClientsClone;
             Assert.Single(clients);
+            server.Stop();
         }
 
         /// <summary>
@@ -61,8 +62,8 @@ namespace Test.Queues
 
             List<QueueClient> clients = queue.ClientsClone;
             Assert.Empty(clients);
+            server.Stop();
         }
-
 
         /// <summary>
         /// Client sends a queue creation message
@@ -83,6 +84,7 @@ namespace Test.Queues
             HorseQueue queue = server.Rider.Queue.Queues.FirstOrDefault(x => x.Name == "queue-new");
             Assert.NotNull(queue);
             Assert.Equal("queue-new", queue.Name);
+            server.Stop();
         }
 
         [Fact]
@@ -108,6 +110,7 @@ namespace Test.Queues
 
             Assert.Equal(TimeSpan.FromSeconds(33), queue.Options.AcknowledgeTimeout);
             Assert.Equal(QueueType.Pull, queue.Type);
+            server.Stop();
         }
 
         [Fact]
@@ -130,6 +133,7 @@ namespace Test.Queues
             Assert.Equal(HorseResultCode.Ok, updated.Code);
 
             Assert.Equal(TimeSpan.FromSeconds(666), queue.Options.MessageTimeout);
+            server.Stop();
         }
 
         [Fact]
@@ -151,6 +155,7 @@ namespace Test.Queues
 
             queue = server.Rider.Queue.Find("push-a");
             Assert.Null(queue);
+            server.Stop();
         }
 
         [Fact]
@@ -168,6 +173,7 @@ namespace Test.Queues
             Assert.NotNull(queues.Model);
             var pushQueue = queues.Model.FirstOrDefault(x => x.Name == "push-a");
             Assert.NotNull(pushQueue);
+            server.Stop();
         }
 
         [Fact]
@@ -185,6 +191,7 @@ namespace Test.Queues
             Assert.NotNull(result.Model);
             var queue = result.Model.FirstOrDefault();
             Assert.NotNull(queue);
+            server.Stop();
         }
 
         /// <summary>
@@ -220,6 +227,8 @@ namespace Test.Queues
                 Assert.Equal(0, queue.MessageCount());
             else
                 Assert.NotEqual(0, queue.MessageCount());
+            
+            server.Stop();
         }
     }
 }
