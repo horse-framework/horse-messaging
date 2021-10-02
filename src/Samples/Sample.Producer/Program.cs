@@ -34,9 +34,10 @@ namespace Sample.Producer
 			HorseClientBuilder builder = new HorseClientBuilder();
 			builder.SetHost("horse://localhost:15500");
 			builder.UseNewtonsoftJsonSerializer();
-			builder.SetResponseTimeout(TimeSpan.FromSeconds(16));
+			builder.SetResponseTimeout(TimeSpan.FromSeconds(300));
 			HorseClient client = builder.Build();
-			client.Connect();
+			client.ResponseTimeout = TimeSpan.FromSeconds(300);
+			await client.ConnectAsync();
 
 			ModelA a = new ModelA();
 			a.Foo = "foo";
@@ -67,7 +68,8 @@ namespace Sample.Producer
 				// Console.WriteLine($"Push: {result.Code} ${JsonSerializer.Serialize(result.Model)}");
 
 				var result = await client.Queue.PushJson("SampleTestEvent", new TestEvent(), true);
-				Console.WriteLine($"Push: {result.Code} ${JsonSerializer.Serialize(result)}");
+				
+				Console.WriteLine($"Push: {result.Code} {result.Reason} ${JsonSerializer.Serialize(result)}");
 				Console.ReadLine();
 				// await Task.Delay(5000);
 			}

@@ -898,7 +898,7 @@ namespace Horse.Messaging.Server.Queues
                     return;
 
                 MessageDelivery delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
-
+                
                 //when server and consumer are in pc,
                 //sometimes consumer sends ack before server start to follow ack of the message
                 //that happens when ack message is arrived in less than 0.01ms
