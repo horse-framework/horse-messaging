@@ -128,7 +128,7 @@ namespace Horse.Messaging.Server.Queues
 
                 foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                     _ = handler.MessageTimedOut(_queue, message);
-                
+
                 _queue.MessageTimeoutEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
             }
         }
@@ -206,8 +206,11 @@ namespace Horse.Messaging.Server.Queues
                     _queue.Info.AddUnacknowledge();
                     Decision decision = await _queue.DeliveryHandler.AcknowledgeTimedOut(_queue, delivery);
 
+                    HorseMessage ackTimeoutMessage = delivery.Message.Message.CreateAcknowledge("ack-timeout");
+                    ackTimeoutMessage.ContentType = (ushort) HorseResultCode.RequestTimeout;
+                    
                     if (delivery.Message != null)
-                        await _queue.ApplyDecision(decision, delivery.Message);
+                        await _queue.ApplyDecision(decision, delivery.Message, ackTimeoutMessage);
 
                     foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                         _ = handler.OnAcknowledgeTimedOut(_queue, delivery);
@@ -303,9 +306,9 @@ namespace Horse.Messaging.Server.Queues
             int count;
             lock (_deliveries)
                 count = _deliveries.Where(x => !string.IsNullOrEmpty(x.Message.Message.MessageId))
-                   .Select(x => x.Message.Message.MessageId)
-                   .Distinct()
-                   .Count();
+                    .Select(x => x.Message.Message.MessageId)
+                    .Distinct()
+                    .Count();
 
             return count;
         }

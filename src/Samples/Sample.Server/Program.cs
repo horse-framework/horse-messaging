@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Reflection.Metadata;
+using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Data;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Handlers;
@@ -9,6 +11,7 @@ using Horse.Server;
 
 namespace Sample.Server
 {
+	
 	class Program
 	{
 		static void Main(string[] args)
@@ -24,13 +27,13 @@ namespace Sample.Server
 												.ConfigureClients(cfg => { cfg.Handlers.Add(new ClientHandler()); })
 												.Build();
 			rider.LoadPersistentQueues().GetAwaiter().GetResult();
-
+/*
 			rider.Transaction.CreateContainer("TransactionName",
 											  TimeSpan.FromSeconds(30),
 											  new QueueTransactionEndpoint(rider.Queue, "CommitQueue"),
 											  new QueueTransactionEndpoint(rider.Queue, "RollbackQueue"),
 											  new QueueTransactionEndpoint(rider.Queue, "TimeoutQueue"));
-
+*/
 			HorseServer server = new HorseServer();
 			server.UseRider(rider);
 			server.Run(9999);

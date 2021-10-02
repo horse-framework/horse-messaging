@@ -190,14 +190,15 @@ namespace Horse.Messaging.Client.Direct
                                                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             DirectTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(model.GetType());
-            HorseMessage message = descriptor.CreateMessage();
 
             if (!string.IsNullOrEmpty(target))
-                message.SetTarget(target);
-            
-            if (contentType.HasValue)
-                message.ContentType = contentType.Value;
+                descriptor.DirectTarget = target;
 
+            if (contentType.HasValue)
+                descriptor.ContentType = contentType;
+            
+            HorseMessage message = descriptor.CreateMessage();
+            
             message.Serialize(model, _client.MessageSerializer);
 
             if (messageHeaders != null)

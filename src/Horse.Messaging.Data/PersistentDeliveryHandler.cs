@@ -227,7 +227,7 @@ namespace Horse.Messaging.Data
         /// <inheritdoc />
         public virtual async Task<Decision> AcknowledgeReceived(HorseQueue queue, HorseMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
-            if (success && DeleteWhen == DeleteWhen.AfterAcknowledgeReceived)
+            if (delivery != null && success && DeleteWhen == DeleteWhen.AfterAcknowledgeReceived)
                 await DeleteMessage(delivery.Message.Message.MessageId);
 
             DeliveryAcknowledgeDecision ack = DeliveryAcknowledgeDecision.None;
@@ -268,8 +268,16 @@ namespace Horse.Messaging.Data
         public virtual Task<Decision> AcknowledgeTimedOut(HorseQueue queue, MessageDelivery delivery)
         {
             DeliveryAcknowledgeDecision ack = ProducerAckDecision == ProducerAckDecision.AfterConsumerAckReceived
-                                                  ? DeliveryAcknowledgeDecision.Negative
-                                                  : DeliveryAcknowledgeDecision.None;
+                ? DeliveryAcknowledgeDecision.Negative
+                : DeliveryAcknowledgeDecision.None;
+
+            if (AckTimeoutPutBack == PutBackDecision.No)
+            {
+                QueueMessage queueMessage = delivery?.Message;
+
+                if (queueMessage != null)
+                    _ = DeleteMessage(queueMessage.Message.MessageId);
+            }
 
             return Task.FromResult(new Decision(true, false, AckTimeoutPutBack, ack));
         }

@@ -12,6 +12,12 @@ namespace AdvancedSample.ServiceModels
 		public string Foo { get; set; }
 	}
 
+	public class SampleTestQueryResult
+	{
+		public string Bar { get; set; }
+	}
+
+
 	[RouterName(AdvancedSampleServiceRoutes.TestService)]
 	[DirectContentType(ServiceContentTypes.SAMPLE_TEST_COMMAND)]
 	public class SampleTestCommand
@@ -19,8 +25,8 @@ namespace AdvancedSample.ServiceModels
 		public string Foo { get; set; }
 	}
 
-	public class SampleTestQueryResult
+	public class SampleTestEvent
 	{
-		public string Bar { get; set; }
+		public string Foo { get; set; }
 	}
 }
