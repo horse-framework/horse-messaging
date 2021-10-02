@@ -12,7 +12,6 @@ namespace Sample.Producer
     [QueueType(MessagingQueueType.Push)]
     [Acknowledge(QueueAckDecision.JustRequest)]
     [Interceptor(typeof(TestModelInterceptor1))]
-
     public class ModelA
     {
         [JsonProperty("no")]
@@ -22,5 +21,12 @@ namespace Sample.Producer
         [JsonProperty("foo")]
         [JsonPropertyName("foo")]
         public string Foo { get; set; }
+    }
+
+    public class ModelC
+    {
+        [JsonProperty("no")]
+        [JsonPropertyName("no")]
+        public int No { get; set; }
     }
 }

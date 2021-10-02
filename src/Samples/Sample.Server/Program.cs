@@ -24,13 +24,13 @@ namespace Sample.Server
 												.ConfigureClients(cfg => { cfg.Handlers.Add(new ClientHandler()); })
 												.Build();
 			rider.LoadPersistentQueues().GetAwaiter().GetResult();
-
+/*
 			rider.Transaction.CreateContainer("TransactionName",
 											  TimeSpan.FromSeconds(30),
 											  new QueueTransactionEndpoint(rider.Queue, "CommitQueue"),
 											  new QueueTransactionEndpoint(rider.Queue, "RollbackQueue"),
 											  new QueueTransactionEndpoint(rider.Queue, "TimeoutQueue"));
-
+*/
 			HorseServer server = new HorseServer();
 			server.UseRider(rider);
 			server.Run(9999);

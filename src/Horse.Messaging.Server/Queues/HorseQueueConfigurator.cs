@@ -93,7 +93,7 @@ namespace Horse.Messaging.Server.Queues
         /// <param name="consumerAckFail">Decision, what will be done if consumer sends nack or doesn't send ack in time</param>
         public HorseQueueConfigurator UseAckDeliveryHandler(AcknowledgeWhen producerAck, PutBackDecision consumerAckFail)
         {
-            return UseAckDeliveryHandler(producerAck, consumerAckFail);
+            return UseAckDeliveryHandler("Default", producerAck, consumerAckFail);
         }
 
         /// <summary>

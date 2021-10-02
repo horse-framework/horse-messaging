@@ -32,12 +32,14 @@ namespace Sample.Producer
 		static async Task Main(string[] args)
 		{
 			HorseClientBuilder builder = new HorseClientBuilder();
-			builder.SetHost("horse://localhost:15500");
+			builder.SetHost("horse://localhost:9999");
 			builder.UseNewtonsoftJsonSerializer();
 			builder.SetResponseTimeout(TimeSpan.FromSeconds(300));
 			HorseClient client = builder.Build();
 			client.ResponseTimeout = TimeSpan.FromSeconds(300);
 			await client.ConnectAsync();
+
+			ModelC c = new ModelC();
 
 			ModelA a = new ModelA();
 			a.Foo = "foo";
