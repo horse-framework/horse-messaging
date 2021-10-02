@@ -17,6 +17,11 @@ namespace Sample.Producer
 		public string Foo { get; set; }
 	}
 
+	public class TestEvent
+	{
+		public string Foo { get; set; }
+	}
+
 	public class TestQueryResult
 	{
 		public string Bar { get; set; }
@@ -45,16 +50,24 @@ namespace Sample.Producer
 			{
 				Foo = "Foo"
 			};
+			TestEvent @event = new()
+			{
+				Foo = "Foo"
+			};
+
 			while (true)
 			{
-				// HorseResult result1 = await client.Router.PublishRequestJson<TestQuery, TestQueryResult>("test-service-route", query, 1);
-				// Console.WriteLine($"Push: {result1.Code}");
+				// HorseResult result = await client.Router.PublishRequestJson<TestQuery, TestQueryResult>("test-service-route", query, 1);
+				// Console.WriteLine($"Push: {result.Code}");
 
-				HorseResult result2 = await client.Router.PublishJson("test-service-route", command, null, true, 2);
-				Console.WriteLine($"Push: {result2.Code}");
+				// HorseResult result = await client.Router.PublishJson("test-service-route", command, null, true, 2);
+				// Console.WriteLine($"Push: {result.Code}");
 
 				// var result = await client.Direct.RequestJson<ResponseModel>(new RequestModel());
 				// Console.WriteLine($"Push: {result.Code} ${JsonSerializer.Serialize(result.Model)}");
+
+				var result = await client.Queue.PushJson("SampleTestEvent", new TestEvent(), true);
+				Console.WriteLine($"Push: {result.Code} ${JsonSerializer.Serialize(result)}");
 				Console.ReadLine();
 				// await Task.Delay(5000);
 			}

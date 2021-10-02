@@ -60,13 +60,14 @@ namespace AdvancedSample.Messaging.Server
 			return HorseRiderBuilder.Create()
 									.ConfigureQueues(cfg =>
 													 {
-														 cfg.UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterSaved, true);
+														 cfg.EventHandlers.Add(_queueEventHandler);
+														 cfg.UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterConsumerAckReceived, true);
 														 cfg.AddPersistentQueues(q =>
 																				 {
 																					 q.UseAutoFlush(TimeSpan.FromMilliseconds(500));
 																					 q.KeepLastBackup();
 																				 });
-														 cfg.Options.AcknowledgeTimeout = TimeSpan.FromMinutes(3);
+														 cfg.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
 														 cfg.Options.Type = QueueType.RoundRobin;
 														 cfg.Options.AutoQueueCreation = true;
 													 })

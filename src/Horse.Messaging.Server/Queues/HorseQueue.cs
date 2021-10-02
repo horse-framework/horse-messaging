@@ -915,7 +915,6 @@ namespace Horse.Messaging.Server.Queues
                 bool success = !(deliveryMessage.HasHeader &&
                                  deliveryMessage.Headers.Any(x => x.Key.Equals(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)));
 
-                // ReSharper disable once ConditionIsAlwaysTrueOrFalse (it's possible, resharper doesn't work properly in here)
                 if (delivery != null)
                 {
                     if (delivery.Receiver != null && delivery.Message == delivery.Receiver.CurrentlyProcessing)
