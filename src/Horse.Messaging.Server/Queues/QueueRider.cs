@@ -47,9 +47,9 @@ namespace Horse.Messaging.Server.Queues
         public IEnumerable<HorseQueue> Queues => _queues.All();
 
         /// <summary>
-        /// Delivery handler creator method
+        /// Key specific registered delivery handler methods
         /// </summary>
-        internal Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> DeliveryHandlerFactory { get; set; }
+        internal Dictionary<string, Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>>> DeliveryHandlerFactories { get; } = new(StringComparer.InvariantCultureIgnoreCase);
 
         /// <summary>
         /// Root horse rider object
@@ -65,12 +65,12 @@ namespace Horse.Messaging.Server.Queues
         /// Event Manage for HorseEventType.QueueCreate
         /// </summary>
         public EventManager CreateEvent { get; }
-        
+
         /// <summary>
         /// Event Manage for HorseEventType.QueueRemove
         /// </summary>
         public EventManager RemoveEvent { get; }
-        
+
         /// <summary>
         /// Event Manage for HorseEventType.QueueStatusChange
         /// </summary>
@@ -100,6 +100,16 @@ namespace Horse.Messaging.Server.Queues
         }
 
         #region Actions
+
+        /// <summary>
+        /// Finds message delivery handler by name
+        /// </summary>
+        /// <param name="name">Delivery handler name</param>
+        public Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> FindDeliveryHandlerFactory(string name)
+        {
+            DeliveryHandlerFactories.TryGetValue(name, out var handler);
+            return handler;
+        }
 
         /// <summary>
         /// Finds queue by name
@@ -142,30 +152,29 @@ namespace Horse.Messaging.Server.Queues
         /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
         public Task<HorseQueue> Create(string queueName, QueueOptions options)
         {
-            return Create(queueName, options, DeliveryHandlerFactory);
-        }
-
-        /// <summary>
-        /// Creates new queue in the server
-        /// </summary>
-        /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
-        /// <exception cref="OperationCanceledException">Thrown when queue limit is exceeded for the server</exception>
-        /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
-        public Task<HorseQueue> Create(string queueName,
-                                            QueueOptions options,
-                                            Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> asyncHandler)
-        {
-            return Create(queueName, options, null, asyncHandler, false, false);
+            return Create(queueName, options, null, false, false);
         }
 
         internal async Task<HorseQueue> Create(string queueName,
-                                                    QueueOptions options,
-                                                    HorseMessage requestMessage,
-                                                    Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> asyncHandler,
-                                                    bool hideException,
-                                                    bool returnIfExists,
-                                                    MessagingClient client = null)
+                                               QueueOptions options,
+                                               HorseMessage requestMessage,
+                                               bool hideException,
+                                               bool returnIfExists,
+                                               MessagingClient client = null,
+                                               string customHandlerName = null)
         {
+            string handlerName;
+
+            if (!string.IsNullOrEmpty(customHandlerName))
+                handlerName = customHandlerName;
+            else
+                handlerName = requestMessage != null ? requestMessage.FindHeader(HorseHeaders.DELIVERY_HANDLER) : "Default";
+
+            if (string.IsNullOrEmpty(handlerName))
+                handlerName = "Default";
+
+            DeliveryHandlerFactories.TryGetValue(handlerName, out Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> deliveryHandlerFactory);
+
             await _createLock.WaitAsync();
             try
             {
@@ -218,9 +227,9 @@ namespace Horse.Messaging.Server.Queues
                 else
                     initialize = true;
 
-                if (initialize)
+                if (initialize && deliveryHandlerFactory != null)
                 {
-                    IMessageDeliveryHandler deliveryHandler = await asyncHandler(handlerBuilder);
+                    IMessageDeliveryHandler deliveryHandler = await deliveryHandlerFactory(handlerBuilder);
                     await queue.InitializeQueue(deliveryHandler);
                 }
 

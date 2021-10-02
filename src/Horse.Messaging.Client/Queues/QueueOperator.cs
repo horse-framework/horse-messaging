@@ -6,7 +6,9 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Internal;
+using Horse.Messaging.Client.Queues.Exceptions;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Models;
 
@@ -24,9 +26,9 @@ namespace Horse.Messaging.Client.Queues
     {
         internal HorseClient Client { get; }
         private readonly Timer _pullContainerTimeoutHandler;
-        
+
         internal TypeDescriptorContainer<QueueTypeDescriptor> DescriptorContainer { get; }
-        internal List<QueueConsumerRegistration> Registrations { get; } = new List<QueueConsumerRegistration>();
+        internal List<QueueConsumerRegistration> Registrations { get; private set; } = new List<QueueConsumerRegistration>();
         internal Dictionary<string, PullContainer> PullContainers { get; }
 
         /// <summary>
@@ -155,7 +157,7 @@ namespace Horse.Messaging.Client.Queues
         /// Creates new queue in server
         /// </summary>
         public Task<HorseResult> Create(string queue,
-                                        IEnumerable<KeyValuePair<string, string>> additionalHeaders)
+            IEnumerable<KeyValuePair<string, string>> additionalHeaders)
         {
             return Create(queue, null, null, additionalHeaders);
         }
@@ -164,8 +166,8 @@ namespace Horse.Messaging.Client.Queues
         /// Creates new queue in server
         /// </summary>
         public Task<HorseResult> Create(string queue,
-                                        string deliveryHandlerHeader,
-                                        IEnumerable<KeyValuePair<string, string>> additionalHeaders)
+            string deliveryHandlerHeader,
+            IEnumerable<KeyValuePair<string, string>> additionalHeaders)
         {
             return Create(queue, null, deliveryHandlerHeader, additionalHeaders);
         }
@@ -174,9 +176,9 @@ namespace Horse.Messaging.Client.Queues
         /// Creates new queue in server
         /// </summary>
         public async Task<HorseResult> Create(string queue,
-                                              Action<QueueOptions> optionsAction,
-                                              string deliveryHandlerHeader = null,
-                                              IEnumerable<KeyValuePair<string, string>> additionalHeaders = null)
+            Action<QueueOptions> optionsAction,
+            string deliveryHandlerHeader = null,
+            IEnumerable<KeyValuePair<string, string>> additionalHeaders = null)
         {
             HorseMessage message = new HorseMessage();
             message.Type = MessageType.Server;
@@ -311,7 +313,7 @@ namespace Horse.Messaging.Client.Queues
         /// Pushes a message to a queue
         /// </summary>
         public Task<HorseResult> PushJson(object jsonObject, bool waitAcknowledge,
-                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             return PushJson(null, jsonObject, waitAcknowledge, messageHeaders);
         }
@@ -320,7 +322,7 @@ namespace Horse.Messaging.Client.Queues
         /// Pushes a message to a queue
         /// </summary>
         public Task<HorseResult> PushJson(object jsonObject, string messageId, bool waitAcknowledge,
-                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             return PushJson(null, jsonObject, messageId, waitAcknowledge, messageHeaders);
         }
@@ -329,7 +331,7 @@ namespace Horse.Messaging.Client.Queues
         /// Pushes a message to a queue
         /// </summary>
         public Task<HorseResult> PushJson(string queue, object jsonObject, bool waitAcknowledge,
-                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             return PushJson(queue, jsonObject, null, waitAcknowledge, messageHeaders);
         }
@@ -338,7 +340,7 @@ namespace Horse.Messaging.Client.Queues
         /// Pushes a message to a queue
         /// </summary>
         public async Task<HorseResult> PushJson(string queue, object jsonObject, string messageId, bool waitAcknowledge,
-                                                IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             QueueTypeDescriptor descriptor = DescriptorContainer.GetDescriptor(jsonObject.GetType());
 
@@ -368,7 +370,7 @@ namespace Horse.Messaging.Client.Queues
         /// Pushes a message to a queue
         /// </summary>
         public async Task<HorseResult> Push(string queue, string content, bool waitAcknowledge,
-                                            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             return await Push(queue, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge, messageHeaders);
         }
@@ -377,7 +379,7 @@ namespace Horse.Messaging.Client.Queues
         /// Pushes a message to a queue
         /// </summary>
         public async Task<HorseResult> Push(string queue, string content, string messageId, bool waitAcknowledge,
-                                            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             return await Push(queue, new MemoryStream(Encoding.UTF8.GetBytes(content)), messageId, waitAcknowledge, messageHeaders);
         }
@@ -386,7 +388,7 @@ namespace Horse.Messaging.Client.Queues
         /// Pushes a message to a queue
         /// </summary>
         public Task<HorseResult> Push(string queue, MemoryStream content, bool waitAcknowledge,
-                                      IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             return Push(queue, content, null, waitAcknowledge, messageHeaders);
         }
@@ -395,7 +397,7 @@ namespace Horse.Messaging.Client.Queues
         /// Pushes a message to a queue
         /// </summary>
         public async Task<HorseResult> Push(string queue, MemoryStream content, string messageId, bool waitAcknowledge,
-                                            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             HorseMessage message = new HorseMessage(MessageType.QueueMessage, queue, 0);
             message.Content = content;
@@ -478,6 +480,34 @@ namespace Horse.Messaging.Client.Queues
                 message.SetMessageId(Client.UniqueIdGenerator.Create());
 
             return await Client.WaitResponse(message, verifyResponse);
+        }
+
+        /// <summary>
+        /// Re-registers the consumer type for another queue name and subscribes to the queue
+        /// </summary>
+        public Task<HorseResult> Subscribe<TConsumer, TModel>(string queue, bool verifyResponse, IEnumerable<KeyValuePair<string, string>> headers = null)
+            where TConsumer : IQueueConsumer<TModel>
+        {
+            List<QueueConsumerRegistration> list = Registrations.ToList();
+            QueueConsumerRegistration current = list.FirstOrDefault(x => x.ConsumerType == typeof(TConsumer));
+
+            if (current == null)
+                throw new HorseQueueException($"{typeof(TConsumer)} Consumer type is not registered");
+
+            QueueConsumerRegistration registration = new QueueConsumerRegistration
+            {
+                ConsumerExecuter = current.ConsumerExecuter,
+                ConsumerType = current.ConsumerType,
+                MessageType = current.MessageType,
+                QueueName = queue
+            };
+
+            foreach (InterceptorTypeDescriptor descriptor in current.IntercetorDescriptors)
+                registration.IntercetorDescriptors.Add(descriptor);
+
+            Registrations = list;
+
+            return Subscribe(queue, verifyResponse, headers);
         }
 
         /// <summary>

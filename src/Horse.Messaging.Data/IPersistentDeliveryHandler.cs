@@ -15,11 +15,6 @@ namespace Horse.Messaging.Data
         HorseQueue Queue { get; }
 
         /// <summary>
-        /// Key for delivery handler attribute
-        /// </summary>
-        string Key { get; }
-
-        /// <summary>
         /// Database filename.
         /// If persistent delivery handler uses different save system value can be ignored.
         /// </summary>

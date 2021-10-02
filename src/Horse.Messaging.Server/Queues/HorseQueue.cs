@@ -212,8 +212,8 @@ namespace Horse.Messaging.Server.Queues
                 return;
 
             Rider.Queue.StatusChangeEvent.Trigger(Name,
-                                                       new KeyValuePair<string, string>($"Previous-{HorseHeaders.STATUS}", Status.ToString()),
-                                                       new KeyValuePair<string, string>($"Next-{HorseHeaders.STATUS}", newStatus.ToString()));
+                                                  new KeyValuePair<string, string>($"Previous-{HorseHeaders.STATUS}", Status.ToString()),
+                                                  new KeyValuePair<string, string>($"Next-{HorseHeaders.STATUS}", newStatus.ToString()));
 
             Status = newStatus;
         }
@@ -510,7 +510,12 @@ namespace Horse.Messaging.Server.Queues
                         DeliveryHandlerHeader = message.Message.FindHeader(HorseHeaders.DELIVERY_HANDLER)
                     };
 
-                    IMessageDeliveryHandler deliveryHandler = await Rider.Queue.DeliveryHandlerFactory(handlerBuilder);
+                    if (string.IsNullOrEmpty(handlerBuilder.DeliveryHandlerHeader))
+                        handlerBuilder.DeliveryHandlerHeader = "Default";
+
+                    Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> factory = Rider.Queue.DeliveryHandlerFactories[handlerBuilder.DeliveryHandlerHeader];
+                    IMessageDeliveryHandler deliveryHandler = await factory(handlerBuilder);
+                    
                     await InitializeQueue(deliveryHandler);
 
                     handlerBuilder.TriggerAfterCompleted();
@@ -893,7 +898,7 @@ namespace Horse.Messaging.Server.Queues
                     return;
 
                 MessageDelivery delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
-
+                
                 //when server and consumer are in pc,
                 //sometimes consumer sends ack before server start to follow ack of the message
                 //that happens when ack message is arrived in less than 0.01ms
@@ -915,7 +920,6 @@ namespace Horse.Messaging.Server.Queues
                 bool success = !(deliveryMessage.HasHeader &&
                                  deliveryMessage.Headers.Any(x => x.Key.Equals(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)));
 
-                // ReSharper disable once ConditionIsAlwaysTrueOrFalse (it's possible, resharper doesn't work properly in here)
                 if (delivery != null)
                 {
                     if (delivery.Receiver != null && delivery.Message == delivery.Receiver.CurrentlyProcessing)
@@ -944,8 +948,8 @@ namespace Horse.Messaging.Server.Queues
                     MessageAckEvent.Trigger(from, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId));
                 else
                     MessageNackEvent.Trigger(from,
-                                                  new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId),
-                                                  new KeyValuePair<string, string>(HorseHeaders.REASON, deliveryMessage.FindHeader(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON)));
+                                             new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId),
+                                             new KeyValuePair<string, string>(HorseHeaders.REASON, deliveryMessage.FindHeader(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON)));
             }
             catch (Exception e)
             {

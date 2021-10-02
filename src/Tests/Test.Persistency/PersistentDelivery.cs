@@ -17,32 +17,22 @@ namespace Test.Persistency
         public async Task InPersistentHandler()
         {
             ConfigurationFactory.Destroy();
-            PersistentDeliveryHandler handler = null;
             HorseServer server = new HorseServer();
             HorseRider rider = server.UseRider(cfg => cfg
-                                                  .ConfigureQueues(q =>
+                                                   .ConfigureQueues(q =>
                                                    {
-                                                       q.AddPersistentQueues(q => q.KeepLastBackup());
-                                                       q.UseDeliveryHandler(async builder =>
-                                                       {
-                                                           DatabaseOptions options = new DatabaseOptions
-                                                           {
-                                                               Filename = "redelivery-test.tdb",
-                                                               InstantFlush = true,
-                                                               CreateBackupOnShrink = false,
-                                                               ShrinkInterval = TimeSpan.FromSeconds(60)
-                                                           };
-
-                                                           handler = new PersistentDeliveryHandler(builder.Queue,
-                                                                                                   options,
-                                                                                                   DeleteWhen.AfterSend,
-                                                                                                   ProducerAckDecision.None,
-                                                                                                   true);
-                                                           await handler.Initialize();
-                                                           return handler;
-                                                       });
+                                                       q.UsePersistentDeliveryHandler(q =>
+                                                                                      {
+                                                                                          q.UseInstantFlush()
+                                                                                              .KeepLastBackup()
+                                                                                              .SetAutoShrink(true, TimeSpan.FromSeconds(60))
+                                                                                              .UseInstantFlush();
+                                                                                      },
+                                                                                      DeleteWhen.AfterSend,
+                                                                                      ProducerAckDecision.None,
+                                                                                      true);
                                                    }));
-
+            
             HorseQueue queue = await rider.Queue.Create("test");
 
             HorseMessage message = new HorseMessage(MessageType.QueueMessage, "test");
@@ -50,6 +40,7 @@ namespace Test.Persistency
             message.SetStringContent("Hello, World!");
             QueueMessage queueMessage = new QueueMessage(message);
 
+            PersistentDeliveryHandler handler = (PersistentDeliveryHandler) queue.DeliveryHandler;
             await handler.BeginSend(queue, queueMessage);
 
             List<KeyValuePair<string, int>> deliveries = handler.RedeliveryService.GetDeliveries();

@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Horse.Messaging.Data.Configuration;
 using Horse.Messaging.Server;
-using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
 
@@ -14,49 +13,6 @@ namespace Horse.Messaging.Data
     /// </summary>
     public static class Extensions
     {
-        /// <summary>
-        /// Adds persistent queues with default configuration
-        /// </summary>
-        public static HorseRider AddPersistentQueues(this HorseRider server)
-        {
-            return AddPersistentQueues(server, _ => { });
-        }
-
-        /// <summary>
-        /// Adds persistent queues with customized configuration
-        /// </summary>
-        public static HorseQueueConfigurator AddPersistentQueues(this HorseQueueConfigurator builder)
-        {
-            return AddPersistentQueues(builder, _ => { });
-        }
-
-        /// <summary>
-        /// Adds persistent queues with customized configuration
-        /// </summary>
-        public static HorseQueueConfigurator AddPersistentQueues(this HorseQueueConfigurator configurator,
-                                                                 Action<DataConfigurationBuilder> cfg)
-        {
-            configurator.Rider.AddPersistentQueues(cfg);
-            return configurator;
-        }
-
-        /// <summary>
-        /// Adds persistent queues with customized configuration
-        /// </summary>
-        public static HorseRider AddPersistentQueues(this HorseRider server,
-                                                     Action<DataConfigurationBuilder> cfg)
-        {
-            DataConfigurationBuilder builder = new DataConfigurationBuilder();
-            cfg(builder);
-
-            if (builder.GenerateQueueFilename == null)
-                builder.GenerateQueueFilename = DefaultQueueDbPath;
-
-            ConfigurationFactory.Initialize(builder);
-
-            return server;
-        }
-
         /// <summary>
         /// Loads all persistent queue messages from databases
         /// </summary>
@@ -85,14 +41,43 @@ namespace Horse.Messaging.Data
                                                                           PutBackDecision ackTimeoutPutback = PutBackDecision.End,
                                                                           PutBackDecision nackPutback = PutBackDecision.End)
         {
-            cfg.Rider.Queue.DeliveryHandlerFactory = async (dh) =>
+            return UsePersistentDeliveryHandler(cfg, _ => { }, deleteWhen, producerAckDecision, useRedelivery, ackTimeoutPutback, nackPutback);
+        }
+
+        /// <summary>
+        /// Implements persistent message delivery handler
+        /// </summary>
+        /// <param name="cfg">Horse Clietn configurator Builder</param>
+        /// <param name="dataConfigurator">Persistent data store configurator</param>
+        /// <param name="deleteWhen">Decision when messages are deleted from disk</param>
+        /// <param name="producerAckDecision">Decision when producer receives acknowledge</param>
+        /// <param name="useRedelivery">True if want to keep redelivery data and send to consumers with message headers</param>
+        /// <param name="ackTimeoutPutback">Putback decision when ack message isn't received</param>
+        /// <param name="nackPutback">Putback decision when negative ack is received</param>
+        /// <returns></returns>
+        public static HorseQueueConfigurator UsePersistentDeliveryHandler(this HorseQueueConfigurator cfg,
+                                                                          Action<DataConfigurationBuilder> dataConfigurator,
+                                                                          DeleteWhen deleteWhen,
+                                                                          ProducerAckDecision producerAckDecision,
+                                                                          bool useRedelivery = false,
+                                                                          PutBackDecision ackTimeoutPutback = PutBackDecision.End,
+                                                                          PutBackDecision nackPutback = PutBackDecision.End)
+        {
+            DataConfigurationBuilder dataConfigurationBuilder = new DataConfigurationBuilder();
+            dataConfigurator(dataConfigurationBuilder);
+
+            if (dataConfigurationBuilder.GenerateQueueFilename == null)
+                dataConfigurationBuilder.GenerateQueueFilename = DefaultQueueDbPath;
+
+            ConfigurationFactory.Initialize(dataConfigurationBuilder);
+
+            cfg.Rider.Queue.DeliveryHandlerFactories.Add("PERSISTENT", async dh =>
             {
                 DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(dh.Queue);
                 PersistentDeliveryHandler handler = new PersistentDeliveryHandler(dh.Queue, databaseOptions,
                                                                                   deleteWhen,
                                                                                   producerAckDecision,
-                                                                                  useRedelivery,
-                                                                                  dh.DeliveryHandlerHeader);
+                                                                                  useRedelivery);
 
                 handler.AckTimeoutPutBack = ackTimeoutPutback;
                 handler.NegativeAckPutBack = nackPutback;
@@ -100,7 +85,19 @@ namespace Horse.Messaging.Data
                 await handler.Initialize();
                 dh.OnAfterCompleted(AfterDeliveryHandlerCreated);
                 return handler;
-            };
+            });
+
+            cfg.Rider.Queue.DeliveryHandlerFactories.Add("PERSISTENT_RELOAD", async b =>
+            {
+                Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> func = cfg.Rider.Queue.DeliveryHandlerFactories["PERSISTENT"];
+                IMessageDeliveryHandler handler = await func(b);
+                b.OnAfterCompleted(_ => { }); //don't trigger created events, it's already created and reloading
+                return handler;
+            });
+
+            if (!cfg.Rider.Queue.DeliveryHandlerFactories.ContainsKey("DEFAULT"))
+                cfg.Rider.Queue.DeliveryHandlerFactories.Add("DEFAULT", cfg.Rider.Queue.DeliveryHandlerFactories["PERSISTENT"]);
+
             return cfg;
         }
 
@@ -120,11 +117,11 @@ namespace Horse.Messaging.Data
                                                                                           ProducerAckDecision producerAckDecision,
                                                                                           bool useRedelivery = false,
                                                                                           PutBackDecision ackTimeoutPutback = PutBackDecision.End,
-                                                                                          PutBackDecision nackPutback = PutBackDecision.End,
-                                                                                          string key = "default")
+                                                                                          PutBackDecision nackPutback = PutBackDecision.End)
         {
             DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
-            PersistentDeliveryHandler handler = new PersistentDeliveryHandler(builder.Queue, databaseOptions, deleteWhen, producerAckDecision, useRedelivery, key);
+            PersistentDeliveryHandler handler =
+                new PersistentDeliveryHandler(builder.Queue, databaseOptions, deleteWhen, producerAckDecision, useRedelivery);
             handler.AckTimeoutPutBack = ackTimeoutPutback;
             handler.NegativeAckPutBack = nackPutback;
             await handler.Initialize();
@@ -157,120 +154,6 @@ namespace Horse.Messaging.Data
             bool added = ConfigurationFactory.Manager.Add(builder.Queue, persistentHandler.DbFilename);
             if (added)
                 ConfigurationFactory.Manager.Save();
-        }
-
-        /// <summary>
-        /// Creates new persistent queue
-        /// </summary>
-        /// <param name="rider">Queue rider</param>
-        /// <param name="queue">Queue Name</param>
-        /// <param name="deleteWhen">Decision, when messages will be removed from disk</param>
-        /// <param name="producerAckDecision">Decision, when ack will be sent to producer</param>
-        /// <returns></returns>
-        public static Task<HorseQueue> CreatePersistentQueue(this QueueRider rider,
-                                                             string queue,
-                                                             DeleteWhen deleteWhen,
-                                                             ProducerAckDecision producerAckDecision)
-        {
-            QueueOptions options = QueueOptions.CloneFrom(rider.Options);
-            return CreatePersistentQueue(rider, queue, deleteWhen, producerAckDecision, options);
-        }
-
-        /// <summary>
-        /// Creates new persistent queue
-        /// </summary>
-        /// <param name="rider">Queue rider</param>
-        /// <param name="queue">Queue name</param>
-        /// <param name="deleteWhen">Decision, when messages will be removed from disk</param>
-        /// <param name="producerAckDecision">Decision, when ack will be sent to producer</param>
-        /// <param name="optionsAction">Queue Options builder action</param>
-        /// <returns></returns>
-        public static Task<HorseQueue> CreatePersistentQueue(this QueueRider rider,
-                                                             string queue,
-                                                             DeleteWhen deleteWhen,
-                                                             ProducerAckDecision producerAckDecision,
-                                                             Action<QueueOptions> optionsAction)
-        {
-            QueueOptions options = QueueOptions.CloneFrom(rider.Options);
-            optionsAction(options);
-            return CreatePersistentQueue(rider, queue, deleteWhen, producerAckDecision, options);
-        }
-
-        /// <summary>
-        /// Creates new persistent queue
-        /// </summary>
-        /// <param name="rider">Queue rider</param>
-        /// <param name="queueName">Queue name</param>
-        /// <param name="deleteWhen">Decision, when messages will be removed from disk</param>
-        /// <param name="producerAckDecision">Decision, when ack will be sent to producer</param>
-        /// <param name="options">Queue Options</param>
-        /// <returns></returns>
-        public static async Task<HorseQueue> CreatePersistentQueue(this QueueRider rider,
-                                                                   string queueName,
-                                                                   DeleteWhen deleteWhen,
-                                                                   ProducerAckDecision producerAckDecision,
-                                                                   QueueOptions options)
-        {
-            HorseQueue queue = await CreateQueue(rider, queueName, deleteWhen, producerAckDecision, options);
-            IPersistentDeliveryHandler deliveryHandler = (IPersistentDeliveryHandler) queue.DeliveryHandler;
-            ConfigurationFactory.Manager.Add(queue, deliveryHandler.DbFilename);
-            ConfigurationFactory.Manager.Save();
-            return queue;
-        }
-
-        /// <summary>
-        /// Creates new persistent queue
-        /// </summary>
-        /// <param name="rider">Queue rider</param>
-        /// <param name="queueName">Queue name</param>
-        /// <param name="options">Queue Options</param>
-        /// <param name="factory">Delivery handler instance creator factory</param>
-        /// <returns></returns>
-        public static async Task<HorseQueue> CreatePersistentQueue(this QueueRider rider,
-                                                                   string queueName,
-                                                                   QueueOptions options,
-                                                                   Func<DatabaseOptions, IPersistentDeliveryHandler> factory)
-        {
-            HorseQueue queue = await CreateQueue(rider, queueName, options, factory);
-            IPersistentDeliveryHandler deliveryHandler = (IPersistentDeliveryHandler) queue.DeliveryHandler;
-            ConfigurationFactory.Manager.Add(queue, deliveryHandler.DbFilename);
-            ConfigurationFactory.Manager.Save();
-            return queue;
-        }
-
-        /// <summary>
-        /// Creates and returns persistent queue
-        /// </summary>
-        internal static async Task<HorseQueue> CreateQueue(QueueRider rider,
-                                                           string queueName,
-                                                           DeleteWhen deleteWhen,
-                                                           ProducerAckDecision producerAckDecision,
-                                                           QueueOptions options)
-        {
-            return await rider.Create(queueName, options, async builder =>
-            {
-                DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
-                PersistentDeliveryHandler handler = new PersistentDeliveryHandler(builder.Queue, databaseOptions, deleteWhen, producerAckDecision);
-                await handler.Initialize();
-                return handler;
-            });
-        }
-
-        /// <summary>
-        /// Creates and returns persistent queue
-        /// </summary>
-        internal static async Task<HorseQueue> CreateQueue(QueueRider rider,
-                                                           string queueName,
-                                                           QueueOptions options,
-                                                           Func<DatabaseOptions, IPersistentDeliveryHandler> factory)
-        {
-            return await rider.Create(queueName, options, async builder =>
-            {
-                DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
-                IPersistentDeliveryHandler handler = factory(databaseOptions);
-                await handler.Initialize();
-                return handler;
-            });
         }
 
         /// <summary>
