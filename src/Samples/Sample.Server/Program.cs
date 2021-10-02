@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Reflection.Metadata;
+using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Data;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Handlers;
@@ -9,6 +11,7 @@ using Horse.Server;
 
 namespace Sample.Server
 {
+	
 	class Program
 	{
 		static void Main(string[] args)
