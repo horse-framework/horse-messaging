@@ -8,7 +8,7 @@ namespace TestService
 	{
 		protected override async Task Execute(SampleTestEvent command)
 		{
-			await Task.Delay(15000);
+			await Task.Delay(40000);
 		}
 	}
 }

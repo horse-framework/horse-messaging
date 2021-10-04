@@ -122,8 +122,8 @@ namespace Horse.Messaging.Server.Transactions
                 throw new Exception($"Endpoint Type type not found: {fullname}");
 
             ConstructorInfo[] ctors = endpointType.GetConstructors()
-               .OrderByDescending(x => x.GetParameters().Length)
-               .ToArray();
+                .OrderByDescending(x => x.GetParameters().Length)
+                .ToArray();
 
             ConstructorInfo constructor = null;
             object[] parameters = null;
@@ -153,7 +153,7 @@ namespace Horse.Messaging.Server.Transactions
                     else if (parameterInfo.ParameterType.IsEquivalentTo(typeof(HorseRider)))
                         parameters[i] = Rider;
 
-                    if (parameterInfo.ParameterType.IsEquivalentTo(typeof(ServerTransactionContainer)))
+                    else if (parameterInfo.ParameterType.IsEquivalentTo(typeof(ServerTransactionContainer)))
                         parameters[i] = container;
 
                     else if (parameterInfo.ParameterType.IsEquivalentTo(typeof(string)))

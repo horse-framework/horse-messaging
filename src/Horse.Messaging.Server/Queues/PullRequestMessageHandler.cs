@@ -35,7 +35,7 @@ namespace Horse.Messaging.Server.Queues
                 if (queue == null && _rider.Queue.Options.AutoQueueCreation)
                 {
                     QueueOptions options = QueueOptions.CloneFrom(_rider.Queue.Options);
-                    queue = await _rider.Queue.Create(message.Target, options, message, _rider.Queue.DeliveryHandlerFactory, true, true);
+                    queue = await _rider.Queue.Create(message.Target, options, message, true, true);
                 }
 
                 if (queue == null)

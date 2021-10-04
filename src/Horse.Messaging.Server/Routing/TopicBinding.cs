@@ -115,7 +115,6 @@ namespace Horse.Messaging.Server.Routing
 				queue = await Router.Rider.Queue.Create(message.Target,
 														Router.Rider.Queue.Options,
 														message,
-														Router.Rider.Queue.DeliveryHandlerFactory,
 														true,
 														true);
 			}
@@ -139,7 +138,6 @@ namespace Horse.Messaging.Server.Routing
 				queue = await Router.Rider.Queue.Create(message.Target,
 														Router.Rider.Queue.Options,
 														message,
-														Router.Rider.Queue.DeliveryHandlerFactory,
 														true,
 														true);
 			}

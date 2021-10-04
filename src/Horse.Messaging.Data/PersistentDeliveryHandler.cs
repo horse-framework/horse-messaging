@@ -23,11 +23,6 @@ namespace Horse.Messaging.Data
         public HorseQueue Queue { get; }
 
         /// <summary>
-        /// Key for delivery handler attribute
-        /// </summary>
-        public string Key { get; protected set; }
-
-        /// <summary>
         /// Database Filename
         /// </summary>
         public string DbFilename => Database.File.Filename;
@@ -73,17 +68,13 @@ namespace Horse.Messaging.Data
                                          DatabaseOptions options,
                                          DeleteWhen deleteWhen,
                                          ProducerAckDecision producerAckDecision,
-                                         bool useRedelivery = false,
-                                         string key = "default")
+                                         bool useRedelivery = false)
         {
             Queue = queue;
             DeleteWhen = deleteWhen;
             ProducerAckDecision = producerAckDecision;
             Database = new Database(options);
             UseRedelivery = useRedelivery;
-            Key = key;
-            if (string.IsNullOrEmpty(Key))
-                Key = "default";
         }
 
         /// <summary>
@@ -236,7 +227,7 @@ namespace Horse.Messaging.Data
         /// <inheritdoc />
         public virtual async Task<Decision> AcknowledgeReceived(HorseQueue queue, HorseMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
-            if (success && DeleteWhen == DeleteWhen.AfterAcknowledgeReceived)
+            if (delivery != null && success && DeleteWhen == DeleteWhen.AfterAcknowledgeReceived)
                 await DeleteMessage(delivery.Message.Message.MessageId);
 
             DeliveryAcknowledgeDecision ack = DeliveryAcknowledgeDecision.None;
@@ -277,8 +268,16 @@ namespace Horse.Messaging.Data
         public virtual Task<Decision> AcknowledgeTimedOut(HorseQueue queue, MessageDelivery delivery)
         {
             DeliveryAcknowledgeDecision ack = ProducerAckDecision == ProducerAckDecision.AfterConsumerAckReceived
-                                                  ? DeliveryAcknowledgeDecision.Negative
-                                                  : DeliveryAcknowledgeDecision.None;
+                ? DeliveryAcknowledgeDecision.Negative
+                : DeliveryAcknowledgeDecision.None;
+
+            if (AckTimeoutPutBack == PutBackDecision.No)
+            {
+                QueueMessage queueMessage = delivery?.Message;
+
+                if (queueMessage != null)
+                    _ = DeleteMessage(queueMessage.Message.MessageId);
+            }
 
             return Task.FromResult(new Decision(true, false, AckTimeoutPutBack, ack));
         }

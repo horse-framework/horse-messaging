@@ -80,7 +80,6 @@ namespace Horse.Messaging.Data.Configuration
 
             if (queue.DeliveryHandler is IPersistentDeliveryHandler deliveryHandler)
             {
-                queueConfiguration.DeliveryHandler = deliveryHandler.Key;
                 queueConfiguration.DeleteWhen = Convert.ToInt32(deliveryHandler.DeleteWhen);
                 queueConfiguration.ProducerAck = Convert.ToInt32(deliveryHandler.ProducerAckDecision);
             }
@@ -115,22 +114,10 @@ namespace Horse.Messaging.Data.Configuration
                 HorseQueue queue = rider.Queue.Find(queueConfiguration.Name);
                 if (queue == null)
                 {
-                    if (rider.Queue.DeliveryHandlerFactory != null)
-                        queue = await rider.Queue.Create(queueConfiguration.Name,
-                                                         queueConfiguration.Configuration.ToOptions(),
-                                                         async builder =>
-                                                         {
-                                                             builder.DeliveryHandlerHeader = queueConfiguration.DeliveryHandler;
-                                                             IMessageDeliveryHandler handler = await rider.Queue.DeliveryHandlerFactory(builder);
-                                                             builder.OnAfterCompleted(_ => { }); //don't trigger created events, it's already created and reloading
-                                                             return handler;
-                                                         });
-                    else
-                        queue = await Extensions.CreateQueue(rider.Queue,
-                                                             queueConfiguration.Name,
-                                                             (DeleteWhen) queueConfiguration.DeleteWhen,
-                                                             (ProducerAckDecision) queueConfiguration.ProducerAck,
-                                                             queueConfiguration.Configuration.ToOptions());
+                    queue = await rider.Queue.Create(queueConfiguration.Name,
+                                                     queueConfiguration.Configuration.ToOptions(),
+                                                     null, false, false, null,
+                                                     "PERSISTENT_RELOAD");
 
                     //queue creation not permitted, skip
                     if (queue == null)
