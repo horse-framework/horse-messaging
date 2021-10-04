@@ -46,7 +46,7 @@ namespace AdvancedSample.Service
 			}
 		}
 
-		protected void ConfigureHorseClient(Action<HorseClientBuilder> builderDelegate)
+		public void ConfigureHorseClient(Action<HorseClientBuilder> builderDelegate)
 		{
 			_clientBuilderDelegate = builderDelegate;
 		}
