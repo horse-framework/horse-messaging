@@ -19,9 +19,9 @@ namespace Horse.Messaging.Server.Queues.Delivery
         Acknowledge,
 
         /// <summary>
-        /// Consumer sent a failed acknowledge for the message
+        /// Consumer sent a negative acknowledge for the message
         /// </summary>
-        Unacknowledge,
+        NegativeAcknowledge,
 
         /// <summary>
         /// Acknowledge timed out
@@ -123,7 +123,7 @@ namespace Horse.Messaging.Server.Queues.Delivery
         {
             Acknowledge = success
                                ? DeliveryAcknowledge.Acknowledge
-                               : DeliveryAcknowledge.Unacknowledge;
+                               : DeliveryAcknowledge.NegativeAcknowledge;
 
             AcknowledgeDate = DateTime.UtcNow;
         }

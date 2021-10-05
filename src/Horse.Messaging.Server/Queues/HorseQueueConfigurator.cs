@@ -2,9 +2,9 @@ using System;
 using System.Data;
 using System.Threading.Tasks;
 using Horse.Messaging.Server.Containers;
-using Horse.Messaging.Server.Handlers;
 using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Queues.Delivery;
+using Horse.Messaging.Server.Queues.Handlers;
 using Horse.Messaging.Server.Security;
 
 namespace Horse.Messaging.Server.Queues
@@ -90,7 +90,7 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         /// <param name="producerAck">Decision, when producer will receive acknowledge (or confirm)</param>
         /// <param name="consumerAckFail">Decision, what will be done if consumer sends nack or doesn't send ack in time</param>
-        public HorseQueueConfigurator UseAckDeliveryHandler(AcknowledgeWhen producerAck, PutBackDecision consumerAckFail)
+        public HorseQueueConfigurator UseAckDeliveryHandler(CommitWhen producerAck, PutBackDecision consumerAckFail)
         {
             return UseAckDeliveryHandler("Default", producerAck, consumerAckFail);
         }
@@ -101,7 +101,7 @@ namespace Horse.Messaging.Server.Queues
         /// <param name="name">Delivery handler name</param>
         /// <param name="producerAck">Decision, when producer will receive acknowledge (or confirm)</param>
         /// <param name="consumerAckFail">Decision, what will be done if consumer sends nack or doesn't send ack in time</param>
-        public HorseQueueConfigurator UseAckDeliveryHandler(string name, AcknowledgeWhen producerAck, PutBackDecision consumerAckFail)
+        public HorseQueueConfigurator UseAckDeliveryHandler(string name, CommitWhen producerAck, PutBackDecision consumerAckFail)
         {
             if (Rider.Queue.DeliveryHandlerFactories.ContainsKey(name))
                 throw new DuplicateNameException($"There is already registered Ack delivery handler with same name: {name}");

@@ -81,7 +81,7 @@ namespace Horse.Messaging.Data.Configuration
             if (queue.DeliveryHandler is IPersistentDeliveryHandler deliveryHandler)
             {
                 queueConfiguration.DeleteWhen = Convert.ToInt32(deliveryHandler.DeleteWhen);
-                queueConfiguration.ProducerAck = Convert.ToInt32(deliveryHandler.ProducerAckDecision);
+                queueConfiguration.CommitWhen = Convert.ToInt32(deliveryHandler.CommitWhen);
             }
 
             lock (_optionsLock)

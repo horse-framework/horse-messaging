@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Horse.Messaging.Data;
 using Horse.Messaging.Data.Configuration;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Handlers;
 using Horse.Server;
 using Xunit;
 
@@ -68,11 +68,11 @@ namespace Test.Persistency
             HorseRider rider = server.UseRider(cfg => cfg.ConfigureQueues(c =>
             {
                 c.UsePersistentDeliveryHandler(
-                    c =>
+                    cx =>
                     {
-                        c.UseInstantFlush()
+                        cx.UseInstantFlush()
                             .SetAutoShrink(true, TimeSpan.FromSeconds(60));
-                    }, DeleteWhen.AfterSend, ProducerAckDecision.None, true);
+                    }, DeleteWhen.AfterSend, CommitWhen.None, true);
             }));
 
             HorseQueue queue = await rider.Queue.Create("reload-test", o => o.Type = QueueType.Push);
@@ -94,7 +94,7 @@ namespace Test.Persistency
             {
                 c.UsePersistentDeliveryHandler(
                     c => { c.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
-                    DeleteWhen.AfterSend, ProducerAckDecision.None, true);
+                    DeleteWhen.AfterSend, CommitWhen.None, true);
             }));
             await rider.LoadPersistentQueues();
             HorseQueue queue2 = rider.Queue.Find("reload-test");

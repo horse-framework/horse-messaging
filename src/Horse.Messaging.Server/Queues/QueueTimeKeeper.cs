@@ -108,6 +108,8 @@ namespace Horse.Messaging.Server.Queues
             foreach (QueueMessage message in temp)
             {
                 _queue.Info.AddMessageTimeout();
+                message.MarkAsTimedOut();
+                
                 Decision decision = await _queue.DeliveryHandler.MessageTimedOut(_queue, message);
                 await _queue.ApplyDecision(decision, message);
 
@@ -123,6 +125,8 @@ namespace Horse.Messaging.Server.Queues
             foreach (QueueMessage message in temp)
             {
                 _queue.Info.AddMessageTimeout();
+                message.MarkAsTimedOut();
+                
                 Decision decision = await _queue.DeliveryHandler.MessageTimedOut(_queue, message);
                 await _queue.ApplyDecision(decision, message);
 

@@ -18,9 +18,9 @@ namespace Horse.Messaging.Data.Configuration
         [JsonPropertyName("DeleteWhen")]
         public int DeleteWhen { get; set; }
 
-        [JsonProperty("ProducerAck")]
-        [JsonPropertyName("ProducerAck")]
-        public int ProducerAck { get; set; }
+        [JsonProperty("CommitWhen")]
+        [JsonPropertyName("CommitWhen")]
+        public int CommitWhen { get; set; }
 
         [JsonProperty("Configuration")]
         [JsonPropertyName("Configuration")]

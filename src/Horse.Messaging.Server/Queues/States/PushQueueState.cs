@@ -75,7 +75,7 @@ namespace Horse.Messaging.Server.Queues.States
             //create prepared message data
             byte[] messageData = HorseProtocolWriter.Create(message.Message);
 
-            Decision final = new Decision(false, false, PutBackDecision.No, DeliveryAcknowledgeDecision.None);
+            Decision final = Decision.NoveNext();
             bool messageIsSent = false;
 
             //to all receivers
@@ -89,7 +89,7 @@ namespace Horse.Messaging.Server.Queues.States
                 Decision ccrd = await _queue.DeliveryHandler.CanConsumerReceive(_queue, message, client.Client);
                 final = HorseQueue.CreateFinalDecision(final, ccrd);
 
-                if (!ccrd.Allow)
+                if (ccrd.Interrupt)
                     continue;
 
                 //create delivery object
@@ -141,12 +141,6 @@ namespace Horse.Messaging.Server.Queues.States
 
             message.Decision = await _queue.DeliveryHandler.EndSend(_queue, message);
             await _queue.ApplyDecision(message.Decision, message);
-
-            if (message.Decision.Allow && message.Decision.PutBack == PutBackDecision.No)
-            {
-                _queue.Info.AddMessageRemove();
-                _ = _queue.DeliveryHandler.MessageDequeued(_queue, message);
-            }
 
             return PushResult.Success;
         }

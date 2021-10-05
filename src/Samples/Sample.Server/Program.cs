@@ -3,9 +3,9 @@ using System.Reflection.Metadata;
 using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Data;
 using Horse.Messaging.Server;
-using Horse.Messaging.Server.Handlers;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
+using Horse.Messaging.Server.Queues.Handlers;
 using Horse.Messaging.Server.Transactions;
 using Horse.Server;
 
@@ -21,8 +21,8 @@ namespace Sample.Server
 																 {
 																	 cfg.Options.Type = QueueType.Push;
 																	 cfg.EventHandlers.Add(new QueueEventHandler());
-																	 cfg.UseAckDeliveryHandler(AcknowledgeWhen.AfterReceived, PutBackDecision.No);
-																	 cfg.UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterSaved);
+																	 cfg.UseAckDeliveryHandler(CommitWhen.AfterReceived, PutBackDecision.No);
+																	 cfg.UsePersistentDeliveryHandler(DeleteWhen.AfterAcknowledge, CommitWhen.AfterSaved);
 																 })
 												.ConfigureClients(cfg => { cfg.Handlers.Add(new ClientHandler()); })
 												.Build();

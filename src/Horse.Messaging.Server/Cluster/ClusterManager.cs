@@ -473,7 +473,7 @@ namespace Horse.Messaging.Server.Cluster
                     _ = node.SendMessage(message);
         }
 
-        internal async Task<bool> SendQueueMessageToNodes(HorseMessage message)
+        internal async Task<bool> SendQueueMessage(HorseMessage message)
         {
             if (State == NodeState.Single)
                 return true;
@@ -547,7 +547,7 @@ namespace Horse.Messaging.Server.Cluster
             }
         }
 
-        internal void SendPutBackToNodes(HorseQueue queue, HorseMessage message, bool end)
+        internal void SendPutBack(HorseQueue queue, HorseMessage message, bool end)
         {
             HorseMessage msg = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.NodePutBackQueueMessage);
             msg.SetMessageId(message.MessageId);
@@ -562,7 +562,7 @@ namespace Horse.Messaging.Server.Cluster
             }
         }
 
-        internal void SendMessageRemovalToNodes(HorseQueue queue, HorseMessage message)
+        internal void SendMessageRemoval(HorseQueue queue, HorseMessage message)
         {
             HorseMessage msg = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.NodeRemoveQueueMessage);
             msg.SetMessageId(message.MessageId);

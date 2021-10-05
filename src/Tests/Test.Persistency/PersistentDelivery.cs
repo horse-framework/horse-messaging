@@ -6,6 +6,7 @@ using Horse.Messaging.Data.Configuration;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Handlers;
 using Horse.Server;
 using Xunit;
 
@@ -29,7 +30,7 @@ namespace Test.Persistency
                                                                                               .UseInstantFlush();
                                                                                       },
                                                                                       DeleteWhen.AfterSend,
-                                                                                      ProducerAckDecision.None,
+                                                                                      CommitWhen.None,
                                                                                       true);
                                                    }));
             

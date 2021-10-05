@@ -309,7 +309,7 @@ namespace Horse.Messaging.Server.Queues
             }
 
             _clients.Clear();
-            
+
             Rider.Cluster.SendQueueRemoved(this);
         }
 
@@ -409,46 +409,6 @@ namespace Horse.Messaging.Server.Queues
                 return Store.GetPriorityNext(false);
 
             return Store.GetRegularNext(false);
-        }
-
-        /// <summary>
-        /// Changes message priority.
-        /// Removes message from previous prio queue and puts it new prio queue.
-        /// If putBack is true, item will be put to the end of the queue
-        /// </summary>
-        public async Task<bool> ChangeMessagePriority(QueueMessage message, bool highPriority, bool putBack = true)
-        {
-            if (message.Message.HighPriority == highPriority)
-                return false;
-
-            await RemoveMessage(message, true, true);
-            message.Message.HighPriority = highPriority;
-            Store.Put(message, putBack);
-            return true;
-        }
-
-        /// <summary>
-        /// Removes the message from the queue.
-        /// Remove operation will be canceled If force is false and message is not sent.
-        /// If silent is false, MessageRemoved method of delivery handler is called
-        /// </summary>
-        public async Task<bool> RemoveMessage(QueueMessage message, bool force = false, bool silent = false)
-        {
-            if (!force && !message.IsSent)
-                return false;
-
-            Store.Remove(message);
-
-            if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
-                Rider.Cluster.SendMessageRemovalToNodes(this, message.Message);
-
-            if (!silent)
-            {
-                Info.AddMessageRemove();
-                await DeliveryHandler.MessageDequeued(this, message);
-            }
-
-            return true;
         }
 
         /// <summary>
@@ -622,7 +582,7 @@ namespace Horse.Messaging.Server.Queues
             {
                 if (Rider.Cluster.Options.Mode == ClusterMode.Reliable && Rider.Cluster.State == NodeState.Main)
                 {
-                    bool ack = await Rider.Cluster.SendQueueMessageToNodes(message.Message);
+                    bool ack = await Rider.Cluster.SendQueueMessage(message.Message);
                     if (!ack)
                         return PushResult.Error;
                 }
@@ -656,8 +616,8 @@ namespace Horse.Messaging.Server.Queues
 
                     //the message is removed from the queue and it's not sent to consumers
                     //we should put the message back into the queue
-                    if (!message.IsInQueue && !message.IsSent)
-                        decision = new Decision(true, true, PutBackDecision.Start, DeliveryAcknowledgeDecision.None);
+                    if (!message.IsInQueue && !message.IsSent && !decision.Delete)
+                        ApplyPutBack(Decision.PutBackMessage(true), message, 1000);
 
                     if (State.ProcessingMessage != null)
                         await ApplyDecision(decision, State.ProcessingMessage);
@@ -728,8 +688,8 @@ namespace Horse.Messaging.Server.Queues
 
                         //the message is removed from the queue and it's not sent to consumers
                         //we should put the message back into the queue
-                        if (!message.IsInQueue && !message.IsSent)
-                            decision = new Decision(true, true, PutBackDecision.Start, DeliveryAcknowledgeDecision.None);
+                        if (!message.IsInQueue && !message.IsSent && !decision.Delete)
+                            ApplyPutBack(Decision.PutBackMessage(true), message, 1000);
 
                         await ApplyDecision(decision, message, null, 5000);
                     }
@@ -753,27 +713,20 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         internal static Decision CreateFinalDecision(Decision final, Decision decision)
         {
-            bool allow = false;
-            PutBackDecision putBack = PutBackDecision.No;
-            bool save = false;
-            DeliveryAcknowledgeDecision ack = DeliveryAcknowledgeDecision.None;
+            bool save = final.Save || decision.Save;
+            bool interrupt = final.Interrupt || decision.Interrupt;
+            bool delete = final.Delete || decision.Delete;
 
-            if (decision.Allow)
-                allow = true;
-
+            PutBackDecision putBack = final.PutBack;
+            DecisionTransmission transmission = final.Transmission;
+            
             if (decision.PutBack != PutBackDecision.No)
                 putBack = decision.PutBack;
 
-            if (decision.SaveMessage)
-                save = true;
+            if (decision.Transmission != DecisionTransmission.None)
+                transmission = decision.Transmission;
 
-            if (decision.Acknowledge == DeliveryAcknowledgeDecision.Always)
-                ack = DeliveryAcknowledgeDecision.Always;
-
-            else if (decision.Acknowledge == DeliveryAcknowledgeDecision.IfSaved && final.Acknowledge == DeliveryAcknowledgeDecision.None)
-                ack = DeliveryAcknowledgeDecision.IfSaved;
-
-            return new Decision(allow, save, putBack, ack);
+            return new Decision(interrupt, save, delete, putBack, transmission);
         }
 
         /// <summary>
@@ -786,32 +739,30 @@ namespace Horse.Messaging.Server.Queues
         {
             try
             {
-                if (decision.SaveMessage)
+                if (decision.Save)
                     await SaveMessage(message);
 
-                if (!message.IsProducerAckSent && (decision.Acknowledge == DeliveryAcknowledgeDecision.Always ||
-                                                   decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ||
-                                                   decision.Acknowledge == DeliveryAcknowledgeDecision.IfSaved && message.IsSaved))
+                if (decision.Transmission != DecisionTransmission.None && !message.IsProducerAckSent)
                 {
-                    HorseMessage acknowledge = customAck ?? message.Message.CreateAcknowledge(decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ? "none" : null);
-
+                    HorseMessage acknowledge = customAck ?? message.Message.CreateAcknowledge(decision.Transmission == DecisionTransmission.Failed ? "failed" : null);
                     if (message.Source != null && message.Source.IsConnected)
                     {
                         bool sent = await message.Source.SendAsync(acknowledge);
                         message.IsProducerAckSent = sent;
-                        if (decision.AcknowledgeDelivery != null)
-                            await decision.AcknowledgeDelivery(message, message.Source, sent);
                     }
-                    else if (decision.AcknowledgeDelivery != null)
-                        await decision.AcknowledgeDelivery(message, message.Source, false);
                 }
-
+                
                 if (decision.PutBack != PutBackDecision.No)
                     ApplyPutBack(decision, message, forceDelay);
-                else if (!decision.Allow)
+                else if (decision.Delete)
                 {
                     Info.AddMessageRemove();
+                    message.MarkAsRemoved();
+                    
                     _ = DeliveryHandler.MessageDequeued(this, message);
+
+                    if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                        Rider.Cluster.SendMessageRemoval(this, message.Message);
                 }
             }
             catch (Exception e)
@@ -819,7 +770,7 @@ namespace Horse.Messaging.Server.Queues
                 Rider.SendError("APPLY_DECISION", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
             }
 
-            return decision.Allow;
+            return !decision.Interrupt;
         }
 
         /// <summary>
@@ -831,7 +782,12 @@ namespace Horse.Messaging.Server.Queues
             {
                 case PutBackDecision.Start:
                     if (Options.PutBackDelay == 0)
+                    {
                         AddMessage(message, false);
+
+                        if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                            Rider.Cluster.SendPutBack(this, message.Message, false);
+                    }
                     else
                         _ = Task.Run(async () =>
                         {
@@ -840,7 +796,7 @@ namespace Horse.Messaging.Server.Queues
                                 await Task.Delay(Options.PutBackDelay);
 
                                 if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
-                                    Rider.Cluster.SendPutBackToNodes(this, message.Message, false);
+                                    Rider.Cluster.SendPutBack(this, message.Message, false);
 
                                 AddMessage(message, false);
                             }
@@ -849,11 +805,17 @@ namespace Horse.Messaging.Server.Queues
                                 Rider.SendError("DELAYED_PUT_BACK", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
                             }
                         });
+
                     break;
 
                 case PutBackDecision.End:
                     if (Options.PutBackDelay == 0 && forceDelay == 0)
+                    {
                         AddMessage(message);
+
+                        if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                            Rider.Cluster.SendPutBack(this, message.Message, true);
+                    }
                     else
                         _ = Task.Run(async () =>
                         {
@@ -862,7 +824,7 @@ namespace Horse.Messaging.Server.Queues
                                 await Task.Delay(Math.Max(forceDelay, Options.PutBackDelay));
 
                                 if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
-                                    Rider.Cluster.SendPutBackToNodes(this, message.Message, true);
+                                    Rider.Cluster.SendPutBack(this, message.Message, true);
 
                                 AddMessage(message);
                             }
@@ -871,6 +833,7 @@ namespace Horse.Messaging.Server.Queues
                                 Rider.SendError("DELAYED_PUT_BACK", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
                             }
                         });
+
                     break;
             }
         }
@@ -937,7 +900,7 @@ namespace Horse.Messaging.Server.Queues
                     return;
 
                 MessageDelivery delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
-                
+
                 //when server and consumer are in pc,
                 //sometimes consumer sends ack before server start to follow ack of the message
                 //that happens when ack message is arrived in less than 0.01ms
@@ -956,16 +919,16 @@ namespace Horse.Messaging.Server.Queues
                     }
                 }
 
+                if (delivery == null || delivery.Acknowledge == DeliveryAcknowledge.Timeout)
+                    return;
+
                 bool success = !(deliveryMessage.HasHeader &&
                                  deliveryMessage.Headers.Any(x => x.Key.Equals(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)));
 
-                if (delivery != null)
-                {
-                    if (delivery.Receiver != null && delivery.Message == delivery.Receiver.CurrentlyProcessing)
-                        delivery.Receiver.CurrentlyProcessing = null;
+                if (delivery.Receiver != null && delivery.Message == delivery.Receiver.CurrentlyProcessing)
+                    delivery.Receiver.CurrentlyProcessing = null;
 
-                    delivery.MarkAsAcknowledged(success);
-                }
+                delivery.MarkAsAcknowledged(success);
 
                 if (success)
                     Info.AddAcknowledge();
@@ -974,9 +937,7 @@ namespace Horse.Messaging.Server.Queues
 
                 Decision decision = await DeliveryHandler.AcknowledgeReceived(this, deliveryMessage, delivery, success);
 
-                // ReSharper disable once ConditionIsAlwaysTrueOrFalse (it's possible, resharper doesn't work properly in here)
-                if (delivery != null)
-                    await ApplyDecision(decision, delivery.Message, deliveryMessage);
+                await ApplyDecision(decision, delivery.Message, deliveryMessage);
 
                 foreach (IQueueMessageEventHandler handler in Rider.Queue.MessageHandlers.All())
                     _ = handler.OnAcknowledged(this, deliveryMessage, delivery, success);

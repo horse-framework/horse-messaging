@@ -262,7 +262,7 @@ namespace Horse.Messaging.Server.Cluster
                     {
                         //todo: send queue list with detailed options
                     }
-                    
+
                     throw new NotImplementedException();
                     break;
 
@@ -273,12 +273,12 @@ namespace Horse.Messaging.Server.Cluster
                 case KnownContentTypes.NodeQueueSyncRequest:
                 {
                     HorseQueue queue = Rider.Queue.Find(message.Target);
-                    
+
                     if (queue != null)
                         _ = queue.StartSync(this);
                     else
                         SendMessage(new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.NodeQueueMessageIdList));
-                    
+
                     break;
                 }
 
@@ -301,6 +301,35 @@ namespace Horse.Messaging.Server.Cluster
                         queue.FinishSync();
                     break;
                 }
+
+                #endregion
+
+
+                #region Queue Operations
+
+                case KnownContentTypes.CreateQueue:
+                    throw new NotImplementedException();
+                    break;
+
+                case KnownContentTypes.UpdateQueue:
+                    throw new NotImplementedException();
+                    break;
+
+                case KnownContentTypes.RemoveQueue:
+                    throw new NotImplementedException();
+                    break;
+
+                case KnownContentTypes.NodePushQueueMessage:
+                    throw new NotImplementedException();
+                    break;
+
+                case KnownContentTypes.NodePutBackQueueMessage:
+                    throw new NotImplementedException();
+                    break;
+
+                case KnownContentTypes.NodeRemoveQueueMessage:
+                    throw new NotImplementedException();
+                    break;
 
                 #endregion
             }

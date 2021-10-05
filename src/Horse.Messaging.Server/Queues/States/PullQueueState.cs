@@ -267,12 +267,6 @@ namespace Horse.Messaging.Server.Queues.States
             message.Decision = await _queue.DeliveryHandler.EndSend(_queue, message);
             await _queue.ApplyDecision(message.Decision, message);
 
-            if (message.Decision.Allow && message.Decision.PutBack == PutBackDecision.No)
-            {
-                _queue.Info.AddMessageRemove();
-                _ = _queue.DeliveryHandler.MessageDequeued(_queue, message);
-            }
-
             return true;
         }
 

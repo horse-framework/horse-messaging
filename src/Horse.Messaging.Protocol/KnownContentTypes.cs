@@ -286,18 +286,23 @@ namespace Horse.Messaging.Protocol
         public const ushort NodeQueueSyncCompletion = 717;
 
         /// <summary>
+        /// "720" Cluster node acknowledge
+        /// </summary>
+        public const ushort ClusterNodeAcknowledge = 720;
+        
+        /// <summary>
         /// "715" Node push queue message
         /// </summary>
-        public const ushort NodePushQueueMessage = 715;
+        public const ushort NodePushQueueMessage = 721;
         
         /// <summary>
         /// "716" Node put back queue message
         /// </summary>
-        public const ushort NodePutBackQueueMessage = 716;
+        public const ushort NodePutBackQueueMessage = 722;
         
         /// <summary>
         /// "717" Node remove queue message
         /// </summary>
-        public const ushort NodeRemoveQueueMessage = 717;
+        public const ushort NodeRemoveQueueMessage = 723;
     }
 }

@@ -5,6 +5,7 @@ using Horse.Messaging.Data.Configuration;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
+using Horse.Messaging.Server.Queues.Handlers;
 
 namespace Horse.Messaging.Data
 {
@@ -29,19 +30,19 @@ namespace Horse.Messaging.Data
         /// </summary>
         /// <param name="cfg">Horse Clietn configurator Builder</param>
         /// <param name="deleteWhen">Decision when messages are deleted from disk</param>
-        /// <param name="producerAckDecision">Decision when producer receives acknowledge</param>
+        /// <param name="commitWhen">Decision when producer receives commit</param>
         /// <param name="useRedelivery">True if want to keep redelivery data and send to consumers with message headers</param>
         /// <param name="ackTimeoutPutback">Putback decision when ack message isn't received</param>
         /// <param name="nackPutback">Putback decision when negative ack is received</param>
         /// <returns></returns>
         public static HorseQueueConfigurator UsePersistentDeliveryHandler(this HorseQueueConfigurator cfg,
                                                                           DeleteWhen deleteWhen,
-                                                                          ProducerAckDecision producerAckDecision,
+                                                                          CommitWhen commitWhen,
                                                                           bool useRedelivery = false,
                                                                           PutBackDecision ackTimeoutPutback = PutBackDecision.End,
                                                                           PutBackDecision nackPutback = PutBackDecision.End)
         {
-            return UsePersistentDeliveryHandler(cfg, _ => { }, deleteWhen, producerAckDecision, useRedelivery, ackTimeoutPutback, nackPutback);
+            return UsePersistentDeliveryHandler(cfg, _ => { }, deleteWhen, commitWhen, useRedelivery, ackTimeoutPutback, nackPutback);
         }
 
         /// <summary>
@@ -50,7 +51,7 @@ namespace Horse.Messaging.Data
         /// <param name="cfg">Horse Clietn configurator Builder</param>
         /// <param name="dataConfigurator">Persistent data store configurator</param>
         /// <param name="deleteWhen">Decision when messages are deleted from disk</param>
-        /// <param name="producerAckDecision">Decision when producer receives acknowledge</param>
+        /// <param name="commitWhen">Decision when producer receives commit</param>
         /// <param name="useRedelivery">True if want to keep redelivery data and send to consumers with message headers</param>
         /// <param name="ackTimeoutPutback">Putback decision when ack message isn't received</param>
         /// <param name="nackPutback">Putback decision when negative ack is received</param>
@@ -58,7 +59,7 @@ namespace Horse.Messaging.Data
         public static HorseQueueConfigurator UsePersistentDeliveryHandler(this HorseQueueConfigurator cfg,
                                                                           Action<DataConfigurationBuilder> dataConfigurator,
                                                                           DeleteWhen deleteWhen,
-                                                                          ProducerAckDecision producerAckDecision,
+                                                                          CommitWhen commitWhen,
                                                                           bool useRedelivery = false,
                                                                           PutBackDecision ackTimeoutPutback = PutBackDecision.End,
                                                                           PutBackDecision nackPutback = PutBackDecision.End)
@@ -76,7 +77,7 @@ namespace Horse.Messaging.Data
                 DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(dh.Queue);
                 PersistentDeliveryHandler handler = new PersistentDeliveryHandler(dh.Queue, databaseOptions,
                                                                                   deleteWhen,
-                                                                                  producerAckDecision,
+                                                                                  commitWhen,
                                                                                   useRedelivery);
 
                 handler.AckTimeoutPutBack = ackTimeoutPutback;
@@ -106,21 +107,21 @@ namespace Horse.Messaging.Data
         /// </summary>
         /// <param name="builder">Delivery handler builder</param>
         /// <param name="deleteWhen">Decision when messages are deleted from disk</param>
-        /// <param name="producerAckDecision">Decision when producer receives acknowledge</param>
+        /// <param name="commitWhen">Decision when producer receives commit</param>
         /// <param name="useRedelivery">True if want to keep redelivery data and send to consumers with message headers</param>
         /// <param name="ackTimeoutPutback">Putback decision when ack message isn't received</param>
         /// <param name="nackPutback">Putback decision when negative ack is received</param>
         /// <returns></returns>
         public static async Task<IMessageDeliveryHandler> CreatePersistentDeliveryHandler(this DeliveryHandlerBuilder builder,
                                                                                           DeleteWhen deleteWhen,
-                                                                                          ProducerAckDecision producerAckDecision,
+                                                                                          CommitWhen commitWhen,
                                                                                           bool useRedelivery = false,
                                                                                           PutBackDecision ackTimeoutPutback = PutBackDecision.End,
                                                                                           PutBackDecision nackPutback = PutBackDecision.End)
         {
             DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
             PersistentDeliveryHandler handler =
-                new PersistentDeliveryHandler(builder.Queue, databaseOptions, deleteWhen, producerAckDecision, useRedelivery);
+                new PersistentDeliveryHandler(builder.Queue, databaseOptions, deleteWhen, commitWhen, useRedelivery);
             handler.AckTimeoutPutBack = ackTimeoutPutback;
             handler.NegativeAckPutBack = nackPutback;
             await handler.Initialize();

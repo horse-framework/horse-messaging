@@ -7,6 +7,7 @@ using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
+using Horse.Messaging.Server.Queues.Handlers;
 
 namespace Horse.Messaging.Data
 {
@@ -33,9 +34,9 @@ namespace Horse.Messaging.Data
         public DeleteWhen DeleteWhen { get; }
 
         /// <summary>
-        /// Option when to send acknowledge to producer
+        /// Option when to send commit to producer
         /// </summary>
-        public ProducerAckDecision ProducerAckDecision { get; }
+        public CommitWhen CommitWhen { get; }
 
         /// <summary>
         /// Put back decision when a negative acknowledge received by consumer.
@@ -67,12 +68,12 @@ namespace Horse.Messaging.Data
         public PersistentDeliveryHandler(HorseQueue queue,
                                          DatabaseOptions options,
                                          DeleteWhen deleteWhen,
-                                         ProducerAckDecision producerAckDecision,
+                                         CommitWhen commitWhen,
                                          bool useRedelivery = false)
         {
             Queue = queue;
             DeleteWhen = deleteWhen;
-            ProducerAckDecision = producerAckDecision;
+            CommitWhen = commitWhen;
             Database = new Database(options);
             UseRedelivery = useRedelivery;
         }
@@ -84,12 +85,12 @@ namespace Horse.Messaging.Data
         {
             if (Queue.Options.Acknowledge == QueueAckDecision.None)
             {
-                if (DeleteWhen == DeleteWhen.AfterAcknowledgeReceived)
+                if (DeleteWhen == DeleteWhen.AfterAcknowledge)
                     throw new NotSupportedException("Delete option is AfterAcknowledgeReceived but queue Acknowledge option is None. " +
                                                     "Messages are not deleted from disk with this configuration. " +
                                                     "Please change queue Acknowledge option or DeleteWhen option");
 
-                if (ProducerAckDecision == ProducerAckDecision.AfterConsumerAckReceived)
+                if (CommitWhen == CommitWhen.AfterAcknowledge)
                     throw new NotSupportedException("Producer Ack option is AfterConsumerAckReceived but queue Acknowledge option is None. " +
                                                     "Messages are not deleted from disk with this configuration. " +
                                                     "Please change queue Acknowledge option or ProducerAckDecision option");
@@ -168,15 +169,22 @@ namespace Horse.Messaging.Data
         #region Events
 
         /// <inheritdoc />
-        public virtual Task<Decision> ReceivedFromProducer(HorseQueue queue, QueueMessage message, MessagingClient sender)
+        public virtual async Task<Decision> ReceivedFromProducer(HorseQueue queue, QueueMessage message, MessagingClient sender)
         {
-            DeliveryAcknowledgeDecision save = DeliveryAcknowledgeDecision.None;
-            if (ProducerAckDecision == ProducerAckDecision.AfterReceived)
-                save = DeliveryAcknowledgeDecision.Always;
-            else if (ProducerAckDecision == ProducerAckDecision.AfterSaved)
-                save = DeliveryAcknowledgeDecision.IfSaved;
+            if (CommitWhen == CommitWhen.AfterSaved)
+            {
+                bool saved = await SaveMessage(queue, message);
+                if (!saved)
+                {
+                    return Decision.InterruptFlow(false, DecisionTransmission.Failed);
+                }
 
-            return Task.FromResult(new Decision(true, true, PutBackDecision.No, save));
+                return Decision.TransmitToProducer(DecisionTransmission.Commit);
+            }
+
+            return Decision.SaveMessage(CommitWhen == CommitWhen.AfterReceived
+                                            ? DecisionTransmission.Commit
+                                            : DecisionTransmission.None);
         }
 
         /// <inheritdoc />
@@ -191,59 +199,77 @@ namespace Horse.Messaging.Data
                     message.Message.SetOrAddHeader(HorseHeaders.DELIVERY, message.DeliveryCount.ToString());
             }
 
-            return new Decision(true, true, PutBackDecision.No, DeliveryAcknowledgeDecision.None);
+            return Decision.NoveNext();
         }
 
         /// <inheritdoc />
         public virtual Task<Decision> CanConsumerReceive(HorseQueue queue, QueueMessage message, MessagingClient receiver)
         {
-            return Task.FromResult(Decision.JustAllow());
+            return Task.FromResult(Decision.NoveNext());
         }
 
         /// <inheritdoc />
         public virtual Task<Decision> ConsumerReceived(HorseQueue queue, MessageDelivery delivery, MessagingClient receiver)
         {
-            return Task.FromResult(Decision.JustAllow());
+            return Task.FromResult(Decision.NoveNext());
         }
 
         /// <inheritdoc />
         public virtual Task<Decision> ConsumerReceiveFailed(HorseQueue queue, MessageDelivery delivery, MessagingClient receiver)
         {
-            return Task.FromResult(Decision.JustAllow());
+            return Task.FromResult(Decision.NoveNext());
         }
 
         /// <inheritdoc />
         public virtual async Task<Decision> EndSend(HorseQueue queue, QueueMessage message)
         {
             if (message.SendCount == 0)
-                return new Decision(true, true, PutBackDecision.Start, DeliveryAcknowledgeDecision.None);
+                return Decision.PutBackMessage(false);
 
             if (DeleteWhen == DeleteWhen.AfterSend)
+            {
                 await DeleteMessage(message.Message.MessageId);
+                return Decision.DeleteMessage();
+            }
 
-            return Decision.JustAllow();
+            return Decision.NoveNext();
         }
 
         /// <inheritdoc />
         public virtual async Task<Decision> AcknowledgeReceived(HorseQueue queue, HorseMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
-            if (delivery != null && success && DeleteWhen == DeleteWhen.AfterAcknowledgeReceived)
-                await DeleteMessage(delivery.Message.Message.MessageId);
+            if (success)
+            {
+                if (DeleteWhen == DeleteWhen.AfterAcknowledge)
+                {
+                    await DeleteMessage(delivery.Message.Message.MessageId);
+                    return Decision.DeleteMessage(CommitWhen == CommitWhen.AfterAcknowledge
+                                                      ? DecisionTransmission.Commit
+                                                      : DecisionTransmission.None);
+                }
 
-            DeliveryAcknowledgeDecision ack = DeliveryAcknowledgeDecision.None;
-            if (ProducerAckDecision == ProducerAckDecision.AfterConsumerAckReceived)
-                ack = success ? DeliveryAcknowledgeDecision.Always : DeliveryAcknowledgeDecision.Negative;
+                if (CommitWhen == CommitWhen.AfterAcknowledge)
+                    return Decision.TransmitToProducer(DecisionTransmission.Commit);
+            }
+            else
+            {
+                if (CommitWhen == CommitWhen.AfterAcknowledge)
+                {
+                    if (NegativeAckPutBack == PutBackDecision.No)
+                        return Decision.TransmitToProducer(DecisionTransmission.Failed);
 
-            PutBackDecision putBack = success ? PutBackDecision.No : NegativeAckPutBack;
+                    return Decision.PutBackMessage(NegativeAckPutBack == PutBackDecision.End, DecisionTransmission.Failed);
+                }
+            }
 
-            return new Decision(true, false, putBack, ack);
+            return Decision.NoveNext();
         }
 
         /// <inheritdoc />
         public virtual async Task<Decision> MessageTimedOut(HorseQueue queue, QueueMessage message)
         {
             await DeleteMessage(message.Message.MessageId);
-            return Decision.JustAllow();
+            return Decision.DeleteMessage();
         }
 
         /// <summary>
@@ -267,25 +293,36 @@ namespace Horse.Messaging.Data
         /// <inheritdoc />
         public virtual Task<Decision> AcknowledgeTimedOut(HorseQueue queue, MessageDelivery delivery)
         {
-            DeliveryAcknowledgeDecision ack = ProducerAckDecision == ProducerAckDecision.AfterConsumerAckReceived
-                ? DeliveryAcknowledgeDecision.Negative
-                : DeliveryAcknowledgeDecision.None;
-
             if (AckTimeoutPutBack == PutBackDecision.No)
             {
-                QueueMessage queueMessage = delivery?.Message;
+                QueueMessage queueMessage = delivery.Message;
 
-                if (queueMessage != null)
+                if (!queueMessage.IsRemoved)
+                {
                     _ = DeleteMessage(queueMessage.Message.MessageId);
+                    return Task.FromResult(Decision.DeleteMessage(CommitWhen == CommitWhen.AfterAcknowledge
+                                                                      ? DecisionTransmission.Failed
+                                                                      : DecisionTransmission.None));
+                }
+
+                if (CommitWhen == CommitWhen.AfterAcknowledge)
+                    return Task.FromResult(Decision.TransmitToProducer(DecisionTransmission.Failed));
+            }
+            else
+            {
+                return Task.FromResult(Decision.PutBackMessage(AckTimeoutPutBack == PutBackDecision.End,
+                                                               CommitWhen == CommitWhen.AfterAcknowledge
+                                                                   ? DecisionTransmission.Failed
+                                                                   : DecisionTransmission.None));
             }
 
-            return Task.FromResult(new Decision(true, false, AckTimeoutPutBack, ack));
+            return Task.FromResult(Decision.NoveNext());
         }
 
         /// <inheritdoc />
         public virtual Task MessageDequeued(HorseQueue queue, QueueMessage message)
         {
-            return Task.FromResult(Decision.JustAllow());
+            return Task.CompletedTask;
         }
 
         /// <inheritdoc />
@@ -294,7 +331,7 @@ namespace Horse.Messaging.Data
             if (ConfigurationFactory.Builder.ErrorAction != null)
                 ConfigurationFactory.Builder.ErrorAction(queue, message, exception);
 
-            return Task.FromResult(Decision.JustAllow());
+            return Task.FromResult(Decision.NoveNext());
         }
 
         /// <inheritdoc />

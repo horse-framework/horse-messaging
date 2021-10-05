@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Handlers;
 
 namespace Horse.Messaging.Data
 {
@@ -26,9 +27,9 @@ namespace Horse.Messaging.Data
         DeleteWhen DeleteWhen { get; }
 
         /// <summary>
-        /// Option when to send acknowledge to producer
+        /// Option when to send commit to producer
         /// </summary>
-        ProducerAckDecision ProducerAckDecision { get; }
+        public CommitWhen CommitWhen { get; }
 
         /// <summary>
         /// Initializes handler and loads the queue
