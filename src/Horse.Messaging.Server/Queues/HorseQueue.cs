@@ -754,10 +754,10 @@ namespace Horse.Messaging.Server.Queues
                 
                 if (decision.PutBack != PutBackDecision.No)
                     ApplyPutBack(decision, message, forceDelay);
-                else if (decision.Delete)
+                else if (decision.Delete && !message.IsRemoved)
                 {
-                    Info.AddMessageRemove();
                     message.MarkAsRemoved();
+                    Info.AddMessageRemove();
                     
                     _ = DeliveryHandler.MessageDequeued(this, message);
 
