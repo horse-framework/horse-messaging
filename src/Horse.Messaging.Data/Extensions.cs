@@ -39,8 +39,8 @@ namespace Horse.Messaging.Data
                                                                           DeleteWhen deleteWhen,
                                                                           CommitWhen commitWhen,
                                                                           bool useRedelivery = false,
-                                                                          PutBackDecision ackTimeoutPutback = PutBackDecision.End,
-                                                                          PutBackDecision nackPutback = PutBackDecision.End)
+                                                                          PutBackDecision ackTimeoutPutback = PutBackDecision.Regular,
+                                                                          PutBackDecision nackPutback = PutBackDecision.Regular)
         {
             return UsePersistentDeliveryHandler(cfg, _ => { }, deleteWhen, commitWhen, useRedelivery, ackTimeoutPutback, nackPutback);
         }
@@ -61,8 +61,8 @@ namespace Horse.Messaging.Data
                                                                           DeleteWhen deleteWhen,
                                                                           CommitWhen commitWhen,
                                                                           bool useRedelivery = false,
-                                                                          PutBackDecision ackTimeoutPutback = PutBackDecision.End,
-                                                                          PutBackDecision nackPutback = PutBackDecision.End)
+                                                                          PutBackDecision ackTimeoutPutback = PutBackDecision.Regular,
+                                                                          PutBackDecision nackPutback = PutBackDecision.Regular)
         {
             DataConfigurationBuilder dataConfigurationBuilder = new DataConfigurationBuilder();
             dataConfigurator(dataConfigurationBuilder);
@@ -116,8 +116,8 @@ namespace Horse.Messaging.Data
                                                                                           DeleteWhen deleteWhen,
                                                                                           CommitWhen commitWhen,
                                                                                           bool useRedelivery = false,
-                                                                                          PutBackDecision ackTimeoutPutback = PutBackDecision.End,
-                                                                                          PutBackDecision nackPutback = PutBackDecision.End)
+                                                                                          PutBackDecision ackTimeoutPutback = PutBackDecision.Regular,
+                                                                                          PutBackDecision nackPutback = PutBackDecision.Regular)
         {
             DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
             PersistentDeliveryHandler handler =

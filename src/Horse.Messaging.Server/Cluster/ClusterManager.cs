@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -79,6 +80,8 @@ namespace Horse.Messaging.Server.Cluster
         private DateTime _askingForMainExpiration = DateTime.UtcNow;
         private readonly object _askLock = new();
         private Thread _stateThread;
+
+        private readonly SemaphoreSlim _queueSyncSlim = new SemaphoreSlim(1, 1);
 
         #endregion
 
@@ -618,7 +621,7 @@ namespace Horse.Messaging.Server.Cluster
                 return;
 
             HorseMessage msg = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.RemoveQueue);
-            
+
             foreach (NodeClient client in Clients)
             {
                 if (!client.IsConnected)
@@ -627,7 +630,7 @@ namespace Horse.Messaging.Server.Cluster
                 _ = client.SendMessage(msg);
             }
         }
-        
+
         #endregion
 
         #region Queue Sync
@@ -651,12 +654,104 @@ namespace Horse.Messaging.Server.Cluster
             return Task.CompletedTask;
         }
 
+        internal async Task ProcessQueueList(NodeClient client, List<NodeQueueInfo> infoList)
+        {
+            HorseQueue[] queues = Rider.Queue.Queues.ToArray();
+            foreach (HorseQueue queue in queues)
+            {
+                NodeQueueInfo info = infoList.FirstOrDefault(x => x.Name == queue.Name);
+                if (info == null)
+                    await Rider.Queue.Remove(queue);
+            }
+
+            if (_queueSyncSlim.CurrentCount == 0)
+            {
+                try
+                {
+                    _queueSyncSlim.Release();
+                }
+                catch
+                {
+                }
+            }
+
+            foreach (NodeQueueInfo info in infoList)
+            {
+                HorseQueue queue = queues.FirstOrDefault(x => x.Name == info.Name);
+                if (queue == null)
+                    queue = await Rider.Queue.CreateReplica(info);
+                else
+                    queue.UpdateOptionsByNodeInfo(info);
+
+                try
+                {
+                    await _queueSyncSlim.WaitAsync(TimeSpan.FromMilliseconds(1500));
+                    await SendQueueSyncRequest(client, queue);
+                }
+                catch
+                {
+                }
+                finally
+                {
+                    _queueSyncSlim.Release();
+                }
+            }
+        }
+
+        internal Task ProcessMessageIds(NodeClient client, HorseQueue queue, string messageContent)
+        {
+            string[] lines = messageContent.Split(Environment.NewLine);
+            int emptyIndex = -1;
+            for (int i = 0; i < lines.Length; i++)
+                if (lines[i] == string.Empty)
+                {
+                    emptyIndex = i;
+                    break;
+                }
+
+            string[] prioMessages = emptyIndex > 0
+                ? new string[emptyIndex - 1]
+                : Array.Empty<string>();
+
+            int regularCount = emptyIndex < 0
+                ? lines.Length
+                : (lines.Length - emptyIndex - 1);
+
+            string[] messages = regularCount > 0
+                ? new string[regularCount]
+                : Array.Empty<string>();
+
+            IEnumerable<string> requestMessages = queue.CheckSync(prioMessages, messages);
+            string content = requestMessages.Aggregate((c, s) => $"{c}{Environment.NewLine}{s}");
+
+            HorseMessage message = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.NodeQueueMessageRequest);
+            message.SetStringContent(content);
+            return client.SendMessage(message);
+        }
+
+        internal async Task SendRequestedMessages(NodeClient client, HorseQueue queue, string[] requestMessageIds)
+        {
+            HorseMessage response = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.NodeQueueMessageResponse);
+            response.Content = new MemoryStream();
+
+            IEnumerable<HorseMessage> messages = queue.FindMessages(requestMessageIds);
+            foreach (HorseMessage msg in messages)
+            {
+                byte[] messageData = HorseProtocolWriter.Create(msg);
+                await response.Content.WriteAsync(messageData, 0, messageData.Length);
+            }
+
+            response.CalculateLengths();
+            await client.SendMessage(response);
+        }
+
         /// <summary>
         /// Sends a queue sync message to the main node
         /// </summary>
-        public Task SendQueueSyncRequest(HorseQueue queue)
+        public Task SendQueueSyncRequest(NodeClient client, HorseQueue queue)
         {
-            throw new NotImplementedException();
+            HorseMessage message = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.NodeQueueSyncRequest);
+            return client.SendMessage(message);
         }
 
         /// <summary>
@@ -675,27 +770,30 @@ namespace Horse.Messaging.Server.Cluster
         }
 
         /// <summary>
-        /// Sends queue message request to the main to receive missing messages
-        /// </summary>
-        public Task SendQueueMessageRequest(HorseQueue queue)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Sends queue message response to replica node
-        /// </summary>
-        public Task SendQueueMessageResponse(HorseQueue queue, NodeClient replica)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
         /// Sends a queue sync completion message to the main node
         /// </summary>
-        public Task SendQueueSyncCompletion(HorseQueue queue)
+        public async Task CompleteQueueSync(NodeClient client, HorseQueue queue, HorseMessage response)
         {
-            throw new NotImplementedException();
+            HorseProtocolReader reader = new HorseProtocolReader();
+
+            response.Content.Position = 0;
+            while (response.Content.Position < response.Content.Length)
+            {
+                HorseMessage queueMessage = await reader.Read(response.Content);
+                queue.SyncMessage(queueMessage);
+            }
+
+            try
+            {
+                if (_queueSyncSlim.CurrentCount == 0)
+                    _queueSyncSlim.Release();
+            }
+            catch
+            {
+            }
+            
+            HorseMessage message = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.NodeQueueSyncCompletion);
+            await client.SendMessage(message);
         }
 
         #endregion

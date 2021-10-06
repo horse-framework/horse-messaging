@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Horse.Messaging.Server.Queues.Store
@@ -29,7 +30,7 @@ namespace Horse.Messaging.Server.Queues.Store
         /// <summary>
         /// Puts a message into message store 
         /// </summary>
-        void Put(QueueMessage message, bool toEnd);
+        void Put(QueueMessage message);
 
         /// <summary>
         /// Returns id list of all messages
@@ -52,13 +53,6 @@ namespace Horse.Messaging.Server.Queues.Store
         QueueMessage GetPriorityNext(bool remove, bool fromEnd = false);
 
         /// <summary>
-        /// Puts a message back into the message store
-        /// </summary>
-        /// <param name="message">Queue message</param>
-        /// <param name="toEnd">If true, message is put at the end of the queue</param>
-        void PutBack(QueueMessage message, bool toEnd);
-
-        /// <summary>
         /// Finds message, removes from store and returns
         /// </summary>
         QueueMessage FindAndRemove(Func<QueueMessage, bool> predicate);
@@ -78,6 +72,18 @@ namespace Horse.Messaging.Server.Queues.Store
         /// </summary>
         List<QueueMessage> FindAndRemovePriority(Func<QueueMessage, bool> predicate);
 
+        /// <summary>
+        /// Gets all messages.
+        /// That method returns the messages without thread safe
+        /// </summary>
+        IEnumerable<QueueMessage> GetUnsafe();
+        
+        /// <summary>
+        /// Gets all priority messages.
+        /// That method returns the messages without thread safe
+        /// </summary>
+        IEnumerable<QueueMessage> GetUnsafePriority();
+        
         /// <summary>
         /// Finds and removes message from store
         /// </summary>

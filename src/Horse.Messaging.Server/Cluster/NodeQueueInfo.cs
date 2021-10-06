@@ -1,14 +1,12 @@
-﻿using System.Collections.Generic;
-
-namespace Horse.Messaging.Server.Cluster
+﻿namespace Horse.Messaging.Server.Cluster
 {
-    public class NodeQueueHandlerHeader
+    internal class NodeQueueHandlerHeader
     {
         public string Key { get; set; }
         public string Value { get; set; }
     }
 
-    public class NodeQueueInfo
+    internal class NodeQueueInfo
     {
         public string Name { get; set; }
         public string HandlerName { get; set; }
@@ -21,9 +19,7 @@ namespace Horse.Messaging.Server.Cluster
 
         public string Topic { get; set; }
         public string Acknowledge { get; set; }
-
         public int AcknowledgeTimeout { get; set; }
-
         public string AutoDestroy { get; set; }
 
         public int ClientLimit { get; set; }

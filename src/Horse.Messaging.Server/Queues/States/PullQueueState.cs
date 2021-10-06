@@ -153,9 +153,9 @@ namespace Horse.Messaging.Server.Queues.States
 
                         if (!message.IsInQueue)
                         {
-                            if (decision.PutBack == PutBackDecision.Start)
+                            if (decision.PutBack == PutBackDecision.Priority)
                                 _queue.AddMessage(message, false);
-                            else if (decision.PutBack == PutBackDecision.End)
+                            else if (decision.PutBack == PutBackDecision.Regular)
                                 _queue.AddMessage(message);
                         }
                     }

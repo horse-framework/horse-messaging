@@ -65,7 +65,7 @@ namespace Test.Common.Handlers
                 if (_rider.PutBack == PutBackDecision.No)
                     return Task.FromResult(Decision.TransmitToProducer(DecisionTransmission.Failed));
 
-                return Task.FromResult(Decision.PutBackMessage(_rider.PutBack == PutBackDecision.End, DecisionTransmission.Failed));
+                return Task.FromResult(Decision.PutBackMessage(_rider.PutBack == PutBackDecision.Regular, DecisionTransmission.Failed));
             }
 
             return Task.FromResult(Decision.TransmitToProducer(DecisionTransmission.Commit));
@@ -84,7 +84,7 @@ namespace Test.Common.Handlers
             if (_rider.PutBack == PutBackDecision.No)
                 return Task.FromResult(Decision.NoveNext());
             
-            return Task.FromResult(Decision.PutBackMessage(_rider.PutBack == PutBackDecision.End));
+            return Task.FromResult(Decision.PutBackMessage(_rider.PutBack == PutBackDecision.Regular));
         }
 
         public Task MessageDequeued(HorseQueue queue, QueueMessage message)

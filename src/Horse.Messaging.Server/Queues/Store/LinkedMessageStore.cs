@@ -7,8 +7,8 @@ namespace Horse.Messaging.Server.Queues.Store
     internal class LinkedMessageStore : IQueueMessageStore
     {
         private readonly HorseQueue _queue;
-        private readonly LinkedList<QueueMessage> _messages = new LinkedList<QueueMessage>();
-        private readonly LinkedList<QueueMessage> _messagesPrio = new LinkedList<QueueMessage>();
+        private readonly LinkedList<QueueMessage> _messages = new();
+        private readonly LinkedList<QueueMessage> _messagesPrio = new();
 
         public LinkedMessageStore(HorseQueue queue)
         {
@@ -30,7 +30,7 @@ namespace Horse.Messaging.Server.Queues.Store
             return _messagesPrio.Count;
         }
 
-        public void Put(QueueMessage message, bool toEnd)
+        public void Put(QueueMessage message)
         {
             if (message.Message.HighPriority)
             {
@@ -40,11 +40,7 @@ namespace Horse.Messaging.Server.Queues.Store
                         return;
 
                     message.IsInQueue = true;
-
-                    if (toEnd)
-                        _messagesPrio.AddLast(message);
-                    else
-                        _messagesPrio.AddFirst(message);
+                    _messagesPrio.AddFirst(message);
                 }
             }
             else
@@ -55,11 +51,7 @@ namespace Horse.Messaging.Server.Queues.Store
                         return;
 
                     message.IsInQueue = true;
-
-                    if (toEnd)
-                        _messages.AddLast(message);
-                    else
-                        _messages.AddFirst(message);
+                    _messages.AddLast(message);
                 }
             }
         }
@@ -154,40 +146,6 @@ namespace Horse.Messaging.Server.Queues.Store
             }
 
             return null;
-        }
-
-        public void PutBack(QueueMessage message, bool toEnd)
-        {
-            if (message.Message.HighPriority)
-            {
-                lock (_messagesPrio)
-                {
-                    if (message.IsInQueue)
-                        return;
-
-                    if (toEnd)
-                        _messagesPrio.AddLast(message);
-                    else
-                        _messagesPrio.AddFirst(message);
-
-                    message.IsInQueue = true;
-                }
-            }
-            else
-            {
-                lock (_messages)
-                {
-                    if (message.IsInQueue)
-                        return;
-
-                    if (toEnd)
-                        _messages.AddLast(message);
-                    else
-                        _messages.AddFirst(message);
-
-                    message.IsInQueue = true;
-                }
-            }
         }
 
         public QueueMessage FindAndRemove(Func<QueueMessage, bool> predicate)
@@ -286,6 +244,18 @@ namespace Horse.Messaging.Server.Queues.Store
             }
 
             return messages;
+        }
+
+        public IEnumerable<QueueMessage> GetUnsafe()
+        {
+            foreach (QueueMessage message in _messages)
+                yield return message;
+        }
+
+        public IEnumerable<QueueMessage> GetUnsafePriority()
+        {
+            foreach (QueueMessage message in _messagesPrio)
+                yield return message;
         }
 
         public void Remove(QueueMessage message)

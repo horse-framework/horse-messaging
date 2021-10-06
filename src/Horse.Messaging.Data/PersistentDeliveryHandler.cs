@@ -42,13 +42,13 @@ namespace Horse.Messaging.Data
         /// Put back decision when a negative acknowledge received by consumer.
         /// Default is End with no delay.
         /// </summary>
-        public PutBackDecision NegativeAckPutBack { get; set; } = PutBackDecision.End;
+        public PutBackDecision NegativeAckPutBack { get; set; } = PutBackDecision.Regular;
 
         /// <summary>
         /// Put back decision when acknowledge timed out.
         /// Default is End with no delay.
         /// </summary>
-        public PutBackDecision AckTimeoutPutBack { get; set; } = PutBackDecision.End;
+        public PutBackDecision AckTimeoutPutBack { get; set; } = PutBackDecision.Regular;
 
         /// <summary>
         /// Redelivery service for the queue
@@ -258,7 +258,7 @@ namespace Horse.Messaging.Data
                     if (NegativeAckPutBack == PutBackDecision.No)
                         return Decision.TransmitToProducer(DecisionTransmission.Failed);
 
-                    return Decision.PutBackMessage(NegativeAckPutBack == PutBackDecision.End, DecisionTransmission.Failed);
+                    return Decision.PutBackMessage(NegativeAckPutBack == PutBackDecision.Regular, DecisionTransmission.Failed);
                 }
             }
 
@@ -310,7 +310,7 @@ namespace Horse.Messaging.Data
             }
             else
             {
-                return Task.FromResult(Decision.PutBackMessage(AckTimeoutPutBack == PutBackDecision.End,
+                return Task.FromResult(Decision.PutBackMessage(AckTimeoutPutBack == PutBackDecision.Regular,
                                                                CommitWhen == CommitWhen.AfterAcknowledge
                                                                    ? DecisionTransmission.Failed
                                                                    : DecisionTransmission.None));

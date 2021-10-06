@@ -46,7 +46,7 @@ namespace Horse.Messaging.Server.Queues
                     message.Serialize(item, _queue.Rider.MessageContentSerializer);
                     QueueMessage qm = new QueueMessage(message, createAsSaved);
 
-                    _queue.Store.Put(qm, true);
+                    _queue.Store.Put(qm);
                 }
 
                 _ = _queue.Trigger();
@@ -85,7 +85,7 @@ namespace Horse.Messaging.Server.Queues
                     message.Serialize(item, _queue.Rider.MessageContentSerializer);
 
                     QueueMessage qm = new QueueMessage(message, createAsSaved);
-                    _queue.Store.Put(qm, true);
+                    _queue.Store.Put(qm);
                 }
 
                 _ = _queue.Trigger();
@@ -125,7 +125,7 @@ namespace Horse.Messaging.Server.Queues
                     message.CalculateLengths();
 
                     QueueMessage qm = new QueueMessage(message, createAsSaved);
-                    _queue.Store.Put(qm, true);
+                    _queue.Store.Put(qm);
                 }
 
                 _ = _queue.Trigger();
@@ -165,7 +165,7 @@ namespace Horse.Messaging.Server.Queues
                     message.CalculateLengths();
 
                     QueueMessage qm = new QueueMessage(message, createAsSaved);
-                    _queue.Store.Put(qm, true);
+                    _queue.Store.Put(qm);
                 }
 
                 _ = _queue.Trigger();
@@ -203,7 +203,7 @@ namespace Horse.Messaging.Server.Queues
                     message.CalculateLengths();
 
                     QueueMessage qm = new QueueMessage(message, isSaved);
-                    _queue.Store.Put(qm, true);
+                    _queue.Store.Put(qm);
 
                     if (actionPerMessage != null)
                         actionPerMessage(qm);

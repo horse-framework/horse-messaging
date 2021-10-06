@@ -20,7 +20,7 @@ namespace Test.Queues
             HorseQueue queue = server.Rider.Queue.Find("push-a");
             queue.Options.PutBackDelay = 2000;
             queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-            server.PutBack = PutBackDecision.Start;
+            server.PutBack = PutBackDecision.Priority;
 
             HorseClient producer = new HorseClient();
             await producer.ConnectAsync("horse://localhost:" + port);
@@ -66,7 +66,7 @@ namespace Test.Queues
             HorseQueue queue = server.Rider.Queue.Find("push-a");
             queue.Options.PutBackDelay = 0;
             queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-            server.PutBack = PutBackDecision.Start;
+            server.PutBack = PutBackDecision.Priority;
 
             HorseClient producer = new HorseClient();
             await producer.ConnectAsync("horse://localhost:" + port);

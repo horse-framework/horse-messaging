@@ -99,7 +99,7 @@ namespace Horse.Messaging.Server.Queues.Handlers
             if (success || putBack == PutBackDecision.No)
                 return Task.FromResult(Decision.DeleteMessage(transmission));
 
-            return Task.FromResult(Decision.PutBackMessage(putBack == PutBackDecision.End));
+            return Task.FromResult(Decision.PutBackMessage(putBack == PutBackDecision.Regular));
         }
 
         /// <summary>
@@ -118,7 +118,7 @@ namespace Horse.Messaging.Server.Queues.Handlers
             if (_consumerAckFail == PutBackDecision.No)
                 return Task.FromResult(Decision.DeleteMessage());
 
-            return Task.FromResult(Decision.PutBackMessage(_consumerAckFail == PutBackDecision.End));
+            return Task.FromResult(Decision.PutBackMessage(_consumerAckFail == PutBackDecision.Regular));
         }
 
         /// <summary>

@@ -93,7 +93,7 @@ namespace Horse.Messaging.Server.Queues.Delivery
         /// </summary>
         public static Decision PutBackMessage(bool toEndOfQueue, DecisionTransmission transmission = DecisionTransmission.None)
         {
-            return new Decision(false, false, false, toEndOfQueue ? PutBackDecision.End : PutBackDecision.Start, transmission);
+            return new Decision(false, false, false, toEndOfQueue ? PutBackDecision.Regular : PutBackDecision.Priority, transmission);
         }
     }
 }

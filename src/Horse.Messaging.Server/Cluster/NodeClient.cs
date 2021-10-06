@@ -1,4 +1,8 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Horse.Core;
 using Horse.Messaging.Client;
@@ -257,42 +261,67 @@ namespace Horse.Messaging.Server.Cluster
                 #region Queue Sync
 
                 case KnownContentTypes.NodeQueueListRequest:
-
                     if (cluster.State == NodeState.Main)
                     {
-                        //todo: send queue list with detailed options
+                        List<NodeQueueInfo> infoList = Rider.Queue.Queues.Select(x => x.CreateNodeQueueInfo()).ToList();
+                        HorseMessage listMessage = new HorseMessage(MessageType.Cluster, Info.Id, KnownContentTypes.NodeQueueListResponse);
+                        listMessage.SetStringContent(System.Text.Json.JsonSerializer.Serialize(infoList));
+                        _ = SendMessage(listMessage);
                     }
 
-                    throw new NotImplementedException();
                     break;
 
                 case KnownContentTypes.NodeQueueListResponse:
-                    throw new NotImplementedException();
+                {
+                    List<NodeQueueInfo> infoList = System.Text.Json.JsonSerializer.Deserialize<List<NodeQueueInfo>>(message.GetStringContent());
+                    _ = cluster.ProcessQueueList(this, infoList);
                     break;
+                }
 
                 case KnownContentTypes.NodeQueueSyncRequest:
                 {
-                    HorseQueue queue = Rider.Queue.Find(message.Target);
+                    if (cluster.State == NodeState.Main)
+                    {
+                        HorseQueue queue = Rider.Queue.Find(message.Target);
 
-                    if (queue != null)
-                        _ = queue.StartSync(this);
-                    else
-                        SendMessage(new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.NodeQueueMessageIdList));
+                        if (queue != null)
+                            _ = queue.StartSync(this);
+                        else
+                            _ = SendMessage(new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.RemoveQueue));
+                    }
 
                     break;
                 }
 
                 case KnownContentTypes.NodeQueueMessageIdList:
-                    throw new NotImplementedException();
+                {
+                    HorseQueue queue = Rider.Queue.Find(message.Target);
+                    if (queue != null)
+                        _ = cluster.ProcessMessageIds(this, queue, message.GetStringContent());
+                    
                     break;
+                }
 
                 case KnownContentTypes.NodeQueueMessageRequest:
-                    throw new NotImplementedException();
+                {
+                    HorseQueue queue = Rider.Queue.Find(message.Target);
+                    if (queue != null)
+                    {
+                        string[] requestMessageIds = message.GetStringContent().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+                        _ = cluster.SendRequestedMessages(this, queue, requestMessageIds);
+                    }
+                    
                     break;
-
+                }
+                
                 case KnownContentTypes.NodeQueueMessageResponse:
-                    throw new NotImplementedException();
+                {
+                    HorseQueue queue = Rider.Queue.Find(message.Target);
+                    if (queue != null)
+                        _ = cluster.CompleteQueueSync(this, queue, message);
+                    
                     break;
+                }
 
                 case KnownContentTypes.NodeQueueSyncCompletion:
                 {
@@ -308,8 +337,12 @@ namespace Horse.Messaging.Server.Cluster
                 #region Queue Operations
 
                 case KnownContentTypes.CreateQueue:
-                    throw new NotImplementedException();
+                {
+                    string content = message.GetStringContent();
+                    NodeQueueInfo queueInfo = System.Text.Json.JsonSerializer.Deserialize<NodeQueueInfo>(content);
+                    _ = Rider.Queue.CreateReplica(queueInfo);
                     break;
+                }
 
                 case KnownContentTypes.UpdateQueue:
                     throw new NotImplementedException();

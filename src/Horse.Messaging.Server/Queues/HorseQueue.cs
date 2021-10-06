@@ -165,8 +165,7 @@ namespace Horse.Messaging.Server.Queues
         public bool IsDestroyed { get; private set; }
 
         private DateTime _syncStartDate;
-        private NodeClient _syncClient;
-        private Dictionary<string, MessageSyncMethod> _syncMethods;
+        private Dictionary<string, bool> _syncMethods;
 
         #endregion
 
@@ -414,7 +413,7 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Adds message into the queue
         /// </summary>
-        internal void AddMessage(QueueMessage message, bool toEnd = true)
+        internal void AddMessage(QueueMessage message, bool trigger = true)
         {
             if (Status == QueueStatus.Syncing)
             {
@@ -428,9 +427,9 @@ namespace Horse.Messaging.Server.Queues
                 }
             }
 
-            Store.Put(message, toEnd);
+            Store.Put(message);
 
-            if (State != null && State.TriggerSupported && !_triggering)
+            if (trigger && State != null && State.TriggerSupported && !_triggering)
                 _ = Trigger();
         }
 
@@ -469,6 +468,11 @@ namespace Horse.Messaging.Server.Queues
                         Options.DelayBetweenMessages = Convert.ToInt32(pair.Value);
                 }
             }
+        }
+
+        internal void UpdateOptionsByNodeInfo(NodeQueueInfo info)
+        {
+            throw new NotImplementedException();
         }
 
         #endregion
@@ -578,6 +582,7 @@ namespace Horse.Messaging.Server.Queues
                 }
             }
 
+            bool isReplica = (Rider.Cluster.Options.Mode == ClusterMode.Reliable && Rider.Cluster.State > NodeState.Main);
             try
             {
                 if (Rider.Cluster.Options.Mode == ClusterMode.Reliable && Rider.Cluster.State == NodeState.Main)
@@ -600,9 +605,10 @@ namespace Horse.Messaging.Server.Queues
                 if (!allow)
                     return PushResult.Success;
 
-                AddMessage(message);
+                AddMessage(message, !isReplica);
 
-                PushEvent.Trigger(sender, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
+                if (!isReplica)
+                    PushEvent.Trigger(sender, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
 
                 return PushResult.Success;
             }
@@ -719,7 +725,7 @@ namespace Horse.Messaging.Server.Queues
 
             PutBackDecision putBack = final.PutBack;
             DecisionTransmission transmission = final.Transmission;
-            
+
             if (decision.PutBack != PutBackDecision.No)
                 putBack = decision.PutBack;
 
@@ -751,14 +757,14 @@ namespace Horse.Messaging.Server.Queues
                         message.IsProducerAckSent = sent;
                     }
                 }
-                
+
                 if (decision.PutBack != PutBackDecision.No)
                     ApplyPutBack(decision, message, forceDelay);
                 else if (decision.Delete && !message.IsRemoved)
                 {
                     message.MarkAsRemoved();
                     Info.AddMessageRemove();
-                    
+
                     _ = DeliveryHandler.MessageDequeued(this, message);
 
                     if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
@@ -778,9 +784,11 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         internal void ApplyPutBack(Decision decision, QueueMessage message, int forceDelay = 0)
         {
+            message.Message.HighPriority = decision.PutBack == PutBackDecision.Priority;
+            
             switch (decision.PutBack)
             {
-                case PutBackDecision.Start:
+                case PutBackDecision.Priority:
                     if (Options.PutBackDelay == 0)
                     {
                         AddMessage(message, false);
@@ -808,7 +816,7 @@ namespace Horse.Messaging.Server.Queues
 
                     break;
 
-                case PutBackDecision.End:
+                case PutBackDecision.Regular:
                     if (Options.PutBackDelay == 0 && forceDelay == 0)
                     {
                         AddMessage(message);
@@ -1096,20 +1104,20 @@ namespace Horse.Messaging.Server.Queues
             }
 
             _syncStartDate = DateTime.UtcNow;
-            _syncClient = replica;
+            SetStatus(QueueStatus.Syncing);
             IEnumerable<string> messageIdList = GetQueueMessageIdList();
             await Rider.Cluster.SendQueueMessageIdList(replica, Name, messageIdList);
         }
 
-        internal void FinishSync()
+        internal bool FinishSync()
         {
-            if (Status != QueueStatus.Syncing)
-                return;
-
-            _syncClient = null;
             _syncStartDate = DateTime.UtcNow;
             _syncMethods = null;
+
+            SetStatus(QueueStatus.Running);
+
             _lock.Release();
+            return true;
         }
 
         internal IEnumerable<string> GetQueueMessageIdList()
@@ -1128,28 +1136,57 @@ namespace Horse.Messaging.Server.Queues
                 yield return id;
         }
 
-        internal IEnumerable<string> CheckSync(List<string> mainPrioMessages, List<string> mainMessages)
+        internal IEnumerable<string> CheckSync(string[] mainPrioMessages, string[] mainMessages)
         {
-            _syncMethods = new Dictionary<string, MessageSyncMethod>();
+            _syncMethods = new Dictionary<string, bool>();
 
             //todo: calculate and generate sync methods
             //todo: return sync method message id list
-
-            if (_syncMethods.All(x => x.Value.Method == SyncMethod.Completed))
-                FinishSync();
 
             //return _syncMethods.Keys;
             throw new NotImplementedException();
         }
 
-        internal void SyncMessage(HorseMessage message)
+        internal async Task<bool> SyncMessage(HorseMessage message)
         {
-            //todo: find sync method and add the message
+            bool completed;
+            bool found = _syncMethods.TryGetValue(message.MessageId, out completed);
 
-            if (_syncMethods.All(x => x.Value.Method == SyncMethod.Completed))
-                FinishSync();
+            if (!found)
+                return false;
 
-            throw new NotImplementedException();
+            if (completed)
+                return true;
+
+            PushResult result = await Push(message);
+
+            return result == PushResult.Success;
+        }
+
+        internal IEnumerable<HorseMessage> FindMessages(string[] idList)
+        {
+            if (Status == QueueStatus.Running)
+                yield break;
+
+            foreach (QueueMessage queueMessage in Store.GetUnsafePriority())
+            {
+                if (idList.Contains(queueMessage.Message.MessageId))
+                    yield return queueMessage.Message;
+            }
+
+            foreach (QueueMessage queueMessage in Store.GetUnsafe())
+            {
+                if (idList.Contains(queueMessage.Message.MessageId))
+                    yield return queueMessage.Message;
+            }
+        }
+
+        internal void CompleteSync()
+        {
+            _syncMethods = null;
+
+            if (Status == QueueStatus.Syncing)
+                SetStatus(QueueStatus.Running);
         }
 
         #endregion

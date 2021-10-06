@@ -11,15 +11,15 @@
         No,
 
         /// <summary>
-        /// Message will be put back to the beginning of the queue.
-        /// It will be consumed at first.
+        /// Message will be put back as priority message.
+        /// It will be re-consumed before regular messages.
         /// </summary>
-        Start,
+        Priority,
 
         /// <summary>
         /// Message will be put back to the end of the queue.
         /// It will be consumed at last.
         /// </summary>
-        End
+        Regular
     }
 }
