@@ -14,9 +14,9 @@ while (service.HorseClient.IsConnected)
 		Foo = "Emre",
 		Bar = "Hizli"
 	};
+	Console.Write("Press enter to push message....");
 	HorseResult result = await service.HorseClient.Queue.PushJson(model, false);
 	Console.WriteLine(result.Code);
-	Console.Write("Press enter to push next message....");
 	Console.ReadLine();
 }
 
