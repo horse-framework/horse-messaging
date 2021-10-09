@@ -37,11 +37,6 @@ namespace Horse.Messaging.Server.Queues.Delivery
         #region Properties
 
         /// <summary>
-        /// True, if receiver is the first acquirer of the message
-        /// </summary>
-        public bool FirstAcquirer { get; internal set; }
-
-        /// <summary>
         /// The message
         /// </summary>
         public QueueMessage Message { get; }

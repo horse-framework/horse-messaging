@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Data;
 using Horse.Messaging.Data.Configuration;
+using Horse.Messaging.Data.Implementation;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
-using Horse.Messaging.Server.Queues.Handlers;
+using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Server;
 using Xunit;
 
@@ -22,7 +23,7 @@ namespace Test.Persistency
             HorseRider rider = server.UseRider(cfg => cfg
                                                    .ConfigureQueues(q =>
                                                    {
-                                                       q.UsePersistentDeliveryHandler(q =>
+                                                       q.UsePersistentQueues(q =>
                                                                                       {
                                                                                           q.UseInstantFlush()
                                                                                               .KeepLastBackup()
@@ -41,10 +42,10 @@ namespace Test.Persistency
             message.SetStringContent("Hello, World!");
             QueueMessage queueMessage = new QueueMessage(message);
 
-            PersistentDeliveryHandler handler = (PersistentDeliveryHandler) queue.DeliveryHandler;
-            await handler.BeginSend(queue, queueMessage);
+            PersistentQueueManager manager = queue.Manager as PersistentQueueManager;
+            await manager.DeliveryHandler.BeginSend(queue, queueMessage);
 
-            List<KeyValuePair<string, int>> deliveries = handler.RedeliveryService.GetDeliveries();
+            List<KeyValuePair<string, int>> deliveries = manager.RedeliveryService.GetDeliveries();
             Assert.Single(deliveries);
             Assert.Equal("id", deliveries[0].Key);
             Assert.Equal(1, deliveries[0].Value);
@@ -52,8 +53,8 @@ namespace Test.Persistency
             string header = message.FindHeader(HorseHeaders.DELIVERY);
             Assert.Null(header);
 
-            await handler.BeginSend(queue, queueMessage);
-            deliveries = handler.RedeliveryService.GetDeliveries();
+            await manager.DeliveryHandler.BeginSend(queue, queueMessage);
+            deliveries = manager.RedeliveryService.GetDeliveries();
             Assert.Single(deliveries);
             Assert.Equal("id", deliveries[0].Key);
             Assert.Equal(2, deliveries[0].Value);
@@ -64,8 +65,8 @@ namespace Test.Persistency
 
             queueMessage.MarkAsSent();
 
-            await handler.EndSend(queue, queueMessage);
-            deliveries = handler.RedeliveryService.GetDeliveries();
+            await manager.DeliveryHandler.EndSend(queue, queueMessage);
+            deliveries = manager.RedeliveryService.GetDeliveries();
             Assert.Empty(deliveries);
             server.Stop();
         }

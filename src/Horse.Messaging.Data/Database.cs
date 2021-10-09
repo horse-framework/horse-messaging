@@ -341,6 +341,24 @@ namespace Horse.Messaging.Data
         }
 
         /// <summary>
+        /// Clears all data in file
+        /// </summary>
+        public async Task Clear()
+        {
+            await WaitForLock();
+            try
+            {
+                Stream stream = File.GetStream();
+                stream.SetLength(0);
+                await stream.FlushAsync();
+            }
+            finally
+            {
+                ReleaseLock();
+            }
+        }
+
+        /// <summary>
         /// Lists all messages in database
         /// </summary>
         /// <returns></returns>

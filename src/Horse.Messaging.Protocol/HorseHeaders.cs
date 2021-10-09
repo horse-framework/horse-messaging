@@ -166,9 +166,9 @@ namespace Horse.Messaging.Protocol
         public const string MESSAGES = "Messages";
 
         /// <summary>
-        /// "Delivery-Handler"
+        /// "Queue-Manager"
         /// </summary>
-        public const string DELIVERY_HANDLER = "Delivery-Handler";
+        public const string QUEUE_MANAGER = "Queue-Manager";
 
         /// <summary>
         /// "Acknowledge"

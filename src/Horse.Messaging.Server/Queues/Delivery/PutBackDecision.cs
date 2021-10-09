@@ -9,7 +9,7 @@
         /// Message will not keep and put back to the queue
         /// </summary>
         No,
-
+        
         /// <summary>
         /// Message will be put back as priority message.
         /// It will be re-consumed before regular messages.

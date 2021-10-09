@@ -1,4 +1,4 @@
-﻿namespace Horse.Messaging.Server.Queues.Handlers
+﻿namespace Horse.Messaging.Server.Queues.Delivery
 {
     /// <summary>
     /// Enum for decision when commit will sent to producer

@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
@@ -686,7 +684,9 @@ namespace Horse.Messaging.Server.Cluster
                 try
                 {
                     await _queueSyncSlim.WaitAsync(TimeSpan.FromMilliseconds(1500));
-                    await SendQueueSyncRequest(client, queue);
+                    await queue.Manager.Synchronizer.BeginReceiving(client);
+                    HorseMessage message = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.NodeQueueSyncRequest);
+                    await client.SendMessage(message);
                 }
                 catch
                 {
@@ -696,104 +696,6 @@ namespace Horse.Messaging.Server.Cluster
                     _queueSyncSlim.Release();
                 }
             }
-        }
-
-        internal Task ProcessMessageIds(NodeClient client, HorseQueue queue, string messageContent)
-        {
-            string[] lines = messageContent.Split(Environment.NewLine);
-            int emptyIndex = -1;
-            for (int i = 0; i < lines.Length; i++)
-                if (lines[i] == string.Empty)
-                {
-                    emptyIndex = i;
-                    break;
-                }
-
-            string[] prioMessages = emptyIndex > 0
-                ? new string[emptyIndex - 1]
-                : Array.Empty<string>();
-
-            int regularCount = emptyIndex < 0
-                ? lines.Length
-                : (lines.Length - emptyIndex - 1);
-
-            string[] messages = regularCount > 0
-                ? new string[regularCount]
-                : Array.Empty<string>();
-
-            IEnumerable<string> requestMessages = queue.CheckSync(prioMessages, messages);
-            string content = requestMessages.Aggregate((c, s) => $"{c}{Environment.NewLine}{s}");
-
-            HorseMessage message = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.NodeQueueMessageRequest);
-            message.SetStringContent(content);
-            return client.SendMessage(message);
-        }
-
-        internal async Task SendRequestedMessages(NodeClient client, HorseQueue queue, string[] requestMessageIds)
-        {
-            HorseMessage response = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.NodeQueueMessageResponse);
-            response.Content = new MemoryStream();
-
-            IEnumerable<HorseMessage> messages = queue.FindMessages(requestMessageIds);
-            foreach (HorseMessage msg in messages)
-            {
-                byte[] messageData = HorseProtocolWriter.Create(msg);
-                await response.Content.WriteAsync(messageData, 0, messageData.Length);
-            }
-
-            response.CalculateLengths();
-            await client.SendMessage(response);
-        }
-
-        /// <summary>
-        /// Sends a queue sync message to the main node
-        /// </summary>
-        public Task SendQueueSyncRequest(NodeClient client, HorseQueue queue)
-        {
-            HorseMessage message = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.NodeQueueSyncRequest);
-            return client.SendMessage(message);
-        }
-
-        /// <summary>
-        /// Sends a queue sync message to the main node
-        /// </summary>
-        public Task SendQueueMessageIdList(NodeClient replica, string queueName, IEnumerable<string> idList)
-        {
-            StringBuilder builder = new StringBuilder();
-            foreach (string id in idList)
-                builder.AppendLine(id);
-
-            HorseMessage message = new HorseMessage(MessageType.Cluster, queueName, KnownContentTypes.NodeQueueMessageIdList);
-            message.SetStringContent(builder.ToString());
-
-            return replica.SendMessage(message);
-        }
-
-        /// <summary>
-        /// Sends a queue sync completion message to the main node
-        /// </summary>
-        public async Task CompleteQueueSync(NodeClient client, HorseQueue queue, HorseMessage response)
-        {
-            HorseProtocolReader reader = new HorseProtocolReader();
-
-            response.Content.Position = 0;
-            while (response.Content.Position < response.Content.Length)
-            {
-                HorseMessage queueMessage = await reader.Read(response.Content);
-                queue.SyncMessage(queueMessage);
-            }
-
-            try
-            {
-                if (_queueSyncSlim.CurrentCount == 0)
-                    _queueSyncSlim.Release();
-            }
-            catch
-            {
-            }
-            
-            HorseMessage message = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.NodeQueueSyncCompletion);
-            await client.SendMessage(message);
         }
 
         #endregion

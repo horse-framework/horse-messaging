@@ -219,14 +219,14 @@ namespace Test.Queues
             Assert.Equal(HorseResultCode.Ok, result.Code);
 
             if (priorityMessages)
-                Assert.Equal(0, queue.PriorityMessageCount());
+                Assert.Equal(0, queue.Manager.PriorityMessageStore.Count());
             else
-                Assert.NotEqual(0, queue.PriorityMessageCount());
+                Assert.NotEqual(0, queue.Manager.PriorityMessageStore.Count());
 
             if (messages)
-                Assert.Equal(0, queue.MessageCount());
+                Assert.Equal(0, queue.Manager.MessageStore.Count());
             else
-                Assert.NotEqual(0, queue.MessageCount());
+                Assert.NotEqual(0, queue.Manager.MessageStore.Count());
             
             server.Stop();
         }

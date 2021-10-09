@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Queues.Delivery;
-using Horse.Messaging.Server.Queues.Handlers;
+using Horse.Messaging.Server.Queues.Managers;
 using Horse.Messaging.Server.Security;
 
 namespace Horse.Messaging.Server.Queues
@@ -47,40 +47,23 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Implements a message delivery handler factory
         /// </summary>
-        public HorseQueueConfigurator UseDeliveryHandler(Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> deliveryHandler)
+        public HorseQueueConfigurator UseDeliveryHandler(Func<QueueManagerBuilder, Task<IHorseQueueManager>> queueManager)
         {
-            return UseDeliveryHandler("Default", deliveryHandler);
+            return UseCustomQueueManager("Default", queueManager);
         }
 
         /// <summary>
         /// Implements a message delivery handler factory
         /// </summary>
-        public HorseQueueConfigurator UseDeliveryHandler(string name, Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> deliveryHandler)
+        public HorseQueueConfigurator UseCustomQueueManager(string name, Func<QueueManagerBuilder, Task<IHorseQueueManager>> queueManager)
         {
-            if (Rider.Queue.DeliveryHandlerFactories.ContainsKey(name))
+            if (Rider.Queue.QueueManagerFactories.ContainsKey(name))
                 throw new DuplicateNameException($"There is already registered delivery handler with same name: {name}");
 
-            Rider.Queue.DeliveryHandlerFactories.Add(name, deliveryHandler);
+            Rider.Queue.QueueManagerFactories.Add(name, queueManager);
 
-            if (!name.Equals("DEFAULT", StringComparison.InvariantCultureIgnoreCase) && !Rider.Queue.DeliveryHandlerFactories.ContainsKey("DEFAULT"))
-                Rider.Queue.DeliveryHandlerFactories.Add("DEFAULT", Rider.Queue.DeliveryHandlerFactories[name]);
-
-            return this;
-        }
-
-        /// <summary>
-        /// Implements non-durable basic delivery handler
-        /// </summary>
-        /// <param name="name">Delivery handler name</param>
-        public HorseQueueConfigurator UseJustAllowDeliveryHandler(string name = "DEFAULT")
-        {
-            if (Rider.Queue.DeliveryHandlerFactories.ContainsKey(name))
-                throw new DuplicateNameException($"There is already registered Just Allow delivery handler with same name: {name}");
-
-            Rider.Queue.DeliveryHandlerFactories.Add(name, _ => Task.FromResult<IMessageDeliveryHandler>(new JustAllowDeliveryHandler()));
-
-            if (!name.Equals("DEFAULT", StringComparison.InvariantCultureIgnoreCase) && !Rider.Queue.DeliveryHandlerFactories.ContainsKey("DEFAULT"))
-                Rider.Queue.DeliveryHandlerFactories.Add("DEFAULT", Rider.Queue.DeliveryHandlerFactories[name]);
+            if (!name.Equals("DEFAULT", StringComparison.InvariantCultureIgnoreCase) && !Rider.Queue.QueueManagerFactories.ContainsKey("DEFAULT"))
+                Rider.Queue.QueueManagerFactories.Add("DEFAULT", Rider.Queue.QueueManagerFactories[name]);
 
             return this;
         }
@@ -88,28 +71,29 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Implements non-durable basic delivery handler with ack
         /// </summary>
-        /// <param name="producerAck">Decision, when producer will receive acknowledge (or confirm)</param>
-        /// <param name="consumerAckFail">Decision, what will be done if consumer sends nack or doesn't send ack in time</param>
-        public HorseQueueConfigurator UseAckDeliveryHandler(CommitWhen producerAck, PutBackDecision consumerAckFail)
+        /// <param name="commitWhen">Decision, when producer will receive commit</param>
+        /// <param name="putBack">Decision, what will be done if consumer sends nack or doesn't send ack in time</param>
+        public HorseQueueConfigurator UseMemoryQueues(CommitWhen commitWhen, PutBackDecision putBack)
         {
-            return UseAckDeliveryHandler("Default", producerAck, consumerAckFail);
+            return UseMemoryQueues("Default", commitWhen, putBack);
         }
 
         /// <summary>
         /// Implements non-durable basic delivery handler with ack
         /// </summary>
         /// <param name="name">Delivery handler name</param>
-        /// <param name="producerAck">Decision, when producer will receive acknowledge (or confirm)</param>
-        /// <param name="consumerAckFail">Decision, what will be done if consumer sends nack or doesn't send ack in time</param>
-        public HorseQueueConfigurator UseAckDeliveryHandler(string name, CommitWhen producerAck, PutBackDecision consumerAckFail)
+        /// <param name="commitWhen">Decision, when producer will receive commit</param>
+        /// <param name="putBack">Decision, what will be done if consumer sends nack or doesn't send ack in time</param>
+        public HorseQueueConfigurator UseMemoryQueues(string name, CommitWhen commitWhen, PutBackDecision putBack)
         {
-            if (Rider.Queue.DeliveryHandlerFactories.ContainsKey(name))
+            if (Rider.Queue.QueueManagerFactories.ContainsKey(name))
                 throw new DuplicateNameException($"There is already registered Ack delivery handler with same name: {name}");
 
-            Rider.Queue.DeliveryHandlerFactories.Add(name, _ => Task.FromResult<IMessageDeliveryHandler>(new AckDeliveryHandler(producerAck, consumerAckFail)));
 
-            if (!name.Equals("DEFAULT", StringComparison.InvariantCultureIgnoreCase) && !Rider.Queue.DeliveryHandlerFactories.ContainsKey("DEFAULT"))
-                Rider.Queue.DeliveryHandlerFactories.Add("DEFAULT", Rider.Queue.DeliveryHandlerFactories[name]);
+            Rider.Queue.QueueManagerFactories.Add(name, b => Task.FromResult<IHorseQueueManager>(new MemoryQueueManager(b.Queue, commitWhen, putBack)));
+
+            if (!name.Equals("DEFAULT", StringComparison.InvariantCultureIgnoreCase) && !Rider.Queue.QueueManagerFactories.ContainsKey("DEFAULT"))
+                Rider.Queue.QueueManagerFactories.Add("DEFAULT", Rider.Queue.QueueManagerFactories[name]);
 
             return this;
         }

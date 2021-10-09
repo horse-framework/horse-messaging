@@ -88,15 +88,22 @@ namespace Horse.Messaging.Data
             if (_autoShrinkTimer != null)
                 Stop();
 
-            _autoShrinkTimer = new ThreadTimer(async () =>
+            _autoShrinkTimer = new ThreadTimer(ElapseShrink, interval);
+            _autoShrinkTimer.Start(ThreadPriority.BelowNormal);
+        }
+
+        private async void ElapseShrink()
+        {
+            try
             {
-                if (_shrinking)
-                    return;
+                if (_shrinking) return;
 
                 if (ShrinkRequired)
                     await _database.Shrink();
-            }, interval);
-            _autoShrinkTimer.Start(ThreadPriority.BelowNormal);
+            }
+            catch
+            {
+            }
         }
 
         /// <summary>

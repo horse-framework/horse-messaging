@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Data;
 using Horse.Messaging.Data.Configuration;
+using Horse.Messaging.Data.Implementation;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
-using Horse.Messaging.Server.Queues.Handlers;
+using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Server;
 using Xunit;
 
@@ -67,7 +68,7 @@ namespace Test.Persistency
 
             HorseRider rider = server.UseRider(cfg => cfg.ConfigureQueues(c =>
             {
-                c.UsePersistentDeliveryHandler(
+                c.UsePersistentQueues(
                     cx =>
                     {
                         cx.UseInstantFlush()
@@ -82,25 +83,24 @@ namespace Test.Persistency
             msg.SetStringContent("Hello, World!");
             await queue.Push(msg);
 
-            QueueMessage queueMsg = queue.FindNextMessage(false);
+            QueueMessage queueMsg = queue.Manager.MessageStore.ReadFirst();
             
-            PersistentDeliveryHandler handler = (PersistentDeliveryHandler) queue.DeliveryHandler;
-            await handler.BeginSend(queue, queueMsg);
+            PersistentQueueManager manager = (PersistentQueueManager) queue.Manager;
+            await manager.DeliveryHandler.BeginSend(queue, queueMsg);
 
-            await handler.RedeliveryService.Close();
+            await manager.RedeliveryService.Close();
             ConfigurationFactory.Destroy();
 
             rider = server.UseRider(cfg => cfg.ConfigureQueues(c =>
             {
-                c.UsePersistentDeliveryHandler(
+                c.UsePersistentQueues(
                     c => { c.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
                     DeleteWhen.AfterSend, CommitWhen.None, true);
             }));
-            await rider.LoadPersistentQueues();
             HorseQueue queue2 = rider.Queue.Find("reload-test");
             Assert.NotNull(queue2);
-            Assert.NotEqual(0, queue2.MessageCount());
-            QueueMessage loadedMsg = queue2.FindNextMessage(false);
+            Assert.NotEqual(0, queue2.Manager.MessageStore.Count());
+            QueueMessage loadedMsg = queue2.Manager.MessageStore.ReadFirst();
 
             Assert.NotNull(loadedMsg);
             Assert.Equal(1, loadedMsg.DeliveryCount);

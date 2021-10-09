@@ -1,49 +1,34 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Horse.Core;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
-using Horse.Messaging.Server.Queues.Delivery;
 
-namespace Horse.Messaging.Server.Queues
+namespace Horse.Messaging.Server.Queues.Delivery
 {
-    /// <summary>
-    /// Follows all deliveries and their acknowledges, responses and expirations
-    /// </summary>
-    internal class QueueTimeKeeper
+    public class DefaultDeliveryTracker : IDeliveryTracker
     {
-        #region Fields
-
-        /// <summary>
-        /// Queue of the keeper
-        /// </summary>
-        private readonly HorseQueue _queue;
-
-        /// <summary>
-        /// Timeout checker timer
-        /// </summary>
-        private ThreadTimer _timer;
-
         /// <summary>
         /// All following deliveries
         /// </summary>
         private readonly List<MessageDelivery> _deliveries = new(1024);
 
-        #endregion
+        private readonly IHorseQueueManager _manager;
+        private readonly HorseQueue _queue;
+        private ThreadTimer _timer;
 
-        public QueueTimeKeeper(HorseQueue queue)
+        public DefaultDeliveryTracker(IHorseQueueManager manager)
         {
-            _queue = queue;
+            _manager = manager;
+            _queue = manager.Queue;
         }
-
-        #region Methods
 
         /// <summary>
         /// Runs the queue time keeper timer
         /// </summary>
-        public void Run()
+        public void Start()
         {
             TimeSpan interval = TimeSpan.FromMilliseconds(1000);
             _timer = new ThreadTimer(async () => await Elapse(), interval);
@@ -56,9 +41,6 @@ namespace Horse.Messaging.Server.Queues
             {
                 if (_queue.Status == QueueStatus.NotInitialized)
                     return;
-
-                if (_queue.Options.MessageTimeout > TimeSpan.Zero)
-                    await ProcessReceiveTimeup();
 
                 await ProcessDeliveries();
             }
@@ -93,67 +75,16 @@ namespace Horse.Messaging.Server.Queues
             await Task.CompletedTask;
         }
 
-        /// <summary>
-        /// Checks messages if they are not received from any receiver and time is up
-        /// Complete the operation about timing up.
-        /// </summary>
-        private async Task ProcessReceiveTimeup()
+        public List<QueueMessage> GetDeliveringMessages()
         {
-            if (_queue.Status == QueueStatus.NotInitialized)
-                return;
+            List<QueueMessage> messages;
 
-            List<QueueMessage> temp = new List<QueueMessage>();
-            ProcessReceiveTimeupOnList(true, temp);
-
-            foreach (QueueMessage message in temp)
+            lock (_deliveries)
             {
-                _queue.Info.AddMessageTimeout();
-                message.MarkAsTimedOut();
-                
-                Decision decision = await _queue.DeliveryHandler.MessageTimedOut(_queue, message);
-                await _queue.ApplyDecision(decision, message);
-
-                foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
-                    _ = handler.MessageTimedOut(_queue, message);
-
-                _queue.MessageTimeoutEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
+                messages = _deliveries.Select(x => x.Message).ToList();
             }
 
-            temp.Clear();
-            ProcessReceiveTimeupOnList(false, temp);
-
-            foreach (QueueMessage message in temp)
-            {
-                _queue.Info.AddMessageTimeout();
-                message.MarkAsTimedOut();
-                
-                Decision decision = await _queue.DeliveryHandler.MessageTimedOut(_queue, message);
-                await _queue.ApplyDecision(decision, message);
-
-                foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
-                    _ = handler.MessageTimedOut(_queue, message);
-
-                _queue.MessageTimeoutEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
-            }
-        }
-
-        /// <summary>
-        /// Checks messages in the list and adds them into time up message list and remove from the queue if they are expired.
-        /// </summary>
-        private void ProcessReceiveTimeupOnList(bool priority, List<QueueMessage> temp)
-        {
-            //if the first message has not expired, none of the messages have expired. 
-            QueueMessage firstMessage = priority
-                ? _queue.Store.GetPriorityNext(false)
-                : _queue.Store.GetRegularNext(false);
-
-            if (firstMessage != null && firstMessage.Deadline.HasValue && firstMessage.Deadline > DateTime.UtcNow)
-                return;
-
-            Func<QueueMessage, bool> predicate = m => m.Deadline.HasValue && DateTime.UtcNow > m.Deadline.Value;
-            temp.AddRange(priority
-                              ? _queue.Store.FindAndRemovePriority(predicate)
-                              : _queue.Store.FindAndRemoveRegular(predicate));
+            return messages;
         }
 
         /// <summary>
@@ -208,11 +139,11 @@ namespace Horse.Messaging.Server.Queues
                     }
 
                     _queue.Info.AddUnacknowledge();
-                    Decision decision = await _queue.DeliveryHandler.AcknowledgeTimedOut(_queue, delivery);
+                    Decision decision = await _manager.DeliveryHandler.AcknowledgeTimeout(_queue, delivery);
 
                     HorseMessage ackTimeoutMessage = delivery.Message.Message.CreateAcknowledge("ack-timeout");
                     ackTimeoutMessage.ContentType = (ushort) HorseResultCode.RequestTimeout;
-                    
+
                     if (delivery.Message != null)
                         await _queue.ApplyDecision(decision, delivery.Message, ackTimeoutMessage);
 
@@ -237,7 +168,7 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Adds acknowledge to check it's timeout
         /// </summary>
-        public void AddAcknowledgeCheck(MessageDelivery delivery)
+        public void Track(MessageDelivery delivery)
         {
             if (!delivery.Message.Message.WaitResponse || !delivery.AcknowledgeDeadline.HasValue)
                 return;
@@ -287,36 +218,22 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Removes delivery from being tracked
         /// </summary>
-        internal void RemoveDelivery(MessageDelivery delivery)
+        public void RemoveDelivery(MessageDelivery delivery)
         {
             lock (_deliveries)
                 _deliveries.Remove(delivery);
         }
 
         /// <summary>
-        /// Returns true, if there are pending messages waiting for acknowledge
-        /// </summary>
-        /// <returns></returns>
-        public bool HasPendingDelivery()
-        {
-            return _deliveries.Count > 0;
-        }
-
-        /// <summary>
         /// Returns unique pending message count
         /// </summary>
-        public int GetPendingMessageCount()
+        public int GetDeliveryCount()
         {
             int count;
             lock (_deliveries)
-                count = _deliveries.Where(x => !string.IsNullOrEmpty(x.Message.Message.MessageId))
-                    .Select(x => x.Message.Message.MessageId)
-                    .Distinct()
-                    .Count();
+                count = _deliveries.Count;
 
             return count;
         }
-
-        #endregion
     }
 }

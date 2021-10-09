@@ -5,7 +5,7 @@ using AdvancedSample.Messaging.Server.RouteBindings;
 using Horse.Messaging.Data;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
-using Horse.Messaging.Server.Queues.Handlers;
+using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Server;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -43,7 +43,6 @@ namespace AdvancedSample.Messaging.Server
         public Task StartAsync(CancellationToken cancellationToken)
         {
             HorseRider rider = _riderBuilder.Build();
-            rider.LoadPersistentQueues().GetAwaiter().GetResult();
             rider.ConfigureServiceRoutes();
             _server.UseRider(rider);
             _server.Start();
@@ -62,7 +61,7 @@ namespace AdvancedSample.Messaging.Server
                 .ConfigureQueues(cfg =>
                 {
                     cfg.EventHandlers.Add(_queueEventHandler);
-                    cfg.UsePersistentDeliveryHandler(q =>
+                    cfg.UsePersistentQueues(q =>
                     {
                         q.UseAutoFlush(TimeSpan.FromMilliseconds(500));
                         q.KeepLastBackup();

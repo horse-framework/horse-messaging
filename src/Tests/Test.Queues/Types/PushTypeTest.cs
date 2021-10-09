@@ -64,7 +64,7 @@ namespace Test.Queues.Types
 
             HorseQueue queue = server.Rider.Queue.Find("push-a");
             Assert.NotNull(queue);
-            Assert.Equal(1, queue.MessageCount());
+            Assert.Equal(1, queue.Manager.MessageStore.Count());
 
             bool msgReceived = false;
             HorseClient consumer = new HorseClient();

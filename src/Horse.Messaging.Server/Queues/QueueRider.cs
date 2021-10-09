@@ -49,9 +49,9 @@ namespace Horse.Messaging.Server.Queues
         public IEnumerable<HorseQueue> Queues => _queues.All();
 
         /// <summary>
-        /// Key specific registered delivery handler methods
+        /// Key specific registered queue manager methods
         /// </summary>
-        internal Dictionary<string, Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>>> DeliveryHandlerFactories { get; } = new(StringComparer.InvariantCultureIgnoreCase);
+        internal Dictionary<string, Func<QueueManagerBuilder, Task<IHorseQueueManager>>> QueueManagerFactories { get; } = new(StringComparer.InvariantCultureIgnoreCase);
 
         /// <summary>
         /// Root horse rider object
@@ -107,9 +107,9 @@ namespace Horse.Messaging.Server.Queues
         /// Finds message delivery handler by name
         /// </summary>
         /// <param name="name">Delivery handler name</param>
-        public Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> FindDeliveryHandlerFactory(string name)
+        public Func<QueueManagerBuilder, Task<IHorseQueueManager>> FindQueueManagerFactory(string name)
         {
-            DeliveryHandlerFactories.TryGetValue(name, out var handler);
+            QueueManagerFactories.TryGetValue(name, out var handler);
             return handler;
         }
 
@@ -163,19 +163,19 @@ namespace Horse.Messaging.Server.Queues
                                                bool hideException,
                                                bool returnIfExists,
                                                MessagingClient client = null,
-                                               string customHandlerName = null)
+                                               string customManagerName = null)
         {
             string handlerName;
 
-            if (!string.IsNullOrEmpty(customHandlerName))
-                handlerName = customHandlerName;
+            if (!string.IsNullOrEmpty(customManagerName))
+                handlerName = customManagerName;
             else
-                handlerName = requestMessage != null ? requestMessage.FindHeader(HorseHeaders.DELIVERY_HANDLER) : "Default";
+                handlerName = requestMessage != null ? requestMessage.FindHeader(HorseHeaders.QUEUE_MANAGER) : "Default";
 
             if (string.IsNullOrEmpty(handlerName))
                 handlerName = "Default";
 
-            DeliveryHandlerFactories.TryGetValue(handlerName, out Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> deliveryHandlerFactory);
+            QueueManagerFactories.TryGetValue(handlerName, out Func<QueueManagerBuilder, Task<IHorseQueueManager>> queueManagerFactory);
 
             await _createLock.WaitAsync();
             try
@@ -212,7 +212,7 @@ namespace Horse.Messaging.Server.Queues
                 if (requestMessage != null)
                     queue.UpdateOptionsByMessage(requestMessage);
 
-                DeliveryHandlerBuilder handlerBuilder = new DeliveryHandlerBuilder
+                QueueManagerBuilder handlerBuilder = new QueueManagerBuilder
                 {
                     Server = Rider,
                     Queue = queue
@@ -220,11 +220,11 @@ namespace Horse.Messaging.Server.Queues
 
                 if (requestMessage != null)
                 {
-                    handlerBuilder.HandlerName = handlerName;
+                    handlerBuilder.ManagerName = handlerName;
                     handlerBuilder.Headers = requestMessage.Headers;
                 }
 
-                queue.HandlerName = handlerBuilder.HandlerName;
+                queue.HandlerName = handlerBuilder.ManagerName;
                 queue.InitializationMessageHeaders = handlerBuilder.Headers;
 
                 bool initialize;
@@ -234,10 +234,10 @@ namespace Horse.Messaging.Server.Queues
                 else
                     initialize = true;
 
-                if (initialize && deliveryHandlerFactory != null)
+                if (initialize && queueManagerFactory != null)
                 {
-                    IMessageDeliveryHandler deliveryHandler = await deliveryHandlerFactory(handlerBuilder);
-                    await queue.InitializeQueue(deliveryHandler);
+                    IHorseQueueManager queueManager = await queueManagerFactory(handlerBuilder);
+                    await queue.InitializeQueue(queueManager);
                 }
 
                 _queues.Add(queue);
@@ -291,7 +291,7 @@ namespace Horse.Messaging.Server.Queues
 
         internal async Task<HorseQueue> CreateReplica(NodeQueueInfo info)
         {
-            DeliveryHandlerFactories.TryGetValue(info.HandlerName, out Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> deliveryHandlerFactory);
+            QueueManagerFactories.TryGetValue(info.HandlerName, out Func<QueueManagerBuilder, Task<IHorseQueueManager>> queueManagerFactory);
 
             await _createLock.WaitAsync();
             try
@@ -301,23 +301,23 @@ namespace Horse.Messaging.Server.Queues
 
                 HorseQueue queue = new HorseQueue(Rider, info.Name, options);
 
-                DeliveryHandlerBuilder handlerBuilder = new DeliveryHandlerBuilder
+                QueueManagerBuilder handlerBuilder = new QueueManagerBuilder
                 {
                     Server = Rider,
                     Queue = queue,
-                    HandlerName = info.HandlerName
+                    ManagerName = info.HandlerName
                 };
 
                 if (info.Headers != null)
                     handlerBuilder.Headers = info.Headers.Select(x => new KeyValuePair<string, string>(x.Key, x.Value));
 
                 queue.Topic = info.Topic;
-                queue.HandlerName = handlerBuilder.HandlerName;
+                queue.HandlerName = handlerBuilder.ManagerName;
                 queue.InitializationMessageHeaders = handlerBuilder.Headers;
 
-                if (info.Initialized && deliveryHandlerFactory != null)
+                if (info.Initialized && queueManagerFactory != null)
                 {
-                    IMessageDeliveryHandler deliveryHandler = await deliveryHandlerFactory(handlerBuilder);
+                    IHorseQueueManager deliveryHandler = await queueManagerFactory(handlerBuilder);
                     await queue.InitializeQueue(deliveryHandler);
                 }
 

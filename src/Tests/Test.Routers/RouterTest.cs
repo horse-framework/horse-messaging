@@ -54,8 +54,8 @@ namespace Test.Routers
             HorseQueue queue1 = server.Rider.Queue.Find("push-a");
             HorseQueue queue2 = server.Rider.Queue.Find("push-a-cc");
 
-            Assert.Equal(4, queue1.MessageCount());
-            Assert.Equal(4, queue2.MessageCount());
+            Assert.Equal(4, queue1.Manager.MessageStore.Count());
+            Assert.Equal(4, queue2.Manager.MessageStore.Count());
 
             Assert.Equal(4, client2Received);
             Assert.Equal(4, client1Received);
@@ -106,8 +106,8 @@ namespace Test.Routers
             HorseQueue queue1 = server.Rider.Queue.Find("push-a");
             HorseQueue queue2 = server.Rider.Queue.Find("push-a-cc");
 
-            Assert.Equal(1, queue1.MessageCount());
-            Assert.Equal(1, queue2.MessageCount());
+            Assert.Equal(1, queue1.Manager.MessageStore.Count());
+            Assert.Equal(1, queue2.Manager.MessageStore.Count());
 
             Assert.Equal(1, client2Received);
             Assert.Equal(2, client1Received);
@@ -158,8 +158,8 @@ namespace Test.Routers
             HorseQueue queue1 = server.Rider.Queue.Find("push-a");
             HorseQueue queue2 = server.Rider.Queue.Find("push-a-cc");
 
-            Assert.Equal(0, queue1.MessageCount());
-            Assert.Equal(4, queue2.MessageCount());
+            Assert.Equal(0, queue1.Manager.MessageStore.Count());
+            Assert.Equal(4, queue2.Manager.MessageStore.Count());
 
             Assert.Equal(0, client1Received);
             Assert.Equal(0, client2Received);
@@ -188,8 +188,8 @@ namespace Test.Routers
             HorseQueue queue1 = server.Rider.Queue.Find("push-a");
             HorseQueue queue2 = server.Rider.Queue.Find("push-a-cc");
 
-            Assert.Equal(1, queue1.MessageCount());
-            Assert.Equal(1, queue2.MessageCount());
+            Assert.Equal(1, queue1.Manager.MessageStore.Count());
+            Assert.Equal(1, queue2.Manager.MessageStore.Count());
             server.Stop();
         }
 
@@ -283,7 +283,7 @@ namespace Test.Routers
 
             HorseQueue queue1 = server.Rider.Queue.Find("push-a");
 
-            Assert.Equal(1, queue1.MessageCount());
+            Assert.Equal(1, queue1.Manager.MessageStore.Count());
             Assert.True(client1Received);
             server.Stop();
         }
@@ -328,8 +328,8 @@ namespace Test.Routers
             HorseQueue queue1 = server.Rider.Queue.Find("push-a");
             HorseQueue queue2 = server.Rider.Queue.Find("push-a-cc");
 
-            Assert.Equal(1, queue1.MessageCount());
-            Assert.Equal(1, queue2.MessageCount());
+            Assert.Equal(1, queue1.Manager.MessageStore.Count());
+            Assert.Equal(1, queue2.Manager.MessageStore.Count());
 
             Assert.True(client1Received);
             Assert.True(client2Received);
@@ -366,7 +366,7 @@ namespace Test.Routers
             Assert.Equal(HorseResultCode.Ok, result.Code);
 
             await Task.Delay(500);
-            Assert.Equal(1, queue1.MessageCount());
+            Assert.Equal(1, queue1.Manager.MessageStore.Count());
             Assert.True(client1Received);
             server.Stop();
         }
@@ -403,7 +403,7 @@ namespace Test.Routers
             HorseMessage message = await producer.Router.PublishRequest("router", "Hello, World!");
             Assert.NotNull(message);
             Assert.Equal("Response", message.GetStringContent());
-            Assert.Equal(1, queue1.MessageCount());
+            Assert.Equal(1, queue1.Manager.MessageStore.Count());
             server.Stop();
         }
     }

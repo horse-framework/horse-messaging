@@ -29,7 +29,7 @@ namespace Test.Persistency
             fillerPushA.FillJson(items, false, false);
 
             await Task.Delay(500);
-            Assert.NotEqual(0, push.MessageCount());
+            Assert.NotEqual(0, push.Manager.MessageStore.Count());
             server.Stop();
         }
 
@@ -52,8 +52,8 @@ namespace Test.Persistency
             filler.FillString(items, false, false);
 
             await Task.Delay(500);
-            Assert.NotEqual(0, queue.PriorityMessageCount());
-            Assert.NotEqual(0, queue.MessageCount());
+            Assert.NotEqual(0, queue.Manager.PriorityMessageStore.Count());
+            Assert.NotEqual(0, queue.Manager.MessageStore.Count());
             server.Stop();
         }
 
@@ -76,8 +76,8 @@ namespace Test.Persistency
             filler.FillData(items, false, false);
 
             await Task.Delay(500);
-            Assert.NotEqual(0, queue.PriorityMessageCount());
-            Assert.NotEqual(0, queue.MessageCount());
+            Assert.NotEqual(0, queue.Manager.PriorityMessageStore.Count());
+            Assert.NotEqual(0, queue.Manager.MessageStore.Count());
             server.Stop();
         }
     }

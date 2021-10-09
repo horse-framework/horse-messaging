@@ -70,7 +70,7 @@ namespace Test.Queues.Types
 
             HorseQueue queue = server.Rider.Queue.Find("rr-a");
             Assert.NotNull(queue);
-            Assert.Equal(1, queue.MessageCount());
+            Assert.Equal(1, queue.Manager.MessageStore.Count());
 
             bool msgReceived = false;
             HorseClient consumer = new HorseClient();
@@ -194,7 +194,7 @@ namespace Test.Queues.Types
             Assert.Equal(2, received);
 
             //1 msg is pending ack, 1 msg is prepared and ready to send (waiting for ack) and 8 msgs are in queue
-            Assert.Equal(8, queue.MessageCount());
+            Assert.Equal(8, queue.Manager.MessageStore.Count());
             server.Stop();
         }
 

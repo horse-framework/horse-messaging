@@ -13,7 +13,6 @@ using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.States;
-using Horse.Messaging.Server.Queues.Store;
 using Horse.Messaging.Server.Security;
 
 namespace Horse.Messaging.Server.Queues
@@ -64,19 +63,13 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Message store of the queue
         /// </summary>
-        internal IQueueMessageStore Store { get; private set; }
+        public IHorseQueueManager Manager { get; private set; }
 
         /// <summary>
         /// Queue options.
         /// If null, queue default options will be used
         /// </summary>
         public QueueOptions Options { get; }
-
-        /// <summary>
-        /// Queue messaging handler.
-        /// If null, server's default delivery will be used.
-        /// </summary>
-        public IMessageDeliveryHandler DeliveryHandler { get; set; }
 
         /// <summary>
         /// Queue statistics and information
@@ -100,15 +93,9 @@ namespace Horse.Messaging.Server.Queues
         public QueueMessage ProcessingMessage => State?.ProcessingMessage;
 
         /// <summary>
-        /// Time keeper for the queue.
-        /// Checks message receiver deadlines and delivery deadlines.
-        /// </summary>
-        internal QueueTimeKeeper TimeKeeper { get; private set; }
-
-        /// <summary>
         /// Returns true, if there are no messages in queue
         /// </summary>
-        public bool IsEmpty => Store == null || Store.CountAll() == 0;
+        public bool IsEmpty => Manager.MessageStore.IsEmpty && Manager.PriorityMessageStore.IsEmpty;
 
         /// <summary>
         /// Wait acknowledge cross thread locker
@@ -118,7 +105,7 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Sync object for inserting messages into queue as FIFO
         /// </summary>
-        private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
+        internal SemaphoreSlim QueueLock { get; } = new(1, 1);
 
         /// <summary>
         /// This task holds the code until acknowledge is received
@@ -164,9 +151,6 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         public bool IsDestroyed { get; private set; }
 
-        private DateTime _syncStartDate;
-        private Dictionary<string, bool> _syncMethods;
-
         #endregion
 
         #region Events
@@ -207,7 +191,6 @@ namespace Horse.Messaging.Server.Queues
             Options = options;
             Type = options.Type;
             _clients = new SafeList<QueueClient>(256);
-            Store = new LinkedMessageStore(this);
             Status = QueueStatus.NotInitialized;
 
             PushEvent = new EventManager(rider, HorseEventType.QueuePush, name);
@@ -235,26 +218,24 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Initializes queue to first use
         /// </summary>
-        internal async Task InitializeQueue(IMessageDeliveryHandler deliveryHandler = null)
+        internal async Task InitializeQueue(IHorseQueueManager queueManager = null)
         {
-            await _lock.WaitAsync();
+            await QueueLock.WaitAsync();
             try
             {
                 if (Status != QueueStatus.NotInitialized)
                     return;
 
-                if (deliveryHandler != null)
-                    DeliveryHandler = deliveryHandler;
+                if (queueManager != null)
+                    Manager = queueManager;
 
-                if (DeliveryHandler == null)
-                    throw new ArgumentNullException("Queue has no delivery handler: " + Name);
+                if (queueManager == null)
+                    throw new ArgumentNullException("Queue has no manager: " + Name);
 
-                var tuple = QueueStateFactory.Create(this, Options.Type);
-                State = tuple.Item1;
+                State = QueueStateFactory.Create(this, Options.Type);
                 Type = Options.Type;
 
-                TimeKeeper = new QueueTimeKeeper(this);
-                TimeKeeper.Run();
+                await queueManager.Initialize();
 
                 _ackLock = new SemaphoreSlim(1, 1);
                 Status = QueueStatus.Running;
@@ -269,7 +250,7 @@ namespace Horse.Messaging.Server.Queues
             }
             finally
             {
-                _lock.Release();
+                QueueLock.Release();
             }
         }
 
@@ -282,10 +263,7 @@ namespace Horse.Messaging.Server.Queues
 
             try
             {
-                if (TimeKeeper != null)
-                    await TimeKeeper.Destroy();
-
-                Store?.ClearAll();
+                await Manager.Destroy();
 
                 if (_ackLock != null)
                 {
@@ -293,8 +271,8 @@ namespace Horse.Messaging.Server.Queues
                     _ackLock = null;
                 }
 
-                if (_lock != null)
-                    _lock.Dispose();
+                if (QueueLock != null)
+                    QueueLock.Dispose();
 
                 if (_triggerTimer != null)
                 {
@@ -329,13 +307,13 @@ namespace Horse.Messaging.Server.Queues
                     break;
 
                 case QueueDestroy.NoMessages:
-                    if (IsEmpty && (TimeKeeper == null || !TimeKeeper.HasPendingDelivery()))
+                    if (IsEmpty && Manager.DeliveryHandler.Tracker.GetDeliveryCount() == 0)
                         await Rider.Queue.Remove(this);
 
                     break;
 
                 case QueueDestroy.Empty:
-                    if (_clients.Count == 0 && IsEmpty && (TimeKeeper == null || !TimeKeeper.HasPendingDelivery()))
+                    if (_clients.Count == 0 && IsEmpty && Manager.DeliveryHandler.Tracker.GetDeliveryCount() == 0)
                         await Rider.Queue.Remove(this);
 
                     break;
@@ -373,44 +351,6 @@ namespace Horse.Messaging.Server.Queues
         #region Messages
 
         /// <summary>
-        /// Returns pending high priority messages count
-        /// </summary>
-        public int PriorityMessageCount()
-        {
-            return Store == null ? 0 : Store.CountPriority();
-        }
-
-        /// <summary>
-        /// Returns pending regular messages count
-        /// </summary>
-        public int MessageCount()
-        {
-            return Store == null ? 0 : Store.CountRegular();
-        }
-
-        /// <summary>
-        /// Returns unique pending message count
-        /// </summary>
-        public int GetAckPendingMessageCount()
-        {
-            if (TimeKeeper == null)
-                return 0;
-
-            return TimeKeeper.GetPendingMessageCount();
-        }
-
-        /// <summary>
-        /// Returns next message but doesn't dequeue it
-        /// </summary>
-        public QueueMessage FindNextMessage(bool priority)
-        {
-            if (priority)
-                return Store.GetPriorityNext(false);
-
-            return Store.GetRegularNext(false);
-        }
-
-        /// <summary>
         /// Adds message into the queue
         /// </summary>
         internal void AddMessage(QueueMessage message, bool trigger = true)
@@ -419,17 +359,20 @@ namespace Horse.Messaging.Server.Queues
             {
                 try
                 {
-                    _lock.Wait();
+                    QueueLock.Wait();
                 }
                 finally
                 {
-                    _lock.Release();
+                    QueueLock.Release();
                 }
             }
 
-            Store.Put(message);
+            bool added = Manager.AddMessage(message);
 
-            if (trigger && State != null && State.TriggerSupported && !_triggering)
+            if (added)
+                message.IsInQueue = true;
+
+            if (added && trigger && State != null && State.TriggerSupported && !_triggering)
                 _ = Trigger();
         }
 
@@ -511,21 +454,21 @@ namespace Horse.Messaging.Server.Queues
                 try
                 {
                     UpdateOptionsByMessage(message.Message);
-                    DeliveryHandlerBuilder handlerBuilder = new DeliveryHandlerBuilder
+                    QueueManagerBuilder handlerBuilder = new QueueManagerBuilder
                     {
                         Server = Rider,
                         Queue = this,
                         Headers = message.Message.Headers,
-                        HandlerName = message.Message.FindHeader(HorseHeaders.DELIVERY_HANDLER)
+                        ManagerName = message.Message.FindHeader(HorseHeaders.QUEUE_MANAGER)
                     };
 
-                    if (string.IsNullOrEmpty(handlerBuilder.HandlerName))
-                        handlerBuilder.HandlerName = "Default";
+                    if (string.IsNullOrEmpty(handlerBuilder.ManagerName))
+                        handlerBuilder.ManagerName = "Default";
 
-                    Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> factory = Rider.Queue.DeliveryHandlerFactories[handlerBuilder.HandlerName];
-                    IMessageDeliveryHandler deliveryHandler = await factory(handlerBuilder);
+                    Func<QueueManagerBuilder, Task<IHorseQueueManager>> factory = Rider.Queue.QueueManagerFactories[handlerBuilder.ManagerName];
+                    IHorseQueueManager queueManager = await factory(handlerBuilder);
 
-                    await InitializeQueue(deliveryHandler);
+                    await InitializeQueue(queueManager);
 
                     handlerBuilder.TriggerAfterCompleted();
                 }
@@ -539,8 +482,12 @@ namespace Horse.Messaging.Server.Queues
             if (Status is QueueStatus.OnlyConsume or QueueStatus.Paused)
                 return PushResult.StatusNotSupported;
 
-            if (Options.MessageLimit > 0 && Store.CountAll() >= Options.MessageLimit)
-                return PushResult.LimitExceeded;
+            if (Options.MessageLimit > 0)
+            {
+                int count = Manager.PriorityMessageStore.Count() + Manager.MessageStore.Count();
+                if (count >= Options.MessageLimit)
+                    return PushResult.LimitExceeded;
+            }
 
             if (Options.MessageSizeLimit > 0 && message.Message.Length > Options.MessageSizeLimit)
                 return PushResult.LimitExceeded;
@@ -553,7 +500,7 @@ namespace Horse.Messaging.Server.Queues
                                           HorseHeaders.QUEUE_TOPIC,
                                           HorseHeaders.PUT_BACK_DELAY,
                                           HorseHeaders.DELIVERY,
-                                          HorseHeaders.DELIVERY_HANDLER,
+                                          HorseHeaders.QUEUE_MANAGER,
                                           HorseHeaders.MESSAGE_TIMEOUT,
                                           HorseHeaders.ACK_TIMEOUT,
                                           HorseHeaders.CC);
@@ -574,11 +521,11 @@ namespace Horse.Messaging.Server.Queues
             {
                 try
                 {
-                    await _lock.WaitAsync();
+                    await QueueLock.WaitAsync();
                 }
                 finally
                 {
-                    _lock.Release();
+                    QueueLock.Release();
                 }
             }
 
@@ -594,7 +541,7 @@ namespace Horse.Messaging.Server.Queues
 
                 //fire message receive event
                 Info.AddMessageReceive();
-                Decision decision = await DeliveryHandler.ReceivedFromProducer(this, message, sender);
+                Decision decision = await Manager.DeliveryHandler.ReceivedFromProducer(this, message, sender);
                 message.Decision = decision;
 
                 bool allow = await ApplyDecision(decision, message);
@@ -618,15 +565,12 @@ namespace Horse.Messaging.Server.Queues
                 Info.AddError();
                 try
                 {
-                    Decision decision = await DeliveryHandler.ExceptionThrown(this, State.ProcessingMessage, ex);
+                    await Manager.OnExceptionThrown("PUSH", State.ProcessingMessage, ex);
 
                     //the message is removed from the queue and it's not sent to consumers
                     //we should put the message back into the queue
-                    if (!message.IsInQueue && !message.IsSent && !decision.Delete)
+                    if (!message.IsInQueue && !message.IsSent)
                         ApplyPutBack(Decision.PutBackMessage(true), message, 1000);
-
-                    if (State.ProcessingMessage != null)
-                        await ApplyDecision(decision, State.ProcessingMessage);
                 }
                 catch //if developer does wrong operation, we should not stop
                 {
@@ -647,7 +591,7 @@ namespace Horse.Messaging.Server.Queues
             if (_triggering)
                 return;
 
-            await _lock.WaitAsync();
+            await QueueLock.WaitAsync();
             try
             {
                 if (_triggering || !State.TriggerSupported)
@@ -659,7 +603,7 @@ namespace Horse.Messaging.Server.Queues
             finally
             {
                 _triggering = false;
-                _lock.Release();
+                QueueLock.Release();
             }
         }
 
@@ -674,7 +618,14 @@ namespace Horse.Messaging.Server.Queues
                 if (_clients.Count == 0)
                     return;
 
-                QueueMessage message = Store.GetNext(true);
+                QueueMessage message = null;
+
+                if (Manager.PriorityMessageStore.Count() > 0)
+                    message = Manager.PriorityMessageStore.ConsumeFirst();
+
+                if (message == null && Manager.MessageStore.Count() > 0)
+                    message = Manager.MessageStore.ConsumeFirst();
+
                 if (message == null)
                     return;
 
@@ -690,14 +641,12 @@ namespace Horse.Messaging.Server.Queues
                     Info.AddError();
                     try
                     {
-                        Decision decision = await DeliveryHandler.ExceptionThrown(this, message, ex);
+                        await Manager.OnExceptionThrown("PROCESS_MESSAGES", message, ex);
 
                         //the message is removed from the queue and it's not sent to consumers
                         //we should put the message back into the queue
-                        if (!message.IsInQueue && !message.IsSent && !decision.Delete)
+                        if (!message.IsInQueue && !message.IsSent)
                             ApplyPutBack(Decision.PutBackMessage(true), message, 1000);
-
-                        await ApplyDecision(decision, message, null, 5000);
                     }
                     catch //if developer does wrong operation, we should not stop
                     {
@@ -762,10 +711,9 @@ namespace Horse.Messaging.Server.Queues
                     ApplyPutBack(decision, message, forceDelay);
                 else if (decision.Delete && !message.IsRemoved)
                 {
-                    message.MarkAsRemoved();
                     Info.AddMessageRemove();
-
-                    _ = DeliveryHandler.MessageDequeued(this, message);
+                    await Manager.RemoveMessage(message);
+                    message.MarkAsRemoved();
 
                     if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
                         Rider.Cluster.SendMessageRemoval(this, message.Message);
@@ -785,7 +733,7 @@ namespace Horse.Messaging.Server.Queues
         internal void ApplyPutBack(Decision decision, QueueMessage message, int forceDelay = 0)
         {
             message.Message.HighPriority = decision.PutBack == PutBackDecision.Priority;
-            
+
             switch (decision.PutBack)
             {
                 case PutBackDecision.Priority:
@@ -857,7 +805,7 @@ namespace Horse.Messaging.Server.Queues
                     return false;
 
                 if (Status != QueueStatus.NotInitialized)
-                    message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
+                    message.IsSaved = await Manager.SaveMessage(message);
 
                 if (message.IsSaved)
                     Info.AddMessageSave();
@@ -907,7 +855,7 @@ namespace Horse.Messaging.Server.Queues
                 if (Status == QueueStatus.NotInitialized)
                     return;
 
-                MessageDelivery delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
+                MessageDelivery delivery = Manager.DeliveryHandler.Tracker.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
 
                 //when server and consumer are in pc,
                 //sometimes consumer sends ack before server start to follow ack of the message
@@ -917,13 +865,13 @@ namespace Horse.Messaging.Server.Queues
                 if (delivery == null)
                 {
                     await Task.Delay(1);
-                    delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
+                    delivery = Manager.DeliveryHandler.Tracker.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
 
                     //try again
                     if (delivery == null)
                     {
                         await Task.Delay(3);
-                        delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
+                        delivery = Manager.DeliveryHandler.Tracker.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
                     }
                 }
 
@@ -943,7 +891,7 @@ namespace Horse.Messaging.Server.Queues
                 else
                     Info.AddNegativeAcknowledge();
 
-                Decision decision = await DeliveryHandler.AcknowledgeReceived(this, deliveryMessage, delivery, success);
+                Decision decision = await Manager.DeliveryHandler.AcknowledgeReceived(this, deliveryMessage, delivery, success);
 
                 await ApplyDecision(decision, delivery.Message, deliveryMessage);
 
@@ -1082,111 +1030,6 @@ namespace Horse.Messaging.Server.Queues
         public QueueClient FindClient(MessagingClient client)
         {
             return _clients.Find(x => x.Client == client);
-        }
-
-        #endregion
-
-        #region Sync
-
-        internal async Task StartSync(NodeClient replica)
-        {
-            if (Status == QueueStatus.Syncing)
-                return;
-
-            try
-            {
-                await _lock.WaitAsync();
-            }
-            catch
-            {
-                _lock.Release();
-                return;
-            }
-
-            _syncStartDate = DateTime.UtcNow;
-            SetStatus(QueueStatus.Syncing);
-            IEnumerable<string> messageIdList = GetQueueMessageIdList();
-            await Rider.Cluster.SendQueueMessageIdList(replica, Name, messageIdList);
-        }
-
-        internal bool FinishSync()
-        {
-            _syncStartDate = DateTime.UtcNow;
-            _syncMethods = null;
-
-            SetStatus(QueueStatus.Running);
-
-            _lock.Release();
-            return true;
-        }
-
-        internal IEnumerable<string> GetQueueMessageIdList()
-        {
-            if (Status != QueueStatus.Syncing)
-                yield break;
-
-            IEnumerable<string> priority = Store.GetMessageIdList(true);
-            foreach (string id in priority)
-                yield return id;
-
-            yield return String.Empty;
-
-            IEnumerable<string> regular = Store.GetMessageIdList(false);
-            foreach (string id in regular)
-                yield return id;
-        }
-
-        internal IEnumerable<string> CheckSync(string[] mainPrioMessages, string[] mainMessages)
-        {
-            _syncMethods = new Dictionary<string, bool>();
-
-            //todo: calculate and generate sync methods
-            //todo: return sync method message id list
-
-            //return _syncMethods.Keys;
-            throw new NotImplementedException();
-        }
-
-        internal async Task<bool> SyncMessage(HorseMessage message)
-        {
-            bool completed;
-            bool found = _syncMethods.TryGetValue(message.MessageId, out completed);
-
-            if (!found)
-                return false;
-
-            if (completed)
-                return true;
-
-            PushResult result = await Push(message);
-
-            return result == PushResult.Success;
-        }
-
-        internal IEnumerable<HorseMessage> FindMessages(string[] idList)
-        {
-            if (Status == QueueStatus.Running)
-                yield break;
-
-            foreach (QueueMessage queueMessage in Store.GetUnsafePriority())
-            {
-                if (idList.Contains(queueMessage.Message.MessageId))
-                    yield return queueMessage.Message;
-            }
-
-            foreach (QueueMessage queueMessage in Store.GetUnsafe())
-            {
-                if (idList.Contains(queueMessage.Message.MessageId))
-                    yield return queueMessage.Message;
-            }
-        }
-
-        internal void CompleteSync()
-        {
-            _syncMethods = null;
-
-            if (Status == QueueStatus.Syncing)
-                SetStatus(QueueStatus.Running);
         }
 
         #endregion

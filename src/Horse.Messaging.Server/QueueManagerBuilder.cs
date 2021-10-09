@@ -5,9 +5,9 @@ using Horse.Messaging.Server.Queues;
 namespace Horse.Messaging.Server
 {
     /// <summary>
-    /// Helper parameter for delivery handler factory implementation
+    /// Helper parameter for horse queue manager factory implementation
     /// </summary>
-    public class DeliveryHandlerBuilder
+    public class QueueManagerBuilder
     {
         /// <summary>
         /// Horse MQ Server
@@ -20,26 +20,26 @@ namespace Horse.Messaging.Server
         public HorseQueue Queue { get; internal set; }
 
         /// <summary>
-        /// Delivery Handler name.
+        /// Queue manager name.
         /// Used when the factory method is triggered over network by a client.
         /// </summary>
-        public string HandlerName { get; set; }
+        public string ManagerName { get; set; }
         
         /// <summary>
         /// All header data of the message that is received over network from a client.
         /// </summary>
         public IEnumerable<KeyValuePair<string,string>> Headers { get; internal set; }
 
-        private Action<DeliveryHandlerBuilder> _afterCompleted;
+        private Action<QueueManagerBuilder> _afterCompleted;
         
-        internal DeliveryHandlerBuilder()
+        internal QueueManagerBuilder()
         {
         }
 
         /// <summary>
         /// Subscribes to after delivery handler and queue created operation
         /// </summary>
-        public void OnAfterCompleted(Action<DeliveryHandlerBuilder> action)
+        public void OnAfterCompleted(Action<QueueManagerBuilder> action)
         {
             _afterCompleted = action;
         }

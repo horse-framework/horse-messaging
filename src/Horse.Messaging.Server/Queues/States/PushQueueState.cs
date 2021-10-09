@@ -68,7 +68,9 @@ namespace Horse.Messaging.Server.Queues.States
             if (message.CurrentDeliveryReceivers.Count > 0)
                 message.CurrentDeliveryReceivers.Clear();
 
-            message.Decision = await _queue.DeliveryHandler.BeginSend(_queue, message);
+            IQueueDeliveryHandler deliveryHandler = _queue.Manager.DeliveryHandler;
+
+            message.Decision = await deliveryHandler.BeginSend(_queue, message);
             if (!await _queue.ApplyDecision(message.Decision, message))
                 return PushResult.Success;
 
@@ -86,10 +88,8 @@ namespace Horse.Messaging.Server.Queues.States
                     continue;
 
                 //call before send and check decision
-                Decision ccrd = await _queue.DeliveryHandler.CanConsumerReceive(_queue, message, client.Client);
-                final = HorseQueue.CreateFinalDecision(final, ccrd);
-
-                if (ccrd.Interrupt)
+                bool canConsumerReceive = await deliveryHandler.CanConsumerReceive(_queue, message, client.Client);
+                if (!canConsumerReceive)
                     continue;
 
                 //create delivery object
@@ -110,23 +110,20 @@ namespace Horse.Messaging.Server.Queues.States
                     message.CurrentDeliveryReceivers.Add(client);
 
                     //adds the delivery to time keeper to check timing up
-                    _queue.TimeKeeper.AddAcknowledgeCheck(delivery);
+                    deliveryHandler.Tracker.Track(delivery);
 
                     //mark message is sent
                     delivery.MarkAsSent();
 
                     //do after send operations for per message
                     _queue.Info.AddDelivery();
-                    Decision d = await _queue.DeliveryHandler.ConsumerReceived(_queue, delivery, client.Client);
 
                     foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                         _ = handler.OnConsumed(_queue, delivery, client.Client);
-
-                    final = HorseQueue.CreateFinalDecision(final, d);
                 }
                 else
                 {
-                    Decision d = await _queue.DeliveryHandler.ConsumerReceiveFailed(_queue, delivery, client.Client);
+                    Decision d = await deliveryHandler.ConsumerReceiveFailed(_queue, delivery, client.Client);
                     final = HorseQueue.CreateFinalDecision(final, d);
                 }
             }
@@ -139,7 +136,7 @@ namespace Horse.Messaging.Server.Queues.States
             if (messageIsSent)
                 _queue.Info.AddMessageSend();
 
-            message.Decision = await _queue.DeliveryHandler.EndSend(_queue, message);
+            message.Decision = await deliveryHandler.EndSend(_queue, message);
             await _queue.ApplyDecision(message.Decision, message);
 
             return PushResult.Success;

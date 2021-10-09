@@ -42,5 +42,19 @@ namespace Horse.Messaging.Data
         /// If AutoFlush is true, database file stream flush interval duration.
         /// </summary>
         public TimeSpan FlushInterval { get; set; }
+
+        internal DatabaseOptions Clone()
+        {
+            return new DatabaseOptions
+            {
+                Filename = Filename,
+                AutoShrink = AutoShrink,
+                ShrinkInterval = ShrinkInterval,
+                CreateBackupOnShrink = CreateBackupOnShrink,
+                InstantFlush = InstantFlush,
+                AutoFlush = AutoFlush,
+                FlushInterval = FlushInterval
+            };
+        }
     }
 }

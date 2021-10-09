@@ -20,12 +20,12 @@ namespace Horse.Messaging.Client.Routers
         /// </summary>
         /// <param name="routerName">Router name</param>
         /// <param name="content">Message content</param>
-        /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
+        /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> Publish(string routerName,
                                   string content,
-                                  bool waitAcknowledge = false,
+                                  bool waitForCommit = false,
                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
@@ -34,13 +34,13 @@ namespace Horse.Messaging.Client.Routers
         /// <param name="routerName">Router name</param>
         /// <param name="content">Message content</param>
         /// <param name="messageId">User specified message Id, must be unique</param>
-        /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
+        /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> Publish(string routerName,
                                   string content,
                                   string messageId,
-                                  bool waitAcknowledge = false,
+                                  bool waitForCommit = false,
                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
@@ -48,12 +48,12 @@ namespace Horse.Messaging.Client.Routers
         /// </summary>
         /// <param name="routerName">Router name</param>
         /// <param name="content">Message content</param>
-        /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
+        /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> Publish(string routerName,
                                   MemoryStream content,
-                                  bool waitAcknowledge = false,
+                                  bool waitForCommit = false,
                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
@@ -62,24 +62,24 @@ namespace Horse.Messaging.Client.Routers
         /// <param name="routerName">Router name</param>
         /// <param name="content">Message content</param>
         /// <param name="messageId">User specified message Id, must be unique</param>
-        /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
+        /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> Publish(string routerName,
                                   MemoryStream content,
                                   string messageId,
-                                  bool waitAcknowledge = false,
+                                  bool waitForCommit = false,
                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Publish a JSON message to a router
         /// </summary>
         /// <param name="jsonObject">The object that will be serialized to JSON string</param>
-        /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
+        /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> PublishJson(object jsonObject,
-                                      bool waitAcknowledge = false,
+                                      bool waitForCommit = false,
                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
@@ -87,12 +87,12 @@ namespace Horse.Messaging.Client.Routers
         /// </summary>
         /// <param name="routerName">Router name</param>
         /// <param name="jsonObject">The object that will be serialized to JSON string</param>
-        /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
+        /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> PublishJson(string routerName,
                                       object jsonObject,
-                                      bool waitAcknowledge = false,
+                                      bool waitForCommit = false,
                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
@@ -101,13 +101,13 @@ namespace Horse.Messaging.Client.Routers
         /// <param name="routerName">Router name</param>
         /// <param name="jsonObject">The object that will be serialized to JSON string</param>
         /// <param name="contentType">Message content type</param>
-        /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
+        /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> PublishJson(string routerName,
                                       object jsonObject,
                                       ushort? contentType = null,
-                                      bool waitAcknowledge = false,
+                                      bool waitForCommit = false,
                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
@@ -117,14 +117,14 @@ namespace Horse.Messaging.Client.Routers
         /// <param name="jsonObject">The object that will be serialized to JSON string</param>
         /// <param name="messageId">User specified message Id, must be unique</param>
         /// <param name="contentType">Message content type</param>
-        /// <param name="waitAcknowledge">If true, Task awaits until acknowledge received from server</param>
+        /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> PublishJson(string routerName,
                                       object jsonObject,
                                       string messageId,
                                       ushort? contentType = null,
-                                      bool waitAcknowledge = false,
+                                      bool waitForCommit = false,
                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
 

@@ -22,7 +22,6 @@ namespace Test.Common
         public int OnReceived { get; set; }
         public int OnSendStarting { get; set; }
         public int OnBeforeSend { get; set; }
-        public int OnAfterSend { get; set; }
         public int OnSendCompleted { get; set; }
         public int OnAcknowledge { get; set; }
         public int OnTimeUp { get; set; }
@@ -53,7 +52,8 @@ namespace Test.Common
                     q.Options.AutoQueueCreation = true;
 
                     q.EventHandlers.Add(new TestQueueHandler(this));
-                    q.UseDeliveryHandler(_ => Task.FromResult<IMessageDeliveryHandler>(new TestDeliveryHandler(this)));
+                    q.UseCustomQueueManager("Default", 
+                                            async m => new TestQueueManager(this, m.Queue, CommitWhen.AfterReceived, PutBackDecision.No));
                 })
                 .ConfigureClients(c =>
                 {

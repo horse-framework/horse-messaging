@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Horse.Core;
@@ -285,7 +283,7 @@ namespace Horse.Messaging.Server.Cluster
                         HorseQueue queue = Rider.Queue.Find(message.Target);
 
                         if (queue != null)
-                            _ = queue.StartSync(this);
+                            _ = queue.Manager.Synchronizer.BeginSharing(this);
                         else
                             _ = SendMessage(new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.RemoveQueue));
                     }
@@ -297,8 +295,8 @@ namespace Horse.Messaging.Server.Cluster
                 {
                     HorseQueue queue = Rider.Queue.Find(message.Target);
                     if (queue != null)
-                        _ = cluster.ProcessMessageIds(this, queue, message.GetStringContent());
-                    
+                        _ = queue.Manager.Synchronizer.ProcessMessageList(message);
+
                     break;
                 }
 
@@ -306,20 +304,17 @@ namespace Horse.Messaging.Server.Cluster
                 {
                     HorseQueue queue = Rider.Queue.Find(message.Target);
                     if (queue != null)
-                    {
-                        string[] requestMessageIds = message.GetStringContent().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-                        _ = cluster.SendRequestedMessages(this, queue, requestMessageIds);
-                    }
-                    
+                        _ = queue.Manager.Synchronizer.SendMessages(message);
+
                     break;
                 }
-                
+
                 case KnownContentTypes.NodeQueueMessageResponse:
                 {
                     HorseQueue queue = Rider.Queue.Find(message.Target);
                     if (queue != null)
-                        _ = cluster.CompleteQueueSync(this, queue, message);
-                    
+                        _ = queue.Manager.Synchronizer.ProcessReceivedMessages(message);
+
                     break;
                 }
 
@@ -327,7 +322,8 @@ namespace Horse.Messaging.Server.Cluster
                 {
                     HorseQueue queue = Rider.Queue.Find(message.Target);
                     if (queue != null)
-                        queue.FinishSync();
+                        _ = queue.Manager.Synchronizer.EndSharing();
+                    
                     break;
                 }
 
@@ -345,8 +341,19 @@ namespace Horse.Messaging.Server.Cluster
                 }
 
                 case KnownContentTypes.UpdateQueue:
-                    throw new NotImplementedException();
+                {
+                    HorseQueue queue = Rider.Queue.Find(message.Target);
+
+                    if (queue != null)
+                    {
+                        string content = message.GetStringContent();
+                        NodeQueueInfo queueInfo = System.Text.Json.JsonSerializer.Deserialize<NodeQueueInfo>(content);
+
+                        queue.UpdateOptionsByNodeInfo(queueInfo);
+                    }
+
                     break;
+                }
 
                 case KnownContentTypes.RemoveQueue:
                     throw new NotImplementedException();
@@ -368,15 +375,18 @@ namespace Horse.Messaging.Server.Cluster
             }
         }
 
-        internal Task SendMessage(HorseMessage message)
+        internal async Task<bool> SendMessage(HorseMessage message)
         {
             if (_outgoingClient != null && _outgoingClient.IsConnected)
-                return _outgoingClient.SendAsync(message);
+            {
+                HorseResult result = await _outgoingClient.SendAsync(message);
+                return result.Code == HorseResultCode.Ok;
+            }
 
             if (_incomingClient != null && _incomingClient.IsConnected)
-                return _incomingClient.SendAsync(message);
+                return await _incomingClient.SendAsync(message);
 
-            return Task.CompletedTask;
+            return false;
         }
 
         internal Task<bool> SendMessageAndWaitAck(HorseMessage message)

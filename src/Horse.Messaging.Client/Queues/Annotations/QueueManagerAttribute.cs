@@ -10,12 +10,12 @@ namespace Horse.Messaging.Client.Queues.Annotations
     /// Server delivery handler builder can use that value
     /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-    public class DeliveryHandlerAttribute : MessageHeaderAttribute
+    public class QueueManagerAttribute : MessageHeaderAttribute
     {
         /// <summary>
         /// Creates new Delivery Handler Attribute
         /// </summary>
-        public DeliveryHandlerAttribute(string value) : base(HorseHeaders.DELIVERY_HANDLER, value)
+        public QueueManagerAttribute(string value) : base(HorseHeaders.QUEUE_MANAGER, value)
         {
         }
     }

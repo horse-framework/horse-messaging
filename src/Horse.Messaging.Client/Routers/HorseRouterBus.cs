@@ -38,39 +38,39 @@ namespace Horse.Messaging.Client.Routers
         /// <inheritdoc />
         public Task<HorseResult> Publish(string routerName,
                                          string content,
-                                         bool waitAcknowledge = false,
+                                         bool waitForCommit = false,
                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Router.Publish(routerName, content, null, waitAcknowledge, 0, messageHeaders);
+            return _client.Router.Publish(routerName, content, null, waitForCommit, 0, messageHeaders);
         }
 
         /// <inheritdoc />
         public Task<HorseResult> Publish(string routerName,
                                          string content,
                                          string messageId,
-                                         bool waitAcknowledge = false,
+                                         bool waitForCommit = false,
                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Router.Publish(routerName, content, messageId, waitAcknowledge, 0, messageHeaders);
+            return _client.Router.Publish(routerName, content, messageId, waitForCommit, 0, messageHeaders);
         }
 
         /// <inheritdoc />
         public Task<HorseResult> Publish(string routerName,
                                          MemoryStream content,
-                                         bool waitAcknowledge = false,
+                                         bool waitForCommit = false,
                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Router.Publish(routerName, content.ToArray(), null, waitAcknowledge, 0, messageHeaders);
+            return _client.Router.Publish(routerName, content.ToArray(), null, waitForCommit, 0, messageHeaders);
         }
 
         /// <inheritdoc />
         public Task<HorseResult> Publish(string routerName,
                                          MemoryStream content,
                                          string messageId,
-                                         bool waitAcknowledge = false,
+                                         bool waitForCommit = false,
                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Router.Publish(routerName, content.ToArray(), messageId, waitAcknowledge, 0, messageHeaders);
+            return _client.Router.Publish(routerName, content.ToArray(), messageId, waitForCommit, 0, messageHeaders);
         }
 
         #endregion
@@ -79,29 +79,29 @@ namespace Horse.Messaging.Client.Routers
 
         /// <inheritdoc />
         public Task<HorseResult> PublishJson(object jsonObject,
-                                             bool waitAcknowledge = false,
+                                             bool waitForCommit = false,
                                              IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Router.PublishJson(jsonObject, waitAcknowledge, messageHeaders);
+            return _client.Router.PublishJson(jsonObject, waitForCommit, messageHeaders);
         }
 
         /// <inheritdoc />
         public Task<HorseResult> PublishJson(string routerName,
                                              object jsonObject,
-                                             bool waitAcknowledge = false,
+                                             bool waitForCommit = false,
                                              IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return PublishJson(routerName, jsonObject, null, waitAcknowledge, messageHeaders);
+            return PublishJson(routerName, jsonObject, null, waitForCommit, messageHeaders);
         }
 
         /// <inheritdoc />
         public Task<HorseResult> PublishJson(string routerName,
                                              object jsonObject,
                                              ushort? contentType = null,
-                                             bool waitAcknowledge = false,
+                                             bool waitForCommit = false,
                                              IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Router.PublishJson(routerName, jsonObject, null, waitAcknowledge, contentType, messageHeaders);
+            return _client.Router.PublishJson(routerName, jsonObject, null, waitForCommit, contentType, messageHeaders);
         }
 
         /// <inheritdoc />
@@ -109,10 +109,10 @@ namespace Horse.Messaging.Client.Routers
                                              object jsonObject,
                                              string messageId,
                                              ushort? contentType = null,
-                                             bool waitAcknowledge = false,
+                                             bool waitForCommit = false,
                                              IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Router.PublishJson(routerName, jsonObject, messageId, waitAcknowledge, contentType, messageHeaders);
+            return _client.Router.PublishJson(routerName, jsonObject, messageId, waitForCommit, contentType, messageHeaders);
         }
 
         #endregion

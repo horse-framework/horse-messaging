@@ -1,86 +1,58 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Threading.Tasks;
+using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Server.Queues.Store
 {
-    internal class LinkedMessageStore : IQueueMessageStore
+    public class LinkedMessageStore : IQueueMessageStore
     {
-        private readonly HorseQueue _queue;
+        public IHorseQueueManager Manager { get; }
+        public IMessageTimeoutTracker TimeoutTracker { get; }
+
+        public bool IsEmpty
+        {
+            get
+            {
+                lock (_messages)
+                    return _messages.Count == 0;
+            }
+        }
+
         private readonly LinkedList<QueueMessage> _messages = new();
-        private readonly LinkedList<QueueMessage> _messagesPrio = new();
 
-        public LinkedMessageStore(HorseQueue queue)
+        public LinkedMessageStore(IHorseQueueManager manager)
         {
-            _queue = queue;
+            Manager = manager;
+            TimeoutTracker = new DefaultMessageTimeoutTracker(manager.Queue, this);
         }
 
-        public int CountAll()
-        {
-            return _messages.Count + _messagesPrio.Count;
-        }
-
-        public int CountRegular()
+        public int Count()
         {
             return _messages.Count;
         }
 
-        public int CountPriority()
+        public virtual void Put(QueueMessage message)
         {
-            return _messagesPrio.Count;
-        }
-
-        public void Put(QueueMessage message)
-        {
-            if (message.Message.HighPriority)
+            lock (_messages)
             {
-                lock (_messagesPrio)
-                {
-                    if (message.IsInQueue)
-                        return;
+                if (message.IsInQueue)
+                    return;
 
-                    message.IsInQueue = true;
-                    _messagesPrio.AddFirst(message);
-                }
-            }
-            else
-            {
-                lock (_messages)
-                {
-                    if (message.IsInQueue)
-                        return;
-
-                    message.IsInQueue = true;
-                    _messages.AddLast(message);
-                }
+                message.IsInQueue = true;
+                _messages.AddLast(message);
             }
         }
 
-        public IEnumerable<string> GetMessageIdList(bool priorityMessages)
+        public virtual QueueMessage ReadFirst()
         {
-            if (priorityMessages)
-            {
-                foreach (QueueMessage msg in _messagesPrio)
-                    yield return msg.Message.MessageId;
-            }
-            else
-            {
-                foreach (QueueMessage msg in _messages)
-                    yield return msg.Message.MessageId;
-            }
+            QueueMessage message;
+            lock (_messages)
+                message = _messages.First?.Value;
+
+            return message;
         }
 
-        public QueueMessage GetNext(bool remove, bool fromEnd = false)
-        {
-            QueueMessage message = GetPriorityNext(remove, fromEnd);
-
-            if (message != null)
-                return message;
-
-            return GetRegularNext(remove, fromEnd);
-        }
-
-        public QueueMessage GetRegularNext(bool remove, bool fromEnd = false)
+        public virtual QueueMessage ConsumeFirst()
         {
             lock (_messages)
             {
@@ -88,162 +60,34 @@ namespace Horse.Messaging.Server.Queues.Store
                     return null;
 
                 QueueMessage message;
-                if (fromEnd)
-                {
-                    message = _messages.Last.Value;
-                    if (remove)
-                    {
-                        _messages.RemoveLast();
-                        message.IsInQueue = false;
-                    }
-                }
-                else
-                {
-                    message = _messages.First.Value;
-                    if (remove)
-                    {
-                        _messages.RemoveFirst();
-                        message.IsInQueue = false;
-                    }
-                }
-
+                message = _messages.First.Value;
+                _messages.RemoveFirst();
+                message.IsInQueue = false;
                 return message;
             }
         }
 
-        public QueueMessage GetPriorityNext(bool remove, bool fromEnd = false)
+        public virtual List<QueueMessage> ConsumeMultiple(int count)
         {
-            if (_messagesPrio.Count > 0)
-            {
-                QueueMessage prioMessage = null;
-                lock (_messagesPrio)
-                {
-                    if (_messagesPrio.Count > 0)
-                    {
-                        if (fromEnd)
-                        {
-                            prioMessage = _messagesPrio.Last.Value;
-                            if (remove)
-                            {
-                                _messagesPrio.RemoveLast();
-                                prioMessage.IsInQueue = false;
-                            }
-                        }
-                        else
-                        {
-                            prioMessage = _messagesPrio.First.Value;
-                            if (remove)
-                            {
-                                _messagesPrio.RemoveFirst();
-                                prioMessage.IsInQueue = false;
-                            }
-                        }
-                    }
-                }
-
-                if (prioMessage != null)
-                    return prioMessage;
-            }
-
-            return null;
-        }
-
-        public QueueMessage FindAndRemove(Func<QueueMessage, bool> predicate)
-        {
-            lock (_messages)
-            {
-                foreach (QueueMessage message in _messages)
-                {
-                    if (predicate(message))
-                    {
-                        message.IsInQueue = false;
-                        _messages.Remove(message);
-                        return message;
-                    }
-                }
-            }
-
-            lock (_messagesPrio)
-            {
-                foreach (QueueMessage message in _messagesPrio)
-                {
-                    if (predicate(message))
-                    {
-                        message.IsInQueue = false;
-                        _messagesPrio.Remove(message);
-                        return message;
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        public List<QueueMessage> FindAll(Func<QueueMessage, bool> predicate)
-        {
-            List<QueueMessage> messages = new List<QueueMessage>();
-
-            lock (_messagesPrio)
-                messages.AddRange(_messagesPrio.Where(predicate));
-
-            lock (_messages)
-                messages.AddRange(_messages.Where(predicate));
-
-            return messages;
-        }
-
-        public List<QueueMessage> FindAndRemoveRegular(Func<QueueMessage, bool> predicate)
-        {
-            List<QueueMessage> messages = new List<QueueMessage>();
+            List<QueueMessage> list = new List<QueueMessage>(count);
 
             lock (_messages)
             {
-                if (_messages.Count == 0)
-                    return messages;
-
-                LinkedListNode<QueueMessage> msg = _messages.First;
-
-                while (msg.Next != null)
+                for (int i = 0; i < count; i++)
                 {
-                    if (predicate(msg.Value))
-                    {
-                        msg.Value.IsInQueue = false;
-                        LinkedListNode<QueueMessage> next = msg.Next;
-                        messages.Add(msg.Value);
-                        _messages.Remove(msg);
-                        msg = next;
-                    }
+                    if (_messages.Count == 0)
+                        break;
+
+                    QueueMessage message = _messages.First.Value;
+                    if (message == null)
+                        continue;
+
+                    list.Add(message);
+                    _messages.RemoveFirst();
                 }
             }
 
-            return messages;
-        }
-
-        public List<QueueMessage> FindAndRemovePriority(Func<QueueMessage, bool> predicate)
-        {
-            List<QueueMessage> messages = new List<QueueMessage>();
-
-            lock (_messagesPrio)
-            {
-                if (_messagesPrio.Count == 0)
-                    return messages;
-
-                LinkedListNode<QueueMessage> msg = _messagesPrio.First;
-
-                while (msg.Next != null)
-                {
-                    if (predicate(msg.Value))
-                    {
-                        msg.Value.IsInQueue = false;
-                        LinkedListNode<QueueMessage> next = msg.Next;
-                        messages.Add(msg.Value);
-                        _messagesPrio.Remove(msg);
-                        msg = next;
-                    }
-                }
-            }
-
-            return messages;
+            return list;
         }
 
         public IEnumerable<QueueMessage> GetUnsafe()
@@ -252,45 +96,63 @@ namespace Horse.Messaging.Server.Queues.Store
                 yield return message;
         }
 
-        public IEnumerable<QueueMessage> GetUnsafePriority()
+        public virtual bool Remove(string messageId)
         {
-            foreach (QueueMessage message in _messagesPrio)
-                yield return message;
+            lock (_messages)
+            {
+                LinkedListNode<QueueMessage> node = _messages.First;
+
+                while (node?.Value != null)
+                {
+                    if (node.Value.Message.MessageId == messageId)
+                    {
+                        _messages.Remove(node);
+                        return true;
+                    }
+
+                    node = node.Next;
+                }
+            }
+
+            return false;
         }
 
-        public void Remove(QueueMessage message)
+        public virtual void Remove(HorseMessage message)
         {
-            if (message.Message.HighPriority)
+            lock (_messages)
             {
-                lock (_messagesPrio)
-                    _messagesPrio.Remove(message);
-            }
-            else
-            {
-                lock (_messages)
-                    _messages.Remove(message);
+                LinkedListNode<QueueMessage> node = _messages.First;
+                while (node?.Value != null)
+                {
+                    if (node.Value.Message == message)
+                    {
+                        _messages.Remove(node);
+                        return;
+                    }
+
+                    node = node.Next;
+                }
             }
         }
 
-        public void ClearRegular()
+        public virtual void Remove(QueueMessage message)
+        {
+            lock (_messages)
+                _messages.Remove(message);
+        }
+
+        public virtual Task Clear()
         {
             lock (_messages)
                 _messages.Clear();
+            
+            return Task.CompletedTask;
         }
 
-        public void ClearPriority()
+        public virtual Task Destroy()
         {
-            lock (_messagesPrio)
-                _messagesPrio.Clear();
-        }
-
-        public void ClearAll()
-        {
-            lock (_messages)
-                _messages.Clear();
-
-            lock (_messagesPrio)
-                _messagesPrio.Clear();
+            Clear();
+            return Task.CompletedTask;
         }
     }
 }

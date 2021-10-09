@@ -177,7 +177,7 @@ namespace Horse.Messaging.Client.Queues
         /// </summary>
         public async Task<HorseResult> Create(string queue,
             Action<QueueOptions> optionsAction,
-            string deliveryHandlerHeader = null,
+            string queueManagerName = null,
             IEnumerable<KeyValuePair<string, string>> additionalHeaders = null)
         {
             HorseMessage message = new HorseMessage();
@@ -187,8 +187,8 @@ namespace Horse.Messaging.Client.Queues
             message.WaitResponse = true;
             message.AddHeader(HorseHeaders.QUEUE_NAME, queue);
 
-            if (!string.IsNullOrEmpty(deliveryHandlerHeader))
-                message.AddHeader(HorseHeaders.DELIVERY_HANDLER, deliveryHandlerHeader);
+            if (!string.IsNullOrEmpty(queueManagerName))
+                message.AddHeader(HorseHeaders.QUEUE_MANAGER, queueManagerName);
 
             if (additionalHeaders != null)
                 foreach (KeyValuePair<string, string> pair in additionalHeaders)
@@ -312,34 +312,34 @@ namespace Horse.Messaging.Client.Queues
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public Task<HorseResult> PushJson(object jsonObject, bool waitAcknowledge,
+        public Task<HorseResult> PushJson(object jsonObject, bool waitForCommit,
             IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return PushJson(null, jsonObject, waitAcknowledge, messageHeaders);
+            return PushJson(null, jsonObject, waitForCommit, messageHeaders);
         }
 
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public Task<HorseResult> PushJson(object jsonObject, string messageId, bool waitAcknowledge,
+        public Task<HorseResult> PushJson(object jsonObject, string messageId, bool waitForCommit,
             IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return PushJson(null, jsonObject, messageId, waitAcknowledge, messageHeaders);
+            return PushJson(null, jsonObject, messageId, waitForCommit, messageHeaders);
         }
 
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public Task<HorseResult> PushJson(string queue, object jsonObject, bool waitAcknowledge,
+        public Task<HorseResult> PushJson(string queue, object jsonObject, bool waitForCommit,
             IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return PushJson(queue, jsonObject, null, waitAcknowledge, messageHeaders);
+            return PushJson(queue, jsonObject, null, waitForCommit, messageHeaders);
         }
 
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public async Task<HorseResult> PushJson(string queue, object jsonObject, string messageId, bool waitAcknowledge,
+        public async Task<HorseResult> PushJson(string queue, object jsonObject, string messageId, bool waitForCommit,
             IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             QueueTypeDescriptor descriptor = DescriptorContainer.GetDescriptor(jsonObject.GetType());
@@ -352,7 +352,7 @@ namespace Horse.Messaging.Client.Queues
             if (!string.IsNullOrEmpty(messageId))
                 message.SetMessageId(messageId);
 
-            message.WaitResponse = waitAcknowledge;
+            message.WaitResponse = waitForCommit;
 
             if (messageHeaders != null)
                 foreach (KeyValuePair<string, string> pair in messageHeaders)
@@ -360,48 +360,48 @@ namespace Horse.Messaging.Client.Queues
 
             message.Serialize(jsonObject, Client.MessageSerializer);
 
-            if (string.IsNullOrEmpty(message.MessageId) && waitAcknowledge)
+            if (string.IsNullOrEmpty(message.MessageId) && waitForCommit)
                 message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-            return await Client.WaitResponse(message, waitAcknowledge);
+            return await Client.WaitResponse(message, waitForCommit);
         }
 
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public async Task<HorseResult> Push(string queue, string content, bool waitAcknowledge,
+        public async Task<HorseResult> Push(string queue, string content, bool waitForCommit,
             IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return await Push(queue, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge, messageHeaders);
+            return await Push(queue, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitForCommit, messageHeaders);
         }
 
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public async Task<HorseResult> Push(string queue, string content, string messageId, bool waitAcknowledge,
+        public async Task<HorseResult> Push(string queue, string content, string messageId, bool waitForCommit,
             IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return await Push(queue, new MemoryStream(Encoding.UTF8.GetBytes(content)), messageId, waitAcknowledge, messageHeaders);
+            return await Push(queue, new MemoryStream(Encoding.UTF8.GetBytes(content)), messageId, waitForCommit, messageHeaders);
         }
 
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public Task<HorseResult> Push(string queue, MemoryStream content, bool waitAcknowledge,
+        public Task<HorseResult> Push(string queue, MemoryStream content, bool waitForCommit,
             IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return Push(queue, content, null, waitAcknowledge, messageHeaders);
+            return Push(queue, content, null, waitForCommit, messageHeaders);
         }
 
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
-        public async Task<HorseResult> Push(string queue, MemoryStream content, string messageId, bool waitAcknowledge,
+        public async Task<HorseResult> Push(string queue, MemoryStream content, string messageId, bool waitForCommit,
             IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             HorseMessage message = new HorseMessage(MessageType.QueueMessage, queue, 0);
             message.Content = content;
-            message.WaitResponse = waitAcknowledge;
+            message.WaitResponse = waitForCommit;
 
             if (!string.IsNullOrEmpty(messageId))
                 message.SetMessageId(messageId);
@@ -410,10 +410,10 @@ namespace Horse.Messaging.Client.Queues
                 foreach (KeyValuePair<string, string> pair in messageHeaders)
                     message.AddHeader(pair.Key, pair.Value);
 
-            if (string.IsNullOrEmpty(message.MessageId) && waitAcknowledge)
+            if (string.IsNullOrEmpty(message.MessageId) && waitForCommit)
                 message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-            return await Client.WaitResponse(message, waitAcknowledge);
+            return await Client.WaitResponse(message, waitForCommit);
         }
 
         /// <summary>

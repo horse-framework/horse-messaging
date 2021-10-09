@@ -1,6 +1,6 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Server.Queues.Store
 {
@@ -9,23 +9,16 @@ namespace Horse.Messaging.Server.Queues.Store
     /// </summary>
     public interface IQueueMessageStore
     {
+        IHorseQueueManager Manager { get; }
+        IMessageTimeoutTracker TimeoutTracker { get; }
+        
+        bool IsEmpty { get; }
+
         /// <summary>
         /// Returns count of all stored messages
         /// </summary>
         /// <returns></returns>
-        int CountAll();
-
-        /// <summary>
-        /// Returns count of stored regular messages
-        /// </summary>
-        /// <returns></returns>
-        int CountRegular();
-
-        /// <summary>
-        /// Returns count of high priority marked messages
-        /// </summary>
-        /// <returns></returns>
-        int CountPriority();
+        int Count();
 
         /// <summary>
         /// Puts a message into message store 
@@ -33,45 +26,20 @@ namespace Horse.Messaging.Server.Queues.Store
         void Put(QueueMessage message);
 
         /// <summary>
-        /// Returns id list of all messages
+        /// Gets next message from store
         /// </summary>
-        IEnumerable<string> GetMessageIdList(bool priorityMessages);
+        QueueMessage ReadFirst();
 
         /// <summary>
         /// Gets next message from store
         /// </summary>
-        QueueMessage GetNext(bool remove, bool fromEnd = false);
-
-        /// <summary>
-        /// Get next regular message
-        /// </summary>
-        QueueMessage GetRegularNext(bool remove, bool fromEnd = false);
-
-        /// <summary>
-        /// Get next priority message
-        /// </summary>
-        QueueMessage GetPriorityNext(bool remove, bool fromEnd = false);
-
-        /// <summary>
-        /// Finds message, removes from store and returns
-        /// </summary>
-        QueueMessage FindAndRemove(Func<QueueMessage, bool> predicate);
-
-        /// <summary>
-        /// Finds message, removes from store and returns
-        /// </summary>
-        List<QueueMessage> FindAll(Func<QueueMessage, bool> predicate);
-
-        /// <summary>
-        /// Finds in regular
-        /// </summary>
-        List<QueueMessage> FindAndRemoveRegular(Func<QueueMessage, bool> predicate);
+        QueueMessage ConsumeFirst();
         
         /// <summary>
-        /// Finds in high priority messages
+        /// Gets next message from store
         /// </summary>
-        List<QueueMessage> FindAndRemovePriority(Func<QueueMessage, bool> predicate);
-
+        List<QueueMessage> ConsumeMultiple(int count);
+        
         /// <summary>
         /// Gets all messages.
         /// That method returns the messages without thread safe
@@ -79,29 +47,29 @@ namespace Horse.Messaging.Server.Queues.Store
         IEnumerable<QueueMessage> GetUnsafe();
         
         /// <summary>
-        /// Gets all priority messages.
-        /// That method returns the messages without thread safe
+        /// Finds and removes message from store
         /// </summary>
-        IEnumerable<QueueMessage> GetUnsafePriority();
-        
+        bool Remove(string messageId);
+
+        /// <summary>
+        /// Finds and removes message from store
+        /// </summary>
+        void Remove(HorseMessage message);
+
         /// <summary>
         /// Finds and removes message from store
         /// </summary>
         void Remove(QueueMessage message);
 
         /// <summary>
-        /// Clears all regular messages from the queue
+        /// Clears all messages from store
         /// </summary>
-        void ClearRegular();
-        
+        Task Clear();
+
         /// <summary>
-        /// Clears all high priority messages from the queue
+        /// Destroys all messages
         /// </summary>
-        void ClearPriority();
-        
-        /// <summary>
-        /// Clears all messages from the queue
-        /// </summary>
-        void ClearAll();
+        /// <returns></returns>
+        Task Destroy();
     }
 }

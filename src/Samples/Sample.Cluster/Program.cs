@@ -4,7 +4,6 @@ using Horse.Core;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Queues.Delivery;
-using Horse.Messaging.Server.Queues.Handlers;
 using Horse.Server;
 
 namespace Sample.Cluster
@@ -58,7 +57,7 @@ namespace Sample.Cluster
         static HorseRider StartServer1()
         {
             HorseRider rider = HorseRiderBuilder.Create()
-                .ConfigureQueues(q => q.UseAckDeliveryHandler(CommitWhen.AfterReceived, PutBackDecision.No))
+                .ConfigureQueues(q => q.UseMemoryQueues(CommitWhen.AfterReceived, PutBackDecision.No))
                 .Build();
 
             rider.Cluster.Options.Name = "Server1";
@@ -90,7 +89,7 @@ namespace Sample.Cluster
         static HorseRider StartServer2()
         {
             HorseRider rider = HorseRiderBuilder.Create()
-                .ConfigureQueues(q => q.UseAckDeliveryHandler(CommitWhen.AfterReceived, PutBackDecision.No))
+                .ConfigureQueues(q => q.UseMemoryQueues(CommitWhen.AfterReceived, PutBackDecision.No))
                 .Build();
 
             rider.Cluster.Options.Name = "Server2";
@@ -122,7 +121,7 @@ namespace Sample.Cluster
         static HorseRider StartServer3()
         {
             HorseRider rider = HorseRiderBuilder.Create()
-                .ConfigureQueues(q => q.UseAckDeliveryHandler(CommitWhen.AfterReceived, PutBackDecision.No))
+                .ConfigureQueues(q => q.UseMemoryQueues(CommitWhen.AfterReceived, PutBackDecision.No))
                 .Build();
 
             rider.Cluster.Options.Name = "Server3";

@@ -1,11 +1,9 @@
 using System;
 using System.IO;
-using System.Threading.Tasks;
 using Horse.Messaging.Data.Configuration;
-using Horse.Messaging.Server;
+using Horse.Messaging.Data.Implementation;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
-using Horse.Messaging.Server.Queues.Handlers;
 
 namespace Horse.Messaging.Data
 {
@@ -14,17 +12,6 @@ namespace Horse.Messaging.Data
     /// </summary>
     public static class Extensions
     {
-        /// <summary>
-        /// Loads all persistent queue messages from databases
-        /// </summary>
-        public static Task LoadPersistentQueues(this HorseRider server)
-        {
-            if (ConfigurationFactory.Builder == null)
-                throw new InvalidOperationException("Before loading queues initialize persistent queues with AddPersistentQueues method");
-
-            return ConfigurationFactory.Manager.LoadQueues(server);
-        }
-
         /// <summary>
         /// Implements persistent message delivery handler
         /// </summary>
@@ -35,14 +22,14 @@ namespace Horse.Messaging.Data
         /// <param name="ackTimeoutPutback">Putback decision when ack message isn't received</param>
         /// <param name="nackPutback">Putback decision when negative ack is received</param>
         /// <returns></returns>
-        public static HorseQueueConfigurator UsePersistentDeliveryHandler(this HorseQueueConfigurator cfg,
+        public static HorseQueueConfigurator UsePersistentQueues(this HorseQueueConfigurator cfg,
                                                                           DeleteWhen deleteWhen,
                                                                           CommitWhen commitWhen,
                                                                           bool useRedelivery = false,
                                                                           PutBackDecision ackTimeoutPutback = PutBackDecision.Regular,
                                                                           PutBackDecision nackPutback = PutBackDecision.Regular)
         {
-            return UsePersistentDeliveryHandler(cfg, _ => { }, deleteWhen, commitWhen, useRedelivery, ackTimeoutPutback, nackPutback);
+            return UsePersistentQueues(cfg, _ => { }, deleteWhen, commitWhen, useRedelivery, ackTimeoutPutback, nackPutback);
         }
 
         /// <summary>
@@ -56,13 +43,13 @@ namespace Horse.Messaging.Data
         /// <param name="ackTimeoutPutback">Putback decision when ack message isn't received</param>
         /// <param name="nackPutback">Putback decision when negative ack is received</param>
         /// <returns></returns>
-        public static HorseQueueConfigurator UsePersistentDeliveryHandler(this HorseQueueConfigurator cfg,
-                                                                          Action<DataConfigurationBuilder> dataConfigurator,
-                                                                          DeleteWhen deleteWhen,
-                                                                          CommitWhen commitWhen,
-                                                                          bool useRedelivery = false,
-                                                                          PutBackDecision ackTimeoutPutback = PutBackDecision.Regular,
-                                                                          PutBackDecision nackPutback = PutBackDecision.Regular)
+        public static HorseQueueConfigurator UsePersistentQueues(this HorseQueueConfigurator cfg,
+                                                                 Action<DataConfigurationBuilder> dataConfigurator,
+                                                                 DeleteWhen deleteWhen,
+                                                                 CommitWhen commitWhen,
+                                                                 bool useRedelivery = false,
+                                                                 PutBackDecision ackTimeoutPutback = PutBackDecision.Regular,
+                                                                 PutBackDecision nackPutback = PutBackDecision.Regular)
         {
             DataConfigurationBuilder dataConfigurationBuilder = new DataConfigurationBuilder();
             dataConfigurator(dataConfigurationBuilder);
@@ -72,88 +59,27 @@ namespace Horse.Messaging.Data
 
             ConfigurationFactory.Initialize(dataConfigurationBuilder);
 
-            cfg.Rider.Queue.DeliveryHandlerFactories.Add("PERSISTENT", async dh =>
+            cfg.Rider.Queue.QueueManagerFactories.Add("PERSISTENT", async dh =>
             {
                 DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(dh.Queue);
-                PersistentDeliveryHandler handler = new PersistentDeliveryHandler(dh.Queue, databaseOptions,
-                                                                                  deleteWhen,
-                                                                                  commitWhen,
-                                                                                  useRedelivery);
+                PersistentQueueManager manager = new PersistentQueueManager(dh.Queue,
+                                                                            databaseOptions,
+                                                                            commitWhen,
+                                                                            deleteWhen,
+                                                                            nackPutback,
+                                                                            ackTimeoutPutback,
+                                                                            useRedelivery);
 
-                handler.AckTimeoutPutBack = ackTimeoutPutback;
-                handler.NegativeAckPutBack = nackPutback;
-
-                await handler.Initialize();
-                dh.OnAfterCompleted(AfterDeliveryHandlerCreated);
-                return handler;
+                await manager.Initialize();
+                return manager;
             });
 
-            cfg.Rider.Queue.DeliveryHandlerFactories.Add("PERSISTENT_RELOAD", async b =>
-            {
-                Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> func = cfg.Rider.Queue.DeliveryHandlerFactories["PERSISTENT"];
-                IMessageDeliveryHandler handler = await func(b);
-                b.OnAfterCompleted(_ => { }); //don't trigger created events, it's already created and reloading
-                return handler;
-            });
+            if (!cfg.Rider.Queue.QueueManagerFactories.ContainsKey("DEFAULT"))
+                cfg.Rider.Queue.QueueManagerFactories.Add("DEFAULT", cfg.Rider.Queue.QueueManagerFactories["PERSISTENT"]);
 
-            if (!cfg.Rider.Queue.DeliveryHandlerFactories.ContainsKey("DEFAULT"))
-                cfg.Rider.Queue.DeliveryHandlerFactories.Add("DEFAULT", cfg.Rider.Queue.DeliveryHandlerFactories["PERSISTENT"]);
+            ConfigurationFactory.Manager.LoadQueues(cfg.Rider).GetAwaiter().GetResult();
 
             return cfg;
-        }
-
-        /// <summary>
-        /// Creates and initializes new persistent delivery handler for the queue
-        /// </summary>
-        /// <param name="builder">Delivery handler builder</param>
-        /// <param name="deleteWhen">Decision when messages are deleted from disk</param>
-        /// <param name="commitWhen">Decision when producer receives commit</param>
-        /// <param name="useRedelivery">True if want to keep redelivery data and send to consumers with message headers</param>
-        /// <param name="ackTimeoutPutback">Putback decision when ack message isn't received</param>
-        /// <param name="nackPutback">Putback decision when negative ack is received</param>
-        /// <returns></returns>
-        public static async Task<IMessageDeliveryHandler> CreatePersistentDeliveryHandler(this DeliveryHandlerBuilder builder,
-                                                                                          DeleteWhen deleteWhen,
-                                                                                          CommitWhen commitWhen,
-                                                                                          bool useRedelivery = false,
-                                                                                          PutBackDecision ackTimeoutPutback = PutBackDecision.Regular,
-                                                                                          PutBackDecision nackPutback = PutBackDecision.Regular)
-        {
-            DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
-            PersistentDeliveryHandler handler =
-                new PersistentDeliveryHandler(builder.Queue, databaseOptions, deleteWhen, commitWhen, useRedelivery);
-            handler.AckTimeoutPutBack = ackTimeoutPutback;
-            handler.NegativeAckPutBack = nackPutback;
-            await handler.Initialize();
-            builder.OnAfterCompleted(AfterDeliveryHandlerCreated);
-            return handler;
-        }
-
-        /// <summary>
-        /// Creates and initializes new persistent delivery handler for the queue
-        /// </summary>
-        /// <param name="builder">Delivery handler builder</param>
-        /// <param name="factory">Creates new persistent delivery handler instance</param>
-        /// <returns></returns>
-        public static async Task<IMessageDeliveryHandler> CreatePersistentDeliveryHandler(this DeliveryHandlerBuilder builder,
-                                                                                          Func<DatabaseOptions, IPersistentDeliveryHandler> factory)
-        {
-            DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(builder.Queue);
-            IPersistentDeliveryHandler handler = factory(databaseOptions);
-            await handler.Initialize();
-            builder.OnAfterCompleted(AfterDeliveryHandlerCreated);
-            return handler;
-        }
-
-        private static void AfterDeliveryHandlerCreated(DeliveryHandlerBuilder builder)
-        {
-            IPersistentDeliveryHandler persistentHandler = builder.Queue.DeliveryHandler as IPersistentDeliveryHandler;
-            if (persistentHandler == null)
-                return;
-
-            bool added = ConfigurationFactory.Manager.Add(builder.Queue, persistentHandler.DbFilename);
-            if (added)
-                ConfigurationFactory.Manager.Save();
         }
 
         /// <summary>
