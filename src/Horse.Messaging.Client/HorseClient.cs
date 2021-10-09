@@ -617,9 +617,7 @@ namespace Horse.Messaging.Client
                 return message.CreateResponse(sent.Code);
             }
 
-            HorseMessage response = await task;
-            if (response == null)
-                response = message.CreateResponse(HorseResultCode.RequestTimeout);
+            HorseMessage response = await task ?? message.CreateResponse(HorseResultCode.RequestTimeout);
 
             return response;
         }

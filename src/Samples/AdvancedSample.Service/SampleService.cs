@@ -3,7 +3,7 @@ using Horse.Messaging.Client;
 
 namespace AdvancedSample.Service
 {
-	public sealed class SampleService<T> : SampleServiceBase
+	internal sealed class SampleService<T> : SampleServiceBase
 		where T : class
 	{
 		public SampleService(string clientType, string[] args) : base(clientType, args)

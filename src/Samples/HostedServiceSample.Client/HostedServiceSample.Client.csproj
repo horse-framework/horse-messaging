@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net5.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
+      <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="5.0.0" />
+      <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Horse.Messaging.Client\Horse.Messaging.Client.csproj" />
+      <ProjectReference Include="..\..\Horse.Messaging.Extensions.Client\Horse.Messaging.Extensions.Client.csproj" />
+      <ProjectReference Include="..\AdvancedSample.Core\AdvancedSample.Core.csproj" />
+      <ProjectReference Include="..\HostedServiceSample.Common\HostedServiceSample.Common.csproj" />
+    </ItemGroup>
+
+</Project>
