@@ -21,23 +21,24 @@ namespace Test.Persistency
             ConfigurationFactory.Destroy();
             HorseServer server = new HorseServer();
             HorseRider rider = server.UseRider(cfg => cfg
-                                                   .ConfigureQueues(q =>
-                                                   {
-                                                       q.UsePersistentQueues(q =>
-                                                                                      {
-                                                                                          q.UseInstantFlush()
-                                                                                              .KeepLastBackup()
-                                                                                              .SetAutoShrink(true, TimeSpan.FromSeconds(60))
-                                                                                              .UseInstantFlush();
-                                                                                      },
-                                                                                      DeleteWhen.AfterSend,
-                                                                                      CommitWhen.None,
-                                                                                      true);
-                                                   }));
-            
-            HorseQueue queue = await rider.Queue.Create("test");
+                .ConfigureQueues(q =>
+                {
+                    q.UsePersistentQueues(q =>
+                        {
+                            q.UseInstantFlush()
+                                .KeepLastBackup()
+                                .SetAutoShrink(true, TimeSpan.FromSeconds(60));
+                        },
+                        DeleteWhen.AfterSend,
+                        CommitWhen.None,
+                        true);
+                }));
 
-            HorseMessage message = new HorseMessage(MessageType.QueueMessage, "test");
+            string queueName = $"test{Environment.TickCount}";
+            
+            HorseQueue queue = await rider.Queue.Create(queueName);
+
+            HorseMessage message = new HorseMessage(MessageType.QueueMessage, queueName);
             message.SetMessageId("id");
             message.SetStringContent("Hello, World!");
             QueueMessage queueMessage = new QueueMessage(message);

@@ -10,11 +10,16 @@ namespace Horse.Messaging.Data.Implementation
     {
         public IHorseQueueManager Manager => _manager;
         public IDeliveryTracker Tracker { get; }
+        public CommitWhen CommitWhen { get; set; }
+        public PutBackDecision PutBack { get; set; }
 
         private readonly PersistentQueueManager _manager;
 
         public PersistentMessageDeliveryHandler(PersistentQueueManager manager)
         {
+            CommitWhen = manager.CommitWhen;
+            PutBack = manager.AckTimeoutPutBack;
+            
             _manager = manager;
             Tracker = new DefaultDeliveryTracker(manager);
         }

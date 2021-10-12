@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Delivery;
 using Test.Common;
 using Xunit;
 
@@ -105,6 +106,8 @@ namespace Test.Queues.Types
             Assert.True(consumer.IsConnected);
             HorseResult joined = await consumer.Queue.Subscribe("push-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
+
+            queue.Manager.DeliveryHandler.CommitWhen = CommitWhen.AfterAcknowledge;
 
             HorseResult ack = await producer.Queue.Push("push-a", "Hello, World!", true);
             Assert.Equal(queueAckIsActive, ack.Code == HorseResultCode.Ok);

@@ -114,7 +114,7 @@ namespace Test.Queues.Types
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             HorseResult ack = await producer.Queue.Push("rr-a", "Hello, World!", true);
-            Assert.Equal(queueAckIsActive, ack.Code == HorseResultCode.Ok);
+            Assert.True(ack.Code == HorseResultCode.Ok);
             server.Stop();
         }
 
@@ -129,6 +129,7 @@ namespace Test.Queues.Types
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
             queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            queue.Manager.DeliveryHandler.PutBack = PutBackDecision.Regular;
 
             HorseClient producer = new HorseClient();
             await producer.ConnectAsync("horse://localhost:" + port);
@@ -171,6 +172,7 @@ namespace Test.Queues.Types
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(2);
             queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
             server.PutBack = PutBackDecision.Regular;
+            queue.Manager.DeliveryHandler.PutBack = PutBackDecision.Regular;
 
             HorseClient producer = new HorseClient();
             await producer.ConnectAsync("horse://localhost:" + port);

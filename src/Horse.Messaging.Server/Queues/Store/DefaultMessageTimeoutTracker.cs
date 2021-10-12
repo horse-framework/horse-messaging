@@ -17,7 +17,7 @@ namespace Horse.Messaging.Server.Queues.Store
         {
             Store = store;
             _queue = queue;
-            
+
             _checker = new Thread(async () =>
             {
                 try
@@ -43,11 +43,11 @@ namespace Horse.Messaging.Server.Queues.Store
                             if (!message.Deadline.HasValue)
                                 break;
 
-                            if (message.Deadline.Value > DateTime.UtcNow + _queue.Options.MessageTimeout)
+                            if (message.Deadline.Value > DateTime.UtcNow)
                                 break;
 
                             Store.Remove(message);
-                            
+
                             _queue.Info.AddMessageTimeout();
                             message.MarkAsTimedOut();
 
@@ -57,9 +57,8 @@ namespace Horse.Messaging.Server.Queues.Store
                                 _ = handler.MessageTimedOut(_queue, message);
 
                             _queue.MessageTimeoutEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
-                            
-                            message = Store.ReadFirst();
 
+                            message = Store.ReadFirst();
                         } while (message != null && message.Deadline.HasValue);
                     }
                 }

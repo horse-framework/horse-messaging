@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -625,7 +626,7 @@ namespace Horse.Messaging.Server.Queues
 
                 if (message == null && Manager.MessageStore.Count() > 0)
                     message = Manager.MessageStore.ConsumeFirst();
-
+                
                 if (message == null)
                     return;
 

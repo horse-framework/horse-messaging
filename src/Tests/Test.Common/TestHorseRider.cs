@@ -52,8 +52,9 @@ namespace Test.Common
                     q.Options.AutoQueueCreation = true;
 
                     q.EventHandlers.Add(new TestQueueHandler(this));
-                    q.UseCustomQueueManager("Default", 
-                                            async m => new TestQueueManager(this, m.Queue, CommitWhen.AfterReceived, PutBackDecision.No));
+                    
+                    q.UseCustomQueueManager("Default", async m =>
+                                                new TestQueueManager(this, m.Queue, CommitWhen.AfterReceived, PutBackDecision.No));
                 })
                 .ConfigureClients(c =>
                 {

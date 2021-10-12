@@ -127,10 +127,10 @@ namespace Horse.Messaging.Server.Queues
         /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
         /// <exception cref="OperationCanceledException">Thrown when queue limit is exceeded for the server</exception>
         /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
-        public async Task<HorseQueue> Create(string queueName)
+        public Task<HorseQueue> Create(string queueName)
         {
             QueueOptions options = QueueOptions.CloneFrom(Options);
-            return await Create(queueName, options);
+            return Create(queueName, options);
         }
 
         /// <summary>
@@ -147,6 +147,19 @@ namespace Horse.Messaging.Server.Queues
         }
 
         /// <summary>
+        /// Creates new queue with default handlers
+        /// </summary>
+        /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
+        /// <exception cref="OperationCanceledException">Thrown when queue limit is exceeded for the server</exception>
+        /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
+        public async Task<HorseQueue> Create(string queueName, Action<QueueOptions> optionsAction, string managerName)
+        {
+            QueueOptions options = QueueOptions.CloneFrom(Options);
+            optionsAction(options);
+            return await Create(queueName, options, null, false, false, null, managerName);
+        }
+
+        /// <summary>
         /// Creates new queue
         /// </summary>
         /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
@@ -158,12 +171,12 @@ namespace Horse.Messaging.Server.Queues
         }
 
         internal async Task<HorseQueue> Create(string queueName,
-                                               QueueOptions options,
-                                               HorseMessage requestMessage,
-                                               bool hideException,
-                                               bool returnIfExists,
-                                               MessagingClient client = null,
-                                               string customManagerName = null)
+            QueueOptions options,
+            HorseMessage requestMessage,
+            bool hideException,
+            bool returnIfExists,
+            MessagingClient client = null,
+            string customManagerName = null)
         {
             string handlerName;
 
@@ -250,7 +263,7 @@ namespace Horse.Messaging.Server.Queues
                 CreateEvent.Trigger(client, queue.Name);
 
                 Rider.Cluster.SendQueueCreated(queue);
-                
+
                 return queue;
             }
             catch (Exception e)

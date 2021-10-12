@@ -20,7 +20,8 @@ namespace Test.Queues
             HorseQueue queue = server.Rider.Queue.Find("push-a");
             queue.Options.PutBackDelay = 2000;
             queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-            server.PutBack = PutBackDecision.Priority;
+            server.PutBack = PutBackDecision.Regular;
+            queue.Manager.DeliveryHandler.PutBack = PutBackDecision.Regular;
 
             HorseClient producer = new HorseClient();
             await producer.ConnectAsync("horse://localhost:" + port);
@@ -30,7 +31,7 @@ namespace Test.Queues
             await Task.Delay(100);
             await producer.Queue.Push("push-a", "Second", false);
             await Task.Delay(200);
-            Assert.Equal(2, queue.Manager.MessageStore.Count());
+            Assert.Equal(2, queue.Manager.MessageStore.Count() + queue.Manager.DeliveryHandler.Tracker.GetDeliveryCount());
 
             int receivedMessages = 0;
             HorseClient consumer = new HorseClient();
@@ -51,8 +52,14 @@ namespace Test.Queues
             await Task.Delay(1500);
             Assert.Equal(1, receivedMessages);
             Assert.Equal(1, queue.Manager.MessageStore.Count());
+            
             await Task.Delay(3000);
-            Assert.Equal(2, queue.Manager.MessageStore.Count());
+            
+            int totalMessages = queue.Manager.MessageStore.Count();
+            if (queue.ProcessingMessage != null)
+                totalMessages++;
+            
+            Assert.Equal(2, totalMessages);
             server.Stop();
         }
 
@@ -66,7 +73,7 @@ namespace Test.Queues
             HorseQueue queue = server.Rider.Queue.Find("push-a");
             queue.Options.PutBackDelay = 0;
             queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-            server.PutBack = PutBackDecision.Priority;
+            server.PutBack = PutBackDecision.Regular;
 
             HorseClient producer = new HorseClient();
             await producer.ConnectAsync("horse://localhost:" + port);

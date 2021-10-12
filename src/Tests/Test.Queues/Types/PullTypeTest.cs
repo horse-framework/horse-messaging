@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Delivery;
 using Test.Common;
 using Xunit;
 
@@ -63,7 +65,7 @@ namespace Test.Queues.Types
 
             HorseQueue queue = server.Rider.Queue.Find("pull-a");
             Assert.NotNull(queue);
-            queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            queue.Options.Acknowledge = QueueAckDecision.JustRequest;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
 
             HorseClient consumer = new HorseClient();
@@ -83,8 +85,9 @@ namespace Test.Queues.Types
             await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
-            HorseQueue pullQueue = server.Rider.Queue.Find("pull-a");
-            
+            HorseQueue horseQueue = server.Rider.Queue.Find("pull-a");
+            horseQueue.Manager.DeliveryHandler.CommitWhen = CommitWhen.AfterAcknowledge;
+
             Task<HorseResult> taskAck = producer.Queue.Push("pull-a", "Hello, World!", true);
 
             await Task.Delay(500);

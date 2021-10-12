@@ -8,6 +8,9 @@ namespace Horse.Messaging.Server.Queues.Delivery
     {
         IHorseQueueManager Manager { get; }
         IDeliveryTracker Tracker { get; }
+        
+        CommitWhen CommitWhen { get; set; }
+        PutBackDecision PutBack { get; set; }
 
         /// <summary>
         /// When a client sends a message to the server.
