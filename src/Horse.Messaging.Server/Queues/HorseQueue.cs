@@ -64,7 +64,13 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Message store of the queue
         /// </summary>
-        public IHorseQueueManager Manager { get; private set; }
+        public IHorseQueueManager Manager
+        {
+            get => _manager;
+            set => _manager ??= value;
+        }
+
+        private IHorseQueueManager _manager;
 
         /// <summary>
         /// Queue options.
@@ -210,8 +216,8 @@ namespace Horse.Messaging.Server.Queues
                 return;
 
             Rider.Queue.StatusChangeEvent.Trigger(Name,
-                                                  new KeyValuePair<string, string>($"Previous-{HorseHeaders.STATUS}", Status.ToString()),
-                                                  new KeyValuePair<string, string>($"Next-{HorseHeaders.STATUS}", newStatus.ToString()));
+                new KeyValuePair<string, string>($"Previous-{HorseHeaders.STATUS}", Status.ToString()),
+                new KeyValuePair<string, string>($"Next-{HorseHeaders.STATUS}", newStatus.ToString()));
 
             Status = newStatus;
         }
@@ -495,16 +501,16 @@ namespace Horse.Messaging.Server.Queues
 
             //remove operational headers that are should not be sent to consumers or saved to disk
             message.Message.RemoveHeaders(HorseHeaders.DELAY_BETWEEN_MESSAGES,
-                                          HorseHeaders.ACKNOWLEDGE,
-                                          HorseHeaders.QUEUE_NAME,
-                                          HorseHeaders.QUEUE_TYPE,
-                                          HorseHeaders.QUEUE_TOPIC,
-                                          HorseHeaders.PUT_BACK_DELAY,
-                                          HorseHeaders.DELIVERY,
-                                          HorseHeaders.QUEUE_MANAGER,
-                                          HorseHeaders.MESSAGE_TIMEOUT,
-                                          HorseHeaders.ACK_TIMEOUT,
-                                          HorseHeaders.CC);
+                HorseHeaders.ACKNOWLEDGE,
+                HorseHeaders.QUEUE_NAME,
+                HorseHeaders.QUEUE_TYPE,
+                HorseHeaders.QUEUE_TOPIC,
+                HorseHeaders.PUT_BACK_DELAY,
+                HorseHeaders.DELIVERY,
+                HorseHeaders.QUEUE_MANAGER,
+                HorseHeaders.MESSAGE_TIMEOUT,
+                HorseHeaders.ACK_TIMEOUT,
+                HorseHeaders.CC);
 
             //prepare properties
             message.Message.WaitResponse = Options.Acknowledge != QueueAckDecision.None;
@@ -626,7 +632,7 @@ namespace Horse.Messaging.Server.Queues
 
                 if (message == null && Manager.MessageStore.Count() > 0)
                     message = Manager.MessageStore.ConsumeFirst();
-                
+
                 if (message == null)
                     return;
 
@@ -905,8 +911,8 @@ namespace Horse.Messaging.Server.Queues
                     MessageAckEvent.Trigger(from, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId));
                 else
                     MessageNackEvent.Trigger(from,
-                                             new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId),
-                                             new KeyValuePair<string, string>(HorseHeaders.REASON, deliveryMessage.FindHeader(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON)));
+                        new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId),
+                        new KeyValuePair<string, string>(HorseHeaders.REASON, deliveryMessage.FindHeader(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON)));
             }
             catch (Exception e)
             {

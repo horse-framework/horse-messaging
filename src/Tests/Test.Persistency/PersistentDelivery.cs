@@ -67,6 +67,8 @@ namespace Test.Persistency
             queueMessage.MarkAsSent();
 
             await manager.DeliveryHandler.EndSend(queue, queueMessage);
+            await manager.RemoveMessage(queueMessage);
+            
             deliveries = manager.RedeliveryService.GetDeliveries();
             Assert.Empty(deliveries);
             server.Stop();

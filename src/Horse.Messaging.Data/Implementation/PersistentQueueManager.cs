@@ -81,6 +81,7 @@ namespace Horse.Messaging.Data.Implementation
             NegativeAckPutBack = nackDecision;
             AckTimeoutPutBack = ackTimeoutDecision;
             UseRedelivery = useRedelivery;
+            queue.Manager = this;
 
             _deliveryHandler = new PersistentMessageDeliveryHandler(this);
 

@@ -14,11 +14,11 @@ namespace Horse.Messaging.Data
     /// </summary>
     public class RedeliveryService
     {
-        private readonly Dictionary<string, int> _redeliveries = new Dictionary<string, int>();
+        private readonly Dictionary<string, int> _redeliveries = new();
 
         private readonly string _fullpath;
         private FileStream _stream;
-        private readonly SemaphoreSlim _slim = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _slim = new(1, 1);
 
         /// <summary>
         /// Creates new redelivery service
@@ -114,7 +114,7 @@ namespace Horse.Messaging.Data
         /// <summary>
         /// Saves current redelivery data to disk
         /// </summary>
-        public async Task Save()
+        private async Task Save()
         {
             await using MemoryStream ms = new MemoryStream();
 

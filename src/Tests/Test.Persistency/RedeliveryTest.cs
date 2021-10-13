@@ -91,6 +91,9 @@ namespace Test.Persistency
             await manager.RedeliveryService.Close();
             ConfigurationFactory.Destroy();
 
+            await Task.Delay(1000);
+
+            server = new HorseServer();
             rider = server.UseRider(cfg => cfg.ConfigureQueues(c =>
             {
                 c.UsePersistentQueues(

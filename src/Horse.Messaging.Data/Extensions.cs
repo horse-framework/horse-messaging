@@ -69,7 +69,7 @@ namespace Horse.Messaging.Data
                                                                             nackPutback,
                                                                             ackTimeoutPutback,
                                                                             useRedelivery);
-
+                
                 await manager.Initialize();
                 return manager;
             });

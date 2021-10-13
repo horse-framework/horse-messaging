@@ -95,6 +95,12 @@ namespace Test.Common
                 }
             }
 
+            Task.Run(async () =>
+            {
+                await Task.Delay(30000);
+                Stop();
+            });
+
             return 0;
         }
 
