@@ -673,9 +673,7 @@ namespace Horse.Messaging.Client
                 return message.CreateResponse(sent.Code);
             }
 
-            HorseMessage response = await task;
-            if (response == null)
-                response = message.CreateResponse(HorseResultCode.RequestTimeout);
+            HorseMessage response = await task ?? message.CreateResponse(HorseResultCode.RequestTimeout);
 
             return response;
         }
@@ -685,7 +683,7 @@ namespace Horse.Messaging.Client
         #region Acknowledge - Response
 
         /// <summary>
-        /// Sends unacknowledge message for the message.
+        /// Sends negative acknowledge message for the message.
         /// </summary>
         public async Task<HorseResult> SendNegativeAck(HorseMessage message, string reason = null)
         {
@@ -697,12 +695,33 @@ namespace Horse.Messaging.Client
         }
 
         /// <summary>
-        /// Sends unacknowledge message for the message.
+        /// Sends acknowledge message for the message.
         /// </summary>
         public async Task<HorseResult> SendAck(HorseMessage message)
         {
             HorseMessage ack = message.CreateAcknowledge();
             return await SendAsync(ack);
+        }
+        
+        /// <summary>
+        /// Sends success response for the message
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        public Task<HorseResult> SendResponse(HorseMessage message)
+        {
+            return SendAck(message);
+        }
+
+        /// <summary>
+        /// /// Sends negative response for the message
+        /// </summary>
+        /// <param name="message">Received horse message</param>
+        /// <param name="reason">Description for the error</param>
+        /// <returns></returns>
+        public  Task<HorseResult> SendNegativeResponse(HorseMessage message, string reason = null)
+        {
+           return SendNegativeAck(message,reason);
         }
 
         /// <summary>

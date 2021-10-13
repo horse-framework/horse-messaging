@@ -173,7 +173,7 @@ namespace Horse.Messaging.Client
             if (Status != TransactionStatus.Begin)
                 throw new InvalidOperationException($"{Name} Transaction in {Status} status cannot be commited ({Id})");
 
-            HorseMessage message = new HorseMessage(MessageType.Transaction, Name, KnownContentTypes.TransactionCommit);
+            HorseMessage message = new(MessageType.Transaction, Name, KnownContentTypes.TransactionCommit);
             message.SetMessageId(Id);
 
             HorseMessage response = await Client.Request(message);
