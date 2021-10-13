@@ -6,7 +6,7 @@ namespace HostedServiceSample.Client
 		public HorseService(string[] args) : base(args)
 		{
 			// You can use the below code to add your all consumers into the dependency injection container
-			// ConfigureHorseClient(builder => builder.AddScopedConsumers(typeof(T)));
+			// ConfigureHorseClient(builder => builder.AddTransientConsumers(typeof(T)));
 		}
 	}
 }
