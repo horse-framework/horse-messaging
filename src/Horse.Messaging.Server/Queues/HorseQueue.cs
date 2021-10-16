@@ -11,7 +11,6 @@ using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
-using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.States;
 using Horse.Messaging.Server.Security;
@@ -703,7 +702,7 @@ namespace Horse.Messaging.Server.Queues
             {
                 if (decision.Save)
                     await SaveMessage(message);
-
+                
                 if (decision.Transmission != DecisionTransmission.None && !message.IsProducerAckSent)
                 {
                     HorseMessage acknowledge = customAck ?? message.Message.CreateAcknowledge(decision.Transmission == DecisionTransmission.Failed ? "failed" : null);

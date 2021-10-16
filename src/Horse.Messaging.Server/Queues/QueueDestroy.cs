@@ -1,4 +1,4 @@
-namespace Horse.Messaging.Server.Options
+namespace Horse.Messaging.Server.Queues
 {
     /// <summary>
     /// Auto queue destroy options

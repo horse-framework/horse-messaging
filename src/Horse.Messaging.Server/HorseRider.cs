@@ -7,7 +7,6 @@ using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Direct;
-using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
 using Horse.Messaging.Server.Transactions;

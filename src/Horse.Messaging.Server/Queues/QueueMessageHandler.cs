@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Network;
-using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Security;
 
 namespace Horse.Messaging.Server.Queues

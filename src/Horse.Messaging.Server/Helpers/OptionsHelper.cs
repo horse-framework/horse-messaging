@@ -1,5 +1,4 @@
 ﻿using Horse.Messaging.Protocol;
-using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Queues;
 
 namespace Horse.Messaging.Server.Helpers

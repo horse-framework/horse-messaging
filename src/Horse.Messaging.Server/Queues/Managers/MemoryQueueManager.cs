@@ -14,14 +14,14 @@ namespace Horse.Messaging.Server.Queues.Managers
         public IQueueDeliveryHandler DeliveryHandler { get; protected set; }
         public IQueueSynchronizer Synchronizer { get; protected set; }
 
-        public MemoryQueueManager(HorseQueue queue, CommitWhen commitWhen, PutBackDecision putBack)
+        public MemoryQueueManager(HorseQueue queue)
         {
             Queue = queue;
 
             MessageStore = new LinkedMessageStore(this);
             PriorityMessageStore = new LinkedMessageStore(this);
             Synchronizer = new MemoryQueueSynchronizer(this);
-            DeliveryHandler = new MemoryDeliveryHandler(this, commitWhen, putBack);
+            DeliveryHandler = new MemoryDeliveryHandler(this);
         }
 
         public virtual Task Initialize()

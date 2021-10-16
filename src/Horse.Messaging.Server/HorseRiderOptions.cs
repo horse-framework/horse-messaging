@@ -1,7 +1,4 @@
-using Horse.Messaging.Server.Cluster;
-using Horse.Server;
-
-namespace Horse.Messaging.Server.Options
+namespace Horse.Messaging.Server
 {
 	/// <summary>
 	/// Server default options

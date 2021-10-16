@@ -3,7 +3,6 @@ using System.IO;
 using Horse.Messaging.Data.Configuration;
 using Horse.Messaging.Data.Implementation;
 using Horse.Messaging.Server.Queues;
-using Horse.Messaging.Server.Queues.Delivery;
 
 namespace Horse.Messaging.Data
 {
@@ -16,20 +15,23 @@ namespace Horse.Messaging.Data
         /// Implements persistent message delivery handler
         /// </summary>
         /// <param name="cfg">Horse Clietn configurator Builder</param>
-        /// <param name="deleteWhen">Decision when messages are deleted from disk</param>
-        /// <param name="commitWhen">Decision when producer receives commit</param>
         /// <param name="useRedelivery">True if want to keep redelivery data and send to consumers with message headers</param>
-        /// <param name="ackTimeoutPutback">Putback decision when ack message isn't received</param>
-        /// <param name="nackPutback">Putback decision when negative ack is received</param>
         /// <returns></returns>
-        public static HorseQueueConfigurator UsePersistentQueues(this HorseQueueConfigurator cfg,
-                                                                          DeleteWhen deleteWhen,
-                                                                          CommitWhen commitWhen,
-                                                                          bool useRedelivery = false,
-                                                                          PutBackDecision ackTimeoutPutback = PutBackDecision.Regular,
-                                                                          PutBackDecision nackPutback = PutBackDecision.Regular)
+        public static HorseQueueConfigurator UsePersistentQueues(this HorseQueueConfigurator cfg, bool useRedelivery = false)
         {
-            return UsePersistentQueues(cfg, _ => { }, deleteWhen, commitWhen, useRedelivery, ackTimeoutPutback, nackPutback);
+            return UsePersistentQueues(cfg, null, null, useRedelivery);
+        }
+
+        /// <summary>
+        /// Implements persistent message delivery handler
+        /// </summary>
+        /// <param name="cfg">Horse Clietn configurator Builder</param>
+        /// <param name="managerName">Queue manager name</param>
+        /// <param name="useRedelivery">True if want to keep redelivery data and send to consumers with message headers</param>
+        /// <returns></returns>
+        public static HorseQueueConfigurator UsePersistentQueues(this HorseQueueConfigurator cfg, string managerName, bool useRedelivery = false)
+        {
+            return UsePersistentQueues(cfg, managerName, null, null, useRedelivery);
         }
 
         /// <summary>
@@ -37,45 +39,56 @@ namespace Horse.Messaging.Data
         /// </summary>
         /// <param name="cfg">Horse Clietn configurator Builder</param>
         /// <param name="dataConfigurator">Persistent data store configurator</param>
-        /// <param name="deleteWhen">Decision when messages are deleted from disk</param>
-        /// <param name="commitWhen">Decision when producer receives commit</param>
+        /// <param name="queueConfig">Queue configurator action right after queue manager is assigned to the queue</param>
         /// <param name="useRedelivery">True if want to keep redelivery data and send to consumers with message headers</param>
-        /// <param name="ackTimeoutPutback">Putback decision when ack message isn't received</param>
-        /// <param name="nackPutback">Putback decision when negative ack is received</param>
         /// <returns></returns>
         public static HorseQueueConfigurator UsePersistentQueues(this HorseQueueConfigurator cfg,
-                                                                 Action<DataConfigurationBuilder> dataConfigurator,
-                                                                 DeleteWhen deleteWhen,
-                                                                 CommitWhen commitWhen,
-                                                                 bool useRedelivery = false,
-                                                                 PutBackDecision ackTimeoutPutback = PutBackDecision.Regular,
-                                                                 PutBackDecision nackPutback = PutBackDecision.Regular)
+            Action<DataConfigurationBuilder> dataConfigurator = null,
+            Action<HorseQueue> queueConfig = null,
+            bool useRedelivery = false)
+        {
+            return UsePersistentQueues(cfg, null, dataConfigurator, queueConfig, useRedelivery);
+        }
+
+        /// <summary>
+        /// Implements persistent message delivery handler
+        /// </summary>
+        /// <param name="cfg">Horse Clietn configurator Builder</param>
+        /// <param name="managerName">Queue manager name</param>
+        /// <param name="dataConfigurator">Persistent data store configurator</param>
+        /// <param name="queueConfig">Queue configurator action right after queue manager is assigned to the queue</param>
+        /// <param name="useRedelivery">True if want to keep redelivery data and send to consumers with message headers</param>
+        /// <returns></returns>
+        public static HorseQueueConfigurator UsePersistentQueues(this HorseQueueConfigurator cfg,
+            string managerName,
+            Action<DataConfigurationBuilder> dataConfigurator = null,
+            Action<HorseQueue> queueConfig = null,
+            bool useRedelivery = false)
         {
             DataConfigurationBuilder dataConfigurationBuilder = new DataConfigurationBuilder();
-            dataConfigurator(dataConfigurationBuilder);
+            dataConfigurator?.Invoke(dataConfigurationBuilder);
 
             if (dataConfigurationBuilder.GenerateQueueFilename == null)
                 dataConfigurationBuilder.GenerateQueueFilename = DefaultQueueDbPath;
 
             ConfigurationFactory.Initialize(dataConfigurationBuilder);
 
-            cfg.Rider.Queue.QueueManagerFactories.Add("PERSISTENT", async dh =>
+            if (string.IsNullOrEmpty(managerName))
+                managerName = "Persistent";
+
+            cfg.Rider.Queue.QueueManagerFactories.Add(managerName, async dh =>
             {
                 DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(dh.Queue);
-                PersistentQueueManager manager = new PersistentQueueManager(dh.Queue,
-                                                                            databaseOptions,
-                                                                            commitWhen,
-                                                                            deleteWhen,
-                                                                            nackPutback,
-                                                                            ackTimeoutPutback,
-                                                                            useRedelivery);
-                
+                PersistentQueueManager manager = new PersistentQueueManager(dh.Queue, databaseOptions, useRedelivery);
+                dh.Queue.Manager = manager;
+                queueConfig?.Invoke(dh.Queue);
+
                 await manager.Initialize();
                 return manager;
             });
 
-            if (!cfg.Rider.Queue.QueueManagerFactories.ContainsKey("DEFAULT"))
-                cfg.Rider.Queue.QueueManagerFactories.Add("DEFAULT", cfg.Rider.Queue.QueueManagerFactories["PERSISTENT"]);
+            if (!cfg.Rider.Queue.QueueManagerFactories.ContainsKey("Default"))
+                cfg.Rider.Queue.QueueManagerFactories.Add("Default", cfg.Rider.Queue.QueueManagerFactories["Persistent"]);
 
             ConfigurationFactory.Manager.LoadQueues(cfg.Rider).GetAwaiter().GetResult();
 

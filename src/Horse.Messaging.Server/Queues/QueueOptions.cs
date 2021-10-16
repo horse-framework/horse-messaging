@@ -1,8 +1,8 @@
 using System;
 using Horse.Messaging.Protocol;
-using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Delivery;
 
-namespace Horse.Messaging.Server.Options
+namespace Horse.Messaging.Server.Queues
 {
     /// <summary>
     /// Queue options
@@ -13,6 +13,11 @@ namespace Horse.Messaging.Server.Options
         /// Acknowledge decision. Default is just request.
         /// </summary>
         public QueueAckDecision Acknowledge { get; set; } = QueueAckDecision.JustRequest;
+
+        /// <summary>
+        /// Option for when the commit message is sent to producer
+        /// </summary>
+        public CommitWhen CommitWhen { get; set; }
 
         /// <summary>
         /// When acknowledge is required, maximum duration for waiting acknowledge message
@@ -28,7 +33,7 @@ namespace Horse.Messaging.Server.Options
         /// Default type for the queue
         /// </summary>
         public QueueType Type { get; set; } = QueueType.Push;
-
+        
         /// <summary>
         /// Maximum message limit of the queue
         /// Zero is unlimited
@@ -52,6 +57,11 @@ namespace Horse.Messaging.Server.Options
         /// Zero is no delay.
         /// </summary>
         public int DelayBetweenMessages { get; set; }
+
+        /// <summary>
+        /// Queue put back decision option
+        /// </summary>
+        public PutBackDecision PutBack { get; set; }
 
         /// <summary>
         /// Waits in milliseconds before putting message back into the queue.

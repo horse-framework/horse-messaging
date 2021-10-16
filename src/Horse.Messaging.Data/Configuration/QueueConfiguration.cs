@@ -14,14 +14,6 @@ namespace Horse.Messaging.Data.Configuration
         [JsonPropertyName("File")]
         public string File { get; set; }
 
-        [JsonProperty("DeleteWhen")]
-        [JsonPropertyName("DeleteWhen")]
-        public int DeleteWhen { get; set; }
-
-        [JsonProperty("CommitWhen")]
-        [JsonPropertyName("CommitWhen")]
-        public int CommitWhen { get; set; }
-
         [JsonProperty("Configuration")]
         [JsonPropertyName("Configuration")]
         public QueueOptionsConfiguration Configuration { get; set; }

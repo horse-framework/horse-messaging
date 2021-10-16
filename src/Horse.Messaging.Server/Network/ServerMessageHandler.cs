@@ -9,7 +9,6 @@ using Horse.Messaging.Protocol.Models;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Helpers;
-using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
 using Horse.Messaging.Server.Security;

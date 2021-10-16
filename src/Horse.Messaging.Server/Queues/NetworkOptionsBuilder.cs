@@ -1,7 +1,6 @@
 using System;
 using System.Text.Json.Serialization;
 using Horse.Messaging.Protocol;
-using Horse.Messaging.Server.Options;
 
 namespace Horse.Messaging.Server.Queues
 {

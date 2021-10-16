@@ -10,23 +10,18 @@ namespace Horse.Messaging.Data.Implementation
     {
         public IHorseQueueManager Manager => _manager;
         public IDeliveryTracker Tracker { get; }
-        public CommitWhen CommitWhen { get; set; }
-        public PutBackDecision PutBack { get; set; }
 
         private readonly PersistentQueueManager _manager;
 
         public PersistentMessageDeliveryHandler(PersistentQueueManager manager)
         {
-            CommitWhen = manager.CommitWhen;
-            PutBack = manager.AckTimeoutPutBack;
-            
             _manager = manager;
             Tracker = new DefaultDeliveryTracker(manager);
         }
 
         public async Task<Decision> ReceivedFromProducer(HorseQueue queue, QueueMessage message, MessagingClient sender)
         {
-            if (_manager.CommitWhen == CommitWhen.AfterSaved)
+            if (_manager.Queue.Options.CommitWhen == CommitWhen.AfterSaved)
             {
                 bool saved = await _manager.SaveMessage(message);
                 if (!saved)
@@ -37,9 +32,9 @@ namespace Horse.Messaging.Data.Implementation
                 return Decision.TransmitToProducer(DecisionTransmission.Commit);
             }
 
-            return Decision.SaveMessage(_manager.CommitWhen == CommitWhen.AfterReceived
-                                            ? DecisionTransmission.Commit
-                                            : DecisionTransmission.None);
+            return Decision.SaveMessage(_manager.Queue.Options.CommitWhen == CommitWhen.AfterReceived
+                ? DecisionTransmission.Commit
+                : DecisionTransmission.None);
         }
 
         public async Task<Decision> BeginSend(HorseQueue queue, QueueMessage message)
@@ -66,12 +61,12 @@ namespace Horse.Messaging.Data.Implementation
             return Task.FromResult(Decision.PutBackMessage(false));
         }
 
-        public  Task<Decision> EndSend(HorseQueue queue, QueueMessage message)
+        public Task<Decision> EndSend(HorseQueue queue, QueueMessage message)
         {
             if (message.SendCount == 0)
                 return Task.FromResult(Decision.PutBackMessage(false));
 
-            if (_manager.DeleteWhen == DeleteWhen.AfterSend)
+            if (_manager.Queue.Options.Acknowledge == QueueAckDecision.None)
                 return Task.FromResult(Decision.DeleteMessage());
 
             return Task.FromResult(Decision.NoveNext());
@@ -81,60 +76,58 @@ namespace Horse.Messaging.Data.Implementation
         {
             if (success)
             {
-                if (_manager.DeleteWhen == DeleteWhen.AfterAcknowledge)
+                if (_manager.Queue.Options.Acknowledge != QueueAckDecision.None)
                 {
-                    return Task.FromResult(Decision.DeleteMessage(_manager.CommitWhen == CommitWhen.AfterAcknowledge
-                                                                      ? DecisionTransmission.Commit
-                                                                      : DecisionTransmission.None));
+                    return Task.FromResult(Decision.DeleteMessage(_manager.Queue.Options.CommitWhen == CommitWhen.AfterAcknowledge
+                        ? DecisionTransmission.Commit
+                        : DecisionTransmission.None));
                 }
 
-                if (_manager.CommitWhen == CommitWhen.AfterAcknowledge)
+                if (_manager.Queue.Options.CommitWhen == CommitWhen.AfterAcknowledge)
                     return Task.FromResult(Decision.TransmitToProducer(DecisionTransmission.Commit));
 
                 return Task.FromResult(Decision.NoveNext());
             }
 
-            if (_manager.CommitWhen == CommitWhen.AfterAcknowledge)
+            if (_manager.Queue.Options.CommitWhen == CommitWhen.AfterAcknowledge)
             {
-                if (_manager.NegativeAckPutBack == PutBackDecision.No)
+                if (_manager.Queue.Options.PutBack == PutBackDecision.No)
                     return Task.FromResult(Decision.TransmitToProducer(DecisionTransmission.Failed));
 
-                return Task.FromResult(Decision.PutBackMessage(_manager.NegativeAckPutBack == PutBackDecision.Regular,
-                                                               DecisionTransmission.Failed));
+                return Task.FromResult(Decision.PutBackMessage(_manager.Queue.Options.PutBack == PutBackDecision.Regular,
+                    DecisionTransmission.Failed));
             }
 
 
-            if (_manager.NegativeAckPutBack == PutBackDecision.No)
+            if (_manager.Queue.Options.PutBack == PutBackDecision.No)
                 return Task.FromResult(Decision.DeleteMessage());
 
-            return Task.FromResult(Decision.PutBackMessage(_manager.NegativeAckPutBack == PutBackDecision.Regular));
+            return Task.FromResult(Decision.PutBackMessage(_manager.Queue.Options.PutBack == PutBackDecision.Regular));
         }
 
         public Task<Decision> AcknowledgeTimeout(HorseQueue queue, MessageDelivery delivery)
         {
-            if (_manager.AckTimeoutPutBack == PutBackDecision.No)
+            if (_manager.Queue.Options.PutBack == PutBackDecision.No)
             {
                 QueueMessage queueMessage = delivery.Message;
 
                 if (!queueMessage.IsRemoved)
                 {
-                    return Task.FromResult(Decision.DeleteMessage(_manager.CommitWhen == CommitWhen.AfterAcknowledge
-                                                                      ? DecisionTransmission.Failed
-                                                                      : DecisionTransmission.None));
+                    return Task.FromResult(Decision.DeleteMessage(_manager.Queue.Options.CommitWhen == CommitWhen.AfterAcknowledge
+                        ? DecisionTransmission.Failed
+                        : DecisionTransmission.None));
                 }
 
-                if (_manager.CommitWhen == CommitWhen.AfterAcknowledge)
+                if (_manager.Queue.Options.CommitWhen == CommitWhen.AfterAcknowledge)
                     return Task.FromResult(Decision.TransmitToProducer(DecisionTransmission.Failed));
 
                 return Task.FromResult(Decision.NoveNext());
             }
-            else
-            {
-                return Task.FromResult(Decision.PutBackMessage(_manager.AckTimeoutPutBack == PutBackDecision.Regular,
-                                                               _manager.CommitWhen == CommitWhen.AfterAcknowledge
-                                                                   ? DecisionTransmission.Failed
-                                                                   : DecisionTransmission.None));
-            }
+
+            return Task.FromResult(Decision.PutBackMessage(_manager.Queue.Options.PutBack == PutBackDecision.Regular,
+                _manager.Queue.Options.CommitWhen == CommitWhen.AfterAcknowledge
+                    ? DecisionTransmission.Failed
+                    : DecisionTransmission.None));
         }
     }
 }

@@ -14,28 +14,6 @@ namespace Horse.Messaging.Data.Implementation
     public class PersistentQueueManager : IHorseQueueManager
     {
         /// <summary>
-        /// Option when to delete messages from disk
-        /// </summary>
-        public DeleteWhen DeleteWhen { get; }
-
-        /// <summary>
-        /// Option when to send commit to producer
-        /// </summary>
-        public CommitWhen CommitWhen { get; }
-
-        /// <summary>
-        /// Put back decision when a negative acknowledge received by consumer.
-        /// Default is End with no delay.
-        /// </summary>
-        public PutBackDecision NegativeAckPutBack { get; set; } = PutBackDecision.Regular;
-
-        /// <summary>
-        /// Put back decision when acknowledge timed out.
-        /// Default is End with no delay.
-        /// </summary>
-        public PutBackDecision AckTimeoutPutBack { get; set; } = PutBackDecision.Regular;
-
-        /// <summary>
         /// Redelivery service for the queue
         /// </summary>
         public RedeliveryService RedeliveryService { get; private set; }
@@ -67,19 +45,9 @@ namespace Horse.Messaging.Data.Implementation
         /// <summary>
         /// Creates new persistent queue manager
         /// </summary>
-        public PersistentQueueManager(HorseQueue queue,
-                                      DatabaseOptions databaseOptions,
-                                      CommitWhen commitWhen,
-                                      DeleteWhen deleteWhen,
-                                      PutBackDecision nackDecision,
-                                      PutBackDecision ackTimeoutDecision,
-                                      bool useRedelivery = false)
+        public PersistentQueueManager(HorseQueue queue, DatabaseOptions databaseOptions, bool useRedelivery = false)
         {
             Queue = queue;
-            CommitWhen = commitWhen;
-            DeleteWhen = deleteWhen;
-            NegativeAckPutBack = nackDecision;
-            AckTimeoutPutBack = ackTimeoutDecision;
             UseRedelivery = useRedelivery;
             queue.Manager = this;
 
@@ -101,18 +69,10 @@ namespace Horse.Messaging.Data.Implementation
 
         public async Task Initialize()
         {
-            if (Queue.Options.Acknowledge == QueueAckDecision.None)
-            {
-                if (DeleteWhen == DeleteWhen.AfterAcknowledge)
-                    throw new NotSupportedException("Delete option is AfterAcknowledgeReceived but queue Acknowledge option is None. " +
-                                                    "Messages are not deleted from disk with this configuration. " +
-                                                    "Please change queue Acknowledge option or DeleteWhen option");
-
-                if (CommitWhen == CommitWhen.AfterAcknowledge)
+            if (Queue.Options.Acknowledge == QueueAckDecision.None && Queue.Options.CommitWhen == CommitWhen.AfterAcknowledge)
                     throw new NotSupportedException("Producer Ack option is AfterConsumerAckReceived but queue Acknowledge option is None. " +
                                                     "Messages are not deleted from disk with this configuration. " +
                                                     "Please change queue Acknowledge option or ProducerAckDecision option");
-            }
 
             await _priorityMessageStore.Initialize();
             await _messageStore.Initialize();

@@ -86,8 +86,6 @@ namespace Horse.Messaging.Data.Configuration
             queueConfiguration.Name = queue.Name;
             queueConfiguration.File = filename;
             queueConfiguration.Queue = queue;
-            queueConfiguration.DeleteWhen = Convert.ToInt32(manager.DeleteWhen);
-            queueConfiguration.CommitWhen = Convert.ToInt32(manager.CommitWhen);
 
             lock (_optionsLock)
                 Config.Queues.Add(queueConfiguration);

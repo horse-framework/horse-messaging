@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using AdvancedSample.Messaging.Server.RouteBindings;
 using Horse.Messaging.Data;
 using Horse.Messaging.Server;
-using Horse.Messaging.Server.Handlers;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Transactions;
@@ -45,7 +44,6 @@ namespace AdvancedSample.Messaging.Server
 		public Task StartAsync(CancellationToken cancellationToken)
 		{
 			HorseRider rider = _riderBuilder.Build();
-			rider.LoadPersistentQueues().GetAwaiter().GetResult();
 			rider.ConfigureServiceRoutes();
 			rider.Transaction.CreateContainer("test", TimeSpan.FromSeconds(30),
 											  new QueueTransactionEndpoint(rider.Queue, "CommitQueue"),
@@ -68,11 +66,11 @@ namespace AdvancedSample.Messaging.Server
 									.ConfigureQueues(cfg =>
 													 {
 														 cfg.EventHandlers.Add(_queueEventHandler);
-														 cfg.UsePersistentDeliveryHandler(q =>
+														 cfg.UsePersistentQueues(q =>
 																						  {
 																							  q.UseAutoFlush(TimeSpan.FromMilliseconds(500));
 																							  q.KeepLastBackup();
-																						  }, DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterConsumerAckReceived, true);
+																						  }, DeleteWhen.AfterAcknowledge, CommitWhen.AfterReceived, true);
 
 														 cfg.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(30);
 														 cfg.Options.Type = QueueType.RoundRobin;

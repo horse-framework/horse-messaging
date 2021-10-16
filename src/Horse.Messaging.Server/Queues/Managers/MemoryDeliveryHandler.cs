@@ -9,21 +9,16 @@ namespace Horse.Messaging.Server.Queues.Managers
     {
         public IHorseQueueManager Manager { get; }
         public IDeliveryTracker Tracker { get; }
-        public CommitWhen CommitWhen { get; set; }
-        public PutBackDecision PutBack { get; set; }
 
-        public MemoryDeliveryHandler(IHorseQueueManager manager, CommitWhen commitWhen, PutBackDecision putBack)
+        public MemoryDeliveryHandler(IHorseQueueManager manager)
         {
             Manager = manager;
-            CommitWhen = commitWhen;
-            PutBack = putBack;
-
             Tracker = new DefaultDeliveryTracker(manager);
         }
 
         public virtual Task<Decision> ReceivedFromProducer(HorseQueue queue, QueueMessage message, MessagingClient sender)
         {
-            if (CommitWhen == CommitWhen.AfterReceived)
+            if (Manager.Queue.Options.CommitWhen == CommitWhen.AfterReceived)
                 return Task.FromResult(Decision.TransmitToProducer(DecisionTransmission.Commit));
 
             return Task.FromResult(Decision.NoveNext());
@@ -46,7 +41,7 @@ namespace Horse.Messaging.Server.Queues.Managers
 
         public virtual Task<Decision> EndSend(HorseQueue queue, QueueMessage message)
         {
-            if (CommitWhen == CommitWhen.AfterSent)
+            if (Manager.Queue.Options.CommitWhen == CommitWhen.AfterSent)
                 return Task.FromResult(Decision.TransmitToProducer(DecisionTransmission.Commit));
 
             if (queue.Options.Acknowledge == QueueAckDecision.None)
@@ -58,12 +53,12 @@ namespace Horse.Messaging.Server.Queues.Managers
         public virtual Task<Decision> AcknowledgeReceived(HorseQueue queue, HorseMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
             DecisionTransmission transmission = DecisionTransmission.None;
-            if (CommitWhen == CommitWhen.AfterAcknowledge)
+            if (Manager.Queue.Options.CommitWhen == CommitWhen.AfterAcknowledge)
                 transmission = success ? DecisionTransmission.Commit : DecisionTransmission.Failed;
 
             PutBackDecision putBack = PutBackDecision.No;
             if (!success)
-                putBack = PutBack;
+                putBack = Manager.Queue.Options.PutBack;
 
             if (success || putBack == PutBackDecision.No)
                 return Task.FromResult(Decision.DeleteMessage(transmission));
@@ -73,10 +68,10 @@ namespace Horse.Messaging.Server.Queues.Managers
 
         public virtual Task<Decision> AcknowledgeTimeout(HorseQueue queue, MessageDelivery delivery)
         {
-            if (PutBack == PutBackDecision.No)
+            if (Manager.Queue.Options.PutBack == PutBackDecision.No)
                 return Task.FromResult(Decision.DeleteMessage());
 
-            return Task.FromResult(Decision.PutBackMessage(PutBack == PutBackDecision.Regular));
+            return Task.FromResult(Decision.PutBackMessage(Manager.Queue.Options.PutBack == PutBackDecision.Regular));
         }
     }
 }
