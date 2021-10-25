@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -339,7 +338,7 @@ namespace Horse.Messaging.Server.Queues
                 MessageLimit = Options.MessageLimit,
                 ClientLimit = Options.ClientLimit,
                 MessageTimeout = Convert.ToInt32(Options.MessageTimeout.TotalSeconds),
-                AcknowledgeTimeout = Convert.ToInt32(Options.AcknowledgeTimeout),
+                AcknowledgeTimeout = Convert.ToInt32(Options.AcknowledgeTimeout.TotalMilliseconds),
                 DelayBetweenMessages = Convert.ToInt32(Options.DelayBetweenMessages),
                 Acknowledge = Options.Acknowledge.FromAckDecision(),
                 AutoDestroy = Options.AutoDestroy.FromQueueDestroy(),
@@ -424,7 +423,24 @@ namespace Horse.Messaging.Server.Queues
 
         internal void UpdateOptionsByNodeInfo(NodeQueueInfo info)
         {
-            throw new NotImplementedException();
+            if (!string.IsNullOrEmpty(info.Acknowledge))
+                Options.Acknowledge = info.Acknowledge.ToAckDecision();
+
+            if (!string.IsNullOrEmpty(info.Topic))
+                Topic = info.Topic;
+
+            if (!string.IsNullOrEmpty(info.AutoDestroy))
+                Options.AutoDestroy = info.AutoDestroy.ToQueueDestroy();
+
+            Options.AcknowledgeTimeout = TimeSpan.FromMilliseconds(info.AcknowledgeTimeout);
+            Options.MessageTimeout = TimeSpan.FromSeconds(info.MessageTimeout);
+            
+            Options.ClientLimit = info.ClientLimit;
+            Options.MessageLimit = info.MessageLimit;
+            Options.MessageSizeLimit = info.MessageSizeLimit;
+
+            Options.DelayBetweenMessages = info.DelayBetweenMessages;
+            Options.PutBackDelay = info.PutBackDelay;
         }
 
         #endregion
@@ -668,6 +684,96 @@ namespace Horse.Messaging.Server.Queues
             }
         }
 
+        internal async Task<PushResult> PushByNode(HorseMessage horseMessage)
+        {
+            QueueMessage message = new QueueMessage(horseMessage);
+
+            if (Status == QueueStatus.NotInitialized)
+            {
+                try
+                {
+                    UpdateOptionsByMessage(message.Message);
+                    QueueManagerBuilder handlerBuilder = new QueueManagerBuilder
+                    {
+                        Server = Rider,
+                        Queue = this,
+                        Headers = message.Message.Headers,
+                        ManagerName = message.Message.FindHeader(HorseHeaders.QUEUE_MANAGER)
+                    };
+
+                    if (string.IsNullOrEmpty(handlerBuilder.ManagerName))
+                        handlerBuilder.ManagerName = "Default";
+
+                    Func<QueueManagerBuilder, Task<IHorseQueueManager>> factory = Rider.Queue.QueueManagerFactories[handlerBuilder.ManagerName];
+                    IHorseQueueManager queueManager = await factory(handlerBuilder);
+
+                    await InitializeQueue(queueManager);
+
+                    handlerBuilder.TriggerAfterCompleted();
+                }
+                catch (Exception e)
+                {
+                    Rider.SendError("INITIALIZE_IN_PUSH", e, $"QueueName:{Name}");
+                    throw;
+                }
+            }
+
+            //if we have an option maximum wait duration for message, set it after message joined to the queue.
+            //time keeper will check this value and if message time is up, it will remove message from the queue.
+            if (Options.MessageTimeout > TimeSpan.Zero)
+                message.Deadline = DateTime.UtcNow.Add(Options.MessageTimeout);
+
+            if (Status == QueueStatus.Syncing)
+            {
+                try
+                {
+                    await QueueLock.WaitAsync();
+                }
+                finally
+                {
+                    QueueLock.Release();
+                }
+            }
+
+            try
+            {
+                Info.AddMessageReceive();
+                Decision decision = await Manager.DeliveryHandler.ReceivedFromProducer(this, message, null);
+                message.Decision = decision;
+
+                bool allow = await ApplyDecision(decision, message);
+
+                foreach (IQueueMessageEventHandler handler in Rider.Queue.MessageHandlers.All())
+                    _ = handler.OnProduced(this, message, null);
+
+                if (!allow)
+                    return PushResult.Success;
+
+                AddMessage(message, false);
+
+                return PushResult.Success;
+            }
+            catch (Exception ex)
+            {
+                Rider.SendError("PUSH", ex, $"QueueName:{Name}");
+                Info.AddError();
+                try
+                {
+                    await Manager.OnExceptionThrown("PUSH", State.ProcessingMessage, ex);
+
+                    //the message is removed from the queue and it's not sent to consumers
+                    //we should put the message back into the queue
+                    if (!message.IsInQueue && !message.IsSent)
+                        ApplyPutBack(Decision.PutBackMessage(true), message, 1000);
+                }
+                catch //if developer does wrong operation, we should not stop
+                {
+                }
+            }
+
+            return PushResult.Success;
+        }
+        
         #endregion
 
         #region Decision

@@ -62,9 +62,9 @@ namespace Horse.Messaging.Server.Queues.Store
                         } while (message != null && message.Deadline.HasValue);
                     }
                 }
-                catch
+                catch (Exception e)
                 {
-                    //todo: log
+                    _queue.Rider.SendError("CheckMessageTimeout", e, null);
                 }
             });
         }

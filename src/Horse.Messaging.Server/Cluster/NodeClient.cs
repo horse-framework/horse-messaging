@@ -17,6 +17,7 @@ namespace Horse.Messaging.Server.Cluster
     public class NodeClient
     {
         private readonly HorseClient _outgoingClient;
+        private readonly NodeDeliveryTracker _deliveryTracker;
         private MessagingClient _incomingClient;
 
         /// <summary>
@@ -81,6 +82,9 @@ namespace Horse.Messaging.Server.Cluster
             _outgoingClient.MessageReceived += ProcessReceivedMessage;
             _outgoingClient.Disconnected += OutgoingClientOnDisconnected;
             _outgoingClient.Connected += OutgoingClientOnConnected;
+
+            _deliveryTracker = new NodeDeliveryTracker(this);
+            _deliveryTracker.Run();
         }
 
         internal void Start()
@@ -358,16 +362,22 @@ namespace Horse.Messaging.Server.Cluster
                     break;
 
                 case KnownContentTypes.NodePushQueueMessage:
-                    throw new NotImplementedException();
+                    _ = PushByNode(message);
                     break;
 
                 case KnownContentTypes.NodePutBackQueueMessage:
-                    throw new NotImplementedException();
+                    //not active yet
                     break;
 
                 case KnownContentTypes.NodeRemoveQueueMessage:
-                    throw new NotImplementedException();
+                {
+                    HorseQueue queue = Rider.Queue.Find(message.Target);
+
+                    if (queue != null)
+                        _ = queue.Manager.RemoveMessage(message.MessageId);
+
                     break;
+                }
 
                 #endregion
             }
@@ -387,9 +397,32 @@ namespace Horse.Messaging.Server.Cluster
             return false;
         }
 
-        internal Task<bool> SendMessageAndWaitAck(HorseMessage message)
+        internal async Task<bool> SendMessageAndWaitAck(HorseMessage message)
         {
-            throw new NotImplementedException();
+            TaskCompletionSource<NodeMessageDelivery> source = _deliveryTracker.Track(message);
+            NodeMessageDelivery delivery = await source.Task;
+
+            if (delivery.IsCommitted)
+                _deliveryTracker.RemoveCommited(delivery);
+
+            return delivery.IsCommitted;
+        }
+
+        private async Task PushByNode(HorseMessage message)
+        {
+            HorseQueue queue = Rider.Queue.Find(message.Target);
+
+            PushResult result = PushResult.Empty;
+            if (queue != null)
+            {
+                message.Type = MessageType.QueueMessage;
+                message.ContentType = 0;
+                
+                result = await queue.PushByNode(message);
+            }
+
+            HorseMessage ack = message.CreateAcknowledge(result == PushResult.Success ? null : HorseHeaders.ERROR);
+            await SendMessage(ack);
         }
     }
 }
