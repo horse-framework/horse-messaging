@@ -323,12 +323,11 @@ namespace Horse.Messaging.Server.Cluster
                     HorseQueue queue = Rider.Queue.Find(message.Target);
                     if (queue != null)
                         _ = queue.Manager.Synchronizer.EndSharing();
-                    
+
                     break;
                 }
 
                 #endregion
-
 
                 #region Queue Operations
 
@@ -348,7 +347,6 @@ namespace Horse.Messaging.Server.Cluster
                     {
                         string content = message.GetStringContent();
                         NodeQueueInfo queueInfo = System.Text.Json.JsonSerializer.Deserialize<NodeQueueInfo>(content);
-
                         queue.UpdateOptionsByNodeInfo(queueInfo);
                     }
 
@@ -356,7 +354,7 @@ namespace Horse.Messaging.Server.Cluster
                 }
 
                 case KnownContentTypes.RemoveQueue:
-                    throw new NotImplementedException();
+                    _ = Rider.Queue.Remove(message.Target);
                     break;
 
                 case KnownContentTypes.NodePushQueueMessage:

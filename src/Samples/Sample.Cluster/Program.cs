@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Threading.Tasks;
 using Horse.Core;
 using Horse.Messaging.Server;
@@ -31,7 +32,7 @@ namespace Sample.Cluster
                 Console.ReadLine();
                 return;
             }
-            
+
             switch (args[0].Trim())
             {
                 case "1":
@@ -45,7 +46,7 @@ namespace Sample.Cluster
                 case "3":
                     StartServer3();
                     break;
-                
+
                 default:
                     Console.WriteLine("Invalid arg");
                     break;
@@ -57,7 +58,7 @@ namespace Sample.Cluster
         static HorseRider StartServer1()
         {
             HorseRider rider = HorseRiderBuilder.Create()
-                .ConfigureQueues(q => q.UseMemoryQueues(CommitWhen.AfterReceived, PutBackDecision.No))
+                .ConfigureQueues(q => q.UseMemoryQueues())
                 .Build();
 
             rider.Cluster.Options.Name = "Server1";
@@ -89,7 +90,7 @@ namespace Sample.Cluster
         static HorseRider StartServer2()
         {
             HorseRider rider = HorseRiderBuilder.Create()
-                .ConfigureQueues(q => q.UseMemoryQueues(CommitWhen.AfterReceived, PutBackDecision.No))
+                .ConfigureQueues(q => q.UseMemoryQueues(c => c.Options.CommitWhen = CommitWhen.AfterReceived))
                 .Build();
 
             rider.Cluster.Options.Name = "Server2";
@@ -121,7 +122,7 @@ namespace Sample.Cluster
         static HorseRider StartServer3()
         {
             HorseRider rider = HorseRiderBuilder.Create()
-                .ConfigureQueues(q => q.UseMemoryQueues(CommitWhen.AfterReceived, PutBackDecision.No))
+                .ConfigureQueues(q => q.UseMemoryQueues(c => c.Options.CommitWhen = CommitWhen.AfterReceived))
                 .Build();
 
             rider.Cluster.Options.Name = "Server3";

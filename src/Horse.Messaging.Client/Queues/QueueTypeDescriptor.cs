@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Horse.Messaging.Client.Internal;
+using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Queues
@@ -49,6 +50,11 @@ namespace Horse.Messaging.Client.Queues
         /// Delay between messages option (in milliseconds)
         /// </summary>
         public int? DelayBetweenMessages { get; set; }
+
+        /// <summary>
+        /// Put back decision
+        /// </summary>
+        public PutBack? PutBackDecision { get; set; }
 
         /// <summary>
         /// Put back delay in milliseconds
@@ -117,6 +123,9 @@ namespace Horse.Messaging.Client.Queues
             if (DelayBetweenMessages.HasValue)
                 message.AddHeader(HorseHeaders.DELAY_BETWEEN_MESSAGES, DelayBetweenMessages.Value.ToString());
 
+            if (PutBackDecision.HasValue)
+                message.AddHeader(HorseHeaders.PUT_BACK, PutBackDecision.Value.ToString());
+            
             if (PutBackDelay.HasValue)
                 message.AddHeader(HorseHeaders.PUT_BACK_DELAY, PutBackDelay.Value.ToString());
 

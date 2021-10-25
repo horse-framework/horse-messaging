@@ -6,7 +6,7 @@ namespace Test.Client.Models
     [QueueName("model-b")]
     [QueueTopic("queue-topic")]
     [DelayBetweenMessages(50)]
-    [PutBackDelay(2500)]
+    [PutBack(PutBack.Regular, 2500)]
     [QueueType(MessagingQueueType.Push)]
     public class ModelB
     {

@@ -21,7 +21,7 @@ namespace Test.Queues
             queue.Options.PutBackDelay = 2000;
             queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
             server.PutBack = PutBackDecision.Regular;
-            queue.Manager.DeliveryHandler.PutBack = PutBackDecision.Regular;
+            queue.Options.PutBack = PutBackDecision.Regular;
 
             HorseClient producer = new HorseClient();
             await producer.ConnectAsync("horse://localhost:" + port);

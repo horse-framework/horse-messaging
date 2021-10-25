@@ -10,11 +10,11 @@ namespace Test.Common.Handlers
     {
         private readonly TestHorseRider _rider;
 
-        public TestQueueManager(TestHorseRider rider, HorseQueue queue, CommitWhen commitWhen, PutBackDecision putBack)
-            : base(queue, commitWhen, putBack)
+        public TestQueueManager(TestHorseRider rider, HorseQueue queue)
+            : base(queue)
         {
             _rider = rider;
-            DeliveryHandler = new TestMessageDeliveryHandler(rider, this, commitWhen, putBack);
+            DeliveryHandler = new TestMessageDeliveryHandler(rider, this);
         }
 
         public override Task OnMessageTimeout(QueueMessage message)

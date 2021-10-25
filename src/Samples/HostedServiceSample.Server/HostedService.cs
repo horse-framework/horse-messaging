@@ -57,7 +57,7 @@ namespace HostedServiceSample.Server
 									.ConfigureQueues(cfg =>
 													 {
 														 cfg.EventHandlers.Add(_queueEventHandler);
-														 cfg.UseJustAllowDeliveryHandler();
+														 cfg.UseMemoryQueues();
 														 cfg.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(30);
 														 cfg.Options.Type = QueueType.RoundRobin;
 														 cfg.Options.AutoQueueCreation = true;

@@ -69,11 +69,13 @@ namespace Test.Persistency
             HorseRider rider = server.UseRider(cfg => cfg.ConfigureQueues(c =>
             {
                 c.UsePersistentQueues(
-                    cx =>
+                    cx => { cx.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
+                    q =>
                     {
-                        cx.UseInstantFlush()
-                            .SetAutoShrink(true, TimeSpan.FromSeconds(60));
-                    }, DeleteWhen.AfterSend, CommitWhen.None, true);
+                        q.Options.Acknowledge = QueueAckDecision.None;
+                        q.Options.CommitWhen = CommitWhen.None;
+                    },
+                    true);
             }));
 
             HorseQueue queue = await rider.Queue.Create("reload-test", o => o.Type = QueueType.Push);
@@ -84,7 +86,7 @@ namespace Test.Persistency
             await queue.Push(msg);
 
             QueueMessage queueMsg = queue.Manager.MessageStore.ReadFirst();
-            
+
             PersistentQueueManager manager = (PersistentQueueManager) queue.Manager;
             await manager.DeliveryHandler.BeginSend(queue, queueMsg);
 
@@ -98,7 +100,12 @@ namespace Test.Persistency
             {
                 c.UsePersistentQueues(
                     c => { c.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
-                    DeleteWhen.AfterSend, CommitWhen.None, true);
+                    q =>
+                    {
+                        q.Options.Acknowledge = QueueAckDecision.None;
+                        q.Options.CommitWhen = CommitWhen.None;
+                    },
+                    true);
             }));
             HorseQueue queue2 = rider.Queue.Find("reload-test");
             Assert.NotNull(queue2);

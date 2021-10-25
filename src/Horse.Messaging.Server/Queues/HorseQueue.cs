@@ -402,6 +402,9 @@ namespace Horse.Messaging.Server.Queues
                 else if (pair.Key.Equals(HorseHeaders.QUEUE_TOPIC, StringComparison.InvariantCultureIgnoreCase))
                     Topic = pair.Value;
 
+                else if (pair.Key.Equals(HorseHeaders.PUT_BACK, StringComparison.InvariantCultureIgnoreCase))
+                    Options.PutBack = pair.Value.ToPutBackDecision();
+
                 else if (pair.Key.Equals(HorseHeaders.PUT_BACK_DELAY, StringComparison.InvariantCultureIgnoreCase))
                     Options.PutBackDelay = Convert.ToInt32(pair.Value);
 
@@ -504,6 +507,7 @@ namespace Horse.Messaging.Server.Queues
                 HorseHeaders.QUEUE_NAME,
                 HorseHeaders.QUEUE_TYPE,
                 HorseHeaders.QUEUE_TOPIC,
+                HorseHeaders.PUT_BACK,
                 HorseHeaders.PUT_BACK_DELAY,
                 HorseHeaders.DELIVERY,
                 HorseHeaders.QUEUE_MANAGER,

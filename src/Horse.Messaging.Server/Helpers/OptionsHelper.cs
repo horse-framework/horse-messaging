@@ -1,5 +1,6 @@
 ﻿using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Delivery;
 
 namespace Horse.Messaging.Server.Helpers
 {
@@ -119,6 +120,24 @@ namespace Horse.Messaging.Server.Helpers
 
                 default:
                     return "push";
+            }
+        }
+        
+        public static PutBackDecision ToPutBackDecision(this string value)
+        {
+            switch (value.Trim().ToLower())
+            {
+                case "no":
+                    return PutBackDecision.No;
+
+                case "regular":
+                    return PutBackDecision.Regular;
+
+                case "priority":
+                    return PutBackDecision.Priority;
+
+                default:
+                    return PutBackDecision.No;
             }
         }
     }

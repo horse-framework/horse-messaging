@@ -92,6 +92,7 @@ namespace Test.Queues.Types
             HorseQueue queue = server.Rider.Queue.Find("push-a");
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(3);
+            queue.Options.CommitWhen = CommitWhen.AfterAcknowledge;
             queue.Options.Acknowledge = queueAckIsActive ? QueueAckDecision.JustRequest : QueueAckDecision.None;
 
             HorseClient producer = new HorseClient();
@@ -106,8 +107,6 @@ namespace Test.Queues.Types
             Assert.True(consumer.IsConnected);
             HorseResult joined = await consumer.Queue.Subscribe("push-a", true);
             Assert.Equal(HorseResultCode.Ok, joined.Code);
-
-            queue.Manager.DeliveryHandler.CommitWhen = CommitWhen.AfterAcknowledge;
 
             HorseResult ack = await producer.Queue.Push("push-a", "Hello, World!", true);
             Assert.Equal(queueAckIsActive, ack.Code == HorseResultCode.Ok);

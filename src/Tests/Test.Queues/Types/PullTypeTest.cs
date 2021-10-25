@@ -66,6 +66,7 @@ namespace Test.Queues.Types
             HorseQueue queue = server.Rider.Queue.Find("pull-a");
             Assert.NotNull(queue);
             queue.Options.Acknowledge = QueueAckDecision.JustRequest;
+            queue.Options.CommitWhen = CommitWhen.AfterAcknowledge;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
 
             HorseClient consumer = new HorseClient();
@@ -86,7 +87,6 @@ namespace Test.Queues.Types
             Assert.True(producer.IsConnected);
 
             HorseQueue horseQueue = server.Rider.Queue.Find("pull-a");
-            horseQueue.Manager.DeliveryHandler.CommitWhen = CommitWhen.AfterAcknowledge;
 
             Task<HorseResult> taskAck = producer.Queue.Push("pull-a", "Hello, World!", true);
 

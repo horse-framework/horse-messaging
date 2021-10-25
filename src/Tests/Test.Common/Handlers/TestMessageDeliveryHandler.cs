@@ -11,8 +11,8 @@ namespace Test.Common.Handlers
     {
         private readonly TestHorseRider _rider;
 
-        public TestMessageDeliveryHandler(TestHorseRider rider, IHorseQueueManager manager, CommitWhen commitWhen, PutBackDecision putBack)
-            : base(manager, commitWhen, putBack)
+        public TestMessageDeliveryHandler(TestHorseRider rider, IHorseQueueManager manager)
+            : base(manager)
         {
             _rider = rider;
         }

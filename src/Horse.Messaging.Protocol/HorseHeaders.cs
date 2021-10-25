@@ -211,6 +211,11 @@ namespace Horse.Messaging.Protocol
         public const string FILTER = "Filter";
 
         /// <summary>
+        /// "Put-Back"
+        /// </summary>
+        public const string PUT_BACK = "Put-Back";
+
+        /// <summary>
         /// "Put-Back-Delay"
         /// </summary>
         public const string PUT_BACK_DELAY = "Put-Back-Delay";

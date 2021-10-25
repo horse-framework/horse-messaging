@@ -29,13 +29,16 @@ namespace Test.Persistency
                                 .KeepLastBackup()
                                 .SetAutoShrink(true, TimeSpan.FromSeconds(60));
                         },
-                        DeleteWhen.AfterSend,
-                        CommitWhen.None,
+                        c =>
+                        {
+                            c.Options.CommitWhen = CommitWhen.AfterSent;
+                            c.Options.PutBack = PutBackDecision.No;
+                        },
                         true);
                 }));
 
             string queueName = $"test{Environment.TickCount}";
-            
+
             HorseQueue queue = await rider.Queue.Create(queueName);
 
             HorseMessage message = new HorseMessage(MessageType.QueueMessage, queueName);
@@ -68,7 +71,7 @@ namespace Test.Persistency
 
             await manager.DeliveryHandler.EndSend(queue, queueMessage);
             await manager.RemoveMessage(queueMessage);
-            
+
             deliveries = manager.RedeliveryService.GetDeliveries();
             Assert.Empty(deliveries);
             server.Stop();

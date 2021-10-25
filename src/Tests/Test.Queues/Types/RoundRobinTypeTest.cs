@@ -129,7 +129,7 @@ namespace Test.Queues.Types
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
             queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-            queue.Manager.DeliveryHandler.PutBack = PutBackDecision.Regular;
+            queue.Options.PutBack = PutBackDecision.Regular;
 
             HorseClient producer = new HorseClient();
             await producer.ConnectAsync("horse://localhost:" + port);
@@ -172,7 +172,7 @@ namespace Test.Queues.Types
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(2);
             queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
             server.PutBack = PutBackDecision.Regular;
-            queue.Manager.DeliveryHandler.PutBack = PutBackDecision.Regular;
+            queue.Options.PutBack = PutBackDecision.Regular;
 
             HorseClient producer = new HorseClient();
             await producer.ConnectAsync("horse://localhost:" + port);
