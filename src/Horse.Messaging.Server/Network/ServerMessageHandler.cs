@@ -33,19 +33,19 @@ namespace Horse.Messaging.Server.Network
 
         #region Handle
 
-        public Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
+        public async Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
         {
             try
             {
-                return HandleUnsafe(client, message);
+                await HandleUnsafe(client, message);
             }
             catch (OperationCanceledException)
             {
-                return client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
+                await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
             }
             catch (DuplicateNameException)
             {
-                return client.SendAsync(message.CreateResponse(HorseResultCode.Duplicate));
+                await client.SendAsync(message.CreateResponse(HorseResultCode.Duplicate));
             }
         }
 

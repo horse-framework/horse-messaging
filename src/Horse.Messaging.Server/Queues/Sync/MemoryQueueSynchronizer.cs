@@ -48,7 +48,7 @@ namespace Horse.Messaging.Server.Queues.Sync
             RemoteNode = replica;
             _syncStartDate = DateTime.UtcNow;
             Manager.Queue.SetStatus(QueueStatus.Syncing);
-            
+
             List<string> priorityIds = Manager.PriorityMessageStore.GetUnsafe().Select(x => x.Message.MessageId).ToList();
             List<string> msgIds = Manager.MessageStore.GetUnsafe().Select(x => x.Message.MessageId).ToList();
 
@@ -63,14 +63,19 @@ namespace Horse.Messaging.Server.Queues.Sync
 
             StringBuilder builder = new StringBuilder();
 
-            builder.AppendLine(priorityIds.Aggregate((c, s) => $"{c}{Environment.NewLine}{s}"));
-            builder.AppendLine();
-            builder.AppendLine(msgIds.Aggregate((c, s) => $"{c}{Environment.NewLine}{s}"));
+            if (priorityIds.Count > 0)
+                builder.AppendLine(priorityIds.Aggregate((c, s) => $"{c}{Environment.NewLine}{s}"));
 
+            builder.AppendLine();
+
+            if (msgIds.Count > 0)
+                builder.AppendLine(msgIds.Aggregate((c, s) => $"{c}{Environment.NewLine}{s}"));
+            
             HorseMessage message = new HorseMessage(MessageType.Cluster, Manager.Queue.Name, KnownContentTypes.NodeQueueMessageIdList);
             message.SetStringContent(builder.ToString());
 
-            return await replica.SendMessage(message);
+            bool result = await replica.SendMessage(message);
+            return result;
         }
 
         public Task<bool> BeginReceiving(NodeClient main)
@@ -145,7 +150,7 @@ namespace Horse.Messaging.Server.Queues.Sync
             HorseMessage requestMessage = new HorseMessage(MessageType.Cluster, Manager.Queue.Name, KnownContentTypes.NodeQueueMessageRequest);
             string content = requestMessages.Aggregate((c, s) => $"{c}{Environment.NewLine}{s}");
             requestMessage.SetStringContent(content);
-            
+
             await RemoteNode.SendMessage(requestMessage);
         }
 
@@ -160,11 +165,11 @@ namespace Horse.Messaging.Server.Queues.Sync
 
             HorseMessage response = new HorseMessage(MessageType.Cluster, Manager.Queue.Name, KnownContentTypes.NodeQueueMessageResponse);
             response.Content = new MemoryStream();
-            
+
             foreach (string id in idList)
             {
                 QueueMessage msg = messages.FirstOrDefault(x => x.Message.MessageId == id);
-                
+
                 if (msg == null)
                     msg = priorityMessages.FirstOrDefault(x => x.Message.MessageId == id);
 
@@ -187,11 +192,11 @@ namespace Horse.Messaging.Server.Queues.Sync
             HorseProtocolReader reader = new HorseProtocolReader();
             message.Content.Position = 0;
 
-            while (message.Content.Position<message.Content.Length)
+            while (message.Content.Position < message.Content.Length)
             {
                 HorseMessage msg = await reader.Read(message.Content);
                 QueueMessage queueMessage = new QueueMessage(msg, true);
-                Manager.AddMessage(queueMessage);   
+                Manager.AddMessage(queueMessage);
             }
 
             await EndReceiving();
@@ -222,7 +227,7 @@ namespace Horse.Messaging.Server.Queues.Sync
 
             HorseMessage message = new HorseMessage(MessageType.Cluster, Manager.Queue.Name, KnownContentTypes.NodeQueueSyncCompletion);
             await RemoteNode.SendMessage(message);
-         
+
             RemoteNode = null;
         }
     }

@@ -316,6 +316,9 @@ namespace Horse.Messaging.Server.Network
                     if (!fromNode && clusterMode == ClusterMode.Scaled)
                         _rider.Cluster.ProcessMessageFromClient(mc, message);
 
+                    if (clusterMode == ClusterMode.Reliable && mc.IsNodeClient && mc.NodeClient != null)
+                        mc.NodeClient.ProcessReceivedMessage(mc, message);
+
                     if (isReplica)
                         return Task.CompletedTask;
 

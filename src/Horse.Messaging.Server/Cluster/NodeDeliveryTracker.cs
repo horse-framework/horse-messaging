@@ -31,12 +31,13 @@ namespace Horse.Messaging.Server.Cluster
                 }
             });
 
-            _thread.IsBackground = true;
-            _thread.Priority = ThreadPriority.BelowNormal;
         }
 
         public void Run()
         {
+            _thread.IsBackground = true;
+            _thread.Priority = ThreadPriority.BelowNormal;
+            
             _thread.Start();
         }
 
@@ -61,6 +62,7 @@ namespace Horse.Messaging.Server.Cluster
                 foreach (NodeMessageDelivery delivery in removing)
                 {
                     delivery.IsTimedOut = true;
+                    delivery.IsCommitted = false;
 
                     if (!delivery.CompletionSource.Task.IsCompleted)
                         delivery.CompletionSource.SetResult(delivery);
@@ -84,10 +86,30 @@ namespace Horse.Messaging.Server.Cluster
             return messageDelivery.CompletionSource;
         }
 
-        public void RemoveCommited(NodeMessageDelivery delivery)
+        public bool Commit(string messageId)
+        {
+            NodeMessageDelivery delivery = null;
+            
+            lock (_deliveries)
+            {
+                _deliveries.TryGetValue(messageId, out delivery);
+                
+                if (delivery != null)
+                    _deliveries.Remove(messageId);
+            }
+
+            if (delivery == null)
+                return false;
+
+            delivery.IsCommitted = true;
+            delivery.CompletionSource.SetResult(delivery);
+            return true;
+        }
+
+        public void Untrack(string messageId)
         {
             lock (_deliveries)
-                _deliveries.Remove(delivery.Message.MessageId);
+                _deliveries.Remove(messageId);
         }
     }
 }

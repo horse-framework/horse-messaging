@@ -434,7 +434,7 @@ namespace Horse.Messaging.Server.Queues
 
             Options.AcknowledgeTimeout = TimeSpan.FromMilliseconds(info.AcknowledgeTimeout);
             Options.MessageTimeout = TimeSpan.FromSeconds(info.MessageTimeout);
-            
+
             Options.ClientLimit = info.ClientLimit;
             Options.MessageLimit = info.MessageLimit;
             Options.MessageSizeLimit = info.MessageSizeLimit;
@@ -773,7 +773,7 @@ namespace Horse.Messaging.Server.Queues
 
             return PushResult.Success;
         }
-        
+
         #endregion
 
         #region Decision
@@ -812,7 +812,7 @@ namespace Horse.Messaging.Server.Queues
             {
                 if (decision.Save)
                     await SaveMessage(message);
-                
+
                 if (decision.Transmission != DecisionTransmission.None && !message.IsProducerAckSent)
                 {
                     HorseMessage acknowledge = customAck ?? message.Message.CreateAcknowledge(decision.Transmission == DecisionTransmission.Failed ? "failed" : null);

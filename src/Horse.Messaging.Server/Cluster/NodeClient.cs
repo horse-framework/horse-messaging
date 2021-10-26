@@ -19,6 +19,7 @@ namespace Horse.Messaging.Server.Cluster
         private readonly HorseClient _outgoingClient;
         private readonly NodeDeliveryTracker _deliveryTracker;
         private MessagingClient _incomingClient;
+        private bool _connectedToRemote;
 
         /// <summary>
         /// Node Info
@@ -97,6 +98,7 @@ namespace Horse.Messaging.Server.Cluster
             if (_incomingClient == null || !_incomingClient.IsConnected)
                 ConnectedDate = DateTime.UtcNow;
 
+            _connectedToRemote = true;
             Rider.Server.Logger?.LogEvent("CLUSTER", $"Connected to remote client: {Info.Name}");
         }
 
@@ -154,7 +156,10 @@ namespace Horse.Messaging.Server.Cluster
             if (_incomingClient == null || !_incomingClient.IsConnected)
                 _ = ProcessDisconnection();
 
-            Rider.Server.Logger?.LogEvent("CLUSTER", $"Disconnected from remote client: {Info.Name}");
+            if (_connectedToRemote)
+                Rider.Server.Logger?.LogEvent("CLUSTER", $"Disconnected from remote client: {Info.Name}");
+            
+            _connectedToRemote = false;
         }
 
         private void IncomingClientOnDisconnected(SocketBase client)
@@ -207,7 +212,10 @@ namespace Horse.Messaging.Server.Cluster
                 case MessageType.Channel:
                 case MessageType.Cache:
                 case MessageType.DirectMessage:
+                    break;
+                
                 case MessageType.Response:
+                    _deliveryTracker.Commit(message.MessageId);
                     break;
             }
         }
@@ -366,8 +374,29 @@ namespace Horse.Messaging.Server.Cluster
                     break;
 
                 case KnownContentTypes.NodePutBackQueueMessage:
-                    //not active yet
+                {
+                    HorseQueue queue = Rider.Queue.Find(message.Target);
+
+                    if (queue != null)
+                    {
+                        QueueMessage found;
+                        if (message.HighPriority)
+                        {
+                            found = queue.Manager.MessageStore.Find(message.MessageId)
+                                    ?? queue.Manager.PriorityMessageStore.Find(message.MessageId);
+                        }
+                        else
+                        {
+                            found = queue.Manager.PriorityMessageStore.Find(message.MessageId)
+                                    ?? queue.Manager.MessageStore.Find(message.MessageId);
+                        }
+
+                        if (found != null)
+                            _ = queue.Manager.ChangeMessagePriority(found, message.HighPriority);
+                    }
+
                     break;
+                }
 
                 case KnownContentTypes.NodeRemoveQueueMessage:
                 {
@@ -400,11 +429,15 @@ namespace Horse.Messaging.Server.Cluster
         internal async Task<bool> SendMessageAndWaitAck(HorseMessage message)
         {
             TaskCompletionSource<NodeMessageDelivery> source = _deliveryTracker.Track(message);
+            
+            bool sent = await SendMessage(message);
+            if (!sent)
+            {
+                _deliveryTracker.Untrack(message.MessageId);
+                return false;
+            }
+            
             NodeMessageDelivery delivery = await source.Task;
-
-            if (delivery.IsCommitted)
-                _deliveryTracker.RemoveCommited(delivery);
-
             return delivery.IsCommitted;
         }
 
@@ -417,7 +450,7 @@ namespace Horse.Messaging.Server.Cluster
             {
                 message.Type = MessageType.QueueMessage;
                 message.ContentType = 0;
-                
+
                 result = await queue.PushByNode(message);
             }
 

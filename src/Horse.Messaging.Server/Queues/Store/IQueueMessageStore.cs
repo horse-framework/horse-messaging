@@ -34,6 +34,11 @@ namespace Horse.Messaging.Server.Queues.Store
         /// Gets next message from store
         /// </summary>
         QueueMessage ConsumeFirst();
+
+        /// <summary>
+        /// Finds a message by Id
+        /// </summary>
+        QueueMessage Find(string messageId);
         
         /// <summary>
         /// Gets next message from store

@@ -103,7 +103,12 @@ namespace Horse.Messaging.Server.Queues
                        MessageLimit = options.MessageLimit,
                        MessageSizeLimit = options.MessageSizeLimit,
                        DelayBetweenMessages = options.DelayBetweenMessages,
-                       PutBackDelay = options.PutBackDelay
+                       PutBackDelay = options.PutBackDelay,
+                       AutoDestroy = options.AutoDestroy,
+                       ClientLimit = options.ClientLimit,
+                       CommitWhen = options.CommitWhen,
+                       PutBack = options.PutBack,
+                       AutoQueueCreation = options.AutoQueueCreation
                    };
         }
     }

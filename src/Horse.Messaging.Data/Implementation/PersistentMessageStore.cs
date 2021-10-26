@@ -46,6 +46,11 @@ namespace Horse.Messaging.Data.Implementation
             return true;
         }
 
+        internal void RemoveFromOnlyMemory(QueueMessage message)
+        {
+            base.Remove(message);
+        }
+        
         public async Task<bool> RemoveMessage(string messageId)
         {
             await Database.Delete(messageId);

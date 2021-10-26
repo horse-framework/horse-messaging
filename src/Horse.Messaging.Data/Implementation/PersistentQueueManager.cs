@@ -25,16 +25,16 @@ namespace Horse.Messaging.Data.Implementation
 
         /// <inheritdoc />
         public HorseQueue Queue { get; }
-        
+
         /// <inheritdoc />
         public IQueueMessageStore MessageStore => _messageStore;
-        
+
         /// <inheritdoc />
         public IQueueMessageStore PriorityMessageStore => _priorityMessageStore;
-        
+
         /// <inheritdoc />
         public IQueueDeliveryHandler DeliveryHandler => _deliveryHandler;
-        
+
         /// <inheritdoc />
         public IQueueSynchronizer Synchronizer { get; }
 
@@ -70,9 +70,9 @@ namespace Horse.Messaging.Data.Implementation
         public async Task Initialize()
         {
             if (Queue.Options.Acknowledge == QueueAckDecision.None && Queue.Options.CommitWhen == CommitWhen.AfterAcknowledge)
-                    throw new NotSupportedException("Producer Ack option is AfterConsumerAckReceived but queue Acknowledge option is None. " +
-                                                    "Messages are not deleted from disk with this configuration. " +
-                                                    "Please change queue Acknowledge option or ProducerAckDecision option");
+                throw new NotSupportedException("Producer Ack option is AfterConsumerAckReceived but queue Acknowledge option is None. " +
+                                                "Messages are not deleted from disk with this configuration. " +
+                                                "Please change queue Acknowledge option or ProducerAckDecision option");
 
             await _priorityMessageStore.Initialize();
             await _messageStore.Initialize();
@@ -91,7 +91,7 @@ namespace Horse.Messaging.Data.Implementation
             bool added = ConfigurationFactory.Manager.Add(Queue, _messageStore.Database.File.Filename);
             if (added)
                 ConfigurationFactory.Manager.Save();
-            
+
             await LoadMessages(_priorityMessageStore.Database, deliveries);
             await LoadMessages(_messageStore.Database, deliveries);
         }
@@ -103,19 +103,19 @@ namespace Horse.Messaging.Data.Implementation
             {
                 QueueFiller filler = new QueueFiller(Queue);
                 PushResult result = filler.FillMessage(dict.Values,
-                                                       true,
-                                                       qm =>
-                                                       {
-                                                           if (!UseRedelivery ||
-                                                               deliveries == null ||
-                                                               deliveries.Count == 0 ||
-                                                               string.IsNullOrEmpty(qm.Message.MessageId))
-                                                               return;
+                    true,
+                    qm =>
+                    {
+                        if (!UseRedelivery ||
+                            deliveries == null ||
+                            deliveries.Count == 0 ||
+                            string.IsNullOrEmpty(qm.Message.MessageId))
+                            return;
 
-                                                           var kv = deliveries.FirstOrDefault(x => x.Key == qm.Message.MessageId);
-                                                           if (kv.Value > 0)
-                                                               qm.DeliveryCount = kv.Value;
-                                                       });
+                        var kv = deliveries.FirstOrDefault(x => x.Key == qm.Message.MessageId);
+                        if (kv.Value > 0)
+                            qm.DeliveryCount = kv.Value;
+                    });
 
                 if (result != PushResult.Success)
                     throw new InvalidOperationException($"Cannot fill messages into {Queue.Name} queue : {result}");
@@ -222,21 +222,17 @@ namespace Horse.Messaging.Data.Implementation
             if (message.Message.HighPriority == priority)
                 return false;
 
+            message.Message.HighPriority = priority;
+
             if (priority)
             {
-                await _messageStore.RemoveMessage(message);
+                _messageStore.RemoveFromOnlyMemory(message);
                 _priorityMessageStore.Put(message);
-                
-                if (message.IsSaved)
-                    await _priorityMessageStore.RemoveMessage(message);
             }
             else
             {
-                await _priorityMessageStore.RemoveMessage(message);
+                _priorityMessageStore.RemoveFromOnlyMemory(message);
                 _messageStore.Put(message);
-                
-                if (message.IsSaved)
-                    await _messageStore.RemoveMessage(message);
             }
 
             return true;

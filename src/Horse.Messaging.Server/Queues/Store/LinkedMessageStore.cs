@@ -67,6 +67,20 @@ namespace Horse.Messaging.Server.Queues.Store
             }
         }
 
+        public virtual QueueMessage Find(string messageId)
+        {
+            lock (_messages)
+            {
+                foreach (QueueMessage qm in _messages)
+                {
+                    if (qm.Message.MessageId == messageId)
+                        return qm;
+                }
+            }
+
+            return null;
+        }
+
         public virtual List<QueueMessage> ConsumeMultiple(int count)
         {
             List<QueueMessage> list = new List<QueueMessage>(count);

@@ -489,7 +489,7 @@ namespace Horse.Messaging.Client
         /// <summary>
         /// Connects to well defined remote host
         /// </summary>
-        internal Task ConnectAsync(DnsInfo host)
+        internal async Task ConnectAsync(DnsInfo host)
         {
             if (string.IsNullOrEmpty(_clientId))
                 _clientId = UniqueIdGenerator.Create();
@@ -503,12 +503,11 @@ namespace Horse.Messaging.Client
             try
             {
                 _socket = new HorseSocket(this, _data);
-                return _socket.ConnectAsync(host);
+                await _socket.ConnectAsync(host);
             }
             catch (Exception e)
             {
                 OnException(e);
-                return Task.CompletedTask;
             }
         }
 
@@ -702,7 +701,7 @@ namespace Horse.Messaging.Client
             HorseMessage ack = message.CreateAcknowledge();
             return await SendAsync(ack);
         }
-        
+
         /// <summary>
         /// Sends success response for the message
         /// </summary>
@@ -719,9 +718,9 @@ namespace Horse.Messaging.Client
         /// <param name="message">Received horse message</param>
         /// <param name="reason">Description for the error</param>
         /// <returns></returns>
-        public  Task<HorseResult> SendNegativeResponse(HorseMessage message, string reason = null)
+        public Task<HorseResult> SendNegativeResponse(HorseMessage message, string reason = null)
         {
-           return SendNegativeAck(message,reason);
+            return SendNegativeAck(message, reason);
         }
 
         /// <summary>

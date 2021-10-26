@@ -6,9 +6,9 @@
         <Product>Horse.Messaging.Data</Product>
         <Description>Horse messaging extensions library</Description>
         <PackageTags>horse,server,messaging,queue,mq,persistent,database,db</PackageTags>
-        <AssemblyVersion>6.0.8</AssemblyVersion>
-        <FileVersion>6.0.8</FileVersion>
-        <PackageVersion>6.0.8</PackageVersion>
+        <AssemblyVersion>6.1.0</AssemblyVersion>
+        <FileVersion>6.1.0</FileVersion>
+        <PackageVersion>6.1.0-beta</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>
