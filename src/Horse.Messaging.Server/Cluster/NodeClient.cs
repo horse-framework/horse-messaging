@@ -158,7 +158,7 @@ namespace Horse.Messaging.Server.Cluster
 
             if (_connectedToRemote)
                 Rider.Server.Logger?.LogEvent("CLUSTER", $"Disconnected from remote client: {Info.Name}");
-            
+
             _connectedToRemote = false;
         }
 
@@ -213,7 +213,7 @@ namespace Horse.Messaging.Server.Cluster
                 case MessageType.Cache:
                 case MessageType.DirectMessage:
                     break;
-                
+
                 case MessageType.Response:
                     _deliveryTracker.Commit(message.MessageId);
                     break;
@@ -325,7 +325,7 @@ namespace Horse.Messaging.Server.Cluster
                 {
                     HorseQueue queue = Rider.Queue.Find(message.Target);
                     if (queue != null)
-                        _ = queue.Manager.Synchronizer.ProcessReceivedMessages(message);
+                        _ = ProcessSync(message, queue);
 
                     break;
                 }
@@ -412,6 +412,12 @@ namespace Horse.Messaging.Server.Cluster
             }
         }
 
+        private async Task ProcessSync(HorseMessage message, HorseQueue queue)
+        {
+            await queue.Manager.Synchronizer.ProcessReceivedMessages(message);
+            await queue.Manager.Synchronizer.EndReceiving();
+        }
+
         internal async Task<bool> SendMessage(HorseMessage message)
         {
             if (_outgoingClient != null && _outgoingClient.IsConnected)
@@ -429,14 +435,14 @@ namespace Horse.Messaging.Server.Cluster
         internal async Task<bool> SendMessageAndWaitAck(HorseMessage message)
         {
             TaskCompletionSource<NodeMessageDelivery> source = _deliveryTracker.Track(message);
-            
+
             bool sent = await SendMessage(message);
             if (!sent)
             {
                 _deliveryTracker.Untrack(message.MessageId);
                 return false;
             }
-            
+
             NodeMessageDelivery delivery = await source.Task;
             return delivery.IsCommitted;
         }

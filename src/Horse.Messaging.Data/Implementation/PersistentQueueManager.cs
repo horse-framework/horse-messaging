@@ -11,6 +11,9 @@ using Horse.Messaging.Server.Queues.Sync;
 
 namespace Horse.Messaging.Data.Implementation
 {
+    /// <summary>
+    /// Queue manager for persistent queues
+    /// </summary>
     public class PersistentQueueManager : IHorseQueueManager
     {
         /// <summary>
@@ -64,9 +67,12 @@ namespace Horse.Messaging.Data.Implementation
             _priorityMessageStore = new PersistentMessageStore(this, prioDbOptions);
             _messageStore = new PersistentMessageStore(this, databaseOptions);
 
-            Synchronizer = new MemoryQueueSynchronizer(this);
+            Synchronizer = new DefaultQueueSynchronizer(this);
         }
 
+        /// <summary>
+        /// Initializes the manager, loads messages from disk and initializes redelivery
+        /// </summary>
         public async Task Initialize()
         {
             if (Queue.Options.Acknowledge == QueueAckDecision.None && Queue.Options.CommitWhen == CommitWhen.AfterAcknowledge)
@@ -133,6 +139,7 @@ namespace Horse.Messaging.Data.Implementation
             }
         }
 
+        /// <inheritdoc />
         public async Task Destroy()
         {
             if (UseRedelivery)
@@ -156,6 +163,7 @@ namespace Horse.Messaging.Data.Implementation
             }
         }
 
+        /// <inheritdoc />
         public Task OnExceptionThrown(string hint, QueueMessage message, Exception exception)
         {
             if (ConfigurationFactory.Builder.ErrorAction != null)
@@ -164,14 +172,14 @@ namespace Horse.Messaging.Data.Implementation
             return Task.CompletedTask;
         }
 
+        /// <inheritdoc />
         public async Task OnMessageTimeout(QueueMessage message)
         {
-            if (message.Message.HighPriority)
-                await _priorityMessageStore.RemoveMessage(message);
-            else
-                await _messageStore.RemoveMessage(message);
+            if (UseRedelivery)
+                await RedeliveryService.Remove(message.Message.MessageId);
         }
 
+        /// <inheritdoc />
         public bool AddMessage(QueueMessage message)
         {
             if (message.Message.HighPriority)
@@ -182,6 +190,7 @@ namespace Horse.Messaging.Data.Implementation
             return true;
         }
 
+        /// <inheritdoc />
         public async Task<bool> RemoveMessage(QueueMessage message)
         {
             if (UseRedelivery)
@@ -194,6 +203,7 @@ namespace Horse.Messaging.Data.Implementation
             return deleted;
         }
 
+        /// <inheritdoc />
         public async Task<bool> RemoveMessage(string messageId)
         {
             if (UseRedelivery)
@@ -207,6 +217,7 @@ namespace Horse.Messaging.Data.Implementation
             return deleted;
         }
 
+        /// <inheritdoc />
         public Task<bool> SaveMessage(QueueMessage message)
         {
             if (message.Message.HighPriority)
@@ -217,10 +228,11 @@ namespace Horse.Messaging.Data.Implementation
             return _messageStore.Database.Insert(message.Message);
         }
 
-        public async Task<bool> ChangeMessagePriority(QueueMessage message, bool priority)
+        /// <inheritdoc />
+        public Task<bool> ChangeMessagePriority(QueueMessage message, bool priority)
         {
             if (message.Message.HighPriority == priority)
-                return false;
+                return Task.FromResult(false);
 
             message.Message.HighPriority = priority;
 
@@ -235,7 +247,7 @@ namespace Horse.Messaging.Data.Implementation
                 _messageStore.Put(message);
             }
 
-            return true;
+            return Task.FromResult(true);
         }
     }
 }

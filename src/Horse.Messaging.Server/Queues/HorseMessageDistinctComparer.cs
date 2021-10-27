@@ -6,7 +6,7 @@ namespace Horse.Messaging.Server.Queues
 {
     internal class HorseMessageDistinctComparer : IEqualityComparer<HorseMessage>
     {
-        public bool Equals(HorseMessage? x, HorseMessage? y)
+        public bool Equals(HorseMessage x, HorseMessage y)
         {
             return x.MessageId == y.MessageId;
         }

@@ -6,24 +6,40 @@ using Horse.Messaging.Server.Queues.Sync;
 
 namespace Horse.Messaging.Server.Queues.Managers
 {
+    /// <summary>
+    /// Default memory queue manager implementation for non persistent queues
+    /// </summary>
     public class MemoryQueueManager : IHorseQueueManager
     {
+        /// <inheritdoc />
         public HorseQueue Queue { get; }
+
+        /// <inheritdoc />
         public IQueueMessageStore MessageStore { get; protected set; }
+
+        /// <inheritdoc />
         public IQueueMessageStore PriorityMessageStore { get; protected set; }
+
+        /// <inheritdoc />
         public IQueueDeliveryHandler DeliveryHandler { get; protected set; }
+
+        /// <inheritdoc />
         public IQueueSynchronizer Synchronizer { get; protected set; }
 
+        /// <summary>
+        /// Creates new memory queue manager
+        /// </summary>
         public MemoryQueueManager(HorseQueue queue)
         {
             Queue = queue;
 
             MessageStore = new LinkedMessageStore(this);
             PriorityMessageStore = new LinkedMessageStore(this);
-            Synchronizer = new MemoryQueueSynchronizer(this);
+            Synchronizer = new DefaultQueueSynchronizer(this);
             DeliveryHandler = new MemoryDeliveryHandler(this);
         }
 
+        /// <inheritdoc />
         public virtual Task Initialize()
         {
             DeliveryHandler.Tracker.Start();
@@ -32,6 +48,7 @@ namespace Horse.Messaging.Server.Queues.Managers
             return Task.CompletedTask;
         }
 
+        /// <inheritdoc />
         public virtual async Task Destroy()
         {
             PriorityMessageStore.TimeoutTracker.Stop();
@@ -42,11 +59,13 @@ namespace Horse.Messaging.Server.Queues.Managers
             await MessageStore.Destroy();
         }
 
+        /// <inheritdoc />
         public virtual Task OnExceptionThrown(string hint, QueueMessage message, Exception exception)
         {
             return Task.CompletedTask;
         }
 
+        /// <inheritdoc />
         public virtual Task OnMessageTimeout(QueueMessage message)
         {
             return Task.CompletedTask;
@@ -54,6 +73,7 @@ namespace Horse.Messaging.Server.Queues.Managers
 
         #region Add- Remove
 
+        /// <inheritdoc />
         public virtual bool AddMessage(QueueMessage message)
         {
             if (message.Message.HighPriority)
@@ -64,6 +84,7 @@ namespace Horse.Messaging.Server.Queues.Managers
             return true;
         }
 
+        /// <inheritdoc />
         public virtual Task<bool> RemoveMessage(QueueMessage message)
         {
             if (message.IsInQueue)
@@ -77,6 +98,7 @@ namespace Horse.Messaging.Server.Queues.Managers
             return Task.FromResult(true);
         }
 
+        /// <inheritdoc />
         public virtual Task<bool> RemoveMessage(string messageId)
         {
             bool removed = PriorityMessageStore.Remove(messageId);
@@ -88,11 +110,13 @@ namespace Horse.Messaging.Server.Queues.Managers
             return Task.FromResult(removed);
         }
 
+        /// <inheritdoc />
         public virtual Task<bool> SaveMessage(QueueMessage message)
         {
             return Task.FromResult(false);
         }
 
+        /// <inheritdoc />
         public virtual Task<bool> ChangeMessagePriority(QueueMessage message, bool priority)
         {
             if (message.Message.HighPriority == priority)

@@ -4,9 +4,20 @@ using Horse.Messaging.Server.Clients;
 
 namespace Horse.Messaging.Server.Queues.Delivery
 {
+    /// <summary>
+    /// Queue delivery handler implementation.
+    /// </summary>
     public interface IQueueDeliveryHandler
     {
+        /// <summary>
+        /// Manager of the handler.
+        /// That object is also manager of the queue.
+        /// </summary>
         IHorseQueueManager Manager { get; }
+        
+        /// <summary>
+        /// Delivery tracker object of the delivery handler.
+        /// </summary>
         IDeliveryTracker Tracker { get; }
 
         /// <summary>

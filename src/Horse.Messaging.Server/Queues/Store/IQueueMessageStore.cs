@@ -9,9 +9,19 @@ namespace Horse.Messaging.Server.Queues.Store
     /// </summary>
     public interface IQueueMessageStore
     {
+        /// <summary>
+        /// Manager of the queue
+        /// </summary>
         IHorseQueueManager Manager { get; }
+        
+        /// <summary>
+        /// Message timeout tracker of the store
+        /// </summary>
         IMessageTimeoutTracker TimeoutTracker { get; }
         
+        /// <summary>
+        /// Returns true if there is no message in the store
+        /// </summary>
         bool IsEmpty { get; }
 
         /// <summary>

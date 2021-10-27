@@ -6,19 +6,29 @@ using Horse.Messaging.Server.Queues.Delivery;
 
 namespace Horse.Messaging.Data.Implementation
 {
+    /// <summary>
+    /// Message delivery handler for persistent queues
+    /// </summary>
     public class PersistentMessageDeliveryHandler : IQueueDeliveryHandler
     {
+        /// <inheritdoc />
         public IHorseQueueManager Manager => _manager;
+        
+        /// <inheritdoc />
         public IDeliveryTracker Tracker { get; }
 
         private readonly PersistentQueueManager _manager;
 
+        /// <summary>
+        /// Creates new persistent message delivery handler
+        /// </summary>
         public PersistentMessageDeliveryHandler(PersistentQueueManager manager)
         {
             _manager = manager;
             Tracker = new DefaultDeliveryTracker(manager);
         }
 
+        /// <inheritdoc />
         public async Task<Decision> ReceivedFromProducer(HorseQueue queue, QueueMessage message, MessagingClient sender)
         {
             if (_manager.Queue.Options.CommitWhen == CommitWhen.AfterSaved)
@@ -37,6 +47,7 @@ namespace Horse.Messaging.Data.Implementation
                 : DecisionTransmission.None);
         }
 
+        /// <inheritdoc />
         public async Task<Decision> BeginSend(HorseQueue queue, QueueMessage message)
         {
             if (_manager.UseRedelivery)
@@ -51,16 +62,19 @@ namespace Horse.Messaging.Data.Implementation
             return Decision.NoveNext();
         }
 
+        /// <inheritdoc />
         public Task<bool> CanConsumerReceive(HorseQueue queue, QueueMessage message, MessagingClient receiver)
         {
             return Task.FromResult(true);
         }
 
+        /// <inheritdoc />
         public Task<Decision> ConsumerReceiveFailed(HorseQueue queue, MessageDelivery delivery, MessagingClient receiver)
         {
             return Task.FromResult(Decision.PutBackMessage(false));
         }
 
+        /// <inheritdoc />
         public Task<Decision> EndSend(HorseQueue queue, QueueMessage message)
         {
             if (message.SendCount == 0)
@@ -72,6 +86,7 @@ namespace Horse.Messaging.Data.Implementation
             return Task.FromResult(Decision.NoveNext());
         }
 
+        /// <inheritdoc />
         public Task<Decision> AcknowledgeReceived(HorseQueue queue, HorseMessage acknowledgeMessage, MessageDelivery delivery, bool success)
         {
             if (success)
@@ -105,6 +120,7 @@ namespace Horse.Messaging.Data.Implementation
             return Task.FromResult(Decision.PutBackMessage(_manager.Queue.Options.PutBack == PutBackDecision.Regular));
         }
 
+        /// <inheritdoc />
         public Task<Decision> AcknowledgeTimeout(HorseQueue queue, MessageDelivery delivery)
         {
             if (_manager.Queue.Options.PutBack == PutBackDecision.No)

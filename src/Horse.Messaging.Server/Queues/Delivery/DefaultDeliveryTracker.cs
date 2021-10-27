@@ -8,6 +8,10 @@ using Horse.Messaging.Server.Clients;
 
 namespace Horse.Messaging.Server.Queues.Delivery
 {
+    /// <summary>
+    /// Default delivery tracker implementation.
+    /// That object tracks sent messages and manages acknowledge and response messages of them.
+    /// </summary>
     public class DefaultDeliveryTracker : IDeliveryTracker
     {
         /// <summary>
@@ -19,6 +23,9 @@ namespace Horse.Messaging.Server.Queues.Delivery
         private readonly HorseQueue _queue;
         private ThreadTimer _timer;
 
+        /// <summary>
+        /// Creates new default delivery tracker
+        /// </summary>
         public DefaultDeliveryTracker(IHorseQueueManager manager)
         {
             _manager = manager;
@@ -75,6 +82,10 @@ namespace Horse.Messaging.Server.Queues.Delivery
             await Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Returns all actively tracking messages.
+        /// The method is thread safe and returns a copy of original collection.
+        /// </summary>
         public List<QueueMessage> GetDeliveringMessages()
         {
             List<QueueMessage> messages;

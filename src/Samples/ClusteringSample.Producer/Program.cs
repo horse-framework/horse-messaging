@@ -33,7 +33,9 @@ namespace ClusteringSample.Producer
 
                 HorseResult result = await client.Queue.PushJson(new Foo {No = no}, true);
                 Console.Write($"Message #{no} Push Result {result.Code} ");
-                no++;
+                
+                if (result.Code == HorseResultCode.Ok)
+                    no++;
             }
         }
     }

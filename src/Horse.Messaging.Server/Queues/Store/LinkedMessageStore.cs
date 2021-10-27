@@ -4,11 +4,19 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Server.Queues.Store
 {
+    /// <summary>
+    /// Default non persistent message store.
+    /// It keeps messages in linked lists.
+    /// </summary>
     public class LinkedMessageStore : IQueueMessageStore
     {
+        /// <inheritdoc />
         public IHorseQueueManager Manager { get; }
+        
+        /// <inheritdoc />
         public IMessageTimeoutTracker TimeoutTracker { get; }
 
+        /// <inheritdoc />
         public bool IsEmpty
         {
             get
@@ -20,17 +28,22 @@ namespace Horse.Messaging.Server.Queues.Store
 
         private readonly LinkedList<QueueMessage> _messages = new();
 
+        /// <summary>
+        /// Creates new linked list message store
+        /// </summary>
         public LinkedMessageStore(IHorseQueueManager manager)
         {
             Manager = manager;
             TimeoutTracker = new DefaultMessageTimeoutTracker(manager.Queue, this);
         }
 
+        /// <inheritdoc />
         public int Count()
         {
             return _messages.Count;
         }
 
+        /// <inheritdoc />
         public virtual void Put(QueueMessage message)
         {
             lock (_messages)
@@ -43,6 +56,7 @@ namespace Horse.Messaging.Server.Queues.Store
             }
         }
 
+        /// <inheritdoc />
         public virtual QueueMessage ReadFirst()
         {
             QueueMessage message;
@@ -52,6 +66,7 @@ namespace Horse.Messaging.Server.Queues.Store
             return message;
         }
 
+        /// <inheritdoc />
         public virtual QueueMessage ConsumeFirst()
         {
             lock (_messages)
@@ -67,6 +82,7 @@ namespace Horse.Messaging.Server.Queues.Store
             }
         }
 
+        /// <inheritdoc />
         public virtual QueueMessage Find(string messageId)
         {
             lock (_messages)
@@ -81,6 +97,7 @@ namespace Horse.Messaging.Server.Queues.Store
             return null;
         }
 
+        /// <inheritdoc />
         public virtual List<QueueMessage> ConsumeMultiple(int count)
         {
             List<QueueMessage> list = new List<QueueMessage>(count);
@@ -104,12 +121,14 @@ namespace Horse.Messaging.Server.Queues.Store
             return list;
         }
 
+        /// <inheritdoc />
         public IEnumerable<QueueMessage> GetUnsafe()
         {
             foreach (QueueMessage message in _messages)
                 yield return message;
         }
 
+        /// <inheritdoc />
         public virtual bool Remove(string messageId)
         {
             lock (_messages)
@@ -131,6 +150,7 @@ namespace Horse.Messaging.Server.Queues.Store
             return false;
         }
 
+        /// <inheritdoc />
         public virtual void Remove(HorseMessage message)
         {
             lock (_messages)
@@ -149,12 +169,14 @@ namespace Horse.Messaging.Server.Queues.Store
             }
         }
 
+        /// <inheritdoc />
         public virtual void Remove(QueueMessage message)
         {
             lock (_messages)
                 _messages.Remove(message);
         }
 
+        /// <inheritdoc />
         public virtual Task Clear()
         {
             lock (_messages)
@@ -163,6 +185,7 @@ namespace Horse.Messaging.Server.Queues.Store
             return Task.CompletedTask;
         }
 
+        /// <inheritdoc />
         public virtual Task Destroy()
         {
             Clear();

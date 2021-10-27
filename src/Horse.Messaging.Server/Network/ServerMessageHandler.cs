@@ -359,7 +359,7 @@ namespace Horse.Messaging.Server.Network
             //if creation successful, sends response
             if (message.WaitResponse)
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
-            
+
             _rider.Cluster.SendQueueUpdated(queue);
         }
 
@@ -396,13 +396,13 @@ namespace Horse.Messaging.Server.Network
 
             if (clearPrio && clearMsgs)
             {
-                queue.Manager.PriorityMessageStore.Clear();
-                queue.Manager.MessageStore.Clear();
+                await queue.Manager.PriorityMessageStore.Clear();
+                await queue.Manager.MessageStore.Clear();
             }
             else if (clearPrio)
-                queue.Manager.PriorityMessageStore.Clear();
+                await queue.Manager.PriorityMessageStore.Clear();
             else if (clearMsgs)
-                queue.Manager.MessageStore.Clear();
+                await queue.Manager.MessageStore.Clear();
 
             //if creation successful, sends response
             if (message.WaitResponse)

@@ -5,20 +5,28 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Server.Queues.Store
 {
+    /// <summary>
+    /// Default message timeout tracker.
+    /// That tracker calls Remove methods of message stores for timed out messages.
+    /// </summary>
     public class DefaultMessageTimeoutTracker : IMessageTimeoutTracker
     {
+        /// <inheritdoc />
         public IQueueMessageStore Store { get; }
 
         private readonly HorseQueue _queue;
         private readonly Thread _checker;
         private bool _running = false;
 
+        /// <summary>
+        /// Creates new default message timeout tracker
+        /// </summary>
         public DefaultMessageTimeoutTracker(HorseQueue queue, IQueueMessageStore store)
         {
             Store = store;
             _queue = queue;
 
-            _checker = new Thread(async () =>
+            _checker = new Thread(() =>
             {
                 try
                 {
@@ -51,7 +59,7 @@ namespace Horse.Messaging.Server.Queues.Store
                             _queue.Info.AddMessageTimeout();
                             message.MarkAsTimedOut();
 
-                            await Store.Manager.RemoveMessage(message);
+                            _ = Store.Manager.OnMessageTimeout(message);
 
                             foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                                 _ = handler.MessageTimedOut(_queue, message);
@@ -69,12 +77,14 @@ namespace Horse.Messaging.Server.Queues.Store
             });
         }
 
+        /// <inheritdoc />
         public void Start()
         {
             _running = true;
             _checker.Start();
         }
 
+        /// <inheritdoc />
         public void Stop()
         {
             _running = false;

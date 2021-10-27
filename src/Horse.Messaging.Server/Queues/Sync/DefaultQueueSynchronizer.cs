@@ -9,20 +9,32 @@ using Horse.Messaging.Server.Cluster;
 
 namespace Horse.Messaging.Server.Queues.Sync
 {
-    public class MemoryQueueSynchronizer : IQueueSynchronizer
+    /// <summary>
+    /// Default Queue synchronizer
+    /// </summary>
+    public class DefaultQueueSynchronizer : IQueueSynchronizer
     {
+        /// <inheritdoc />
         public IHorseQueueManager Manager { get; }
+        
+        /// <inheritdoc />
         public QueueSyncStatus Status { get; private set; }
+        
+        /// <inheritdoc />
         public NodeClient RemoteNode { get; private set; }
 
         private DateTime _syncStartDate;
 
-        public MemoryQueueSynchronizer(IHorseQueueManager manager)
+        /// <summary>
+        /// Creates new default queue synchronizer
+        /// </summary>
+        public DefaultQueueSynchronizer(IHorseQueueManager manager)
         {
             Manager = manager;
         }
 
-        public async Task<bool> BeginSharing(NodeClient replica)
+        /// <inheritdoc />
+        public virtual async Task<bool> BeginSharing(NodeClient replica)
         {
             if (Manager.Queue.Status == QueueStatus.Syncing)
                 return false;
@@ -78,7 +90,8 @@ namespace Horse.Messaging.Server.Queues.Sync
             return result;
         }
 
-        public Task<bool> BeginReceiving(NodeClient main)
+        /// <inheritdoc />
+        public virtual Task<bool> BeginReceiving(NodeClient main)
         {
             if (Status != QueueSyncStatus.None)
                 return Task.FromResult(false);
@@ -89,7 +102,8 @@ namespace Horse.Messaging.Server.Queues.Sync
             return Task.FromResult(true);
         }
 
-        public async Task ProcessMessageList(HorseMessage message)
+        /// <inheritdoc />
+        public virtual async Task ProcessMessageList(HorseMessage message)
         {
             string[] lines = message.GetStringContent().Split(Environment.NewLine);
 
@@ -154,7 +168,8 @@ namespace Horse.Messaging.Server.Queues.Sync
             await RemoteNode.SendMessage(requestMessage);
         }
 
-        public async Task SendMessages(HorseMessage requestMessage)
+        /// <inheritdoc />
+        public virtual async Task SendMessages(HorseMessage requestMessage)
         {
             string[] idList = requestMessage.GetStringContent()
                 .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
@@ -187,7 +202,8 @@ namespace Horse.Messaging.Server.Queues.Sync
             await RemoteNode.SendMessage(response);
         }
 
-        public async Task ProcessReceivedMessages(HorseMessage message)
+        /// <inheritdoc />
+        public virtual async Task ProcessReceivedMessages(HorseMessage message)
         {
             HorseProtocolReader reader = new HorseProtocolReader();
             message.Content.Position = 0;
@@ -198,11 +214,10 @@ namespace Horse.Messaging.Server.Queues.Sync
                 QueueMessage queueMessage = new QueueMessage(msg, true);
                 Manager.AddMessage(queueMessage);
             }
-
-            await EndReceiving();
         }
 
-        public Task EndSharing()
+        /// <inheritdoc />
+        public virtual Task EndSharing()
         {
             Status = QueueSyncStatus.None;
             _syncStartDate = DateTime.UtcNow;
@@ -220,7 +235,8 @@ namespace Horse.Messaging.Server.Queues.Sync
             return Task.CompletedTask;
         }
 
-        public async Task EndReceiving()
+        /// <inheritdoc />
+        public virtual async Task EndReceiving()
         {
             Status = QueueSyncStatus.None;
             Manager.Queue.SetStatus(QueueStatus.Running);
