@@ -16,10 +16,10 @@ namespace Horse.Messaging.Server.Queues.Sync
     {
         /// <inheritdoc />
         public IHorseQueueManager Manager { get; }
-        
+
         /// <inheritdoc />
         public QueueSyncStatus Status { get; private set; }
-        
+
         /// <inheritdoc />
         public NodeClient RemoteNode { get; private set; }
 
@@ -61,6 +61,25 @@ namespace Horse.Messaging.Server.Queues.Sync
             _syncStartDate = DateTime.UtcNow;
             Manager.Queue.SetStatus(QueueStatus.Syncing);
 
+            _ = Task.Factory.StartNew(async () =>
+            {
+                while (Status == QueueSyncStatus.Sharing || DateTime.UtcNow - _syncStartDate > TimeSpan.FromMinutes(3))
+                {
+                    try
+                    {
+                        await Task.Delay(1000);
+                        if (!replica.IsConnected)
+                        {
+                            await EndSharing();
+                            break;
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
+            });
+
             List<string> priorityIds = Manager.PriorityMessageStore.GetUnsafe().Select(x => x.Message.MessageId).ToList();
             List<string> msgIds = Manager.MessageStore.GetUnsafe().Select(x => x.Message.MessageId).ToList();
 
@@ -82,7 +101,7 @@ namespace Horse.Messaging.Server.Queues.Sync
 
             if (msgIds.Count > 0)
                 builder.AppendLine(msgIds.Aggregate((c, s) => $"{c}{Environment.NewLine}{s}"));
-            
+
             HorseMessage message = new HorseMessage(MessageType.Cluster, Manager.Queue.Name, KnownContentTypes.NodeQueueMessageIdList);
             message.SetStringContent(builder.ToString());
 
@@ -95,6 +114,25 @@ namespace Horse.Messaging.Server.Queues.Sync
         {
             if (Status != QueueSyncStatus.None)
                 return Task.FromResult(false);
+
+            _ = Task.Factory.StartNew(async () =>
+            {
+                while (Status == QueueSyncStatus.Sharing)
+                {
+                    try
+                    {
+                        await Task.Delay(1000);
+                        if (!main.IsConnected || DateTime.UtcNow - _syncStartDate > TimeSpan.FromMinutes(3))
+                        {
+                            await EndReceiving();
+                            break;
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
+            });
 
             RemoteNode = main;
             Status = QueueSyncStatus.Receiving;

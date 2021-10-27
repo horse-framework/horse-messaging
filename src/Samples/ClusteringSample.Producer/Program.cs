@@ -15,9 +15,11 @@ namespace ClusteringSample.Producer
         static async Task Main(string[] args)
         {
             HorseClient client = new HorseClient();
+            
             client.AddHost("horse://localhost:26101");
             client.AddHost("horse://localhost:26102");
             client.AddHost("horse://localhost:26103");
+            
             await client.ConnectAsync();
 
             int no = 1;

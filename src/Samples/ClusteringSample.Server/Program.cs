@@ -30,6 +30,10 @@ namespace ClusteringSample.Server
                     q.Options.CommitWhen = CommitWhen.AfterReceived;
                     q.UseMemoryQueues();
                 })
+                .ConfigureClients(c =>
+                {
+                    c.Handlers.Add(new ClientEventHandler());
+                })
                 .Build();
 
             rider.Cluster.Options.Name = $"Server-{port}";

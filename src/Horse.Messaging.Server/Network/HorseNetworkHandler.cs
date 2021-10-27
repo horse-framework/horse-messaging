@@ -126,19 +126,10 @@ namespace Horse.Messaging.Server.Network
 
             if (_rider.Cluster.Options.Mode == ClusterMode.Reliable && _rider.Cluster.State > NodeState.Main)
             {
-                HorseMessage message = MessageBuilder.StatusCodeMessage(KnownContentTypes.Found, client.UniqueId);
-                if (_rider.Cluster.MainNode != null)
-                {
-                    message.AddHeader(HorseHeaders.NODE_ID, _rider.Cluster.MainNode.Id);
-                    message.AddHeader(HorseHeaders.NODE_NAME, _rider.Cluster.MainNode.Name);
-                    message.AddHeader(HorseHeaders.NODE_PUBLIC_HOST, _rider.Cluster.MainNode.PublicHost);
+                foreach (IClientHandler handler in _rider.Client.Handlers.All())
+                    _ = handler.Connected(_rider, client);
 
-                    if (_rider.Cluster.SuccessorNode != null)
-                        message.AddHeader(HorseHeaders.SUCCESSOR_NODE, _rider.Cluster.SuccessorNode.PublicHost);
-                }
-
-                await client.SendAsync(message);
-                return null;
+                return client;
             }
 
             //client authenticated, add it into the connected clients list
@@ -180,14 +171,30 @@ namespace Horse.Messaging.Server.Network
         /// <summary>
         /// Triggered when handshake is completed and the connection is ready to communicate 
         /// </summary>
-        public Task Ready(IHorseServer server, HorseServerSocket client)
+        public async Task Ready(IHorseServer server, HorseServerSocket client)
         {
             MessagingClient mc = (MessagingClient) client;
 
+            if (_rider.Cluster.Options.Mode == ClusterMode.Reliable && _rider.Cluster.State > NodeState.Main)
+            {
+                HorseMessage message = MessageBuilder.StatusCodeMessage(KnownContentTypes.Found, mc.UniqueId);
+                if (_rider.Cluster.MainNode != null)
+                {
+                    message.AddHeader(HorseHeaders.NODE_ID, _rider.Cluster.MainNode.Id);
+                    message.AddHeader(HorseHeaders.NODE_NAME, _rider.Cluster.MainNode.Name);
+                    message.AddHeader(HorseHeaders.NODE_PUBLIC_HOST, _rider.Cluster.MainNode.PublicHost);
+
+                    if (_rider.Cluster.SuccessorNode != null)
+                        message.AddHeader(HorseHeaders.SUCCESSOR_NODE, _rider.Cluster.SuccessorNode.PublicHost);
+                }
+
+                await client.SendAsync(message);
+                client.Disconnect();
+                return;
+            }
+            
             if (mc.IsNodeClient && mc.NodeClient != null)
                 mc.NodeClient.IncomingClientConnected(mc, mc.Data);
-
-            return Task.CompletedTask;
         }
 
         /// <summary>
