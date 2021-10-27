@@ -40,7 +40,7 @@ namespace ClusteringSample.Server
             rider.Cluster.Options.SharedSecret = "top-secret";
             rider.Cluster.Options.NodeHost = $"horse://localhost:{port}";
             rider.Cluster.Options.PublicHost = $"horse://localhost:{port}";
-            rider.Cluster.Options.Acknowledge = ReplicaAcknowledge.OnlySuccessor;
+            rider.Cluster.Options.Acknowledge = ReplicaAcknowledge.AllNodes;
 
             foreach (int nodePort in otherNodePorts)
             {

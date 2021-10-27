@@ -339,7 +339,7 @@ namespace Horse.Messaging.Server.Queues
                 ClientLimit = Options.ClientLimit,
                 MessageTimeout = Convert.ToInt32(Options.MessageTimeout.TotalSeconds),
                 AcknowledgeTimeout = Convert.ToInt32(Options.AcknowledgeTimeout.TotalMilliseconds),
-                DelayBetweenMessages = Convert.ToInt32(Options.DelayBetweenMessages),
+                DelayBetweenMessages = Options.DelayBetweenMessages,
                 Acknowledge = Options.Acknowledge.FromAckDecision(),
                 AutoDestroy = Options.AutoDestroy.FromQueueDestroy(),
                 QueueType = Options.Type.FromQueueType(),

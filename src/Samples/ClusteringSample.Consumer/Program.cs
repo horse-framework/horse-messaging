@@ -16,8 +16,8 @@ namespace ClusteringSample.Consumer
         static async Task Main(string[] args)
         {
             HorseClient client = new HorseClient();
-            client.AddHost("horse://localhost:26103");
             client.AddHost("horse://localhost:26101");
+            client.AddHost("horse://localhost:26103");
             client.AddHost("horse://localhost:26102");
             
             QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(client.Queue);

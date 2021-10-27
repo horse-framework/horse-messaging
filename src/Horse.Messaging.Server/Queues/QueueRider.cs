@@ -290,10 +290,10 @@ namespace Horse.Messaging.Server.Queues
         {
             options.Acknowledge = info.Acknowledge.ToAckDecision();
             options.Type = info.QueueType.ToQueueType();
-            options.PutBackDelay = Convert.ToInt32(info.PutBackDelay);
-            options.MessageTimeout = TimeSpan.FromSeconds(Convert.ToInt32(info.MessageTimeout));
-            options.AcknowledgeTimeout = TimeSpan.FromSeconds(Convert.ToInt32(info.AcknowledgeTimeout));
-            options.DelayBetweenMessages = Convert.ToInt32(info.DelayBetweenMessages);
+            options.PutBackDelay = info.PutBackDelay;
+            options.MessageTimeout = TimeSpan.FromSeconds(info.MessageTimeout);
+            options.AcknowledgeTimeout = TimeSpan.FromMilliseconds(info.AcknowledgeTimeout);
+            options.DelayBetweenMessages = info.DelayBetweenMessages;
             options.AutoDestroy = info.AutoDestroy.ToQueueDestroy();
 
             options.ClientLimit = info.ClientLimit;

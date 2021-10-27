@@ -199,6 +199,12 @@ namespace Horse.Messaging.Server.Queues.Sync
             foreach (QueueMessage msg in removing)
                 await Manager.RemoveMessage(msg);
 
+            if (requestMessages.Count == 0)
+            {
+                await EndReceiving();
+                return;
+            }
+
             HorseMessage requestMessage = new HorseMessage(MessageType.Cluster, Manager.Queue.Name, KnownContentTypes.NodeQueueMessageRequest);
             string content = requestMessages.Aggregate((c, s) => $"{c}{Environment.NewLine}{s}");
             requestMessage.SetStringContent(content);

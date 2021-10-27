@@ -175,6 +175,12 @@ namespace Horse.Messaging.Server.Network
         {
             MessagingClient mc = (MessagingClient) client;
 
+            if (mc.IsNodeClient && mc.NodeClient != null)
+            {
+                mc.NodeClient.IncomingClientConnected(mc, mc.Data);
+                return;
+            }
+            
             if (_rider.Cluster.Options.Mode == ClusterMode.Reliable && _rider.Cluster.State > NodeState.Main)
             {
                 HorseMessage message = MessageBuilder.StatusCodeMessage(KnownContentTypes.Found, mc.UniqueId);
@@ -190,11 +196,7 @@ namespace Horse.Messaging.Server.Network
 
                 await client.SendAsync(message);
                 client.Disconnect();
-                return;
             }
-            
-            if (mc.IsNodeClient && mc.NodeClient != null)
-                mc.NodeClient.IncomingClientConnected(mc, mc.Data);
         }
 
         /// <summary>
