@@ -85,7 +85,7 @@ namespace Horse.Messaging.Server.Cluster
 
         internal ClusterManager(HorseRider rider)
         {
-            Id = Guid.NewGuid().ToString();
+            Id = $"{DateTime.UtcNow.ToUnixMilliseconds()}-{Guid.NewGuid()}";
             Rider = rider;
 
             ConnectedToRemoteNodeEvent = new EventManager(rider, HorseEventType.ConnectedToRemoteNode);
@@ -122,7 +122,7 @@ namespace Horse.Messaging.Server.Cluster
             _stateThread.Start();
         }
 
-        internal void Start()
+        internal async Task Start()
         {
             List<NodeClient> clients = new List<NodeClient>();
 
@@ -133,6 +133,23 @@ namespace Horse.Messaging.Server.Cluster
 
             foreach (NodeClient client in Clients)
                 client.Start();
+
+            if (Options.Mode == ClusterMode.Scaled || Clients.Length == 0)
+                return;
+
+            //do not accept clients until cluster node sync completed (with 10 secs timeout)
+            DateTime expire = DateTime.UtcNow.AddSeconds(10);
+            
+            while (true)
+            {
+                await Task.Delay(100);
+                
+                if (State != NodeState.Main)
+                    return;
+
+                if (DateTime.UtcNow > expire)
+                    return;
+            }
         }
 
         #region Node Management

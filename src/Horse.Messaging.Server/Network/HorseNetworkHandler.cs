@@ -225,32 +225,39 @@ namespace Horse.Messaging.Server.Network
         /// <summary>
         /// Called when a new message received from the client
         /// </summary>
-        public Task Received(IHorseServer server, IConnectionInfo info, HorseServerSocket client, HorseMessage message)
+        public async Task Received(IHorseServer server, IConnectionInfo info, HorseServerSocket client, HorseMessage message)
         {
-            MessagingClient mc = (MessagingClient) client;
-
-            //if client sends anonymous messages and server needs message id, generate new
-            if (string.IsNullOrEmpty(message.MessageId))
+            try
             {
-                //anonymous messages can't be responsed, do not wait response
-                if (message.WaitResponse)
-                    message.WaitResponse = false;
+                MessagingClient mc = (MessagingClient) client;
 
-                message.SetMessageId(_rider.MessageIdGenerator.Create());
+                //if client sends anonymous messages and server needs message id, generate new
+                if (string.IsNullOrEmpty(message.MessageId))
+                {
+                    //anonymous messages can't be responsed, do not wait response
+                    if (message.WaitResponse)
+                        message.WaitResponse = false;
+
+                    message.SetMessageId(_rider.MessageIdGenerator.Create());
+                }
+
+                //if message does not have a source information, source will be set to sender's unique id
+                if (string.IsNullOrEmpty(message.Source))
+                    message.SetSource(mc.UniqueId);
+
+                //if client sending messages like someone another, kick him
+                else if (message.Source != mc.UniqueId)
+                {
+                    client.Disconnect();
+                    return;
+                }
+
+                await RouteToHandler(mc, message, false);
             }
-
-            //if message does not have a source information, source will be set to sender's unique id
-            if (string.IsNullOrEmpty(message.Source))
-                message.SetSource(mc.UniqueId);
-
-            //if client sending messages like someone another, kick him
-            else if (message.Source != mc.UniqueId)
+            catch
             {
                 client.Disconnect();
-                return Task.CompletedTask;
             }
-
-            return RouteToHandler(mc, message, false);
         }
 
         /// <summary>

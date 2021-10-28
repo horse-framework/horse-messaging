@@ -543,26 +543,31 @@ namespace Horse.Messaging.Server.Queues
             if (Options.MessageTimeout > TimeSpan.Zero)
                 message.Deadline = DateTime.UtcNow.Add(Options.MessageTimeout);
 
-            if (Status == QueueStatus.Syncing)
-            {
-                try
-                {
-                    await QueueLock.WaitAsync();
-                }
-                finally
-                {
-                    QueueLock.Release();
-                }
-            }
-
-            bool isReplica = (Rider.Cluster.Options.Mode == ClusterMode.Reliable && Rider.Cluster.State > NodeState.Main);
             try
             {
-                if (Rider.Cluster.Options.Mode == ClusterMode.Reliable && Rider.Cluster.State == NodeState.Main)
+                if (Status == QueueStatus.Syncing)
                 {
-                    bool ack = await Rider.Cluster.SendQueueMessage(message.Message);
-                    if (!ack)
-                        return PushResult.Error;
+                    try
+                    {
+                        await QueueLock.WaitAsync();
+                    }
+                    finally
+                    {
+                        QueueLock.Release();
+                    }
+                }
+
+                if (Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                {
+                    if (Rider.Cluster.State > NodeState.Main)
+                        return PushResult.StatusNotSupported;
+
+                    if (Rider.Cluster.State == NodeState.Main)
+                    {
+                        bool ack = await Rider.Cluster.SendQueueMessage(message.Message);
+                        if (!ack)
+                            return PushResult.Error;
+                    }
                 }
 
                 //fire message receive event
@@ -576,12 +581,11 @@ namespace Horse.Messaging.Server.Queues
                     _ = handler.OnProduced(this, message, sender);
 
                 if (!allow)
-                    return PushResult.Success;
+                    return PushResult.StatusNotSupported;
 
-                AddMessage(message, !isReplica);
+                AddMessage(message);
 
-                if (!isReplica)
-                    PushEvent.Trigger(sender, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
+                PushEvent.Trigger(sender, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
 
                 return PushResult.Success;
             }
@@ -601,9 +605,9 @@ namespace Horse.Messaging.Server.Queues
                 catch //if developer does wrong operation, we should not stop
                 {
                 }
-            }
 
-            return PushResult.Success;
+                return PushResult.Error;
+            }
         }
 
         /// <summary>

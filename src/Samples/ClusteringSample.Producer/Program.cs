@@ -25,7 +25,9 @@ namespace ClusteringSample.Producer
             int no = 1;
             while (true)
             {
-                Console.ReadLine();
+               // Console.ReadLine();
+               Console.WriteLine();
+               await Task.Delay(1000);
 
                 if (!client.IsConnected)
                 {

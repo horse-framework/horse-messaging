@@ -96,15 +96,20 @@ namespace Horse.Messaging.Server.Queues
 
             //push the message
             PushResult result = await queue.Push(queueMessage, client);
-            if (result == PushResult.StatusNotSupported)
+            if (answerSender)
             {
-                if (answerSender)
+                if (result == PushResult.StatusNotSupported)
+                {
                     await client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
-            }
-            else if (result == PushResult.LimitExceeded)
-            {
-                if (answerSender)
+                }
+                else if (result == PushResult.LimitExceeded)
+                {
                     await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
+                }
+                else if (result == PushResult.Error)
+                {
+                    await client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
+                }
             }
         }
 

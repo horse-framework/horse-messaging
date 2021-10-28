@@ -1,5 +1,4 @@
 ﻿using System;
-using ClusteringSample.Producer;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Cluster;

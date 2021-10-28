@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Core;
@@ -282,7 +281,7 @@ namespace Horse.Messaging.Client
             if (_reconnectTimer == null)
             {
                 int ms = Convert.ToInt32(_reconnectWait.TotalMilliseconds);
-                _reconnectTimer = new Timer(s =>
+                _reconnectTimer = new Timer(_ =>
                 {
                     if (!_autoConnect || IsConnected)
                         return;
@@ -852,22 +851,29 @@ namespace Horse.Messaging.Client
                         string successorHost = message.FindHeader(HorseHeaders.SUCCESSOR_NODE);
                         string replaceNodes = message.FindHeader(HorseHeaders.REPLICA_NODE);
 
+                        List<string> newRemoteHosts = new List<string>();
+
+                        lock (RemoteHosts)
+                            newRemoteHosts.Add(RemoteHosts[_hostIndex]);
+
+                        if (!string.IsNullOrEmpty(successorHost))
+                            newRemoteHosts.Add(successorHost);
+
+                        if (!string.IsNullOrEmpty(replaceNodes))
+                        {
+                            string[] replicaHosts = replaceNodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                            foreach (string replicaHost in replicaHosts)
+                            {
+                                if (!string.IsNullOrEmpty(replicaHost))
+                                    newRemoteHosts.Add(replicaHost);
+                            }
+                        }
+
                         lock (RemoteHosts)
                         {
-                            if (!string.IsNullOrEmpty(successorHost) &&
-                                !RemoteHosts.Contains(successorHost, StringComparer.InvariantCultureIgnoreCase))
-                                RemoteHosts.Add(successorHost);
-
-                            if (!string.IsNullOrEmpty(replaceNodes))
-                            {
-                                string[] replicaHosts = replaceNodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
-                                foreach (string replicaHost in replicaHosts)
-                                {
-                                    if (!string.IsNullOrEmpty(replicaHost) &&
-                                        !RemoteHosts.Contains(replicaHost, StringComparer.InvariantCultureIgnoreCase))
-                                        RemoteHosts.Add(replicaHost);
-                                }
-                            }
+                            RemoteHosts.Clear();
+                            _hostIndex = -1;
+                            RemoteHosts.AddRange(newRemoteHosts);
                         }
                     }
 

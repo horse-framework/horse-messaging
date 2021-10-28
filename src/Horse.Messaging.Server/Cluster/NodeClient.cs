@@ -451,6 +451,12 @@ namespace Horse.Messaging.Server.Cluster
         {
             HorseQueue queue = Rider.Queue.Find(message.Target);
 
+            if (Rider.Cluster.MainNode == null || Rider.Cluster.MainNode.Id != Info?.Id)
+            {
+                await SendMessage(message.CreateAcknowledge(HorseHeaders.UNACCEPTABLE));
+                return;
+            }
+
             PushResult result = PushResult.Empty;
             if (queue != null)
             {

@@ -1,7 +1,7 @@
 ﻿using System;
 using Horse.Core;
 
-namespace ClusteringSample.Producer
+namespace ClusteringSample.Server
 {
     public class ConsoleLogger : ILogger
     {

@@ -27,8 +27,11 @@ namespace Horse.Messaging.Server
             horseRider.Server = server;
 
             horseRider.Initialize();
+            horseRider.Cluster.Start()
+                .GetAwaiter()
+                .GetResult();
+            
             server.UseHorseProtocol(handler);
-            horseRider.Cluster.Start();
 
             return server;
         }
@@ -50,7 +53,9 @@ namespace Horse.Messaging.Server
             cfg(builder);
             
             rider.Initialize();
-            rider.Cluster.Start();
+            rider.Cluster.Start()
+                .GetAwaiter()
+                .GetResult();
             
             return rider;
         }
