@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Reflection.Metadata.Ecma335;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
@@ -32,6 +31,7 @@ namespace ClusteringSample.Server
                     q.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
                     q.Options.CommitWhen = CommitWhen.AfterReceived;
                     q.UseMemoryQueues();
+                    q.MessageHandlers.Add(new QueueMessageHandler());
                 })
                 .ConfigureClients(c => { c.Handlers.Add(new ClientEventHandler()); })
                 .Build();

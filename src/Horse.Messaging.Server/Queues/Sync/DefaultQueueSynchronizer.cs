@@ -117,10 +117,24 @@ namespace Horse.Messaging.Server.Queues.Sync
         }
 
         /// <inheritdoc />
-        public virtual Task<bool> BeginReceiving(NodeClient main)
+        public virtual async Task<bool> BeginReceiving(NodeClient main)
         {
-            if (Status != QueueSyncStatus.None)
-                return Task.FromResult(false);
+            try
+            {
+                await Manager.Queue.QueueLock.WaitAsync();
+            }
+            catch
+            {
+                try
+                {
+                    Manager.Queue.QueueLock.Release();
+                }
+                catch
+                {
+                }
+
+                return false;
+            }
 
             _ = Task.Factory.StartNew(async () =>
             {
@@ -145,7 +159,7 @@ namespace Horse.Messaging.Server.Queues.Sync
             main.OnDisconnected += OnNodeDisconnected;
             Status = QueueSyncStatus.Receiving;
             _syncStartDate = DateTime.UtcNow;
-            return Task.FromResult(true);
+            return true;
         }
 
         /// <inheritdoc />
@@ -299,6 +313,14 @@ namespace Horse.Messaging.Server.Queues.Sync
             Manager.Queue.SetStatus(QueueStatus.Running);
             RemoteNode.OnDisconnected -= OnNodeDisconnected;
 
+            try
+            {
+                Manager.Queue.QueueLock.Release();
+            }
+            catch
+            {
+            }
+            
             HorseMessage message = new HorseMessage(MessageType.Cluster, Manager.Queue.Name, KnownContentTypes.NodeQueueSyncCompletion);
             await RemoteNode.SendMessage(message);
 

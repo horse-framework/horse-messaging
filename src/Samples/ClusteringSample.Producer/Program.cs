@@ -23,20 +23,26 @@ namespace ClusteringSample.Producer
             await client.ConnectAsync();
 
             int no = 1;
+            bool hasConnection = true;
             while (true)
             {
-               // Console.ReadLine();
-               Console.WriteLine();
-               await Task.Delay(1000);
+               await Task.Delay(300);
 
                 if (!client.IsConnected)
                 {
-                    Console.Write("Client is not connected ");
+                    hasConnection = false;
+                    Console.Write(".");
                     continue;
                 }
 
+                if (!hasConnection)
+                {
+                    Console.WriteLine();
+                    hasConnection = true;
+                }
+
                 HorseResult result = await client.Queue.PushJson(new Foo {No = no}, true);
-                Console.Write($"Message #{no} Push Result {result.Code} ");
+                Console.WriteLine($"Message #{no} Push Result {result.Code} ");
                 
                 if (result.Code == HorseResultCode.Ok)
                     no++;

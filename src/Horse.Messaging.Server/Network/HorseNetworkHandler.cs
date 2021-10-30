@@ -124,6 +124,9 @@ namespace Horse.Messaging.Server.Network
                 }
             }
 
+            if (!_rider.Cluster.CanClientConnect())
+                return null;
+
             if (_rider.Cluster.Options.Mode == ClusterMode.Reliable && _rider.Cluster.State > NodeState.Main)
             {
                 foreach (IClientHandler handler in _rider.Client.Handlers.All())
@@ -173,6 +176,9 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         public async Task Ready(IHorseServer server, HorseServerSocket client)
         {
+            if (client == null)
+                return;
+            
             MessagingClient mc = (MessagingClient) client;
 
             if (mc.IsNodeClient && mc.NodeClient != null)

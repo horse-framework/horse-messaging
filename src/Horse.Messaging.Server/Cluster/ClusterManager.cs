@@ -73,7 +73,12 @@ namespace Horse.Messaging.Server.Cluster
         /// Event Manager for HorseEventType.RemoteNodeDisconnect 
         /// </summary>
         public EventManager RemoteNodeDisconnectEvent { get; }
-        
+
+        /// <summary>
+        /// The time cluster is initialized
+        /// </summary>
+        public DateTime StartDate { get; private set; }
+
         internal DateTime QueueUpdate { get; set; }
 
         private bool _askingForMain;
@@ -100,9 +105,14 @@ namespace Horse.Messaging.Server.Cluster
         {
             _stateThread = new Thread(() =>
             {
+                Thread.Sleep(1500);
+
                 while (true)
                 {
-                    Thread.Sleep(1500);
+                    Thread.Sleep(500);
+
+                    if (Options.Nodes.Count == 0 || Options.Mode == ClusterMode.Scaled)
+                        return;
 
                     if (Clients.Length > 0 && (State == NodeState.Successor || State == NodeState.Replica))
                     {
@@ -120,12 +130,18 @@ namespace Horse.Messaging.Server.Cluster
                         break;
                 }
             });
-
-            _stateThread.Start();
         }
 
-        internal async Task Start()
+        internal void Start()
         {
+            StartDate = DateTime.UtcNow;
+
+            if (Options.Nodes.Count == 0)
+            {
+                Options.Mode = ClusterMode.Scaled;
+                return;
+            }
+
             List<NodeClient> clients = new List<NodeClient>();
 
             foreach (NodeInfo nodeInfo in Options.Nodes)
@@ -136,22 +152,28 @@ namespace Horse.Messaging.Server.Cluster
             foreach (NodeClient client in Clients)
                 client.Start();
 
-            if (Options.Mode == ClusterMode.Scaled || Clients.Length == 0)
-                return;
+            _stateThread.Start();
+        }
 
-            //do not accept clients until cluster node sync completed (with 10 secs timeout)
-            DateTime expire = DateTime.UtcNow.AddSeconds(10);
-            
-            while (true)
-            {
-                await Task.Delay(100);
-                
-                if (State != NodeState.Main)
-                    return;
+        /// <summary>
+        /// Returns false, if the client trying to connect before cluster initialized
+        /// </summary>
+        public bool CanClientConnect()
+        {
+            if (Options.Nodes.Count == 0)
+                return true;
 
-                if (DateTime.UtcNow > expire)
-                    return;
-            }
+            if (Options.Mode == ClusterMode.Scaled)
+                return true;
+
+            TimeSpan lifetime = DateTime.UtcNow - StartDate;
+            if (lifetime > TimeSpan.FromSeconds(15))
+                return true;
+
+            if (State == NodeState.Main)
+                return true;
+
+            return false;
         }
 
         #region Node Management

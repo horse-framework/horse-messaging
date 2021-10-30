@@ -12,7 +12,7 @@ namespace ClusteringSample.Consumer
     {
         public async Task Consume(HorseMessage message, Foo model, HorseClient client)
         {
-            await Task.Delay(new Random().Next(500, 2500));
+            await Task.Delay(new Random().Next(50, 250));
             Console.WriteLine($"Message #{model.No} is Consumed");
         }
     }

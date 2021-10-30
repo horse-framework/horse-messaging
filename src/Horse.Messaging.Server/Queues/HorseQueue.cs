@@ -553,14 +553,14 @@ namespace Horse.Messaging.Server.Queues
                     try
                     {
                         await QueueLock.WaitAsync();
+
+                        if (Rider.Cluster.State > NodeState.Main)
+                            return PushResult.StatusNotSupported;
                     }
                     finally
                     {
                         QueueLock.Release();
                     }
-
-                    if (Rider.Cluster.State > NodeState.Main)
-                        return PushResult.StatusNotSupported;
 
                     bool ack = await Rider.Cluster.SendQueueMessage(message.Message);
                     if (!ack)
