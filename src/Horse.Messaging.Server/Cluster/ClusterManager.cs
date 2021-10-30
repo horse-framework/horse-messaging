@@ -73,6 +73,8 @@ namespace Horse.Messaging.Server.Cluster
         /// Event Manager for HorseEventType.RemoteNodeDisconnect 
         /// </summary>
         public EventManager RemoteNodeDisconnectEvent { get; }
+        
+        internal DateTime QueueUpdate { get; set; }
 
         private bool _askingForMain;
         private DateTime _askingForMainExpiration = DateTime.UtcNow;

@@ -20,6 +20,7 @@ namespace Horse.Messaging.Server.Cluster
         private readonly NodeDeliveryTracker _deliveryTracker;
         private MessagingClient _incomingClient;
         private bool _connectedToRemote;
+        public event Action<NodeClient> OnDisconnected;
 
         /// <summary>
         /// Node Info
@@ -176,6 +177,7 @@ namespace Horse.Messaging.Server.Cluster
                 return;
 
             ClusterManager cluster = Rider.Cluster;
+            OnDisconnected?.Invoke(this);
 
             if (cluster.Options.Mode == ClusterMode.Scaled)
                 return;

@@ -36,9 +36,6 @@ namespace Horse.Messaging.Server.Queues.Sync
         /// <inheritdoc />
         public virtual async Task<bool> BeginSharing(NodeClient replica)
         {
-            if (Manager.Queue.Status == QueueStatus.Syncing)
-                return false;
-
             try
             {
                 await Manager.Queue.QueueLock.WaitAsync();
@@ -56,8 +53,9 @@ namespace Horse.Messaging.Server.Queues.Sync
                 return false;
             }
 
-            Status = QueueSyncStatus.Sharing;
             RemoteNode = replica;
+            replica.OnDisconnected += OnNodeDisconnected;
+            Status = QueueSyncStatus.Sharing;
             _syncStartDate = DateTime.UtcNow;
             Manager.Queue.SetStatus(QueueStatus.Syncing);
 
@@ -83,13 +81,22 @@ namespace Horse.Messaging.Server.Queues.Sync
             List<string> priorityIds = Manager.PriorityMessageStore.GetUnsafe().Select(x => x.Message.MessageId).ToList();
             List<string> msgIds = Manager.MessageStore.GetUnsafe().Select(x => x.Message.MessageId).ToList();
 
+            QueueMessage processing = Manager.Queue.ProcessingMessage;
+            if (processing != null)
+            {
+                if (processing.Message.HighPriority)
+                    priorityIds.Insert(0, processing.Message.MessageId);
+                else
+                    msgIds.Insert(0, processing.Message.MessageId);
+            }
+
             List<QueueMessage> deliveringMessages = Manager.DeliveryHandler.Tracker.GetDeliveringMessages();
             foreach (QueueMessage deliveringMessage in deliveringMessages)
             {
                 if (deliveringMessage.Message.HighPriority)
-                    priorityIds.Add(deliveringMessage.Message.MessageId);
+                    priorityIds.Insert(0, deliveringMessage.Message.MessageId);
                 else
-                    msgIds.Add(deliveringMessage.Message.MessageId);
+                    msgIds.Insert(0, deliveringMessage.Message.MessageId);
             }
 
             StringBuilder builder = new StringBuilder();
@@ -117,7 +124,7 @@ namespace Horse.Messaging.Server.Queues.Sync
 
             _ = Task.Factory.StartNew(async () =>
             {
-                while (Status == QueueSyncStatus.Sharing)
+                while (Status == QueueSyncStatus.Receiving)
                 {
                     try
                     {
@@ -135,6 +142,7 @@ namespace Horse.Messaging.Server.Queues.Sync
             });
 
             RemoteNode = main;
+            main.OnDisconnected += OnNodeDisconnected;
             Status = QueueSyncStatus.Receiving;
             _syncStartDate = DateTime.UtcNow;
             return Task.FromResult(true);
@@ -218,6 +226,8 @@ namespace Horse.Messaging.Server.Queues.Sync
             string[] idList = requestMessage.GetStringContent()
                 .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
 
+            QueueMessage processingMessage = Manager.Queue.ProcessingMessage;
+
             List<QueueMessage> priorityMessages = Manager.PriorityMessageStore.GetUnsafe().ToList();
             List<QueueMessage> messages = Manager.MessageStore.GetUnsafe().ToList();
             List<QueueMessage> deliveringMessages = Manager.DeliveryHandler.Tracker.GetDeliveringMessages();
@@ -227,13 +237,15 @@ namespace Horse.Messaging.Server.Queues.Sync
 
             foreach (string id in idList)
             {
-                QueueMessage msg = messages.FirstOrDefault(x => x.Message.MessageId == id);
+                QueueMessage msg;
+                if (processingMessage != null && processingMessage.Message.MessageId == id)
+                    msg = processingMessage;
+                else
+                    msg = messages.FirstOrDefault(x => x.Message.MessageId == id);
 
                 if (msg == null)
-                    msg = priorityMessages.FirstOrDefault(x => x.Message.MessageId == id);
-
-                if (msg == null)
-                    msg = deliveringMessages.FirstOrDefault(x => x.Message.MessageId == id);
+                    msg = priorityMessages.FirstOrDefault(x => x.Message.MessageId == id)
+                          ?? deliveringMessages.FirstOrDefault(x => x.Message.MessageId == id);
 
                 if (msg == null)
                     continue;
@@ -265,6 +277,7 @@ namespace Horse.Messaging.Server.Queues.Sync
         {
             Status = QueueSyncStatus.None;
             _syncStartDate = DateTime.UtcNow;
+            RemoteNode.OnDisconnected -= OnNodeDisconnected;
 
             Manager.Queue.SetStatus(QueueStatus.Running);
 
@@ -284,11 +297,20 @@ namespace Horse.Messaging.Server.Queues.Sync
         {
             Status = QueueSyncStatus.None;
             Manager.Queue.SetStatus(QueueStatus.Running);
+            RemoteNode.OnDisconnected -= OnNodeDisconnected;
 
             HorseMessage message = new HorseMessage(MessageType.Cluster, Manager.Queue.Name, KnownContentTypes.NodeQueueSyncCompletion);
             await RemoteNode.SendMessage(message);
 
             RemoteNode = null;
+        }
+
+        private void OnNodeDisconnected(NodeClient nodeClient)
+        {
+            if (Status == QueueSyncStatus.Sharing)
+                _ = EndSharing();
+            else if (Status == QueueSyncStatus.Receiving)
+                _ = EndReceiving();
         }
     }
 }

@@ -100,7 +100,7 @@ namespace Horse.Messaging.Server.Queues
             {
                 if (result == PushResult.StatusNotSupported)
                 {
-                    await client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
+                    await client.SendAsync(message.CreateResponse(HorseResultCode.Unacceptable));
                 }
                 else if (result == PushResult.LimitExceeded)
                 {

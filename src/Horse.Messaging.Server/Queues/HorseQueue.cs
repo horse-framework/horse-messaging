@@ -545,8 +545,11 @@ namespace Horse.Messaging.Server.Queues
 
             try
             {
-                if (Status == QueueStatus.Syncing)
+                if (Rider.Cluster.Options.Mode == ClusterMode.Reliable)
                 {
+                    if (Rider.Cluster.State > NodeState.Main)
+                        return PushResult.StatusNotSupported;
+
                     try
                     {
                         await QueueLock.WaitAsync();
@@ -555,25 +558,20 @@ namespace Horse.Messaging.Server.Queues
                     {
                         QueueLock.Release();
                     }
-                }
 
-                if (Rider.Cluster.Options.Mode == ClusterMode.Reliable)
-                {
                     if (Rider.Cluster.State > NodeState.Main)
                         return PushResult.StatusNotSupported;
 
-                    if (Rider.Cluster.State == NodeState.Main)
-                    {
-                        bool ack = await Rider.Cluster.SendQueueMessage(message.Message);
-                        if (!ack)
-                            return PushResult.Error;
-                    }
+                    bool ack = await Rider.Cluster.SendQueueMessage(message.Message);
+                    if (!ack)
+                        return PushResult.Error;
                 }
 
                 //fire message receive event
                 Info.AddMessageReceive();
                 Decision decision = await Manager.DeliveryHandler.ReceivedFromProducer(this, message, sender);
                 message.Decision = decision;
+                Rider.Cluster.QueueUpdate = DateTime.UtcNow;
 
                 bool allow = await ApplyDecision(decision, message);
 

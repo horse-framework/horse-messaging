@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Reflection.Metadata.Ecma335;
+using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Cluster;
+using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
+using Horse.Messaging.Server.Queues.Sync;
 using Horse.Server;
 
 namespace ClusteringSample.Server
@@ -29,10 +33,7 @@ namespace ClusteringSample.Server
                     q.Options.CommitWhen = CommitWhen.AfterReceived;
                     q.UseMemoryQueues();
                 })
-                .ConfigureClients(c =>
-                {
-                    c.Handlers.Add(new ClientEventHandler());
-                })
+                .ConfigureClients(c => { c.Handlers.Add(new ClientEventHandler()); })
                 .Build();
 
             rider.Cluster.Options.Name = $"Server-{port}";
@@ -50,6 +51,29 @@ namespace ClusteringSample.Server
                     PublicHost = $"horse://localhost:{nodePort}"
                 });
             }
+
+            _ = Task.Factory.StartNew(async () =>
+            {
+                while (true)
+                    try
+                    {
+                        await Task.Delay(5000);
+                        foreach (HorseQueue queue in rider.Queue.Queues)
+                        {
+                            Console.WriteLine($"QUEUE {queue.Name} has {queue.Manager.MessageStore.Count()} Messages");
+                            if (queue.Manager == null)
+                                continue;
+
+                            if (queue.Manager.Synchronizer.Status == QueueSyncStatus.None)
+                                continue;
+
+                            Console.WriteLine($"Queue {queue.Name} Sync Status is {queue.Manager.Synchronizer.Status}");
+                        }
+                    }
+                    catch
+                    {
+                    }
+            });
 
             HorseServer server = new HorseServer();
             server.Logger = new ConsoleLogger();

@@ -10,10 +10,10 @@ namespace ClusteringSample.Consumer
     [AutoAck]
     public class FooConsumer : IQueueConsumer<Foo>
     {
-        public Task Consume(HorseMessage message, Foo model, HorseClient client)
+        public async Task Consume(HorseMessage message, Foo model, HorseClient client)
         {
+            await Task.Delay(new Random().Next(500, 2500));
             Console.WriteLine($"Message #{model.No} is Consumed");
-            return Task.CompletedTask;
         }
     }
 }
