@@ -53,10 +53,6 @@ namespace Horse.Messaging.Server.Queues.States
             if (_queue.Options.Acknowledge != QueueAckDecision.None)
                 ackDeadline = DateTime.UtcNow.Add(_queue.Options.AcknowledgeTimeout);
 
-            //if to process next message is requires previous message acknowledge, wait here
-            if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
-                await _queue.WaitForAcknowledge(message);
-
             //if there are not receivers, complete send operation
             List<QueueClient> clients = _queue.ClientsClone;
             if (clients.Count == 0)

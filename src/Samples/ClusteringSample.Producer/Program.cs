@@ -26,7 +26,7 @@ namespace ClusteringSample.Producer
             bool hasConnection = true;
             while (true)
             {
-               await Task.Delay(300);
+               await Task.Delay(30);
 
                 if (!client.IsConnected)
                 {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Queues.Delivery;
 
@@ -86,6 +87,19 @@ namespace Horse.Messaging.Server.Queues.States
 
             ClearDecision clear = FindClearDecision(request);
             bool sendInfo = FindInfoRequest(request);
+
+            if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
+                await _queue.WaitForAcknowledge();
+
+            if (_queue.Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                try
+                {
+                    await _queue.QueueLock.WaitAsync();
+                }
+                finally
+                {
+                    _queue.QueueLock.Release();
+                }
 
             Tuple<QueueMessage, int, int> messageTuple = DequeueMessage(sendInfo, count == index ? clear : ClearDecision.None);
 
@@ -191,10 +205,6 @@ namespace Horse.Messaging.Server.Queues.States
             DateTime? deadline = null;
             if (_queue.Options.Acknowledge != QueueAckDecision.None)
                 deadline = DateTime.UtcNow.Add(_queue.Options.AcknowledgeTimeout);
-
-            //if to process next message is requires previous message acknowledge, wait here
-            if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
-                await _queue.WaitForAcknowledge(message);
 
             if (message.CurrentDeliveryReceivers.Count > 0)
                 message.CurrentDeliveryReceivers.Clear();

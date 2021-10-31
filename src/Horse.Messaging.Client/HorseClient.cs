@@ -330,6 +330,40 @@ namespace Horse.Messaging.Client
             }
         }
 
+        private void RefreshRemoteHosts(HorseMessage message)
+        {
+            string successorHost = message.FindHeader(HorseHeaders.SUCCESSOR_NODE);
+            string replaceNodes = message.FindHeader(HorseHeaders.REPLICA_NODE);
+
+            lock (RemoteHosts)
+            {
+                string mainHost = RemoteHosts[_hostIndex];
+
+                if (!string.IsNullOrEmpty(replaceNodes))
+                {
+                    string[] replicaHosts = replaceNodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                    foreach (string replicaHost in replicaHosts)
+                    {
+                        if (string.IsNullOrEmpty(replicaHost))
+                            continue;
+
+                        if (!RemoteHosts.Contains(replicaHost))
+                            RemoteHosts.Add(replicaHost);
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(successorHost))
+                {
+                    RemoteHosts.Remove(successorHost);
+                    RemoteHosts.Insert(0, successorHost);
+                }
+
+                RemoteHosts.Remove(mainHost);
+                RemoteHosts.Insert(0, mainHost);
+                _hostIndex = -1;
+            }
+        }
+
         private void SetAutoReconnect(bool value)
         {
             _autoConnect = value;
@@ -836,46 +870,16 @@ namespace Horse.Messaging.Client
 
                         lock (RemoteHosts)
                         {
-                            if (!string.IsNullOrEmpty(mainHost) &&
-                                !RemoteHosts.Contains(mainHost, StringComparer.InvariantCultureIgnoreCase))
-                                RemoteHosts.Add(mainHost);
-
-                            if (!string.IsNullOrEmpty(successorHost) &&
-                                !RemoteHosts.Contains(successorHost, StringComparer.InvariantCultureIgnoreCase))
+                            if (!string.IsNullOrEmpty(successorHost) && !RemoteHosts.Contains(successorHost))
                                 RemoteHosts.Add(successorHost);
+
+                            if (!string.IsNullOrEmpty(mainHost) && !RemoteHosts.Contains(mainHost))
+                                RemoteHosts.Add(mainHost);
                         }
                     }
 
-                    if (message.ContentType == KnownContentTypes.Accepted || message.ContentType == KnownContentTypes.ResetContent)
-                    {
-                        string successorHost = message.FindHeader(HorseHeaders.SUCCESSOR_NODE);
-                        string replaceNodes = message.FindHeader(HorseHeaders.REPLICA_NODE);
-
-                        List<string> newRemoteHosts = new List<string>();
-
-                        lock (RemoteHosts)
-                            newRemoteHosts.Add(RemoteHosts[_hostIndex]);
-
-                        if (!string.IsNullOrEmpty(successorHost))
-                            newRemoteHosts.Add(successorHost);
-
-                        if (!string.IsNullOrEmpty(replaceNodes))
-                        {
-                            string[] replicaHosts = replaceNodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
-                            foreach (string replicaHost in replicaHosts)
-                            {
-                                if (!string.IsNullOrEmpty(replicaHost))
-                                    newRemoteHosts.Add(replicaHost);
-                            }
-                        }
-
-                        lock (RemoteHosts)
-                        {
-                            RemoteHosts.Clear();
-                            _hostIndex = -1;
-                            RemoteHosts.AddRange(newRemoteHosts);
-                        }
-                    }
+                    else if (message.ContentType == KnownContentTypes.Accepted || message.ContentType == KnownContentTypes.ResetContent)
+                        RefreshRemoteHosts(message);
 
                     break;
 

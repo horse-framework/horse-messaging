@@ -150,6 +150,7 @@ namespace Horse.Messaging.Server.Queues
         public List<QueueClient> ClientsClone => _clients.GetAsClone();
 
         private readonly SafeList<QueueClient> _clients;
+        private readonly SemaphoreSlim _triggerLock = new SemaphoreSlim(1, 1);
 
         /// <summary>
         /// True if queue is destroyed
@@ -619,7 +620,7 @@ namespace Horse.Messaging.Server.Queues
             if (_triggering)
                 return;
 
-            await QueueLock.WaitAsync();
+            await _triggerLock.WaitAsync();
             try
             {
                 if (_triggering || !State.TriggerSupported)
@@ -631,7 +632,7 @@ namespace Horse.Messaging.Server.Queues
             finally
             {
                 _triggering = false;
-                QueueLock.Release();
+                _triggerLock.Release();
             }
         }
 
@@ -645,6 +646,21 @@ namespace Horse.Messaging.Server.Queues
             {
                 if (_clients.Count == 0)
                     return;
+                
+                if (Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
+                    await WaitForAcknowledge();
+
+                if (Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                {
+                    try
+                    {
+                        await QueueLock.WaitAsync();
+                    }
+                    finally
+                    {
+                        QueueLock.Release();
+                    }
+                }
 
                 QueueMessage message = null;
 
@@ -659,6 +675,9 @@ namespace Horse.Messaging.Server.Queues
 
                 try
                 {
+                    if (Options.Acknowledge == QueueAckDecision.WaitForAcknowledge && !message.Message.WaitResponse)
+                        message.Message.WaitResponse = true;
+
                     PushResult pr = await State.Push(message);
                     if (pr == PushResult.NoConsumers || pr == PushResult.Empty)
                         return;
@@ -943,12 +962,8 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// When wait for acknowledge is active, this method locks the queue until acknowledge is received
         /// </summary>
-        internal async Task WaitForAcknowledge(QueueMessage message)
+        internal async Task WaitForAcknowledge()
         {
-            //if we will lock the queue until ack received, we must request ack
-            if (!message.Message.WaitResponse)
-                message.Message.WaitResponse = true;
-
             await _ackLock.WaitAsync();
             try
             {
