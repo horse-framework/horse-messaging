@@ -15,9 +15,19 @@ namespace Horse.Messaging.Data
         /// Implements persistent message delivery handler
         /// </summary>
         /// <param name="cfg">Horse Clietn configurator Builder</param>
+        /// <returns></returns>
+        public static HorseQueueConfigurator UsePersistentQueues(this HorseQueueConfigurator cfg)
+        {
+            return UsePersistentQueues(cfg, null, null, false);
+        }
+
+        /// <summary>
+        /// Implements persistent message delivery handler
+        /// </summary>
+        /// <param name="cfg">Horse Clietn configurator Builder</param>
         /// <param name="useRedelivery">True if want to keep redelivery data and send to consumers with message headers</param>
         /// <returns></returns>
-        public static HorseQueueConfigurator UsePersistentQueues(this HorseQueueConfigurator cfg, bool useRedelivery = false)
+        public static HorseQueueConfigurator UsePersistentQueues(this HorseQueueConfigurator cfg, bool useRedelivery)
         {
             return UsePersistentQueues(cfg, null, null, useRedelivery);
         }
@@ -43,7 +53,7 @@ namespace Horse.Messaging.Data
         /// <param name="useRedelivery">True if want to keep redelivery data and send to consumers with message headers</param>
         /// <returns></returns>
         public static HorseQueueConfigurator UsePersistentQueues(this HorseQueueConfigurator cfg,
-            Action<DataConfigurationBuilder> dataConfigurator = null,
+            Action<DataConfigurationBuilder> dataConfigurator,
             Action<HorseQueue> queueConfig = null,
             bool useRedelivery = false)
         {
@@ -82,8 +92,6 @@ namespace Horse.Messaging.Data
                 PersistentQueueManager manager = new PersistentQueueManager(dh.Queue, databaseOptions, useRedelivery);
                 dh.Queue.Manager = manager;
                 queueConfig?.Invoke(dh.Queue);
-
-                await manager.Initialize();
                 return manager;
             });
 

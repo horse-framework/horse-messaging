@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Horse.Messaging.Data;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Cluster;
@@ -30,7 +31,8 @@ namespace ClusteringSample.Server
                     q.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
                     q.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
                     q.Options.CommitWhen = CommitWhen.AfterReceived;
-                    q.UseMemoryQueues();
+                    q.UsePersistentQueues();
+                    //q.UseMemoryQueues();
                     q.MessageHandlers.Add(new QueueMessageHandler());
                 })
                 .ConfigureClients(c => { c.Handlers.Add(new ClientEventHandler()); })
