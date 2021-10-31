@@ -106,9 +106,10 @@ namespace Horse.Messaging.Server.Cluster
         {
             _stateThread = new Thread(() =>
             {
-                Thread.Sleep(1500);
+                while (Rider?.Server == null || !Rider.Server.IsRunning)
+                    Thread.Sleep(500);
 
-                while (true)
+                while (Rider.Server.IsRunning)
                 {
                     Thread.Sleep(500);
 
@@ -126,9 +127,6 @@ namespace Horse.Messaging.Server.Cluster
                                 _ = AskForMain();
                         }
                     }
-
-                    if (Rider?.Server != null && !Rider.Server.IsRunning)
-                        break;
                 }
             });
         }

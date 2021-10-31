@@ -30,13 +30,18 @@ namespace ClusteringSample.Server
                 {
                     q.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
                     q.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-                    q.Options.CommitWhen = CommitWhen.AfterReceived;
-                    q.UsePersistentQueues();
+                    q.Options.CommitWhen = CommitWhen.AfterSaved;
+                    q.UsePersistentQueues(c =>
+                    {
+                        c.UseInstantFlush();
+                    });
                     //q.UseMemoryQueues();
                     q.MessageHandlers.Add(new QueueMessageHandler());
                 })
                 .ConfigureClients(c => { c.Handlers.Add(new ClientEventHandler()); })
                 .Build();
+
+            rider.ErrorHandlers.Add(new ConsoleErrorHandler());
 
             rider.Cluster.Options.Name = $"Server-{port}";
             rider.Cluster.Options.SharedSecret = "top-secret";

@@ -41,6 +41,14 @@ namespace Horse.Messaging.Data.Configuration
         [JsonPropertyName("DelayBetweenMessages")]
         public int DelayBetweenMessages { get; set; }
         
+        [JsonProperty("PutBack")]
+        [JsonPropertyName("PutBack")]
+        public string PutBack { get; set; }
+        
+        [JsonProperty("CommitWhen")]
+        [JsonPropertyName("CommitWhen")]
+        public string CommitWhen { get; set; }
+
         [JsonProperty("PutBackDelay")]
         [JsonPropertyName("PutBackDelay")]
         public int PutBackDelay { get; set; }

@@ -140,5 +140,29 @@ namespace Horse.Messaging.Server.Helpers
                     return PutBackDecision.No;
             }
         }
+        
+        public static CommitWhen ToCommitWhen(this string value)
+        {
+            switch (value.Trim().ToLower())
+            {
+                case "none":
+                    return CommitWhen.None;
+
+                case "afterreceived":
+                    return CommitWhen.AfterReceived;
+
+                case "aftersaved":
+                    return CommitWhen.AfterSaved;
+
+                case "aftersent":
+                    return CommitWhen.AfterSent;
+
+                case "afteracknowledge":
+                    return CommitWhen.AfterAcknowledge;
+
+                default:
+                    return CommitWhen.None;
+            }
+        }
     }
 }

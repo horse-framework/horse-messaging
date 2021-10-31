@@ -254,6 +254,11 @@ namespace Horse.Messaging.Server.Queues
                     _ = CheckAutoDestroy();
                 }, null, TimeSpan.FromMilliseconds(5000), TimeSpan.FromMilliseconds(5000));
             }
+            catch (Exception e)
+            {
+                Rider.SendError("InitializeQueue", e, Name);
+                throw;
+            }
             finally
             {
                 QueueLock.Release();
@@ -361,19 +366,30 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         internal void AddMessage(QueueMessage message, bool trigger = true)
         {
-            if (Status == QueueStatus.Syncing)
-            {
+            bool added = false;
+
+            for (int i = 0; i < 3; i++)
                 try
                 {
-                    QueueLock.Wait();
-                }
-                finally
-                {
-                    QueueLock.Release();
-                }
-            }
+                    if (Status == QueueStatus.Syncing)
+                    {
+                        try
+                        {
+                            QueueLock.Wait();
+                        }
+                        finally
+                        {
+                            QueueLock.Release();
+                        }
+                    }
 
-            bool added = Manager.AddMessage(message);
+                    added = Manager.AddMessage(message);
+                    break;
+                }
+                catch
+                {
+                    Thread.Sleep(1);
+                }
 
             if (added)
                 message.IsInQueue = true;
@@ -620,6 +636,9 @@ namespace Horse.Messaging.Server.Queues
             if (_triggering)
                 return;
 
+            if (Rider.Cluster.Options.Mode == ClusterMode.Reliable && Rider.Cluster.State > NodeState.Main)
+                return;
+
             await _triggerLock.WaitAsync();
             try
             {
@@ -646,7 +665,7 @@ namespace Horse.Messaging.Server.Queues
             {
                 if (_clients.Count == 0)
                     return;
-                
+
                 if (Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
                     await WaitForAcknowledge();
 

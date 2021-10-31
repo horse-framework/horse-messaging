@@ -33,8 +33,9 @@ namespace Horse.Messaging.Data.Implementation
         {
             if (_manager.Queue.Options.CommitWhen == CommitWhen.AfterSaved)
             {
-                bool saved = await _manager.SaveMessage(message);
-                if (!saved)
+                message.IsSaved = await _manager.SaveMessage(message);
+                
+                if (!message.IsSaved)
                 {
                     return Decision.InterruptFlow(false, DecisionTransmission.Failed);
                 }

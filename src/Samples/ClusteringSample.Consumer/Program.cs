@@ -17,8 +17,8 @@ namespace ClusteringSample.Consumer
         {
             HorseClient client = new HorseClient();
             client.AddHost("horse://localhost:26101");
-            client.AddHost("horse://localhost:26103");
             client.AddHost("horse://localhost:26102");
+            client.AddHost("horse://localhost:26103");
             
             QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(client.Queue);
             registrar.RegisterConsumer<FooConsumer>();
