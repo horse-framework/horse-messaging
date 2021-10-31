@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using Horse.Messaging.Data.Configuration;
 using Horse.Messaging.Data.Implementation;
 using Horse.Messaging.Server.Queues;
@@ -86,13 +87,13 @@ namespace Horse.Messaging.Data
             if (string.IsNullOrEmpty(managerName))
                 managerName = "Persistent";
 
-            cfg.Rider.Queue.QueueManagerFactories.Add(managerName, async dh =>
+            cfg.Rider.Queue.QueueManagerFactories.Add(managerName, dh =>
             {
                 DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(dh.Queue);
                 PersistentQueueManager manager = new PersistentQueueManager(dh.Queue, databaseOptions, useRedelivery);
                 dh.Queue.Manager = manager;
                 queueConfig?.Invoke(dh.Queue);
-                return manager;
+                return Task.FromResult<IHorseQueueManager>(manager);
             });
 
             if (!cfg.Rider.Queue.QueueManagerFactories.ContainsKey("Default"))

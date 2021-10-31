@@ -456,12 +456,17 @@ namespace Horse.Messaging.Server.Cluster
 
         private async Task PushByNode(HorseMessage message)
         {
-            HorseQueue queue = Rider.Queue.Find(message.Target);
-
             if (Rider.Cluster.MainNode == null || Rider.Cluster.MainNode.Id != Info?.Id)
             {
                 await SendMessage(message.CreateAcknowledge(HorseHeaders.UNACCEPTABLE));
                 return;
+            }
+
+            HorseQueue queue = Rider.Queue.Find(message.Target);
+            if (queue == null)
+            {
+                QueueOptions options = QueueOptions.CloneFrom(Rider.Queue.Options);
+                queue = await Rider.Queue.Create(message.Target, options, message, true, true);
             }
 
             PushResult result = PushResult.Empty;
