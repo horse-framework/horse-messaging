@@ -8,7 +8,7 @@
         <PackageTags>horse,client,messaging,queue,channel,cache</PackageTags>
         <AssemblyVersion>6.1.0</AssemblyVersion>
         <FileVersion>6.1.0</FileVersion>
-        <PackageVersion>6.1.0-beta</PackageVersion>
+        <PackageVersion>6.1.1-beta</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>
