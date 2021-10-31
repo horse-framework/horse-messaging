@@ -80,6 +80,7 @@ namespace Horse.Messaging.Server.Cluster
             _outgoingClient.AddProperty(HorseHeaders.NODE_ID, rider.Cluster.Id);
             _outgoingClient.AddProperty(HorseHeaders.NODE_HOST, rider.Cluster.Options.NodeHost);
             _outgoingClient.AddProperty(HorseHeaders.NODE_PUBLIC_HOST, rider.Cluster.Options.PublicHost);
+            _outgoingClient.AddProperty(HorseHeaders.NODE_START, Rider.Cluster.StartDate.ToUnixMilliseconds().ToString());
 
             _outgoingClient.MessageReceived += ProcessReceivedMessage;
             _outgoingClient.Disconnected += OutgoingClientOnDisconnected;
@@ -112,6 +113,7 @@ namespace Horse.Messaging.Server.Cluster
 
             Info.Id = data.Properties.GetStringValue(HorseHeaders.NODE_ID);
             Info.PublicHost = data.Properties.GetStringValue(HorseHeaders.NODE_PUBLIC_HOST);
+            Info.StartDate = Convert.ToInt64(data.Properties.GetStringValue(HorseHeaders.NODE_START).Trim()).ToUnixDate();
 
             if (_outgoingClient == null || !_outgoingClient.IsConnected)
                 ConnectedDate = DateTime.UtcNow;
@@ -122,6 +124,7 @@ namespace Horse.Messaging.Server.Cluster
             infoMessage.AddHeader(HorseHeaders.CLIENT_NAME, Rider.Cluster.Options.Name);
             infoMessage.AddHeader(HorseHeaders.NODE_ID, Rider.Cluster.Id);
             infoMessage.AddHeader(HorseHeaders.NODE_PUBLIC_HOST, Rider.Cluster.Options.PublicHost);
+            infoMessage.AddHeader(HorseHeaders.NODE_START, Rider.Cluster.StartDate.ToUnixMilliseconds().ToString());
 
             incomingClient.Send(infoMessage);
 
@@ -176,7 +179,9 @@ namespace Horse.Messaging.Server.Cluster
             if (IsConnected)
                 return;
 
+            Info.StartDate = null;
             ClusterManager cluster = Rider.Cluster;
+            
             OnDisconnected?.Invoke(this);
 
             if (cluster.Options.Mode == ClusterMode.Scaled)

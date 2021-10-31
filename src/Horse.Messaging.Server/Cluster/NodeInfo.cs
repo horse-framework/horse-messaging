@@ -1,4 +1,6 @@
-﻿namespace Horse.Messaging.Server.Cluster
+﻿using System;
+
+namespace Horse.Messaging.Server.Cluster
 {
     /// <summary>
     /// Node Info
@@ -25,5 +27,10 @@
         /// Node public host name for clients
         /// </summary>
         public string PublicHost { get; set; }
+
+        /// <summary>
+        /// Node start date
+        /// </summary>
+        public DateTime? StartDate { get; set; }
     }
 }

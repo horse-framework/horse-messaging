@@ -269,6 +269,11 @@ namespace Horse.Messaging.Protocol
         /// "Node-Name"
         /// </summary>
         public const string NODE_NAME = "Node-Name";
+        
+        /// <summary>
+        /// "Node-Start"
+        /// </summary>
+        public const string NODE_START = "Node-Start";
 
         /// <summary>
         /// "Horse-Node"

@@ -77,7 +77,7 @@ namespace Horse.Messaging.Server.Cluster
         /// <summary>
         /// The time cluster is initialized
         /// </summary>
-        public DateTime StartDate { get; private set; }
+        public DateTime StartDate { get; internal set; }
 
         internal DateTime QueueUpdate { get; set; }
 
@@ -92,8 +92,9 @@ namespace Horse.Messaging.Server.Cluster
 
         internal ClusterManager(HorseRider rider)
         {
-            Id = $"{DateTime.UtcNow.ToUnixMilliseconds()}-{Guid.NewGuid()}";
+            Id = $"{Guid.NewGuid()}";
             Rider = rider;
+            StartDate = DateTime.UtcNow;
 
             ConnectedToRemoteNodeEvent = new EventManager(rider, HorseEventType.ConnectedToRemoteNode);
             DisconnectedFromRemoteNodeEvent = new EventManager(rider, HorseEventType.DisconnectedFromRemoteNode);
@@ -320,7 +321,8 @@ namespace Horse.Messaging.Server.Cluster
                     break;
 
                 case NodeState.Single:
-                    approve = true;
+                    if (successor.Info.StartDate.HasValue)
+                        approve = successor.Info.StartDate < StartDate;
                     break;
             }
 
@@ -381,11 +383,11 @@ namespace Horse.Messaging.Server.Cluster
                     return Task.CompletedTask;
                 }
 
-                //if next replica is self, ask for main
-                List<string> compare = new List<string> {Id, firstReplica.Info.Id};
-                string firstId = compare.OrderBy(x => x).FirstOrDefault();
+                NodeClient oldestClient = Clients.Where(x => x.Info.StartDate.HasValue)
+                    .OrderBy(x => x.Info.StartDate)
+                    .FirstOrDefault();
 
-                if (firstId == Id)
+                if (StartDate > oldestClient.Info.StartDate)
                     return AskForMain();
 
                 //prod the next replica for being main
