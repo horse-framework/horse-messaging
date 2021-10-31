@@ -347,6 +347,13 @@ namespace Horse.Messaging.Client.Queues
             if (!string.IsNullOrEmpty(queue))
                 descriptor.QueueName = queue;
 
+            if (NameHandler != null)
+                descriptor.QueueName = NameHandler.Invoke(new QueueNameHandlerContext
+                {
+                    Client = Client,
+                    Type = jsonObject.GetType()
+                });
+
             HorseMessage message = descriptor.CreateMessage();
 
             if (!string.IsNullOrEmpty(messageId))

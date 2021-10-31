@@ -16,7 +16,7 @@ namespace ClusteringSample.Producer
         {
             HorseClient client = new HorseClient();
             
-            client.AddHost("horse://localhost:26101");
+            client.AddHost("horse://localhost:26222");
             client.AddHost("horse://localhost:26102");
             client.AddHost("horse://localhost:26103");
             
