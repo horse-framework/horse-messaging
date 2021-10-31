@@ -46,7 +46,7 @@ namespace Horse.Messaging.Server.Cluster
         /// <summary>
         /// Returns true if there is active connection to the node
         /// </summary>
-        internal bool IsConnected
+        public bool IsConnected
         {
             get
             {
