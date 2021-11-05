@@ -125,7 +125,7 @@ namespace Horse.Messaging.Client.Queues
 
             if (PutBackDecision.HasValue)
                 message.AddHeader(HorseHeaders.PUT_BACK, PutBackDecision.Value.ToString());
-            
+
             if (PutBackDelay.HasValue)
                 message.AddHeader(HorseHeaders.PUT_BACK_DELAY, PutBackDelay.Value.ToString());
 

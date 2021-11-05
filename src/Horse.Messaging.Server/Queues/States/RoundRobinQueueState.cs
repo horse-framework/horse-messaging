@@ -47,12 +47,6 @@ namespace Horse.Messaging.Server.Queues.States
                 else
                     cc = GetNextRRClient(ref _roundRobinIndex);
 
-                /*
-                //if to process next message is requires previous message acknowledge, wait here
-                if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
-                    await _queue.WaitForAcknowledge(message);
-                */
-
                 if (cc == null)
                 {
                     _queue.AddMessage(message, false);

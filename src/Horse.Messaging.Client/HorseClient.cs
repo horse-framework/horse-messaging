@@ -939,7 +939,32 @@ namespace Horse.Messaging.Client
 
             foreach (QueueConsumerRegistration registration in Queue.Registrations)
             {
-                HorseResult joinResult = await Queue.Subscribe(registration.QueueName, true);
+                QueueTypeDescriptor modelDescriptor = Queue.DescriptorContainer.GetDescriptor(registration.MessageType);
+                QueueTypeDescriptor consumerDescriptor = Queue.DescriptorContainer.GetDescriptor(registration.ConsumerType);
+
+                List<KeyValuePair<string, string>> descriptorHeaders = new List<KeyValuePair<string, string>>();
+
+                if (modelDescriptor != null)
+                {
+                    HorseMessage modelMessage = modelDescriptor.CreateMessage();
+                    if (modelMessage.HasHeader)
+                        descriptorHeaders.AddRange(modelMessage.Headers);
+                }
+
+                if (consumerDescriptor != null)
+                {
+                    HorseMessage consumerMessage = consumerDescriptor.CreateMessage();
+                    if (consumerMessage.HasHeader)
+                    {
+                        foreach (KeyValuePair<string, string> pair in consumerMessage.Headers)
+                        {
+                            descriptorHeaders.RemoveAll(x => x.Key == pair.Key);
+                            descriptorHeaders.Add(pair);
+                        }
+                    }
+                }
+
+                HorseResult joinResult = await Queue.Subscribe(registration.QueueName, true, descriptorHeaders);
                 if (joinResult.Code == HorseResultCode.Ok)
                     continue;
 

@@ -633,7 +633,7 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         public async Task Trigger()
         {
-            if (_triggering)
+            if (_triggering || !State.TriggerSupported)
                 return;
 
             if (Rider.Cluster.Options.Mode == ClusterMode.Reliable && Rider.Cluster.State > NodeState.Main)
@@ -642,9 +642,6 @@ namespace Horse.Messaging.Server.Queues
             await _triggerLock.WaitAsync();
             try
             {
-                if (_triggering || !State.TriggerSupported)
-                    return;
-
                 _triggering = true;
                 await ProcessPendingMessages();
             }
@@ -666,7 +663,8 @@ namespace Horse.Messaging.Server.Queues
                 if (_clients.Count == 0)
                     return;
 
-                if (Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
+                bool waitForAck = Options.Type != QueueType.RoundRobin && Options.Acknowledge == QueueAckDecision.WaitForAcknowledge;
+                if (waitForAck)
                     await WaitForAcknowledge();
 
                 if (Rider.Cluster.Options.Mode == ClusterMode.Reliable)
@@ -690,7 +688,12 @@ namespace Horse.Messaging.Server.Queues
                     message = Manager.MessageStore.ConsumeFirst();
 
                 if (message == null)
+                {
+                    if (waitForAck)
+                        ReleaseAcknowledgeLock(false);
+
                     return;
+                }
 
                 try
                 {
@@ -699,10 +702,18 @@ namespace Horse.Messaging.Server.Queues
 
                     PushResult pr = await State.Push(message);
                     if (pr == PushResult.NoConsumers || pr == PushResult.Empty)
+                    {
+                        if (waitForAck)
+                            ReleaseAcknowledgeLock(false);
+
                         return;
+                    }
                 }
                 catch (Exception ex)
                 {
+                    if (waitForAck)
+                        ReleaseAcknowledgeLock(false);
+
                     Rider.SendError("PROCESS_MESSAGES", ex, $"QueueName:{Name}");
                     Info.AddError();
                     try
@@ -986,8 +997,10 @@ namespace Horse.Messaging.Server.Queues
             await _ackLock.WaitAsync();
             try
             {
-                if (_acknowledgeCallback != null)
-                    await _acknowledgeCallback.Task;
+                TaskCompletionSource<bool> source = _acknowledgeCallback;
+
+                if (source != null)
+                    await source.Task;
 
                 _acknowledgeCallback = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             }
@@ -1037,6 +1050,7 @@ namespace Horse.Messaging.Server.Queues
                     delivery.Receiver.CurrentlyProcessing = null;
 
                 delivery.MarkAsAcknowledged(success);
+                ReleaseAcknowledgeLock(true);
 
                 if (success)
                     Info.AddAcknowledge();
@@ -1049,8 +1063,6 @@ namespace Horse.Messaging.Server.Queues
 
                 foreach (IQueueMessageEventHandler handler in Rider.Queue.MessageHandlers.All())
                     _ = handler.OnAcknowledged(this, deliveryMessage, delivery, success);
-
-                ReleaseAcknowledgeLock(true);
 
                 if (success)
                     MessageAckEvent.Trigger(from, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId));
@@ -1070,11 +1082,20 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         internal void ReleaseAcknowledgeLock(bool received)
         {
-            if (_acknowledgeCallback != null)
+            try
             {
                 TaskCompletionSource<bool> ack = _acknowledgeCallback;
-                _acknowledgeCallback = null;
-                ack.SetResult(received);
+                if (ack != null)
+                {
+                    _acknowledgeCallback = null;
+                    ack.SetResult(received);
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (InvalidOperationException)
+            {
             }
         }
 
