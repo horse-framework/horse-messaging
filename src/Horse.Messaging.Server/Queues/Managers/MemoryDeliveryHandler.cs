@@ -37,6 +37,11 @@ namespace Horse.Messaging.Server.Queues.Managers
         /// <inheritdoc />
         public virtual Task<Decision> BeginSend(HorseQueue queue, QueueMessage message)
         {
+            message.DeliveryCount++;
+            
+            if (message.DeliveryCount > 1)
+                message.Message.SetOrAddHeader(HorseHeaders.DELIVERY, message.DeliveryCount.ToString());
+            
             return Task.FromResult(Decision.NoveNext());
         }
 
