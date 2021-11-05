@@ -12,12 +12,12 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Acknowledge decision. Default is just request.
         /// </summary>
-        public QueueAckDecision Acknowledge { get; set; } = QueueAckDecision.JustRequest;
+        public QueueAckDecision Acknowledge { get; set; } = QueueAckDecision.WaitForAcknowledge;
 
         /// <summary>
         /// Option for when the commit message is sent to producer
         /// </summary>
-        public CommitWhen CommitWhen { get; set; }
+        public CommitWhen CommitWhen { get; set; } = CommitWhen.AfterReceived;
 
         /// <summary>
         /// When acknowledge is required, maximum duration for waiting acknowledge message
@@ -32,7 +32,7 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Default type for the queue
         /// </summary>
-        public QueueType Type { get; set; } = QueueType.Push;
+        public QueueType Type { get; set; } = QueueType.RoundRobin;
         
         /// <summary>
         /// Maximum message limit of the queue
@@ -61,7 +61,7 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Queue put back decision option
         /// </summary>
-        public PutBackDecision PutBack { get; set; }
+        public PutBackDecision PutBack { get; set; } = PutBackDecision.Regular;
 
         /// <summary>
         /// Waits in milliseconds before putting message back into the queue.

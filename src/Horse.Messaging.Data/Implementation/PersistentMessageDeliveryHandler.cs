@@ -13,7 +13,7 @@ namespace Horse.Messaging.Data.Implementation
     {
         /// <inheritdoc />
         public IHorseQueueManager Manager => _manager;
-        
+
         /// <inheritdoc />
         public IDeliveryTracker Tracker { get; }
 
@@ -34,7 +34,7 @@ namespace Horse.Messaging.Data.Implementation
             if (_manager.Queue.Options.CommitWhen == CommitWhen.AfterSaved)
             {
                 message.IsSaved = await _manager.SaveMessage(message);
-                
+
                 if (!message.IsSaved)
                 {
                     return Decision.InterruptFlow(false, DecisionTransmission.Failed);
@@ -110,8 +110,7 @@ namespace Horse.Messaging.Data.Implementation
                 if (_manager.Queue.Options.PutBack == PutBackDecision.No)
                     return Task.FromResult(Decision.TransmitToProducer(DecisionTransmission.Failed));
 
-                return Task.FromResult(Decision.PutBackMessage(_manager.Queue.Options.PutBack == PutBackDecision.Regular,
-                    DecisionTransmission.Failed));
+                return Task.FromResult(Decision.PutBackMessage(_manager.Queue.Options.PutBack == PutBackDecision.Regular, DecisionTransmission.Failed));
             }
 
 
