@@ -445,6 +445,8 @@ namespace Horse.Messaging.Server.Network
                     Status = queue.Status.ToString().Trim().ToLower(),
                     PriorityMessages = queue.Manager.PriorityMessageStore.Count(),
                     Messages = queue.Manager.MessageStore.Count(),
+                    ProcessingMessages = queue.ClientsClone.Count(x => x.CurrentlyProcessing != null),
+                    DeliveryTrackingMessags = queue.Manager.DeliveryHandler.Tracker.GetDeliveryCount(),
                     Acknowledge = ack,
                     AcknowledgeTimeout = Convert.ToInt32(queue.Options.AcknowledgeTimeout.TotalMilliseconds),
                     MessageTimeout = Convert.ToInt32(queue.Options.MessageTimeout.TotalMilliseconds),

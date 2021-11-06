@@ -30,6 +30,22 @@ namespace Horse.Messaging.Protocol.Models
         public int PriorityMessages { get; set; }
 
         /// <summary>
+        /// Actively processing message count by consumers.
+        /// These messages are not in queue, just pending for acknowledge
+        /// </summary>
+        [JsonProperty("ProcessingMessages")]
+        [JsonPropertyName("ProcessingMessages")]
+        public int ProcessingMessages { get; set; }
+
+        /// <summary>
+        /// Count of the messages that are tracking by delivery tracker.
+        /// These messages are being tracked because acknowledge is pending from their consumers.
+        /// </summary>
+        [JsonProperty("DeliveryTrackingMessags")]
+        [JsonPropertyName("DeliveryTrackingMessags")]
+        public int DeliveryTrackingMessags { get; set; }
+
+        /// <summary>
         /// Pending regular messages in the queue
         /// </summary>
         [JsonProperty("Messages")]

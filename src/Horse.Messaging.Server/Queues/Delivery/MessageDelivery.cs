@@ -128,7 +128,7 @@ namespace Horse.Messaging.Server.Queues.Delivery
         /// </summary>
         public bool MarkAsAcknowledgeTimeout()
         {
-            if (Receiver != null)
+            if (Receiver != null && Receiver.CurrentlyProcessing == Message)
                 Receiver.CurrentlyProcessing = null;
             
             if (Acknowledge != DeliveryAcknowledge.None)
