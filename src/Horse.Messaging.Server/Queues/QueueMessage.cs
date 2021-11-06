@@ -14,7 +14,7 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Message creation date
         /// </summary>
-        public DateTime CreatedDate { get; set; }
+        public DateTime CreatedDate { get; }
 
         /// <summary>
         /// The deadline that message expires
@@ -35,7 +35,7 @@ namespace Horse.Messaging.Server.Queues
         /// If true, message is saved to DB or Disk
         /// </summary>
         public bool IsSaved { get; internal set; }
-        
+
         /// <summary>
         /// True, if producer received ack
         /// </summary>
@@ -52,12 +52,6 @@ namespace Horse.Messaging.Server.Queues
         public int SendCount { get; private set; }
 
         /// <summary>
-        /// If in pending duration, there is no available receivers, this value will be true.
-        /// That means, message isn't sent to anyone.
-        /// </summary>
-        public bool IsTimedOut { get; internal set; }
-
-        /// <summary>
         /// Last decision for the message
         /// </summary>
         public Decision Decision { get; set; }
@@ -66,6 +60,16 @@ namespace Horse.Messaging.Server.Queues
         /// If true, message is in queue
         /// </summary>
         internal bool IsInQueue { get; set; }
+
+        /// <summary>
+        /// If true, message is timed out
+        /// </summary>
+        internal bool IsTimedOut { get; private set; }
+
+        /// <summary>
+        /// If true, message is completely removed
+        /// </summary>
+        internal bool IsRemoved { get; private set; }
 
         /// <summary>
         /// Payload object for end-user usage
@@ -83,7 +87,7 @@ namespace Horse.Messaging.Server.Queues
         /// That list is reset before each delivery (if message ack timed out or nack received etc)
         /// </summary>
         internal List<QueueClient> CurrentDeliveryReceivers { get; } = new List<QueueClient>();
-        
+
         /// <summary>
         /// Creates new QueueMessage from HorseMessage with save status
         /// </summary>
@@ -103,6 +107,22 @@ namespace Horse.Messaging.Server.Queues
                 IsSent = true;
 
             SendCount++;
+        }
+
+        /// <summary>
+        /// Sets message as removed
+        /// </summary>
+        public void MarkAsRemoved()
+        {
+            IsRemoved = true;
+        }
+
+        /// <summary>
+        /// Sets message as timed out
+        /// </summary>
+        public void MarkAsTimedOut()
+        {
+            IsTimedOut = true;
         }
     }
 }

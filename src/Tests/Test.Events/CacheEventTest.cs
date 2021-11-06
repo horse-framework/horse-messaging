@@ -32,6 +32,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, CacheGetHandler.Count);
+            server.Stop();
         }
         
         [Fact]
@@ -53,6 +54,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, CacheSetHandler.Count);
+            server.Stop();
         }
         
         [Fact]
@@ -77,6 +79,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, CacheRemoveHandler.Count);
+            server.Stop();
         }
         
         [Fact]
@@ -101,6 +104,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, CachePurgeHandler.Count);
+            server.Stop();
         }
     }
 }

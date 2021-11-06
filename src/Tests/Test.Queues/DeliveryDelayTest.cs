@@ -40,6 +40,7 @@ namespace Test.Queues
             await Task.Delay(500);
             Assert.True(receivedMessages > 4);
             Assert.True(receivedMessages < 7);
+            server.Stop();
         }
     }
 }

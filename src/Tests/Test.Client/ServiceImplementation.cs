@@ -25,7 +25,7 @@ namespace Test.Client
 
             services.AddHorseBus(b =>
             {
-                b.SetHost($"horse://localhost:{port}");
+                b.AddHost($"horse://localhost:{port}");
                 
                 b.AutoSubscribe(true);
                 b.OnConnected(c => { });
@@ -61,6 +61,7 @@ namespace Test.Client
             Assert.NotNull(channel);
             Assert.NotNull(direct);
             Assert.NotNull(router);
+            server.Stop();
         }
     }
 }

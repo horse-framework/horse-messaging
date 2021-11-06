@@ -1,27 +1,56 @@
 ﻿using System;
+using System.Collections;
 using System.Threading.Tasks;
-using Horse.Messaging.Client;
-using Horse.Messaging.Client.Queues;
-using Horse.Messaging.Protocol;
+using Horse.Core;
 using Horse.Messaging.Server;
-using Horse.Messaging.Server.Handlers;
-using Horse.Messaging.Server.Options;
+using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Server;
 
 namespace Sample.Cluster
 {
+    public class ConsoleLogger : ILogger
+    {
+        public void LogException(string hint, Exception exception)
+        {
+            Console.WriteLine("ERROR: " + hint + " - " + exception);
+        }
+
+        public void LogEvent(string hint, string message)
+        {
+            Console.WriteLine(hint + "\t" + message);
+        }
+    }
+
     class Program
     {
         static async Task Main(string[] args)
         {
-            StartServer2();
-            StartServer1();
+            if (args.Length == 0)
+            {
+                StartServer2();
+                Console.ReadLine();
+                return;
+            }
 
-            await Task.Delay(1500);
+            switch (args[0].Trim())
+            {
+                case "1":
+                    StartServer1();
+                    break;
 
-            ConnectToServer1AsProducer();
-            ConnectToServer2AsConsumer();
+                case "2":
+                    StartServer2();
+                    break;
+
+                case "3":
+                    StartServer3();
+                    break;
+
+                default:
+                    Console.WriteLine("Invalid arg");
+                    break;
+            }
 
             Console.ReadLine();
         }
@@ -29,82 +58,97 @@ namespace Sample.Cluster
         static HorseRider StartServer1()
         {
             HorseRider rider = HorseRiderBuilder.Create()
-               .ConfigureQueues(q => q.UseAckDeliveryHandler(AcknowledgeWhen.AfterReceived, PutBackDecision.No))
-               .Build();
+                .ConfigureQueues(q => q.UseMemoryQueues())
+                .Build();
 
-            rider.NodeManager.SetHost(new HostOptions {Port = 26101});
-            rider.NodeManager.AddRemoteNode(new NodeOptions
+            rider.Cluster.Options.Name = "Server1";
+            rider.Cluster.Options.SharedSecret = "top-secret";
+            rider.Cluster.Options.NodeHost = "horse://localhost:26101";
+            rider.Cluster.Options.PublicHost = "horse://localhost:26101";
+
+            rider.Cluster.Options.Nodes.Add(new NodeInfo
             {
-                Host = "horse://localhost:26100",
-                Name = "Node-2",
-                ReconnectWait = 500
+                Name = "Server2",
+                Host = "horse://localhost:26102",
+                PublicHost = "horse://localhost:26102"
+            });
+
+            rider.Cluster.Options.Nodes.Add(new NodeInfo
+            {
+                Name = "Server3",
+                Host = "horse://localhost:26103",
+                PublicHost = "horse://localhost:26103"
             });
 
             HorseServer server = new HorseServer();
+            server.Logger = new ConsoleLogger();
             server.UseRider(rider);
-            server.Start(26001);
+            server.Start(26101);
             return rider;
         }
 
         static HorseRider StartServer2()
         {
             HorseRider rider = HorseRiderBuilder.Create()
-               .ConfigureQueues(q => q.UseAckDeliveryHandler(AcknowledgeWhen.AfterReceived, PutBackDecision.No))
-               .Build();
+                .ConfigureQueues(q => q.UseMemoryQueues(c => c.Options.CommitWhen = CommitWhen.AfterReceived))
+                .Build();
 
-            rider.NodeManager.SetHost(new HostOptions {Port = 26100});
-            rider.NodeManager.AddRemoteNode(new NodeOptions
+            rider.Cluster.Options.Name = "Server2";
+            rider.Cluster.Options.SharedSecret = "top-secret";
+            rider.Cluster.Options.NodeHost = "horse://localhost:26102";
+            rider.Cluster.Options.PublicHost = "horse://localhost:26102";
+
+            rider.Cluster.Options.Nodes.Add(new NodeInfo
             {
+                Name = "Server1",
                 Host = "horse://localhost:26101",
-                Name = "Node-1",
-                ReconnectWait = 500
+                PublicHost = "horse://localhost:26101"
+            });
+
+            rider.Cluster.Options.Nodes.Add(new NodeInfo
+            {
+                Name = "Server3",
+                Host = "horse://localhost:26103",
+                PublicHost = "horse://localhost:26103"
             });
 
             HorseServer server = new HorseServer();
+            server.Logger = new ConsoleLogger();
             server.UseRider(rider);
-            server.Start(26002);
+            server.Start(26102);
             return rider;
         }
 
-        static void ConnectToServer1AsProducer()
+        static HorseRider StartServer3()
         {
-            HorseClient client = new HorseClient();
-            client.MessageSerializer = new NewtonsoftContentSerializer();
-            client.Connect("horse://localhost:26002");
+            HorseRider rider = HorseRiderBuilder.Create()
+                .ConfigureQueues(q => q.UseMemoryQueues(c => c.Options.CommitWhen = CommitWhen.AfterReceived))
+                .Build();
 
-            Task.Run(async () =>
+            rider.Cluster.Options.Name = "Server3";
+            rider.Cluster.Options.SharedSecret = "top-secret";
+            rider.Cluster.Options.NodeHost = "horse://localhost:26103";
+            rider.Cluster.Options.PublicHost = "horse://localhost:26103";
+
+            rider.Cluster.Options.Nodes.Add(new NodeInfo
             {
-                int counter = 1;
-                while (true)
-                {
-                    await Task.Delay(1000);
-
-                    MirroredModel model = new MirroredModel();
-                    model.Foo = $"Foo #{counter}";
-
-                    HorseResult pushResult = await client.Queue.PushJson(model, true);
-                    Console.WriteLine($"Push Result: {pushResult.Code}");
-
-                    counter++;
-                }
+                Name = "Server1",
+                Host = "horse://localhost:26101",
+                PublicHost = "horse://localhost:26101"
             });
-        }
 
-        static void ConnectToServer2AsConsumer()
-        {
-            //that client is connected to same node with producer
-            HorseClient client1 = new HorseClient();
-            client1.MessageSerializer = new NewtonsoftContentSerializer();
-            QueueConsumerRegistrar registrar1 = new QueueConsumerRegistrar(client1.Queue);
-            registrar1.RegisterConsumer<MirroredModelConsumer>();
-            client1.Connect("horse://localhost:26002");
+            rider.Cluster.Options.Nodes.Add(new NodeInfo
+            {
+                Name = "Server2",
+                Host = "horse://localhost:26102",
+                PublicHost = "horse://localhost:26102"
+            });
 
-            //that client is connected to other node
-            HorseClient client2 = new HorseClient();
-            client2.MessageSerializer = new NewtonsoftContentSerializer();
-            QueueConsumerRegistrar registrar2 = new QueueConsumerRegistrar(client2.Queue);
-            registrar2.RegisterConsumer<MirroredModelConsumer>();
-            client2.Connect("horse://localhost:26001");
+            HorseServer server = new HorseServer();
+            server.Logger = new ConsoleLogger();
+            server.UseRider(rider);
+            server.Start(26103);
+            return rider;
         }
     }
 }

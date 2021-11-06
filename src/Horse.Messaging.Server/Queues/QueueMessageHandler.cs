@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Network;
-using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Security;
 
 namespace Horse.Messaging.Server.Queues
@@ -97,15 +96,20 @@ namespace Horse.Messaging.Server.Queues
 
             //push the message
             PushResult result = await queue.Push(queueMessage, client);
-            if (result == PushResult.StatusNotSupported)
+            if (answerSender)
             {
-                if (answerSender)
-                    await client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
-            }
-            else if (result == PushResult.LimitExceeded)
-            {
-                if (answerSender)
+                if (result == PushResult.StatusNotSupported)
+                {
+                    await client.SendAsync(message.CreateResponse(HorseResultCode.Unacceptable));
+                }
+                else if (result == PushResult.LimitExceeded)
+                {
                     await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
+                }
+                else if (result == PushResult.Error)
+                {
+                    await client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
+                }
             }
         }
 

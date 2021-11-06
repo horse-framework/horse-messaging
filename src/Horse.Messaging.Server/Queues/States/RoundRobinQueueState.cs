@@ -47,12 +47,6 @@ namespace Horse.Messaging.Server.Queues.States
                 else
                     cc = GetNextRRClient(ref _roundRobinIndex);
 
-                /*
-                //if to process next message is requires previous message acknowledge, wait here
-                if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
-                    await _queue.WaitForAcknowledge(message);
-                */
-
                 if (cc == null)
                 {
                     _queue.AddMessage(message, false);
@@ -92,7 +86,9 @@ namespace Horse.Messaging.Server.Queues.States
             if (message.CurrentDeliveryReceivers.Count > 0)
                 message.CurrentDeliveryReceivers.Clear();
 
-            message.Decision = await _queue.DeliveryHandler.BeginSend(_queue, message);
+            IQueueDeliveryHandler deliveryHandler = _queue.Manager.DeliveryHandler;
+
+            message.Decision = await deliveryHandler.BeginSend(_queue, message);
             if (!await _queue.ApplyDecision(message.Decision, message))
                 return PushResult.Success;
 
@@ -100,8 +96,8 @@ namespace Horse.Messaging.Server.Queues.States
             byte[] messageData = HorseProtocolWriter.Create(message.Message);
 
             //call before send and check decision
-            message.Decision = await _queue.DeliveryHandler.CanConsumerReceive(_queue, message, receiver.Client);
-            if (!await _queue.ApplyDecision(message.Decision, message))
+            bool canReceive = await deliveryHandler.CanConsumerReceive(_queue, message, receiver.Client);
+            if (!canReceive)
                 return PushResult.Success;
 
             //create delivery object
@@ -121,7 +117,7 @@ namespace Horse.Messaging.Server.Queues.States
                 message.CurrentDeliveryReceivers.Add(receiver);
 
                 //adds the delivery to time keeper to check timing up
-                _queue.TimeKeeper.AddAcknowledgeCheck(delivery);
+                deliveryHandler.Tracker.Track(delivery);
 
                 //mark message is sent
                 delivery.MarkAsSent();
@@ -129,25 +125,18 @@ namespace Horse.Messaging.Server.Queues.States
 
                 //do after send operations for per message
                 _queue.Info.AddDelivery();
-                message.Decision = await _queue.DeliveryHandler.ConsumerReceived(_queue, delivery, receiver.Client);
 
                 foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                     _ = handler.OnConsumed(_queue, delivery, receiver.Client);
             }
             else
-                message.Decision = await _queue.DeliveryHandler.ConsumerReceiveFailed(_queue, delivery, receiver.Client);
+                message.Decision = await deliveryHandler.ConsumerReceiveFailed(_queue, delivery, receiver.Client);
 
             if (!await _queue.ApplyDecision(message.Decision, message))
                 return PushResult.Success;
 
-            message.Decision = await _queue.DeliveryHandler.EndSend(_queue, message);
+            message.Decision = await deliveryHandler.EndSend(_queue, message);
             await _queue.ApplyDecision(message.Decision, message);
-
-            if (message.Decision.Allow && message.Decision.PutBack == PutBackDecision.No)
-            {
-                _queue.Info.AddMessageRemove();
-                _ = _queue.DeliveryHandler.MessageDequeued(_queue, message);
-            }
 
             return PushResult.Success;
         }

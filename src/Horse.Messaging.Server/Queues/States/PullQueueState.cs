@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Queues.Delivery;
 
@@ -12,8 +13,8 @@ namespace Horse.Messaging.Server.Queues.States
     {
         None,
         All,
-        HighPriority,
-        DefaultPriority
+        Priority,
+        Regular
     }
 
     internal class PullQueueState : IQueueState
@@ -57,10 +58,10 @@ namespace Horse.Messaging.Server.Queues.States
                 return ClearDecision.All;
 
             if (clearStr.Equals("high-priority", StringComparison.InvariantCultureIgnoreCase))
-                return ClearDecision.HighPriority;
+                return ClearDecision.Priority;
 
             if (clearStr.Equals("default-priority", StringComparison.InvariantCultureIgnoreCase))
-                return ClearDecision.DefaultPriority;
+                return ClearDecision.Regular;
 
             return ClearDecision.None;
         }
@@ -72,21 +73,6 @@ namespace Horse.Messaging.Server.Queues.States
         {
             string infoStr = request.FindHeader(HorseHeaders.INFO);
             return !string.IsNullOrEmpty(infoStr) && infoStr.Trim().Equals("Yes", StringComparison.InvariantCultureIgnoreCase);
-        }
-
-        /// <summary>
-        /// Reads Order header value and returns as true false.
-        /// If true, it's fifo (as default).
-        /// If false, it's lifo.
-        /// </summary>
-        private static bool FindOrder(HorseMessage request)
-        {
-            string orderStr = request.FindHeader(HorseHeaders.ORDER);
-            if (string.IsNullOrEmpty(orderStr))
-                return true;
-
-            bool lifo = orderStr.Trim().Equals(HorseHeaders.LIFO, StringComparison.InvariantCultureIgnoreCase);
-            return !lifo;
         }
 
         public async Task<PullResult> Pull(QueueClient client, HorseMessage request)
@@ -101,9 +87,21 @@ namespace Horse.Messaging.Server.Queues.States
 
             ClearDecision clear = FindClearDecision(request);
             bool sendInfo = FindInfoRequest(request);
-            bool fifo = FindOrder(request);
 
-            Tuple<QueueMessage, int, int> messageTuple = DequeueMessage(fifo, sendInfo, count == index ? clear : ClearDecision.None);
+            if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
+                await _queue.WaitForAcknowledge();
+
+            if (_queue.Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                try
+                {
+                    await _queue.QueueLock.WaitAsync();
+                }
+                finally
+                {
+                    _queue.QueueLock.Release();
+                }
+
+            Tuple<QueueMessage, int, int> messageTuple = DequeueMessage(sendInfo, count == index ? clear : ClearDecision.None);
 
             //there is no pullable message
             if (messageTuple.Item1 == null)
@@ -139,7 +137,7 @@ namespace Horse.Messaging.Server.Queues.States
                         break;
 
                     index++;
-                    messageTuple = DequeueMessage(fifo, sendInfo, count == index ? clear : ClearDecision.None);
+                    messageTuple = DequeueMessage(sendInfo, count == index ? clear : ClearDecision.None);
                     headers.Clear();
                 }
                 catch (Exception ex)
@@ -147,19 +145,9 @@ namespace Horse.Messaging.Server.Queues.States
                     _queue.Info.AddError();
                     try
                     {
-                        Decision decision = await _queue.DeliveryHandler.ExceptionThrown(_queue, message, ex);
-
-                        await _queue.ApplyDecision(decision, message);
-
-                        if (!message.IsInQueue)
-                        {
-                            if (decision.PutBack == PutBackDecision.Start)
-                                _queue.AddMessage(message, false);
-                            else if (decision.PutBack == PutBackDecision.End)
-                                _queue.AddMessage(message);
-                        }
+                        await _queue.Manager.OnExceptionThrown("PULL", message, ex);
                     }
-                    catch //if developer does wrong operation, we should not stop
+                    catch
                     {
                     }
                 }
@@ -177,28 +165,28 @@ namespace Horse.Messaging.Server.Queues.States
         /// Finds and dequeues a message from the queue.
         /// If there is not message, returns null
         /// </summary>
-        private Tuple<QueueMessage, int, int> DequeueMessage(bool fifo, bool getInfo, ClearDecision clear)
+        private Tuple<QueueMessage, int, int> DequeueMessage(bool getInfo, ClearDecision clear)
         {
             int prioMessageCount = 0;
             int messageCount = 0;
 
-            QueueMessage message = _queue.Store.GetNext(true, !fifo);
+            QueueMessage message = _queue.Manager.PriorityMessageStore.ConsumeFirst();
+
+            if (message == null)
+                message = _queue.Manager.MessageStore.ConsumeFirst();
 
             if (getInfo)
             {
-                prioMessageCount = _queue.Store.CountPriority();
-                messageCount = _queue.Store.CountRegular();
+                prioMessageCount = _queue.Manager.PriorityMessageStore.Count();
+                messageCount = _queue.Manager.MessageStore.Count();
             }
 
-            if (clear == ClearDecision.All)
-                _queue.Store.ClearAll();
+            if (clear == ClearDecision.All || clear == ClearDecision.Priority)
+                _queue.Manager.PriorityMessageStore.Clear();
 
-            else if (clear == ClearDecision.HighPriority)
-                _queue.Store.ClearPriority();
+            if (clear == ClearDecision.All || clear == ClearDecision.Regular)
+                _queue.Manager.MessageStore.Clear();
 
-            else if (clear == ClearDecision.DefaultPriority)
-                _queue.Store.ClearRegular();
-            
             if (message != null)
                 ProcessingMessage = message;
 
@@ -218,20 +206,18 @@ namespace Horse.Messaging.Server.Queues.States
             if (_queue.Options.Acknowledge != QueueAckDecision.None)
                 deadline = DateTime.UtcNow.Add(_queue.Options.AcknowledgeTimeout);
 
-            //if to process next message is requires previous message acknowledge, wait here
-            if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
-                await _queue.WaitForAcknowledge(message);
-
             if (message.CurrentDeliveryReceivers.Count > 0)
                 message.CurrentDeliveryReceivers.Clear();
 
-            message.Decision = await _queue.DeliveryHandler.BeginSend(_queue, message);
+            IQueueDeliveryHandler deliveryHandler = _queue.Manager.DeliveryHandler;
+
+            message.Decision = await deliveryHandler.BeginSend(_queue, message);
             if (!await _queue.ApplyDecision(message.Decision, message))
                 return false;
 
             //call before send and check decision
-            message.Decision = await _queue.DeliveryHandler.CanConsumerReceive(_queue, message, requester.Client);
-            if (!await _queue.ApplyDecision(message.Decision, message))
+            bool canReceive = await deliveryHandler.CanConsumerReceive(_queue, message, requester.Client);
+            if (!canReceive)
                 return false;
 
             //create delivery object
@@ -241,12 +227,11 @@ namespace Horse.Messaging.Server.Queues.States
             if (sent)
             {
                 message.CurrentDeliveryReceivers.Add(requester);
-                _queue.TimeKeeper.AddAcknowledgeCheck(delivery);
+                deliveryHandler.Tracker.Track(delivery);
                 delivery.MarkAsSent();
 
                 //do after send operations for per message
                 _queue.Info.AddDelivery();
-                message.Decision = await _queue.DeliveryHandler.ConsumerReceived(_queue, delivery, requester.Client);
 
                 foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                     _ = handler.OnConsumed(_queue, delivery, requester.Client);
@@ -259,19 +244,13 @@ namespace Horse.Messaging.Server.Queues.States
             }
             else
             {
-                message.Decision = await _queue.DeliveryHandler.ConsumerReceiveFailed(_queue, delivery, requester.Client);
+                message.Decision = await deliveryHandler.ConsumerReceiveFailed(_queue, delivery, requester.Client);
                 if (!await _queue.ApplyDecision(message.Decision, message))
                     return false;
             }
 
-            message.Decision = await _queue.DeliveryHandler.EndSend(_queue, message);
+            message.Decision = await deliveryHandler.EndSend(_queue, message);
             await _queue.ApplyDecision(message.Decision, message);
-
-            if (message.Decision.Allow && message.Decision.PutBack == PutBackDecision.No)
-            {
-                _queue.Info.AddMessageRemove();
-                _ = _queue.DeliveryHandler.MessageDequeued(_queue, message);
-            }
 
             return true;
         }

@@ -37,75 +37,75 @@ namespace Horse.Messaging.Client.Queues
         /// <inheritdoc />
         public Task<HorseResult> Push(string queue,
                                       MemoryStream content,
-                                      bool waitAcknowledge = false,
+                                      bool waitForCommit = false,
                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Queue.Push(queue, content, waitAcknowledge, messageHeaders);
+            return _client.Queue.Push(queue, content, waitForCommit, messageHeaders);
         }
 
         /// <inheritdoc />
         public Task<HorseResult> Push(string queue,
                                       string content,
-                                      bool waitAcknowledge = false,
+                                      bool waitForCommit = false,
                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Queue.Push(queue, content, waitAcknowledge, messageHeaders);
+            return _client.Queue.Push(queue, content, waitForCommit, messageHeaders);
         }
 
         /// <inheritdoc />
         public Task<HorseResult> Push(string queue,
                                       MemoryStream content,
                                       string messageId,
-                                      bool waitAcknowledge = false,
+                                      bool waitForCommit = false,
                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Queue.Push(queue, content, messageId, waitAcknowledge, messageHeaders);
+            return _client.Queue.Push(queue, content, messageId, waitForCommit, messageHeaders);
         }
 
         /// <inheritdoc />
         public Task<HorseResult> Push(string queue,
                                       string content,
                                       string messageId,
-                                      bool waitAcknowledge = false,
+                                      bool waitForCommit = false,
                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Queue.Push(queue, content, messageId, waitAcknowledge, messageHeaders);
+            return _client.Queue.Push(queue, content, messageId, waitForCommit, messageHeaders);
         }
 
         /// <inheritdoc />
         public Task<HorseResult> PushJson(object jsonObject,
-                                          bool waitAcknowledge = false,
+                                          bool waitForCommit = false,
                                           IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Queue.PushJson(jsonObject, waitAcknowledge, messageHeaders);
+            return _client.Queue.PushJson(jsonObject, waitForCommit, messageHeaders);
         }
 
         /// <inheritdoc />
         public Task<HorseResult> PushJson(string queue,
                                           object jsonObject,
-                                          bool waitAcknowledge = false,
+                                          bool waitForCommit = false,
                                           IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Queue.PushJson(queue, jsonObject, waitAcknowledge, messageHeaders);
+            return _client.Queue.PushJson(queue, jsonObject, waitForCommit, messageHeaders);
         }
 
         /// <inheritdoc />
         public Task<HorseResult> PushJson(object jsonObject,
                                           string messageId,
-                                          bool waitAcknowledge = false,
+                                          bool waitForCommit = false,
                                           IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Queue.PushJson(jsonObject, messageId, waitAcknowledge, messageHeaders);
+            return _client.Queue.PushJson(jsonObject, messageId, waitForCommit, messageHeaders);
         }
 
         /// <inheritdoc />
         public Task<HorseResult> PushJson(string queue,
                                           object jsonObject,
                                           string messageId,
-                                          bool waitAcknowledge = false,
+                                          bool waitForCommit = false,
                                           IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Queue.PushJson(queue, jsonObject, messageId, waitAcknowledge, messageHeaders);
+            return _client.Queue.PushJson(queue, jsonObject, messageId, waitForCommit, messageHeaders);
         }
 
         /// <inheritdoc />

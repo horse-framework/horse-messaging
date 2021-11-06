@@ -32,6 +32,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, DirectMessageHandler.Count);
+            server.Stop();
         }
 
         [Fact]
@@ -54,6 +55,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, DirectResponseHandler.Count);
+            server.Stop();
         }
     }
 }

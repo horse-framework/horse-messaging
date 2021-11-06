@@ -23,7 +23,7 @@ namespace Test.Client
 
             HorseClientBuilder b = new HorseClientBuilder();
 
-            b.SetHost($"horse://localhost:{port}");
+            b.AddHost($"horse://localhost:{port}");
 
             b.AutoSubscribe(true);
             b.OnConnected(c => { });
@@ -46,6 +46,7 @@ namespace Test.Client
             await client.ConnectAsync();
 
             Assert.NotNull(client);
+            server.Stop();
         }
     }
 }

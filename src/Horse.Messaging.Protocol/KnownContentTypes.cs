@@ -1,5 +1,3 @@
-using System.Security.Cryptography.X509Certificates;
-
 namespace Horse.Messaging.Protocol
 {
     /// <summary>
@@ -23,9 +21,19 @@ namespace Horse.Messaging.Protocol
         public const ushort Accepted = 202;
 
         /// <summary>
+        /// "204" Reset content
+        /// </summary>
+        public const ushort ResetContent = 205;
+
+        /// <summary>
         /// "204" No content
         /// </summary>
         public const ushort NoContent = 204;
+
+        /// <summary>
+        /// "302" Found
+        /// </summary>
+        public const ushort Found = 302;
 
         /// <summary>
         /// "400" Message has invalid content
@@ -103,19 +111,14 @@ namespace Horse.Messaging.Protocol
         public const ushort QueueList = 616;
 
         /// <summary>
-        /// "621" Gets active instance list
+        /// "621" Gets active node list
         /// </summary>
-        public const ushort InstanceList = 621;
+        public const ushort NodeList = 621;
 
         /// <summary>
         /// "631" Gets all connected clients
         /// </summary>
         public const ushort ClientList = 631;
-
-        /// <summary>
-        /// "641" Node instance sends a decision to other nodes
-        /// </summary>
-        public const ushort DecisionOverNode = 641;
 
         /// <summary>
         /// "651" Gets all rouuters
@@ -201,20 +204,105 @@ namespace Horse.Messaging.Protocol
         /// "686" Unsubscribes from a channel
         /// </summary>
         public const ushort ChannelUnsubscribe = 687;
-        
+
         /// <summary>
         /// "691" Create and begin new transaction
         /// </summary>
         public const ushort TransactionBegin = 691;
-        
+
         /// <summary>
         /// "692" Commit a transaction
         /// </summary>
         public const ushort TransactionCommit = 692;
-        
+
         /// <summary>
         /// "693" rollback a transaction
         /// </summary>
         public const ushort TransactionRollback = 693;
+
+        /// <summary>
+        /// "700" Node information
+        /// </summary>
+        public const ushort NodeInformation = 700;
+
+        /// <summary>
+        /// "701" Main node announcement
+        /// </summary>
+        public const ushort MainNodeAnnouncement = 701;
+
+        /// <summary>
+        /// "702" Main announcement answer
+        /// </summary>
+        public const ushort MainAnnouncementAnswer = 702;
+
+        /// <summary>
+        /// "703" Ask for Main permission
+        /// </summary>
+        public const ushort AskForMainPermission = 703;
+
+        /// <summary>
+        /// "704" Prod for main announcement
+        /// </summary>
+        public const ushort ProdForMainAnnouncement = 704;
+
+        /// <summary>
+        /// "705" Who is main node
+        /// </summary>
+        public const ushort WhoIsMainNode = 705;
+
+        /// <summary>
+        /// "711" Node queue list request
+        /// </summary>
+        public const ushort NodeQueueListRequest = 711;
+
+        /// <summary>
+        /// "712" Node queue list response
+        /// </summary>
+        public const ushort NodeQueueListResponse = 712;
+
+        /// <summary>
+        /// "713" Node queue sync request
+        /// </summary>
+        public const ushort NodeQueueSyncRequest = 713;
+
+        /// <summary>
+        /// "714" Node queue message id list
+        /// </summary>
+        public const ushort NodeQueueMessageIdList = 714;
+
+        /// <summary>
+        /// "715" Node queue message request
+        /// </summary>
+        public const ushort NodeQueueMessageRequest = 715;
+
+        /// <summary>
+        /// "716" Node queue message response
+        /// </summary>
+        public const ushort NodeQueueMessageResponse = 716;
+
+        /// <summary>
+        /// "717" Node queue sync completion
+        /// </summary>
+        public const ushort NodeQueueSyncCompletion = 717;
+
+        /// <summary>
+        /// "720" Cluster node acknowledge
+        /// </summary>
+        public const ushort ClusterNodeAcknowledge = 720;
+        
+        /// <summary>
+        /// "715" Node push queue message
+        /// </summary>
+        public const ushort NodePushQueueMessage = 721;
+        
+        /// <summary>
+        /// "716" Node put back queue message
+        /// </summary>
+        public const ushort NodePutBackQueueMessage = 722;
+        
+        /// <summary>
+        /// "717" Node remove queue message
+        /// </summary>
+        public const ushort NodeRemoveQueueMessage = 723;
     }
 }

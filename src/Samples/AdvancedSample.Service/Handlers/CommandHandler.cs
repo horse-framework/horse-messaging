@@ -13,12 +13,11 @@ namespace AdvancedSample.Service.Handlers
 	[Interceptor(typeof(TestInterceptor))]
 	public abstract class CommandHandler<T> : IDirectMessageHandler<T>
 	{
-		protected abstract Task Execute(T command);
+		protected abstract Task Execute(T command, HorseClient client);
 
 		public async Task Handle(HorseMessage message, T model, HorseClient client)
 		{
-			await Task.Delay(15000);
-			await Execute(model);
+			await Execute(model, client);
 		}
 
 		private static async Task OnError(HorseMessage message, HorseClient client, Exception exception)

@@ -13,6 +13,15 @@ namespace Horse.Messaging.Server.Helpers
             return Convert.ToInt64(span.TotalMilliseconds);
         }
 
+
+        /// <summary>
+        /// Converts Unix milliseconds to DateTime
+        /// </summary>
+        public static DateTime ToUnixDate(this long unixMilliseconds)
+        {
+            return new DateTime(1970, 1, 1).AddMilliseconds(unixMilliseconds);
+        }
+
         /// <summary>
         /// Returns total milliseconds between UTC now and the date
         /// </summary>

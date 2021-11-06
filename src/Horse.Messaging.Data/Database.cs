@@ -65,6 +65,11 @@ namespace Horse.Messaging.Data
         /// </summary>
         public DatabaseOptions Options { get; }
 
+        /// <summary>
+        /// Returns true if the database is open
+        /// </summary>
+        public bool IsOpen { get; private set; }
+
         #endregion
 
         #region Open - Close
@@ -84,6 +89,14 @@ namespace Horse.Messaging.Data
         /// </summary>
         public async Task Open()
         {
+            lock (File)
+            {
+                if (IsOpen)
+                    return;
+                
+                IsOpen = true;
+            }
+            
             await File.Open();
             await Load();
 
@@ -140,6 +153,9 @@ namespace Horse.Messaging.Data
         /// </summary>
         public async Task Close()
         {
+            lock (File)
+                IsOpen = false;
+            
             _shrinkManager.Stop();
             await Shrink();
             await File.Close();
@@ -333,6 +349,24 @@ namespace Horse.Messaging.Data
             {
                 TriggerError(ErrorHint.Delete, e);
                 return false;
+            }
+            finally
+            {
+                ReleaseLock();
+            }
+        }
+
+        /// <summary>
+        /// Clears all data in file
+        /// </summary>
+        public async Task Clear()
+        {
+            await WaitForLock();
+            try
+            {
+                Stream stream = File.GetStream();
+                stream.SetLength(0);
+                await stream.FlushAsync();
             }
             finally
             {

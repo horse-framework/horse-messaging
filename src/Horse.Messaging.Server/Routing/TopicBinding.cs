@@ -44,7 +44,7 @@ namespace Horse.Messaging.Server.Routing
 		/// <summary>
 		/// Sends the message to binding receivers
 		/// </summary>
-		public override Task<bool> Send(MessagingClient sender, HorseMessage message)
+		public override async Task<bool> Send(MessagingClient sender, HorseMessage message)
 		{
 			try
 			{
@@ -56,22 +56,22 @@ namespace Horse.Messaging.Server.Routing
 				switch (RouteMethod)
 				{
 					case RouteMethod.Distribute:
-						return SendDistribute(message);
+						return await SendDistribute(message);
 
 					case RouteMethod.OnlyFirst:
-						return SendOnlyFirst(message);
+						return await SendOnlyFirst(message);
 
 					case RouteMethod.RoundRobin:
-						return SendRoundRobin(message);
+						return await SendRoundRobin(message);
 
 					default:
-						return Task.FromResult(false);
+						return false;
 				}
 			}
 			catch (Exception e)
 			{
 				Router.Rider.SendError("BINDING_SEND", e, $"Type:Topic, Binding:{Name}");
-				return Task.FromResult(false);
+				return false;
 			}
 		}
 

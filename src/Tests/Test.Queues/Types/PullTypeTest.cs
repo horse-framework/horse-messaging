@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Delivery;
 using Test.Common;
 using Xunit;
 
@@ -35,7 +37,7 @@ namespace Test.Queues.Types
 
             HorseQueue queue = server.Rider.Queue.Find("pull-a");
             Assert.NotNull(queue);
-            Assert.Equal(1, queue.MessageCount());
+            Assert.Equal(1, queue.Manager.MessageStore.Count());
 
             PullRequest request = new PullRequest();
             request.Queue = "pull-a";
@@ -51,6 +53,7 @@ namespace Test.Queues.Types
             PullContainer container2 = await consumer.Queue.Pull(request);
             Assert.Equal(PullProcess.Empty, container2.Status);
             Assert.Empty(container2.ReceivedMessages);
+            server.Stop();
         }
 
         [Fact]
@@ -63,6 +66,7 @@ namespace Test.Queues.Types
             HorseQueue queue = server.Rider.Queue.Find("pull-a");
             Assert.NotNull(queue);
             queue.Options.Acknowledge = QueueAckDecision.JustRequest;
+            queue.Options.CommitWhen = CommitWhen.AfterAcknowledge;
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
 
             HorseClient consumer = new HorseClient();
@@ -82,12 +86,14 @@ namespace Test.Queues.Types
             await producer.ConnectAsync("horse://localhost:" + port);
             Assert.True(producer.IsConnected);
 
+            HorseQueue horseQueue = server.Rider.Queue.Find("pull-a");
+
             Task<HorseResult> taskAck = producer.Queue.Push("pull-a", "Hello, World!", true);
 
             await Task.Delay(500);
             Assert.False(taskAck.IsCompleted);
             Assert.False(msgReceived);
-            Assert.Equal(1, queue.MessageCount());
+            Assert.Equal(1, queue.Manager.MessageStore.Count());
 
             consumer.PullTimeout = TimeSpan.FromDays(1);
 
@@ -95,48 +101,7 @@ namespace Test.Queues.Types
             Assert.Equal(PullProcess.Completed, pull.Status);
             Assert.Equal(1, pull.ReceivedCount);
             Assert.NotEmpty(pull.ReceivedMessages);
-        }
-
-        /// <summary>
-        /// Pull messages in FIFO and LIFO order
-        /// </summary>
-        [Theory]
-        [InlineData(null)]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task PullOrder(bool? fifo)
-        {
-            TestHorseRider server = new TestHorseRider();
-            await server.Initialize();
-            int port = server.Start();
-
-            HorseQueue queue = server.Rider.Queue.Find("pull-a");
-            await queue.Push("First Message");
-            await queue.Push("Second Message");
-
-            HorseClient client = new HorseClient();
-            await client.ConnectAsync("horse://localhost:" + port);
-            HorseResult joined = await client.Queue.Subscribe("pull-a", true);
-            Assert.Equal(HorseResultCode.Ok, joined.Code);
-
-            PullRequest request = new PullRequest
-            {
-                Queue = "pull-a",
-                Count = 1,
-                Order = !fifo.HasValue || fifo.Value ? MessageOrder.FIFO : MessageOrder.LIFO
-            };
-
-            PullContainer container = await client.Queue.Pull(request);
-            Assert.Equal(PullProcess.Completed, container.Status);
-
-            HorseMessage msg = container.ReceivedMessages.FirstOrDefault();
-            Assert.NotNull(msg);
-
-            string content = msg.GetStringContent();
-            if (fifo.HasValue && !fifo.Value)
-                Assert.Equal("Second Message", content);
-            else
-                Assert.Equal("First Message", content);
+            server.Stop();
         }
 
         /// <summary>
@@ -170,6 +135,7 @@ namespace Test.Queues.Types
             PullContainer container = await client.Queue.Pull(request);
             Assert.Equal(count, container.ReceivedCount);
             Assert.Equal(PullProcess.Completed, container.Status);
+            server.Stop();
         }
 
         /// <summary>
@@ -218,10 +184,12 @@ namespace Test.Queues.Types
             Assert.Equal(PullProcess.Completed, container.Status);
 
             if (priorityMessages)
-                Assert.Equal(0, queue.PriorityMessageCount());
+                Assert.Equal(0, queue.Manager.PriorityMessageStore.Count());
 
             if (messages)
-                Assert.Equal(0, queue.MessageCount());
+                Assert.Equal(0, queue.Manager.MessageStore.Count());
+            
+            server.Stop();
         }
     }
 }

@@ -137,7 +137,7 @@ namespace Horse.Messaging.Protocol
             }
         }
 
-        private Task ProcessMessage(IConnectionInfo info, HorseMessage message, HorseServerSocket socket)
+        private async Task ProcessMessage(IConnectionInfo info, HorseMessage message, HorseServerSocket socket)
         {
             //if user makes a mistake in received method, we should not interrupt connection handling
             try
@@ -147,14 +147,12 @@ namespace Horse.Messaging.Protocol
                 else if (message.Type == MessageType.Pong)
                     socket.KeepAlive();
 
-                return _handler.Received(_server, info, socket, message);
+                await _handler.Received(_server, info, socket, message);
             }
             catch (Exception e)
             {
                 if (_server.Logger != null)
                     _server.Logger.LogException("Unhandled Exception", e);
-
-                return Task.CompletedTask;
             }
         }
 

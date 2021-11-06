@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Core;
@@ -80,10 +81,12 @@ namespace Horse.Messaging.Client
         public TimeSpan Lifetime { get; set; }
 
         /// <summary>
-        /// Defined remote host.
+        /// Defined remote hosts.
         /// If Connect methods are used with remote host parameter, this value is updated.
         /// </summary>
-        public string RemoteHost { get; set; }
+        internal List<string> RemoteHosts { get; } = new();
+
+        private int _hostIndex = -1;
 
         /// <summary>
         /// Internal connected event
@@ -270,7 +273,6 @@ namespace Horse.Messaging.Client
             Queue.Dispose();
         }
 
-
         private void UpdateReconnectTimer()
         {
             if (_reconnectWait == TimeSpan.Zero)
@@ -279,7 +281,7 @@ namespace Horse.Messaging.Client
             if (_reconnectTimer == null)
             {
                 int ms = Convert.ToInt32(_reconnectWait.TotalMilliseconds);
-                _reconnectTimer = new Timer(s =>
+                _reconnectTimer = new Timer(_ =>
                 {
                     if (!_autoConnect || IsConnected)
                         return;
@@ -292,8 +294,73 @@ namespace Horse.Messaging.Client
                         _socket.Disconnect();
                     }
 
-                    Connect(RemoteHost);
+                    Connect(FindNextTargetHost());
                 }, null, ms, ms);
+            }
+        }
+
+        /// <summary>
+        /// Adds new remote host to connect
+        /// </summary>
+        /// <param name="hostname">Host name with protocol horse://... or horses://...</param>
+        public void AddHost(string hostname)
+        {
+            if (string.IsNullOrEmpty(hostname))
+                throw new Exception("Remote host name is empty");
+
+            lock (RemoteHosts)
+            {
+                if (!RemoteHosts.Contains(hostname, StringComparer.InvariantCultureIgnoreCase))
+                    RemoteHosts.Add(hostname);
+            }
+        }
+
+        private string FindNextTargetHost()
+        {
+            lock (RemoteHosts)
+            {
+                if (RemoteHosts.Count == 0)
+                    throw new Exception("There is no host to connect");
+
+                _hostIndex++;
+                if (_hostIndex >= RemoteHosts.Count)
+                    _hostIndex = 0;
+
+                return RemoteHosts[_hostIndex];
+            }
+        }
+
+        private void RefreshRemoteHosts(HorseMessage message)
+        {
+            string successorHost = message.FindHeader(HorseHeaders.SUCCESSOR_NODE);
+            string replaceNodes = message.FindHeader(HorseHeaders.REPLICA_NODE);
+
+            lock (RemoteHosts)
+            {
+                string mainHost = RemoteHosts[_hostIndex];
+
+                if (!string.IsNullOrEmpty(replaceNodes))
+                {
+                    string[] replicaHosts = replaceNodes.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                    foreach (string replicaHost in replicaHosts)
+                    {
+                        if (string.IsNullOrEmpty(replicaHost))
+                            continue;
+
+                        if (!RemoteHosts.Contains(replicaHost))
+                            RemoteHosts.Add(replicaHost);
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(successorHost))
+                {
+                    RemoteHosts.Remove(successorHost);
+                    RemoteHosts.Insert(0, successorHost);
+                }
+
+                RemoteHosts.Remove(mainHost);
+                RemoteHosts.Insert(0, mainHost);
+                _hostIndex = -1;
             }
         }
 
@@ -384,7 +451,7 @@ namespace Horse.Messaging.Client
         /// </summary>
         public void Connect()
         {
-            Connect(RemoteHost);
+            Connect(FindNextTargetHost());
         }
 
         /// <summary>
@@ -392,6 +459,13 @@ namespace Horse.Messaging.Client
         /// </summary>
         public void Connect(string host)
         {
+            if (string.IsNullOrEmpty(host))
+                throw new Exception("Remote host name is empty");
+
+            lock (RemoteHosts)
+                if (!RemoteHosts.Contains(host, StringComparer.InvariantCultureIgnoreCase))
+                    RemoteHosts.Add(host);
+
             DnsResolver resolver = new DnsResolver();
             Connect(resolver.Resolve(host));
         }
@@ -399,12 +473,12 @@ namespace Horse.Messaging.Client
         /// <summary>
         /// Connects to well defined remote host
         /// </summary>
-        public void Connect(DnsInfo host)
+        internal void Connect(DnsInfo host)
         {
             if (string.IsNullOrEmpty(_clientId))
                 _clientId = UniqueIdGenerator.Create();
 
-            /* todo
+            /*
             if (host.Protocol != Core.Protocol.Hmq)
                 throw new NotSupportedException("Only Horse protocol is supported");
                 */
@@ -426,7 +500,7 @@ namespace Horse.Messaging.Client
         /// </summary>
         public Task ConnectAsync()
         {
-            return ConnectAsync(RemoteHost);
+            return ConnectAsync(FindNextTargetHost());
         }
 
         /// <summary>
@@ -434,6 +508,13 @@ namespace Horse.Messaging.Client
         /// </summary>
         public Task ConnectAsync(string host)
         {
+            if (string.IsNullOrEmpty(host))
+                throw new Exception("Remote host name is empty");
+
+            lock (RemoteHosts)
+                if (!RemoteHosts.Contains(host, StringComparer.InvariantCultureIgnoreCase))
+                    RemoteHosts.Add(host);
+
             DnsResolver resolver = new DnsResolver();
             return ConnectAsync(resolver.Resolve(host));
         }
@@ -441,19 +522,26 @@ namespace Horse.Messaging.Client
         /// <summary>
         /// Connects to well defined remote host
         /// </summary>
-        public Task ConnectAsync(DnsInfo host)
+        internal async Task ConnectAsync(DnsInfo host)
         {
             if (string.IsNullOrEmpty(_clientId))
                 _clientId = UniqueIdGenerator.Create();
 
-            /* todo
+            /*
             if (host.Protocol != Core.Protocol.Hmq)
                 throw new NotSupportedException("Only Horse protocol is supported");
                 */
 
             SetAutoReconnect(true);
-            _socket = new HorseSocket(this, _data);
-            return _socket.ConnectAsync(host);
+            try
+            {
+                _socket = new HorseSocket(this, _data);
+                await _socket.ConnectAsync(host);
+            }
+            catch (Exception e)
+            {
+                OnException(e);
+            }
         }
 
         /// <summary>
@@ -617,9 +705,7 @@ namespace Horse.Messaging.Client
                 return message.CreateResponse(sent.Code);
             }
 
-            HorseMessage response = await task;
-            if (response == null)
-                response = message.CreateResponse(HorseResultCode.RequestTimeout);
+            HorseMessage response = await task ?? message.CreateResponse(HorseResultCode.RequestTimeout);
 
             return response;
         }
@@ -629,7 +715,7 @@ namespace Horse.Messaging.Client
         #region Acknowledge - Response
 
         /// <summary>
-        /// Sends unacknowledge message for the message.
+        /// Sends negative acknowledge message for the message.
         /// </summary>
         public async Task<HorseResult> SendNegativeAck(HorseMessage message, string reason = null)
         {
@@ -641,12 +727,33 @@ namespace Horse.Messaging.Client
         }
 
         /// <summary>
-        /// Sends unacknowledge message for the message.
+        /// Sends acknowledge message for the message.
         /// </summary>
         public async Task<HorseResult> SendAck(HorseMessage message)
         {
             HorseMessage ack = message.CreateAcknowledge();
             return await SendAsync(ack);
+        }
+
+        /// <summary>
+        /// Sends success response for the message
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        public Task<HorseResult> SendResponse(HorseMessage message)
+        {
+            return SendAck(message);
+        }
+
+        /// <summary>
+        /// /// Sends negative response for the message
+        /// </summary>
+        /// <param name="message">Received horse message</param>
+        /// <param name="reason">Description for the error</param>
+        /// <returns></returns>
+        public Task<HorseResult> SendNegativeResponse(HorseMessage message, string reason = null)
+        {
+            return SendNegativeAck(message, reason);
         }
 
         /// <summary>
@@ -755,6 +862,25 @@ namespace Horse.Messaging.Client
                 case MessageType.Server:
                     if (message.ContentType == KnownContentTypes.Accepted)
                         SetClientId(message.Target);
+
+                    if (message.ContentType == KnownContentTypes.Found)
+                    {
+                        string mainHost = message.FindHeader(HorseHeaders.NODE_PUBLIC_HOST);
+                        string successorHost = message.FindHeader(HorseHeaders.SUCCESSOR_NODE);
+
+                        lock (RemoteHosts)
+                        {
+                            if (!string.IsNullOrEmpty(successorHost) && !RemoteHosts.Contains(successorHost))
+                                RemoteHosts.Add(successorHost);
+
+                            if (!string.IsNullOrEmpty(mainHost) && !RemoteHosts.Contains(mainHost))
+                                RemoteHosts.Add(mainHost);
+                        }
+                    }
+
+                    else if (message.ContentType == KnownContentTypes.Accepted || message.ContentType == KnownContentTypes.ResetContent)
+                        RefreshRemoteHosts(message);
+
                     break;
 
                 case MessageType.Terminate:
@@ -813,7 +939,32 @@ namespace Horse.Messaging.Client
 
             foreach (QueueConsumerRegistration registration in Queue.Registrations)
             {
-                HorseResult joinResult = await Queue.Subscribe(registration.QueueName, true);
+                QueueTypeDescriptor modelDescriptor = Queue.DescriptorContainer.GetDescriptor(registration.MessageType);
+                QueueTypeDescriptor consumerDescriptor = Queue.DescriptorContainer.GetDescriptor(registration.ConsumerType);
+
+                List<KeyValuePair<string, string>> descriptorHeaders = new List<KeyValuePair<string, string>>();
+
+                if (modelDescriptor != null)
+                {
+                    HorseMessage modelMessage = modelDescriptor.CreateMessage();
+                    if (modelMessage.HasHeader)
+                        descriptorHeaders.AddRange(modelMessage.Headers);
+                }
+
+                if (consumerDescriptor != null)
+                {
+                    HorseMessage consumerMessage = consumerDescriptor.CreateMessage();
+                    if (consumerMessage.HasHeader)
+                    {
+                        foreach (KeyValuePair<string, string> pair in consumerMessage.Headers)
+                        {
+                            descriptorHeaders.RemoveAll(x => x.Key == pair.Key);
+                            descriptorHeaders.Add(pair);
+                        }
+                    }
+                }
+
+                HorseResult joinResult = await Queue.Subscribe(registration.QueueName, true, descriptorHeaders);
                 if (joinResult.Code == HorseResultCode.Ok)
                     continue;
 

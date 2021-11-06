@@ -79,6 +79,9 @@ namespace Horse.Messaging.Client.Queues
             if (!string.IsNullOrEmpty(defaultConfigurator.Topic))
                 descriptor.Topic = defaultConfigurator.Topic;
 
+            if (defaultConfigurator.PutBackDecision.HasValue)
+                descriptor.PutBackDecision = defaultConfigurator.PutBackDecision.Value;
+
             if (defaultConfigurator.PutBackDelay.HasValue)
                 descriptor.PutBackDelay = defaultConfigurator.PutBackDelay.Value;
 
@@ -133,9 +136,12 @@ namespace Horse.Messaging.Client.Queues
             if (delayAttr != null)
                 descriptor.DelayBetweenMessages = delayAttr.Value;
 
-            PutBackDelayAttribute putbackAttr = type.GetCustomAttribute<PutBackDelayAttribute>(true);
+            PutBackAttribute putbackAttr = type.GetCustomAttribute<PutBackAttribute>(true);
             if (putbackAttr != null)
-                descriptor.PutBackDelay = putbackAttr.Value;
+            {
+                descriptor.PutBackDecision = putbackAttr.Value;
+                descriptor.PutBackDelay = putbackAttr.Delay;
+            }
 
             IEnumerable<MessageHeaderAttribute> headerAttributes = type.GetCustomAttributes<MessageHeaderAttribute>(true);
             foreach (MessageHeaderAttribute headerAttribute in headerAttributes)

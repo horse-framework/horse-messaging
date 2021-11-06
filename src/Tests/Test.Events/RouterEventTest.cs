@@ -30,6 +30,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, RouterCreateHandler.Count);
+            server.Stop();
         }
 
         [Fact]
@@ -57,6 +58,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, RouterRemoveHandler.Count);
+            server.Stop();
         }
 
         [Fact]
@@ -81,6 +83,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, AddBindingHandler.Count);
+            server.Stop();
         }
 
         [Fact]
@@ -111,6 +114,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, RemoveBindingHandler.Count);
+            server.Stop();
         }
 
         [Fact]
@@ -137,6 +141,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, RouterPublishHandler.Count);
+            server.Stop();
         }
     }
 }

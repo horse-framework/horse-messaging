@@ -188,30 +188,30 @@ namespace Horse.Messaging.Server.Events
 
                 case HorseEventType.ConnectedToRemoteNode:
                     if (subscribe)
-                        _rider.NodeManager.ConnectedToRemoteNodeEvent.Subscribers.Add(client, c => c == client);
+                        _rider.Cluster.ConnectedToRemoteNodeEvent.Subscribers.Add(client, c => c == client);
                     else
-                        _rider.NodeManager.ConnectedToRemoteNodeEvent.Subscribers.Remove(client);
+                        _rider.Cluster.ConnectedToRemoteNodeEvent.Subscribers.Remove(client);
                     break;
 
                 case HorseEventType.DisconnectedFromRemoteNode:
                     if (subscribe)
-                        _rider.NodeManager.DisconnectedFromRemoteNodeEvent.Subscribers.Add(client, c => c == client);
+                        _rider.Cluster.DisconnectedFromRemoteNodeEvent.Subscribers.Add(client, c => c == client);
                     else
-                        _rider.NodeManager.DisconnectedFromRemoteNodeEvent.Subscribers.Remove(client);
+                        _rider.Cluster.DisconnectedFromRemoteNodeEvent.Subscribers.Remove(client);
                     break;
 
                 case HorseEventType.RemoteNodeConnect:
                     if (subscribe)
-                        _rider.NodeManager.RemoteNodeConnectEvent.Subscribers.Add(client, c => c == client);
+                        _rider.Cluster.RemoteNodeConnectEvent.Subscribers.Add(client, c => c == client);
                     else
-                        _rider.NodeManager.RemoteNodeConnectEvent.Subscribers.Remove(client);
+                        _rider.Cluster.RemoteNodeConnectEvent.Subscribers.Remove(client);
                     break;
 
                 case HorseEventType.RemoteNodeDisconnect:
                     if (subscribe)
-                        _rider.NodeManager.RemoteNodeDisconnectEvent.Subscribers.Add(client, c => c == client);
+                        _rider.Cluster.RemoteNodeDisconnectEvent.Subscribers.Add(client, c => c == client);
                     else
-                        _rider.NodeManager.RemoteNodeDisconnectEvent.Subscribers.Remove(client);
+                        _rider.Cluster.RemoteNodeDisconnectEvent.Subscribers.Remove(client);
                     break;
 
                 case HorseEventType.QueueCreate:

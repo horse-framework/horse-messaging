@@ -1,6 +1,6 @@
 using System;
 using Horse.Messaging.Protocol;
-using Horse.Messaging.Server.Options;
+using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Queues;
 
 namespace Horse.Messaging.Data.Configuration
@@ -19,7 +19,10 @@ namespace Horse.Messaging.Data.Configuration
                        MessageSizeLimit = configuration.MessageSizeLimit,
                        ClientLimit = configuration.ClientLimit,
                        DelayBetweenMessages = configuration.DelayBetweenMessages,
-                       PutBackDelay = configuration.PutBackDelay
+                       PutBackDelay = configuration.PutBackDelay,
+                       AutoDestroy = configuration.AutoDestroy.ToQueueDestroy(),
+                       PutBack = configuration.PutBack.ToPutBackDecision(),
+                       CommitWhen = configuration.CommitWhen.ToCommitWhen()
                    };
         }
 
@@ -35,7 +38,10 @@ namespace Horse.Messaging.Data.Configuration
                        MessageSizeLimit = options.MessageSizeLimit,
                        ClientLimit = options.ClientLimit,
                        DelayBetweenMessages = options.DelayBetweenMessages,
-                       PutBackDelay = options.PutBackDelay
+                       PutBack = options.PutBack.ToString(),
+                       PutBackDelay = options.PutBackDelay,
+                       AutoDestroy = options.AutoDestroy.ToString(),
+                       CommitWhen = options.CommitWhen.ToString()
                    };
         }
 

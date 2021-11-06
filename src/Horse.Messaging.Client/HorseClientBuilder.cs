@@ -140,9 +140,18 @@ namespace Horse.Messaging.Client
 		/// <summary>
 		/// Adds new host to connect
 		/// </summary>
+		[Obsolete("Use AddHost method instead of this")]
 		public HorseClientBuilder SetHost(string hostname)
 		{
-			_client.RemoteHost = hostname;
+			return AddHost(hostname);
+		}
+
+		/// <summary>
+		/// Adds new host to connect
+		/// </summary>
+		public HorseClientBuilder AddHost(string hostname)
+		{
+			_client.AddHost(hostname);
 			return this;
 		}
 

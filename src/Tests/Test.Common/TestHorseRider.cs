@@ -22,7 +22,6 @@ namespace Test.Common
         public int OnReceived { get; set; }
         public int OnSendStarting { get; set; }
         public int OnBeforeSend { get; set; }
-        public int OnAfterSend { get; set; }
         public int OnSendCompleted { get; set; }
         public int OnAcknowledge { get; set; }
         public int OnTimeUp { get; set; }
@@ -40,26 +39,33 @@ namespace Test.Common
 
         public PutBackDecision PutBack { get; set; }
 
+        public HorseServer Server { get; private set; }
 
         public async Task Initialize()
         {
             Rider = HorseRiderBuilder.Create()
-               .ConfigureQueues(q =>
+                .ConfigureQueues(q =>
                 {
                     q.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
                     q.Options.MessageTimeout = TimeSpan.FromSeconds(12);
                     q.Options.Type = QueueType.Push;
                     q.Options.AutoQueueCreation = true;
-                    
+
                     q.EventHandlers.Add(new TestQueueHandler(this));
-                    q.UseDeliveryHandler(_ => Task.FromResult<IMessageDeliveryHandler>(new TestDeliveryHandler(this)));
+                    
+                    q.UseCustomQueueManager("Default", async m =>
+                    {
+                        m.Queue.Options.CommitWhen = CommitWhen.AfterReceived;
+                        m.Queue.Options.PutBack = PutBackDecision.No;
+                        return new TestQueueManager(this, m.Queue);
+                    });
                 })
-               .ConfigureClients(c =>
+                .ConfigureClients(c =>
                 {
                     c.Handlers.Add(new TestClientHandler(this));
                     c.AdminAuthorizations.Add(new TestAdminAuthorization());
                 })
-               .Build();
+                .Build();
 
             await Rider.Queue.Create("push-a", o => o.Type = QueueType.Push);
             await Rider.Queue.Create("push-a-cc", o => o.Type = QueueType.Push);
@@ -81,9 +87,9 @@ namespace Test.Common
                     serverOptions.PingInterval = pingInterval;
                     serverOptions.RequestTimeout = requestTimeout;
 
-                    HorseServer server = new HorseServer(serverOptions);
-                    server.UseRider(Rider);
-                    server.Start();
+                    Server = new HorseServer(serverOptions);
+                    Server.UseRider(Rider);
+                    Server.Start();
                     Port = port;
                     return port;
                 }
@@ -93,7 +99,18 @@ namespace Test.Common
                 }
             }
 
+            Task.Run(async () =>
+            {
+                await Task.Delay(30000);
+                Stop();
+            });
+
             return 0;
+        }
+
+        public void Stop()
+        {
+            Server.Stop();
         }
     }
 }

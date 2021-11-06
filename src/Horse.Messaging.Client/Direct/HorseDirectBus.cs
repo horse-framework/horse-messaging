@@ -40,15 +40,15 @@ namespace Horse.Messaging.Client.Direct
         }
 
         /// <inheritdoc />
-        public Task<HorseResult> SendAsync(string target, ushort contentType, MemoryStream content, bool waitAcknowledge, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        public Task<HorseResult> SendAsync(string target, ushort contentType, MemoryStream content, bool waitForCommit, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Direct.SendAsync(target, contentType, content, waitAcknowledge, messageHeaders);
+            return _client.Direct.SendAsync(target, contentType, content, waitForCommit, messageHeaders);
         }
 
         /// <inheritdoc />
-        public Task<HorseResult> SendByName(string name, ushort contentType, MemoryStream content, bool waitAcknowledge, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        public Task<HorseResult> SendByName(string name, ushort contentType, MemoryStream content, bool waitForCommit, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
-            return _client.Direct.SendByName(name, contentType, content, waitAcknowledge, messageHeaders);
+            return _client.Direct.SendByName(name, contentType, content, waitForCommit, messageHeaders);
         }
 
         /// <inheritdoc />

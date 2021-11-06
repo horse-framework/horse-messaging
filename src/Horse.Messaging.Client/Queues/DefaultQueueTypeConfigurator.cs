@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Queues
@@ -34,6 +35,15 @@ namespace Horse.Messaging.Client.Queues
         {
             get => TimeSpan.FromMilliseconds(_operator.DescriptorContainer.Default.DelayBetweenMessages ?? 0);
             set => _operator.DescriptorContainer.Default.DelayBetweenMessages = value.HasValue ? Convert.ToInt32(value.Value.TotalMilliseconds) : 0;
+        }
+
+        /// <summary>
+        /// Put back decision
+        /// </summary>
+        public PutBack? PutBackDecision
+        {
+            get => _operator.DescriptorContainer.Default.PutBackDecision;
+            set => _operator.DescriptorContainer.Default.PutBackDecision = value;
         }
 
         /// <summary>

@@ -6,13 +6,12 @@ using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
-using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.States;
-using Horse.Messaging.Server.Queues.Store;
 using Horse.Messaging.Server.Security;
 
 namespace Horse.Messaging.Server.Queues
@@ -63,7 +62,13 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Message store of the queue
         /// </summary>
-        internal IQueueMessageStore Store { get; private set; }
+        public IHorseQueueManager Manager
+        {
+            get => _manager;
+            set => _manager ??= value;
+        }
+
+        private IHorseQueueManager _manager;
 
         /// <summary>
         /// Queue options.
@@ -72,15 +77,19 @@ namespace Horse.Messaging.Server.Queues
         public QueueOptions Options { get; }
 
         /// <summary>
-        /// Queue messaging handler.
-        /// If null, server's default delivery will be used.
-        /// </summary>
-        public IMessageDeliveryHandler DeliveryHandler { get; set; }
-
-        /// <summary>
         /// Queue statistics and information
         /// </summary>
         public QueueInfo Info { get; } = new QueueInfo();
+
+        /// <summary>
+        /// Queue delivery handler name
+        /// </summary>
+        internal string HandlerName { get; set; }
+
+        /// <summary>
+        /// Message header data which triggers the initialization of the queue
+        /// </summary>
+        internal IEnumerable<KeyValuePair<string, string>> InitializationMessageHeaders { get; set; }
 
         /// <summary>
         /// Returns currently processing message.
@@ -89,15 +98,9 @@ namespace Horse.Messaging.Server.Queues
         public QueueMessage ProcessingMessage => State?.ProcessingMessage;
 
         /// <summary>
-        /// Time keeper for the queue.
-        /// Checks message receiver deadlines and delivery deadlines.
-        /// </summary>
-        internal QueueTimeKeeper TimeKeeper { get; private set; }
-
-        /// <summary>
         /// Returns true, if there are no messages in queue
         /// </summary>
-        public bool IsEmpty => Store == null || Store.CountAll() == 0;
+        public bool IsEmpty => Manager.MessageStore.IsEmpty && Manager.PriorityMessageStore.IsEmpty;
 
         /// <summary>
         /// Wait acknowledge cross thread locker
@@ -107,7 +110,7 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Sync object for inserting messages into queue as FIFO
         /// </summary>
-        private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
+        internal SemaphoreSlim QueueLock { get; } = new(1, 1);
 
         /// <summary>
         /// This task holds the code until acknowledge is received
@@ -147,6 +150,7 @@ namespace Horse.Messaging.Server.Queues
         public List<QueueClient> ClientsClone => _clients.GetAsClone();
 
         private readonly SafeList<QueueClient> _clients;
+        private readonly SemaphoreSlim _triggerLock = new SemaphoreSlim(1, 1);
 
         /// <summary>
         /// True if queue is destroyed
@@ -193,7 +197,6 @@ namespace Horse.Messaging.Server.Queues
             Options = options;
             Type = options.Type;
             _clients = new SafeList<QueueClient>(256);
-            Store = new LinkedMessageStore(this);
             Status = QueueStatus.NotInitialized;
 
             PushEvent = new EventManager(rider, HorseEventType.QueuePush, name);
@@ -212,8 +215,8 @@ namespace Horse.Messaging.Server.Queues
                 return;
 
             Rider.Queue.StatusChangeEvent.Trigger(Name,
-                                                  new KeyValuePair<string, string>($"Previous-{HorseHeaders.STATUS}", Status.ToString()),
-                                                  new KeyValuePair<string, string>($"Next-{HorseHeaders.STATUS}", newStatus.ToString()));
+                new KeyValuePair<string, string>($"Previous-{HorseHeaders.STATUS}", Status.ToString()),
+                new KeyValuePair<string, string>($"Next-{HorseHeaders.STATUS}", newStatus.ToString()));
 
             Status = newStatus;
         }
@@ -221,26 +224,24 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Initializes queue to first use
         /// </summary>
-        internal async Task InitializeQueue(IMessageDeliveryHandler deliveryHandler = null)
+        internal async Task InitializeQueue(IHorseQueueManager queueManager = null)
         {
-            await _lock.WaitAsync();
+            await QueueLock.WaitAsync();
             try
             {
                 if (Status != QueueStatus.NotInitialized)
                     return;
 
-                if (deliveryHandler != null)
-                    DeliveryHandler = deliveryHandler;
+                if (queueManager != null)
+                    Manager = queueManager;
 
-                if (DeliveryHandler == null)
-                    throw new ArgumentNullException("Queue has no delivery handler: " + Name);
+                if (queueManager == null)
+                    throw new ArgumentNullException("Queue has no manager: " + Name);
 
-                var tuple = QueueStateFactory.Create(this, Options.Type);
-                State = tuple.Item1;
+                State = QueueStateFactory.Create(this, Options.Type);
                 Type = Options.Type;
 
-                TimeKeeper = new QueueTimeKeeper(this);
-                TimeKeeper.Run();
+                await queueManager.Initialize();
 
                 _ackLock = new SemaphoreSlim(1, 1);
                 Status = QueueStatus.Running;
@@ -253,9 +254,14 @@ namespace Horse.Messaging.Server.Queues
                     _ = CheckAutoDestroy();
                 }, null, TimeSpan.FromMilliseconds(5000), TimeSpan.FromMilliseconds(5000));
             }
+            catch (Exception e)
+            {
+                Rider.SendError("InitializeQueue", e, Name);
+                throw;
+            }
             finally
             {
-                _lock.Release();
+                QueueLock.Release();
             }
         }
 
@@ -268,10 +274,7 @@ namespace Horse.Messaging.Server.Queues
 
             try
             {
-                if (TimeKeeper != null)
-                    await TimeKeeper.Destroy();
-
-                Store?.ClearAll();
+                await Manager.Destroy();
 
                 if (_ackLock != null)
                 {
@@ -279,8 +282,8 @@ namespace Horse.Messaging.Server.Queues
                     _ackLock = null;
                 }
 
-                if (_lock != null)
-                    _lock.Dispose();
+                if (QueueLock != null)
+                    QueueLock.Dispose();
 
                 if (_triggerTimer != null)
                 {
@@ -294,6 +297,8 @@ namespace Horse.Messaging.Server.Queues
             }
 
             _clients.Clear();
+
+            Rider.Cluster.SendQueueRemoved(this);
         }
 
         /// <summary>
@@ -313,17 +318,43 @@ namespace Horse.Messaging.Server.Queues
                     break;
 
                 case QueueDestroy.NoMessages:
-                    if (IsEmpty && (TimeKeeper == null || !TimeKeeper.HasPendingDelivery()))
+                    if (IsEmpty && Manager.DeliveryHandler.Tracker.GetDeliveryCount() == 0)
                         await Rider.Queue.Remove(this);
 
                     break;
 
                 case QueueDestroy.Empty:
-                    if (_clients.Count == 0 && IsEmpty && (TimeKeeper == null || !TimeKeeper.HasPendingDelivery()))
+                    if (_clients.Count == 0 && IsEmpty && Manager.DeliveryHandler.Tracker.GetDeliveryCount() == 0)
                         await Rider.Queue.Remove(this);
 
                     break;
             }
+        }
+
+        internal NodeQueueInfo CreateNodeQueueInfo()
+        {
+            return new NodeQueueInfo
+            {
+                Name = Name,
+                Topic = Topic,
+                HandlerName = HandlerName,
+                Initialized = Status != QueueStatus.NotInitialized,
+                PutBackDelay = Options.PutBackDelay,
+                MessageSizeLimit = Options.MessageSizeLimit,
+                MessageLimit = Options.MessageLimit,
+                ClientLimit = Options.ClientLimit,
+                MessageTimeout = Convert.ToInt32(Options.MessageTimeout.TotalSeconds),
+                AcknowledgeTimeout = Convert.ToInt32(Options.AcknowledgeTimeout.TotalMilliseconds),
+                DelayBetweenMessages = Options.DelayBetweenMessages,
+                Acknowledge = Options.Acknowledge.FromAckDecision(),
+                AutoDestroy = Options.AutoDestroy.FromQueueDestroy(),
+                QueueType = Options.Type.FromQueueType(),
+                Headers = InitializationMessageHeaders?.Select(x => new NodeQueueHandlerHeader
+                {
+                    Key = x.Key,
+                    Value = x.Value
+                }).ToArray()
+            };
         }
 
         #endregion
@@ -331,88 +362,39 @@ namespace Horse.Messaging.Server.Queues
         #region Messages
 
         /// <summary>
-        /// Returns pending high priority messages count
-        /// </summary>
-        public int PriorityMessageCount()
-        {
-            return Store == null ? 0 : Store.CountPriority();
-        }
-
-        /// <summary>
-        /// Returns pending regular messages count
-        /// </summary>
-        public int MessageCount()
-        {
-            return Store == null ? 0 : Store.CountRegular();
-        }
-
-        /// <summary>
-        /// Returns unique pending message count
-        /// </summary>
-        public int GetAckPendingMessageCount()
-        {
-            if (TimeKeeper == null)
-                return 0;
-
-            return TimeKeeper.GetPendingMessageCount();
-        }
-
-        /// <summary>
-        /// Returns next message but doesn't dequeue it
-        /// </summary>
-        public QueueMessage FindNextMessage(bool priority)
-        {
-            if (priority)
-                return Store.GetPriorityNext(false);
-
-            return Store.GetRegularNext(false);
-        }
-
-        /// <summary>
-        /// Changes message priority.
-        /// Removes message from previous prio queue and puts it new prio queue.
-        /// If putBack is true, item will be put to the end of the queue
-        /// </summary>
-        public async Task<bool> ChangeMessagePriority(QueueMessage message, bool highPriority, bool putBack = true)
-        {
-            if (message.Message.HighPriority == highPriority)
-                return false;
-
-            await RemoveMessage(message, true, true);
-            message.Message.HighPriority = highPriority;
-            Store.Put(message, putBack);
-            return true;
-        }
-
-        /// <summary>
-        /// Removes the message from the queue.
-        /// Remove operation will be canceled If force is false and message is not sent.
-        /// If silent is false, MessageRemoved method of delivery handler is called
-        /// </summary>
-        public async Task<bool> RemoveMessage(QueueMessage message, bool force = false, bool silent = false)
-        {
-            if (!force && !message.IsSent)
-                return false;
-
-            Store.Remove(message);
-
-            if (!silent)
-            {
-                Info.AddMessageRemove();
-                await DeliveryHandler.MessageDequeued(this, message);
-            }
-
-            return true;
-        }
-
-        /// <summary>
         /// Adds message into the queue
         /// </summary>
-        internal void AddMessage(QueueMessage message, bool toEnd = true)
+        internal void AddMessage(QueueMessage message, bool trigger = true)
         {
-            Store.Put(message, toEnd);
+            bool added = false;
 
-            if (State != null && State.TriggerSupported && !_triggering)
+            for (int i = 0; i < 3; i++)
+                try
+                {
+                    if (Status == QueueStatus.Syncing)
+                    {
+                        try
+                        {
+                            QueueLock.Wait();
+                        }
+                        finally
+                        {
+                            QueueLock.Release();
+                        }
+                    }
+
+                    added = Manager.AddMessage(message);
+                    break;
+                }
+                catch
+                {
+                    Thread.Sleep(1);
+                }
+
+            if (added)
+                message.IsInQueue = true;
+
+            if (added && trigger && State != null && State.TriggerSupported && !_triggering)
                 _ = Trigger();
         }
 
@@ -428,26 +410,16 @@ namespace Horse.Messaging.Server.Queues
             foreach (KeyValuePair<string, string> pair in message.Headers)
             {
                 if (pair.Key.Equals(HorseHeaders.ACKNOWLEDGE, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    switch (pair.Value.Trim().ToLower())
-                    {
-                        case "none":
-                            Options.Acknowledge = QueueAckDecision.None;
-                            break;
-                        case "request":
-                            Options.Acknowledge = QueueAckDecision.JustRequest;
-                            break;
-                        case "wait":
-                            Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-                            break;
-                    }
-                }
+                    Options.Acknowledge = pair.Value.ToAckDecision();
 
                 else if (pair.Key.Equals(HorseHeaders.QUEUE_TYPE, StringComparison.InvariantCultureIgnoreCase))
                     Options.Type = pair.Value.ToQueueType();
 
                 else if (pair.Key.Equals(HorseHeaders.QUEUE_TOPIC, StringComparison.InvariantCultureIgnoreCase))
                     Topic = pair.Value;
+
+                else if (pair.Key.Equals(HorseHeaders.PUT_BACK, StringComparison.InvariantCultureIgnoreCase))
+                    Options.PutBack = pair.Value.ToPutBackDecision();
 
                 else if (pair.Key.Equals(HorseHeaders.PUT_BACK_DELAY, StringComparison.InvariantCultureIgnoreCase))
                     Options.PutBackDelay = Convert.ToInt32(pair.Value);
@@ -464,6 +436,28 @@ namespace Horse.Messaging.Server.Queues
                         Options.DelayBetweenMessages = Convert.ToInt32(pair.Value);
                 }
             }
+        }
+
+        internal void UpdateOptionsByNodeInfo(NodeQueueInfo info)
+        {
+            if (!string.IsNullOrEmpty(info.Acknowledge))
+                Options.Acknowledge = info.Acknowledge.ToAckDecision();
+
+            if (!string.IsNullOrEmpty(info.Topic))
+                Topic = info.Topic;
+
+            if (!string.IsNullOrEmpty(info.AutoDestroy))
+                Options.AutoDestroy = info.AutoDestroy.ToQueueDestroy();
+
+            Options.AcknowledgeTimeout = TimeSpan.FromMilliseconds(info.AcknowledgeTimeout);
+            Options.MessageTimeout = TimeSpan.FromSeconds(info.MessageTimeout);
+
+            Options.ClientLimit = info.ClientLimit;
+            Options.MessageLimit = info.MessageLimit;
+            Options.MessageSizeLimit = info.MessageSizeLimit;
+
+            Options.DelayBetweenMessages = info.DelayBetweenMessages;
+            Options.PutBackDelay = info.PutBackDelay;
         }
 
         #endregion
@@ -502,21 +496,21 @@ namespace Horse.Messaging.Server.Queues
                 try
                 {
                     UpdateOptionsByMessage(message.Message);
-                    DeliveryHandlerBuilder handlerBuilder = new DeliveryHandlerBuilder
+                    QueueManagerBuilder handlerBuilder = new QueueManagerBuilder
                     {
                         Server = Rider,
                         Queue = this,
                         Headers = message.Message.Headers,
-                        DeliveryHandlerHeader = message.Message.FindHeader(HorseHeaders.DELIVERY_HANDLER)
+                        ManagerName = message.Message.FindHeader(HorseHeaders.QUEUE_MANAGER)
                     };
 
-                    if (string.IsNullOrEmpty(handlerBuilder.DeliveryHandlerHeader))
-                        handlerBuilder.DeliveryHandlerHeader = "Default";
+                    if (string.IsNullOrEmpty(handlerBuilder.ManagerName))
+                        handlerBuilder.ManagerName = "Default";
 
-                    Func<DeliveryHandlerBuilder, Task<IMessageDeliveryHandler>> factory = Rider.Queue.DeliveryHandlerFactories[handlerBuilder.DeliveryHandlerHeader];
-                    IMessageDeliveryHandler deliveryHandler = await factory(handlerBuilder);
-                    
-                    await InitializeQueue(deliveryHandler);
+                    Func<QueueManagerBuilder, Task<IHorseQueueManager>> factory = Rider.Queue.QueueManagerFactories[handlerBuilder.ManagerName];
+                    IHorseQueueManager queueManager = await factory(handlerBuilder);
+
+                    await InitializeQueue(queueManager);
 
                     handlerBuilder.TriggerAfterCompleted();
                 }
@@ -530,24 +524,29 @@ namespace Horse.Messaging.Server.Queues
             if (Status is QueueStatus.OnlyConsume or QueueStatus.Paused)
                 return PushResult.StatusNotSupported;
 
-            if (Options.MessageLimit > 0 && Store.CountAll() >= Options.MessageLimit)
-                return PushResult.LimitExceeded;
+            if (Options.MessageLimit > 0)
+            {
+                int count = Manager.PriorityMessageStore.Count() + Manager.MessageStore.Count();
+                if (count >= Options.MessageLimit)
+                    return PushResult.LimitExceeded;
+            }
 
             if (Options.MessageSizeLimit > 0 && message.Message.Length > Options.MessageSizeLimit)
                 return PushResult.LimitExceeded;
 
             //remove operational headers that are should not be sent to consumers or saved to disk
             message.Message.RemoveHeaders(HorseHeaders.DELAY_BETWEEN_MESSAGES,
-                                          HorseHeaders.ACKNOWLEDGE,
-                                          HorseHeaders.QUEUE_NAME,
-                                          HorseHeaders.QUEUE_TYPE,
-                                          HorseHeaders.QUEUE_TOPIC,
-                                          HorseHeaders.PUT_BACK_DELAY,
-                                          HorseHeaders.DELIVERY,
-                                          HorseHeaders.DELIVERY_HANDLER,
-                                          HorseHeaders.MESSAGE_TIMEOUT,
-                                          HorseHeaders.ACK_TIMEOUT,
-                                          HorseHeaders.CC);
+                HorseHeaders.ACKNOWLEDGE,
+                HorseHeaders.QUEUE_NAME,
+                HorseHeaders.QUEUE_TYPE,
+                HorseHeaders.QUEUE_TOPIC,
+                HorseHeaders.PUT_BACK,
+                HorseHeaders.PUT_BACK_DELAY,
+                HorseHeaders.DELIVERY,
+                HorseHeaders.QUEUE_MANAGER,
+                HorseHeaders.MESSAGE_TIMEOUT,
+                HorseHeaders.ACK_TIMEOUT,
+                HorseHeaders.CC);
 
             //prepare properties
             message.Message.WaitResponse = Options.Acknowledge != QueueAckDecision.None;
@@ -563,10 +562,33 @@ namespace Horse.Messaging.Server.Queues
 
             try
             {
+                if (Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                {
+                    if (Rider.Cluster.State > NodeState.Main)
+                        return PushResult.StatusNotSupported;
+
+                    try
+                    {
+                        await QueueLock.WaitAsync();
+
+                        if (Rider.Cluster.State > NodeState.Main)
+                            return PushResult.StatusNotSupported;
+                    }
+                    finally
+                    {
+                        QueueLock.Release();
+                    }
+
+                    bool ack = await Rider.Cluster.SendQueueMessage(message.Message);
+                    if (!ack)
+                        return PushResult.Error;
+                }
+
                 //fire message receive event
                 Info.AddMessageReceive();
-                Decision decision = await DeliveryHandler.ReceivedFromProducer(this, message, sender);
+                Decision decision = await Manager.DeliveryHandler.ReceivedFromProducer(this, message, sender);
                 message.Decision = decision;
+                Rider.Cluster.QueueUpdate = DateTime.UtcNow;
 
                 bool allow = await ApplyDecision(decision, message);
 
@@ -574,7 +596,7 @@ namespace Horse.Messaging.Server.Queues
                     _ = handler.OnProduced(this, message, sender);
 
                 if (!allow)
-                    return PushResult.Success;
+                    return PushResult.StatusNotSupported;
 
                 AddMessage(message);
 
@@ -588,22 +610,19 @@ namespace Horse.Messaging.Server.Queues
                 Info.AddError();
                 try
                 {
-                    Decision decision = await DeliveryHandler.ExceptionThrown(this, State.ProcessingMessage, ex);
+                    await Manager.OnExceptionThrown("PUSH", State.ProcessingMessage, ex);
 
                     //the message is removed from the queue and it's not sent to consumers
                     //we should put the message back into the queue
                     if (!message.IsInQueue && !message.IsSent)
-                        decision = new Decision(true, true, PutBackDecision.Start, DeliveryAcknowledgeDecision.None);
-
-                    if (State.ProcessingMessage != null)
-                        await ApplyDecision(decision, State.ProcessingMessage);
+                        ApplyPutBack(Decision.PutBackMessage(true), message, 1000);
                 }
                 catch //if developer does wrong operation, we should not stop
                 {
                 }
-            }
 
-            return PushResult.Success;
+                return PushResult.Error;
+            }
         }
 
         /// <summary>
@@ -614,22 +633,22 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         public async Task Trigger()
         {
-            if (_triggering)
+            if (_triggering || !State.TriggerSupported)
                 return;
 
-            await _lock.WaitAsync();
+            if (Rider.Cluster.Options.Mode == ClusterMode.Reliable && Rider.Cluster.State > NodeState.Main)
+                return;
+
+            await _triggerLock.WaitAsync();
             try
             {
-                if (_triggering || !State.TriggerSupported)
-                    return;
-
                 _triggering = true;
                 await ProcessPendingMessages();
             }
             finally
             {
                 _triggering = false;
-                _lock.Release();
+                _triggerLock.Release();
             }
         }
 
@@ -644,30 +663,67 @@ namespace Horse.Messaging.Server.Queues
                 if (_clients.Count == 0)
                     return;
 
-                QueueMessage message = Store.GetNext(true);
+                bool waitForAck = Options.Type != QueueType.RoundRobin && Options.Acknowledge == QueueAckDecision.WaitForAcknowledge;
+                if (waitForAck)
+                    await WaitForAcknowledge();
+
+                if (Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                {
+                    try
+                    {
+                        await QueueLock.WaitAsync();
+                    }
+                    finally
+                    {
+                        QueueLock.Release();
+                    }
+                }
+
+                QueueMessage message = null;
+
+                if (Manager.PriorityMessageStore.Count() > 0)
+                    message = Manager.PriorityMessageStore.ConsumeFirst();
+
+                if (message == null && Manager.MessageStore.Count() > 0)
+                    message = Manager.MessageStore.ConsumeFirst();
+
                 if (message == null)
+                {
+                    if (waitForAck)
+                        ReleaseAcknowledgeLock(false);
+
                     return;
+                }
 
                 try
                 {
+                    if (Options.Acknowledge == QueueAckDecision.WaitForAcknowledge && !message.Message.WaitResponse)
+                        message.Message.WaitResponse = true;
+
                     PushResult pr = await State.Push(message);
                     if (pr == PushResult.NoConsumers || pr == PushResult.Empty)
+                    {
+                        if (waitForAck)
+                            ReleaseAcknowledgeLock(false);
+
                         return;
+                    }
                 }
                 catch (Exception ex)
                 {
+                    if (waitForAck)
+                        ReleaseAcknowledgeLock(false);
+
                     Rider.SendError("PROCESS_MESSAGES", ex, $"QueueName:{Name}");
                     Info.AddError();
                     try
                     {
-                        Decision decision = await DeliveryHandler.ExceptionThrown(this, message, ex);
+                        await Manager.OnExceptionThrown("PROCESS_MESSAGES", message, ex);
 
                         //the message is removed from the queue and it's not sent to consumers
                         //we should put the message back into the queue
                         if (!message.IsInQueue && !message.IsSent)
-                            decision = new Decision(true, true, PutBackDecision.Start, DeliveryAcknowledgeDecision.None);
-
-                        await ApplyDecision(decision, message, null, 5000);
+                            ApplyPutBack(Decision.PutBackMessage(true), message, 1000);
                     }
                     catch //if developer does wrong operation, we should not stop
                     {
@@ -677,6 +733,96 @@ namespace Horse.Messaging.Server.Queues
                 if (Options.DelayBetweenMessages > 0)
                     await Task.Delay(Options.DelayBetweenMessages);
             }
+        }
+
+        internal async Task<PushResult> PushByNode(HorseMessage horseMessage)
+        {
+            QueueMessage message = new QueueMessage(horseMessage);
+
+            if (Status == QueueStatus.NotInitialized)
+            {
+                try
+                {
+                    UpdateOptionsByMessage(message.Message);
+                    QueueManagerBuilder handlerBuilder = new QueueManagerBuilder
+                    {
+                        Server = Rider,
+                        Queue = this,
+                        Headers = message.Message.Headers,
+                        ManagerName = message.Message.FindHeader(HorseHeaders.QUEUE_MANAGER)
+                    };
+
+                    if (string.IsNullOrEmpty(handlerBuilder.ManagerName))
+                        handlerBuilder.ManagerName = "Default";
+
+                    Func<QueueManagerBuilder, Task<IHorseQueueManager>> factory = Rider.Queue.QueueManagerFactories[handlerBuilder.ManagerName];
+                    IHorseQueueManager queueManager = await factory(handlerBuilder);
+
+                    await InitializeQueue(queueManager);
+
+                    handlerBuilder.TriggerAfterCompleted();
+                }
+                catch (Exception e)
+                {
+                    Rider.SendError("INITIALIZE_IN_PUSH", e, $"QueueName:{Name}");
+                    throw;
+                }
+            }
+
+            //if we have an option maximum wait duration for message, set it after message joined to the queue.
+            //time keeper will check this value and if message time is up, it will remove message from the queue.
+            if (Options.MessageTimeout > TimeSpan.Zero)
+                message.Deadline = DateTime.UtcNow.Add(Options.MessageTimeout);
+
+            if (Status == QueueStatus.Syncing)
+            {
+                try
+                {
+                    await QueueLock.WaitAsync();
+                }
+                finally
+                {
+                    QueueLock.Release();
+                }
+            }
+
+            try
+            {
+                Info.AddMessageReceive();
+                Decision decision = await Manager.DeliveryHandler.ReceivedFromProducer(this, message, null);
+                message.Decision = decision;
+
+                bool allow = await ApplyDecision(decision, message);
+
+                foreach (IQueueMessageEventHandler handler in Rider.Queue.MessageHandlers.All())
+                    _ = handler.OnProduced(this, message, null);
+
+                if (!allow)
+                    return PushResult.Success;
+
+                AddMessage(message, false);
+
+                return PushResult.Success;
+            }
+            catch (Exception ex)
+            {
+                Rider.SendError("PUSH", ex, $"QueueName:{Name}");
+                Info.AddError();
+                try
+                {
+                    await Manager.OnExceptionThrown("PUSH", State.ProcessingMessage, ex);
+
+                    //the message is removed from the queue and it's not sent to consumers
+                    //we should put the message back into the queue
+                    if (!message.IsInQueue && !message.IsSent)
+                        ApplyPutBack(Decision.PutBackMessage(true), message, 1000);
+                }
+                catch //if developer does wrong operation, we should not stop
+                {
+                }
+            }
+
+            return PushResult.Success;
         }
 
         #endregion
@@ -689,27 +835,20 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         internal static Decision CreateFinalDecision(Decision final, Decision decision)
         {
-            bool allow = false;
-            PutBackDecision putBack = PutBackDecision.No;
-            bool save = false;
-            DeliveryAcknowledgeDecision ack = DeliveryAcknowledgeDecision.None;
+            bool save = final.Save || decision.Save;
+            bool interrupt = final.Interrupt || decision.Interrupt;
+            bool delete = final.Delete || decision.Delete;
 
-            if (decision.Allow)
-                allow = true;
+            PutBackDecision putBack = final.PutBack;
+            DecisionTransmission transmission = final.Transmission;
 
             if (decision.PutBack != PutBackDecision.No)
                 putBack = decision.PutBack;
 
-            if (decision.SaveMessage)
-                save = true;
+            if (decision.Transmission != DecisionTransmission.None)
+                transmission = decision.Transmission;
 
-            if (decision.Acknowledge == DeliveryAcknowledgeDecision.Always)
-                ack = DeliveryAcknowledgeDecision.Always;
-
-            else if (decision.Acknowledge == DeliveryAcknowledgeDecision.IfSaved && final.Acknowledge == DeliveryAcknowledgeDecision.None)
-                ack = DeliveryAcknowledgeDecision.IfSaved;
-
-            return new Decision(allow, save, putBack, ack);
+            return new Decision(interrupt, save, delete, putBack, transmission);
         }
 
         /// <summary>
@@ -722,32 +861,29 @@ namespace Horse.Messaging.Server.Queues
         {
             try
             {
-                if (decision.SaveMessage)
+                if (decision.Save)
                     await SaveMessage(message);
 
-                if (!message.IsProducerAckSent && (decision.Acknowledge == DeliveryAcknowledgeDecision.Always ||
-                                                   decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ||
-                                                   decision.Acknowledge == DeliveryAcknowledgeDecision.IfSaved && message.IsSaved))
+                if (decision.Transmission != DecisionTransmission.None && !message.IsProducerAckSent)
                 {
-                    HorseMessage acknowledge = customAck ?? message.Message.CreateAcknowledge(decision.Acknowledge == DeliveryAcknowledgeDecision.Negative ? "none" : null);
-
+                    HorseMessage acknowledge = customAck ?? message.Message.CreateAcknowledge(decision.Transmission == DecisionTransmission.Failed ? "failed" : null);
                     if (message.Source != null && message.Source.IsConnected)
                     {
                         bool sent = await message.Source.SendAsync(acknowledge);
                         message.IsProducerAckSent = sent;
-                        if (decision.AcknowledgeDelivery != null)
-                            await decision.AcknowledgeDelivery(message, message.Source, sent);
                     }
-                    else if (decision.AcknowledgeDelivery != null)
-                        await decision.AcknowledgeDelivery(message, message.Source, false);
                 }
 
                 if (decision.PutBack != PutBackDecision.No)
                     ApplyPutBack(decision, message, forceDelay);
-                else if (!decision.Allow)
+                else if (decision.Delete && !message.IsRemoved)
                 {
                     Info.AddMessageRemove();
-                    _ = DeliveryHandler.MessageDequeued(this, message);
+                    await Manager.RemoveMessage(message);
+                    message.MarkAsRemoved();
+
+                    if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                        Rider.Cluster.SendMessageRemoval(this, message.Message);
                 }
             }
             catch (Exception e)
@@ -755,7 +891,7 @@ namespace Horse.Messaging.Server.Queues
                 Rider.SendError("APPLY_DECISION", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
             }
 
-            return decision.Allow;
+            return !decision.Interrupt;
         }
 
         /// <summary>
@@ -763,17 +899,28 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         internal void ApplyPutBack(Decision decision, QueueMessage message, int forceDelay = 0)
         {
+            message.Message.HighPriority = decision.PutBack == PutBackDecision.Priority;
+
             switch (decision.PutBack)
             {
-                case PutBackDecision.Start:
+                case PutBackDecision.Priority:
                     if (Options.PutBackDelay == 0)
+                    {
                         AddMessage(message, false);
+
+                        if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                            Rider.Cluster.SendPutBack(this, message.Message, false);
+                    }
                     else
                         _ = Task.Run(async () =>
                         {
                             try
                             {
                                 await Task.Delay(Options.PutBackDelay);
+
+                                if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                                    Rider.Cluster.SendPutBack(this, message.Message, false);
+
                                 AddMessage(message, false);
                             }
                             catch (Exception e)
@@ -781,17 +928,27 @@ namespace Horse.Messaging.Server.Queues
                                 Rider.SendError("DELAYED_PUT_BACK", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
                             }
                         });
+
                     break;
 
-                case PutBackDecision.End:
+                case PutBackDecision.Regular:
                     if (Options.PutBackDelay == 0 && forceDelay == 0)
+                    {
                         AddMessage(message);
+
+                        if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                            Rider.Cluster.SendPutBack(this, message.Message, true);
+                    }
                     else
                         _ = Task.Run(async () =>
                         {
                             try
                             {
                                 await Task.Delay(Math.Max(forceDelay, Options.PutBackDelay));
+
+                                if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                                    Rider.Cluster.SendPutBack(this, message.Message, true);
+
                                 AddMessage(message);
                             }
                             catch (Exception e)
@@ -799,6 +956,7 @@ namespace Horse.Messaging.Server.Queues
                                 Rider.SendError("DELAYED_PUT_BACK", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
                             }
                         });
+
                     break;
             }
         }
@@ -814,7 +972,7 @@ namespace Horse.Messaging.Server.Queues
                     return false;
 
                 if (Status != QueueStatus.NotInitialized)
-                    message.IsSaved = await DeliveryHandler.SaveMessage(this, message);
+                    message.IsSaved = await Manager.SaveMessage(message);
 
                 if (message.IsSaved)
                     Info.AddMessageSave();
@@ -827,39 +985,6 @@ namespace Horse.Messaging.Server.Queues
             return message.IsSaved;
         }
 
-        /// <summary>
-        /// Sends decision to all connected master nodes
-        /// </summary>
-        public void SendDecisionToNodes(QueueMessage queueMessage, Decision decision)
-        {
-            HorseMessage msg = new HorseMessage(MessageType.Server, null, 10);
-            DecisionOverNode model = new DecisionOverNode
-            {
-                Queue = Name,
-                MessageId = queueMessage.Message.MessageId,
-                Acknowledge = decision.Acknowledge,
-                Allow = decision.Allow,
-                PutBack = decision.PutBack,
-                SaveMessage = decision.SaveMessage
-            };
-
-            msg.Serialize(model, Rider.MessageContentSerializer);
-            Rider.NodeManager.SendMessageToNodes(msg);
-        }
-
-        /// <summary>
-        /// Applies decision over node to the queue
-        /// </summary>
-        internal async Task ApplyDecisionOverNode(string messageId, Decision decision)
-        {
-            QueueMessage message = Store.FindAndRemove(x => x.Message.MessageId == messageId);
-
-            if (message == null)
-                return;
-
-            await ApplyDecision(decision, message);
-        }
-
         #endregion
 
         #region Acknowledge
@@ -867,17 +992,15 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// When wait for acknowledge is active, this method locks the queue until acknowledge is received
         /// </summary>
-        internal async Task WaitForAcknowledge(QueueMessage message)
+        internal async Task WaitForAcknowledge()
         {
-            //if we will lock the queue until ack received, we must request ack
-            if (!message.Message.WaitResponse)
-                message.Message.WaitResponse = true;
-
             await _ackLock.WaitAsync();
             try
             {
-                if (_acknowledgeCallback != null)
-                    await _acknowledgeCallback.Task;
+                TaskCompletionSource<bool> source = _acknowledgeCallback;
+
+                if (source != null)
+                    await source.Task;
 
                 _acknowledgeCallback = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             }
@@ -897,8 +1020,8 @@ namespace Horse.Messaging.Server.Queues
                 if (Status == QueueStatus.NotInitialized)
                     return;
 
-                MessageDelivery delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
-                
+                MessageDelivery delivery = Manager.DeliveryHandler.Tracker.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
+
                 //when server and consumer are in pc,
                 //sometimes consumer sends ack before server start to follow ack of the message
                 //that happens when ack message is arrived in less than 0.01ms
@@ -907,49 +1030,46 @@ namespace Horse.Messaging.Server.Queues
                 if (delivery == null)
                 {
                     await Task.Delay(1);
-                    delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
+                    delivery = Manager.DeliveryHandler.Tracker.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
 
                     //try again
                     if (delivery == null)
                     {
                         await Task.Delay(3);
-                        delivery = TimeKeeper.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
+                        delivery = Manager.DeliveryHandler.Tracker.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
                     }
                 }
+
+                if (delivery == null || delivery.Acknowledge == DeliveryAcknowledge.Timeout)
+                    return;
 
                 bool success = !(deliveryMessage.HasHeader &&
                                  deliveryMessage.Headers.Any(x => x.Key.Equals(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)));
 
-                if (delivery != null)
-                {
-                    if (delivery.Receiver != null && delivery.Message == delivery.Receiver.CurrentlyProcessing)
-                        delivery.Receiver.CurrentlyProcessing = null;
+                if (delivery.Receiver != null && delivery.Message == delivery.Receiver.CurrentlyProcessing)
+                    delivery.Receiver.CurrentlyProcessing = null;
 
-                    delivery.MarkAsAcknowledged(success);
-                }
+                delivery.MarkAsAcknowledged(success);
+                ReleaseAcknowledgeLock(true);
 
                 if (success)
                     Info.AddAcknowledge();
                 else
                     Info.AddNegativeAcknowledge();
 
-                Decision decision = await DeliveryHandler.AcknowledgeReceived(this, deliveryMessage, delivery, success);
+                Decision decision = await Manager.DeliveryHandler.AcknowledgeReceived(this, deliveryMessage, delivery, success);
 
-                // ReSharper disable once ConditionIsAlwaysTrueOrFalse (it's possible, resharper doesn't work properly in here)
-                if (delivery != null)
-                    await ApplyDecision(decision, delivery.Message, deliveryMessage);
+                await ApplyDecision(decision, delivery.Message, deliveryMessage);
 
                 foreach (IQueueMessageEventHandler handler in Rider.Queue.MessageHandlers.All())
                     _ = handler.OnAcknowledged(this, deliveryMessage, delivery, success);
-
-                ReleaseAcknowledgeLock(true);
 
                 if (success)
                     MessageAckEvent.Trigger(from, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId));
                 else
                     MessageNackEvent.Trigger(from,
-                                             new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId),
-                                             new KeyValuePair<string, string>(HorseHeaders.REASON, deliveryMessage.FindHeader(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON)));
+                        new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, deliveryMessage.MessageId),
+                        new KeyValuePair<string, string>(HorseHeaders.REASON, deliveryMessage.FindHeader(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON)));
             }
             catch (Exception e)
             {
@@ -962,11 +1082,20 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         internal void ReleaseAcknowledgeLock(bool received)
         {
-            if (_acknowledgeCallback != null)
+            try
             {
                 TaskCompletionSource<bool> ack = _acknowledgeCallback;
-                _acknowledgeCallback = null;
-                ack.SetResult(received);
+                if (ack != null)
+                {
+                    _acknowledgeCallback = null;
+                    ack.SetResult(received);
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (InvalidOperationException)
+            {
             }
         }
 

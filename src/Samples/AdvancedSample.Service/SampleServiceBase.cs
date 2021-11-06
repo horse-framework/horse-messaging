@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace AdvancedSample.Service
 {
-	public abstract class SampleServiceBase
+	internal abstract class SampleServiceBase: ISampleService
 	{
 		private string _hostname;
 		private IHost _host;
@@ -30,11 +30,7 @@ namespace AdvancedSample.Service
 			_clientType = string.IsNullOrWhiteSpace(clientType) ? throw new ArgumentException("Client type must be defined", nameof(clientType)) : clientType;
 		}
 
-		public void Build()
-		{
-			_host = BuildHost(_args);
-		}
-
+	
 		public void Run()
 		{
 			Build();
@@ -46,26 +42,31 @@ namespace AdvancedSample.Service
 			}
 		}
 
-		protected void ConfigureHorseClient(Action<HorseClientBuilder> builderDelegate)
+		public void ConfigureHorseClient(Action<HorseClientBuilder> builderDelegate)
 		{
 			_clientBuilderDelegate = builderDelegate;
 		}
 
-		protected void ConfigureHostBuilder(Action<IHostBuilder> hostBuilderDelegate)
+		public void ConfigureHostBuilder(Action<IHostBuilder> hostBuilderDelegate)
 		{
 			_hostBuilderDelegate = hostBuilderDelegate;
 		}
 
-		protected void ConfigureServices(Action<IServiceCollection> configureDelegate)
+		public void ConfigureServices(Action<IServiceCollection> configureDelegate)
 		{
 			_configureDelegate1 = configureDelegate;
 		}
 
-		protected void ConfigureServices(Action<IServiceCollection, IConfiguration> configureDelegate)
+		public void ConfigureServices(Action<IServiceCollection, IConfiguration> configureDelegate)
 		{
 			_configureDelegate2 = configureDelegate;
 		}
-
+		
+		private void Build()
+		{
+			_host = BuildHost(_args);
+		}
+		
 		private IHost BuildHost(string[] args)
 		{
 			var builder = Host.CreateDefaultBuilder(args)
@@ -119,5 +120,14 @@ namespace AdvancedSample.Service
 		{
 			_logger.LogCritical(exception, "[ERROR]");
 		}
+	}
+
+	public interface ISampleService
+	{
+		public void ConfigureHorseClient(Action<HorseClientBuilder> builderDelegate);
+		public void ConfigureHostBuilder(Action<IHostBuilder> hostBuilderDelegate);
+		public void ConfigureServices(Action<IServiceCollection> configureDelegate);
+		public void ConfigureServices(Action<IServiceCollection, IConfiguration> configureDelegate);
+		public void Run();
 	}
 }

@@ -32,7 +32,7 @@ namespace Horse.Messaging.Server.Queues
                 if (_queue.Status == QueueStatus.Paused || _queue.Status == QueueStatus.OnlyConsume)
                     return PushResult.StatusNotSupported;
 
-                int max = _queue.PriorityMessageCount() + _queue.MessageCount() + items.Count();
+                int max = _queue.Manager.PriorityMessageStore.Count() + _queue.Manager.MessageStore.Count() + items.Count();
                 if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
                     return PushResult.LimitExceeded;
 
@@ -46,7 +46,11 @@ namespace Horse.Messaging.Server.Queues
                     message.Serialize(item, _queue.Rider.MessageContentSerializer);
                     QueueMessage qm = new QueueMessage(message, createAsSaved);
 
-                    _queue.Store.Put(qm, true);
+
+                    if (message.HighPriority)
+                        _queue.Manager.PriorityMessageStore.Put(qm);
+                    else
+                        _queue.Manager.MessageStore.Put(qm);
                 }
 
                 _ = _queue.Trigger();
@@ -71,7 +75,7 @@ namespace Horse.Messaging.Server.Queues
                 if (_queue.Status == QueueStatus.Paused || _queue.Status == QueueStatus.OnlyConsume)
                     return PushResult.StatusNotSupported;
 
-                int max = _queue.PriorityMessageCount() + _queue.MessageCount() + items.Count();
+                int max = _queue.Manager.PriorityMessageStore.Count() + _queue.Manager.MessageStore.Count() + items.Count();
                 if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
                     return PushResult.LimitExceeded;
 
@@ -85,7 +89,11 @@ namespace Horse.Messaging.Server.Queues
                     message.Serialize(item, _queue.Rider.MessageContentSerializer);
 
                     QueueMessage qm = new QueueMessage(message, createAsSaved);
-                    _queue.Store.Put(qm, true);
+
+                    if (message.HighPriority)
+                        _queue.Manager.PriorityMessageStore.Put(qm);
+                    else
+                        _queue.Manager.MessageStore.Put(qm);
                 }
 
                 _ = _queue.Trigger();
@@ -109,7 +117,7 @@ namespace Horse.Messaging.Server.Queues
                 if (_queue.Status == QueueStatus.Paused || _queue.Status == QueueStatus.OnlyConsume)
                     return PushResult.StatusNotSupported;
 
-                int max = _queue.PriorityMessageCount() + _queue.MessageCount() + items.Count();
+                int max = _queue.Manager.PriorityMessageStore.Count() + _queue.Manager.MessageStore.Count() + items.Count();
                 if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
                     return PushResult.LimitExceeded;
 
@@ -125,7 +133,11 @@ namespace Horse.Messaging.Server.Queues
                     message.CalculateLengths();
 
                     QueueMessage qm = new QueueMessage(message, createAsSaved);
-                    _queue.Store.Put(qm, true);
+
+                    if (message.HighPriority)
+                        _queue.Manager.PriorityMessageStore.Put(qm);
+                    else
+                        _queue.Manager.MessageStore.Put(qm);
                 }
 
                 _ = _queue.Trigger();
@@ -149,7 +161,7 @@ namespace Horse.Messaging.Server.Queues
                 if (_queue.Status == QueueStatus.Paused || _queue.Status == QueueStatus.OnlyConsume)
                     return PushResult.StatusNotSupported;
 
-                int max = _queue.PriorityMessageCount() + _queue.MessageCount() + items.Count();
+                int max = _queue.Manager.PriorityMessageStore.Count() + _queue.Manager.MessageStore.Count() + items.Count();
                 if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
                     return PushResult.LimitExceeded;
 
@@ -165,7 +177,11 @@ namespace Horse.Messaging.Server.Queues
                     message.CalculateLengths();
 
                     QueueMessage qm = new QueueMessage(message, createAsSaved);
-                    _queue.Store.Put(qm, true);
+
+                    if (message.HighPriority)
+                        _queue.Manager.PriorityMessageStore.Put(qm);
+                    else
+                        _queue.Manager.MessageStore.Put(qm);
                 }
 
                 _ = _queue.Trigger();
@@ -189,7 +205,7 @@ namespace Horse.Messaging.Server.Queues
                 if (_queue.Status == QueueStatus.Paused || _queue.Status == QueueStatus.OnlyConsume)
                     return PushResult.StatusNotSupported;
 
-                int max = _queue.PriorityMessageCount() + _queue.MessageCount() + messages.Count();
+                int max = _queue.Manager.PriorityMessageStore.Count() + _queue.Manager.MessageStore.Count() + messages.Count();
                 if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
                     return PushResult.LimitExceeded;
 
@@ -203,7 +219,11 @@ namespace Horse.Messaging.Server.Queues
                     message.CalculateLengths();
 
                     QueueMessage qm = new QueueMessage(message, isSaved);
-                    _queue.Store.Put(qm, true);
+
+                    if (message.HighPriority)
+                        _queue.Manager.PriorityMessageStore.Put(qm);
+                    else
+                        _queue.Manager.MessageStore.Put(qm);
 
                     if (actionPerMessage != null)
                         actionPerMessage(qm);

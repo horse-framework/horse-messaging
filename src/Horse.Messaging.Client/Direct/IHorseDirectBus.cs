@@ -21,13 +21,13 @@ namespace Horse.Messaging.Client.Direct
         /// <param name="target">Target Id</param>
         /// <param name="contentType">Message content type</param>
         /// <param name="content">Message content</param>
-        /// <param name="waitAcknowledge">If true, awaitable waits for acknowledge</param>
+        /// <param name="waitForCommit">If true, awaitable waits for commit</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> SendAsync(string target,
                                     ushort contentType,
                                     MemoryStream content,
-                                    bool waitAcknowledge,
+                                    bool waitForCommit,
                                     IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
@@ -36,13 +36,13 @@ namespace Horse.Messaging.Client.Direct
         /// <param name="name">Receiver client name</param>
         /// <param name="contentType">Message content type</param>
         /// <param name="content">Message content</param>
-        /// <param name="waitAcknowledge">If true, awaitable waits for acknowledge</param>
+        /// <param name="waitForCommit">If true, awaitable waits for commit</param>
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> SendByName(string name,
                                      ushort contentType,
                                      MemoryStream content,
-                                     bool waitAcknowledge,
+                                     bool waitForCommit,
                                      IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>

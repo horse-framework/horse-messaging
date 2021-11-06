@@ -4,9 +4,9 @@ using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Cache;
 using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Direct;
-using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
 using Horse.Messaging.Server.Transactions;
@@ -67,9 +67,9 @@ namespace Horse.Messaging.Server
         public HorseServer Server { get; internal set; }
 
         /// <summary>
-        /// Node server for distribitued systems
+        /// Cluster manager
         /// </summary>
-        public NodeManager NodeManager { get; }
+        public ClusterManager Cluster { get; }
 
         /// <summary>
         /// Error handlers
@@ -116,10 +116,10 @@ namespace Horse.Messaging.Server
             Channel = new ChannelRider(this);
             Transaction = new TransactionRider(this);
             Cache = new HorseCache(this);
-            NodeManager = new NodeManager(this);
+            Cluster = new ClusterManager(this);
 
             Cache.Initialize();
-            NodeManager.Initialize();
+            Cluster.Initialize();
         }
 
         /// <summary>

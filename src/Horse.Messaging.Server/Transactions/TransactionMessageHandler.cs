@@ -22,19 +22,19 @@ namespace Horse.Messaging.Server.Transactions
 
         #endregion
 
-        public Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
+        public async Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
         {
             try
             {
-                return HandleUnsafe(client, message);
+                await HandleUnsafe(client, message);
             }
             catch (OperationCanceledException)
             {
-                return client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
+                await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
             }
             catch
             {
-                return client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
+                await client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
             }
         }
 

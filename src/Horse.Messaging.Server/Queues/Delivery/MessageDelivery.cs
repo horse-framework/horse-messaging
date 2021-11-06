@@ -19,9 +19,9 @@ namespace Horse.Messaging.Server.Queues.Delivery
         Acknowledge,
 
         /// <summary>
-        /// Consumer sent a failed acknowledge for the message
+        /// Consumer sent a negative acknowledge for the message
         /// </summary>
-        Unacknowledge,
+        NegativeAcknowledge,
 
         /// <summary>
         /// Acknowledge timed out
@@ -35,11 +35,6 @@ namespace Horse.Messaging.Server.Queues.Delivery
     public class MessageDelivery
     {
         #region Properties
-
-        /// <summary>
-        /// True, if receiver is the first acquirer of the message
-        /// </summary>
-        public bool FirstAcquirer { get; internal set; }
 
         /// <summary>
         /// The message
@@ -123,7 +118,7 @@ namespace Horse.Messaging.Server.Queues.Delivery
         {
             Acknowledge = success
                                ? DeliveryAcknowledge.Acknowledge
-                               : DeliveryAcknowledge.Unacknowledge;
+                               : DeliveryAcknowledge.NegativeAcknowledge;
 
             AcknowledgeDate = DateTime.UtcNow;
         }
@@ -133,7 +128,7 @@ namespace Horse.Messaging.Server.Queues.Delivery
         /// </summary>
         public bool MarkAsAcknowledgeTimeout()
         {
-            if (Receiver != null)
+            if (Receiver != null && Receiver.CurrentlyProcessing == Message)
                 Receiver.CurrentlyProcessing = null;
             
             if (Acknowledge != DeliveryAcknowledge.None)

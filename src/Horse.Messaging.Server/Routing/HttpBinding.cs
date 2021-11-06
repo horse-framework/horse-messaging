@@ -31,7 +31,7 @@ namespace Horse.Messaging.Server.Routing
         /// Sends message to target as HTTP request and waits for response.
         /// Ok Accepted and Created responses return true, others return false
         /// </summary>
-        public override Task<bool> Send(MessagingClient sender, HorseMessage message)
+        public override async Task<bool> Send(MessagingClient sender, HorseMessage message)
         {
             try
             {
@@ -78,14 +78,14 @@ namespace Horse.Messaging.Server.Routing
                 }
 
                 if (response == null)
-                    return Task.FromResult(false);
+                    return false;
 
-                return ProcessResponse(response);
+                return await ProcessResponse(response);
             }
             catch (Exception e)
             {
                 Router.Rider.SendError("BINDING_SEND", e, $"Type:Http, Binding:{Name}");
-                return Task.FromResult(false);
+                return false;
             }
         }
 

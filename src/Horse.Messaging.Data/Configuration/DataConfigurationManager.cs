@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Horse.Messaging.Data.Implementation;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
 
@@ -70,6 +71,14 @@ namespace Horse.Messaging.Data.Configuration
         /// </summary>
         public bool Add(HorseQueue queue, string filename)
         {
+            PersistentQueueManager manager = queue.Manager as PersistentQueueManager;
+            if (manager == null)
+                return false;
+
+            lock (_optionsLock)
+                if (Config.Queues.Any(x => x.Name == queue.Name))
+                    return false;
+
             QueueOptionsConfiguration queueOptions = queue.Options.ToConfiguration();
 
             QueueConfiguration queueConfiguration = new QueueConfiguration();
@@ -77,12 +86,6 @@ namespace Horse.Messaging.Data.Configuration
             queueConfiguration.Name = queue.Name;
             queueConfiguration.File = filename;
             queueConfiguration.Queue = queue;
-
-            if (queue.DeliveryHandler is IPersistentDeliveryHandler deliveryHandler)
-            {
-                queueConfiguration.DeleteWhen = Convert.ToInt32(deliveryHandler.DeleteWhen);
-                queueConfiguration.ProducerAck = Convert.ToInt32(deliveryHandler.ProducerAckDecision);
-            }
 
             lock (_optionsLock)
                 Config.Queues.Add(queueConfiguration);
@@ -117,7 +120,7 @@ namespace Horse.Messaging.Data.Configuration
                     queue = await rider.Queue.Create(queueConfiguration.Name,
                                                      queueConfiguration.Configuration.ToOptions(),
                                                      null, false, false, null,
-                                                     "PERSISTENT_RELOAD");
+                                                     "PERSISTENT");
 
                     //queue creation not permitted, skip
                     if (queue == null)
@@ -125,8 +128,7 @@ namespace Horse.Messaging.Data.Configuration
                 }
                 else
                 {
-                    if (queue.DeliveryHandler is IPersistentDeliveryHandler deliveryHandler)
-                        await deliveryHandler.Initialize();
+                    await queue.Manager.Initialize();
                 }
 
                 queueConfiguration.Queue = queue;

@@ -3,10 +3,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using AdvancedSample.Messaging.Server.RouteBindings;
 using Horse.Messaging.Data;
+using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
-using Horse.Messaging.Server.Handlers;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
+using Horse.Messaging.Server.Transactions;
 using Horse.Server;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -25,10 +26,10 @@ namespace AdvancedSample.Messaging.Server
         private readonly IErrorHandler _errorHandler;
 
         public AdvancedSampleHostedService(IOptions<ServerOptions> options,
-                                           ILogger<AdvancedSampleHostedService> logger,
-                                           IQueueEventHandler queueEventHandler,
-                                           IClientHandler clientHandler,
-                                           IErrorHandler errorHandler)
+            ILogger<AdvancedSampleHostedService> logger,
+            IQueueEventHandler queueEventHandler,
+            IClientHandler clientHandler,
+            IErrorHandler errorHandler)
         {
             _logger = logger;
             _queueEventHandler = queueEventHandler;
@@ -44,8 +45,11 @@ namespace AdvancedSample.Messaging.Server
         public Task StartAsync(CancellationToken cancellationToken)
         {
             HorseRider rider = _riderBuilder.Build();
-            rider.LoadPersistentQueues().GetAwaiter().GetResult();
             rider.ConfigureServiceRoutes();
+            rider.Transaction.CreateContainer("test", TimeSpan.FromSeconds(30),
+                new QueueTransactionEndpoint(rider.Queue, "CommitQueue"),
+                new QueueTransactionEndpoint(rider.Queue, "RollbackQueue"),
+                new QueueTransactionEndpoint(rider.Queue, "TimeoutQueue"));
             _server.UseRider(rider);
             _server.Start();
             return Task.CompletedTask;
@@ -63,11 +67,16 @@ namespace AdvancedSample.Messaging.Server
                 .ConfigureQueues(cfg =>
                 {
                     cfg.EventHandlers.Add(_queueEventHandler);
-                    cfg.UsePersistentDeliveryHandler(q =>
-                    {
-                        q.UseAutoFlush(TimeSpan.FromMilliseconds(500));
-                        q.KeepLastBackup();
-                    }, DeleteWhen.AfterAcknowledgeReceived, ProducerAckDecision.AfterConsumerAckReceived, true);
+                    cfg.UsePersistentQueues(q =>
+                        {
+                            q.UseAutoFlush(TimeSpan.FromMilliseconds(500));
+                            q.KeepLastBackup();
+                        },
+                        q =>
+                        {
+                            q.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                            q.Options.CommitWhen = CommitWhen.AfterReceived;
+                        }, true);
 
                     cfg.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(30);
                     cfg.Options.Type = QueueType.RoundRobin;

@@ -1,116 +1,99 @@
-using System.Threading.Tasks;
-using Horse.Messaging.Server.Clients;
-
 namespace Horse.Messaging.Server.Queues.Delivery
 {
-    /// <summary>
-    /// 
-    /// </summary>
-    public enum PutBackDecision
-    {
-        /// <summary>
-        /// Message will not keep and put back to the queue
-        /// </summary>
-        No,
-
-        /// <summary>
-        /// Message will be put back to the beginning of the queue.
-        /// It will be consumed at first.
-        /// </summary>
-        Start,
-
-        /// <summary>
-        /// Message will be put back to the end of the queue.
-        /// It will be consumed at last.
-        /// </summary>
-        End
-    }
-
-    /// <summary>
-    /// When sending ack to producer is decided.
-    /// An acknowledge message is sent to producer.
-    /// This handler is called after acknowledge send operation.
-    /// </summary>
-    public delegate Task QueueAcknowledgeDeliveryHandler(QueueMessage message, MessagingClient producer, bool success);
-
     /// <summary>
     /// Decision description for each step in message delivery
     /// </summary>
     public readonly struct Decision
     {
         /// <summary>
-        /// If true, operation will continue
+        /// If true, queue message operation will be interrupted.
         /// </summary>
-        public readonly bool Allow;
+        public readonly bool Interrupt;
 
         /// <summary>
         /// If true, message will be saved.
         /// If message already saved, second save will be discarded.
         /// </summary>
-        public readonly bool SaveMessage;
+        public readonly bool Save;
 
         /// <summary>
-        /// If true, message will be kept in front of the queue.
+        /// If true, message will be deleted.
+        /// If message already deleted, second save will be discarded.
+        /// </summary>
+        public readonly bool Delete;
+
+        /// <summary>
+        /// If not No, message will be kept in front of the queue.
         /// Settings this value always true may cause infinity same message send operation.
         /// </summary>
         public readonly PutBackDecision PutBack;
 
         /// <summary>
-        /// If true, server will send an acknowledge message to producer.
-        /// Sometimes acknowledge is required after save operation instead of receiving ack from consumer.
-        /// This can be true in similar cases.
+        /// Sending decision message to producer
         /// </summary>
-        public readonly DeliveryAcknowledgeDecision Acknowledge;
-
-        /// <summary>
-        /// If acknowledge is decided, this method will be called after acknowledge sent or failed
-        /// </summary>
-        public readonly QueueAcknowledgeDeliveryHandler AcknowledgeDelivery;
-
-        /// <summary>
-        /// Creates new decision without keeping messages and acknowledge
-        /// </summary>
-        public Decision(bool allow, bool save)
-        {
-            Allow = allow;
-            SaveMessage = save;
-            PutBack = PutBackDecision.No;
-            Acknowledge = DeliveryAcknowledgeDecision.None;
-            AcknowledgeDelivery = null;
-        }
+        public readonly DecisionTransmission Transmission;
 
         /// <summary>
         /// Creates new decision with full parameters
         /// </summary>
-        public Decision(bool allow, bool save, PutBackDecision putBack, DeliveryAcknowledgeDecision ack)
+        internal Decision(bool interrupt, bool save, bool delete, PutBackDecision putBack, DecisionTransmission transmission)
         {
-            Allow = allow;
-            SaveMessage = save;
+            Interrupt = interrupt;
+            Save = save;
+            Delete = delete;
             PutBack = putBack;
-            Acknowledge = ack;
-            AcknowledgeDelivery = null;
+            Transmission = transmission;
         }
 
         /// <summary>
-        /// Creates new decision with full parameters
+        /// Does nothing special. Just decision for moving to next handler step.
         /// </summary>
-        public Decision(bool allow, bool save, PutBackDecision putBack, DeliveryAcknowledgeDecision ack, QueueAcknowledgeDeliveryHandler acknowledgeDelivery)
+        public static Decision NoveNext(DecisionTransmission transmission = DecisionTransmission.None)
         {
-            Allow = allow;
-            SaveMessage = save;
-            PutBack = putBack;
-            Acknowledge = ack;
-            AcknowledgeDelivery = acknowledgeDelivery;
+            return new Decision(false, false, false, PutBackDecision.No, transmission);
         }
 
         /// <summary>
-        /// Creates allow decision.
-        /// Value does not save, keep and send acknowledge
+        /// Sends commit or failed message to producer
+        /// </summary>
+        public static Decision TransmitToProducer(DecisionTransmission transmission)
+        {
+            return new Decision(false, false, false, PutBackDecision.No, transmission);
+        }
+
+        /// <summary>
+        /// Creates new message remove decision
         /// </summary>
         /// <returns></returns>
-        public static Decision JustAllow()
+        public static Decision DeleteMessage(DecisionTransmission transmission = DecisionTransmission.None)
         {
-            return new Decision(true, false);
+            return new Decision(false, false, true, PutBackDecision.No, transmission);
+        }
+
+        /// <summary>
+        /// Saves the message.
+        /// If sendCommit is true, commit message is sent to producer
+        /// </summary>
+        public static Decision SaveMessage(DecisionTransmission transmission = DecisionTransmission.None)
+        {
+            return new Decision(false, true, false, PutBackDecision.No, transmission);
+        }
+
+        /// <summary>
+        /// Interrupts queue operation flow.
+        /// If delete parameter is true, message will be deleted.
+        /// </summary>
+        public static Decision InterruptFlow(bool deleteMessage, DecisionTransmission transmission = DecisionTransmission.None)
+        {
+            return new Decision(true, false, deleteMessage, PutBackDecision.No, transmission);
+        }
+
+        /// <summary>
+        /// Puts the message back to the queue
+        /// </summary>
+        public static Decision PutBackMessage(bool toEndOfQueue, DecisionTransmission transmission = DecisionTransmission.None)
+        {
+            return new Decision(false, false, false, toEndOfQueue ? PutBackDecision.Regular : PutBackDecision.Priority, transmission);
         }
     }
 }

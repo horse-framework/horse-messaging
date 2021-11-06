@@ -51,6 +51,7 @@ namespace Test.Queues.Types
 
             await Task.Delay(1500);
             Assert.Equal(msgSent, msgReceived);
+            server.Stop();
         }
 
         [Fact]
@@ -69,7 +70,7 @@ namespace Test.Queues.Types
 
             HorseQueue queue = server.Rider.Queue.Find("rr-a");
             Assert.NotNull(queue);
-            Assert.Equal(1, queue.MessageCount());
+            Assert.Equal(1, queue.Manager.MessageStore.Count());
 
             bool msgReceived = false;
             HorseClient consumer = new HorseClient();
@@ -82,6 +83,7 @@ namespace Test.Queues.Types
 
             await Task.Delay(800);
             Assert.True(msgReceived);
+            server.Stop();
         }
 
         [Theory]
@@ -112,7 +114,8 @@ namespace Test.Queues.Types
             Assert.Equal(HorseResultCode.Ok, joined.Code);
 
             HorseResult ack = await producer.Queue.Push("rr-a", "Hello, World!", true);
-            Assert.Equal(queueAckIsActive, ack.Code == HorseResultCode.Ok);
+            Assert.True(ack.Code == HorseResultCode.Ok);
+            server.Stop();
         }
 
         [Fact]
@@ -126,6 +129,7 @@ namespace Test.Queues.Types
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(5);
             queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+            queue.Options.PutBack = PutBackDecision.Regular;
 
             HorseClient producer = new HorseClient();
             await producer.ConnectAsync("horse://localhost:" + port);
@@ -153,6 +157,7 @@ namespace Test.Queues.Types
             await Task.Delay(1050);
             Assert.True(received > 8);
             Assert.True(received < 12);
+            server.Stop();
         }
 
         [Fact]
@@ -166,7 +171,8 @@ namespace Test.Queues.Types
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(2);
             queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-            server.PutBack = PutBackDecision.End;
+            server.PutBack = PutBackDecision.Regular;
+            queue.Options.PutBack = PutBackDecision.Regular;
 
             HorseClient producer = new HorseClient();
             await producer.ConnectAsync("horse://localhost:" + port);
@@ -190,7 +196,8 @@ namespace Test.Queues.Types
             Assert.Equal(2, received);
 
             //1 msg is pending ack, 1 msg is prepared and ready to send (waiting for ack) and 8 msgs are in queue
-            Assert.Equal(8, queue.MessageCount());
+            Assert.Equal(8, queue.Manager.MessageStore.Count());
+            server.Stop();
         }
 
         [Fact]
@@ -204,7 +211,7 @@ namespace Test.Queues.Types
             Assert.NotNull(queue);
             queue.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
             queue.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-            server.PutBack = PutBackDecision.End;
+            server.PutBack = PutBackDecision.Regular;
 
             HorseClient producer = new HorseClient();
             await producer.ConnectAsync("horse://localhost:" + port);
@@ -250,6 +257,7 @@ namespace Test.Queues.Types
             Assert.Equal(1, c1);
             Assert.Equal(1, c2);
             Assert.Equal(1, c3);
+            server.Stop();
         }
     }
 }

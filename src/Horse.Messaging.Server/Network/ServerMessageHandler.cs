@@ -7,8 +7,8 @@ using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Models;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Helpers;
-using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
 using Horse.Messaging.Server.Security;
@@ -33,19 +33,19 @@ namespace Horse.Messaging.Server.Network
 
         #region Handle
 
-        public Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
+        public async Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
         {
             try
             {
-                return HandleUnsafe(client, message);
+                await HandleUnsafe(client, message);
             }
             catch (OperationCanceledException)
             {
-                return client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
+                await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
             }
             catch (DuplicateNameException)
             {
-                return client.SendAsync(message.CreateResponse(HorseResultCode.Duplicate));
+                await client.SendAsync(message.CreateResponse(HorseResultCode.Duplicate));
             }
         }
 
@@ -86,8 +86,8 @@ namespace Horse.Messaging.Server.Network
                     return GetQueueList(client, message);
 
                 //get queue information
-                case KnownContentTypes.InstanceList:
-                    return GetInstanceList(client, message);
+                case KnownContentTypes.NodeList:
+                    return GetNodeList(client, message);
 
                 //get client information list
                 case KnownContentTypes.ClientList:
@@ -359,6 +359,8 @@ namespace Horse.Messaging.Server.Network
             //if creation successful, sends response
             if (message.WaitResponse)
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
+
+            _rider.Cluster.SendQueueUpdated(queue);
         }
 
         /// <summary>
@@ -393,11 +395,14 @@ namespace Horse.Messaging.Server.Network
             }
 
             if (clearPrio && clearMsgs)
-                queue.Store.ClearAll();
+            {
+                await queue.Manager.PriorityMessageStore.Clear();
+                await queue.Manager.MessageStore.Clear();
+            }
             else if (clearPrio)
-                queue.Store.ClearPriority();
+                await queue.Manager.PriorityMessageStore.Clear();
             else if (clearMsgs)
-                queue.Store.ClearRegular();
+                await queue.Manager.MessageStore.Clear();
 
             //if creation successful, sends response
             if (message.WaitResponse)
@@ -438,8 +443,10 @@ namespace Horse.Messaging.Server.Network
                     Name = queue.Name,
                     Topic = queue.Topic,
                     Status = queue.Status.ToString().Trim().ToLower(),
-                    PriorityMessages = queue.Store.CountPriority(),
-                    Messages = queue.Store.CountRegular(),
+                    PriorityMessages = queue.Manager.PriorityMessageStore.Count(),
+                    Messages = queue.Manager.MessageStore.Count(),
+                    ProcessingMessages = queue.ClientsClone.Count(x => x.CurrentlyProcessing != null),
+                    DeliveryTrackingMessags = queue.Manager.DeliveryHandler.Tracker.GetDeliveryCount(),
                     Acknowledge = ack,
                     AcknowledgeTimeout = Convert.ToInt32(queue.Options.AcknowledgeTimeout.TotalMilliseconds),
                     MessageTimeout = Convert.ToInt32(queue.Options.MessageTimeout.TotalMilliseconds),
@@ -473,7 +480,7 @@ namespace Horse.Messaging.Server.Network
         /// <summary>
         /// Gets connected instance list
         /// </summary>
-        private async Task GetInstanceList(MessagingClient client, HorseMessage message)
+        private async Task GetNodeList(MessagingClient client, HorseMessage message)
         {
             foreach (IAdminAuthorization authorization in _rider.Client.AdminAuthorizations.All())
             {
@@ -489,42 +496,29 @@ namespace Horse.Messaging.Server.Network
 
             List<NodeInformation> list = new List<NodeInformation>();
 
-            //slave instances
-            List<MessagingClient> slaves = _rider.NodeManager.IncomingNodes.GetAsClone();
-            foreach (MessagingClient slave in slaves)
-            {
-                list.Add(new NodeInformation
-                {
-                    IsSlave = true,
-                    Host = slave.RemoteHost,
-                    IsConnected = slave.IsConnected,
-                    Id = slave.UniqueId,
-                    Name = slave.Name,
-                    Lifetime = slave.ConnectedDate.LifetimeMilliseconds()
-                });
-            }
-
             //outgoing nodes
-            foreach (OutgoingNode node in _rider.NodeManager.OutgoingNodes)
+            foreach (NodeClient node in _rider.Cluster.Clients)
             {
-                if (node?.Client == null)
-                    continue;
-
-                NodeOptions options = node.Client.Tag as NodeOptions;
+                string state = NodeState.Replica.ToString();
+                if (node.Info.Id == _rider.Cluster.MainNode?.Id)
+                    state = NodeState.Main.ToString();
+                else if (node.Info.Id == _rider.Cluster.SuccessorNode?.Id)
+                    state = NodeState.Successor.ToString();
 
                 list.Add(new NodeInformation
                 {
-                    IsSlave = false,
-                    Host = options?.Host,
-                    IsConnected = node.Client.IsConnected,
-                    Id = node.Client.ClientId,
-                    Name = options?.Name,
-                    Lifetime = Convert.ToInt64(node.Client.Lifetime.TotalMilliseconds)
+                    Id = node.Info.Id,
+                    Name = node.Info.Name,
+                    Host = node.Info.Host,
+                    PublicHost = node.Info.PublicHost,
+                    State = state,
+                    IsConnected = node.IsConnected,
+                    Lifetime = Convert.ToInt64((DateTime.UtcNow - node.ConnectedDate).TotalMilliseconds)
                 });
             }
 
             HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
-            message.ContentType = KnownContentTypes.InstanceList;
+            message.ContentType = KnownContentTypes.NodeList;
             response.Serialize(list, _rider.MessageContentSerializer);
             await client.SendAsync(response);
         }

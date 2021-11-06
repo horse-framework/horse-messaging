@@ -17,19 +17,19 @@ namespace Horse.Messaging.Server.Cache
             _cache = server.Cache;
         }
 
-        public Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
+        public async Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
         {
             try
             {
-                return HandleUnsafe(client, message);
+                await HandleUnsafe(client, message);
             }
             catch (OperationCanceledException)
             {
-                return client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
+                await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
             }
             catch
             {
-                return client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
+                await client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
             }
         }
 
@@ -100,7 +100,7 @@ namespace Horse.Messaging.Server.Cache
                         case CacheResult.ItemSizeLimit:
                             await client.SendAsync(message.CreateResponse(HorseResultCode.ValueSizeLimit));
                             return;
-                        
+
                         default:
                             await client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
                             return;

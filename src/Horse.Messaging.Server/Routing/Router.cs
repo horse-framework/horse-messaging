@@ -55,9 +55,9 @@ namespace Horse.Messaging.Server.Routing
         /// Event Manage for HorseEventType.MessagePublishedToRouter
         /// </summary>
         public EventManager PublishEvent { get; }
-        
+
         private readonly object _rrlock = new object();
-        
+
         #endregion
 
         /// <summary>
@@ -165,35 +165,35 @@ namespace Horse.Messaging.Server.Routing
         /// <summary>
         /// Pushes a message to router
         /// </summary>
-        public Task<RouterPublishResult> Publish(MessagingClient sender, HorseMessage message)
+        public async Task<RouterPublishResult> Publish(MessagingClient sender, HorseMessage message)
         {
             try
             {
                 if (!IsEnabled)
-                    return Task.FromResult(RouterPublishResult.Disabled);
+                    return RouterPublishResult.Disabled;
 
                 if (Bindings.Length == 0)
-                    return Task.FromResult(RouterPublishResult.NoBindings);
+                    return RouterPublishResult.NoBindings;
 
                 switch (Method)
                 {
                     case RouteMethod.Distribute:
-                        return Distribute(sender, message);
+                        return await Distribute(sender, message);
 
                     case RouteMethod.OnlyFirst:
-                        return OnlyFirst(sender, message);
+                        return await OnlyFirst(sender, message);
 
                     case RouteMethod.RoundRobin:
-                        return RoundRobin(sender, message);
+                        return await RoundRobin(sender, message);
 
                     default:
-                        return Task.FromResult(RouterPublishResult.Disabled);
+                        return RouterPublishResult.Disabled;
                 }
             }
             catch (Exception e)
             {
                 Rider.SendError("PUBLISH", e, $"Router:{Name}, Binding:{Name}");
-                return Task.FromResult(RouterPublishResult.NoBindings);
+                return RouterPublishResult.NoBindings;
             }
         }
 
@@ -216,12 +216,11 @@ namespace Horse.Messaging.Server.Routing
 
                 if (sent)
                     result = binding.Interaction != BindingInteraction.None
-                                 ? RouterPublishResult.OkAndWillBeRespond
-                                 : RouterPublishResult.OkWillNotRespond;
+                        ? RouterPublishResult.OkAndWillBeRespond
+                        : RouterPublishResult.OkWillNotRespond;
 
                 index++;
-            }
-            while (!sent);
+            } while (!sent);
 
             return result;
         }
@@ -249,7 +248,7 @@ namespace Horse.Messaging.Server.Routing
 
             return result;
         }
-        
+
         /// <summary>
         /// Sends the message to only one binding within round robin algorithm
         /// </summary>
@@ -267,16 +266,16 @@ namespace Horse.Messaging.Server.Routing
 
                     index = _lastRoutedIndex;
                 }
-                
+
                 Binding binding = Bindings[index];
-                
+
                 bool waitResponse = message.WaitResponse;
                 bool sent = await binding.Send(sender, message);
                 message.WaitResponse = waitResponse;
                 if (sent)
                     return binding.Interaction != BindingInteraction.None
-                               ? RouterPublishResult.OkAndWillBeRespond
-                               : RouterPublishResult.OkWillNotRespond;
+                        ? RouterPublishResult.OkAndWillBeRespond
+                        : RouterPublishResult.OkWillNotRespond;
             }
 
             return RouterPublishResult.NoReceivers;

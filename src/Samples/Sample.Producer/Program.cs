@@ -32,7 +32,7 @@ namespace Sample.Producer
 		static async Task Main(string[] args)
 		{
 			HorseClientBuilder builder = new HorseClientBuilder();
-			builder.SetHost("horse://localhost:9999");
+			builder.SetHost("horse://localhost:15500");
 			builder.UseNewtonsoftJsonSerializer();
 			builder.SetResponseTimeout(TimeSpan.FromSeconds(300));
 			HorseClient client = builder.Build();
@@ -63,14 +63,14 @@ namespace Sample.Producer
 				// HorseResult result = await client.Router.PublishRequestJson<TestQuery, TestQueryResult>("test-service-route", query, 1);
 				// Console.WriteLine($"Push: {result.Code}");
 
-				// HorseResult result = await client.Router.PublishJson("test-service-route", command, null, true, 2);
+				HorseResult result = await client.Router.PublishJson("test-service-route", command, null, true, 2);
 				// Console.WriteLine($"Push: {result.Code}");
 
 				// var result = await client.Direct.RequestJson<ResponseModel>(new RequestModel());
 				// Console.WriteLine($"Push: {result.Code} ${JsonSerializer.Serialize(result.Model)}");
 
-				var result = await client.Queue.PushJson("SampleTestEvent", new TestEvent(), true);
-				
+				// var result = await client.Queue.PushJson("SampleTestEvent", new TestEvent(), true);
+
 				Console.WriteLine($"Push: {result.Code} {result.Reason} ${JsonSerializer.Serialize(result)}");
 				Console.ReadLine();
 				// await Task.Delay(5000);

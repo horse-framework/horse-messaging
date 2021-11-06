@@ -5,7 +5,6 @@ using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Direct;
 using Horse.Messaging.Server.Network;
-using Horse.Messaging.Server.Options;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
 using Horse.Server;
@@ -27,11 +26,10 @@ namespace Horse.Messaging.Server
             HorseNetworkHandler handler = new HorseNetworkHandler(horseRider);
             horseRider.Server = server;
 
-            horseRider.NodeManager.ConnectionHandler = new NodeConnectionHandler(horseRider.NodeManager, handler);
+            horseRider.Initialize();
+            horseRider.Cluster.Start();
+            
             server.UseHorseProtocol(handler);
-
-            if (horseRider.NodeManager != null)
-                horseRider.NodeManager.SubscribeStartStop(server);
 
             return server;
         }
@@ -45,19 +43,16 @@ namespace Horse.Messaging.Server
             HorseNetworkHandler handler = new HorseNetworkHandler(rider);
             rider.Server = server;
 
-            rider.NodeManager.ConnectionHandler = new NodeConnectionHandler(rider.NodeManager, handler);
-            server.UseHorseProtocol(handler);
-
-            if (rider.NodeManager != null)
-                rider.NodeManager.SubscribeStartStop(server);
-
             HorseRiderBuilder builder = new HorseRiderBuilder();
             builder.Rider = rider;
 
             cfg(builder);
             
             rider.Initialize();
+            rider.Cluster.Start();
             
+            server.UseHorseProtocol(handler);
+
             return rider;
         }
 

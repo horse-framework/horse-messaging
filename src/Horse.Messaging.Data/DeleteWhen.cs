@@ -13,6 +13,6 @@ namespace Horse.Messaging.Data
         /// <summary>
         /// After acknowledge is received from consumer.
         /// </summary>
-        AfterAcknowledgeReceived
+        AfterAcknowledge
     }
 }

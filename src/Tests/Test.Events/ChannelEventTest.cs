@@ -29,6 +29,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, ChannelCreateHandler.Count);
+            server.Stop();
         }
 
         [Fact]
@@ -53,6 +54,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, ChannelRemoveHandler.Count);
+            server.Stop();
         }
 
         [Fact]
@@ -74,6 +76,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, ChannelSubscribeHandler.Count);
+            server.Stop();
         }
 
         [Fact]
@@ -101,6 +104,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, ChannelUnsubscribeHandler.Count);
+            server.Stop();
         }
 
         [Fact]
@@ -122,6 +126,7 @@ namespace Test.Events
 
             await Task.Delay(250);
             Assert.Equal(1, ChannelPublishHandler.Count);
+            server.Stop();
         }
     }
 }

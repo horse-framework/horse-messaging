@@ -25,12 +25,13 @@ namespace Test.Nodes
 
             HorseClient client = new HorseClient();
             client.SetClientName("Test-" + port);
-            client.Connect("horse://localhost:" + port + "/path");
+            await client.ConnectAsync("horse://localhost:" + port + "/path");
 
             Thread.Sleep(50);
 
             Assert.True(client.IsConnected);
             Assert.Equal(1, server.ClientConnected);
+            server.Stop();
         }
 
         /// <summary>
@@ -48,7 +49,7 @@ namespace Test.Nodes
             for (int i = 0; i < 50; i++)
             {
                 TcpClient client = new TcpClient();
-                client.Connect("127.0.0.1", port);
+                await client.ConnectAsync("127.0.0.1", port);
                 clients.Add(client);
                 Thread.Sleep(20);
                 ThreadPool.UnsafeQueueUserWorkItem(async c =>
@@ -86,6 +87,7 @@ namespace Test.Nodes
             connectedClients = clients.Count(x => x.Connected);
             Assert.Equal(0, server.ClientConnected);
             Assert.Equal(0, connectedClients);
+            server.Stop();
         }
 
         /// <summary>
@@ -106,6 +108,7 @@ namespace Test.Nodes
 
             Assert.True(client.IsConnected);
             Assert.Equal(1, server.ClientConnected);
+            server.Stop();
         }
 
         /// <summary>
@@ -150,6 +153,7 @@ namespace Test.Nodes
 
             Assert.False(client.Connected);
             Assert.Equal(1, server.ClientDisconnected);
+            server.Stop();
         }
 
         /// <summary>
@@ -206,6 +210,7 @@ namespace Test.Nodes
             await Task.Delay(3000);
             Assert.Equal(connected, concurrentClients * connectionCount);
             Assert.Equal(disconnected, concurrentClients * connectionCount);
+            server.Stop();
         }
 
         [Theory]
@@ -228,6 +233,7 @@ namespace Test.Nodes
             var c = result.Model.FirstOrDefault();
             Assert.NotNull(c);
             Assert.Equal("client-test", c.Type);
+            server.Stop();
         }
     }
 }

@@ -166,9 +166,9 @@ namespace Horse.Messaging.Protocol
         public const string MESSAGES = "Messages";
 
         /// <summary>
-        /// "Delivery-Handler"
+        /// "Queue-Manager"
         /// </summary>
-        public const string DELIVERY_HANDLER = "Delivery-Handler";
+        public const string QUEUE_MANAGER = "Queue-Manager";
 
         /// <summary>
         /// "Acknowledge"
@@ -211,6 +211,11 @@ namespace Horse.Messaging.Protocol
         public const string FILTER = "Filter";
 
         /// <summary>
+        /// "Put-Back"
+        /// </summary>
+        public const string PUT_BACK = "Put-Back";
+
+        /// <summary>
         /// "Put-Back-Delay"
         /// </summary>
         public const string PUT_BACK_DELAY = "Put-Back-Delay";
@@ -248,11 +253,62 @@ namespace Horse.Messaging.Protocol
         /// <summary>
         /// "Susbcribe"
         /// </summary>
-        public const string SUBSCRIBE = "Susbcribe";
+        public const string SUBSCRIBE = "Subscribe";
         
         /// <summary>
         /// "Status"
         /// </summary>
         public const string STATUS = "Status";
+        
+        /// <summary>
+        /// "Node-Id"
+        /// </summary>
+        public const string NODE_ID = "Node-Id";
+
+        /// <summary>
+        /// "Node-Name"
+        /// </summary>
+        public const string NODE_NAME = "Node-Name";
+        
+        /// <summary>
+        /// "Node-Start"
+        /// </summary>
+        public const string NODE_START = "Node-Start";
+
+        /// <summary>
+        /// "Horse-Node"
+        /// </summary>
+        public const string HORSE_NODE = "Horse-Node";
+
+        /// <summary>
+        /// "Node-Host"
+        /// </summary>
+        public const string NODE_HOST = "Node-Host";
+        
+        /// <summary>
+        /// "Node-Public-Host"
+        /// </summary>
+        public const string NODE_PUBLIC_HOST = "Node-Public-Host";
+        
+        /// <summary>
+        /// "Yes"
+        /// </summary>
+        public const string YES = "Yes";
+
+        /// <summary>
+        /// "Main-Node"
+        /// </summary>
+        public const string MAIN_NODE = "Main-Node";
+        
+        /// <summary>
+        /// "Successor-Node"
+        /// </summary>
+        public const string SUCCESSOR_NODE = "Successor-Node";
+
+        /// <summary>
+        /// "Replica-Node"
+        /// </summary>
+        public const string REPLICA_NODE = "Replica-Node";
+
     }
 }
