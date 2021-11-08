@@ -117,10 +117,13 @@ namespace Horse.Messaging.Server.Queues.Delivery
         public void MarkAsAcknowledged(bool success)
         {
             Acknowledge = success
-                               ? DeliveryAcknowledge.Acknowledge
-                               : DeliveryAcknowledge.NegativeAcknowledge;
+                ? DeliveryAcknowledge.Acknowledge
+                : DeliveryAcknowledge.NegativeAcknowledge;
 
             AcknowledgeDate = DateTime.UtcNow;
+
+            if (Receiver != null && Receiver.CurrentlyProcessing == Message)
+                Receiver.CurrentlyProcessing = null;
         }
 
         /// <summary>
@@ -130,7 +133,7 @@ namespace Horse.Messaging.Server.Queues.Delivery
         {
             if (Receiver != null && Receiver.CurrentlyProcessing == Message)
                 Receiver.CurrentlyProcessing = null;
-            
+
             if (Acknowledge != DeliveryAcknowledge.None)
                 return false;
 

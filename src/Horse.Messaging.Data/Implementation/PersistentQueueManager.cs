@@ -100,6 +100,10 @@ namespace Horse.Messaging.Data.Implementation
 
             await LoadMessages(_priorityMessageStore.Database, deliveries);
             await LoadMessages(_messageStore.Database, deliveries);
+            
+            DeliveryHandler.Tracker.Start();
+            PriorityMessageStore.TimeoutTracker.Start();
+            MessageStore.TimeoutTracker.Start();
         }
 
         private async Task LoadMessages(Database database, List<KeyValuePair<string, int>> deliveries)
@@ -161,6 +165,13 @@ namespace Horse.Messaging.Data.Implementation
                 if (ConfigurationFactory.Builder.ErrorAction != null)
                     ConfigurationFactory.Builder.ErrorAction(Queue, null, e);
             }
+            
+            PriorityMessageStore.TimeoutTracker.Stop();
+            MessageStore.TimeoutTracker.Stop();
+
+            await DeliveryHandler.Tracker.Destroy();
+            await PriorityMessageStore.Destroy();
+            await MessageStore.Destroy();
         }
 
         /// <inheritdoc />

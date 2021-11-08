@@ -18,13 +18,14 @@ namespace Sample.Server
                 {
                     cfg.Options.Type = QueueType.Push;
                     cfg.EventHandlers.Add(new QueueEventHandler());
-
+/*
                     cfg.UseMemoryQueues(c =>
                     {
-                        c.Options.CommitWhen = CommitWhen.AfterAcknowledge;
-                        c.Options.PutBack = PutBackDecision.No;
+                        c.Options.CommitWhen = CommitWhen.AfterReceived;
+                        c.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                        c.Options.PutBack = PutBackDecision.Regular;
                     });
-
+*/
                     cfg.UsePersistentQueues(null, c =>
                     {
                         c.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
@@ -33,16 +34,16 @@ namespace Sample.Server
                 })
                 .ConfigureClients(cfg => { cfg.Handlers.Add(new ClientHandler()); })
                 .Build();
-
+/*
             rider.Transaction.CreateContainer("TransactionName",
                 TimeSpan.FromSeconds(30),
                 new QueueTransactionEndpoint(rider.Queue, "CommitQueue"),
                 new QueueTransactionEndpoint(rider.Queue, "RollbackQueue"),
                 new QueueTransactionEndpoint(rider.Queue, "TimeoutQueue"));
-
+*/
             HorseServer server = new HorseServer();
             server.UseRider(rider);
-            server.Run(9999);
+            server.Run(26222);
         }
     }
 }

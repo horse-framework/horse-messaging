@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
-using Horse.Core;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 
@@ -21,7 +21,8 @@ namespace Horse.Messaging.Server.Queues.Delivery
 
         private readonly IHorseQueueManager _manager;
         private readonly HorseQueue _queue;
-        private ThreadTimer _timer;
+        private Thread _timer;
+        private bool _destroyed;
 
         /// <summary>
         /// Creates new default delivery tracker
@@ -37,24 +38,29 @@ namespace Horse.Messaging.Server.Queues.Delivery
         /// </summary>
         public void Start()
         {
-            TimeSpan interval = TimeSpan.FromMilliseconds(1000);
-            _timer = new ThreadTimer(async () => await Elapse(), interval);
+            _timer = new Thread(async () =>
+            {
+                while (!_destroyed)
+                {
+                    try
+                    {
+                        await Task.Delay(1000);
+
+                        if (_queue.Status == QueueStatus.NotInitialized)
+                            continue;
+
+                        await ProcessDeliveries();
+                    }
+                    catch (Exception e)
+                    {
+                        _queue.Rider.SendError("PROCESS_DELIVERIES", e, $"QueueName:{_queue.Name}");
+                    }
+                }
+            });
+
+            _timer.IsBackground = true;
+            _timer.Priority = ThreadPriority.BelowNormal;
             _timer.Start();
-        }
-
-        private async Task Elapse()
-        {
-            try
-            {
-                if (_queue.Status == QueueStatus.NotInitialized)
-                    return;
-
-                await ProcessDeliveries();
-            }
-            catch (Exception e)
-            {
-                _queue.Rider.SendError("PROCESS_DELIVERIES", e, $"QueueName:{_queue.Name}");
-            }
         }
 
         /// <summary>
@@ -72,13 +78,7 @@ namespace Horse.Messaging.Server.Queues.Delivery
         public async Task Destroy()
         {
             Reset();
-
-            if (_timer != null)
-            {
-                _timer.Stop();
-                _timer = null;
-            }
-
+            _destroyed = true;
             await Task.CompletedTask;
         }
 
@@ -131,7 +131,6 @@ namespace Horse.Messaging.Server.Queues.Delivery
             if (rdlist.Count == 0)
                 return;
 
-            bool released = false;
             foreach (Tuple<bool, MessageDelivery> tuple in rdlist)
             {
                 MessageDelivery delivery = tuple.Item2;
@@ -139,15 +138,7 @@ namespace Horse.Messaging.Server.Queues.Delivery
                 {
                     bool marked = delivery.MarkAsAcknowledgeTimeout();
                     if (!marked)
-                    {
-                        if (!released)
-                        {
-                            released = true;
-                            _queue.ReleaseAcknowledgeLock(false);
-                        }
-
                         continue;
-                    }
 
                     _queue.Info.AddUnacknowledge();
                     Decision decision = await _manager.DeliveryHandler.AcknowledgeTimeout(_queue, delivery);
@@ -156,20 +147,17 @@ namespace Horse.Messaging.Server.Queues.Delivery
                     ackTimeoutMessage.ContentType = (ushort) HorseResultCode.RequestTimeout;
 
                     if (delivery.Message != null)
-                        await _queue.ApplyDecision(decision, delivery.Message, ackTimeoutMessage);
+                        _ = _queue.ApplyDecision(decision, delivery.Message, ackTimeoutMessage);
 
                     foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                         _ = handler.OnAcknowledgeTimedOut(_queue, delivery);
 
-                    if (!released)
-                    {
-                        released = true;
-                        _queue.ReleaseAcknowledgeLock(false);
-                    }
-
                     _queue.MessageUnackEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, delivery.Message.Message.MessageId));
                 }
             }
+
+            if (rdlist.Count > 0)
+                _queue.ReleaseAcknowledgeLock(false);
 
             IEnumerable<MessageDelivery> rdm = rdlist.Select(x => x.Item2);
             lock (_deliveries)

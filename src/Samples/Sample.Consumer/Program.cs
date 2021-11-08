@@ -9,8 +9,7 @@ namespace Sample.Consumer
 		{
 			HorseClientBuilder builder = new HorseClientBuilder();
 
-			HorseClient client = builder.SetHost("horse://localhost:9999")
-										.AddSingletonConsumers(typeof(Program))
+			HorseClient client = builder.AddHost("horse://localhost:26222")
 										.AddSingletonConsumers(typeof(Program))
 										 /*
 										.ConfigureModels(cfg => //cfg.UseQueueName(type => "Username1")
