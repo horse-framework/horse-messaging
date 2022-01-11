@@ -112,9 +112,8 @@ namespace Horse.Messaging.Server.Queues.States
                 {
                     receiver.CurrentlyProcessing = message;
                     receiver.ProcessDeadline = deadline ?? DateTime.UtcNow;
+                    message.CurrentDeliveryReceivers.Add(receiver);
                 }
-
-                message.CurrentDeliveryReceivers.Add(receiver);
 
                 //adds the delivery to time keeper to check timing up
                 deliveryHandler.Tracker.Track(delivery);
@@ -194,7 +193,7 @@ namespace Horse.Messaging.Server.Queues.States
                     if (client.CurrentlyProcessing == null)
                         return new Tuple<QueueClient, int>(client, index);
 
-                    if (client.CurrentlyProcessing.Deadline < DateTime.UtcNow)
+                    if (client.ProcessDeadline < DateTime.UtcNow)
                     {
                         client.CurrentlyProcessing = null;
                         return new Tuple<QueueClient, int>(client, index);

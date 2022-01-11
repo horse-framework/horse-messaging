@@ -426,10 +426,15 @@ namespace Horse.Messaging.Server.Network
                 }
             }
 
+            string filter = message.FindHeader(HorseHeaders.FILTER);
+
             List<QueueInformation> list = new List<QueueInformation>();
             foreach (HorseQueue queue in _rider.Queue.Queues)
             {
                 if (queue == null)
+                    continue;
+
+                if (!string.IsNullOrEmpty(filter) && Filter.CheckMatch(queue.Name,filter))
                     continue;
 
                 string ack = "none";

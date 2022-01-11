@@ -103,11 +103,6 @@ namespace Horse.Messaging.Server.Queues
         public bool IsEmpty => Manager.MessageStore.IsEmpty && Manager.PriorityMessageStore.IsEmpty;
 
         /// <summary>
-        /// Wait acknowledge cross thread locker
-        /// </summary>
-        private SemaphoreSlim _ackLock;
-
-        /// <summary>
         /// Sync object for inserting messages into queue as FIFO
         /// </summary>
         internal SemaphoreSlim QueueLock { get; } = new(1, 1);
@@ -243,7 +238,6 @@ namespace Horse.Messaging.Server.Queues
 
                 await queueManager.Initialize();
 
-                _ackLock = new SemaphoreSlim(1, 1);
                 Status = QueueStatus.Running;
 
                 _triggerTimer = new Timer(a =>
@@ -276,14 +270,7 @@ namespace Horse.Messaging.Server.Queues
             {
                 await Manager.Destroy();
 
-                if (_ackLock != null)
-                {
-                    _ackLock.Dispose();
-                    _ackLock = null;
-                }
-
-                if (QueueLock != null)
-                    QueueLock.Dispose();
+                QueueLock?.Dispose();
 
                 if (_triggerTimer != null)
                 {
@@ -681,28 +668,31 @@ namespace Horse.Messaging.Server.Queues
 
                 QueueMessage message = null;
 
-                if (Manager.PriorityMessageStore.Count() > 0)
-                    message = Manager.PriorityMessageStore.ConsumeFirst();
-
-                if (message == null && Manager.MessageStore.Count() > 0)
-                    message = Manager.MessageStore.ConsumeFirst();
-
-                if (message == null)
-                {
-                    if (waitForAck)
-                        ReleaseAcknowledgeLock(false);
-
-                    return;
-                }
-
                 try
                 {
+                    if (Manager.PriorityMessageStore.Count() > 0)
+                        message = Manager.PriorityMessageStore.ConsumeFirst();
+
+                    if (message == null && Manager.MessageStore.Count() > 0)
+                        message = Manager.MessageStore.ConsumeFirst();
+
+                    if (message == null)
+                    {
+                        if (waitForAck)
+                            ReleaseAcknowledgeLock(false);
+
+                        return;
+                    }
+
                     if (Options.Acknowledge == QueueAckDecision.WaitForAcknowledge && !message.Message.WaitResponse)
                         message.Message.WaitResponse = true;
 
                     PushResult pr = await State.Push(message);
-                    if (pr == PushResult.NoConsumers || pr == PushResult.Empty)
+                    if (pr != PushResult.Success)
                     {
+                        if (!message.IsInQueue)
+                            AddMessage(message, false);
+                        
                         if (waitForAck)
                             ReleaseAcknowledgeLock(false);
 
@@ -711,6 +701,9 @@ namespace Horse.Messaging.Server.Queues
                 }
                 catch (Exception ex)
                 {
+                    if (!message.IsInQueue && !message.IsSent)
+                        AddMessage(message, false);
+
                     if (waitForAck)
                         ReleaseAcknowledgeLock(false);
 
@@ -994,20 +987,11 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         internal async Task WaitForAcknowledge()
         {
-            await _ackLock.WaitAsync();
-            try
-            {
-                TaskCompletionSource<bool> source = _acknowledgeCallback;
+            TaskCompletionSource<bool> source = _acknowledgeCallback;
+            if (source != null && !source.Task.IsCompleted)
+                await source.Task;
 
-                if (source != null)
-                    await source.Task;
-
-                _acknowledgeCallback = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-            }
-            finally
-            {
-                _ackLock.Release();
-            }
+            _acknowledgeCallback = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
         /// <summary>
@@ -1040,14 +1024,20 @@ namespace Horse.Messaging.Server.Queues
                     }
                 }
 
-                if (delivery == null || delivery.Acknowledge == DeliveryAcknowledge.Timeout)
+                if (delivery == null)
+                {
+                    QueueClient queueClient = ClientsClone.FirstOrDefault(x => x.Client == from);
+                    if (queueClient != null && queueClient.CurrentlyProcessing != null && queueClient.CurrentlyProcessing.Message.MessageId == deliveryMessage.MessageId)
+                        queueClient.CurrentlyProcessing = null;
+
+                    return;
+                }
+
+                if (delivery.Acknowledge == DeliveryAcknowledge.Timeout)
                     return;
 
                 bool success = !(deliveryMessage.HasHeader &&
                                  deliveryMessage.Headers.Any(x => x.Key.Equals(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)));
-
-                if (delivery.Receiver != null && delivery.Message == delivery.Receiver.CurrentlyProcessing)
-                    delivery.Receiver.CurrentlyProcessing = null;
 
                 delivery.MarkAsAcknowledged(success);
                 ReleaseAcknowledgeLock(true);
@@ -1085,11 +1075,8 @@ namespace Horse.Messaging.Server.Queues
             try
             {
                 TaskCompletionSource<bool> ack = _acknowledgeCallback;
-                if (ack != null)
-                {
-                    _acknowledgeCallback = null;
+                if (ack != null && !ack.Task.IsCompleted)
                     ack.SetResult(received);
-                }
             }
             catch (ObjectDisposedException)
             {

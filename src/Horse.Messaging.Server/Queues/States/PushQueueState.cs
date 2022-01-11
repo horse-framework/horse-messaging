@@ -100,10 +100,10 @@ namespace Horse.Messaging.Server.Queues.States
                     {
                         client.CurrentlyProcessing = message;
                         client.ProcessDeadline = ackDeadline ?? DateTime.UtcNow;
+                        message.CurrentDeliveryReceivers.Add(client);
                     }
 
                     messageIsSent = true;
-                    message.CurrentDeliveryReceivers.Add(client);
 
                     //adds the delivery to time keeper to check timing up
                     deliveryHandler.Tracker.Track(delivery);
