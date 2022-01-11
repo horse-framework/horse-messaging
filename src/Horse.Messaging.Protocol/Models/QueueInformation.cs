@@ -12,7 +12,7 @@ namespace Horse.Messaging.Protocol.Models
         /// Queue name
         /// </summary>
         [JsonProperty("Name")]
-        [JsonPropertyName("Nmae")]
+        [JsonPropertyName("Name")]
         public string Name { get; set; }
 
         /// <summary>
