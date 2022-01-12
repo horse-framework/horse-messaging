@@ -509,9 +509,10 @@ namespace Horse.Messaging.Client.Queues
                 QueueName = queue
             };
 
-            foreach (InterceptorTypeDescriptor descriptor in current.IntercetorDescriptors)
-                registration.IntercetorDescriptors.Add(descriptor);
+            foreach (InterceptorTypeDescriptor descriptor in current.InterceptorDescriptors)
+                registration.InterceptorDescriptors.Add(descriptor);
 
+            list.Add(registration);
             Registrations = list;
 
             return Subscribe(queue, verifyResponse, headers);

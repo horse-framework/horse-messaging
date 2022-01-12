@@ -25,7 +25,7 @@ namespace Horse.Messaging.Client.Queues
         /// <summary>
         /// Interceptor descriptors
         /// </summary>
-        internal List<InterceptorTypeDescriptor> IntercetorDescriptors { get; } = new();
+        internal List<InterceptorTypeDescriptor> InterceptorDescriptors { get; } = new();
 
         /// <summary>
         /// Consumer executer

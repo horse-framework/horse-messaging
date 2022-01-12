@@ -130,8 +130,8 @@ namespace Horse.Messaging.Client.Queues
         /// <param name="handlerFactory"></param>
         protected async Task RunBeforeInterceptors(HorseMessage message, HorseClient client, IHandlerFactory handlerFactory = null)
         {
-            if (_registration.IntercetorDescriptors.Count == 0) return;
-            var beforeInterceptors = _registration.IntercetorDescriptors.Where(m => m.RunBefore);
+            if (_registration.InterceptorDescriptors.Count == 0) return;
+            var beforeInterceptors = _registration.InterceptorDescriptors.Where(m => m.RunBefore);
             IEnumerable<IHorseInterceptor> interceptors = handlerFactory is null
                 ? beforeInterceptors.Select(m => m.Instance)
                 : beforeInterceptors.Select(m => handlerFactory.CreateInterceptor(m.InterceptorType));
@@ -148,8 +148,8 @@ namespace Horse.Messaging.Client.Queues
         /// <param name="handlerFactory"></param>
         protected async Task RunAfterInterceptors(HorseMessage message, HorseClient client, IHandlerFactory handlerFactory = null)
         {
-            if (_registration.IntercetorDescriptors.Count == 0) return;
-            var afterInterceptors = _registration.IntercetorDescriptors.Where(m => !m.RunBefore);
+            if (_registration.InterceptorDescriptors.Count == 0) return;
+            var afterInterceptors = _registration.InterceptorDescriptors.Where(m => !m.RunBefore);
             IEnumerable<IHorseInterceptor> interceptors = handlerFactory is null
                 ? afterInterceptors.Select(m => m.Instance)
                 : afterInterceptors.Select(m => handlerFactory.CreateInterceptor(m.InterceptorType));
