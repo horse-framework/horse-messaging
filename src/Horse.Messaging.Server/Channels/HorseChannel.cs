@@ -180,6 +180,10 @@ namespace Horse.Messaging.Server.Channels
                 }
 
                 PublishEvent.Trigger(Name);
+
+                foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
+                    _ = handler.OnPublish(this, message);
+
                 return PushResult.Success;
             }
             catch (Exception ex)
@@ -276,7 +280,7 @@ namespace Horse.Messaging.Server.Channels
 
             Info.SubscriberCount = _clients.Count();
             Rider.Channel.UnsubscribeEvent.Trigger(client, Name);
-            
+
             return true;
         }
 
