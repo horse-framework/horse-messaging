@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Queues;
 
@@ -44,5 +45,10 @@ namespace Horse.Messaging.Server.Security
         /// Returns true, if client can receive all consumers of queue
         /// </summary>
         Task<bool> CanReceiveQueueConsumers(MessagingClient client, HorseQueue queue);
+        
+        /// <summary>
+        /// Returns true, if client can receive all subscribers of channel
+        /// </summary>
+        Task<bool> CanReceiveChannelSubscribers(MessagingClient client, HorseChannel channel);
     }
 }

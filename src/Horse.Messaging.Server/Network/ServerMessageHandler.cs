@@ -457,7 +457,6 @@ namespace Horse.Messaging.Server.Network
                     MessageTimeout = Convert.ToInt32(queue.Options.MessageTimeout.TotalMilliseconds),
                     ReceivedMessages = queue.Info.ReceivedMessages,
                     SentMessages = queue.Info.SentMessages,
-                    Deliveries = queue.Info.Deliveries,
                     NegativeAcks = queue.Info.NegativeAcknowledge,
                     Acks = queue.Info.Acknowledges,
                     TimeoutMessages = queue.Info.TimedOutMessages,

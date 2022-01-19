@@ -1,8 +1,12 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Protocol.Models;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Network;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Security;
 
 namespace Horse.Messaging.Server.Channels
 {
@@ -190,6 +194,65 @@ namespace Horse.Messaging.Server.Channels
 
                 case KnownContentTypes.ChannelList:
                 {
+                    string filter = message.FindHeader(HorseHeaders.FILTER);
+                    List<ChannelInformation> list = new List<ChannelInformation>();
+                    foreach (HorseChannel channel in _rider.Channel.Channels)
+                    {
+                        if (channel == null)
+                            continue;
+
+                        if (!string.IsNullOrEmpty(filter) && Filter.CheckMatch(channel.Name, filter))
+                            continue;
+
+                        list.Add(channel.Info);
+                    }
+
+                    HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
+                    response.ContentType = KnownContentTypes.ChannelList;
+                    response.Serialize(list, _rider.MessageContentSerializer);
+                    await client.SendAsync(response);
+                    break;
+                }
+
+                case KnownContentTypes.ChannelSubscribers:
+                {
+                    HorseChannel channel = _rider.Channel.Find(message.Target);
+
+                    if (channel == null)
+                    {
+                        await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+                        return;
+                    }
+
+                    foreach (IAdminAuthorization authorization in _rider.Client.AdminAuthorizations.All())
+                    {
+                        bool grant = await authorization.CanReceiveChannelSubscribers(client, channel);
+                        if (!grant)
+                        {
+                            if (message.WaitResponse)
+                                await client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
+
+                            return;
+                        }
+                    }
+
+                    List<ClientInformation> list = new List<ClientInformation>();
+
+                    foreach (ChannelClient cc in channel.Clients)
+                        list.Add(new ClientInformation
+                        {
+                            Id = cc.Client.UniqueId,
+                            Name = cc.Client.Name,
+                            Type = cc.Client.Type,
+                            IsAuthenticated = cc.Client.IsAuthenticated,
+                            Online = cc.SubscribedAt.LifetimeMilliseconds(),
+                        });
+
+                    HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
+                    message.ContentType = KnownContentTypes.ChannelSubscribers;
+                    response.Serialize(list, _rider.MessageContentSerializer);
+                    await client.SendAsync(response);
+
                     break;
                 }
             }

@@ -206,6 +206,11 @@ namespace Horse.Messaging.Protocol
         public const ushort ChannelUnsubscribe = 687;
 
         /// <summary>
+        /// "688" Gets Subscribers of a channel
+        /// </summary>
+        public const ushort ChannelSubscribers = 688;
+
+        /// <summary>
         /// "691" Create and begin new transaction
         /// </summary>
         public const ushort TransactionBegin = 691;
