@@ -171,6 +171,11 @@ namespace Horse.Messaging.Protocol
         public const ushort PurgeCache = 674;
 
         /// <summary>
+        /// "675" Get Cache List 
+        /// </summary>
+        public const ushort GetCacheList = 675;
+
+        /// <summary>
         /// "681" Pushes a message to channel
         /// </summary>
         public const ushort ChannelPush = 681;
