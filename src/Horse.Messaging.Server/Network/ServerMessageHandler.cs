@@ -434,7 +434,7 @@ namespace Horse.Messaging.Server.Network
                 if (queue == null)
                     continue;
 
-                if (!string.IsNullOrEmpty(filter) && Filter.CheckMatch(queue.Name,filter))
+                if (!string.IsNullOrEmpty(filter) && !Filter.CheckMatch(queue.Name, filter))
                     continue;
 
                 string ack = "none";

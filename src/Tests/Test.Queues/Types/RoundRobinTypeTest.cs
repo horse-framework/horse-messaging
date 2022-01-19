@@ -35,6 +35,7 @@ namespace Test.Queues.Types
             {
                 HorseClient consumer = new HorseClient();
                 consumer.ClientId = "consumer-" + i;
+                consumer.AutoAcknowledge = true;
                 await consumer.ConnectAsync("horse://localhost:" + port);
                 Assert.True(consumer.IsConnected);
                 consumer.MessageReceived += (c, m) => Interlocked.Increment(ref msgReceived);

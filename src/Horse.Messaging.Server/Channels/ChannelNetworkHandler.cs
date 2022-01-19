@@ -201,7 +201,7 @@ namespace Horse.Messaging.Server.Channels
                         if (channel == null)
                             continue;
 
-                        if (!string.IsNullOrEmpty(filter) && Filter.CheckMatch(channel.Name, filter))
+                        if (!string.IsNullOrEmpty(filter) && !Filter.CheckMatch(channel.Name, filter))
                             continue;
 
                         list.Add(channel.Info);

@@ -13,10 +13,10 @@ namespace Horse.Messaging.Server.Helpers
                 return value.Contains(filter.Substring(1, filter.Length - 2), StringComparison.InvariantCultureIgnoreCase);
 
             if (jstart)
-                return value.EndsWith(filter.Substring(1));
+                return value.EndsWith(filter.Substring(1), StringComparison.InvariantCultureIgnoreCase);
 
             if (jend)
-                return value.StartsWith(filter.Substring(0, filter.Length - 1));
+                return value.StartsWith(filter.Substring(0, filter.Length - 1), StringComparison.InvariantCultureIgnoreCase);
 
             return value.Equals(filter, StringComparison.InvariantCultureIgnoreCase);
         }

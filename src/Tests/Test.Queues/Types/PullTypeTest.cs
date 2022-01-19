@@ -23,6 +23,7 @@ namespace Test.Queues.Types
 
             HorseClient consumer = new HorseClient();
             consumer.ClientId = "consumer";
+            consumer.AutoAcknowledge = true;
             await consumer.ConnectAsync("horse://localhost:" + port);
             Assert.True(consumer.IsConnected);
             HorseResult joined = await consumer.Queue.Subscribe("pull-a", true);

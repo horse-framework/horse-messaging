@@ -168,6 +168,7 @@ namespace Test.Queues
             HorseClient client = new HorseClient();
             await client.ConnectAsync("horse://localhost:" + port);
 
+            await Task.Delay(250);
             var queues = await client.Queue.List("push-a");
             Assert.Equal(HorseResultCode.Ok, queues.Result.Code);
             Assert.NotNull(queues.Model);
