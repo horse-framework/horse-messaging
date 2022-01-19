@@ -35,7 +35,8 @@ namespace Horse.Messaging.Server.Channels
             return new HorseChannelOptions
             {
                 ClientLimit = other.ClientLimit,
-                MessageSizeLimit = other.MessageSizeLimit
+                MessageSizeLimit = other.MessageSizeLimit,
+                AutoDestroy = other.AutoDestroy
             };
         }
     }
