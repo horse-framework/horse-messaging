@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
+using Horse.Messaging.Protocol.Models;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
@@ -44,6 +45,11 @@ namespace Horse.Messaging.Server.Channels
         public HorseChannelOptions Options { get; }
 
         /// <summary>
+        /// Channel Information
+        /// </summary>
+        public ChannelInformation Info { get; }
+
+        /// <summary>
         /// Payload object for end-user usage
         /// </summary>
         public object Payload { get; set; }
@@ -77,6 +83,11 @@ namespace Horse.Messaging.Server.Channels
             Options = options;
             Status = ChannelStatus.Running;
             PublishEvent = new EventManager(rider, HorseEventType.ChannelPublish, name);
+            Info = new ChannelInformation
+            {
+                Name = name,
+                Status = Status.ToString()
+            };
 
             _destoryTimer = new Timer(s =>
             {
@@ -149,6 +160,7 @@ namespace Horse.Messaging.Server.Channels
             {
                 byte[] messageData = HorseProtocolWriter.Create(message);
 
+                int count = 0;
                 //to all receivers
                 foreach (ChannelClient client in Clients)
                 {
@@ -158,6 +170,13 @@ namespace Horse.Messaging.Server.Channels
 
                     //send the message
                     _ = client.Client.SendAsync(messageData);
+                    count++;
+                }
+
+                lock (Info)
+                {
+                    Info.Published++;
+                    Info.Received += count;
                 }
 
                 PublishEvent.Trigger(Name);
@@ -205,6 +224,7 @@ namespace Horse.Messaging.Server.Channels
             foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
                 _ = handler.OnSubscribe(this, client);
 
+            Info.SubscriberCount = _clients.Count();
             Rider.Channel.SubscribeEvent.Trigger(client, Name);
             return SubscriptionResult.Success;
         }
@@ -220,6 +240,7 @@ namespace Horse.Messaging.Server.Channels
             foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
                 _ = handler.OnUnsubscribe(this, client.Client);
 
+            Info.SubscriberCount = _clients.Count();
             Rider.Channel.UnsubscribeEvent.Trigger(client.Client, Name);
         }
 
@@ -233,6 +254,7 @@ namespace Horse.Messaging.Server.Channels
             foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
                 _ = handler.OnUnsubscribe(this, client.Client);
 
+            Info.SubscriberCount = _clients.Count();
             Rider.Channel.UnsubscribeEvent.Trigger(client.Client, Name);
         }
 
@@ -252,6 +274,7 @@ namespace Horse.Messaging.Server.Channels
             foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
                 _ = handler.OnUnsubscribe(this, client);
 
+            Info.SubscriberCount = _clients.Count();
             Rider.Channel.UnsubscribeEvent.Trigger(client, Name);
             
             return true;

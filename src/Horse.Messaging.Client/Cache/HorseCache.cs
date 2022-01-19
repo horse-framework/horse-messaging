@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Protocol.Models;
 
 namespace Horse.Messaging.Client.Cache
 {
@@ -60,6 +62,18 @@ namespace Horse.Messaging.Client.Cache
             return result.Model;
         }
 
+        /// <summary>
+        /// Finds in all cache keys
+        /// </summary>
+        public async Task<HorseModelResult<List<CacheInformation>>> List(string filter = null)
+        {
+            HorseMessage message = new HorseMessage();
+            message.Type = MessageType.Cache;
+            message.SetMessageId( _client.UniqueIdGenerator.Create());
+            message.ContentType = KnownContentTypes.GetCacheList;
+            message.AddHeader(HorseHeaders.FILTER, filter);
+            return await _client.SendAndGetJson<List<CacheInformation>>(message);
+        }
         #endregion
 
         #region Set

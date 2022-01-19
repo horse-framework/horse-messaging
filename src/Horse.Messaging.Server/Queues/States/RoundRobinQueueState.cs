@@ -122,9 +122,6 @@ namespace Horse.Messaging.Server.Queues.States
                 delivery.MarkAsSent();
                 _queue.Info.AddMessageSend();
 
-                //do after send operations for per message
-                _queue.Info.AddDelivery();
-
                 foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
                     _ = handler.OnConsumed(_queue, delivery, receiver.Client);
             }

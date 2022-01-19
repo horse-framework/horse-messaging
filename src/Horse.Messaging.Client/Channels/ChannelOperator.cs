@@ -5,7 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Horse.Messaging.Client.Internal;
+using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Protocol.Models;
 
 namespace Horse.Messaging.Client.Channels
 {
@@ -142,6 +144,34 @@ namespace Horse.Messaging.Client.Channels
             return await Client.WaitResponse(message, verifyResponse);
         }
 
+        /// <summary>
+        /// Finds in all channels in server
+        /// </summary>
+        public async Task<HorseModelResult<List<ChannelInformation>>> List(string filter = null)
+        {
+            HorseMessage message = new HorseMessage();
+            message.Type = MessageType.Channel;
+            message.SetMessageId(Client.UniqueIdGenerator.Create());
+            message.ContentType = KnownContentTypes.ChannelList;
+            message.AddHeader(HorseHeaders.FILTER, filter);
+            return await Client.SendAndGetJson<List<ChannelInformation>>(message);
+        }
+
+        /// <summary>
+        /// Gets all subscribers of channel
+        /// </summary>
+        public async Task<HorseModelResult<List<ClientInformation>>> GetSubscribers(string channelName)
+        {
+            HorseMessage message = new HorseMessage();
+            message.Type = MessageType.Channel;
+            message.SetTarget(channelName);
+            message.ContentType = KnownContentTypes.ChannelSubscribe;
+            message.SetMessageId(Client.UniqueIdGenerator.Create());
+
+            message.AddHeader(HorseHeaders.CHANNEL_NAME, channelName);
+
+            return await Client.SendAndGetJson<List<ClientInformation>>(message);
+        }
 
         #region Publish
 
@@ -149,7 +179,7 @@ namespace Horse.Messaging.Client.Channels
         /// Publishes a message to a channel
         /// </summary>
         public Task<HorseResult> Publish(object jsonObject, bool waitAcknowledge = false,
-                                         IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             return Publish(null, jsonObject, waitAcknowledge, messageHeaders);
         }
@@ -158,7 +188,7 @@ namespace Horse.Messaging.Client.Channels
         /// Publishes a message to a channel
         /// </summary>
         public async Task<HorseResult> Publish(string channel, object jsonObject, bool waitAcknowledge = false,
-                                               IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             ChannelTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(jsonObject.GetType());
 
@@ -184,7 +214,7 @@ namespace Horse.Messaging.Client.Channels
         /// Pushes a message to a queue
         /// </summary>
         public async Task<HorseResult> PublishString(string channel, string content, bool waitAcknowledge = false,
-                                                     IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             return await PublishData(channel, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge, messageHeaders);
         }
@@ -193,7 +223,7 @@ namespace Horse.Messaging.Client.Channels
         /// Pushes a message to a queue
         /// </summary>
         public async Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitAcknowledge = false,
-                                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             HorseMessage message = new HorseMessage(MessageType.Channel, channel, KnownContentTypes.ChannelPush);
             message.Content = content;

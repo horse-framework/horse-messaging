@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Threading;
 using Horse.Messaging.Protocol.Events;
+using Horse.Messaging.Protocol.Models;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
+using Horse.Messaging.Server.Helpers;
 
 namespace Horse.Messaging.Server.Cache
 {
@@ -88,6 +91,26 @@ namespace Horse.Messaging.Server.Cache
         #endregion
 
         #region Actions
+
+        public List<CacheInformation> GetCacheKeys()
+        {
+            List<CacheInformation> list;
+            
+            lock (_items)
+            {
+                list = new List<CacheInformation>(_items.Count);
+                foreach (HorseCacheItem item in _items.Values)
+                {
+                    list.Add(new CacheInformation
+                    {
+                        Key = item.Key,
+                        Expiration = item.Expiration.ToUnixMilliseconds()
+                    });
+                }
+            }
+
+            return list;
+        }
 
         /// <summary>
         /// Adds or sets a cache

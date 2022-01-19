@@ -95,13 +95,6 @@ namespace Horse.Messaging.Protocol.Models
         public long SentMessages { get; set; }
 
         /// <summary>
-        /// Total message send operation each message to each consumer
-        /// </summary>
-        [JsonProperty("Deliveries")]
-        [JsonPropertyName("Deliveries")]
-        public long Deliveries { get; set; }
-
-        /// <summary>
         /// Total unacknowledged messages
         /// </summary>
         [JsonProperty("NegativeAcks")]

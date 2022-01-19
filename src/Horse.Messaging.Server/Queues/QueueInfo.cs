@@ -33,14 +33,6 @@ namespace Horse.Messaging.Server.Queues
         private long _sentMessages;
 
         /// <summary>
-        /// Total consumer message receive count.
-        /// If 2 are sent to 5 consumers, this value will be 10.
-        /// </summary>
-        public long Deliveries => _deliveries;
-
-        private long _deliveries;
-
-        /// <summary>
         /// Timed out message count
         /// </summary>
         public long TimedOutMessages => _timedOutMessages;
@@ -141,7 +133,6 @@ namespace Horse.Messaging.Server.Queues
         {
             Volatile.Write(ref _receivedMessages, 0);
             Volatile.Write(ref _sentMessages, 0);
-            Volatile.Write(ref _deliveries, 0);
             Volatile.Write(ref _timedOutMessages, 0);
             Volatile.Write(ref _acknowledges, 0);
             Volatile.Write(ref _unacknowledges, 0);
@@ -174,14 +165,6 @@ namespace Horse.Messaging.Server.Queues
         {
             LastMessageSendDate = DateTime.UtcNow;
             Interlocked.Increment(ref _sentMessages);
-        }
-
-        /// <summary>
-        /// Increases consumer messave receive count
-        /// </summary>
-        internal void AddDelivery()
-        {
-            Interlocked.Increment(ref _deliveries);
         }
 
         /// <summary>
