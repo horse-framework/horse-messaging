@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 
 namespace Horse.Messaging.Server.Channels
@@ -18,6 +19,11 @@ namespace Horse.Messaging.Server.Channels
         /// </summary>
         Task OnRemoved(HorseChannel channel);
 
+        /// <summary>
+        /// Triggered when a channel message is published
+        /// </summary>
+        Task OnPublish(HorseChannel channel, HorseMessage message);
+        
         /// <summary>
         /// Triggered when a client is subscribed to a channel
         /// </summary>
