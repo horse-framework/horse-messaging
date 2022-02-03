@@ -120,7 +120,7 @@ namespace Horse.Messaging.Server.Clients
         #region Actions
 
         /// <summary>
-        /// Gets all queues of the server
+        /// Gets all subscribed queues of client
         /// </summary>
         public IEnumerable<QueueClient> GetQueues()
         {

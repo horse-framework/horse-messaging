@@ -186,6 +186,17 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task Unsubscribe(MessagingClient client, HorseMessage message)
         {
+            if (message.Target == "*")
+            {
+                IEnumerable<QueueClient> queueClients = client.GetQueues();
+
+                foreach (QueueClient queueClient in queueClients)
+                    queueClient.Queue.RemoveClient(queueClient.Client);
+
+                await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
+                return;
+            }
+            
             HorseQueue queue = _rider.Queue.Find(message.Target);
             if (queue == null)
             {
