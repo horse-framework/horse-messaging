@@ -968,7 +968,7 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Executes put back decision for the message
         /// </summary>
-        internal void ApplyPutBack(Decision decision, QueueMessage message, int forceDelay = 0)
+        private void ApplyPutBack(Decision decision, QueueMessage message, int forceDelay = 0)
         {
             message.Message.HighPriority = decision.PutBack == PutBackDecision.Priority;
 
