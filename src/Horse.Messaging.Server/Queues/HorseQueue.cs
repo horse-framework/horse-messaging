@@ -212,6 +212,9 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         public void SetStatus(QueueStatus newStatus)
         {
+            if (Status == newStatus)
+                return;
+
             if (newStatus == QueueStatus.NotInitialized)
                 return;
 
@@ -220,6 +223,9 @@ namespace Horse.Messaging.Server.Queues
                 new KeyValuePair<string, string>($"Next-{HorseHeaders.STATUS}", newStatus.ToString()));
 
             Status = newStatus;
+
+            if (newStatus == QueueStatus.OnlyConsume || newStatus == QueueStatus.Running)
+                _ = Trigger();
         }
 
         /// <summary>
@@ -656,6 +662,9 @@ namespace Horse.Messaging.Server.Queues
             if (Rider.Cluster.Options.Mode == ClusterMode.Reliable && Rider.Cluster.State > NodeState.Main)
                 return;
 
+            if (!(Status == QueueStatus.Running || Status == QueueStatus.OnlyConsume))
+                return;
+
             await _triggerLock.WaitAsync();
             try
             {
@@ -678,6 +687,9 @@ namespace Horse.Messaging.Server.Queues
             while (State.TriggerSupported)
             {
                 if (_clients.Count == 0)
+                    return;
+
+                if (!(Status == QueueStatus.Running || Status == QueueStatus.OnlyConsume))
                     return;
 
                 bool waitForAck = Options.Type != QueueType.RoundRobin && Options.Acknowledge == QueueAckDecision.WaitForAcknowledge;
