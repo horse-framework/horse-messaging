@@ -929,6 +929,15 @@ namespace Horse.Messaging.Server.Queues
             return !decision.Interrupt;
         }
 
+        /// <summary>
+        /// Returns message count that are waiting for put back
+        /// </summary>
+        public int GetMessageCountPendingForPutBack()
+        {
+            lock (_putBackWaitList)
+                return _putBackWaitList.Count;
+        }
+        
         private void ExecutePutBack(object sender)
         {
             try
