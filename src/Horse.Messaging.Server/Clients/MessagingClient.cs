@@ -23,6 +23,9 @@ namespace Horse.Messaging.Server.Clients
         /// </summary>
         private readonly List<QueueClient> _queues = new List<QueueClient>();
 
+        /// <summary>
+        /// Channels that client subscribed
+        /// </summary>
         private readonly List<ChannelClient> _channels = new List<ChannelClient>();
 
         /// <summary>
@@ -64,12 +67,12 @@ namespace Horse.Messaging.Server.Clients
         /// If you want to keep some data belong the client, you can use this property.
         /// </summary>
         public object Tag { get; set; }
-        
+
         /// <summary>
         /// True, if client is another node
         /// </summary>
         internal bool IsNodeClient { get; set; }
-        
+
         internal NodeClient NodeClient { get; set; }
 
         /// <summary>
@@ -120,7 +123,7 @@ namespace Horse.Messaging.Server.Clients
         #region Actions
 
         /// <summary>
-        /// Gets all queues of the server
+        /// Gets all subscribed queues of client
         /// </summary>
         public IEnumerable<QueueClient> GetQueues()
         {
@@ -181,8 +184,23 @@ namespace Horse.Messaging.Server.Clients
             }
 
             foreach (QueueClient cc in list)
-                if (cc.Queue != null)
-                    cc.Queue.RemoveClientSilent(cc);
+                cc.Queue?.RemoveClientSilent(cc);
+        }
+
+        /// <summary>
+        /// Unsubscribes from all channels
+        /// </summary>
+        internal void UnsubscribeFromAllChannels()
+        {
+            List<ChannelClient> list;
+            lock (_channels)
+            {
+                list = new List<ChannelClient>(_channels);
+                _channels.Clear();
+            }
+
+            foreach (ChannelClient cc in list)
+                cc.Channel?.RemoveClientSilent(cc);
         }
 
         #endregion

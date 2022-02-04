@@ -186,6 +186,17 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task Unsubscribe(MessagingClient client, HorseMessage message)
         {
+            if (message.Target == "*")
+            {
+                IEnumerable<QueueClient> queueClients = client.GetQueues();
+
+                foreach (QueueClient queueClient in queueClients)
+                    queueClient.Queue.RemoveClient(queueClient.Client);
+
+                await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
+                return;
+            }
+            
             HorseQueue queue = _rider.Queue.Find(message.Target);
             if (queue == null)
             {
@@ -448,10 +459,10 @@ namespace Horse.Messaging.Server.Network
                     Name = queue.Name,
                     Topic = queue.Topic,
                     Status = queue.Status.ToString().Trim().ToLower(),
-                    PriorityMessages = queue.Manager.PriorityMessageStore.Count(),
-                    Messages = queue.Manager.MessageStore.Count(),
+                    PriorityMessages = queue.Manager == null ? 0 : queue.Manager.PriorityMessageStore.Count(),
+                    Messages = queue.Manager == null ? 0 : queue.Manager.MessageStore.Count(),
                     ProcessingMessages = queue.ClientsClone.Count(x => x.CurrentlyProcessing != null),
-                    DeliveryTrackingMessags = queue.Manager.DeliveryHandler.Tracker.GetDeliveryCount(),
+                    DeliveryTrackingMessags = queue.Manager == null ? 0 : queue.Manager.DeliveryHandler.Tracker.GetDeliveryCount(),
                     Acknowledge = ack,
                     AcknowledgeTimeout = Convert.ToInt32(queue.Options.AcknowledgeTimeout.TotalMilliseconds),
                     MessageTimeout = Convert.ToInt32(queue.Options.MessageTimeout.TotalMilliseconds),

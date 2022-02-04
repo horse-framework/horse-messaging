@@ -597,6 +597,9 @@ namespace Horse.Messaging.Server.Cluster
 
             foreach (NodeClient client in Clients)
             {
+                if (client == null)
+                    continue;
+                
                 if (!client.IsConnected)
                     continue;
 

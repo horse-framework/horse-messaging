@@ -130,6 +130,11 @@ namespace Horse.Messaging.Server.Queues
         private Timer _triggerTimer;
 
         /// <summary>
+        /// Checks message waiting for put back and put them back into the queue if their time come.
+        /// </summary>
+        private Timer _delayedPutBackTimer;
+
+        /// <summary>
         /// Triggered when queue is destroyed
         /// </summary>
         public event QueueEventHandler OnDestroyed;
@@ -146,6 +151,7 @@ namespace Horse.Messaging.Server.Queues
 
         private readonly SafeList<QueueClient> _clients;
         private readonly SemaphoreSlim _triggerLock = new SemaphoreSlim(1, 1);
+        private readonly List<PutBackQueueMessage> _putBackWaitList = new List<PutBackQueueMessage>(8);
 
         /// <summary>
         /// True if queue is destroyed
@@ -206,6 +212,9 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         public void SetStatus(QueueStatus newStatus)
         {
+            if (Status == newStatus)
+                return;
+
             if (newStatus == QueueStatus.NotInitialized)
                 return;
 
@@ -214,6 +223,9 @@ namespace Horse.Messaging.Server.Queues
                 new KeyValuePair<string, string>($"Next-{HorseHeaders.STATUS}", newStatus.ToString()));
 
             Status = newStatus;
+
+            if (newStatus == QueueStatus.OnlyConsume || newStatus == QueueStatus.Running)
+                _ = Trigger();
         }
 
         /// <summary>
@@ -247,6 +259,8 @@ namespace Horse.Messaging.Server.Queues
 
                     _ = CheckAutoDestroy();
                 }, null, TimeSpan.FromMilliseconds(5000), TimeSpan.FromMilliseconds(5000));
+
+                _delayedPutBackTimer = new Timer(ExecutePutBack, null, TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500));
             }
             catch (Exception e)
             {
@@ -276,6 +290,12 @@ namespace Horse.Messaging.Server.Queues
                 {
                     await _triggerTimer.DisposeAsync();
                     _triggerTimer = null;
+                }
+
+                if (_delayedPutBackTimer != null)
+                {
+                    await _delayedPutBackTimer.DisposeAsync();
+                    _delayedPutBackTimer = null;
                 }
             }
             finally
@@ -383,6 +403,22 @@ namespace Horse.Messaging.Server.Queues
 
             if (added && trigger && State != null && State.TriggerSupported && !_triggering)
                 _ = Trigger();
+        }
+
+        /// <summary>
+        /// Clears messages which are waiting for put back and returns all of them
+        /// </summary>
+        public List<QueueMessage> ClearPuttingBackMessages()
+        {
+            List<QueueMessage> result;
+
+            lock (_putBackWaitList)
+            {
+                result = _putBackWaitList.Select(x => x.Message).ToList();
+                _putBackWaitList.Clear();
+            }
+
+            return result;
         }
 
         #endregion
@@ -626,6 +662,9 @@ namespace Horse.Messaging.Server.Queues
             if (Rider.Cluster.Options.Mode == ClusterMode.Reliable && Rider.Cluster.State > NodeState.Main)
                 return;
 
+            if (!(Status == QueueStatus.Running || Status == QueueStatus.OnlyConsume))
+                return;
+
             await _triggerLock.WaitAsync();
             try
             {
@@ -648,6 +687,9 @@ namespace Horse.Messaging.Server.Queues
             while (State.TriggerSupported)
             {
                 if (_clients.Count == 0)
+                    return;
+
+                if (!(Status == QueueStatus.Running || Status == QueueStatus.OnlyConsume))
                     return;
 
                 bool waitForAck = Options.Type != QueueType.RoundRobin && Options.Acknowledge == QueueAckDecision.WaitForAcknowledge;
@@ -692,7 +734,7 @@ namespace Horse.Messaging.Server.Queues
                     {
                         if (!message.IsInQueue)
                             AddMessage(message, false);
-                        
+
                         if (waitForAck)
                             ReleaseAcknowledgeLock(false);
 
@@ -888,69 +930,61 @@ namespace Horse.Messaging.Server.Queues
         }
 
         /// <summary>
+        /// Returns message count that are waiting for put back
+        /// </summary>
+        public int GetMessageCountPendingForPutBack()
+        {
+            lock (_putBackWaitList)
+                return _putBackWaitList.Count;
+        }
+        
+        private void ExecutePutBack(object sender)
+        {
+            try
+            {
+                lock (_putBackWaitList)
+                {
+                    while (_putBackWaitList.Count > 0)
+                    {
+                        PutBackQueueMessage item = _putBackWaitList[0];
+
+                        if (item.PutBackDate > DateTime.UtcNow)
+                            return;
+
+                        if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                            Rider.Cluster.SendPutBack(this, item.Message.Message, !item.Message.Message.HighPriority);
+
+                        AddMessage(item.Message);
+                        _putBackWaitList.RemoveAt(0);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Rider.SendError("EXECUTE_DELAYED_PUTBACK", e, $"QueueName:{Name}");
+            }
+        }
+
+        /// <summary>
         /// Executes put back decision for the message
         /// </summary>
-        internal void ApplyPutBack(Decision decision, QueueMessage message, int forceDelay = 0)
+        private void ApplyPutBack(Decision decision, QueueMessage message, int forceDelay = 0)
         {
             message.Message.HighPriority = decision.PutBack == PutBackDecision.Priority;
 
-            switch (decision.PutBack)
+            if (Options.PutBackDelay == 0 && forceDelay == 0)
             {
-                case PutBackDecision.Priority:
-                    if (Options.PutBackDelay == 0)
-                    {
-                        AddMessage(message, false);
+                AddMessage(message);
 
-                        if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
-                            Rider.Cluster.SendPutBack(this, message.Message, false);
-                    }
-                    else
-                        _ = Task.Run(async () =>
-                        {
-                            try
-                            {
-                                await Task.Delay(Options.PutBackDelay);
-
-                                if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
-                                    Rider.Cluster.SendPutBack(this, message.Message, false);
-
-                                AddMessage(message, false);
-                            }
-                            catch (Exception e)
-                            {
-                                Rider.SendError("DELAYED_PUT_BACK", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
-                            }
-                        });
-
-                    break;
-
-                case PutBackDecision.Regular:
-                    if (Options.PutBackDelay == 0 && forceDelay == 0)
-                    {
-                        AddMessage(message);
-
-                        if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
-                            Rider.Cluster.SendPutBack(this, message.Message, true);
-                    }
-                    else
-                        _ = Task.Run(async () =>
-                        {
-                            try
-                            {
-                                await Task.Delay(Math.Max(forceDelay, Options.PutBackDelay));
-
-                                if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
-                                    Rider.Cluster.SendPutBack(this, message.Message, true);
-
-                                AddMessage(message);
-                            }
-                            catch (Exception e)
-                            {
-                                Rider.SendError("DELAYED_PUT_BACK", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
-                            }
-                        });
-
-                    break;
+                if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
+                    Rider.Cluster.SendPutBack(this, message.Message, true);
+            }
+            else
+            {
+                int milliseconds = Math.Max(forceDelay, Options.PutBackDelay);
+                PutBackQueueMessage item = new PutBackQueueMessage(message, DateTime.UtcNow.AddMilliseconds(milliseconds));
+                lock (_putBackWaitList)
+                    _putBackWaitList.Add(item);
             }
         }
 

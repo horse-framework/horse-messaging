@@ -31,6 +31,13 @@ namespace Horse.Messaging.Client.Queues
         internal List<QueueConsumerRegistration> Registrations { get; private set; } = new List<QueueConsumerRegistration>();
         internal Dictionary<string, PullContainer> PullContainers { get; }
 
+        private int _activeConsumeOperations;
+
+        /// <summary>
+        /// Returns count of consume operations
+        /// </summary>
+        public int ActiveConsumeOperations => _activeConsumeOperations;
+
         /// <summary>
         /// Queue name handler
         /// </summary>
@@ -75,11 +82,16 @@ namespace Horse.Messaging.Client.Queues
 
             try
             {
+                Interlocked.Increment(ref _activeConsumeOperations);
                 await reg.ConsumerExecuter.Execute(Client, message, model);
             }
             catch (Exception ex)
             {
                 Client.OnException(ex, message);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _activeConsumeOperations);
             }
         }
 
@@ -533,6 +545,14 @@ namespace Horse.Messaging.Client.Queues
                 message.SetMessageId(Client.UniqueIdGenerator.Create());
 
             return await Client.WaitResponse(message, verifyResponse);
+        }
+
+        /// <summary>
+        /// Unsubscribes from all queues
+        /// </summary>
+        public Task<HorseResult> UnsubscribeFromAllQueues()
+        {
+            return Unsubscribe("*", true);
         }
 
         #endregion
