@@ -92,6 +92,7 @@ namespace Horse.Messaging.Server.Clients
         {
             _clients.Remove(client);
             client.UnsubscribeFromAllQueues();
+            client.UnsubscribeFromAllChannels();
             DisconnectEvent.Trigger(client);
         }
 
@@ -103,6 +104,7 @@ namespace Horse.Messaging.Server.Clients
             foreach (MessagingClient client in _clients.GetAsClone())
             {
                 client.UnsubscribeFromAllQueues();
+                client.UnsubscribeFromAllChannels();
                 client.Disconnect();
             }
             

@@ -181,11 +181,7 @@ namespace Horse.Messaging.Server.Channels
                 {
                     bool waitResponse = message.WaitResponse;
                     HorseChannel channel = _rider.Channel.Find(message.Target);
-
-                    if (channel != null)
-                    {
-                        channel.RemoveClient(client);
-                    }
+                    channel?.RemoveClient(client);
 
                     if (waitResponse)
                         await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
