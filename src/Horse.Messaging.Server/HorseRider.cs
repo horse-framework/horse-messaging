@@ -132,6 +132,7 @@ namespace Horse.Messaging.Server
 
             _initialized = true;
             Transaction.Initialize();
+            Router.Initialize();
         }
 
         /// <summary>
