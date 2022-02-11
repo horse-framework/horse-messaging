@@ -13,15 +13,11 @@ namespace HostedServiceSample.Server.Handlers
 	public class SamplePersistentQueueManager: PersistentQueueManager
 	{
 		private static readonly DataConfigurationBuilder _builder = new();
-		public SamplePersistentQueueManager(HorseQueue queue, bool useRedelivery = false):
-			base(queue, _builder
-					   .SetPhysicalPath(m => $"{queue.Name}.tdb")
-					   .KeepLastBackup()
-					   .UseAutoFlush(TimeSpan.FromMilliseconds(500))
-					   .CreateOptions(queue), useRedelivery)
+
+		public SamplePersistentQueueManager(HorseQueue queue, DatabaseOptions options, bool useRedelivery = false):
+			base(queue, options, useRedelivery)
 		{
 			DeliveryHandler = new SamplePersistentDeliveryHandler(this);
-			ConfigurationFactory.Initialize(_builder);
 		}
 	}
 
