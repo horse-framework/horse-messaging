@@ -14,6 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\Horse.Messaging.Data\Horse.Messaging.Data.csproj" />
       <ProjectReference Include="..\..\Horse.Messaging.Server\Horse.Messaging.Server.csproj" />
       <ProjectReference Include="..\HostedServiceSample.Common\HostedServiceSample.Common.csproj" />
     </ItemGroup>

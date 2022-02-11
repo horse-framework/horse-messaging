@@ -118,7 +118,7 @@ namespace Horse.Messaging.Data.Configuration
         /// <summary>
         /// Creates new DatabaseOptions using predefined options
         /// </summary>
-        internal DatabaseOptions CreateOptions(HorseQueue queue)
+        public DatabaseOptions CreateOptions(HorseQueue queue)
         {
             return new DatabaseOptions
                    {

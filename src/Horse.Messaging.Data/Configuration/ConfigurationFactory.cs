@@ -5,7 +5,10 @@ using System.Runtime.CompilerServices;
 
 namespace Horse.Messaging.Data.Configuration
 {
-    internal static class ConfigurationFactory
+    /// <summary>
+    /// 
+    /// </summary>
+    public static class ConfigurationFactory
     {
         /// <summary>
         /// Current configuration

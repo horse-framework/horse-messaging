@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AdvancedSample.Messaging.Server.RouteBindings;
+using Horse.Messaging.Data;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Managers;
@@ -61,7 +62,7 @@ namespace HostedServiceSample.Server
 									.ConfigureQueues(cfg =>
 													 {
 														 cfg.EventHandlers.Add(_queueEventHandler);
-														 cfg.UseCustomQueueManager("a", m => Task.FromResult<IHorseQueueManager>(new SampleMemoryQueueManager(m.Queue)));
+														 cfg.UseCustomQueueManager("a", m => Task.FromResult<IHorseQueueManager>(new SamplePersistentQueueManager(m.Queue)));
 														 cfg.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
 														 cfg.Options.Type = QueueType.RoundRobin;
 														 cfg.Options.AutoQueueCreation = true;
