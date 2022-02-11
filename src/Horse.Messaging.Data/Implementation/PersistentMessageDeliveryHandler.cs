@@ -49,7 +49,7 @@ namespace Horse.Messaging.Data.Implementation
         }
 
         /// <inheritdoc />
-        public async Task<Decision> BeginSend(HorseQueue queue, QueueMessage message)
+        public virtual async Task<Decision> BeginSend(HorseQueue queue, QueueMessage message)
         {
             if (_manager.UseRedelivery)
             {
@@ -64,19 +64,19 @@ namespace Horse.Messaging.Data.Implementation
         }
 
         /// <inheritdoc />
-        public Task<bool> CanConsumerReceive(HorseQueue queue, QueueMessage message, MessagingClient receiver)
+        public virtual Task<bool> CanConsumerReceive(HorseQueue queue, QueueMessage message, MessagingClient receiver)
         {
             return Task.FromResult(true);
         }
 
         /// <inheritdoc />
-        public Task<Decision> ConsumerReceiveFailed(HorseQueue queue, MessageDelivery delivery, MessagingClient receiver)
+        public virtual Task<Decision> ConsumerReceiveFailed(HorseQueue queue, MessageDelivery delivery, MessagingClient receiver)
         {
             return Task.FromResult(Decision.PutBackMessage(false));
         }
 
         /// <inheritdoc />
-        public Task<Decision> EndSend(HorseQueue queue, QueueMessage message)
+        public virtual Task<Decision> EndSend(HorseQueue queue, QueueMessage message)
         {
             if (message.SendCount == 0)
                 return Task.FromResult(Decision.PutBackMessage(false));
