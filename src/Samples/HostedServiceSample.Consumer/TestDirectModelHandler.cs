@@ -1,18 +1,17 @@
 using System;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
-using Horse.Messaging.Client.Queues;
-using Horse.Messaging.Client.Queues.Annotations;
+using Horse.Messaging.Client.Direct;
+using Horse.Messaging.Client.Direct.Annotations;
 using Horse.Messaging.Protocol;
 using Newtonsoft.Json;
 
 namespace HostedServiceSample.Producer
 {
-	[AutoAck]
-	[AutoNack(NegativeReason.Error)]
-	internal class TestQueueModelConsumer : IQueueConsumer<TestQueueModel>
+	[DirectContentType(1)]
+	public class TestDirectModelHandler: IDirectMessageHandler<TestDirectModel>
 	{
-		public Task Consume(HorseMessage message, TestQueueModel model, HorseClient client)
+		public Task Handle(HorseMessage message, TestDirectModel model, HorseClient client)
 		{
 			_ = Console.Out.WriteLineAsync("Consumed!!!");
 			_ = Console.Out.WriteLineAsync(JsonConvert.SerializeObject(model, Formatting.Indented));

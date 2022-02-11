@@ -75,6 +75,8 @@ namespace Horse.Messaging.Server.Routing
 
         internal void Initialize()
         {
+            // TODO : Memo
+            return;
             if (!PersistentRouters || string.IsNullOrEmpty(RouterConfigurationFilename))
                 return;
 
@@ -216,6 +218,8 @@ namespace Horse.Messaging.Server.Routing
 
         internal void SaveRouters()
         {
+            // TODO : Memo
+            return;
             List<RouterDefinition> definitions = new List<RouterDefinition>();
 
             foreach (IRouter router in _routers.All())

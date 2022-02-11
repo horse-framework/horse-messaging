@@ -33,6 +33,6 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// An error has occured
         /// </summary>
-        Error
+        Error,
     }
 }

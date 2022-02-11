@@ -1,9 +1,12 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using AdvancedSample.Messaging.Server.RouteBindings;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Managers;
 using Horse.Server;
+using HostedServiceSample.Server.Handlers;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -11,7 +14,7 @@ using HostOptions = Horse.Server.HostOptions;
 
 namespace HostedServiceSample.Server
 {
-	internal class HostedService : IHostedService
+	internal class HostedService: IHostedService
 	{
 		private readonly HorseServer _server;
 		private readonly ILogger<HostedService> _logger;
@@ -40,6 +43,7 @@ namespace HostedServiceSample.Server
 		public Task StartAsync(CancellationToken cancellationToken)
 		{
 			HorseRider rider = _riderBuilder.Build();
+			rider.ConfigureServiceRoutes();
 			_server.UseRider(rider);
 			_server.Start();
 			return Task.CompletedTask;
@@ -57,8 +61,8 @@ namespace HostedServiceSample.Server
 									.ConfigureQueues(cfg =>
 													 {
 														 cfg.EventHandlers.Add(_queueEventHandler);
-														 cfg.UseMemoryQueues();
-														 cfg.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(30);
+														 cfg.UseCustomQueueManager("a", m => Task.FromResult<IHorseQueueManager>(new SampleMemoryQueueManager(m.Queue)));
+														 cfg.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
 														 cfg.Options.Type = QueueType.RoundRobin;
 														 cfg.Options.AutoQueueCreation = true;
 													 })
