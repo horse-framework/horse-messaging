@@ -30,9 +30,7 @@ namespace Horse.Messaging.Data.Configuration
         /// </summary>
         public static void Initialize(DataConfigurationBuilder builder)
         {
-            if (Builder != null)
-                throw new InvalidOperationException("Data configuration is already initialized");
-
+            if (Builder != null) return;
             Builder = builder;
             Manager = new DataConfigurationManager();
             Configuration = Manager.Load(builder.ConfigFile);
