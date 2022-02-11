@@ -80,7 +80,7 @@ namespace Horse.Messaging.Data
             dataConfigurator?.Invoke(dataConfigurationBuilder);
 
             if (dataConfigurationBuilder.GenerateQueueFilename == null)
-                dataConfigurationBuilder.GenerateQueueFilename = DefaultQueueDbPath;
+                dataConfigurationBuilder.GenerateQueueFilename = DataConfigurationBuilder.DefaultQueueDbPath;
 
             ConfigurationFactory.Initialize(dataConfigurationBuilder);
 
@@ -104,23 +104,6 @@ namespace Horse.Messaging.Data
             return cfg;
         }
 
-        /// <summary>
-        /// Generates full file path for database file of the queue
-        /// </summary>
-        private static string DefaultQueueDbPath(HorseQueue queue)
-        {
-            string dir = "data";
-            try
-            {
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
 
-                return dir + "/" + queue.Name + ".tdb";
-            }
-            catch
-            {
-                return "data-" + queue.Name + ".tdb";
-            }
-        }
     }
 }

@@ -5,4 +5,10 @@ namespace HostedServiceSample.Producer
 		public string Foo { get; set; }
 		public string Bar { get; set; }
 	}
+	
+	internal class TestQueueModel2
+	{
+		public string Foo { get; set; }
+		public string Bar { get; set; }
+	}
 }

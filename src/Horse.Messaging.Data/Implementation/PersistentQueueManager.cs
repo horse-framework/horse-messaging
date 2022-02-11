@@ -99,7 +99,7 @@ namespace Horse.Messaging.Data.Implementation
 
             await LoadMessages(_priorityMessageStore.Database, deliveries);
             await LoadMessages(_messageStore.Database, deliveries);
-            
+
             DeliveryHandler.Tracker.Start();
             PriorityMessageStore.TimeoutTracker.Start();
             MessageStore.TimeoutTracker.Start();
@@ -164,7 +164,7 @@ namespace Horse.Messaging.Data.Implementation
                 if (ConfigurationFactory.Builder.ErrorAction != null)
                     ConfigurationFactory.Builder.ErrorAction(Queue, null, e);
             }
-            
+
             PriorityMessageStore.TimeoutTracker.Stop();
             MessageStore.TimeoutTracker.Stop();
 

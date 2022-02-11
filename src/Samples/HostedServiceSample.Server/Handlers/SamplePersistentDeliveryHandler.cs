@@ -12,8 +12,6 @@ namespace HostedServiceSample.Server.Handlers
 {
 	public class SamplePersistentQueueManager: PersistentQueueManager
 	{
-		private static readonly DataConfigurationBuilder _builder = new();
-
 		public SamplePersistentQueueManager(HorseQueue queue, DatabaseOptions options, bool useRedelivery = false):
 			base(queue, options, useRedelivery)
 		{

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Horse.Messaging.Server.Queues;
 
 namespace Horse.Messaging.Data.Configuration
@@ -122,7 +123,7 @@ namespace Horse.Messaging.Data.Configuration
         {
             return new DatabaseOptions
                    {
-                       Filename = GenerateQueueFilename(queue),
+                       Filename = GenerateQueueFilename is not null ? GenerateQueueFilename(queue) : DefaultQueueDbPath(queue),
                        AutoFlush = _autoFlush,
                        AutoShrink = _autoShrink,
                        FlushInterval = _flushInteval,
@@ -130,6 +131,25 @@ namespace Horse.Messaging.Data.Configuration
                        ShrinkInterval = _shrinkInteval,
                        CreateBackupOnShrink = _createBackup
                    };
+        }
+        
+        /// <summary>
+        /// Generates full file path for database file of the queue
+        /// </summary>
+        internal static string DefaultQueueDbPath(HorseQueue queue)
+        {
+            string dir = "data";
+            try
+            {
+                if (!Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+
+                return dir + "/" + queue.Name + ".tdb";
+            }
+            catch
+            {
+                return "data-" + queue.Name + ".tdb";
+            }
         }
     }
 }
