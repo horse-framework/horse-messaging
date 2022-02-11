@@ -81,7 +81,7 @@ namespace Horse.Messaging.Server.Queues.States
 
 			IQueueDeliveryHandler deliveryHandler = _queue.Manager.DeliveryHandler;
 
-			// UPDATE : beginSend and canReceive must be check in round robin algo.
+			// UPDATE : 11.02.2022 beginSend and canReceive must be check in round robin algo.
 			// message.Decision = await deliveryHandler.BeginSend(_queue, message);
 			// if (!await _queue.ApplyDecision(message.Decision, message))
 			// 	return PushResult.Success;
@@ -148,6 +148,7 @@ namespace Horse.Messaging.Server.Queues.States
 		/// </summary>
 		internal QueueClient GetNextRRClient(ref int index)
 		{
+			// UPDATE: 11.02.2022 no need this function anymore
 			List<QueueClient> clients = _queue.ClientsClone;
 			if (index < 0 || index + 1 >= clients.Count)
 			{
