@@ -61,6 +61,8 @@ namespace Horse.Messaging.Server.Routing
         /// </summary>
         public bool PersistentRouters { get; internal set; }
 
+        private bool _initializing;
+
         /// <summary>
         /// Creates new queue rider
         /// </summary>
@@ -81,6 +83,7 @@ namespace Horse.Messaging.Server.Routing
             if (!System.IO.File.Exists(RouterConfigurationFilename))
                 return;
 
+            _initializing = true;
             string json = System.IO.File.ReadAllText(RouterConfigurationFilename);
             RouterDefinition[] definitions = System.Text.Json.JsonSerializer.Deserialize<RouterDefinition[]>(json);
 
@@ -90,6 +93,8 @@ namespace Horse.Messaging.Server.Routing
                 if (router != null)
                     _routers.Add(router);
             }
+
+            _initializing = false;
         }
 
         /// <summary>
@@ -216,7 +221,7 @@ namespace Horse.Messaging.Server.Routing
 
         internal void SaveRouters()
         {
-            if (!PersistentRouters)
+            if (!PersistentRouters || _initializing)
                 return;
             
             List<RouterDefinition> definitions = new List<RouterDefinition>();
