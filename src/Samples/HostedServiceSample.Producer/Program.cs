@@ -14,7 +14,7 @@ while (service.HorseClient.IsConnected)
     Console.Write("Press enter to push message....");
     string userId = Console.ReadLine();
     string modelType = Console.ReadLine() ?? "0";
-    var result = await PushQueueMessage(userId, modelType);
+    var result = await PushQueueMessageThroughRouter(userId, modelType);
     Console.WriteLine(result.Code);
 }
 
@@ -44,6 +44,34 @@ async Task<HorseResult> PushQueueMessage(string userId, string modelType)
     }
 
     return await service.HorseClient.Queue.PushJson(model, true, headers);
+}
+
+async Task<HorseResult> PushQueueMessageThroughRouter(string userId, string modelType)
+{
+    object model = null;
+    Dictionary<string, string> headers = new()
+    {
+        {"UserId", userId},
+    };
+    switch (modelType)
+    {
+        case "0":
+            model = new TestQueueModel()
+            {
+                Foo = "Emre",
+                Bar = "Hizli"
+            };
+            break;
+        case "1":
+            model = new TestQueueModel2()
+            {
+                Foo = "Emre1",
+                Bar = "Hizli2"
+            };
+            break;
+    }
+
+    return await service.HorseClient.Router.PublishJson(model, true, headers);
 }
 
 async Task<HorseResult> PushRouteMessage(string userId)
