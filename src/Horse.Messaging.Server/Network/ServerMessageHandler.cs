@@ -43,6 +43,10 @@ namespace Horse.Messaging.Server.Network
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
             }
+            catch (NotSupportedException)
+            {
+                await client.SendAsync(message.CreateResponse(HorseResultCode.Unacceptable));
+            }
             catch (DuplicateNameException)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Duplicate));

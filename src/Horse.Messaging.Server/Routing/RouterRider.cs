@@ -75,8 +75,6 @@ namespace Horse.Messaging.Server.Routing
 
         internal void Initialize()
         {
-            // TODO : Memo
-            return;
             if (!PersistentRouters || string.IsNullOrEmpty(RouterConfigurationFilename))
                 return;
 
@@ -103,7 +101,7 @@ namespace Horse.Messaging.Server.Routing
             try
             {
                 if (!Filter.CheckNameEligibility(name))
-                    throw new InvalidOperationException("Invalid router name");
+                    throw new NotSupportedException("Invalid router name");
 
                 if (Rider.Options.RouterLimit > 0 && Rider.Options.RouterLimit >= _routers.Count())
                     throw new OperationCanceledException("Router limit is exceeded for the server");
@@ -218,8 +216,9 @@ namespace Horse.Messaging.Server.Routing
 
         internal void SaveRouters()
         {
-            // TODO : Memo
-            return;
+            if (!PersistentRouters)
+                return;
+            
             List<RouterDefinition> definitions = new List<RouterDefinition>();
 
             foreach (IRouter router in _routers.All())
@@ -275,7 +274,7 @@ namespace Horse.Messaging.Server.Routing
 
             try
             {
-                string json = System.Text.Json.JsonSerializer.Serialize(definitions);
+                string json = System.Text.Json.JsonSerializer.Serialize(definitions.ToArray());
                 System.IO.File.WriteAllText(RouterConfigurationFilename, json);
             }
             catch (Exception e)
