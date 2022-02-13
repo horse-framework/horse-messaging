@@ -183,37 +183,21 @@ namespace Horse.Messaging.Server.Routing
 
             foreach (BindingDefinition bd in definition.Bindings)
             {
-                Binding binding = null;
-
-                switch (bd.Type.ToLower())
+                Type type = Type.GetType(bd.Type);
+                if (type == null)
                 {
-                    case "direct":
-                        binding = new DirectBinding(bd.Name, bd.Target, bd.Priority, bd.Interaction, bd.Method ?? RouteMethod.Distribute);
-                        break;
-
-                    case "queue":
-                        binding = new QueueBinding(bd.Name, bd.Target, bd.Priority, bd.Interaction);
-                        break;
-
-                    case "topic":
-                        binding = new TopicBinding(bd.Name, bd.Target, bd.ContentType, bd.Priority, bd.Interaction, bd.Method ?? RouteMethod.Distribute);
-                        break;
-
-                    case "http":
-                        HttpBindingMethod httpBindingMethod = HttpBindingMethod.Get;
-                        if (bd.ContentType.HasValue)
-                            httpBindingMethod = (HttpBindingMethod) Convert.ToInt32(bd.ContentType.HasValue);
-
-                        binding = new HttpBinding(bd.Name, bd.Target, httpBindingMethod, bd.Priority, bd.Interaction);
-                        break;
-
-                    case "dynamic":
-                        binding = new DynamicQueueBinding(bd.Name, bd.Priority, bd.Interaction);
-                        break;
+                    Rider.SendError("CreateRouter", new ArgumentException($"Type resolve error for binding {bd.Type}"), "Loading from Binding Definition");
+                    continue;
                 }
 
-                if (binding != null)
-                    router.AddBinding(binding);
+                Binding binding = (Binding) Activator.CreateInstance(type);
+                binding.Name = bd.Name;
+                binding.Target = bd.Target;
+                binding.Priority = bd.Priority;
+                binding.Interaction = bd.Interaction;
+                binding.RouteMethod = bd.Method ?? RouteMethod.Distribute;
+
+                router.AddBinding(binding);
             }
 
             return router;
@@ -223,7 +207,7 @@ namespace Horse.Messaging.Server.Routing
         {
             if (!PersistentRouters || _initializing)
                 return;
-            
+
             List<RouterDefinition> definitions = new List<RouterDefinition>();
 
             foreach (IRouter router in _routers.All())
@@ -244,36 +228,14 @@ namespace Horse.Messaging.Server.Routing
                         Interaction = binding.Interaction,
                         Target = binding.Target,
                         ContentType = binding.ContentType,
-                        Priority = binding.Priority
+                        Priority = binding.Priority,
+                        Type = binding.GetType().FullName,
+                        Method = binding.RouteMethod
                     };
 
-                    if (binding is QueueBinding)
-                    {
-                        bindingDefinition.Type = "queue";
-                    }
-                    else if (binding is TopicBinding topicBinding)
-                    {
-                        bindingDefinition.Type = "topic";
-                        bindingDefinition.Method = topicBinding.RouteMethod;
-                    }
-                    else if (binding is DirectBinding directBinding)
-                    {
-                        bindingDefinition.Type = "direct";
-                        bindingDefinition.Method = directBinding.RouteMethod;
-                    }
-                    else if (binding is DynamicQueueBinding dynamicQueueBinding)
-                    {
-                        bindingDefinition.Type = "dynamic";
-                        
-                    }
-                    else if (binding is HttpBinding httpBinding)
-                    {
-                        bindingDefinition.Type = "http";
-                    }
-                    
                     definition.Bindings.Add(bindingDefinition);
                 }
-                
+
                 definitions.Add(definition);
             }
 

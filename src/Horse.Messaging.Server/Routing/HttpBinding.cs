@@ -17,17 +17,6 @@ namespace Horse.Messaging.Server.Routing
     public class HttpBinding : Binding
     {
         /// <summary>
-        /// Creates new HTTP binding.
-        /// Name is the name of the binding.
-        /// Target should be the endpoint.
-        /// Priority for router binding.
-        /// </summary>
-        public HttpBinding(string name, string target, HttpBindingMethod method, int priority, BindingInteraction interaction)
-            : base(name, target, (ushort) method, priority, interaction)
-        {
-        }
-
-        /// <summary>
         /// Sends message to target as HTTP request and waits for response.
         /// Ok Accepted and Created responses return true, others return false
         /// </summary>

@@ -19,23 +19,23 @@ namespace Horse.Messaging.Server.Routing
         /// For queue bindings, queue name.
         /// For direct bindings client id, type or name.
         /// </summary>
-        public string Target { get; }
+        public string Target { get; set; }
 
         /// <summary>
         /// Binding content type.
         /// Null, passes same content type from producer to receiver
         /// </summary>
-        public ushort? ContentType { get; }
+        public ushort? ContentType { get; set; }
 
         /// <summary>
         /// Binding priority
         /// </summary>
-        public int Priority { get; }
+        public int Priority { get; set; }
 
         /// <summary>
         /// Binding interaction type
         /// </summary>
-        public BindingInteraction Interaction { get; }
+        public BindingInteraction Interaction { get; set; }
 
         /// <summary>
         /// Parent Router object of the binding
@@ -43,16 +43,9 @@ namespace Horse.Messaging.Server.Routing
         internal Router Router { get; set; }
 
         /// <summary>
-        /// Creates new binding
+        /// Routing method
         /// </summary>
-        protected Binding(string name, string target, ushort? contentType, int priority, BindingInteraction interaction)
-        {
-            Name = name;
-            Target = target;
-            ContentType = contentType;
-            Priority = priority;
-            Interaction = interaction;
-        }
+        public RouteMethod RouteMethod { get; set; }
 
         /// <summary>
         /// Sends the message to binding receivers

@@ -8,11 +8,6 @@ namespace HostedServiceSample.Server.CustomBindings
 {
 	public class SampleDirectBinding: DirectBinding
 	{
-		public SampleDirectBinding(string name, string target, int priority, BindingInteraction interaction, RouteMethod routeMethod = RouteMethod.Distribute): base(name, target, priority, interaction, routeMethod) { }
-
-		public SampleDirectBinding(string name, string target, ushort? contentType, int priority, BindingInteraction interaction, RouteMethod routeMethod = RouteMethod.Distribute): base(name, target, contentType, priority, interaction,
-			routeMethod) { }
-
 		public override Task<bool> Send(MessagingClient sender, HorseMessage message)
 		{
 			var userIdParam = message.FindHeader("UserId");

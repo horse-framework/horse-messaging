@@ -1,7 +1,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using AdvancedSample.Messaging.Server.RouteBindings;
 using Horse.Messaging.Data;
 using Horse.Messaging.Data.Configuration;
 using Horse.Messaging.Server;
@@ -9,6 +8,7 @@ using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Managers;
 using Horse.Server;
 using HostedServiceSample.Server.Handlers;
+using HostedServiceSample.Server.RouteBindings;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

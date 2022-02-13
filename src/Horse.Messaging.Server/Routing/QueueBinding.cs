@@ -17,18 +17,6 @@ namespace Horse.Messaging.Server.Routing
         private DateTime _queueUpdateTime;
 
         /// <summary>
-        /// Creates new queue binding.
-        /// Name is the name of the binding.
-        /// Target should be queue name.
-        /// Content Type should be Queue Id.
-        /// Priority for router binding.
-        /// </summary>
-        public QueueBinding(string name, string target, int priority, BindingInteraction interaction)
-            : base(name, target, null, priority, interaction)
-        {
-        }
-
-        /// <summary>
         /// Sends the message to binding receivers
         /// </summary>
         public override async Task<bool> Send(MessagingClient sender, HorseMessage message)

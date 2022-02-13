@@ -16,16 +16,6 @@ namespace Horse.Messaging.Server.Routing
     public class DynamicQueueBinding : Binding
     {
         /// <summary>
-        /// Creates new queue binding.
-        /// Name is the name of the binding.
-        /// Priority for router binding.
-        /// </summary>
-        public DynamicQueueBinding(string name, int priority, BindingInteraction interaction)
-            : base(name, null, null, priority, interaction)
-        {
-        }
-
-        /// <summary>
         /// Sends the message to binding receivers
         /// </summary>
         public override async Task<bool> Send(MessagingClient sender, HorseMessage message)

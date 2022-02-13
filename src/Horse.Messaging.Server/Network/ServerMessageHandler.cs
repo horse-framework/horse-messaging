@@ -200,7 +200,7 @@ namespace Horse.Messaging.Server.Network
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
                 return;
             }
-            
+
             HorseQueue queue = _rider.Queue.Find(message.Target);
             if (queue == null)
             {
@@ -706,25 +706,25 @@ namespace Horse.Messaging.Server.Network
                 }
             }
 
-            switch (info.BindingType)
+            Type bindingType = Type.GetType(info.BindingType);
+            if (bindingType == null && !info.BindingType.EndsWith("Binding"))
+                bindingType = Type.GetType($"{info.BindingType}Binding");
+
+            if (bindingType == null)
             {
-                case BindingType.Direct:
-                    router.AddBinding(new DirectBinding(info.Name, info.Target, info.ContentType, info.Priority, info.Interaction, info.Method));
-                    break;
-
-                case BindingType.Queue:
-                    router.AddBinding(new QueueBinding(info.Name, info.Target, info.Priority, info.Interaction));
-                    break;
-
-                case BindingType.Http:
-                    router.AddBinding(new HttpBinding(info.Name, info.Target, (HttpBindingMethod) (info.ContentType ?? 0), info.Priority, info.Interaction));
-                    break;
-
-                case BindingType.Topic:
-                    router.AddBinding(new TopicBinding(info.Name, info.Target, info.ContentType ?? 0, info.Priority, info.Interaction, info.Method));
-                    break;
+                await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+                return;
             }
 
+            Binding binding = (Binding) Activator.CreateInstance(bindingType);
+            binding.Name = info.Name;
+            binding.Target = info.Target;
+            binding.ContentType = info.ContentType;
+            binding.Priority = info.Priority;
+            binding.Interaction = info.Interaction;
+            binding.RouteMethod = info.Method;
+
+            router.AddBinding(binding);
             await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
         }
 
@@ -791,23 +791,10 @@ namespace Horse.Messaging.Server.Network
                     Target = binding.Target,
                     Priority = binding.Priority,
                     ContentType = binding.ContentType,
-                    Interaction = binding.Interaction
+                    Interaction = binding.Interaction,
+                    BindingType = binding.GetType().FullName,
+                    Method = binding.RouteMethod
                 };
-
-                if (binding is QueueBinding)
-                    info.BindingType = BindingType.Queue;
-                else if (binding is DirectBinding directBinding)
-                {
-                    info.Method = directBinding.RouteMethod;
-                    info.BindingType = BindingType.Direct;
-                }
-                else if (binding is TopicBinding topicBinding)
-                {
-                    info.Method = topicBinding.RouteMethod;
-                    info.BindingType = BindingType.Topic;
-                }
-                else if (binding is HttpBinding)
-                    info.BindingType = BindingType.Http;
 
                 items.Add(info);
             }

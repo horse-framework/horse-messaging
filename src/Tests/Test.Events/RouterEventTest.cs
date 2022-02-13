@@ -78,7 +78,7 @@ namespace Test.Events
             HorseResult createResult = await client.Router.Create("test-router", RouteMethod.Distribute);
             Assert.Equal(HorseResultCode.Ok, createResult.Code);
 
-            HorseResult bindingResult = await client.Router.AddBinding("test-router", BindingType.Direct, "binding-1", "@name:client-test", BindingInteraction.None);
+            HorseResult bindingResult = await client.Router.AddBinding("test-router", "DirectBinding", "binding-1", "@name:client-test", BindingInteraction.None);
             Assert.Equal(HorseResultCode.Ok, bindingResult.Code);
 
             await Task.Delay(250);
@@ -103,7 +103,7 @@ namespace Test.Events
             HorseResult createResult = await client.Router.Create("test-router", RouteMethod.Distribute);
             Assert.Equal(HorseResultCode.Ok, createResult.Code);
 
-            HorseResult bindingResult = await client.Router.AddBinding("test-router", BindingType.Direct, "binding-1", "@name:client-test", BindingInteraction.None);
+            HorseResult bindingResult = await client.Router.AddBinding("test-router", "Direct", "binding-1", "@name:client-test", BindingInteraction.None);
             Assert.Equal(HorseResultCode.Ok, bindingResult.Code);
 
             await Task.Delay(250);

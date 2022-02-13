@@ -51,7 +51,7 @@ namespace Horse.Messaging.Protocol.Models
         /// </summary>
         [JsonProperty("BindingType")]
         [JsonPropertyName("BindingType")]
-        public BindingType BindingType { get; set; }
+        public string BindingType { get; set; }
 
         /// <summary>
         /// Routing method in binding

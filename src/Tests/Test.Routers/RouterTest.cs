@@ -18,10 +18,10 @@ namespace Test.Routers
             int port = server.Start(300, 300);
 
             Router router = new Router(server.Rider, "router", RouteMethod.Distribute);
-            router.AddBinding(new QueueBinding("qbind-1", "push-a", 5, BindingInteraction.None));
-            router.AddBinding(new QueueBinding("qbind-2", "push-a-cc", 10, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-1", "client-1", 20, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-2", "client-2", 0, BindingInteraction.None));
+            router.AddBinding(new QueueBinding {Name = "qbind-1", Target = "push-a", Priority = 5, Interaction = BindingInteraction.None});
+            router.AddBinding(new QueueBinding {Name = "qbind-2", Target = "push-a-cc", Priority = 10, Interaction = BindingInteraction.None});
+            router.AddBinding(new DirectBinding {Name = "dbind-1", Target = "client-1", Priority = 20, Interaction = BindingInteraction.None});
+            router.AddBinding(new DirectBinding {Name = "dbind-2", Target = "client-2", Priority = 0, Interaction = BindingInteraction.None});
             server.Rider.Router.Add(router);
 
             HorseClient producer = new HorseClient();
@@ -70,10 +70,10 @@ namespace Test.Routers
             int port = server.Start(300, 300);
 
             Router router = new Router(server.Rider, "router", RouteMethod.RoundRobin);
-            router.AddBinding(new QueueBinding("qbind-1", "push-a", 5, BindingInteraction.None));
-            router.AddBinding(new QueueBinding("qbind-2", "push-a-cc", 10, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-1", "client-1", 20, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-2", "client-2", 0, BindingInteraction.None));
+            router.AddBinding(new QueueBinding {Name = "qbind-1", Target = "push-a", Priority = 5, Interaction = BindingInteraction.None});
+            router.AddBinding(new QueueBinding {Name = "qbind-2", Target = "push-a-cc", Priority = 10, Interaction = BindingInteraction.None});
+            router.AddBinding(new DirectBinding {Name = "dbind-1", Target = "client-1", Priority = 20, Interaction = BindingInteraction.None});
+            router.AddBinding(new DirectBinding {Name = "dbind-2", Target = "client-2", Priority = 0, Interaction = BindingInteraction.None});
             server.Rider.Router.Add(router);
 
             HorseClient producer = new HorseClient();
@@ -122,10 +122,10 @@ namespace Test.Routers
             int port = server.Start(300, 300);
 
             Router router = new Router(server.Rider, "router", RouteMethod.OnlyFirst);
-            router.AddBinding(new QueueBinding("qbind-1", "push-a", 5, BindingInteraction.None));
-            router.AddBinding(new QueueBinding("qbind-2", "push-a-cc", 10, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-1", "client-1", 2, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-2", "client-2", 8, BindingInteraction.None));
+            router.AddBinding(new QueueBinding {Name = "qbind-1", Target = "push-a", Priority = 5, Interaction = BindingInteraction.None});
+            router.AddBinding(new QueueBinding {Name = "qbind-2", Target = "push-a-cc", Priority = 10, Interaction = BindingInteraction.None});
+            router.AddBinding(new DirectBinding {Name = "dbind-1", Target = "client-1", Priority = 2, Interaction = BindingInteraction.None});
+            router.AddBinding(new DirectBinding {Name = "dbind-2", Target = "client-2", Priority = 0, Interaction = BindingInteraction.None});
             server.Rider.Router.Add(router);
 
             HorseClient producer = new HorseClient();
@@ -174,8 +174,8 @@ namespace Test.Routers
             int port = server.Start(300, 300);
 
             Router router = new Router(server.Rider, "router", RouteMethod.Distribute);
-            router.AddBinding(new QueueBinding("qbind-1", "push-a", 0, BindingInteraction.None));
-            router.AddBinding(new QueueBinding("qbind-2", "push-a-cc", 0, BindingInteraction.None));
+            router.AddBinding(new QueueBinding {Name = "qbind-1", Target = "push-a", Priority = 0, Interaction = BindingInteraction.None});
+            router.AddBinding(new QueueBinding {Name = "qbind-2", Target = "push-a-cc", Priority = 0, Interaction = BindingInteraction.None});
             server.Rider.Router.Add(router);
 
             HorseClient producer = new HorseClient();
@@ -201,8 +201,8 @@ namespace Test.Routers
             int port = server.Start(300, 300);
 
             Router router = new Router(server.Rider, "router", RouteMethod.Distribute);
-            router.AddBinding(new DirectBinding("dbind-1", "client-1", 0, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-2", "client-2", 0, BindingInteraction.None));
+            router.AddBinding(new DirectBinding {Name = "dbind-1", Target = "client-1", Priority = 0, Interaction = BindingInteraction.None});
+            router.AddBinding(new DirectBinding {Name = "dbind-2", Target = "client-2", Priority = 0, Interaction = BindingInteraction.None});
             server.Rider.Router.Add(router);
 
             HorseClient producer = new HorseClient();
@@ -241,8 +241,8 @@ namespace Test.Routers
             int port = server.Start(300, 300);
 
             Router router = new Router(server.Rider, "router", RouteMethod.Distribute);
-            router.AddBinding(new DirectBinding("dbind-1", "client-1", 0, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-2", "client-2", 0, BindingInteraction.None));
+            router.AddBinding(new DirectBinding {Name = "dbind-1", Target = "client-1", Priority = 0, Interaction = BindingInteraction.None});
+            router.AddBinding(new DirectBinding {Name = "dbind-2", Target = "client-2", Priority = 0, Interaction = BindingInteraction.None});
             server.Rider.Router.Add(router);
 
             HorseClient producer = new HorseClient();
@@ -262,8 +262,8 @@ namespace Test.Routers
             int port = server.Start(300, 300);
 
             Router router = new Router(server.Rider, "router", RouteMethod.Distribute);
-            router.AddBinding(new QueueBinding("qbind-1", "push-a", 0, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-1", "client-1", 0, BindingInteraction.None));
+            router.AddBinding(new QueueBinding {Name = "qbind-1", Target = "push-a", Priority = 5, Interaction = BindingInteraction.None});
+            router.AddBinding(new DirectBinding {Name = "dbind-1", Target = "client-1", Priority = 0, Interaction = BindingInteraction.None});
             server.Rider.Router.Add(router);
 
             HorseClient producer = new HorseClient();
@@ -296,10 +296,10 @@ namespace Test.Routers
             int port = server.Start(300, 300);
 
             Router router = new Router(server.Rider, "router", RouteMethod.Distribute);
-            router.AddBinding(new QueueBinding("qbind-1", "push-a", 0, BindingInteraction.None));
-            router.AddBinding(new QueueBinding("qbind-2", "push-a-cc", 0, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-1", "client-1", 0, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-2", "client-2", 0, BindingInteraction.None));
+            router.AddBinding(new QueueBinding {Name = "qbind-1", Target = "push-a", Priority = 0, Interaction = BindingInteraction.None});
+            router.AddBinding(new QueueBinding {Name = "qbind-2", Target = "push-a-cc", Priority = 0, Interaction = BindingInteraction.None});
+            router.AddBinding(new DirectBinding {Name = "dbind-1", Target = "client-1", Priority = 0, Interaction = BindingInteraction.None});
+            router.AddBinding(new DirectBinding {Name = "dbind-2", Target = "client-2", Priority = 0, Interaction = BindingInteraction.None});
             server.Rider.Router.Add(router);
 
             HorseClient producer = new HorseClient();
@@ -345,8 +345,8 @@ namespace Test.Routers
             server.SendAcknowledgeFromMQ = true;
 
             Router router = new Router(server.Rider, "router", RouteMethod.Distribute);
-            router.AddBinding(new QueueBinding("qbind-1", "push-a", 0, BindingInteraction.Response));
-            router.AddBinding(new DirectBinding("dbind-1", "client-1", 0, BindingInteraction.None));
+            router.AddBinding(new QueueBinding {Name = "qbind-1", Target = "push-a", Priority = 0, Interaction = BindingInteraction.Response});
+            router.AddBinding(new DirectBinding {Name = "dbind-1", Target = "client-1", Priority = 0, Interaction = BindingInteraction.None});
             server.Rider.Router.Add(router);
 
             HorseClient producer = new HorseClient();
@@ -379,8 +379,8 @@ namespace Test.Routers
             int port = server.Start(300, 300);
 
             Router router = new Router(server.Rider, "router", RouteMethod.Distribute);
-            router.AddBinding(new QueueBinding("qbind-1", "push-a", 0, BindingInteraction.None));
-            router.AddBinding(new DirectBinding("dbind-1", "client-1", 0, BindingInteraction.Response));
+            router.AddBinding(new QueueBinding {Name = "qbind-1", Target = "push-a", Priority = 0, Interaction = BindingInteraction.None});
+            router.AddBinding(new DirectBinding {Name = "dbind-1", Target = "client-1", Priority = 0, Interaction = BindingInteraction.Response});
             server.Rider.Router.Add(router);
 
             HorseClient producer = new HorseClient();

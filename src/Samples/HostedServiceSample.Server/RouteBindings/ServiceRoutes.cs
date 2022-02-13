@@ -3,19 +3,32 @@ using Horse.Messaging.Server;
 using Horse.Messaging.Server.Routing;
 using HostedServiceSample.Server.CustomBindings;
 
-namespace AdvancedSample.Messaging.Server.RouteBindings
+namespace HostedServiceSample.Server.RouteBindings
 {
-	public static class ServiceRoutes
-	{
-		public static void ConfigureServiceRoutes(this HorseRider rider)
-		{
-			IRouter directRouter = rider.Router.Add("test-router", RouteMethod.Distribute);
-			SampleDirectBinding testDirectBinding = new("test-binding", $"@type:test-consumer", 1, BindingInteraction.Response, RouteMethod.RoundRobin);
-			directRouter.AddBinding(testDirectBinding);
+    public static class ServiceRoutes
+    {
+        public static void ConfigureServiceRoutes(this HorseRider rider)
+        {
+            IRouter directRouter = rider.Router.Add("test-router", RouteMethod.Distribute);
+            SampleDirectBinding testDirectBinding = new SampleDirectBinding
+            {
+                Name = "test-binding",
+                Target = $"@type:test-consumer",
+                Priority = 1,
+                Interaction = BindingInteraction.Response,
+                RouteMethod = RouteMethod.RoundRobin
+            };
+            directRouter.AddBinding(testDirectBinding);
 
-			IRouter queueRouter = rider.Router.Add("test-queue-router", RouteMethod.Distribute);
-			QueueBinding testQueueBinding = new("test-queue-binding", "TestQueueModel2", 1, BindingInteraction.Response);
-			queueRouter.AddBinding(testQueueBinding);
-		}
-	}
+            IRouter queueRouter = rider.Router.Add("test-queue-router", RouteMethod.Distribute);
+            QueueBinding testQueueBinding = new QueueBinding
+            {
+                Name = "test-queue-binding",
+                Target = "TestQueueModel2",
+                Priority = 1,
+                Interaction = BindingInteraction.Response
+            };
+            queueRouter.AddBinding(testQueueBinding);
+        }
+    }
 }
