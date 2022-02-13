@@ -35,8 +35,17 @@ namespace Sample.Server
                 .ConfigureRouters(cfg => cfg.UsePersistentRouters())
                 .Build();
 
+            IRouter router = rider.Router.Find("test");
+            /*
             IRouter router = rider.Router.Add("test", RouteMethod.Distribute);
-            
+            router.AddBinding(new QueueBinding
+            {
+                Name = "binding1",
+                Target = "queue1",
+                Interaction = BindingInteraction.Response,
+                Priority = 400,
+                RouteMethod = RouteMethod.Distribute
+            });*/
             
             /*
 

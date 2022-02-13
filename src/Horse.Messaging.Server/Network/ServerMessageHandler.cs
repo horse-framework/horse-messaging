@@ -706,6 +706,9 @@ namespace Horse.Messaging.Server.Network
                 }
             }
 
+            if (info.BindingType.IndexOf('.') < 0)
+                info.BindingType = "Horse.Messaging.Server.Routing." + info.BindingType;
+
             Type bindingType = Type.GetType(info.BindingType);
             if (bindingType == null && !info.BindingType.EndsWith("Binding"))
                 bindingType = Type.GetType($"{info.BindingType}Binding");
