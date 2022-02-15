@@ -35,17 +35,13 @@ namespace Horse.Messaging.Server.Queues.States
             {
                 if (!message.Deadline.HasValue && _queue.Options.MessageTimeout > TimeSpan.Zero)
                     message.Deadline = DateTime.UtcNow.Add(_queue.Options.MessageTimeout);
+
+                Tuple<QueueClient, int> tuple = await GetNextAvailableRRClient(_roundRobinIndex, message,
+                    _queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge);
+                QueueClient cc = tuple.Item1;
                 
-                QueueClient cc;
-                if (_queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge)
-                {
-                    Tuple<QueueClient, int> tuple = await GetNextAvailableRRClient(_roundRobinIndex);
-                    cc = tuple.Item1;
-                    if (cc != null)
-                        _roundRobinIndex = tuple.Item2;
-                }
-                else
-                    cc = GetNextRRClient(ref _roundRobinIndex);
+                if (cc != null)
+                    _roundRobinIndex = tuple.Item2;
 
                 if (cc == null)
                 {
@@ -95,11 +91,6 @@ namespace Horse.Messaging.Server.Queues.States
             //create prepared message data
             byte[] messageData = HorseProtocolWriter.Create(message.Message);
 
-            //call before send and check decision
-            bool canReceive = await deliveryHandler.CanConsumerReceive(_queue, message, receiver.Client);
-            if (!canReceive)
-                return PushResult.Success;
-
             //create delivery object
             MessageDelivery delivery = new MessageDelivery(message, receiver, deadline);
 
@@ -147,31 +138,11 @@ namespace Horse.Messaging.Server.Queues.States
             return Task.FromResult(QueueStatusAction.Allow);
         }
 
-
-        /// <summary>
-        /// Gets next client with round robin algorithm and updates index
-        /// </summary>
-        internal QueueClient GetNextRRClient(ref int index)
-        {
-            List<QueueClient> clients = _queue.ClientsClone;
-            if (index < 0 || index + 1 >= clients.Count)
-            {
-                if (clients.Count == 0)
-                    return null;
-
-                index = 0;
-                return clients[0];
-            }
-
-            index++;
-            return clients[index];
-        }
-
         /// <summary>
         /// Gets next available client which is not currently consuming any message.
         /// Used for wait for acknowledge situations
         /// </summary>
-        internal async Task<Tuple<QueueClient, int>> GetNextAvailableRRClient(int currentIndex)
+        private async Task<Tuple<QueueClient, int>> GetNextAvailableRRClient(int currentIndex, QueueMessage message, bool waitForAcknowledge)
         {
             List<QueueClient> clients = _queue.ClientsClone;
             if (clients.Count == 0)
@@ -187,16 +158,30 @@ namespace Horse.Messaging.Server.Queues.States
                         index = 0;
 
                     QueueClient client = clients[index];
-                    if (client.CurrentlyProcessing == null)
-                        return new Tuple<QueueClient, int>(client, index);
 
-                    if (client.ProcessDeadline < DateTime.UtcNow)
+                    if (waitForAcknowledge && client.CurrentlyProcessing != null)
                     {
-                        client.CurrentlyProcessing = null;
-                        return new Tuple<QueueClient, int>(client, index);
+                        if (client.ProcessDeadline < DateTime.UtcNow)
+                        {
+                            client.CurrentlyProcessing = null;
+                        }
+                        else
+                        {
+                            index++;
+                            continue;
+                        }
+                    }
+
+                    var deliveryHandler = _queue.Manager.DeliveryHandler;
+                    bool canReceive = await deliveryHandler.CanConsumerReceive(_queue, message, client.Client);
+                    if (!canReceive)
+                    {
+                        index++;
+                        continue;
                     }
 
                     index++;
+                    return new Tuple<QueueClient, int>(client, index);
                 }
 
                 await Task.Delay(3);

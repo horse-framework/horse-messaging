@@ -1,11 +1,11 @@
 using System;
 using System.Runtime.CompilerServices;
 
-[assembly:InternalsVisibleTo("Test.Persistency")]
+[assembly: InternalsVisibleTo("Test.Persistency")]
 
 namespace Horse.Messaging.Data.Configuration
 {
-    internal static class ConfigurationFactory
+    public static class ConfigurationFactory
     {
         /// <summary>
         /// Current configuration
@@ -20,16 +20,14 @@ namespace Horse.Messaging.Data.Configuration
         /// <summary>
         /// Configuration builder
         /// </summary>
-        internal static DataConfigurationBuilder Builder { get; private set; }
+        public static DataConfigurationBuilder Builder { get; private set; }
 
         /// <summary>
         /// Initializes configurations and creates builder and manager
         /// </summary>
         public static void Initialize(DataConfigurationBuilder builder)
         {
-            if (Builder != null)
-                throw new InvalidOperationException("Data configuration is already initialized");
-
+            if (Builder != null) throw new InvalidOperationException("Data configurator is already initialized before.");
             Builder = builder;
             Manager = new DataConfigurationManager();
             Configuration = Manager.Load(builder.ConfigFile);

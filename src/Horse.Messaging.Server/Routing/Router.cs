@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
@@ -57,7 +58,7 @@ namespace Horse.Messaging.Server.Routing
         public EventManager PublishEvent { get; }
 
         private readonly object _rrlock = new object();
-
+        
         #endregion
 
         /// <summary>
@@ -85,7 +86,7 @@ namespace Horse.Messaging.Server.Routing
         /// <summary>
         /// Adds new binding to router
         /// </summary>
-        public bool AddBinding(Binding binding)
+        public bool AddBinding<TBinding>(TBinding binding) where TBinding : Binding, new()
         {
             try
             {
@@ -98,6 +99,42 @@ namespace Horse.Messaging.Server.Routing
                 binding.Router = this;
                 Bindings = list.OrderByDescending(x => x.Priority).ToArray();
                 Rider.Router.BindingAddEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
+                Rider.Router.SaveRouters();
+                return true;
+            }
+            catch (Exception e)
+            {
+                Rider.SendError("ADD_ROUTER_BINDING", e, $"Router:{Name}, Binding:{binding?.Name}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Adds new binding.
+        /// Binding type must have parameterless constructor.
+        /// Otherwise an exception is thrown.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Binding type must have parameterless constructor</exception>
+        public bool AddBinding(Binding binding)
+        {
+            Type type = binding.GetType();
+            ConstructorInfo[] ctors = type.GetConstructors();
+            bool hasParameterlessCtor = ctors.Any(x => x.GetParameters().Length == 0);
+            if (!hasParameterlessCtor)
+                throw new InvalidOperationException($"Binding type {type.FullName} must have parameterless constructor");
+            
+            try
+            {
+                if (Bindings.Any(x => x.Name.Equals(binding.Name)))
+                    return false;
+
+                List<Binding> list = Bindings.ToList();
+                list.Add(binding);
+
+                binding.Router = this;
+                Bindings = list.OrderByDescending(x => x.Priority).ToArray();
+                Rider.Router.BindingAddEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
+                Rider.Router.SaveRouters();
                 return true;
             }
             catch (Exception e)
@@ -127,6 +164,7 @@ namespace Horse.Messaging.Server.Routing
                 binding.Router = null;
                 Bindings = list.OrderByDescending(x => x.Priority).ToArray();
                 Rider.Router.BindingRemoveEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
+                Rider.Router.SaveRouters();
             }
             catch (Exception e)
             {
@@ -151,6 +189,7 @@ namespace Horse.Messaging.Server.Routing
                 list.Remove(binding);
                 Bindings = list.OrderByDescending(x => x.Priority).ToArray();
                 Rider.Router.BindingRemoveEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
+                Rider.Router.SaveRouters();
             }
             catch (Exception e)
             {

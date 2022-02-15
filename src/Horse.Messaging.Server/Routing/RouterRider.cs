@@ -52,6 +52,18 @@ namespace Horse.Messaging.Server.Routing
         public EventManager BindingRemoveEvent { get; }
 
         /// <summary>
+        /// Configuration filename for saved routers
+        /// </summary>
+        internal string RouterConfigurationFilename { get; set; }
+
+        /// <summary>
+        /// Returns true if persistent routers are activated
+        /// </summary>
+        public bool PersistentRouters { get; internal set; }
+
+        private bool _initializing;
+
+        /// <summary>
         /// Creates new queue rider
         /// </summary>
         internal RouterRider(HorseRider rider)
@@ -63,6 +75,28 @@ namespace Horse.Messaging.Server.Routing
             BindingRemoveEvent = new EventManager(rider, HorseEventType.RouterBindingRemove);
         }
 
+        internal void Initialize()
+        {
+            if (!PersistentRouters || string.IsNullOrEmpty(RouterConfigurationFilename))
+                return;
+
+            if (!System.IO.File.Exists(RouterConfigurationFilename))
+                return;
+
+            _initializing = true;
+            string json = System.IO.File.ReadAllText(RouterConfigurationFilename);
+            RouterDefinition[] definitions = System.Text.Json.JsonSerializer.Deserialize<RouterDefinition[]>(json);
+
+            foreach (RouterDefinition definition in definitions)
+            {
+                IRouter router = CreateRouter(definition);
+                if (router != null)
+                    _routers.Add(router);
+            }
+
+            _initializing = false;
+        }
+
         /// <summary>
         /// Creates new Router and adds it to server routers.
         /// Throws exception if name is not eligible
@@ -72,7 +106,7 @@ namespace Horse.Messaging.Server.Routing
             try
             {
                 if (!Filter.CheckNameEligibility(name))
-                    throw new InvalidOperationException("Invalid router name");
+                    throw new NotSupportedException("Invalid router name");
 
                 if (Rider.Options.RouterLimit > 0 && Rider.Options.RouterLimit >= _routers.Count())
                     throw new OperationCanceledException("Router limit is exceeded for the server");
@@ -84,6 +118,7 @@ namespace Horse.Messaging.Server.Routing
                 _routers.Add(router);
 
                 CreateEvent.Trigger(name, new KeyValuePair<string, string>(HorseHeaders.ROUTE_METHOD, method.ToString()));
+                SaveRouters();
 
                 return router;
             }
@@ -114,6 +149,7 @@ namespace Horse.Messaging.Server.Routing
                 CreateEvent.Trigger(router.Name, new KeyValuePair<string, string>(HorseHeaders.ROUTE_METHOD, router.Method.ToString()));
 
                 _routers.Add(router);
+                SaveRouters();
             }
             catch (Exception e)
             {
@@ -129,6 +165,7 @@ namespace Horse.Messaging.Server.Routing
         {
             _routers.Remove(router);
             RemoveEvent.Trigger(router.Name);
+            SaveRouters();
         }
 
         /// <summary>
@@ -137,6 +174,80 @@ namespace Horse.Messaging.Server.Routing
         public IRouter Find(string name)
         {
             return _routers.Find(x => x.Name == name);
+        }
+
+        private IRouter CreateRouter(RouterDefinition definition)
+        {
+            Router router = new Router(Rider, definition.Name, definition.Method);
+            router.IsEnabled = definition.IsEnabled;
+
+            foreach (BindingDefinition bd in definition.Bindings)
+            {
+                Type type = Type.GetType(bd.Type);
+                if (type == null)
+                {
+                    Rider.SendError("CreateRouter", new ArgumentException($"Type resolve error for binding {bd.Type}"), "Loading from Binding Definition");
+                    continue;
+                }
+
+                Binding binding = (Binding) Activator.CreateInstance(type);
+                binding.Name = bd.Name;
+                binding.Target = bd.Target;
+                binding.Priority = bd.Priority;
+                binding.Interaction = bd.Interaction;
+                binding.RouteMethod = bd.Method ?? RouteMethod.Distribute;
+
+                router.AddBinding(binding);
+            }
+
+            return router;
+        }
+
+        internal void SaveRouters()
+        {
+            if (!PersistentRouters || _initializing)
+                return;
+
+            List<RouterDefinition> definitions = new List<RouterDefinition>();
+
+            foreach (IRouter router in _routers.All())
+            {
+                RouterDefinition definition = new RouterDefinition
+                {
+                    Name = router.Name,
+                    Method = router.Method,
+                    IsEnabled = router.IsEnabled,
+                    Bindings = new List<BindingDefinition>()
+                };
+
+                foreach (Binding binding in router.GetBindings())
+                {
+                    BindingDefinition bindingDefinition = new BindingDefinition
+                    {
+                        Name = binding.Name,
+                        Interaction = binding.Interaction,
+                        Target = binding.Target,
+                        ContentType = binding.ContentType,
+                        Priority = binding.Priority,
+                        Type = binding.GetType().FullName,
+                        Method = binding.RouteMethod
+                    };
+
+                    definition.Bindings.Add(bindingDefinition);
+                }
+
+                definitions.Add(definition);
+            }
+
+            try
+            {
+                string json = System.Text.Json.JsonSerializer.Serialize(definitions.ToArray());
+                System.IO.File.WriteAllText(RouterConfigurationFilename, json);
+            }
+            catch (Exception e)
+            {
+                Rider.SendError("SaveRouters", e, null);
+            }
         }
     }
 }

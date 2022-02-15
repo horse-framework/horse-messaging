@@ -1,23 +1,89 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using HostedServiceSample.Client;
 using HostedServiceSample.Producer;
 
-var service = HorseServiceFactory.Create<Program>(args);
+var service = HorseServiceFactory.Create<Program>(args, "test-producer");
 _ = service.RunAsync();
 
 
 while (service.HorseClient.IsConnected)
 {
-	TestQueueModel model = new()
-	{
-		Foo = "Emre",
-		Bar = "Hizli"
-	};
-	Console.Write("Press enter to push message....");
-	HorseResult result = await service.HorseClient.Queue.PushJson(model, false);
-	Console.WriteLine(result.Code);
-	Console.ReadLine();
+    Console.Write("Press enter to push message....");
+    string userId = Console.ReadLine();
+    string modelType = Console.ReadLine() ?? "0";
+    var result = await PushQueueMessageThroughRouter(userId, modelType);
+    Console.WriteLine(result.Code);
 }
 
-internal class Program { }
+async Task<HorseResult> PushQueueMessage(string userId, string modelType)
+{
+    object model = null;
+    Dictionary<string, string> headers = new()
+    {
+        {"UserId", userId},
+    };
+    switch (modelType)
+    {
+        case "0":
+            model = new TestQueueModel()
+            {
+                Foo = "Emre",
+                Bar = "Hizli"
+            };
+            break;
+        case "1":
+            model = new TestQueueModel2()
+            {
+                Foo = "Emre1",
+                Bar = "Hizli2"
+            };
+            break;
+    }
+
+    return await service.HorseClient.Queue.PushJson(model, true, headers);
+}
+
+async Task<HorseResult> PushQueueMessageThroughRouter(string userId, string modelType)
+{
+    object model = null;
+    Dictionary<string, string> headers = new()
+    {
+        {"UserId", userId},
+    };
+    switch (modelType)
+    {
+        case "0":
+            model = new TestQueueModel()
+            {
+                Foo = "Emre",
+                Bar = "Hizli"
+            };
+            break;
+        case "1":
+            model = new TestQueueModel2()
+            {
+                Foo = "Emre1",
+                Bar = "Hizli2"
+            };
+            break;
+    }
+
+    return await service.HorseClient.Router.PublishJson(model, true, headers);
+}
+
+async Task<HorseResult> PushRouteMessage(string userId)
+{
+    TestDirectModel model = new()
+    {
+        Foo = "Emre",
+        Bar = "Hizli"
+    };
+    Dictionary<string, string> headers = new()
+    {
+        {"UserId", userId},
+    };
+    return await service.HorseClient.Router.PublishJson(model, false, headers);
+}

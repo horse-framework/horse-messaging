@@ -81,7 +81,7 @@ namespace Horse.Messaging.Client.Routers
         /// <param name="priority">Binding priority</param>
         /// <returns></returns>
         public async Task<HorseResult> AddBinding(string routerName,
-                                                  BindingType type,
+                                                  string type,
                                                   string name,
                                                   string target,
                                                   BindingInteraction interaction,

@@ -23,25 +23,6 @@ namespace Horse.Messaging.Server.Routing
 		private int _roundRobinIndex = -1;
 
 		/// <summary>
-		/// Tag binding routing method
-		/// </summary>
-		public RouteMethod RouteMethod { get; set; }
-
-		/// <summary>
-		/// Creates new direct binding.
-		/// Name is the name of the binding.
-		/// Target is the topic of queues.
-		/// Content Type should be Queue Id.
-		/// Priority for router binding.
-		/// </summary>
-		public TopicBinding(string name, string target, ushort? contentType, int priority, BindingInteraction interaction,
-							RouteMethod routeMethod = RouteMethod.Distribute)
-			: base(name, target, contentType, priority, interaction)
-		{
-			RouteMethod = routeMethod;
-		}
-
-		/// <summary>
 		/// Sends the message to binding receivers
 		/// </summary>
 		public override async Task<bool> Send(MessagingClient sender, HorseMessage message)

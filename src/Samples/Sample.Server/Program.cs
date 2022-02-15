@@ -1,10 +1,9 @@
-﻿using System;
-using Horse.Messaging.Data;
+﻿using Horse.Messaging.Data;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
-using Horse.Messaging.Server.Transactions;
+using Horse.Messaging.Server.Routing;
 using Horse.Server;
 
 namespace Sample.Server
@@ -33,8 +32,23 @@ namespace Sample.Server
                     });
                 })
                 .ConfigureClients(cfg => { cfg.Handlers.Add(new ClientHandler()); })
+                .ConfigureRouters(cfg => cfg.UsePersistentRouters())
                 .Build();
-/*
+
+            IRouter router = rider.Router.Find("test");
+            /*
+            IRouter router = rider.Router.Add("test", RouteMethod.Distribute);
+            router.AddBinding(new QueueBinding
+            {
+                Name = "binding1",
+                Target = "queue1",
+                Interaction = BindingInteraction.Response,
+                Priority = 400,
+                RouteMethod = RouteMethod.Distribute
+            });*/
+            
+            /*
+
             rider.Transaction.CreateContainer("TransactionName",
                 TimeSpan.FromSeconds(30),
                 new QueueTransactionEndpoint(rider.Queue, "CommitQueue"),

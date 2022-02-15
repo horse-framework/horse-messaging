@@ -36,12 +36,11 @@ namespace Horse.Messaging.Data.Implementation
         public IQueueMessageStore PriorityMessageStore => _priorityMessageStore;
 
         /// <inheritdoc />
-        public IQueueDeliveryHandler DeliveryHandler => _deliveryHandler;
+        public IQueueDeliveryHandler DeliveryHandler { get; protected set; }
 
         /// <inheritdoc />
         public IQueueSynchronizer Synchronizer { get; }
 
-        private readonly PersistentMessageDeliveryHandler _deliveryHandler;
         private readonly PersistentMessageStore _priorityMessageStore;
         private readonly PersistentMessageStore _messageStore;
 
@@ -54,7 +53,7 @@ namespace Horse.Messaging.Data.Implementation
             UseRedelivery = useRedelivery;
             queue.Manager = this;
 
-            _deliveryHandler = new PersistentMessageDeliveryHandler(this);
+            DeliveryHandler = new PersistentMessageDeliveryHandler(this);
 
             DatabaseOptions prioDbOptions = databaseOptions.Clone();
             if (prioDbOptions.Filename.EndsWith(".tdb", StringComparison.InvariantCultureIgnoreCase))
@@ -100,7 +99,7 @@ namespace Horse.Messaging.Data.Implementation
 
             await LoadMessages(_priorityMessageStore.Database, deliveries);
             await LoadMessages(_messageStore.Database, deliveries);
-            
+
             DeliveryHandler.Tracker.Start();
             PriorityMessageStore.TimeoutTracker.Start();
             MessageStore.TimeoutTracker.Start();
@@ -165,7 +164,7 @@ namespace Horse.Messaging.Data.Implementation
                 if (ConfigurationFactory.Builder.ErrorAction != null)
                     ConfigurationFactory.Builder.ErrorAction(Queue, null, e);
             }
-            
+
             PriorityMessageStore.TimeoutTracker.Stop();
             MessageStore.TimeoutTracker.Stop();
 
