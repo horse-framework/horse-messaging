@@ -1,6 +1,6 @@
 # Horse Messaging
 
-[![NuGet](https://img.shields.io/nuget/v/Horse.Messaging.Server?label=Server%20NuGet)](https://www.nuget.org/packages/Horse.Messaging.Serer)
+[![NuGet](https://img.shields.io/nuget/v/Horse.Messaging.Server?label=Server%20NuGet)](https://www.nuget.org/packages/Horse.Messaging.Server)
 [![NuGet](https://img.shields.io/nuget/v/Horse.Messaging.Client?label=Client%20NuGet)](https://www.nuget.org/packages/Horse.Messaging.Client)
 
 ## What's Horse Messaging
