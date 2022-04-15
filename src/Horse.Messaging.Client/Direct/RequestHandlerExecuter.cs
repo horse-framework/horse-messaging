@@ -64,6 +64,7 @@ namespace Horse.Messaging.Client.Direct
 				}
 				catch (Exception e)
 				{
+					Exception throwBack = e;
 					ErrorResponse errorModel;
 					/*
 					*	If any error thrown from there we should think try to send exceptions process.
@@ -75,6 +76,7 @@ namespace Horse.Messaging.Client.Direct
 					}
 					catch (Exception exception)
 					{
+						throwBack = exception;
 						errorModel = await handler.OnError(exception, requestModel, message, client);
 					}
 
@@ -88,7 +90,7 @@ namespace Horse.Messaging.Client.Direct
 
 					respond = true;
 					await client.SendAsync(responseMessage);
-					throw;
+					throw throwBack;
 				}
 			}
 			catch (Exception e)
