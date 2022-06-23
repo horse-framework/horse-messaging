@@ -481,6 +481,7 @@ namespace Horse.Messaging.Server.Network
                     LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
                     LastMessageSent = queue.Info.GetLastMessageSendUnix(),
                     MessageLimit = queue.Options.MessageLimit,
+                    LimitExceededStrategy = queue.Options.LimitExceededStrategy.ToString(),
                     MessageSizeLimit = queue.Options.MessageSizeLimit,
                     DelayBetweenMessages = queue.Options.DelayBetweenMessages
                 });

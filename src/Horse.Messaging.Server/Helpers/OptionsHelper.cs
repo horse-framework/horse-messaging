@@ -42,6 +42,25 @@ namespace Horse.Messaging.Server.Helpers
             }
         }
 
+        public static MessageLimitExceededStrategy ToLimitExceededStrategy(this string value)
+        {
+            switch (value.Trim().ToLower())
+            {
+                case "reject":
+                case "rejectnew":
+                case "rejectnewmessage":
+                    return MessageLimitExceededStrategy.RejectNewMessage;
+
+                case "delete":
+                case "deleteoldest":
+                case "deleteoldestmessage":
+                    return MessageLimitExceededStrategy.DeleteOldestMessage;
+
+                default:
+                    return MessageLimitExceededStrategy.RejectNewMessage;
+            }
+        }
+
         public static QueueDestroy ToQueueDestroy(this string value)
         {
             switch (value.Trim().ToLower())
@@ -122,7 +141,7 @@ namespace Horse.Messaging.Server.Helpers
                     return "push";
             }
         }
-        
+
         public static PutBackDecision ToPutBackDecision(this string value)
         {
             switch (value.Trim().ToLower())
@@ -140,7 +159,7 @@ namespace Horse.Messaging.Server.Helpers
                     return PutBackDecision.No;
             }
         }
-        
+
         public static CommitWhen ToCommitWhen(this string value)
         {
             switch (value.Trim().ToLower())

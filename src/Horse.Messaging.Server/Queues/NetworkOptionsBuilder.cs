@@ -1,6 +1,7 @@
 using System;
 using System.Text.Json.Serialization;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Helpers;
 
 namespace Horse.Messaging.Server.Queues
 {
@@ -61,6 +62,12 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         [JsonPropertyName("AutoDestroy")]
         public string AutoDestroy { get; set; }
+
+        /// <summary>
+        /// Message limit exceeded strategy
+        /// </summary>
+        [JsonPropertyName("LimitExceededStrategy")]
+        public string LimitExceededStrategy { get; set; }
 
         /// <summary>
         /// Delay between messages in milliseconds.
@@ -133,6 +140,9 @@ namespace Horse.Messaging.Server.Queues
 
             if (MessageLimit.HasValue)
                 target.MessageLimit = MessageLimit.Value;
+
+            if (!string.IsNullOrEmpty(LimitExceededStrategy))
+                target.LimitExceededStrategy = LimitExceededStrategy.ToLimitExceededStrategy();
 
             if (ClientLimit.HasValue)
                 target.ClientLimit = ClientLimit.Value;
