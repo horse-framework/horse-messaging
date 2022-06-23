@@ -733,7 +733,6 @@ namespace Horse.Messaging.Client
         public async Task<HorseMessage> Request(HorseMessage message)
         {
             message.WaitResponse = true;
-            message.HighPriority = false;
 
             if (string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(UniqueIdGenerator.Create());
