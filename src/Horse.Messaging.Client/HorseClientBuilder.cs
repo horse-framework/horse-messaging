@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Horse.Messaging.Client.Channels;
 using Horse.Messaging.Client.Direct;
@@ -9,6 +10,8 @@ using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
 using Microsoft.Extensions.DependencyInjection;
+
+[assembly:InternalsVisibleTo("Horse.Messaging.Extensions.Client")]
 
 namespace Horse.Messaging.Client
 {
@@ -47,6 +50,8 @@ namespace Horse.Messaging.Client
 
         private readonly HorseClient _client;
         private IServiceCollection _services;
+
+        internal IServiceCollection Services => _services;
 
         /// <summary>
         /// Creates Horse Connector Builder without IOC implementation
@@ -796,6 +801,8 @@ namespace Horse.Messaging.Client
         /// <summary>
         /// When application exit triggered, unsubscribes from queues and waits for active consume operations.
         /// Exit process is blocked minimum minWait and maximum maxWait.
+        /// IF YOU ARE USING Microsoft.Extensions.Hosting, Hosting library can override and cancel that method's operations.
+        /// Use UseGracefulShutdownHostedService method in Horse.Messaging.Extensions.Client library instead of that method.
         /// </summary>
         public HorseClientBuilder FinalizeConsumingOperations(TimeSpan minWait, TimeSpan maxWait)
         {
