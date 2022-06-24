@@ -32,7 +32,6 @@ namespace Sample.Server
                     });
                 })
                 .ConfigureClients(cfg => { cfg.Handlers.Add(new ClientHandler()); })
-                .ConfigureRouters(cfg => cfg.UsePersistentRouters())
                 .Build();
 
             IRouter router = rider.Router.Find("test");

@@ -72,6 +72,12 @@ namespace Horse.Messaging.Server
         public ClusterManager Cluster { get; }
 
         /// <summary>
+        /// Data path for queues, routers, channels and other options.
+        /// Default value is "data"
+        /// </summary>
+        public string DataPath { get; set; } = "data";
+
+        /// <summary>
         /// Error handlers
         /// </summary>
         public ArrayContainer<IErrorHandler> ErrorHandlers { get; } = new ArrayContainer<IErrorHandler>();
@@ -131,6 +137,9 @@ namespace Horse.Messaging.Server
                 return;
 
             _initialized = true;
+            if (DataPath.EndsWith("/") || DataPath.EndsWith("\\"))
+                DataPath = DataPath[..^1];
+            
             Transaction.Initialize();
             Router.Initialize();
         }

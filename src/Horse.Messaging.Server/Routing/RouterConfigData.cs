@@ -3,11 +3,11 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Server.Routing
 {
-    public class RouterDefinition
+    internal class RouterConfigData
     {
         public string Name { get; set; }
         public bool IsEnabled { get; set; }
         public RouteMethod Method { get; set; }
-        public List<BindingDefinition> Bindings { get; set; }
+        public List<BindingConfigData> Bindings { get; set; }
     }
 }

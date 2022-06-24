@@ -51,16 +51,6 @@ namespace Horse.Messaging.Server.Routing
         /// </summary>
         public EventManager BindingRemoveEvent { get; }
 
-        /// <summary>
-        /// Configuration filename for saved routers
-        /// </summary>
-        internal string RouterConfigurationFilename { get; set; }
-
-        /// <summary>
-        /// Returns true if persistent routers are activated
-        /// </summary>
-        public bool PersistentRouters { get; internal set; }
-
         private bool _initializing;
 
         /// <summary>
@@ -77,17 +67,18 @@ namespace Horse.Messaging.Server.Routing
 
         internal void Initialize()
         {
-            if (!PersistentRouters || string.IsNullOrEmpty(RouterConfigurationFilename))
+            string fullpath = $"{Rider.DataPath}/routers.json";
+            if (!System.IO.File.Exists(fullpath))
+            {
+                System.IO.File.WriteAllText(fullpath, "[]");
                 return;
-
-            if (!System.IO.File.Exists(RouterConfigurationFilename))
-                return;
+            }
 
             _initializing = true;
-            string json = System.IO.File.ReadAllText(RouterConfigurationFilename);
-            RouterDefinition[] definitions = System.Text.Json.JsonSerializer.Deserialize<RouterDefinition[]>(json);
+            string json = System.IO.File.ReadAllText(fullpath);
+            RouterConfigData[] definitions = System.Text.Json.JsonSerializer.Deserialize<RouterConfigData[]>(json);
 
-            foreach (RouterDefinition definition in definitions)
+            foreach (RouterConfigData definition in definitions)
             {
                 IRouter router = CreateRouter(definition);
                 if (router != null)
@@ -176,12 +167,12 @@ namespace Horse.Messaging.Server.Routing
             return _routers.Find(x => x.Name == name);
         }
 
-        private IRouter CreateRouter(RouterDefinition definition)
+        private IRouter CreateRouter(RouterConfigData configData)
         {
-            Router router = new Router(Rider, definition.Name, definition.Method);
-            router.IsEnabled = definition.IsEnabled;
+            Router router = new Router(Rider, configData.Name, configData.Method);
+            router.IsEnabled = configData.IsEnabled;
 
-            foreach (BindingDefinition bd in definition.Bindings)
+            foreach (BindingConfigData bd in configData.Bindings)
             {
                 Type type = Type.GetType(bd.Type);
                 if (type == null)
@@ -205,24 +196,24 @@ namespace Horse.Messaging.Server.Routing
 
         internal void SaveRouters()
         {
-            if (!PersistentRouters || _initializing)
+            if (_initializing)
                 return;
 
-            List<RouterDefinition> definitions = new List<RouterDefinition>();
+            List<RouterConfigData> definitions = new List<RouterConfigData>();
 
             foreach (IRouter router in _routers.All())
             {
-                RouterDefinition definition = new RouterDefinition
+                RouterConfigData configData = new RouterConfigData
                 {
                     Name = router.Name,
                     Method = router.Method,
                     IsEnabled = router.IsEnabled,
-                    Bindings = new List<BindingDefinition>()
+                    Bindings = new List<BindingConfigData>()
                 };
 
                 foreach (Binding binding in router.GetBindings())
                 {
-                    BindingDefinition bindingDefinition = new BindingDefinition
+                    BindingConfigData bindingConfigData = new BindingConfigData
                     {
                         Name = binding.Name,
                         Interaction = binding.Interaction,
@@ -233,16 +224,16 @@ namespace Horse.Messaging.Server.Routing
                         Method = binding.RouteMethod
                     };
 
-                    definition.Bindings.Add(bindingDefinition);
+                    configData.Bindings.Add(bindingConfigData);
                 }
 
-                definitions.Add(definition);
+                definitions.Add(configData);
             }
 
             try
             {
                 string json = System.Text.Json.JsonSerializer.Serialize(definitions.ToArray());
-                System.IO.File.WriteAllText(RouterConfigurationFilename, json);
+                System.IO.File.WriteAllText($"{Rider.DataPath}/routers.json", json);
             }
             catch (Exception e)
             {
