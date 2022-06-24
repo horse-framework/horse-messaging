@@ -44,6 +44,9 @@ namespace Horse.Messaging.Server.Helpers
 
         public static MessageLimitExceededStrategy ToLimitExceededStrategy(this string value)
         {
+            if (value == null)
+                return MessageLimitExceededStrategy.RejectNewMessage;
+
             switch (value.Trim().ToLower())
             {
                 case "reject":
