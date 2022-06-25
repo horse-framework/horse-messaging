@@ -67,7 +67,7 @@ namespace Horse.Messaging.Server.Routing
 
         internal void Initialize()
         {
-            string fullpath = $"{Rider.DataPath}/routers.json";
+            string fullpath = $"{Rider.Options.DataPath}/routers.json";
             if (!System.IO.File.Exists(fullpath))
             {
                 System.IO.File.WriteAllText(fullpath, "[]");
@@ -233,7 +233,7 @@ namespace Horse.Messaging.Server.Routing
             try
             {
                 string json = System.Text.Json.JsonSerializer.Serialize(definitions.ToArray());
-                System.IO.File.WriteAllText($"{Rider.DataPath}/routers.json", json);
+                System.IO.File.WriteAllText($"{Rider.Options.DataPath}/routers.json", json);
             }
             catch (Exception e)
             {

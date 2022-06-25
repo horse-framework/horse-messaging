@@ -16,6 +16,11 @@ namespace Horse.Messaging.Server
 		public string Type { get; set; } = "messaging";
 
 		/// <summary>
+		/// Data path for all riders
+		/// </summary>
+		public string DataPath { get; set; } = "data";
+
+		/// <summary>
 		/// Maximum queue limit of the server
 		/// Zero is unlimited.
 		/// </summary>

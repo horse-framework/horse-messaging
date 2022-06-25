@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
-using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
@@ -73,6 +73,10 @@ namespace Horse.Messaging.Server.Channels
 
         #endregion
 
+        #region Init - Load - Save
+
+        private bool _initializing;
+
         /// <summary>
         /// Creates new channel rider
         /// </summary>
@@ -84,6 +88,84 @@ namespace Horse.Messaging.Server.Channels
             SubscribeEvent = new EventManager(rider, HorseEventType.ChannelSubscribe);
             UnsubscribeEvent = new EventManager(rider, HorseEventType.ChannelUnsubscribe);
         }
+
+        internal void Initialize()
+        {
+            string fullpath = $"{Rider.Options.DataPath}/channels.json";
+            if (!System.IO.File.Exists(fullpath))
+            {
+                GlobalChannelConfigData g = new GlobalChannelConfigData();
+                g.Channels = new List<ChannelConfigData>();
+                System.IO.File.WriteAllText(fullpath, JsonSerializer.Serialize(g));
+                return;
+            }
+
+            _initializing = true;
+            string json = System.IO.File.ReadAllText(fullpath);
+            GlobalChannelConfigData global = JsonSerializer.Deserialize<GlobalChannelConfigData>(json);
+
+            foreach (ChannelConfigData definition in global.Channels)
+            {
+                ChannelStatus status = definition.Status.ToChannelStatus();
+                if (status == ChannelStatus.Destroyed)
+                    continue;
+
+                HorseChannel channel = Create(definition.Name, opt =>
+                {
+                    opt.AutoDestroy = definition.AutoDestroy;
+                    opt.ClientLimit = definition.ClientLimit;
+                    opt.MessageSizeLimit = definition.MessageSizeLimit;
+                }).GetAwaiter().GetResult();
+
+                channel.Topic = definition.Topic;
+                channel.Status = status;
+            }
+
+            _initializing = false;
+        }
+
+        internal void SaveChannels()
+        {
+            if (_initializing)
+                return;
+
+            GlobalChannelConfigData global = new GlobalChannelConfigData();
+            global.AutoDestroy = Options.AutoDestroy;
+            global.AutoChannelCreation = Options.AutoChannelCreation;
+            global.ClientLimit = Options.ClientLimit;
+            global.MessageSizeLimit = Options.MessageSizeLimit;
+            global.Channels = new List<ChannelConfigData>();
+
+            foreach (HorseChannel channel in _channels.All())
+            {
+                if (channel.Status == ChannelStatus.Destroyed)
+                    continue;
+                
+                ChannelConfigData configData = new ChannelConfigData
+                {
+                    Name = channel.Name,
+                    Status = channel.Status.ToString(),
+                    Topic = channel.Topic,
+                    AutoDestroy = channel.Options.AutoDestroy,
+                    ClientLimit = channel.Options.ClientLimit,
+                    MessageSizeLimit = channel.Options.MessageSizeLimit
+                };
+
+                global.Channels.Add(configData);
+            }
+
+            try
+            {
+                string json = JsonSerializer.Serialize(global);
+                System.IO.File.WriteAllText($"{Rider.Options.DataPath}/channels.json", json);
+            }
+            catch (Exception e)
+            {
+                Rider.SendError("SaveChannels", e, null);
+            }
+        }
+
+        #endregion
 
         #region Actions
 
@@ -131,11 +213,11 @@ namespace Horse.Messaging.Server.Channels
             return Create(channelName, options, null, false, false);
         }
 
-        internal async Task<HorseChannel> Create(string channelName,
-                                                 HorseChannelOptions options,
-                                                 HorseMessage requestMessage,
-                                                 bool hideException,
-                                                 bool returnIfExists)
+        private async Task<HorseChannel> Create(string channelName,
+            HorseChannelOptions options,
+            HorseMessage requestMessage,
+            bool hideException,
+            bool returnIfExists)
         {
             await _createLock.WaitAsync();
             try
@@ -165,6 +247,7 @@ namespace Horse.Messaging.Server.Channels
                     _ = handler.OnCreated(channel);
 
                 CreateEvent.Trigger(channelName);
+                SaveChannels();
                 return channel;
             }
             catch (Exception e)
@@ -215,6 +298,7 @@ namespace Horse.Messaging.Server.Channels
 
                 RemoveEvent.Trigger(channel.Name);
                 channel.Destroy();
+                SaveChannels();
             }
             catch (Exception e)
             {

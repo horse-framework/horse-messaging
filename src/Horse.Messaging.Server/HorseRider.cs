@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Cache;
@@ -72,12 +73,6 @@ namespace Horse.Messaging.Server
         public ClusterManager Cluster { get; }
 
         /// <summary>
-        /// Data path for queues, routers, channels and other options.
-        /// Default value is "data"
-        /// </summary>
-        public string DataPath { get; set; } = "data";
-
-        /// <summary>
         /// Error handlers
         /// </summary>
         public ArrayContainer<IErrorHandler> ErrorHandlers { get; } = new ArrayContainer<IErrorHandler>();
@@ -137,11 +132,21 @@ namespace Horse.Messaging.Server
                 return;
 
             _initialized = true;
-            if (DataPath.EndsWith("/") || DataPath.EndsWith("\\"))
-                DataPath = DataPath[..^1];
+            
+            if (Options.DataPath.EndsWith("/") || Options.DataPath.EndsWith("\\"))
+                Options.DataPath = Options.DataPath[..^1];
+
+            if (!System.IO.Directory.Exists($"{Options.DataPath}"))
+            {
+                System.IO.Directory.CreateDirectory($"{Options.DataPath}");
+                
+                //wait for windows os (in next method we will read file from that directory and windows os sometimes throws directory does not exists exception)
+                Task.Delay(1000).GetAwaiter().GetResult();
+            }
             
             Transaction.Initialize();
             Router.Initialize();
+            Channel.Initialize();
         }
 
         /// <summary>

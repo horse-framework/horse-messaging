@@ -1,4 +1,5 @@
 ﻿using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
 
@@ -184,6 +185,21 @@ namespace Horse.Messaging.Server.Helpers
 
                 default:
                     return CommitWhen.None;
+            }
+        }
+
+        public static ChannelStatus ToChannelStatus(this string statusName)
+        {
+            switch (statusName)
+            {
+                case "Running":
+                    return ChannelStatus.Running;
+                case "Paused":
+                    return ChannelStatus.Paused;
+                case "Destroyed":
+                    return ChannelStatus.Destroyed;
+                default:
+                    return ChannelStatus.Running;
             }
         }
     }

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Test.Common.Handlers;
@@ -44,6 +45,11 @@ namespace Test.Common
         public async Task Initialize()
         {
             Rider = HorseRiderBuilder.Create()
+                .ConfigureOptions(o =>
+                {
+                    Random rnd = new Random();
+                    o.DataPath = $"data-{Environment.TickCount}-{rnd.Next(0, 10000)}";
+                })
                 .ConfigureQueues(q =>
                 {
                     q.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
