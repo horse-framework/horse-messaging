@@ -9,5 +9,5 @@ internal class GlobalChannelConfigData
     public bool AutoDestroy { get; set; }
     public bool AutoChannelCreation { get; set; }
 
-    public List<ChannelConfigData> Channels { get; set; }
+    public List<ChannelConfigData> Channels { get; set; } = new List<ChannelConfigData>();
 }

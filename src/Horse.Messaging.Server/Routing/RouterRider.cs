@@ -67,18 +67,10 @@ namespace Horse.Messaging.Server.Routing
 
         internal void Initialize()
         {
-            string fullpath = $"{Rider.Options.DataPath}/routers.json";
-            if (!System.IO.File.Exists(fullpath))
-            {
-                System.IO.File.WriteAllText(fullpath, "[]");
-                return;
-            }
-
             _initializing = true;
-            string json = System.IO.File.ReadAllText(fullpath);
-            RouterConfigData[] definitions = System.Text.Json.JsonSerializer.Deserialize<RouterConfigData[]>(json);
 
-            foreach (RouterConfigData definition in definitions)
+            GlobalRouterConfigData data = Configurator.LoadConfiguration<GlobalRouterConfigData>($"{Rider.Options.DataPath}/routers.json");
+            foreach (RouterConfigData definition in data.Routers)
             {
                 IRouter router = CreateRouter(definition);
                 if (router != null)
@@ -199,7 +191,7 @@ namespace Horse.Messaging.Server.Routing
             if (_initializing)
                 return;
 
-            List<RouterConfigData> definitions = new List<RouterConfigData>();
+            GlobalRouterConfigData config = new GlobalRouterConfigData();
 
             foreach (IRouter router in _routers.All())
             {
@@ -227,18 +219,10 @@ namespace Horse.Messaging.Server.Routing
                     configData.Bindings.Add(bindingConfigData);
                 }
 
-                definitions.Add(configData);
+                config.Routers.Add(configData);
             }
 
-            try
-            {
-                string json = System.Text.Json.JsonSerializer.Serialize(definitions.ToArray());
-                System.IO.File.WriteAllText($"{Rider.Options.DataPath}/routers.json", json);
-            }
-            catch (Exception e)
-            {
-                Rider.SendError("SaveRouters", e, null);
-            }
+            Configurator.SaveConfiguration($"{Rider.Options.DataPath}/routers.json", config);
         }
     }
 }

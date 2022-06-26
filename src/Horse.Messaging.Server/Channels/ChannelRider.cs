@@ -91,18 +91,9 @@ namespace Horse.Messaging.Server.Channels
 
         internal void Initialize()
         {
-            string fullpath = $"{Rider.Options.DataPath}/channels.json";
-            if (!System.IO.File.Exists(fullpath))
-            {
-                GlobalChannelConfigData g = new GlobalChannelConfigData();
-                g.Channels = new List<ChannelConfigData>();
-                System.IO.File.WriteAllText(fullpath, JsonSerializer.Serialize(g));
-                return;
-            }
-
             _initializing = true;
-            string json = System.IO.File.ReadAllText(fullpath);
-            GlobalChannelConfigData global = JsonSerializer.Deserialize<GlobalChannelConfigData>(json);
+
+            GlobalChannelConfigData global = Configurator.LoadConfiguration<GlobalChannelConfigData>($"{Rider.Options.DataPath}/channels.json");
 
             foreach (ChannelConfigData definition in global.Channels)
             {
@@ -140,7 +131,7 @@ namespace Horse.Messaging.Server.Channels
             {
                 if (channel.Status == ChannelStatus.Destroyed)
                     continue;
-                
+
                 ChannelConfigData configData = new ChannelConfigData
                 {
                     Name = channel.Name,
@@ -154,15 +145,7 @@ namespace Horse.Messaging.Server.Channels
                 global.Channels.Add(configData);
             }
 
-            try
-            {
-                string json = JsonSerializer.Serialize(global);
-                System.IO.File.WriteAllText($"{Rider.Options.DataPath}/channels.json", json);
-            }
-            catch (Exception e)
-            {
-                Rider.SendError("SaveChannels", e, null);
-            }
+            Configurator.SaveConfiguration($"{Rider.Options.DataPath}/channels.json", global);
         }
 
         #endregion

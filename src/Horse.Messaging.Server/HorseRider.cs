@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Cache;
@@ -133,17 +132,7 @@ namespace Horse.Messaging.Server
 
             _initialized = true;
             
-            if (Options.DataPath.EndsWith("/") || Options.DataPath.EndsWith("\\"))
-                Options.DataPath = Options.DataPath[..^1];
-
-            if (!System.IO.Directory.Exists($"{Options.DataPath}"))
-            {
-                System.IO.Directory.CreateDirectory($"{Options.DataPath}");
-                
-                //wait for windows os (in next method we will read file from that directory and windows os sometimes throws directory does not exists exception)
-                Task.Delay(1000).GetAwaiter().GetResult();
-            }
-            
+            Options.DataPath = Configurator.Initialize(Options.DataPath);
             Transaction.Initialize();
             Router.Initialize();
             Channel.Initialize();

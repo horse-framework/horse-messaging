@@ -8,6 +8,6 @@ namespace Horse.Messaging.Server.Routing
         public string Name { get; set; }
         public bool IsEnabled { get; set; }
         public RouteMethod Method { get; set; }
-        public List<BindingConfigData> Bindings { get; set; }
+        public List<BindingConfigData> Bindings { get; set; } = new List<BindingConfigData>();
     }
 }
