@@ -7,9 +7,9 @@
         <Product>Horse.Messaging.Server</Product>
         <Description>Horse Messaging Server</Description>
         <PackageTags>horse,server,messaging,queue,channel,cache</PackageTags>
-        <AssemblyVersion>6.2.0</AssemblyVersion>
-        <FileVersion>6.2.0</FileVersion>
-        <PackageVersion>6.2.0</PackageVersion>
+        <AssemblyVersion>6.2.6</AssemblyVersion>
+        <FileVersion>6.2.6</FileVersion>
+        <PackageVersion>6.2.6</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>

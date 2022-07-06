@@ -299,6 +299,9 @@ namespace Horse.Messaging.Server.Queues
             options.ClientLimit = info.ClientLimit;
             options.MessageLimit = info.MessageLimit;
             options.MessageSizeLimit = info.MessageSizeLimit;
+
+            if (!string.IsNullOrEmpty(info.LimitExceededStrategy))
+                options.LimitExceededStrategy = info.LimitExceededStrategy.ToLimitExceededStrategy();
         }
 
         internal async Task<HorseQueue> CreateReplica(NodeQueueInfo info)

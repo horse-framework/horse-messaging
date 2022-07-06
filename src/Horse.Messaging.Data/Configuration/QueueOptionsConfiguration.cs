@@ -25,6 +25,10 @@ namespace Horse.Messaging.Data.Configuration
         [JsonPropertyName("MessageLimit")]
         public int MessageLimit { get; set; }
 
+        [JsonProperty("LimitExceededStrategy")]
+        [JsonPropertyName("LimitExceededStrategy")]
+        public string LimitExceededStrategy { get; set; }
+
         [JsonProperty("MessageSizeLimit")]
         [JsonPropertyName("MessageSizeLimit")]
         public ulong MessageSizeLimit { get; set; }

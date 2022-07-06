@@ -159,6 +159,13 @@ namespace Horse.Messaging.Protocol.Models
         public int MessageLimit { get; set; }
 
         /// <summary>
+        /// Message limit exceeded strategy
+        /// </summary>
+        [JsonProperty("LimitExceededStrategy")]
+        [JsonPropertyName("LimitExceededStrategy")]
+        public string LimitExceededStrategy { get; set; }
+
+        /// <summary>
         /// Maximum message size limit
         /// Zero is unlimited
         /// </summary>

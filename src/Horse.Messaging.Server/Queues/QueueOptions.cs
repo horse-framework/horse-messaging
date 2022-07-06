@@ -33,12 +33,18 @@ namespace Horse.Messaging.Server.Queues
         /// Default type for the queue
         /// </summary>
         public QueueType Type { get; set; } = QueueType.RoundRobin;
-        
+
         /// <summary>
         /// Maximum message limit of the queue
         /// Zero is unlimited
         /// </summary>
         public int MessageLimit { get; set; }
+
+        /// <summary>
+        /// Decision for when message limit is exceeded and a new message is received.
+        /// Default value is RejectNewMessage.
+        /// </summary>
+        public MessageLimitExceededStrategy LimitExceededStrategy { get; set; } = MessageLimitExceededStrategy.RejectNewMessage;
 
         /// <summary>
         /// Maximum message size limit
@@ -73,7 +79,7 @@ namespace Horse.Messaging.Server.Queues
         /// Queue auto destroy options. Default value is NoMessagesAndConsumers.
         /// </summary>
         public QueueDestroy AutoDestroy { get; set; } = QueueDestroy.Disabled;
-        
+
         /// <summary>
         /// If true, queue will be created automatically with default options
         /// when a client tries to subscribe or push a message to not existing queue.
@@ -95,21 +101,22 @@ namespace Horse.Messaging.Server.Queues
         public static QueueOptions CloneFrom(QueueOptions options)
         {
             return new QueueOptions
-                   {
-                       Type = options.Type,
-                       AcknowledgeTimeout = options.AcknowledgeTimeout,
-                       MessageTimeout = options.MessageTimeout,
-                       Acknowledge = options.Acknowledge,
-                       MessageLimit = options.MessageLimit,
-                       MessageSizeLimit = options.MessageSizeLimit,
-                       DelayBetweenMessages = options.DelayBetweenMessages,
-                       PutBackDelay = options.PutBackDelay,
-                       AutoDestroy = options.AutoDestroy,
-                       ClientLimit = options.ClientLimit,
-                       CommitWhen = options.CommitWhen,
-                       PutBack = options.PutBack,
-                       AutoQueueCreation = options.AutoQueueCreation
-                   };
+            {
+                Type = options.Type,
+                AcknowledgeTimeout = options.AcknowledgeTimeout,
+                MessageTimeout = options.MessageTimeout,
+                Acknowledge = options.Acknowledge,
+                MessageLimit = options.MessageLimit,
+                LimitExceededStrategy = options.LimitExceededStrategy,
+                MessageSizeLimit = options.MessageSizeLimit,
+                DelayBetweenMessages = options.DelayBetweenMessages,
+                PutBackDelay = options.PutBackDelay,
+                AutoDestroy = options.AutoDestroy,
+                ClientLimit = options.ClientLimit,
+                CommitWhen = options.CommitWhen,
+                PutBack = options.PutBack,
+                AutoQueueCreation = options.AutoQueueCreation
+            };
         }
     }
 }

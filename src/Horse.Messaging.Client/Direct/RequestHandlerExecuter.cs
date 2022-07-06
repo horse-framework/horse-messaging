@@ -7,7 +7,7 @@ using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Direct
 {
-	internal class RequestHandlerExecuter<TRequest, TResponse> : ExecuterBase
+	internal class RequestHandlerExecuter<TRequest, TResponse>: ExecuterBase
 	{
 		private readonly Type _handlerType;
 		private readonly IHorseRequestHandler<TRequest, TResponse> _handler;
@@ -35,7 +35,7 @@ namespace Horse.Messaging.Client.Direct
 
 			try
 			{
-				TRequest requestModel = (TRequest) model;
+				TRequest requestModel = (TRequest)model;
 				IHorseRequestHandler<TRequest, TResponse> handler;
 
 				if (_handler != null) handler = _handler;
@@ -43,7 +43,7 @@ namespace Horse.Messaging.Client.Direct
 				{
 					handlerFactory = _handlerFactoryCreator();
 					providedHandler = handlerFactory.CreateHandler(_handlerType);
-					handler = (IHorseRequestHandler<TRequest, TResponse>) providedHandler.Service;
+					handler = (IHorseRequestHandler<TRequest, TResponse>)providedHandler.Service;
 				}
 				else
 					throw new NullReferenceException("There is no consumer defined");
@@ -64,7 +64,21 @@ namespace Horse.Messaging.Client.Direct
 				}
 				catch (Exception e)
 				{
-					ErrorResponse errorModel = await handler.OnError(e, requestModel, message, client);
+					Exception throwBack = e;
+					ErrorResponse errorModel;
+					/*
+					*	If any error thrown from there we should think try to send exceptions process.
+				    *	So we trying twice for this. 
+				    */
+					try
+					{
+						errorModel = await handler.OnError(e, requestModel, message, client);
+					}
+					catch (Exception exception)
+					{
+						throwBack = exception;
+						errorModel = await handler.OnError(exception, requestModel, message, client);
+					}
 
 					if (errorModel.ResultCode == HorseResultCode.Ok)
 						errorModel.ResultCode = HorseResultCode.Failed;
@@ -76,7 +90,7 @@ namespace Horse.Messaging.Client.Direct
 
 					respond = true;
 					await client.SendAsync(responseMessage);
-					throw;
+					throw throwBack;
 				}
 			}
 			catch (Exception e)
@@ -86,6 +100,7 @@ namespace Horse.Messaging.Client.Direct
 					try
 					{
 						HorseMessage response = message.CreateResponse(HorseResultCode.InternalServerError);
+						response.SetStringContent(e.Message);
 						await client.SendAsync(response);
 					}
 					catch

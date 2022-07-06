@@ -108,7 +108,7 @@ namespace Horse.Messaging.Server.Direct
                 _ = handler.OnDirect(sender, message, receivers);
 
             _rider.Direct.DirectEvent.Trigger(sender, message.Target,
-                                              new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
+                new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
         }
 
         /// <summary>
@@ -151,7 +151,7 @@ namespace Horse.Messaging.Server.Direct
             }
 
             _rider.Direct.DirectEvent.Trigger(client, message.Target,
-                                              new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
+                new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
         }
     }
 }

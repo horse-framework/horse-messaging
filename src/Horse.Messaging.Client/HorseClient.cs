@@ -140,6 +140,13 @@ namespace Horse.Messaging.Client
         public bool CatchResponseMessages { get; set; }
 
         /// <summary>
+        /// If true, throws all exceptions about connections.
+        /// Error event handler always is triggered even exception thrown or not.
+        /// Default value is false.
+        /// </summary>
+        public bool ThrowExceptions { get; set; } = false;
+        
+        /// <summary>
         /// Maximum time to wait response message
         /// </summary>
         public TimeSpan ResponseTimeout { get; set; } = TimeSpan.FromSeconds(30);
@@ -317,16 +324,28 @@ namespace Horse.Messaging.Client
 
         private string FindNextTargetHost()
         {
-            lock (RemoteHosts)
+            try
             {
-                if (RemoteHosts.Count == 0)
-                    throw new Exception("There is no host to connect");
+                lock (RemoteHosts)
+                {
+                    if (RemoteHosts.Count == 0)
+                        throw new Exception("There is no host to connect");
 
-                _hostIndex++;
-                if (_hostIndex >= RemoteHosts.Count)
-                    _hostIndex = 0;
+                    _hostIndex++;
+                    if (_hostIndex >= RemoteHosts.Count)
+                        _hostIndex = 0;
 
-                return RemoteHosts[_hostIndex];
+                    return RemoteHosts[_hostIndex];
+                }
+            }
+            catch (Exception e)
+            {
+                OnException(e);
+
+                if (ThrowExceptions)
+                    throw;
+                
+                return null;
             }
         }
 
@@ -459,15 +478,25 @@ namespace Horse.Messaging.Client
         /// </summary>
         public void Connect(string host)
         {
-            if (string.IsNullOrEmpty(host))
-                throw new Exception("Remote host name is empty");
+            try
+            {
+                if (string.IsNullOrEmpty(host))
+                    throw new Exception("Remote host name is empty");
 
-            lock (RemoteHosts)
-                if (!RemoteHosts.Contains(host, StringComparer.InvariantCultureIgnoreCase))
-                    RemoteHosts.Add(host);
+                lock (RemoteHosts)
+                    if (!RemoteHosts.Contains(host, StringComparer.InvariantCultureIgnoreCase))
+                        RemoteHosts.Add(host);
 
-            DnsResolver resolver = new DnsResolver();
-            Connect(resolver.Resolve(host));
+                DnsResolver resolver = new DnsResolver();
+                Connect(resolver.Resolve(host));
+            }
+            catch (Exception e)
+            {
+                OnException(e);
+
+                if (ThrowExceptions)
+                    throw;
+            }
         }
 
         /// <summary>
@@ -492,6 +521,9 @@ namespace Horse.Messaging.Client
             catch (Exception e)
             {
                 OnException(e);
+                
+                if (ThrowExceptions)
+                    throw;
             }
         }
 
@@ -508,15 +540,27 @@ namespace Horse.Messaging.Client
         /// </summary>
         public Task ConnectAsync(string host)
         {
-            if (string.IsNullOrEmpty(host))
-                throw new Exception("Remote host name is empty");
+            try
+            {
+                if (string.IsNullOrEmpty(host))
+                    throw new Exception("Remote host name is empty");
 
-            lock (RemoteHosts)
-                if (!RemoteHosts.Contains(host, StringComparer.InvariantCultureIgnoreCase))
-                    RemoteHosts.Add(host);
+                lock (RemoteHosts)
+                    if (!RemoteHosts.Contains(host, StringComparer.InvariantCultureIgnoreCase))
+                        RemoteHosts.Add(host);
 
-            DnsResolver resolver = new DnsResolver();
-            return ConnectAsync(resolver.Resolve(host));
+                DnsResolver resolver = new DnsResolver();
+                return ConnectAsync(resolver.Resolve(host));
+            }
+            catch (Exception e)
+            {
+                OnException(e);
+                
+                if (ThrowExceptions)
+                    throw;
+                
+                return Task.CompletedTask;
+            }
         }
 
         /// <summary>
@@ -527,11 +571,6 @@ namespace Horse.Messaging.Client
             if (string.IsNullOrEmpty(_clientId))
                 _clientId = UniqueIdGenerator.Create();
 
-            /*
-            if (host.Protocol != Core.Protocol.Hmq)
-                throw new NotSupportedException("Only Horse protocol is supported");
-                */
-
             SetAutoReconnect(true);
             try
             {
@@ -541,6 +580,9 @@ namespace Horse.Messaging.Client
             catch (Exception e)
             {
                 OnException(e);
+                
+                if (ThrowExceptions)
+                    throw;
             }
         }
 
@@ -691,7 +733,6 @@ namespace Horse.Messaging.Client
         public async Task<HorseMessage> Request(HorseMessage message)
         {
             message.WaitResponse = true;
-            message.HighPriority = false;
 
             if (string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(UniqueIdGenerator.Create());

@@ -1,4 +1,5 @@
 ﻿using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
 
@@ -39,6 +40,28 @@ namespace Horse.Messaging.Server.Helpers
 
                 default:
                     return "none";
+            }
+        }
+
+        public static MessageLimitExceededStrategy ToLimitExceededStrategy(this string value)
+        {
+            if (value == null)
+                return MessageLimitExceededStrategy.RejectNewMessage;
+
+            switch (value.Trim().ToLower())
+            {
+                case "reject":
+                case "rejectnew":
+                case "rejectnewmessage":
+                    return MessageLimitExceededStrategy.RejectNewMessage;
+
+                case "delete":
+                case "deleteoldest":
+                case "deleteoldestmessage":
+                    return MessageLimitExceededStrategy.DeleteOldestMessage;
+
+                default:
+                    return MessageLimitExceededStrategy.RejectNewMessage;
             }
         }
 
@@ -122,7 +145,7 @@ namespace Horse.Messaging.Server.Helpers
                     return "push";
             }
         }
-        
+
         public static PutBackDecision ToPutBackDecision(this string value)
         {
             switch (value.Trim().ToLower())
@@ -140,7 +163,7 @@ namespace Horse.Messaging.Server.Helpers
                     return PutBackDecision.No;
             }
         }
-        
+
         public static CommitWhen ToCommitWhen(this string value)
         {
             switch (value.Trim().ToLower())
@@ -162,6 +185,21 @@ namespace Horse.Messaging.Server.Helpers
 
                 default:
                     return CommitWhen.None;
+            }
+        }
+
+        public static ChannelStatus ToChannelStatus(this string statusName)
+        {
+            switch (statusName)
+            {
+                case "Running":
+                    return ChannelStatus.Running;
+                case "Paused":
+                    return ChannelStatus.Paused;
+                case "Destroyed":
+                    return ChannelStatus.Destroyed;
+                default:
+                    return ChannelStatus.Running;
             }
         }
     }

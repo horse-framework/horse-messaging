@@ -2,7 +2,7 @@
 
 namespace Horse.Messaging.Server.Routing
 {
-    public class BindingDefinition
+    internal class BindingConfigData
     {
         public string Name { get; set; }
         public string Type { get; set; }

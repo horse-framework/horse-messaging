@@ -1,9 +1,11 @@
 using System.Text.Json.Serialization;
 using Horse.Messaging.Client.Direct.Annotations;
+using Horse.Messaging.Client.Queues.Annotations;
 using Newtonsoft.Json;
 
 namespace Sample.Consumer
 {
+	[HighPriorityMessage]
 	[DirectContentType(1000)]
 	[DirectTarget(FindTargetBy.Type, "direct-handler")]
 	public class RequestModel

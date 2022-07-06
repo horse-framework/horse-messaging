@@ -349,6 +349,7 @@ namespace Horse.Messaging.Server.Queues
                 PutBackDelay = Options.PutBackDelay,
                 MessageSizeLimit = Options.MessageSizeLimit,
                 MessageLimit = Options.MessageLimit,
+                LimitExceededStrategy = Options.LimitExceededStrategy.ToString(),
                 ClientLimit = Options.ClientLimit,
                 MessageTimeout = Convert.ToInt32(Options.MessageTimeout.TotalSeconds),
                 AcknowledgeTimeout = Convert.ToInt32(Options.AcknowledgeTimeout.TotalMilliseconds),
@@ -479,6 +480,9 @@ namespace Horse.Messaging.Server.Queues
             Options.MessageLimit = info.MessageLimit;
             Options.MessageSizeLimit = info.MessageSizeLimit;
 
+            if (!string.IsNullOrEmpty(info.LimitExceededStrategy))
+                Options.LimitExceededStrategy = info.LimitExceededStrategy.ToLimitExceededStrategy();
+
             Options.DelayBetweenMessages = info.DelayBetweenMessages;
             Options.PutBackDelay = info.PutBackDelay;
         }
@@ -551,7 +555,16 @@ namespace Horse.Messaging.Server.Queues
             {
                 int count = Manager.PriorityMessageStore.Count() + Manager.MessageStore.Count();
                 if (count >= Options.MessageLimit)
-                    return PushResult.LimitExceeded;
+                {
+                    if (Options.LimitExceededStrategy == MessageLimitExceededStrategy.DeleteOldestMessage)
+                    {
+                        QueueMessage firstMessage = Manager.MessageStore.ConsumeFirst();
+                        if (firstMessage != null)
+                            await Manager.RemoveMessage(firstMessage);
+                    }
+                    else
+                        return PushResult.LimitExceeded;
+                }
             }
 
             if (Options.MessageSizeLimit > 0 && message.Message.Length > Options.MessageSizeLimit)
@@ -937,7 +950,7 @@ namespace Horse.Messaging.Server.Queues
             lock (_putBackWaitList)
                 return _putBackWaitList.Count;
         }
-        
+
         private void ExecutePutBack(object sender)
         {
             try

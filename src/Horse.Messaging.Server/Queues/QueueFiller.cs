@@ -34,7 +34,16 @@ namespace Horse.Messaging.Server.Queues
 
                 int max = _queue.Manager.PriorityMessageStore.Count() + _queue.Manager.MessageStore.Count() + items.Count();
                 if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
-                    return PushResult.LimitExceeded;
+                {
+                    if (_queue.Options.LimitExceededStrategy == MessageLimitExceededStrategy.DeleteOldestMessage)
+                    {
+                        QueueMessage firstMessage = _queue.Manager.MessageStore.ConsumeFirst();
+                        if (firstMessage != null)
+                            _queue.Manager.RemoveMessage(firstMessage).GetAwaiter().GetResult();
+                    }
+                    else
+                        return PushResult.LimitExceeded;
+                }
 
                 foreach (T item in items)
                 {
@@ -77,7 +86,16 @@ namespace Horse.Messaging.Server.Queues
 
                 int max = _queue.Manager.PriorityMessageStore.Count() + _queue.Manager.MessageStore.Count() + items.Count();
                 if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
-                    return PushResult.LimitExceeded;
+                {
+                    if (_queue.Options.LimitExceededStrategy == MessageLimitExceededStrategy.DeleteOldestMessage)
+                    {
+                        QueueMessage firstMessage = _queue.Manager.MessageStore.ConsumeFirst();
+                        if (firstMessage != null)
+                            _queue.Manager.RemoveMessage(firstMessage).GetAwaiter().GetResult();
+                    }
+                    else
+                        return PushResult.LimitExceeded;
+                }
 
                 foreach (T item in items)
                 {
@@ -119,7 +137,16 @@ namespace Horse.Messaging.Server.Queues
 
                 int max = _queue.Manager.PriorityMessageStore.Count() + _queue.Manager.MessageStore.Count() + items.Count();
                 if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
-                    return PushResult.LimitExceeded;
+                {
+                    if (_queue.Options.LimitExceededStrategy == MessageLimitExceededStrategy.DeleteOldestMessage)
+                    {
+                        QueueMessage firstMessage = _queue.Manager.MessageStore.ConsumeFirst();
+                        if (firstMessage != null)
+                            _queue.Manager.RemoveMessage(firstMessage).GetAwaiter().GetResult();
+                    }
+                    else
+                        return PushResult.LimitExceeded;
+                }
 
                 foreach (string item in items)
                 {
@@ -163,7 +190,16 @@ namespace Horse.Messaging.Server.Queues
 
                 int max = _queue.Manager.PriorityMessageStore.Count() + _queue.Manager.MessageStore.Count() + items.Count();
                 if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
-                    return PushResult.LimitExceeded;
+                {
+                    if (_queue.Options.LimitExceededStrategy == MessageLimitExceededStrategy.DeleteOldestMessage)
+                    {
+                        QueueMessage firstMessage = _queue.Manager.MessageStore.ConsumeFirst();
+                        if (firstMessage != null)
+                            _queue.Manager.RemoveMessage(firstMessage).GetAwaiter().GetResult();
+                    }
+                    else
+                        return PushResult.LimitExceeded;
+                }
 
                 foreach (byte[] item in items)
                 {
@@ -207,7 +243,16 @@ namespace Horse.Messaging.Server.Queues
 
                 int max = _queue.Manager.PriorityMessageStore.Count() + _queue.Manager.MessageStore.Count() + messages.Count();
                 if (_queue.Options.MessageLimit > 0 && max > _queue.Options.MessageLimit)
-                    return PushResult.LimitExceeded;
+                {
+                    if (_queue.Options.LimitExceededStrategy == MessageLimitExceededStrategy.DeleteOldestMessage)
+                    {
+                        QueueMessage firstMessage = _queue.Manager.MessageStore.ConsumeFirst();
+                        if (firstMessage != null)
+                            _queue.Manager.RemoveMessage(firstMessage).GetAwaiter().GetResult();
+                    }
+                    else
+                        return PushResult.LimitExceeded;
+                }
 
                 foreach (HorseMessage message in messages)
                 {

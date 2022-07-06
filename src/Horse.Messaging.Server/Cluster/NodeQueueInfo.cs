@@ -24,6 +24,7 @@
 
         public int ClientLimit { get; set; }
         public int MessageLimit { get; set; }
+        public string LimitExceededStrategy { get; set; }
         public int MessageTimeout { get; set; }
         public int DelayBetweenMessages { get; set; }
         public ulong MessageSizeLimit { get; set; }
