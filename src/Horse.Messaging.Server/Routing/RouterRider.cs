@@ -51,6 +51,11 @@ namespace Horse.Messaging.Server.Routing
         /// </summary>
         public EventManager BindingRemoveEvent { get; }
 
+        /// <summary>
+        /// Save routers to local file
+        /// </summary>
+        public bool KeepRouters { get; set; } = true;
+
         private bool _initializing;
 
         /// <summary>
@@ -67,6 +72,7 @@ namespace Horse.Messaging.Server.Routing
 
         internal void Initialize()
         {
+            if (!KeepRouters) return;
             _initializing = true;
 
             GlobalRouterConfigData data = Configurator.LoadConfiguration<GlobalRouterConfigData>($"{Rider.Options.DataPath}/routers.json");
@@ -173,7 +179,7 @@ namespace Horse.Messaging.Server.Routing
                     continue;
                 }
 
-                Binding binding = (Binding) Activator.CreateInstance(type);
+                Binding binding = (Binding)Activator.CreateInstance(type);
                 binding.Name = bd.Name;
                 binding.Target = bd.Target;
                 binding.Priority = bd.Priority;
@@ -188,7 +194,7 @@ namespace Horse.Messaging.Server.Routing
 
         internal void SaveRouters()
         {
-            if (_initializing)
+            if (_initializing || !KeepRouters)
                 return;
 
             GlobalRouterConfigData config = new GlobalRouterConfigData();

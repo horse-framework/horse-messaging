@@ -50,7 +50,6 @@ namespace HostedServiceSample.Server
             _server.Start();
             return Task.CompletedTask;
         }
-
         public Task StopAsync(CancellationToken cancellationToken)
         {
             _server.Stop();
@@ -78,7 +77,9 @@ namespace HostedServiceSample.Server
                 })
                 .ConfigureClients(cfg => { cfg.Handlers.Add(_clientHandler); })
                 .ConfigureOptions(options => { options.Name = "SAMPLE"; })
+                .ConfigureRouters(o => o.Rider.Router.KeepRouters = false)
                 .AddErrorHandler(_errorHandler);
+
         }
 
         private void Started(HorseServer obj)
