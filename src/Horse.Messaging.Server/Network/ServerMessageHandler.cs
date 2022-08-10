@@ -157,7 +157,7 @@ namespace Horse.Messaging.Server.Network
             }
 
             QueueClient found = queue.FindClient(client.UniqueId);
-            if (found != null)
+            if (found != null && client == found.Client)
             {
                 if (message.WaitResponse)
                     await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));

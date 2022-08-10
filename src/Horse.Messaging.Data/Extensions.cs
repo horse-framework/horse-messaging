@@ -104,6 +104,5 @@ namespace Horse.Messaging.Data
             return cfg;
         }
 
-
     }
 }
