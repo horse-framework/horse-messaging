@@ -83,9 +83,14 @@ namespace Horse.Messaging.Server.Queues
         public QueueInfo Info { get; } = new QueueInfo();
 
         /// <summary>
-        /// Queue delivery handler name
+        /// Queue manager name
         /// </summary>
-        internal string HandlerName { get; set; }
+        internal string ManagerName { get; set; }
+
+        /// <summary>
+        /// Payload data is for queue manager's usage.
+        /// </summary>
+        internal string ManagerPayload { get; set; }
 
         /// <summary>
         /// Message header data which triggers the initialization of the queue
@@ -224,6 +229,7 @@ namespace Horse.Messaging.Server.Queues
                 new KeyValuePair<string, string>($"Next-{HorseHeaders.STATUS}", newStatus.ToString()));
 
             Status = newStatus;
+            UpdateConfiguration();
 
             if (newStatus == QueueStatus.OnlyConsume || newStatus == QueueStatus.Running)
                 _ = Trigger();
@@ -345,7 +351,7 @@ namespace Horse.Messaging.Server.Queues
             {
                 Name = Name,
                 Topic = Topic,
-                HandlerName = HandlerName,
+                HandlerName = ManagerName,
                 Initialized = Status != QueueStatus.NotInitialized,
                 PutBackDelay = Options.PutBackDelay,
                 MessageSizeLimit = Options.MessageSizeLimit,
@@ -364,6 +370,26 @@ namespace Horse.Messaging.Server.Queues
                     Value = x.Value
                 }).ToArray()
             };
+        }
+
+        /// <summary>
+        /// Saves persistent configurations
+        /// </summary>
+        public void UpdateConfiguration()
+        {
+            IPersistenceConfigurator<QueueConfiguration> persistence = Rider.Queue.PersistenceConfigurator;
+
+            if (persistence == null)
+                return;
+
+            QueueConfiguration configuration = QueueConfiguration.Create(this);
+            QueueConfiguration previous = persistence.Find(x => x.Name == Name);
+            
+            if (previous != null)
+                persistence.Remove(previous);
+
+            persistence.Add(configuration);
+            persistence.Save();
         }
 
         #endregion

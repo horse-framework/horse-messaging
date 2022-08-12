@@ -11,7 +11,6 @@ namespace HostedServiceSample.Producer
 	}
 	
 	[RouterName("test-queue-ro1uter")]
-	[QueueType(MessagingQueueType.Push)]
 	public class TestQueueModel2
 	{
 		public string Foo { get; set; }

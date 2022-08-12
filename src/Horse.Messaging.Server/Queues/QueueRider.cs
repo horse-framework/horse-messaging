@@ -12,6 +12,7 @@ using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.Managers;
 using Horse.Messaging.Server.Security;
 
@@ -90,6 +91,13 @@ namespace Horse.Messaging.Server.Queues
         public EventManager UnsubscriptionEvent { get; }
 
         /// <summary>
+        /// Persistence configurator for queues.
+        /// Settings this value to null disables the persistence for queues and queues are lost after application restart.
+        /// Default value is not null and saves queues into ./data/queues.json file
+        /// </summary>
+        public IPersistenceConfigurator<QueueConfiguration> PersistenceConfigurator { get; set; }
+
+        /// <summary>
         /// Creates new queue rider
         /// </summary>
         internal QueueRider(HorseRider rider)
@@ -100,6 +108,55 @@ namespace Horse.Messaging.Server.Queues
             StatusChangeEvent = new EventManager(rider, HorseEventType.QueueStatusChange);
             SubscriptionEvent = new EventManager(rider, HorseEventType.QueueSubscription);
             UnsubscriptionEvent = new EventManager(rider, HorseEventType.QueueUnsubscription);
+            PersistenceConfigurator = new QueuePersistenceConfigurator("data", "queues.json");
+        }
+
+        internal void Initialize()
+        {
+            if (PersistenceConfigurator != null)
+            {
+                QueueConfiguration[] configurations = PersistenceConfigurator.Load();
+
+                foreach (QueueConfiguration configuration in configurations)
+                {
+                    QueueOptions options = new QueueOptions
+                    {
+                        Acknowledge = Enums.Parse<QueueAckDecision>(configuration.Acknowledge, true, EnumFormat.Description),
+                        AcknowledgeTimeout = TimeSpan.FromMilliseconds(configuration.AcknowledgeTimeout),
+                        Type = Enums.Parse<QueueType>(configuration.Type, true, EnumFormat.Description),
+                        AutoDestroy = Enums.Parse<QueueDestroy>(configuration.AutoDestroy, true, EnumFormat.Description),
+                        ClientLimit = configuration.ClientLimit,
+                        CommitWhen = Enums.Parse<CommitWhen>(configuration.CommitWhen, true, EnumFormat.Description),
+                        MessageLimit = configuration.MessageLimit,
+                        MessageTimeout = TimeSpan.FromMilliseconds(configuration.MessageTimeout),
+                        PutBack = Enums.Parse<PutBackDecision>(configuration.PutBack, true, EnumFormat.Description),
+                        DelayBetweenMessages = configuration.DelayBetweenMessages,
+                        LimitExceededStrategy = Enums.Parse<MessageLimitExceededStrategy>(configuration.LimitExceededStrategy, true, EnumFormat.Description),
+                        MessageSizeLimit = configuration.MessageSizeLimit,
+                        PutBackDelay = configuration.PutBackDelay
+                    };
+
+                    QueueStatus status = Enums.Parse<QueueStatus>(configuration.Status, true, EnumFormat.Description);
+                    HorseMessage nonInitializionMessage = null;
+
+                    if (status == QueueStatus.NotInitialized)
+                        nonInitializionMessage = new HorseMessage(MessageType.Server, configuration.Name, KnownContentTypes.QueueSubscribe);
+
+                    Create(configuration.Name, options, nonInitializionMessage, true, true, null, configuration.ManagerName)
+                        .ContinueWith(o =>
+                        {
+                            HorseQueue queue = o.Result;
+                            if (queue != null)
+                            {
+                                if (!string.IsNullOrEmpty(configuration.Topic))
+                                    queue.Topic = configuration.Topic;
+
+                                if (status != QueueStatus.NotInitialized)
+                                    queue.SetStatus(status);
+                            }
+                        });
+                }
+            }
         }
 
         #region Actions
@@ -140,11 +197,11 @@ namespace Horse.Messaging.Server.Queues
         /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
         /// <exception cref="OperationCanceledException">Thrown when queue limit is exceeded for the server</exception>
         /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
-        public async Task<HorseQueue> Create(string queueName, Action<QueueOptions> optionsAction)
+        public Task<HorseQueue> Create(string queueName, Action<QueueOptions> optionsAction)
         {
             QueueOptions options = QueueOptions.CloneFrom(Options);
             optionsAction(options);
-            return await Create(queueName, options);
+            return Create(queueName, options);
         }
 
         /// <summary>
@@ -153,11 +210,11 @@ namespace Horse.Messaging.Server.Queues
         /// <exception cref="NoNullAllowedException">Thrown when server does not have default delivery handler implementation</exception>
         /// <exception cref="OperationCanceledException">Thrown when queue limit is exceeded for the server</exception>
         /// <exception cref="DuplicateNameException">Thrown when there is already a queue with same id</exception>
-        public async Task<HorseQueue> Create(string queueName, Action<QueueOptions> optionsAction, string managerName)
+        public Task<HorseQueue> Create(string queueName, Action<QueueOptions> optionsAction, string managerName)
         {
             QueueOptions options = QueueOptions.CloneFrom(Options);
             optionsAction(options);
-            return await Create(queueName, options, null, false, false, null, managerName);
+            return Create(queueName, options, null, false, false, null, managerName);
         }
 
         /// <summary>
@@ -238,7 +295,7 @@ namespace Horse.Messaging.Server.Queues
                     handlerBuilder.Headers = requestMessage.Headers;
                 }
 
-                queue.HandlerName = handlerBuilder.ManagerName;
+                queue.ManagerName = handlerBuilder.ManagerName;
                 queue.InitializationMessageHeaders = handlerBuilder.Headers;
 
                 bool initialize;
@@ -255,6 +312,7 @@ namespace Horse.Messaging.Server.Queues
                 }
 
                 _queues.Add(queue);
+
                 foreach (IQueueEventHandler handler in EventHandlers.All())
                     _ = handler.OnCreated(queue);
 
@@ -262,8 +320,19 @@ namespace Horse.Messaging.Server.Queues
                     handlerBuilder.TriggerAfterCompleted();
 
                 CreateEvent.Trigger(client, queue.Name);
-
                 Rider.Cluster.SendQueueCreated(queue);
+
+                if (PersistenceConfigurator != null)
+                {
+                    QueueConfiguration configuration = PersistenceConfigurator.Find(x => x.Name == queue.Name);
+
+                    if (configuration == null)
+                    {
+                        configuration = QueueConfiguration.Create(queue);
+                        PersistenceConfigurator.Add(configuration);
+                        PersistenceConfigurator.Save();
+                    }
+                }
 
                 return queue;
             }
@@ -329,7 +398,7 @@ namespace Horse.Messaging.Server.Queues
                     handlerBuilder.Headers = info.Headers.Select(x => new KeyValuePair<string, string>(x.Key, x.Value));
 
                 queue.Topic = info.Topic;
-                queue.HandlerName = handlerBuilder.ManagerName;
+                queue.ManagerName = handlerBuilder.ManagerName;
                 queue.InitializationMessageHeaders = handlerBuilder.Headers;
 
                 if (info.Initialized && queueManagerFactory != null)
@@ -339,6 +408,18 @@ namespace Horse.Messaging.Server.Queues
                 }
 
                 _queues.Add(queue);
+                
+                if (PersistenceConfigurator != null)
+                {
+                    QueueConfiguration configuration = PersistenceConfigurator.Find(x => x.Name == queue.Name);
+
+                    if (configuration == null)
+                    {
+                        configuration = QueueConfiguration.Create(queue);
+                        PersistenceConfigurator.Add(configuration);
+                        PersistenceConfigurator.Save();
+                    }
+                }
 
                 if (info.Initialized)
                     handlerBuilder.TriggerAfterCompleted();
@@ -365,13 +446,13 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Removes a queue from the server
         /// </summary>
-        public async Task Remove(string name)
+        public Task Remove(string name)
         {
             HorseQueue queue = Find(name);
             if (queue == null)
-                return;
+                return Task.CompletedTask;
 
-            await Remove(queue);
+            return Remove(queue);
         }
 
         /// <summary>
@@ -389,6 +470,12 @@ namespace Horse.Messaging.Server.Queues
 
                 await queue.Destroy();
                 RemoveEvent.Trigger(queue.Name);
+
+                if (PersistenceConfigurator != null)
+                {
+                    PersistenceConfigurator.Remove(x => x.Name == queue.Name);
+                    PersistenceConfigurator.Save();
+                }
             }
             catch (Exception e)
             {

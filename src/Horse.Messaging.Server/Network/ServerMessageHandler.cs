@@ -370,6 +370,7 @@ namespace Horse.Messaging.Server.Network
 
             builder.Type = null;
             builder.ApplyToQueue(queue.Options);
+            queue.UpdateConfiguration();
 
             //if creation successful, sends response
             if (message.WaitResponse)

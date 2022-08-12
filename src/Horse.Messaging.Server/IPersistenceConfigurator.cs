@@ -5,9 +5,9 @@ namespace Horse.Messaging.Server;
 
 public interface IPersistenceConfigurator<T>
 {
-    Task<T[]> Load();
+    T[] Load();
 
-    Task<bool> Save();
+    void Save();
 
     void Add(T item);
 
