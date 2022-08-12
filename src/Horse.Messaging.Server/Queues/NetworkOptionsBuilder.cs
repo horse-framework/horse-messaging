@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json.Serialization;
+using EnumsNET;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Helpers;
 
@@ -142,7 +143,7 @@ namespace Horse.Messaging.Server.Queues
                 target.MessageLimit = MessageLimit.Value;
 
             if (!string.IsNullOrEmpty(LimitExceededStrategy))
-                target.LimitExceededStrategy = LimitExceededStrategy.ToLimitExceededStrategy();
+                target.LimitExceededStrategy = Enums.Parse<MessageLimitExceededStrategy>(LimitExceededStrategy, true, EnumFormat.Description);
 
             if (ClientLimit.HasValue)
                 target.ClientLimit = ClientLimit.Value;

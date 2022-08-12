@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using EnumsNET;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Containers;
@@ -97,7 +97,7 @@ namespace Horse.Messaging.Server.Channels
 
             foreach (ChannelConfigData definition in global.Channels)
             {
-                ChannelStatus status = definition.Status.ToChannelStatus();
+                ChannelStatus status = Enums.Parse<ChannelStatus>(definition.Status, true, EnumFormat.Description);
                 if (status == ChannelStatus.Destroyed)
                     continue;
 

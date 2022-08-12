@@ -29,4 +29,8 @@
       <ProjectReference Include="..\Horse.Messaging.Server\Horse.Messaging.Server.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Enums.NET" Version="4.0.0" />
+    </ItemGroup>
+
 </Project>

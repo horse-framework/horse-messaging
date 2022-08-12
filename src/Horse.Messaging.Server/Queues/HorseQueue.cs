@@ -3,14 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using EnumsNET;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
-using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Queues.Delivery;
+using Horse.Messaging.Server.Queues.Managers;
 using Horse.Messaging.Server.Queues.States;
 using Horse.Messaging.Server.Security;
 
@@ -354,9 +355,9 @@ namespace Horse.Messaging.Server.Queues
                 MessageTimeout = Convert.ToInt32(Options.MessageTimeout.TotalSeconds),
                 AcknowledgeTimeout = Convert.ToInt32(Options.AcknowledgeTimeout.TotalMilliseconds),
                 DelayBetweenMessages = Options.DelayBetweenMessages,
-                Acknowledge = Options.Acknowledge.FromAckDecision(),
-                AutoDestroy = Options.AutoDestroy.FromQueueDestroy(),
-                QueueType = Options.Type.FromQueueType(),
+                Acknowledge = Options.Acknowledge.AsString(EnumFormat.Description),
+                AutoDestroy = Options.AutoDestroy.AsString(EnumFormat.Description),
+                QueueType = Options.Type.AsString(EnumFormat.Description),
                 Headers = InitializationMessageHeaders?.Select(x => new NodeQueueHandlerHeader
                 {
                     Key = x.Key,
@@ -434,16 +435,16 @@ namespace Horse.Messaging.Server.Queues
             foreach (KeyValuePair<string, string> pair in message.Headers)
             {
                 if (pair.Key.Equals(HorseHeaders.ACKNOWLEDGE, StringComparison.InvariantCultureIgnoreCase))
-                    Options.Acknowledge = pair.Value.ToAckDecision();
+                    Options.Acknowledge = Enums.Parse<QueueAckDecision>(pair.Value, true, EnumFormat.Description);
 
                 else if (pair.Key.Equals(HorseHeaders.QUEUE_TYPE, StringComparison.InvariantCultureIgnoreCase))
-                    Options.Type = pair.Value.ToQueueType();
+                    Options.Type = Enums.Parse<QueueType>(pair.Value, true, EnumFormat.Description);
 
                 else if (pair.Key.Equals(HorseHeaders.QUEUE_TOPIC, StringComparison.InvariantCultureIgnoreCase))
                     Topic = pair.Value;
 
                 else if (pair.Key.Equals(HorseHeaders.PUT_BACK, StringComparison.InvariantCultureIgnoreCase))
-                    Options.PutBack = pair.Value.ToPutBackDecision();
+                    Options.PutBack = Enums.Parse<PutBackDecision>(pair.Value, true, EnumFormat.Description);
 
                 else if (pair.Key.Equals(HorseHeaders.PUT_BACK_DELAY, StringComparison.InvariantCultureIgnoreCase))
                     Options.PutBackDelay = Convert.ToInt32(pair.Value);
@@ -465,13 +466,13 @@ namespace Horse.Messaging.Server.Queues
         internal void UpdateOptionsByNodeInfo(NodeQueueInfo info)
         {
             if (!string.IsNullOrEmpty(info.Acknowledge))
-                Options.Acknowledge = info.Acknowledge.ToAckDecision();
+                Options.Acknowledge = Enums.Parse<QueueAckDecision>(info.Acknowledge, true, EnumFormat.Description);
 
             if (!string.IsNullOrEmpty(info.Topic))
                 Topic = info.Topic;
 
             if (!string.IsNullOrEmpty(info.AutoDestroy))
-                Options.AutoDestroy = info.AutoDestroy.ToQueueDestroy();
+                Options.AutoDestroy = Enums.Parse<QueueDestroy>(info.AutoDestroy, true, EnumFormat.Description);
 
             Options.AcknowledgeTimeout = TimeSpan.FromMilliseconds(info.AcknowledgeTimeout);
             Options.MessageTimeout = TimeSpan.FromSeconds(info.MessageTimeout);
@@ -481,7 +482,7 @@ namespace Horse.Messaging.Server.Queues
             Options.MessageSizeLimit = info.MessageSizeLimit;
 
             if (!string.IsNullOrEmpty(info.LimitExceededStrategy))
-                Options.LimitExceededStrategy = info.LimitExceededStrategy.ToLimitExceededStrategy();
+                Options.LimitExceededStrategy = Enums.Parse<MessageLimitExceededStrategy>(info.LimitExceededStrategy, true, EnumFormat.Description);
 
             Options.DelayBetweenMessages = info.DelayBetweenMessages;
             Options.PutBackDelay = info.PutBackDelay;

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Horse.Messaging.Data.Configuration;
 using Horse.Messaging.Data.Implementation;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Managers;
 
 namespace Horse.Messaging.Data
 {

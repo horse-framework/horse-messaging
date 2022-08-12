@@ -3,6 +3,7 @@ using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
+using Horse.Messaging.Server.Queues.Managers;
 
 namespace Horse.Messaging.Data.Implementation
 {

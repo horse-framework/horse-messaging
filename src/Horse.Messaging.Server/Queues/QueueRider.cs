@@ -4,6 +4,7 @@ using System.Data;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using EnumsNET;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Clients;
@@ -11,6 +12,7 @@ using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Queues.Managers;
 using Horse.Messaging.Server.Security;
 
 namespace Horse.Messaging.Server.Queues
@@ -215,7 +217,7 @@ namespace Horse.Messaging.Server.Queues
                     if (queueType != null)
                     {
                         typeSpecified = true;
-                        options.Type = queueType.ToQueueType();
+                        options.Type = Enums.Parse<QueueType>(queueType, true, EnumFormat.Description);
                     }
                 }
 
@@ -288,20 +290,20 @@ namespace Horse.Messaging.Server.Queues
 
         internal void FillQueueOptions(QueueOptions options, NodeQueueInfo info)
         {
-            options.Acknowledge = info.Acknowledge.ToAckDecision();
-            options.Type = info.QueueType.ToQueueType();
+            options.Acknowledge = Enums.Parse<QueueAckDecision>(info.Acknowledge, true, EnumFormat.Description);
+            options.Type = Enums.Parse<QueueType>(info.QueueType, true, EnumFormat.Description);
             options.PutBackDelay = info.PutBackDelay;
             options.MessageTimeout = TimeSpan.FromSeconds(info.MessageTimeout);
             options.AcknowledgeTimeout = TimeSpan.FromMilliseconds(info.AcknowledgeTimeout);
             options.DelayBetweenMessages = info.DelayBetweenMessages;
-            options.AutoDestroy = info.AutoDestroy.ToQueueDestroy();
+            options.AutoDestroy = Enums.Parse<QueueDestroy>(info.AutoDestroy, true, EnumFormat.Description);
 
             options.ClientLimit = info.ClientLimit;
             options.MessageLimit = info.MessageLimit;
             options.MessageSizeLimit = info.MessageSizeLimit;
 
             if (!string.IsNullOrEmpty(info.LimitExceededStrategy))
-                options.LimitExceededStrategy = info.LimitExceededStrategy.ToLimitExceededStrategy();
+                options.LimitExceededStrategy = Enums.Parse<MessageLimitExceededStrategy>(info.LimitExceededStrategy, true, EnumFormat.Description);
         }
 
         internal async Task<HorseQueue> CreateReplica(NodeQueueInfo info)

@@ -6,6 +6,7 @@ using Horse.Messaging.Data.Configuration;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
+using Horse.Messaging.Server.Queues.Managers;
 using Horse.Messaging.Server.Queues.Store;
 using Horse.Messaging.Server.Queues.Sync;
 
