@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using Horse.Messaging.Data.Configuration;
 using Horse.Messaging.Data.Implementation;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Managers;
@@ -83,14 +82,13 @@ namespace Horse.Messaging.Data
             if (dataConfigurationBuilder.GenerateQueueFilename == null)
                 dataConfigurationBuilder.GenerateQueueFilename = DataConfigurationBuilder.DefaultQueueDbPath;
 
-            ConfigurationFactory.Initialize(dataConfigurationBuilder);
-
             if (string.IsNullOrEmpty(managerName))
                 managerName = "Persistent";
 
+
             cfg.Rider.Queue.QueueManagerFactories.Add(managerName, dh =>
             {
-                DatabaseOptions databaseOptions = ConfigurationFactory.Builder.CreateOptions(dh.Queue);
+                DatabaseOptions databaseOptions = dataConfigurationBuilder.CreateOptions(dh.Queue);
                 PersistentQueueManager manager = new PersistentQueueManager(dh.Queue, databaseOptions, useRedelivery);
                 dh.Queue.Manager = manager;
                 queueConfig?.Invoke(dh.Queue);
@@ -100,10 +98,7 @@ namespace Horse.Messaging.Data
             if (!cfg.Rider.Queue.QueueManagerFactories.ContainsKey("Default"))
                 cfg.Rider.Queue.QueueManagerFactories.Add("Default", cfg.Rider.Queue.QueueManagerFactories["Persistent"]);
 
-            ConfigurationFactory.Manager.LoadQueues(cfg.Rider).GetAwaiter().GetResult();
-
             return cfg;
         }
-
     }
 }

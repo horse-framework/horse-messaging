@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Data;
-using Horse.Messaging.Data.Configuration;
 using Horse.Messaging.Data.Implementation;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;

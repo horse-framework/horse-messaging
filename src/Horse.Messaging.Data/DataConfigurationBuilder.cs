@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using Horse.Messaging.Server.Queues;
 
-namespace Horse.Messaging.Data.Configuration
+namespace Horse.Messaging.Data
 {
     /// <summary>
     /// Data configuration builder for persistent queues
@@ -11,28 +11,18 @@ namespace Horse.Messaging.Data.Configuration
     {
         #region Fields - Properties
 
-        private bool _instantFlush = false;
+        private bool _instantFlush;
         private bool _autoFlush = true;
         private bool _createBackup = true;
         private bool _autoShrink = true;
         private TimeSpan _flushInteval = TimeSpan.FromMilliseconds(250);
         private TimeSpan _shrinkInteval = TimeSpan.FromMinutes(15);
 
-        internal string ConfigFile { get; private set; } = "data/config.json";
         internal Func<HorseQueue, string> GenerateQueueFilename { get; set; }
-        
+
         internal Action<HorseQueue, QueueMessage, Exception> ErrorAction { get; set; }
 
         #endregion
-
-        /// <summary>
-        /// Changes default configuration file for persistent queues
-        /// </summary>
-        public DataConfigurationBuilder SetConfigFile(string fullpath)
-        {
-            ConfigFile = fullpath;
-            return this;
-        }
 
         /// <summary>
         /// If true, messages are saved with high performance.
@@ -122,17 +112,17 @@ namespace Horse.Messaging.Data.Configuration
         public DatabaseOptions CreateOptions(HorseQueue queue)
         {
             return new DatabaseOptions
-                   {
-                       Filename = GenerateQueueFilename is not null ? GenerateQueueFilename(queue) : DefaultQueueDbPath(queue),
-                       AutoFlush = _autoFlush,
-                       AutoShrink = _autoShrink,
-                       FlushInterval = _flushInteval,
-                       InstantFlush = _instantFlush,
-                       ShrinkInterval = _shrinkInteval,
-                       CreateBackupOnShrink = _createBackup
-                   };
+            {
+                Filename = GenerateQueueFilename is not null ? GenerateQueueFilename(queue) : DefaultQueueDbPath(queue),
+                AutoFlush = _autoFlush,
+                AutoShrink = _autoShrink,
+                FlushInterval = _flushInteval,
+                InstantFlush = _instantFlush,
+                ShrinkInterval = _shrinkInteval,
+                CreateBackupOnShrink = _createBackup
+            };
         }
-        
+
         /// <summary>
         /// Generates full file path for database file of the queue
         /// </summary>
