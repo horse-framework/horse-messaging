@@ -47,7 +47,6 @@ namespace Test.Persistency
         public async Task ReloadAfterRestart()
         {
             await Task.Delay(500);
-            ConfigurationFactory.Destroy();
             RedeliveryService service = new RedeliveryService("data/reload-test.tdb.delivery");
             await service.Load();
             await service.Clear();
@@ -90,7 +89,6 @@ namespace Test.Persistency
             await manager.DeliveryHandler.BeginSend(queue, queueMsg);
 
             await manager.RedeliveryService.Close();
-            ConfigurationFactory.Destroy();
 
             await Task.Delay(1000);
 

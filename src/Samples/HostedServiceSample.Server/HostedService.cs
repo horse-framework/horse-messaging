@@ -49,6 +49,7 @@ namespace HostedServiceSample.Server
             _server.Start();
             return Task.CompletedTask;
         }
+
         public Task StopAsync(CancellationToken cancellationToken)
         {
             _server.Stop();
@@ -64,10 +65,9 @@ namespace HostedServiceSample.Server
                     DataConfigurationBuilder builder = new();
                     builder.KeepLastBackup();
                     builder.UseAutoFlush(TimeSpan.FromMilliseconds(500));
-                    ConfigurationFactory.Initialize(builder);
                     cfg.UseCustomQueueManager("a", m =>
                     {
-                        var manager = new SamplePersistentQueueManager(m.Queue, ConfigurationFactory.Builder.CreateOptions(m.Queue), true);
+                        var manager = new SamplePersistentQueueManager(m.Queue, builder.CreateOptions(m.Queue), true);
                         return Task.FromResult<IHorseQueueManager>(manager);
                     });
                     cfg.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
@@ -78,7 +78,6 @@ namespace HostedServiceSample.Server
                 .ConfigureOptions(options => { options.Name = "SAMPLE"; })
                 .ConfigureRouters(o => o.Rider.Router.KeepRouters = false)
                 .AddErrorHandler(_errorHandler);
-
         }
 
         private void Started(HorseServer obj)

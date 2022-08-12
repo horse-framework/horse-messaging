@@ -17,7 +17,6 @@ namespace Test.Persistency
         [Fact]
         public async Task InPersistentHandler()
         {
-            ConfigurationFactory.Destroy();
             HorseServer server = new HorseServer();
             HorseRider rider = server.UseRider(cfg => cfg
                 .ConfigureQueues(q =>
