@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using EnumsNET;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Containers;
@@ -30,6 +31,13 @@ namespace Horse.Messaging.Server.Routing
         /// Root horse rider object
         /// </summary>
         public HorseRider Rider { get; }
+
+        /// <summary>
+        /// Persistence configurator for routers.
+        /// Settings this value to null disables the persistence for routers and they are lost after application restart.
+        /// Default value is not null and saves queues into ./data/routers.json file
+        /// </summary>
+        public IPersistenceConfigurator<RouterConfiguration> PersistenceConfigurator { get; set; }
 
         /// <summary>
         /// Event Manage for HorseEventType.RouterCreate
@@ -68,6 +76,7 @@ namespace Horse.Messaging.Server.Routing
             RemoveEvent = new EventManager(rider, HorseEventType.RouterRemove);
             BindingAddEvent = new EventManager(rider, HorseEventType.RouterBindingAdd);
             BindingRemoveEvent = new EventManager(rider, HorseEventType.RouterBindingRemove);
+            PersistenceConfigurator = new RouterPersistenceConfigurator("data", "routers.json");
         }
 
         internal void Initialize()
@@ -75,12 +84,15 @@ namespace Horse.Messaging.Server.Routing
             if (!KeepRouters) return;
             _initializing = true;
 
-            GlobalRouterConfigData data = Configurator.LoadConfiguration<GlobalRouterConfigData>($"{Rider.Options.DataPath}/routers.json");
-            foreach (RouterConfigData definition in data.Routers)
+            if (PersistenceConfigurator != null)
             {
-                IRouter router = CreateRouter(definition);
-                if (router != null)
-                    _routers.Add(router);
+                RouterConfiguration[] configurations = PersistenceConfigurator.Load();
+                foreach (RouterConfiguration config in configurations)
+                {
+                    IRouter router = CreateRouter(config);
+                    if (router != null)
+                        _routers.Add(router);
+                }
             }
 
             _initializing = false;
@@ -107,7 +119,12 @@ namespace Horse.Messaging.Server.Routing
                 _routers.Add(router);
 
                 CreateEvent.Trigger(name, new KeyValuePair<string, string>(HorseHeaders.ROUTE_METHOD, method.ToString()));
-                SaveRouters();
+
+                if (PersistenceConfigurator != null)
+                {
+                    PersistenceConfigurator.Add(RouterConfiguration.Create(router));
+                    PersistenceConfigurator.Save();
+                }
 
                 return router;
             }
@@ -138,7 +155,12 @@ namespace Horse.Messaging.Server.Routing
                 CreateEvent.Trigger(router.Name, new KeyValuePair<string, string>(HorseHeaders.ROUTE_METHOD, router.Method.ToString()));
 
                 _routers.Add(router);
-                SaveRouters();
+
+                if (PersistenceConfigurator != null)
+                {
+                    PersistenceConfigurator.Add(RouterConfiguration.Create(router));
+                    PersistenceConfigurator.Save();
+                }
             }
             catch (Exception e)
             {
@@ -154,7 +176,16 @@ namespace Horse.Messaging.Server.Routing
         {
             _routers.Remove(router);
             RemoveEvent.Trigger(router.Name);
-            SaveRouters();
+
+            if (PersistenceConfigurator != null)
+            {
+                RouterConfiguration configuration = PersistenceConfigurator.Find(x => x.Name == router.Name);
+                if (configuration != null)
+                {
+                    PersistenceConfigurator.Remove(configuration);
+                    PersistenceConfigurator.Save();
+                }
+            }
         }
 
         /// <summary>
@@ -165,12 +196,12 @@ namespace Horse.Messaging.Server.Routing
             return _routers.Find(x => x.Name == name);
         }
 
-        private IRouter CreateRouter(RouterConfigData configData)
+        private IRouter CreateRouter(RouterConfiguration configuration)
         {
-            Router router = new Router(Rider, configData.Name, configData.Method);
-            router.IsEnabled = configData.IsEnabled;
+            Router router = new Router(Rider, configuration.Name, Enums.Parse<RouteMethod>(configuration.Method, true, EnumFormat.Description));
+            router.IsEnabled = configuration.IsEnabled;
 
-            foreach (BindingConfigData bd in configData.Bindings)
+            foreach (BindingConfiguration bd in configuration.Bindings)
             {
                 Type type = Type.GetType(bd.Type);
                 if (type == null)
@@ -179,56 +210,19 @@ namespace Horse.Messaging.Server.Routing
                     continue;
                 }
 
-                Binding binding = (Binding)Activator.CreateInstance(type);
+                Binding binding = (Binding) Activator.CreateInstance(type);
                 binding.Name = bd.Name;
                 binding.Target = bd.Target;
                 binding.Priority = bd.Priority;
-                binding.Interaction = bd.Interaction;
-                binding.RouteMethod = bd.Method ?? RouteMethod.Distribute;
+                binding.Interaction = Enums.Parse<BindingInteraction>(bd.Interaction, true, EnumFormat.Description);
+                binding.RouteMethod = string.IsNullOrEmpty(bd.Method)
+                    ? RouteMethod.Distribute
+                    : Enums.Parse<RouteMethod>(bd.Method, true, EnumFormat.Description);
 
                 router.AddBinding(binding);
             }
 
             return router;
-        }
-
-        internal void SaveRouters()
-        {
-            if (_initializing || !KeepRouters)
-                return;
-
-            GlobalRouterConfigData config = new GlobalRouterConfigData();
-
-            foreach (IRouter router in _routers.All())
-            {
-                RouterConfigData configData = new RouterConfigData
-                {
-                    Name = router.Name,
-                    Method = router.Method,
-                    IsEnabled = router.IsEnabled,
-                    Bindings = new List<BindingConfigData>()
-                };
-
-                foreach (Binding binding in router.GetBindings())
-                {
-                    BindingConfigData bindingConfigData = new BindingConfigData
-                    {
-                        Name = binding.Name,
-                        Interaction = binding.Interaction,
-                        Target = binding.Target,
-                        ContentType = binding.ContentType,
-                        Priority = binding.Priority,
-                        Type = binding.GetType().FullName,
-                        Method = binding.RouteMethod
-                    };
-
-                    configData.Bindings.Add(bindingConfigData);
-                }
-
-                config.Routers.Add(configData);
-            }
-
-            Configurator.SaveConfiguration($"{Rider.Options.DataPath}/routers.json", config);
         }
     }
 }

@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 namespace Horse.Messaging.Protocol
 {
     /// <summary>
@@ -8,11 +10,13 @@ namespace Horse.Messaging.Protocol
         /// <summary>
         /// No response is pending
         /// </summary>
+        [Description("none")]
         None,
 
         /// <summary>
         /// Receiver should respond
         /// </summary>
+        [Description("response")]
         Response
     }
 }

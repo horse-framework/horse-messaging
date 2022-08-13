@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 namespace Horse.Messaging.Protocol
 {
     /// <summary>
@@ -8,11 +10,13 @@ namespace Horse.Messaging.Protocol
         /// <summary>
         /// Routes each message to all bindings
         /// </summary>
+        [Description("distribute")]
         Distribute = 0,
 
         /// <summary>
         /// Routes each message to only one binding
         /// </summary>
+        [Description("round-robin")]
         RoundRobin = 1,
 
         /// <summary>
@@ -21,6 +25,7 @@ namespace Horse.Messaging.Protocol
         /// Messages are sent to only one active queue when it exists.
         /// When it's removed messages are sent to other queue while it's active. 
         /// </summary>
+        [Description("only-first")]
         OnlyFirst = 2
     }
 }
