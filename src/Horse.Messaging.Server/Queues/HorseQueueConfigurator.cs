@@ -41,6 +41,17 @@ namespace Horse.Messaging.Server.Queues
         {
             Rider = rider;
         }
+        
+        /// <summary>
+        /// Uses custom queue persistent configurator.
+        /// By default, queue configurations are saved to json file.
+        /// Setting this value null, persistent configurations will be disabled. 
+        /// </summary>
+        public HorseQueueConfigurator UseCustomPersistentConfigurator(IPersistenceConfigurator<QueueConfiguration> configurator)
+        {
+            Rider.Queue.PersistenceConfigurator = configurator;
+            return this;
+        }
 
         /// <summary>
         /// Implements a message delivery handler factory

@@ -53,9 +53,6 @@ namespace Test.Persistency
             await service.Set("id", 4);
             await service.Close();
 
-            if (System.IO.File.Exists("data/config.json"))
-                System.IO.File.Delete("data/config.json");
-
             if (System.IO.File.Exists("data/reload-test.tdb"))
                 System.IO.File.Delete("data/reload-test.tdb");
 
@@ -63,9 +60,10 @@ namespace Test.Persistency
                 System.IO.File.Delete("data/reload-test.tdb.delivery");
 
             HorseServer server = new HorseServer();
-
+            string filename = $"queues-{Guid.NewGuid()}.json";
             HorseRider rider = server.UseRider(cfg => cfg.ConfigureQueues(c =>
             {
+                c.UseCustomPersistentConfigurator(new QueuePersistenceConfigurator("data", filename));
                 c.UsePersistentQueues(
                     cx => { cx.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
                     q =>
@@ -95,6 +93,7 @@ namespace Test.Persistency
             server = new HorseServer();
             rider = server.UseRider(cfg => cfg.ConfigureQueues(c =>
             {
+                c.UseCustomPersistentConfigurator(new QueuePersistenceConfigurator("data", filename));
                 c.UsePersistentQueues(
                     c => { c.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
                     q =>

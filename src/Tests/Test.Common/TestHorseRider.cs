@@ -6,6 +6,7 @@ using Test.Common.Handlers;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
+using Horse.Messaging.Server.Routing;
 using Horse.Server;
 
 namespace Test.Common
@@ -58,19 +59,22 @@ namespace Test.Common
                     q.Options.AutoQueueCreation = true;
 
                     q.EventHandlers.Add(new TestQueueHandler(this));
-                    
+
                     q.UseCustomQueueManager("Default", async m =>
                     {
                         m.Queue.Options.CommitWhen = CommitWhen.AfterReceived;
                         m.Queue.Options.PutBack = PutBackDecision.No;
                         return new TestQueueManager(this, m.Queue);
                     });
+
+                    q.UseCustomPersistentConfigurator(new QueuePersistenceConfigurator("data", $"queues-{Guid.NewGuid()}.json"));
                 })
                 .ConfigureClients(c =>
                 {
                     c.Handlers.Add(new TestClientHandler(this));
                     c.AdminAuthorizations.Add(new TestAdminAuthorization());
                 })
+                .ConfigureRouters(c => { c.UseCustomPersistentConfigurator(new RouterPersistenceConfigurator("data", $"routers-{Guid.NewGuid()}.json")); })
                 .Build();
 
             await Rider.Queue.Create("push-a", o => o.Type = QueueType.Push);

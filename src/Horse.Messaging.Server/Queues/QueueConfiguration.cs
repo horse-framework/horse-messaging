@@ -1,9 +1,11 @@
 ﻿using System;
 using EnumsNET;
-using Microsoft.VisualBasic;
 
 namespace Horse.Messaging.Server.Queues;
 
+/// <summary>
+/// Persistent queue configuration data
+/// </summary>
 public class QueueConfiguration
 {
     /// <summary>
