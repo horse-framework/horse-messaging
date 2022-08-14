@@ -35,7 +35,7 @@ namespace Horse.Messaging.Server.Routing
         /// <summary>
         /// Persistence configurator for routers.
         /// Settings this value to null disables the persistence for routers and they are lost after application restart.
-        /// Default value is not null and saves queues into ./data/routers.json file
+        /// Default value is not null and saves routers into ./data/routers.json file
         /// </summary>
         public IPersistenceConfigurator<RouterConfiguration> PersistenceConfigurator { get; set; }
 

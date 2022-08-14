@@ -3,16 +3,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace Horse.Messaging.Server.Queues;
+namespace Horse.Messaging.Server.Channels;
 
-public class QueuePersistenceConfigurator : IPersistenceConfigurator<QueueConfiguration>
+public class ChannelPersistentConfigurator : IPersistenceConfigurator<ChannelConfiguration>
 {
     private readonly string _path;
     private readonly string _filename;
 
-    private List<QueueConfiguration> _configurations = new List<QueueConfiguration>();
+    private List<ChannelConfiguration> _configurations = new List<ChannelConfiguration>();
 
-    public QueuePersistenceConfigurator(string path, string filename)
+    public ChannelPersistentConfigurator(string path, string filename)
     {
         if (!path.EndsWith('\\') && !path.EndsWith('/'))
             path += "/";
@@ -21,7 +21,7 @@ public class QueuePersistenceConfigurator : IPersistenceConfigurator<QueueConfig
         _filename = filename;
     }
 
-    public QueueConfiguration[] Load()
+    public ChannelConfiguration[] Load()
     {
         if (!Directory.Exists(_path))
             Directory.CreateDirectory(_path);
@@ -34,7 +34,7 @@ public class QueuePersistenceConfigurator : IPersistenceConfigurator<QueueConfig
 
             lock (_configurations)
             {
-                _configurations = new List<QueueConfiguration>();
+                _configurations = new List<ChannelConfiguration>();
                 return _configurations.ToArray();
             }
         }
@@ -43,7 +43,7 @@ public class QueuePersistenceConfigurator : IPersistenceConfigurator<QueueConfig
 
         lock (_configurations)
         {
-            _configurations = System.Text.Json.JsonSerializer.Deserialize<List<QueueConfiguration>>(json);
+            _configurations = System.Text.Json.JsonSerializer.Deserialize<List<ChannelConfiguration>>(json);
             return _configurations.ToArray();
         }
     }
@@ -54,32 +54,32 @@ public class QueuePersistenceConfigurator : IPersistenceConfigurator<QueueConfig
         File.WriteAllText($"{_path}{_filename}", json);
     }
 
-    public void Add(QueueConfiguration item)
+    public void Add(ChannelConfiguration item)
     {
         lock (_configurations)
             _configurations.Add(item);
     }
 
-    public QueueConfiguration Find(Func<QueueConfiguration, bool> predicate)
+    public ChannelConfiguration Find(Func<ChannelConfiguration, bool> predicate)
     {
         lock (_configurations)
         {
-            QueueConfiguration configuration = _configurations.FirstOrDefault(predicate);
+            ChannelConfiguration configuration = _configurations.FirstOrDefault(predicate);
             return configuration;
         }
     }
 
-    public void Remove(Func<QueueConfiguration, bool> predicate)
+    public void Remove(Func<ChannelConfiguration, bool> predicate)
     {
         lock (_configurations)
         {
-            QueueConfiguration configuration = _configurations.FirstOrDefault(predicate);
+            ChannelConfiguration configuration = _configurations.FirstOrDefault(predicate);
             if (configuration != null)
                 _configurations.Remove(configuration);
         }
     }
 
-    public void Remove(QueueConfiguration item)
+    public void Remove(ChannelConfiguration item)
     {
         lock (_configurations)
             _configurations.Remove(item);
