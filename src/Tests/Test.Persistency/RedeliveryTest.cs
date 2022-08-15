@@ -61,18 +61,20 @@ namespace Test.Persistency
 
             HorseServer server = new HorseServer();
             string filename = $"queues-{Guid.NewGuid()}.json";
-            HorseRider rider = server.UseRider(cfg => cfg.ConfigureQueues(c =>
-            {
-                c.UseCustomPersistentConfigurator(new QueuePersistenceConfigurator("data", filename));
-                c.UsePersistentQueues(
-                    cx => { cx.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
-                    q =>
-                    {
-                        q.Options.Acknowledge = QueueAckDecision.None;
-                        q.Options.CommitWhen = CommitWhen.None;
-                    },
-                    true);
-            }));
+            HorseRider rider = server.UseRider(cfg => cfg
+                .ConfigureChannels(c => { c.UseCustomPersistentConfigurator(null); })
+                .ConfigureQueues(c =>
+                {
+                    c.UseCustomPersistentConfigurator(new QueuePersistenceConfigurator("data", filename));
+                    c.UsePersistentQueues(
+                        cx => { cx.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
+                        q =>
+                        {
+                            q.Options.Acknowledge = QueueAckDecision.None;
+                            q.Options.CommitWhen = CommitWhen.None;
+                        },
+                        true);
+                }));
 
             HorseQueue queue = await rider.Queue.Create("reload-test", o => o.Type = QueueType.Push);
 
@@ -91,18 +93,21 @@ namespace Test.Persistency
             await Task.Delay(1000);
 
             server = new HorseServer();
-            rider = server.UseRider(cfg => cfg.ConfigureQueues(c =>
-            {
-                c.UseCustomPersistentConfigurator(new QueuePersistenceConfigurator("data", filename));
-                c.UsePersistentQueues(
-                    c => { c.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
-                    q =>
-                    {
-                        q.Options.Acknowledge = QueueAckDecision.None;
-                        q.Options.CommitWhen = CommitWhen.None;
-                    },
-                    true);
-            }));
+            rider = server.UseRider(cfg => cfg
+                .ConfigureChannels(c => { c.UseCustomPersistentConfigurator(null); })
+                .ConfigureQueues(c =>
+                {
+                    c.UseCustomPersistentConfigurator(new QueuePersistenceConfigurator("data", filename));
+                    c.UsePersistentQueues(
+                        c => { c.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
+                        q =>
+                        {
+                            q.Options.Acknowledge = QueueAckDecision.None;
+                            q.Options.CommitWhen = CommitWhen.None;
+                        },
+                        true);
+                }));
+            await Task.Delay(250);
             HorseQueue queue2 = rider.Queue.Find("reload-test");
             Assert.NotNull(queue2);
             Assert.NotEqual(0, queue2.Manager.MessageStore.Count());

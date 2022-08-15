@@ -19,6 +19,10 @@ namespace Test.Persistency
         {
             HorseServer server = new HorseServer();
             HorseRider rider = server.UseRider(cfg => cfg
+                .ConfigureChannels(c =>
+                {
+                    c.UseCustomPersistentConfigurator(null);
+                })
                 .ConfigureQueues(q =>
                 {
                     q.UsePersistentQueues(q =>

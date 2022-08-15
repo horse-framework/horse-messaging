@@ -69,6 +69,10 @@ namespace Test.Common
 
                     q.UseCustomPersistentConfigurator(new QueuePersistenceConfigurator("data", $"queues-{Guid.NewGuid()}.json"));
                 })
+                .ConfigureChannels(c =>
+                {
+                    c.UseCustomPersistentConfigurator(null);
+                })
                 .ConfigureClients(c =>
                 {
                     c.Handlers.Add(new TestClientHandler(this));
