@@ -1,8 +1,10 @@
+using Horse.Messaging.Server;
 using Horse.Server;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using PullQueueSample.Common;
+using PullQueueSample.Server.Handlers;
 
 namespace PullQueueSample.Server;
 
@@ -24,6 +26,9 @@ internal class Server
             .ConfigureServices((hostContext, services) =>
             {
                 services.AddHostedService<HostedService>();
+                services.AddSingleton<IQueueEventHandler, QueueEventHandler>();
+                services.AddSingleton<IClientHandler, ClientHandler>();
+                services.AddSingleton<IErrorHandler, ErrorHandler>();
                 services.Configure<ServerOptions>(options => hostContext.Configuration.GetSection("HorseServerOptions").Bind(options));
             });
     }
