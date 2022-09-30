@@ -22,5 +22,6 @@ public class ChannelConfiguration
             ClientLimit = channel.Options.ClientLimit,
             MessageSizeLimit = channel.Options.MessageSizeLimit
         };
+
     }
 }

@@ -162,6 +162,14 @@ namespace Horse.Messaging.Server.Queues
         #region Actions
 
         /// <summary>
+        /// Returns registered queue managers
+        /// </summary>
+        public string[] GetQueueManagers()
+        {
+            return QueueManagerFactories.Keys.ToArray();
+        }
+
+        /// <summary>
         /// Finds message delivery handler by name
         /// </summary>
         /// <param name="name">Delivery handler name</param>

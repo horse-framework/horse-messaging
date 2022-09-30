@@ -85,7 +85,6 @@ namespace Horse.Messaging.Data
             if (string.IsNullOrEmpty(managerName))
                 managerName = "Persistent";
 
-
             cfg.Rider.Queue.QueueManagerFactories.Add(managerName, dh =>
             {
                 DatabaseOptions databaseOptions = dataConfigurationBuilder.CreateOptions(dh.Queue);
