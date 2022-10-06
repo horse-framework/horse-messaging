@@ -5,28 +5,22 @@ using System.Linq;
 
 namespace Horse.Messaging.Server.Queues;
 
-public class QueuePersistenceConfigurator : IPersistenceConfigurator<QueueConfiguration>
+public class QueueOptionsConfigurator : IOptionsConfigurator<QueueConfiguration>
 {
-    private readonly string _path;
+    private readonly HorseRider _rider;
     private readonly string _filename;
 
     private List<QueueConfiguration> _configurations = new List<QueueConfiguration>();
 
-    public QueuePersistenceConfigurator(string path, string filename)
+    public QueueOptionsConfigurator(HorseRider rider, string filename)
     {
-        if (!path.EndsWith('\\') && !path.EndsWith('/'))
-            path += "/";
-
-        _path = path;
+        _rider = rider;
         _filename = filename;
     }
 
     public QueueConfiguration[] Load()
     {
-        if (!Directory.Exists(_path))
-            Directory.CreateDirectory(_path);
-
-        string fullname = $"{_path}{_filename}";
+        string fullname = $"{_rider.Options.DataPath}/{_filename}";
 
         if (!File.Exists(fullname))
         {
@@ -51,7 +45,7 @@ public class QueuePersistenceConfigurator : IPersistenceConfigurator<QueueConfig
     public void Save()
     {
         string json = System.Text.Json.JsonSerializer.Serialize(_configurations);
-        File.WriteAllText($"{_path}{_filename}", json);
+        File.WriteAllText($"{_rider.Options.DataPath}/{_filename}", json);
     }
 
     public void Add(QueueConfiguration item)

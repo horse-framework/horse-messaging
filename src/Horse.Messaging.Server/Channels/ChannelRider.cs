@@ -56,7 +56,7 @@ namespace Horse.Messaging.Server.Channels
         /// Settings this value to null disables the persistence for channels and they are lost after application restart.
         /// Default value is not null and saves channels into ./data/channels.json file
         /// </summary>
-        public IPersistenceConfigurator<ChannelConfiguration> PersistenceConfigurator { get; set; }
+        public IOptionsConfigurator<ChannelConfiguration> OptionsConfigurator { get; set; }
 
         /// <summary>
         /// Event Manager for HorseEventType.ChannelCreate
@@ -94,16 +94,16 @@ namespace Horse.Messaging.Server.Channels
             RemoveEvent = new EventManager(rider, HorseEventType.ChannelRemove);
             SubscribeEvent = new EventManager(rider, HorseEventType.ChannelSubscribe);
             UnsubscribeEvent = new EventManager(rider, HorseEventType.ChannelUnsubscribe);
-            PersistenceConfigurator = new ChannelPersistentConfigurator("data", "channels.json");
+            OptionsConfigurator = new ChannelOptionsConfigurator(rider, "channels.json");
         }
 
         internal void Initialize()
         {
             _initializing = true;
 
-            if (PersistenceConfigurator != null)
+            if (OptionsConfigurator != null)
             {
-                ChannelConfiguration[] configurations = PersistenceConfigurator.Load();
+                ChannelConfiguration[] configurations = OptionsConfigurator.Load();
                 foreach (ChannelConfiguration config in configurations)
                 {
                     ChannelStatus status = Enums.Parse<ChannelStatus>(config.Status, true, EnumFormat.Description);
@@ -208,11 +208,11 @@ namespace Horse.Messaging.Server.Channels
 
                 CreateEvent.Trigger(channelName);
 
-                if (!_initializing && PersistenceConfigurator != null)
+                if (!_initializing && OptionsConfigurator != null)
                 {
                     ChannelConfiguration configuration = ChannelConfiguration.Create(channel);
-                    PersistenceConfigurator.Add(configuration);
-                    PersistenceConfigurator.Save();
+                    OptionsConfigurator.Add(configuration);
+                    OptionsConfigurator.Save();
                 }
                 
                 return channel;
@@ -266,10 +266,10 @@ namespace Horse.Messaging.Server.Channels
                 RemoveEvent.Trigger(channel.Name);
                 channel.Destroy();
                 
-                if (PersistenceConfigurator != null)
+                if (OptionsConfigurator != null)
                 {
-                    PersistenceConfigurator.Remove(x => x.Name == channel.Name);
-                    PersistenceConfigurator.Save();
+                    OptionsConfigurator.Remove(x => x.Name == channel.Name);
+                    OptionsConfigurator.Save();
                 }
 
             }

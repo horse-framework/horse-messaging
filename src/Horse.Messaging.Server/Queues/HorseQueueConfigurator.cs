@@ -47,9 +47,9 @@ namespace Horse.Messaging.Server.Queues
         /// By default, queue configurations are saved to json file.
         /// Setting this value null, persistent configurations will be disabled. 
         /// </summary>
-        public HorseQueueConfigurator UseCustomPersistentConfigurator(IPersistenceConfigurator<QueueConfiguration> configurator)
+        public HorseQueueConfigurator UseCustomPersistentConfigurator(IOptionsConfigurator<QueueConfiguration> configurator)
         {
-            Rider.Queue.PersistenceConfigurator = configurator;
+            Rider.Queue.OptionsConfigurator = configurator;
             return this;
         }
 

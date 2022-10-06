@@ -95,7 +95,7 @@ namespace Horse.Messaging.Server.Queues
         /// Settings this value to null disables the persistence for queues and queues are lost after application restart.
         /// Default value is not null and saves queues into ./data/queues.json file
         /// </summary>
-        public IPersistenceConfigurator<QueueConfiguration> PersistenceConfigurator { get; set; }
+        public IOptionsConfigurator<QueueConfiguration> OptionsConfigurator { get; set; }
 
         /// <summary>
         /// Creates new queue rider
@@ -108,14 +108,14 @@ namespace Horse.Messaging.Server.Queues
             StatusChangeEvent = new EventManager(rider, HorseEventType.QueueStatusChange);
             SubscriptionEvent = new EventManager(rider, HorseEventType.QueueSubscription);
             UnsubscriptionEvent = new EventManager(rider, HorseEventType.QueueUnsubscription);
-            PersistenceConfigurator = new QueuePersistenceConfigurator("data", "queues.json");
+            OptionsConfigurator = new QueueOptionsConfigurator(rider, "queues.json");
         }
 
         internal void Initialize()
         {
-            if (PersistenceConfigurator != null)
+            if (OptionsConfigurator != null)
             {
-                QueueConfiguration[] configurations = PersistenceConfigurator.Load();
+                QueueConfiguration[] configurations = OptionsConfigurator.Load();
 
                 foreach (QueueConfiguration configuration in configurations)
                 {
@@ -330,15 +330,15 @@ namespace Horse.Messaging.Server.Queues
                 CreateEvent.Trigger(client, queue.Name);
                 Rider.Cluster.SendQueueCreated(queue);
 
-                if (PersistenceConfigurator != null)
+                if (OptionsConfigurator != null)
                 {
-                    QueueConfiguration configuration = PersistenceConfigurator.Find(x => x.Name == queue.Name);
+                    QueueConfiguration configuration = OptionsConfigurator.Find(x => x.Name == queue.Name);
 
                     if (configuration == null)
                     {
                         configuration = QueueConfiguration.Create(queue);
-                        PersistenceConfigurator.Add(configuration);
-                        PersistenceConfigurator.Save();
+                        OptionsConfigurator.Add(configuration);
+                        OptionsConfigurator.Save();
                     }
                 }
 
@@ -417,15 +417,15 @@ namespace Horse.Messaging.Server.Queues
 
                 _queues.Add(queue);
                 
-                if (PersistenceConfigurator != null)
+                if (OptionsConfigurator != null)
                 {
-                    QueueConfiguration configuration = PersistenceConfigurator.Find(x => x.Name == queue.Name);
+                    QueueConfiguration configuration = OptionsConfigurator.Find(x => x.Name == queue.Name);
 
                     if (configuration == null)
                     {
                         configuration = QueueConfiguration.Create(queue);
-                        PersistenceConfigurator.Add(configuration);
-                        PersistenceConfigurator.Save();
+                        OptionsConfigurator.Add(configuration);
+                        OptionsConfigurator.Save();
                     }
                 }
 
@@ -479,10 +479,10 @@ namespace Horse.Messaging.Server.Queues
                 await queue.Destroy();
                 RemoveEvent.Trigger(queue.Name);
 
-                if (PersistenceConfigurator != null)
+                if (OptionsConfigurator != null)
                 {
-                    PersistenceConfigurator.Remove(x => x.Name == queue.Name);
-                    PersistenceConfigurator.Save();
+                    OptionsConfigurator.Remove(x => x.Name == queue.Name);
+                    OptionsConfigurator.Save();
                 }
             }
             catch (Exception e)

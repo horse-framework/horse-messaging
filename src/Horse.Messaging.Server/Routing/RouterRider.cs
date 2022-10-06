@@ -37,7 +37,7 @@ namespace Horse.Messaging.Server.Routing
         /// Settings this value to null disables the persistence for routers and they are lost after application restart.
         /// Default value is not null and saves routers into ./data/routers.json file
         /// </summary>
-        public IPersistenceConfigurator<RouterConfiguration> PersistenceConfigurator { get; set; }
+        public IOptionsConfigurator<RouterConfiguration> OptionsConfigurator { get; set; }
 
         /// <summary>
         /// Event Manage for HorseEventType.RouterCreate
@@ -76,7 +76,7 @@ namespace Horse.Messaging.Server.Routing
             RemoveEvent = new EventManager(rider, HorseEventType.RouterRemove);
             BindingAddEvent = new EventManager(rider, HorseEventType.RouterBindingAdd);
             BindingRemoveEvent = new EventManager(rider, HorseEventType.RouterBindingRemove);
-            PersistenceConfigurator = new RouterPersistenceConfigurator("data", "routers.json");
+            OptionsConfigurator = new RouterOptionsConfigurator(rider, "routers.json");
         }
 
         internal void Initialize()
@@ -84,9 +84,9 @@ namespace Horse.Messaging.Server.Routing
             if (!KeepRouters) return;
             _initializing = true;
 
-            if (PersistenceConfigurator != null)
+            if (OptionsConfigurator != null)
             {
-                RouterConfiguration[] configurations = PersistenceConfigurator.Load();
+                RouterConfiguration[] configurations = OptionsConfigurator.Load();
                 foreach (RouterConfiguration config in configurations)
                 {
                     IRouter router = CreateRouter(config);
@@ -120,10 +120,10 @@ namespace Horse.Messaging.Server.Routing
 
                 CreateEvent.Trigger(name, new KeyValuePair<string, string>(HorseHeaders.ROUTE_METHOD, method.ToString()));
 
-                if (PersistenceConfigurator != null)
+                if (OptionsConfigurator != null)
                 {
-                    PersistenceConfigurator.Add(RouterConfiguration.Create(router));
-                    PersistenceConfigurator.Save();
+                    OptionsConfigurator.Add(RouterConfiguration.Create(router));
+                    OptionsConfigurator.Save();
                 }
 
                 return router;
@@ -156,10 +156,10 @@ namespace Horse.Messaging.Server.Routing
 
                 _routers.Add(router);
 
-                if (PersistenceConfigurator != null)
+                if (OptionsConfigurator != null)
                 {
-                    PersistenceConfigurator.Add(RouterConfiguration.Create(router));
-                    PersistenceConfigurator.Save();
+                    OptionsConfigurator.Add(RouterConfiguration.Create(router));
+                    OptionsConfigurator.Save();
                 }
             }
             catch (Exception e)
@@ -177,13 +177,13 @@ namespace Horse.Messaging.Server.Routing
             _routers.Remove(router);
             RemoveEvent.Trigger(router.Name);
 
-            if (PersistenceConfigurator != null)
+            if (OptionsConfigurator != null)
             {
-                RouterConfiguration configuration = PersistenceConfigurator.Find(x => x.Name == router.Name);
+                RouterConfiguration configuration = OptionsConfigurator.Find(x => x.Name == router.Name);
                 if (configuration != null)
                 {
-                    PersistenceConfigurator.Remove(configuration);
-                    PersistenceConfigurator.Save();
+                    OptionsConfigurator.Remove(configuration);
+                    OptionsConfigurator.Save();
                 }
             }
         }

@@ -5,28 +5,22 @@ using System.Linq;
 
 namespace Horse.Messaging.Server.Channels;
 
-public class ChannelPersistentConfigurator : IPersistenceConfigurator<ChannelConfiguration>
+public class ChannelOptionsConfigurator : IOptionsConfigurator<ChannelConfiguration>
 {
-    private readonly string _path;
+    private readonly HorseRider _rider;
     private readonly string _filename;
 
     private List<ChannelConfiguration> _configurations = new List<ChannelConfiguration>();
 
-    public ChannelPersistentConfigurator(string path, string filename)
+    public ChannelOptionsConfigurator(HorseRider rider, string filename)
     {
-        if (!path.EndsWith('\\') && !path.EndsWith('/'))
-            path += "/";
-
-        _path = path;
+        _rider = rider;
         _filename = filename;
     }
 
     public ChannelConfiguration[] Load()
     {
-        if (!Directory.Exists(_path))
-            Directory.CreateDirectory(_path);
-
-        string fullname = $"{_path}{_filename}";
+        string fullname = $"{_rider.Options.DataPath}/{_filename}";
 
         if (!File.Exists(fullname))
         {
@@ -51,7 +45,7 @@ public class ChannelPersistentConfigurator : IPersistenceConfigurator<ChannelCon
     public void Save()
     {
         string json = System.Text.Json.JsonSerializer.Serialize(_configurations);
-        File.WriteAllText($"{_path}{_filename}", json);
+        File.WriteAllText($"{_rider.Options.DataPath}/{_filename}", json);
     }
 
     public void Add(ChannelConfiguration item)

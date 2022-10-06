@@ -65,7 +65,7 @@ namespace Test.Persistency
                 .ConfigureChannels(c => { c.UseCustomPersistentConfigurator(null); })
                 .ConfigureQueues(c =>
                 {
-                    c.UseCustomPersistentConfigurator(new QueuePersistenceConfigurator("data", filename));
+                    c.UseCustomPersistentConfigurator(new QueueOptionsConfigurator(c.Rider, filename));
                     c.UsePersistentQueues(
                         cx => { cx.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
                         q =>
@@ -97,7 +97,7 @@ namespace Test.Persistency
                 .ConfigureChannels(c => { c.UseCustomPersistentConfigurator(null); })
                 .ConfigureQueues(c =>
                 {
-                    c.UseCustomPersistentConfigurator(new QueuePersistenceConfigurator("data", filename));
+                    c.UseCustomPersistentConfigurator(new QueueOptionsConfigurator(c.Rider, filename));
                     c.UsePersistentQueues(
                         c => { c.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
                         q =>

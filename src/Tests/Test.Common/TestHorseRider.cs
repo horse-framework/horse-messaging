@@ -67,7 +67,7 @@ namespace Test.Common
                         return new TestQueueManager(this, m.Queue);
                     });
 
-                    q.UseCustomPersistentConfigurator(new QueuePersistenceConfigurator("data", $"queues-{Guid.NewGuid()}.json"));
+                    q.UseCustomPersistentConfigurator(new QueueOptionsConfigurator(q.Rider, $"queues-{Guid.NewGuid()}.json"));
                 })
                 .ConfigureChannels(c =>
                 {
@@ -78,7 +78,7 @@ namespace Test.Common
                     c.Handlers.Add(new TestClientHandler(this));
                     c.AdminAuthorizations.Add(new TestAdminAuthorization());
                 })
-                .ConfigureRouters(c => { c.UseCustomPersistentConfigurator(new RouterPersistenceConfigurator("data", $"routers-{Guid.NewGuid()}.json")); })
+                .ConfigureRouters(c => { c.UseCustomPersistentConfigurator(new RouterOptionsConfigurator(c.Rider, $"routers-{Guid.NewGuid()}.json")); })
                 .Build();
 
             await Rider.Queue.Create("push-a", o => o.Type = QueueType.Push);

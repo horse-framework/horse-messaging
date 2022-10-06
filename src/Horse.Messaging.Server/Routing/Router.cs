@@ -323,16 +323,16 @@ namespace Horse.Messaging.Server.Routing
 
         private void UpdateRouterConfiguration()
         {
-            IPersistenceConfigurator<RouterConfiguration> persistence = Rider.Router.PersistenceConfigurator;
+            IOptionsConfigurator<RouterConfiguration> options = Rider.Router.OptionsConfigurator;
 
-            if (persistence == null)
+            if (options == null)
                 return;
 
             RouterConfiguration configuration = RouterConfiguration.Create(this);
 
-            persistence.Remove(x => x.Name == Name);
-            persistence.Add(configuration);
-            persistence.Save();
+            options.Remove(x => x.Name == Name);
+            options.Add(configuration);
+            options.Save();
         }
     }
 }

@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Horse.Messaging.Server;
 
-public interface IPersistenceConfigurator<T>
+public interface IOptionsConfigurator<T>
 {
     T[] Load();
 

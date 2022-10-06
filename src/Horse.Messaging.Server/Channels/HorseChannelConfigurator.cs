@@ -33,9 +33,9 @@ namespace Horse.Messaging.Server.Channels
         /// By default, queue configurations are saved to json file.
         /// Setting this value null, persistent configurations will be disabled. 
         /// </summary>
-        public HorseChannelConfigurator UseCustomPersistentConfigurator(IPersistenceConfigurator<ChannelConfiguration> configurator)
+        public HorseChannelConfigurator UseCustomPersistentConfigurator(IOptionsConfigurator<ChannelConfiguration> configurator)
         {
-            _rider.Channel.PersistenceConfigurator = configurator;
+            _rider.Channel.OptionsConfigurator = configurator;
             return this;
         }
 

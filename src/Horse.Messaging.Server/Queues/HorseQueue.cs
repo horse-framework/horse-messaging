@@ -377,19 +377,19 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         public void UpdateConfiguration()
         {
-            IPersistenceConfigurator<QueueConfiguration> persistence = Rider.Queue.PersistenceConfigurator;
+            IOptionsConfigurator<QueueConfiguration> options = Rider.Queue.OptionsConfigurator;
 
-            if (persistence == null)
+            if (options == null)
                 return;
 
             QueueConfiguration configuration = QueueConfiguration.Create(this);
-            QueueConfiguration previous = persistence.Find(x => x.Name == Name);
+            QueueConfiguration previous = options.Find(x => x.Name == Name);
             
             if (previous != null)
-                persistence.Remove(previous);
+                options.Remove(previous);
 
-            persistence.Add(configuration);
-            persistence.Save();
+            options.Add(configuration);
+            options.Save();
         }
 
         #endregion
