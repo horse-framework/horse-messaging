@@ -128,18 +128,7 @@ namespace Horse.Messaging.Data
         /// </summary>
         internal static string DefaultQueueDbPath(HorseQueue queue)
         {
-            string dir = "data";
-            try
-            {
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
-
-                return dir + "/" + queue.Name + ".tdb";
-            }
-            catch
-            {
-                return "data-" + queue.Name + ".tdb";
-            }
+            return $"{queue.Rider.Options.DataPath}/{queue.Name}.hdb";
         }
     }
 }
