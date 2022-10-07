@@ -56,12 +56,12 @@ namespace Horse.Messaging.Data.Implementation
             DeliveryHandler = new PersistentMessageDeliveryHandler(this);
 
             DatabaseOptions prioDbOptions = databaseOptions.Clone();
-            if (prioDbOptions.Filename.EndsWith(".tdb", StringComparison.InvariantCultureIgnoreCase))
+            if (prioDbOptions.Filename.EndsWith(".hdb", StringComparison.InvariantCultureIgnoreCase))
                 prioDbOptions.Filename = prioDbOptions.Filename.Substring(0, prioDbOptions.Filename.Length - 4) +
-                                         "_priority" +
-                                         ".tdb";
+                                         "_prio" +
+                                         ".hdb";
             else
-                prioDbOptions.Filename += "_priority";
+                prioDbOptions.Filename += "_prio";
 
             _priorityMessageStore = new PersistentMessageStore(this, prioDbOptions);
             _messageStore = new PersistentMessageStore(this, databaseOptions);
