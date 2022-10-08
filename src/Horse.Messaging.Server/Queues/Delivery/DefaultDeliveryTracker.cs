@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Queues.Managers;
 
 namespace Horse.Messaging.Server.Queues.Delivery
 {

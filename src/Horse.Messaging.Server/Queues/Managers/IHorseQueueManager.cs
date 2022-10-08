@@ -4,7 +4,7 @@ using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.Store;
 using Horse.Messaging.Server.Queues.Sync;
 
-namespace Horse.Messaging.Server.Queues
+namespace Horse.Messaging.Server.Queues.Managers
 {
     /// <summary>
     /// Queue manager implementation.

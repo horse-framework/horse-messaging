@@ -1,4 +1,5 @@
-﻿using Horse.Messaging.Extensions.Client;
+﻿using System;
+using Horse.Messaging.Extensions.Client;
 using HostedServiceSample.Client;
 using HostedServiceSample.Consumer;
 using Microsoft.Extensions.Hosting;

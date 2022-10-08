@@ -2,7 +2,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Data;
-using Horse.Messaging.Data.Configuration;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Managers;
@@ -66,10 +65,9 @@ namespace HostedServiceSample.Server
                     DataConfigurationBuilder builder = new();
                     builder.KeepLastBackup();
                     builder.UseAutoFlush(TimeSpan.FromMilliseconds(500));
-                    ConfigurationFactory.Initialize(builder);
                     cfg.UseCustomQueueManager("a", m =>
                     {
-                        var manager = new SamplePersistentQueueManager(m.Queue, ConfigurationFactory.Builder.CreateOptions(m.Queue), true);
+                        var manager = new SamplePersistentQueueManager(m.Queue, builder.CreateOptions(m.Queue), true);
                         return Task.FromResult<IHorseQueueManager>(manager);
                     });
                     cfg.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(15);
@@ -78,6 +76,7 @@ namespace HostedServiceSample.Server
                 })
                 .ConfigureClients(cfg => { cfg.Handlers.Add(_clientHandler); })
                 .ConfigureOptions(options => { options.Name = "SAMPLE"; })
+                .ConfigureRouters(o => o.Rider.Router.KeepRouters = false)
                 .AddErrorHandler(_errorHandler);
         }
 

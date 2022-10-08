@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Horse.Messaging.Data.Configuration;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
+using Horse.Messaging.Server.Queues.Managers;
 using Horse.Messaging.Server.Queues.Store;
 using Horse.Messaging.Server.Queues.Sync;
 
@@ -56,12 +56,12 @@ namespace Horse.Messaging.Data.Implementation
             DeliveryHandler = new PersistentMessageDeliveryHandler(this);
 
             DatabaseOptions prioDbOptions = databaseOptions.Clone();
-            if (prioDbOptions.Filename.EndsWith(".tdb", StringComparison.InvariantCultureIgnoreCase))
+            if (prioDbOptions.Filename.EndsWith(".hdb", StringComparison.InvariantCultureIgnoreCase))
                 prioDbOptions.Filename = prioDbOptions.Filename.Substring(0, prioDbOptions.Filename.Length - 4) +
-                                         "_priority" +
-                                         ".tdb";
+                                         "_prio" +
+                                         ".hdb";
             else
-                prioDbOptions.Filename += "_priority";
+                prioDbOptions.Filename += "_prio";
 
             _priorityMessageStore = new PersistentMessageStore(this, prioDbOptions);
             _messageStore = new PersistentMessageStore(this, databaseOptions);
@@ -92,10 +92,6 @@ namespace Horse.Messaging.Data.Implementation
                 await RedeliveryService.Load();
                 deliveries = RedeliveryService.GetDeliveries();
             }
-
-            bool added = ConfigurationFactory.Manager.Add(Queue, _messageStore.Database.File.Filename);
-            if (added)
-                ConfigurationFactory.Manager.Save();
 
             await LoadMessages(_priorityMessageStore.Database, deliveries);
             await LoadMessages(_messageStore.Database, deliveries);
@@ -153,16 +149,12 @@ namespace Horse.Messaging.Data.Implementation
 
             try
             {
-                ConfigurationFactory.Manager.Remove(Queue);
-                ConfigurationFactory.Manager.Save();
-
                 await _priorityMessageStore.Destroy();
                 await _messageStore.Destroy();
             }
             catch (Exception e)
             {
-                if (ConfigurationFactory.Builder.ErrorAction != null)
-                    ConfigurationFactory.Builder.ErrorAction(Queue, null, e);
+                Queue.Rider.SendError("PersistentQueueDestroy", e, Queue.Name);
             }
 
             PriorityMessageStore.TimeoutTracker.Stop();
@@ -176,9 +168,7 @@ namespace Horse.Messaging.Data.Implementation
         /// <inheritdoc />
         public Task OnExceptionThrown(string hint, QueueMessage message, Exception exception)
         {
-            if (ConfigurationFactory.Builder.ErrorAction != null)
-                ConfigurationFactory.Builder.ErrorAction(Queue, message, exception);
-
+            Queue.Rider.SendError(hint, exception, $"MessageId: {message.Message.MessageId}");
             return Task.CompletedTask;
         }
 

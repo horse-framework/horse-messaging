@@ -1,7 +1,7 @@
 using System;
 using System.Text.Json.Serialization;
+using EnumsNET;
 using Horse.Messaging.Protocol;
-using Horse.Messaging.Server.Helpers;
 
 namespace Horse.Messaging.Server.Queues
 {
@@ -94,40 +94,10 @@ namespace Horse.Messaging.Server.Queues
         public void ApplyToQueue(QueueOptions target)
         {
             if (!string.IsNullOrEmpty(Acknowledge))
-                switch (Acknowledge.Trim().ToLower())
-                {
-                    case "none":
-                        target.Acknowledge = QueueAckDecision.None;
-                        break;
-
-                    case "request":
-                        target.Acknowledge = QueueAckDecision.JustRequest;
-                        break;
-
-                    case "wait":
-                        target.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-                        break;
-                }
+                target.Acknowledge = Enums.Parse<QueueAckDecision>(Acknowledge, true, EnumFormat.Description);
 
             if (!string.IsNullOrEmpty(AutoDestroy))
-                switch (AutoDestroy.Trim().ToLower())
-                {
-                    case "disabled":
-                        target.AutoDestroy = QueueDestroy.Disabled;
-                        break;
-
-                    case "no-message":
-                        target.AutoDestroy = QueueDestroy.NoMessages;
-                        break;
-
-                    case "no-consumer":
-                        target.AutoDestroy = QueueDestroy.NoConsumers;
-                        break;
-
-                    case "empty":
-                        target.AutoDestroy = QueueDestroy.Empty;
-                        break;
-                }
+                target.AutoDestroy = Enums.Parse<QueueDestroy>(AutoDestroy, true, EnumFormat.Description);
 
             if (AcknowledgeTimeout.HasValue)
                 target.AcknowledgeTimeout = TimeSpan.FromMilliseconds(AcknowledgeTimeout.Value);
@@ -142,7 +112,7 @@ namespace Horse.Messaging.Server.Queues
                 target.MessageLimit = MessageLimit.Value;
 
             if (!string.IsNullOrEmpty(LimitExceededStrategy))
-                target.LimitExceededStrategy = LimitExceededStrategy.ToLimitExceededStrategy();
+                target.LimitExceededStrategy = Enums.Parse<MessageLimitExceededStrategy>(LimitExceededStrategy, true, EnumFormat.Description);
 
             if (ClientLimit.HasValue)
                 target.ClientLimit = ClientLimit.Value;

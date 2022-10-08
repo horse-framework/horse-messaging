@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Managers;
 using Horse.Messaging.Server.Queues.Store;
 
 namespace Horse.Messaging.Data.Implementation

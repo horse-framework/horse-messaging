@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Data;
-using Horse.Messaging.Data.Configuration;
 using Horse.Messaging.Data.Implementation;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
@@ -18,9 +17,12 @@ namespace Test.Persistency
         [Fact]
         public async Task InPersistentHandler()
         {
-            ConfigurationFactory.Destroy();
             HorseServer server = new HorseServer();
             HorseRider rider = server.UseRider(cfg => cfg
+                .ConfigureChannels(c =>
+                {
+                    c.UseCustomPersistentConfigurator(null);
+                })
                 .ConfigureQueues(q =>
                 {
                     q.UsePersistentQueues(q =>

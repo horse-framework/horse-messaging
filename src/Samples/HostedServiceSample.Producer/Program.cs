@@ -14,8 +14,9 @@ while (service.HorseClient.IsConnected)
 	Console.Write("Press enter to push message....");
 	string userId = Console.ReadLine();
 	string modelType = Console.ReadLine() ?? "0";
+	var result = await PushQueueMessage(userId, modelType);
 	// var result = await PushQueueMessageThroughRouter(userId, modelType);
-	var result = await PushRouteRequestMessage(userId);
+	// var result = await PushRouteRequestMessage(userId);
 	Console.WriteLine(result.Code);
 }
 

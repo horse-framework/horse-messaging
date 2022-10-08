@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Data;
-using Horse.Messaging.Data.Configuration;
 using Horse.Messaging.Data.Implementation;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
@@ -48,15 +47,11 @@ namespace Test.Persistency
         public async Task ReloadAfterRestart()
         {
             await Task.Delay(500);
-            ConfigurationFactory.Destroy();
             RedeliveryService service = new RedeliveryService("data/reload-test.tdb.delivery");
             await service.Load();
             await service.Clear();
             await service.Set("id", 4);
             await service.Close();
-
-            if (System.IO.File.Exists("data/config.json"))
-                System.IO.File.Delete("data/config.json");
 
             if (System.IO.File.Exists("data/reload-test.tdb"))
                 System.IO.File.Delete("data/reload-test.tdb");
@@ -65,18 +60,21 @@ namespace Test.Persistency
                 System.IO.File.Delete("data/reload-test.tdb.delivery");
 
             HorseServer server = new HorseServer();
-
-            HorseRider rider = server.UseRider(cfg => cfg.ConfigureQueues(c =>
-            {
-                c.UsePersistentQueues(
-                    cx => { cx.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
-                    q =>
-                    {
-                        q.Options.Acknowledge = QueueAckDecision.None;
-                        q.Options.CommitWhen = CommitWhen.None;
-                    },
-                    true);
-            }));
+            string filename = $"queues-{Guid.NewGuid()}.json";
+            HorseRider rider = server.UseRider(cfg => cfg
+                .ConfigureChannels(c => { c.UseCustomPersistentConfigurator(null); })
+                .ConfigureQueues(c =>
+                {
+                    c.UseCustomPersistentConfigurator(new QueueOptionsConfigurator(c.Rider, filename));
+                    c.UsePersistentQueues(
+                        cx => { cx.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
+                        q =>
+                        {
+                            q.Options.Acknowledge = QueueAckDecision.None;
+                            q.Options.CommitWhen = CommitWhen.None;
+                        },
+                        true);
+                }));
 
             HorseQueue queue = await rider.Queue.Create("reload-test", o => o.Type = QueueType.Push);
 
@@ -91,22 +89,25 @@ namespace Test.Persistency
             await manager.DeliveryHandler.BeginSend(queue, queueMsg);
 
             await manager.RedeliveryService.Close();
-            ConfigurationFactory.Destroy();
 
             await Task.Delay(1000);
 
             server = new HorseServer();
-            rider = server.UseRider(cfg => cfg.ConfigureQueues(c =>
-            {
-                c.UsePersistentQueues(
-                    c => { c.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
-                    q =>
-                    {
-                        q.Options.Acknowledge = QueueAckDecision.None;
-                        q.Options.CommitWhen = CommitWhen.None;
-                    },
-                    true);
-            }));
+            rider = server.UseRider(cfg => cfg
+                .ConfigureChannels(c => { c.UseCustomPersistentConfigurator(null); })
+                .ConfigureQueues(c =>
+                {
+                    c.UseCustomPersistentConfigurator(new QueueOptionsConfigurator(c.Rider, filename));
+                    c.UsePersistentQueues(
+                        c => { c.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
+                        q =>
+                        {
+                            q.Options.Acknowledge = QueueAckDecision.None;
+                            q.Options.CommitWhen = CommitWhen.None;
+                        },
+                        true);
+                }));
+            await Task.Delay(250);
             HorseQueue queue2 = rider.Queue.Find("reload-test");
             Assert.NotNull(queue2);
             Assert.NotEqual(0, queue2.Manager.MessageStore.Count());

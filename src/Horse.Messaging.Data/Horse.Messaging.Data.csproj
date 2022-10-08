@@ -7,9 +7,9 @@
         <Product>Horse.Messaging.Data</Product>
         <Description>Persistant queue message data library for Horse Messaging</Description>
         <PackageTags>horse,server,messaging,queue,mq,persistent,database,db</PackageTags>
-        <AssemblyVersion>6.2.6</AssemblyVersion>
-        <FileVersion>6.2.6</FileVersion>
-        <PackageVersion>6.2.6</PackageVersion>
+        <AssemblyVersion>6.3.4</AssemblyVersion>
+        <FileVersion>6.3.4</FileVersion>
+        <PackageVersion>6.3.4</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>
@@ -27,6 +27,10 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Horse.Messaging.Server\Horse.Messaging.Server.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Enums.NET" Version="4.0.0" />
     </ItemGroup>
 
 </Project>

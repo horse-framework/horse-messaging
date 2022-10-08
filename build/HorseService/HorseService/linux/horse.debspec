@@ -1,0 +1,43 @@
+basepath: .
+outdir: .
+
+package: horse
+version: 6.3.1
+architecture: all
+maintainer: Mehmet Helvacikoylu <mehmet@helvacikoylu.com>
+homepage: https://github.com/horse-framework/horse-messaging
+description: Horse Messaging Queue and Communication Server
+
+ETCDIR = etc/horse
+BINDIR = opt/horse
+PUBDIR = HorseService\bin\Release\net6.0\publish
+
+dir: var/log/horse
+conffile: {PUBDIR}/options.json {ETCDIR}/ text
+file: {PUBDIR}/linux/horse.service lib/systemd/system/
+file: {PUBDIR}/linux/horse.init.d etc/init.d/horse 755
+
+file: {PUBDIR}/HorseService.dll {BINDIR}/ 755
+file: {PUBDIR}/Enums.NET.dll {BINDIR}/
+file: {PUBDIR}/Horse.Core.dll {BINDIR}/
+file: {PUBDIR}/Horse.deps.json {BINDIR}/
+file: {PUBDIR}/Horse.Jockey.dll {BINDIR}/
+file: {PUBDIR}/Horse.Messaging.Client.dll {BINDIR}/
+file: {PUBDIR}/Horse.Messaging.Data.dll {BINDIR}/
+file: {PUBDIR}/Horse.Messaging.Protocol.dll {BINDIR}/
+file: {PUBDIR}/Horse.Messaging.Server.dll {BINDIR}/
+file: {PUBDIR}/Horse.Mvc.Auth.Jwt.dll {BINDIR}/
+file: {PUBDIR}/Horse.Mvc.dll {BINDIR}/
+file: {PUBDIR}/Horse.pdb {BINDIR}/
+file: {PUBDIR}/Horse.Protocols.Http.dll {BINDIR}/
+file: {PUBDIR}/Horse.runtimeconfig.json {BINDIR}/
+file: {PUBDIR}/Horse.Server.dll {BINDIR}/
+file: {PUBDIR}/Horse.WebSocket.Protocol.dll {BINDIR}/
+file: {PUBDIR}/Horse.WebSocket.Server.dll {BINDIR}/
+file: {PUBDIR}/Microsoft.Extensions.DependencyInjection.Abstractions.dll {BINDIR}/
+file: {PUBDIR}/Microsoft.Extensions.DependencyInjection.dll {BINDIR}/
+file: {PUBDIR}/Microsoft.IdentityModel.JsonWebTokens.dll {BINDIR}/
+file: {PUBDIR}/Microsoft.IdentityModel.Logging.dll {BINDIR}/
+file: {PUBDIR}/Microsoft.IdentityModel.Tokens.dll {BINDIR}/
+file: {PUBDIR}/Newtonsoft.Json.dll {BINDIR}/
+file: {PUBDIR}/System.IdentityModel.Tokens.Jwt.dll {BINDIR}/

@@ -221,9 +221,13 @@ namespace Horse.Messaging.Server.Channels
             if (Options.ClientLimit > 0 && _clients.Count() >= Options.ClientLimit)
                 return SubscriptionResult.Full;
 
-            ChannelClient cc = new ChannelClient(this, client);
-            _clients.Add(cc);
-            client.AddSubscription(cc);
+            ChannelClient channelClient = _clients.Find(x => x.Client == client);
+            if (channelClient != null)
+                return SubscriptionResult.Success;
+
+            channelClient = new ChannelClient(this, client);
+            _clients.Add(channelClient);
+            client.AddSubscription(channelClient);
 
             foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
                 _ = handler.OnSubscribe(this, client);

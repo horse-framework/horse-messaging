@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using EnumsNET;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Containers;
@@ -52,6 +52,13 @@ namespace Horse.Messaging.Server.Channels
         public HorseRider Rider { get; }
 
         /// <summary>
+        /// Persistence configurator for routers.
+        /// Settings this value to null disables the persistence for channels and they are lost after application restart.
+        /// Default value is not null and saves channels into ./data/channels.json file
+        /// </summary>
+        public IOptionsConfigurator<ChannelConfiguration> OptionsConfigurator { get; set; }
+
+        /// <summary>
         /// Event Manager for HorseEventType.ChannelCreate
         /// </summary>
         public EventManager CreateEvent { get; }
@@ -87,65 +94,35 @@ namespace Horse.Messaging.Server.Channels
             RemoveEvent = new EventManager(rider, HorseEventType.ChannelRemove);
             SubscribeEvent = new EventManager(rider, HorseEventType.ChannelSubscribe);
             UnsubscribeEvent = new EventManager(rider, HorseEventType.ChannelUnsubscribe);
+            OptionsConfigurator = new ChannelOptionsConfigurator(rider, "channels.json");
         }
 
         internal void Initialize()
         {
             _initializing = true;
 
-            GlobalChannelConfigData global = Configurator.LoadConfiguration<GlobalChannelConfigData>($"{Rider.Options.DataPath}/channels.json");
-
-            foreach (ChannelConfigData definition in global.Channels)
+            if (OptionsConfigurator != null)
             {
-                ChannelStatus status = definition.Status.ToChannelStatus();
-                if (status == ChannelStatus.Destroyed)
-                    continue;
-
-                HorseChannel channel = Create(definition.Name, opt =>
+                ChannelConfiguration[] configurations = OptionsConfigurator.Load();
+                foreach (ChannelConfiguration config in configurations)
                 {
-                    opt.AutoDestroy = definition.AutoDestroy;
-                    opt.ClientLimit = definition.ClientLimit;
-                    opt.MessageSizeLimit = definition.MessageSizeLimit;
-                }).GetAwaiter().GetResult();
+                    ChannelStatus status = Enums.Parse<ChannelStatus>(config.Status, true, EnumFormat.Description);
+                    if (status == ChannelStatus.Destroyed)
+                        continue;
 
-                channel.Topic = definition.Topic;
-                channel.Status = status;
+                    HorseChannel channel = Create(config.Name, opt =>
+                    {
+                        opt.AutoDestroy = config.AutoDestroy;
+                        opt.ClientLimit = config.ClientLimit;
+                        opt.MessageSizeLimit = config.MessageSizeLimit;
+                    }).GetAwaiter().GetResult();
+
+                    channel.Topic = config.Topic;
+                    channel.Status = status;
+                }
             }
 
             _initializing = false;
-        }
-
-        internal void SaveChannels()
-        {
-            if (_initializing)
-                return;
-
-            GlobalChannelConfigData global = new GlobalChannelConfigData();
-            global.AutoDestroy = Options.AutoDestroy;
-            global.AutoChannelCreation = Options.AutoChannelCreation;
-            global.ClientLimit = Options.ClientLimit;
-            global.MessageSizeLimit = Options.MessageSizeLimit;
-            global.Channels = new List<ChannelConfigData>();
-
-            foreach (HorseChannel channel in _channels.All())
-            {
-                if (channel.Status == ChannelStatus.Destroyed)
-                    continue;
-
-                ChannelConfigData configData = new ChannelConfigData
-                {
-                    Name = channel.Name,
-                    Status = channel.Status.ToString(),
-                    Topic = channel.Topic,
-                    AutoDestroy = channel.Options.AutoDestroy,
-                    ClientLimit = channel.Options.ClientLimit,
-                    MessageSizeLimit = channel.Options.MessageSizeLimit
-                };
-
-                global.Channels.Add(configData);
-            }
-
-            Configurator.SaveConfiguration($"{Rider.Options.DataPath}/channels.json", global);
         }
 
         #endregion
@@ -230,7 +207,14 @@ namespace Horse.Messaging.Server.Channels
                     _ = handler.OnCreated(channel);
 
                 CreateEvent.Trigger(channelName);
-                SaveChannels();
+
+                if (!_initializing && OptionsConfigurator != null)
+                {
+                    ChannelConfiguration configuration = ChannelConfiguration.Create(channel);
+                    OptionsConfigurator.Add(configuration);
+                    OptionsConfigurator.Save();
+                }
+                
                 return channel;
             }
             catch (Exception e)
@@ -281,7 +265,13 @@ namespace Horse.Messaging.Server.Channels
 
                 RemoveEvent.Trigger(channel.Name);
                 channel.Destroy();
-                SaveChannels();
+                
+                if (OptionsConfigurator != null)
+                {
+                    OptionsConfigurator.Remove(x => x.Name == channel.Name);
+                    OptionsConfigurator.Save();
+                }
+
             }
             catch (Exception e)
             {

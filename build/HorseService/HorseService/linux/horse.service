@@ -1,0 +1,21 @@
+[Unit]
+Description=Horse Messaging Server
+
+[Service]
+WorkingDirectory=/opt/horse
+ExecStartPre=/bin/sh -c "mv /var/log/horse/horse.log /var/log/horse/horse.log.1"
+ExecStart=/usr/bin/dotnet /opt/horse/HorseService.dll
+SyslogIdentifier=horse
+Restart=always
+RestartSec=5s
+StandardOutput=file:/var/log/horse/horse.log
+StandardError=file:/var/log/horse/horse_error.log
+
+[Journal]
+Storage=persistent
+MaxRetentionSec=5days
+SystemMaxFileSize=10M
+MaxFileSec=10M
+
+[Install]
+WantedBy=multi-user.target

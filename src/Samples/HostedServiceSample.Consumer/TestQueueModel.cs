@@ -1,3 +1,5 @@
+using Horse.Messaging.Client.Queues;
+using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Client.Routers.Annotations;
 
 namespace HostedServiceSample.Producer
@@ -8,7 +10,7 @@ namespace HostedServiceSample.Producer
 		public string Bar { get; set; }
 	}
 	
-	[RouterName("test-queue-router")]
+	[RouterName("test-queue-ro1uter")]
 	public class TestQueueModel2
 	{
 		public string Foo { get; set; }

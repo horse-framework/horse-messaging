@@ -45,7 +45,6 @@ namespace Horse.Messaging.Server.Routing
             }
 
             await SendResponse(result, client, message);
-
             if (router is Router r)
             {
                 if (!string.IsNullOrEmpty(message.MessageId))

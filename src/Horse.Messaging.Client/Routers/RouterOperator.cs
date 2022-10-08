@@ -246,6 +246,7 @@ namespace Horse.Messaging.Client.Routers
                                                    ushort? contentType = null,
                                                    IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
+
             RouterTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(model.GetType());
 
             if (!string.IsNullOrEmpty(routerName))

@@ -136,6 +136,7 @@ namespace Horse.Messaging.Server
             Transaction.Initialize();
             Router.Initialize();
             Channel.Initialize();
+            Queue.Initialize();
         }
 
         /// <summary>
