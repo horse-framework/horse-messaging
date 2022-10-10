@@ -356,7 +356,7 @@ namespace Horse.Messaging.Server.Queues
                 PutBackDelay = Options.PutBackDelay,
                 MessageSizeLimit = Options.MessageSizeLimit,
                 MessageLimit = Options.MessageLimit,
-                LimitExceededStrategy = Options.LimitExceededStrategy.ToString(),
+                LimitExceededStrategy = Options.LimitExceededStrategy.AsString(EnumFormat.Description),
                 ClientLimit = Options.ClientLimit,
                 MessageTimeout = Convert.ToInt32(Options.MessageTimeout.TotalSeconds),
                 AcknowledgeTimeout = Convert.ToInt32(Options.AcknowledgeTimeout.TotalMilliseconds),

@@ -4,6 +4,7 @@ using System.Data;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using EnumsNET;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Models;
@@ -483,7 +484,7 @@ namespace Horse.Messaging.Server.Network
                     LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
                     LastMessageSent = queue.Info.GetLastMessageSendUnix(),
                     MessageLimit = queue.Options.MessageLimit,
-                    LimitExceededStrategy = queue.Options.LimitExceededStrategy.ToString(),
+                    LimitExceededStrategy = queue.Options.LimitExceededStrategy.AsString(EnumFormat.Description),
                     MessageSizeLimit = queue.Options.MessageSizeLimit,
                     DelayBetweenMessages = queue.Options.DelayBetweenMessages
                 });
