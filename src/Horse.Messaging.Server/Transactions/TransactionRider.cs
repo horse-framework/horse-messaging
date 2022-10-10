@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Channels;
@@ -49,7 +50,7 @@ namespace Horse.Messaging.Server.Transactions
                 return;
 
             string fileContent = System.IO.File.ReadAllText(filename);
-            _data = System.Text.Json.JsonSerializer.Deserialize<List<TransactionContainerData>>(fileContent);
+            _data = JsonSerializer.Deserialize<List<TransactionContainerData>>(fileContent, new JsonSerializerOptions {PropertyNameCaseInsensitive = true});
 
             foreach (TransactionContainerData item in _data)
             {

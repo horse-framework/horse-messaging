@@ -55,6 +55,7 @@ namespace Sample.Server
                 new QueueTransactionEndpoint(rider.Queue, "TimeoutQueue"));
 */
             HorseServer server = new HorseServer();
+            server.Options.PingInterval = 10;
             server.UseRider(rider);
             server.Run(26222);
         }

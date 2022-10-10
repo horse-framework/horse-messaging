@@ -7,9 +7,9 @@
         <Product>Horse.Messaging.Protocol</Product>
         <Description>Horse Messaging Protocol library and server extension for Horse Server</Description>
         <PackageTags>horse,tcp,server,http,messaging,queue,cache,channel,stream,protocol</PackageTags>
-        <AssemblyVersion>6.3.4</AssemblyVersion>
-        <FileVersion>6.3.4</FileVersion>
-        <PackageVersion>6.3.4</PackageVersion>
+        <AssemblyVersion>6.3.5</AssemblyVersion>
+        <FileVersion>6.3.5</FileVersion>
+        <PackageVersion>6.3.5</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>

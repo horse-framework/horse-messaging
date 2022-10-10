@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 
 namespace Horse.Messaging.Server.Channels;
 
@@ -37,14 +38,14 @@ public class ChannelOptionsConfigurator : IOptionsConfigurator<ChannelConfigurat
 
         lock (_configurations)
         {
-            _configurations = System.Text.Json.JsonSerializer.Deserialize<List<ChannelConfiguration>>(json);
+            _configurations = JsonSerializer.Deserialize<List<ChannelConfiguration>>(json, new JsonSerializerOptions {PropertyNameCaseInsensitive = true});
             return _configurations.ToArray();
         }
     }
 
     public void Save()
     {
-        string json = System.Text.Json.JsonSerializer.Serialize(_configurations);
+        string json = JsonSerializer.Serialize(_configurations);
         File.WriteAllText($"{_rider.Options.DataPath}/{_filename}", json);
     }
 
