@@ -17,19 +17,19 @@ namespace Sample.Server
                 {
                     cfg.Options.Type = QueueType.Push;
                     cfg.EventHandlers.Add(new QueueEventHandler());
-/*
+
                     cfg.UseMemoryQueues(c =>
                     {
                         c.Options.CommitWhen = CommitWhen.AfterReceived;
                         c.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
                         c.Options.PutBack = PutBackDecision.Regular;
                     });
-*/
+/*
                     cfg.UsePersistentQueues(null, c =>
                     {
                         c.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
                         c.Options.CommitWhen = CommitWhen.AfterSaved;
-                    });
+                    });*/
                 })
                 .ConfigureClients(cfg => { cfg.Handlers.Add(new ClientHandler()); })
                 .Build();

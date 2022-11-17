@@ -283,7 +283,14 @@ namespace Horse.Messaging.Server.Queues.Sync
             {
                 HorseMessage msg = await reader.Read(message.Content);
                 QueueMessage queueMessage = new QueueMessage(msg, true);
-                Manager.AddMessage(queueMessage);
+                try
+                {
+                    Manager.AddMessage(queueMessage);
+                }
+                catch
+                {
+                    //already added
+                }
             }
         }
 

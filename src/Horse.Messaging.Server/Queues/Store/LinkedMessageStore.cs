@@ -114,6 +114,8 @@ namespace Horse.Messaging.Server.Queues.Store
                     if (message == null)
                         continue;
 
+                    message.IsInQueue = false;
+                    
                     list.Add(message);
                     _messages.RemoveFirst();
                 }

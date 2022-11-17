@@ -57,7 +57,10 @@ namespace Horse.Messaging.Server.Queues.States
             List<QueueClient> clients = _queue.ClientsClone;
             if (clients.Count == 0)
             {
-                _queue.AddMessage(message, false);
+                PushResult pushResult = _queue.AddMessage(message, false);
+                if (pushResult != PushResult.Success)
+                    return pushResult;
+                
                 return PushResult.NoConsumers;
             }
 

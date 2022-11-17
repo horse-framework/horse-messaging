@@ -234,20 +234,29 @@ namespace Horse.Messaging.Data.Implementation
             if (message.Message.HighPriority == priority)
                 return Task.FromResult(false);
 
+            bool oldValue = message.Message.HighPriority;
             message.Message.HighPriority = priority;
 
-            if (priority)
+            try
             {
-                _messageStore.RemoveFromOnlyMemory(message);
-                _priorityMessageStore.Put(message);
-            }
-            else
-            {
-                _priorityMessageStore.RemoveFromOnlyMemory(message);
-                _messageStore.Put(message);
-            }
+                if (priority)
+                {
+                    _messageStore.RemoveFromOnlyMemory(message);
+                    _priorityMessageStore.Put(message);
+                }
+                else
+                {
+                    _priorityMessageStore.RemoveFromOnlyMemory(message);
+                    _messageStore.Put(message);
+                }
 
-            return Task.FromResult(true);
+                return Task.FromResult(true);
+            }
+            catch
+            {
+                message.Message.HighPriority = oldValue;
+                return Task.FromResult(false);
+            }
         }
     }
 }

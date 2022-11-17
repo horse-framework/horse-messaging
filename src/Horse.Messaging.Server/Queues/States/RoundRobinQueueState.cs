@@ -39,13 +39,16 @@ namespace Horse.Messaging.Server.Queues.States
                 Tuple<QueueClient, int> tuple = await GetNextAvailableRRClient(_roundRobinIndex, message,
                     _queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge);
                 QueueClient cc = tuple.Item1;
-                
+
                 if (cc != null)
                     _roundRobinIndex = tuple.Item2;
 
                 if (cc == null)
                 {
-                    _queue.AddMessage(message, false);
+                    PushResult pushResult = _queue.AddMessage(message, false);
+                    if (pushResult != PushResult.Success)
+                        return pushResult;
+                    
                     return PushResult.NoConsumers;
                 }
 
@@ -75,7 +78,10 @@ namespace Horse.Messaging.Server.Queues.States
             //return if client unsubsribes while waiting ack of previous message
             if (!_queue.ClientsClone.Contains(receiver))
             {
-                _queue.AddMessage(message, false);
+                PushResult pushResult = _queue.AddMessage(message, false);
+                if (pushResult != PushResult.Success)
+                    return pushResult;
+                
                 return PushResult.NoConsumers;
             }
 

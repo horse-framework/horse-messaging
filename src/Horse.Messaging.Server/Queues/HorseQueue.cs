@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -384,7 +385,7 @@ namespace Horse.Messaging.Server.Queues
 
             QueueConfiguration configuration = QueueConfiguration.Create(this);
             QueueConfiguration previous = options.Find(x => x.Name == Name);
-            
+
             if (previous != null)
                 options.Remove(previous);
 
@@ -399,7 +400,7 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Adds message into the queue
         /// </summary>
-        internal void AddMessage(QueueMessage message, bool trigger = true)
+        internal PushResult AddMessage(QueueMessage message, bool trigger = true)
         {
             bool added = false;
 
@@ -421,6 +422,10 @@ namespace Horse.Messaging.Server.Queues
                     added = Manager.AddMessage(message);
                     break;
                 }
+                catch (DuplicateNameException)
+                {
+                    return PushResult.DuplicateUniqueId;
+                }
                 catch
                 {
                     Thread.Sleep(1);
@@ -431,6 +436,8 @@ namespace Horse.Messaging.Server.Queues
 
             if (added && trigger && State != null && State.TriggerSupported && !_triggering)
                 _ = Trigger();
+
+            return added ? PushResult.Success : PushResult.Error;
         }
 
         /// <summary>
@@ -661,7 +668,9 @@ namespace Horse.Messaging.Server.Queues
                 if (!allow)
                     return PushResult.StatusNotSupported;
 
-                AddMessage(message);
+                PushResult pushResult = AddMessage(message);
+                if (pushResult != PushResult.Success)
+                    return pushResult;
 
                 PushEvent.Trigger(sender, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
 

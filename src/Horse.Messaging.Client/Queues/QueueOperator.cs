@@ -447,9 +447,9 @@ namespace Horse.Messaging.Client.Queues
             if (request.ClearAfter == ClearDecision.AllMessages)
                 message.AddHeader(HorseHeaders.CLEAR, "all");
             else if (request.ClearAfter == ClearDecision.PriorityMessages)
-                message.AddHeader(HorseHeaders.CLEAR, "High-Priority");
+                message.AddHeader(HorseHeaders.CLEAR, "high-priority");
             else if (request.ClearAfter == ClearDecision.Messages)
-                message.AddHeader(HorseHeaders.CLEAR, "Default-Priority");
+                message.AddHeader(HorseHeaders.CLEAR, "default-priority");
 
             if (request.GetQueueMessageCounts)
                 message.AddHeader(HorseHeaders.INFO, "yes");
