@@ -95,22 +95,7 @@ namespace Horse.Messaging.Client.Queues
                 message.HighPriority = HighPriority;
 
             if (Acknowledge.HasValue)
-            {
-                switch (Acknowledge.Value)
-                {
-                    case QueueAckDecision.None:
-                        message.AddHeader(HorseHeaders.ACKNOWLEDGE, "none");
-                        break;
-
-                    case QueueAckDecision.JustRequest:
-                        message.AddHeader(HorseHeaders.ACKNOWLEDGE, "request");
-                        break;
-
-                    case QueueAckDecision.WaitForAcknowledge:
-                        message.AddHeader(HorseHeaders.ACKNOWLEDGE, "wait");
-                        break;
-                }
-            }
+                message.AddHeader(HorseHeaders.ACKNOWLEDGE, Acknowledge.Value.AsString(EnumFormat.Description));
 
             if (HasQueueName)
                 message.AddHeader(HorseHeaders.QUEUE_NAME, QueueName);
