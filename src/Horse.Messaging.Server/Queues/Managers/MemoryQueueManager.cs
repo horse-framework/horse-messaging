@@ -33,8 +33,8 @@ namespace Horse.Messaging.Server.Queues.Managers
         {
             Queue = queue;
 
-            MessageStore = new LinkedMessageStore(this);
-            PriorityMessageStore = new LinkedMessageStore(this);
+            MessageStore = new DictionaryMessageStore(this);
+            PriorityMessageStore = new DictionaryMessageStore(this);
             Synchronizer = new DefaultQueueSynchronizer(this);
             DeliveryHandler = new MemoryDeliveryHandler(this);
         }

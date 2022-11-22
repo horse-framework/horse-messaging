@@ -87,8 +87,10 @@ public class DictionaryMessageStore : IQueueMessageStore
             if (_messages.Count == 0)
                 return null;
 
-            QueueMessage message = _messages.FirstOrDefault().Value;
+            var keyValue = _messages.FirstOrDefault();
+            QueueMessage message = keyValue.Value;
             message.IsInQueue = false;
+            _messages.Remove(keyValue.Key);
             return message;
         }
     }
