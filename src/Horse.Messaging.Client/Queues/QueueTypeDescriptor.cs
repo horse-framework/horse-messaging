@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using EnumsNET;
 using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Protocol;
@@ -94,28 +95,13 @@ namespace Horse.Messaging.Client.Queues
                 message.HighPriority = HighPriority;
 
             if (Acknowledge.HasValue)
-            {
-                switch (Acknowledge.Value)
-                {
-                    case QueueAckDecision.None:
-                        message.AddHeader(HorseHeaders.ACKNOWLEDGE, "none");
-                        break;
-
-                    case QueueAckDecision.JustRequest:
-                        message.AddHeader(HorseHeaders.ACKNOWLEDGE, "request");
-                        break;
-
-                    case QueueAckDecision.WaitForAcknowledge:
-                        message.AddHeader(HorseHeaders.ACKNOWLEDGE, "wait");
-                        break;
-                }
-            }
+                message.AddHeader(HorseHeaders.ACKNOWLEDGE, Acknowledge.Value.AsString(EnumFormat.Description));
 
             if (HasQueueName)
                 message.AddHeader(HorseHeaders.QUEUE_NAME, QueueName);
 
             if (QueueType.HasValue)
-                message.AddHeader(HorseHeaders.QUEUE_TYPE, QueueType.Value.ToString().Trim().ToLower());
+                message.AddHeader(HorseHeaders.QUEUE_TYPE, QueueType.Value.AsString(EnumFormat.Description));
 
             if (!string.IsNullOrEmpty(Topic))
                 message.AddHeader(HorseHeaders.QUEUE_TOPIC, Topic);
@@ -124,7 +110,7 @@ namespace Horse.Messaging.Client.Queues
                 message.AddHeader(HorseHeaders.DELAY_BETWEEN_MESSAGES, DelayBetweenMessages.Value.ToString());
 
             if (PutBackDecision.HasValue)
-                message.AddHeader(HorseHeaders.PUT_BACK, PutBackDecision.Value.ToString());
+                message.AddHeader(HorseHeaders.PUT_BACK, PutBackDecision.Value.AsString(EnumFormat.Description));
 
             if (PutBackDelay.HasValue)
                 message.AddHeader(HorseHeaders.PUT_BACK_DELAY, PutBackDelay.Value.ToString());

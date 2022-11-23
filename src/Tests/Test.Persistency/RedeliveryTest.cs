@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data.SqlTypes;
 using System.Threading.Tasks;
 using Horse.Messaging.Data;
 using Horse.Messaging.Data.Implementation;
@@ -46,28 +47,26 @@ namespace Test.Persistency
         [Fact]
         public async Task ReloadAfterRestart()
         {
+            string guid = Guid.NewGuid().ToString();
             await Task.Delay(500);
-            RedeliveryService service = new RedeliveryService("data/reload-test.tdb.delivery");
+            RedeliveryService service = new RedeliveryService($"data/reload-test-{guid}.tdb.delivery");
             await service.Load();
             await service.Clear();
             await service.Set("id", 4);
             await service.Close();
 
-            if (System.IO.File.Exists("data/reload-test.tdb"))
-                System.IO.File.Delete("data/reload-test.tdb");
-
-            if (System.IO.File.Exists("data/reload-test.tdb.delivery"))
-                System.IO.File.Delete("data/reload-test.tdb.delivery");
-
             HorseServer server = new HorseServer();
-            string filename = $"queues-{Guid.NewGuid()}.json";
             HorseRider rider = server.UseRider(cfg => cfg
                 .ConfigureChannels(c => { c.UseCustomPersistentConfigurator(null); })
                 .ConfigureQueues(c =>
                 {
-                    c.UseCustomPersistentConfigurator(new QueueOptionsConfigurator(c.Rider, filename));
+                    c.UseCustomPersistentConfigurator(new QueueOptionsConfigurator(c.Rider, $"queues-{guid}.json"));
                     c.UsePersistentQueues(
-                        cx => { cx.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
+                        cx =>
+                        {
+                            cx.SetPhysicalPath(q => $"{q.Name}-{guid}.tdb");
+                            cx.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60));
+                        },
                         q =>
                         {
                             q.Options.Acknowledge = QueueAckDecision.None;
@@ -97,9 +96,13 @@ namespace Test.Persistency
                 .ConfigureChannels(c => { c.UseCustomPersistentConfigurator(null); })
                 .ConfigureQueues(c =>
                 {
-                    c.UseCustomPersistentConfigurator(new QueueOptionsConfigurator(c.Rider, filename));
+                    c.UseCustomPersistentConfigurator(new QueueOptionsConfigurator(c.Rider, $"queues-{guid}.json"));
                     c.UsePersistentQueues(
-                        c => { c.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60)); },
+                        c =>
+                        {
+                            c.SetPhysicalPath(q => $"{q.Name}-{guid}.tdb");
+                            c.UseInstantFlush().SetAutoShrink(true, TimeSpan.FromSeconds(60));
+                        },
                         q =>
                         {
                             q.Options.Acknowledge = QueueAckDecision.None;

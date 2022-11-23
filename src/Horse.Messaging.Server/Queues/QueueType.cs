@@ -29,6 +29,6 @@ namespace Horse.Messaging.Server.Queues
         /// Request operation removes the message from the queue.
         /// </summary>
         [Description("pull")]
-        Pull,
+        Pull
     }
 }

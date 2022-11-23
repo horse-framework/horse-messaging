@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
+using EnumsNET;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Models;
@@ -266,7 +268,7 @@ namespace Horse.Messaging.Server.Network
         {
             NetworkOptionsBuilder builder = null;
             if (message.Length > 0)
-                builder = await System.Text.Json.JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content);
+                builder = await JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content, new JsonSerializerOptions {PropertyNameCaseInsensitive = true});
 
             HorseQueue queue = _rider.Queue.Find(message.Target);
 
@@ -345,7 +347,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task UpdateQueue(MessagingClient client, HorseMessage message)
         {
-            NetworkOptionsBuilder builder = await System.Text.Json.JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content);
+            NetworkOptionsBuilder builder = await JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content, new JsonSerializerOptions {PropertyNameCaseInsensitive = true});
 
             HorseQueue queue = _rider.Queue.Find(message.Target);
             if (queue == null)
@@ -482,7 +484,7 @@ namespace Horse.Messaging.Server.Network
                     LastMessageReceived = queue.Info.GetLastMessageReceiveUnix(),
                     LastMessageSent = queue.Info.GetLastMessageSendUnix(),
                     MessageLimit = queue.Options.MessageLimit,
-                    LimitExceededStrategy = queue.Options.LimitExceededStrategy.ToString(),
+                    LimitExceededStrategy = queue.Options.LimitExceededStrategy.AsString(EnumFormat.Description),
                     MessageSizeLimit = queue.Options.MessageSizeLimit,
                     DelayBetweenMessages = queue.Options.DelayBetweenMessages
                 });

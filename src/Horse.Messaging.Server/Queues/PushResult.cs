@@ -34,5 +34,10 @@ namespace Horse.Messaging.Server.Queues
         /// An error has occured
         /// </summary>
         Error,
+        
+        /// <summary>
+        /// Another message in queue with same unique id
+        /// </summary>
+        DuplicateUniqueId
     }
 }

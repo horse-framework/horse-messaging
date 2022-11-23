@@ -33,8 +33,8 @@ namespace Horse.Messaging.Server.Queues.Managers
         {
             Queue = queue;
 
-            MessageStore = new LinkedMessageStore(this);
-            PriorityMessageStore = new LinkedMessageStore(this);
+            MessageStore = new DictionaryMessageStore(this);
+            PriorityMessageStore = new DictionaryMessageStore(this);
             Synchronizer = new DefaultQueueSynchronizer(this);
             DeliveryHandler = new MemoryDeliveryHandler(this);
         }
@@ -122,19 +122,29 @@ namespace Horse.Messaging.Server.Queues.Managers
             if (message.Message.HighPriority == priority)
                 return Task.FromResult(false);
 
+            bool oldValue = message.Message.HighPriority;
             message.Message.HighPriority = priority;
-            if (priority)
+            
+            try
             {
-                MessageStore.Remove(message);
-                PriorityMessageStore.Put(message);
-            }
-            else
-            {
-                PriorityMessageStore.Remove(message);
-                MessageStore.Put(message);
-            }
+                if (priority)
+                {
+                    MessageStore.Remove(message);
+                    PriorityMessageStore.Put(message);
+                }
+                else
+                {
+                    PriorityMessageStore.Remove(message);
+                    MessageStore.Put(message);
+                }
 
-            return Task.FromResult(true);
+                return Task.FromResult(true);
+            }
+            catch
+            {
+                message.Message.HighPriority = oldValue;
+                return Task.FromResult(false);
+            }
         }
 
         #endregion

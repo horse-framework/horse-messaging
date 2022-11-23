@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 
 namespace Horse.Messaging.Client.Queues.Annotations
 {
@@ -10,16 +11,19 @@ namespace Horse.Messaging.Client.Queues.Annotations
         /// <summary>
         /// Throw message, do not put it back to the queue
         /// </summary>
+        [Description("no")]
         No,
 
         /// <summary>
         /// Put the message back to the end of the queue
         /// </summary>
+        [Description("regular")]
         Regular,
 
         /// <summary>
         /// Put the message back to the queue as priority message
         /// </summary>
+        [Description("priority")]
         Priority
     }
 

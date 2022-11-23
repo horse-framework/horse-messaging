@@ -165,7 +165,7 @@ namespace Horse.Messaging.Client.Channels
             HorseMessage message = new HorseMessage();
             message.Type = MessageType.Channel;
             message.SetTarget(channelName);
-            message.ContentType = KnownContentTypes.ChannelSubscribe;
+            message.ContentType = KnownContentTypes.ChannelSubscribers;
             message.SetMessageId(Client.UniqueIdGenerator.Create());
 
             message.AddHeader(HorseHeaders.CHANNEL_NAME, channelName);

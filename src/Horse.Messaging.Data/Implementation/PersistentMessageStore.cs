@@ -10,7 +10,7 @@ namespace Horse.Messaging.Data.Implementation
     /// <summary>
     /// Message store object for persistent queues
     /// </summary>
-    public class PersistentMessageStore : LinkedMessageStore
+    public class PersistentMessageStore : DictionaryMessageStore
     {
         internal Database Database { get; }
 
