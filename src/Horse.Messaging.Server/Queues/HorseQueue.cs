@@ -676,6 +676,10 @@ namespace Horse.Messaging.Server.Queues
 
                 return PushResult.Success;
             }
+            catch (DuplicateNameException)
+            {
+                return PushResult.DuplicateUniqueId;
+            }
             catch (Exception ex)
             {
                 Rider.SendError("PUSH", ex, $"QueueName:{Name}");
@@ -888,6 +892,10 @@ namespace Horse.Messaging.Server.Queues
 
                 return PushResult.Success;
             }
+            catch (DuplicateNameException)
+            {
+                return PushResult.DuplicateUniqueId;
+            }
             catch (Exception ex)
             {
                 Rider.SendError("PUSH", ex, $"QueueName:{Name}");
@@ -904,9 +912,9 @@ namespace Horse.Messaging.Server.Queues
                 catch //if developer does wrong operation, we should not stop
                 {
                 }
-            }
 
-            return PushResult.Success;
+                return PushResult.Error;
+            }
         }
 
         #endregion
