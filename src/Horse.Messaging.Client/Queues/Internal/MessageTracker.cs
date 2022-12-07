@@ -113,15 +113,16 @@ namespace Horse.Messaging.Client.Queues.Internal
             if (message.Type != MessageType.Response || string.IsNullOrEmpty(message.MessageId))
                 return;
 
-            MessageDescriptor descriptor;
             lock (_descriptors)
-                descriptor = _descriptors.Find(x => x.Message.WaitResponse && x.Message.MessageId == message.MessageId);
+            {
+                MessageDescriptor descriptor = _descriptors.Find(x => x.Message.WaitResponse && x.Message.MessageId == message.MessageId && !x.Completed);
 
-            if (descriptor == null)
-                return;
+                if (descriptor == null)
+                    return;
 
-            descriptor.Completed = true;
-            descriptor.Set(true, message);
+                descriptor.Completed = true;
+                descriptor.Set(true, message);
+            }
         }
 
         /// <summary>

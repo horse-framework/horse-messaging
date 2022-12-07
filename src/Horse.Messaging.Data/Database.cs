@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -93,10 +94,10 @@ namespace Horse.Messaging.Data
             {
                 if (IsOpen)
                     return;
-                
+
                 IsOpen = true;
             }
-            
+
             await File.Open();
             await Load();
 
@@ -155,7 +156,7 @@ namespace Horse.Messaging.Data
         {
             lock (File)
                 IsOpen = false;
-            
+
             _shrinkManager.Stop();
             await Shrink();
             await File.Close();
@@ -206,8 +207,8 @@ namespace Horse.Messaging.Data
                     count = _deletedMessages.Count;
                     position = stream.Position;
                     msgs = _deletedMessages.Count > 0
-                               ? new List<string>(_deletedMessages)
-                               : new List<string>();
+                        ? new List<string>(_deletedMessages)
+                        : new List<string>();
                 }
                 finally
                 {
@@ -287,7 +288,7 @@ namespace Horse.Messaging.Data
             try
             {
                 if (_messages.ContainsKey(message.MessageId))
-                    return false;
+                    throw new DuplicateNameException("Another message with same id is already in queue");
 
                 _messages.Add(message.MessageId, message);
                 Stream stream = File.GetStream();
@@ -299,6 +300,10 @@ namespace Horse.Messaging.Data
                     File.FlushRequired = true;
 
                 return true;
+            }
+            catch (DuplicateNameException)
+            {
+                throw;
             }
             catch (Exception e)
             {
