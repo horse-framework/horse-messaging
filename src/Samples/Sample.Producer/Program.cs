@@ -73,7 +73,7 @@ namespace Sample.Producer
                 // var result = await client.Direct.RequestJson<ResponseModel>(new RequestModel());
                 // Console.WriteLine($"Push: {result.Code} ${JsonSerializer.Serialize(result.Model)}");
 
-                var result = await client.Queue.PushJson("SampleTestEvent", new TestEvent(), true);
+                var result = await client.Queue.PushJson("SampleTestEvent", new TestEvent(),"testId", true);
 
                 Console.WriteLine($"Push: {result.Code} {result.Reason} ${JsonSerializer.Serialize(result)}");
                 Console.ReadLine();
