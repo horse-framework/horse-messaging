@@ -32,7 +32,7 @@ namespace Horse.Messaging.Data.Implementation
         /// <inheritdoc />
         public async Task<Decision> ReceivedFromProducer(HorseQueue queue, QueueMessage message, MessagingClient sender)
         {
-            if (_manager.Queue.Options.CommitWhen == CommitWhen.AfterSaved)
+            if (_manager.Queue.Options.CommitWhen == CommitWhen.AfterReceived)
             {
                 message.IsSaved = await _manager.SaveMessage(message);
 

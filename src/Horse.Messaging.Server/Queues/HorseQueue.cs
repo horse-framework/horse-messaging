@@ -660,7 +660,7 @@ namespace Horse.Messaging.Server.Queues
                 message.Decision = decision;
                 Rider.Cluster.QueueUpdate = DateTime.UtcNow;
 
-                if (decision.Transmission == DecisionTransmission.Commit)
+                if (decision.Transmission != DecisionTransmission.Failed)
                 {
                     PushResult pushResult = AddMessage(message);
                     if (pushResult != PushResult.Success)
