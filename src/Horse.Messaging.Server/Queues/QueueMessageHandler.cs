@@ -98,17 +98,31 @@ namespace Horse.Messaging.Server.Queues
             PushResult result = await queue.Push(queueMessage, client);
             if (answerSender)
             {
-                if (result == PushResult.StatusNotSupported)
+                switch (result)
                 {
-                    await client.SendAsync(message.CreateResponse(HorseResultCode.Unacceptable));
-                }
-                else if (result == PushResult.LimitExceeded)
-                {
-                    await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
-                }
-                else if (result == PushResult.Error)
-                {
-                    await client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
+                    case PushResult.Empty:
+                        await client.SendAsync(message.CreateResponse(HorseResultCode.NoContent));
+                        break;
+                    
+                    case PushResult.Error:
+                        await client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
+                        break;
+                    
+                    case PushResult.LimitExceeded:
+                        await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
+                        break;
+                    
+                    case PushResult.NoConsumers:
+                        await client.SendAsync(message.CreateResponse(HorseResultCode.NoConsumers));
+                        break;
+                    
+                    case PushResult.DuplicateUniqueId:
+                        await client.SendAsync(message.CreateResponse(HorseResultCode.Duplicate));
+                        break;
+                    
+                    case PushResult.StatusNotSupported:
+                        await client.SendAsync(message.CreateResponse(HorseResultCode.Unacceptable));
+                        break;
                 }
             }
         }

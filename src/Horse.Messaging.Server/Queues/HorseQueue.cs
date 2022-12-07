@@ -660,17 +660,20 @@ namespace Horse.Messaging.Server.Queues
                 message.Decision = decision;
                 Rider.Cluster.QueueUpdate = DateTime.UtcNow;
 
-                bool allow = await ApplyDecision(decision, message);
+                if (decision.Transmission == DecisionTransmission.Commit)
+                {
+                    PushResult pushResult = AddMessage(message);
+                    if (pushResult != PushResult.Success)
+                        return pushResult;
+                }
 
-                foreach (IQueueMessageEventHandler handler in Rider.Queue.MessageHandlers.All())
-                    _ = handler.OnProduced(this, message, sender);
+                bool allow = await ApplyDecision(decision, message);
 
                 if (!allow)
                     return PushResult.StatusNotSupported;
 
-                PushResult pushResult = AddMessage(message);
-                if (pushResult != PushResult.Success)
-                    return pushResult;
+                foreach (IQueueMessageEventHandler handler in Rider.Queue.MessageHandlers.All())
+                    _ = handler.OnProduced(this, message, sender);
 
                 PushEvent.Trigger(sender, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
 

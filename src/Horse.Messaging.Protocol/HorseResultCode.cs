@@ -228,6 +228,11 @@ namespace Horse.Messaging.Protocol
         /// <summary>
         /// Value size limit for message length etc
         /// </summary>
-        ValueSizeLimit = 702
+        ValueSizeLimit = 702,
+        
+        /// <summary>
+        /// No consumers
+        /// </summary>
+        NoConsumers = 703
     }
 }
