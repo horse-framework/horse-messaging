@@ -62,7 +62,7 @@ namespace Horse.Messaging.Server.Queues
             //only pull statused queues can handle this request
             if (queue.Type != QueueType.Pull)
             {
-                if (!string.IsNullOrEmpty(message.MessageId))
+                if (string.IsNullOrEmpty(message.MessageId))
                     await client.SendAsync(MessageBuilder.CreateNoContentPullResponse(message, HorseHeaders.UNACCEPTABLE));
 
                 return;
@@ -72,10 +72,16 @@ namespace Horse.Messaging.Server.Queues
             QueueClient queueClient = queue.FindClient(client);
             if (queueClient == null)
             {
-                if (!string.IsNullOrEmpty(message.MessageId))
-                    await client.SendAsync(MessageBuilder.CreateNoContentPullResponse(message, HorseHeaders.UNACCEPTABLE));
+                SubscriptionResult subscriptionResult = await queue.AddClient(client);
+                if (subscriptionResult != SubscriptionResult.Success)
+                {
+                    if (!string.IsNullOrEmpty(message.MessageId))
+                        await client.SendAsync(MessageBuilder.CreateNoContentPullResponse(message, HorseHeaders.UNACCEPTABLE));
 
-                return;
+                    return;
+                }
+
+                queueClient = queue.FindClient(client);
             }
 
             //check authorization

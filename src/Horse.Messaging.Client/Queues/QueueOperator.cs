@@ -473,7 +473,7 @@ namespace Horse.Messaging.Client.Queues
                 container.Complete("Error");
             }
 
-            return await container.GetAwaitableTask();
+            return await container.GetAwaitableTask().ConfigureAwait(false);
         }
 
         #endregion

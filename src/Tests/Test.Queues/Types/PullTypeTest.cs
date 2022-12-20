@@ -7,6 +7,7 @@ using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
+using NuGet.Frameworks;
 using Test.Common;
 using Xunit;
 
@@ -133,7 +134,10 @@ namespace Test.Queues.Types
                 Count = count
             };
 
-            PullContainer container = await client.Queue.Pull(request);
+            int mx = 0;
+            PullContainer container = await client.Queue.Pull(request, async (i, m) => mx++);
+            await Task.Delay(100);
+            Assert.Equal(count, mx);
             Assert.Equal(count, container.ReceivedCount);
             Assert.Equal(PullProcess.Completed, container.Status);
             server.Stop();
@@ -189,7 +193,7 @@ namespace Test.Queues.Types
 
             if (messages)
                 Assert.Equal(0, queue.Manager.MessageStore.Count());
-            
+
             server.Stop();
         }
     }

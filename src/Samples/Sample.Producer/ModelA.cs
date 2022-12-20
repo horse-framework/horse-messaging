@@ -7,9 +7,8 @@ using Newtonsoft.Json;
 
 namespace Sample.Producer
 {
-    [QueueName("model-a")]
-    [QueueManager("dhand")]
-    [QueueType(MessagingQueueType.Push)]
+    [QueueName("model-g")]
+    [QueueType(MessagingQueueType.Pull)]
     [Acknowledge(QueueAckDecision.JustRequest)]
     [Interceptor(typeof(TestModelInterceptor1))]
     public class ModelA
