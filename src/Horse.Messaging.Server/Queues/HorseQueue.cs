@@ -660,21 +660,28 @@ namespace Horse.Messaging.Server.Queues
                 message.Decision = decision;
                 Rider.Cluster.QueueUpdate = DateTime.UtcNow;
 
-                bool allow = await ApplyDecision(decision, message);
+                if (decision.Transmission != DecisionTransmission.Failed)
+                {
+                    PushResult pushResult = AddMessage(message);
+                    if (pushResult != PushResult.Success)
+                        return pushResult;
+                }
 
-                foreach (IQueueMessageEventHandler handler in Rider.Queue.MessageHandlers.All())
-                    _ = handler.OnProduced(this, message, sender);
+                bool allow = await ApplyDecision(decision, message);
 
                 if (!allow)
                     return PushResult.StatusNotSupported;
 
-                PushResult pushResult = AddMessage(message);
-                if (pushResult != PushResult.Success)
-                    return pushResult;
+                foreach (IQueueMessageEventHandler handler in Rider.Queue.MessageHandlers.All())
+                    _ = handler.OnProduced(this, message, sender);
 
                 PushEvent.Trigger(sender, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
 
                 return PushResult.Success;
+            }
+            catch (DuplicateNameException)
+            {
+                return PushResult.DuplicateUniqueId;
             }
             catch (Exception ex)
             {
@@ -888,6 +895,10 @@ namespace Horse.Messaging.Server.Queues
 
                 return PushResult.Success;
             }
+            catch (DuplicateNameException)
+            {
+                return PushResult.DuplicateUniqueId;
+            }
             catch (Exception ex)
             {
                 Rider.SendError("PUSH", ex, $"QueueName:{Name}");
@@ -904,9 +915,9 @@ namespace Horse.Messaging.Server.Queues
                 catch //if developer does wrong operation, we should not stop
                 {
                 }
-            }
 
-            return PushResult.Success;
+                return PushResult.Error;
+            }
         }
 
         #endregion

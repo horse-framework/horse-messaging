@@ -45,25 +45,15 @@ namespace Sample.Producer
 
             ModelC c = new ModelC();
 
-            ModelA a = new ModelA();
-            a.Foo = "foo";
-            a.No = 123;
-
-            TestQuery query = new()
-            {
-                Foo = "Foo"
-            };
-            TestCommand command = new()
-            {
-                Foo = "Foo"
-            };
-            TestEvent @event = new()
-            {
-                Foo = "Foo"
-            };
-
             while (true)
             {
+                ModelA a = new ModelA();
+                a.Foo = "foo";
+                a.No = 123;
+
+                var result = await client.Queue.PushJson(a, true);
+                Console.WriteLine($"Push: {result.Code} {result.Reason}");
+                
                 // HorseResult result = await client.Router.PublishRequestJson<TestQuery, TestQueryResult>("test-service-route", query, 1);
                 // Console.WriteLine($"Push: {result.Code}");
 
@@ -72,10 +62,10 @@ namespace Sample.Producer
 
                 // var result = await client.Direct.RequestJson<ResponseModel>(new RequestModel());
                 // Console.WriteLine($"Push: {result.Code} ${JsonSerializer.Serialize(result.Model)}");
-
+/*
                 var result = await client.Queue.PushJson("SampleTestEvent", new TestEvent(), true);
 
-                Console.WriteLine($"Push: {result.Code} {result.Reason} ${JsonSerializer.Serialize(result)}");
+                Console.WriteLine($"Push: {result.Code} {result.Reason} ${JsonSerializer.Serialize(result)}");*/
                 Console.ReadLine();
                 // await Task.Delay(5000);
             }

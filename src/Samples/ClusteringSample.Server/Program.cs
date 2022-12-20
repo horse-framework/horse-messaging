@@ -30,7 +30,7 @@ namespace ClusteringSample.Server
                 {
                     q.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(10);
                     q.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-                    q.Options.CommitWhen = CommitWhen.AfterSaved;
+                    q.Options.CommitWhen = CommitWhen.AfterReceived;
                     q.UsePersistentQueues(c =>
                     {
                         c.UseInstantFlush();

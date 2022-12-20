@@ -85,6 +85,22 @@ namespace Horse.Messaging.Server.Queues.States
                 return PullResult.Unacceptable;
             }
 
+            if (_queue.Status == QueueStatus.NotInitialized)
+            {
+                await client.Client.SendAsync(MessageBuilder.CreateNoContentPullResponse(request, HorseHeaders.EMPTY));
+                return PullResult.Empty;
+            }
+
+            int msgCount = _queue.Manager.MessageStore.Count();
+            if (msgCount == 0)
+                msgCount += _queue.Manager.PriorityMessageStore.Count();
+
+            if (msgCount == 0)
+            {
+                await client.Client.SendAsync(MessageBuilder.CreateNoContentPullResponse(request, HorseHeaders.EMPTY));
+                return PullResult.Empty;
+            }
+
             ClearDecision clear = FindClearDecision(request);
             bool sendInfo = FindInfoRequest(request);
 
@@ -137,6 +153,9 @@ namespace Horse.Messaging.Server.Queues.States
                         break;
 
                     index++;
+                    if (index > count)
+                        break;
+                    
                     messageTuple = DequeueMessage(sendInfo, count == index ? clear : ClearDecision.None);
                     headers.Clear();
                 }
@@ -150,6 +169,9 @@ namespace Horse.Messaging.Server.Queues.States
                     catch
                     {
                     }
+
+                    await client.Client.SendAsync(MessageBuilder.CreateNoContentPullResponse(request, HorseHeaders.ERROR));
+                    return PullResult.Unacceptable;
                 }
                 finally
                 {

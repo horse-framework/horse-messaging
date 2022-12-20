@@ -20,12 +20,6 @@ namespace Horse.Messaging.Server.Queues.Delivery
         AfterReceived,
 
         /// <summary>
-        /// After producer sent message and server saves it to disk
-        /// </summary>
-        [Description("after-saved")]
-        AfterSaved,
-
-        /// <summary>
         /// After message is sent to all consumers
         /// </summary>
         [Description("after-sent")]

@@ -316,6 +316,10 @@ namespace Horse.Messaging.Server.Queues
                 if (initialize && queueManagerFactory != null)
                 {
                     IHorseQueueManager queueManager = await queueManagerFactory(handlerBuilder);
+                    
+                    if (requestMessage != null)
+                        queue.UpdateOptionsByMessage(requestMessage);
+
                     await queue.InitializeQueue(queueManager);
                 }
 
