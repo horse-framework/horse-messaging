@@ -1,7 +1,8 @@
 ﻿using System;
+using Horse.Messaging.Data;
+using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
-using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Server;
 
 namespace Benchmark.Server
@@ -16,10 +17,11 @@ namespace Benchmark.Server
                 .ConfigureQueues(cfg =>
                 {
                     cfg.EventHandlers.Add(new QueueEventHandler());
-                    //cfg.Options.Acknowledge = QueueAckDecision.None;
+                    cfg.Options.Acknowledge = QueueAckDecision.None;
                     cfg.Options.Type = QueueType.Push;
                     cfg.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(30);
-                    cfg.UseMemoryQueues();
+                    //cfg.UseMemoryQueues();
+                    cfg.UsePersistentQueues(c => { c.UseAutoFlush(TimeSpan.FromMilliseconds(250)); });
                     //cfg.UseAckDeliveryHandler(AcknowledgeWhen.AfterReceived, PutBackDecision.No);
                 })
                 .ConfigureCache(cfg => { cfg.Options.DefaultDuration = TimeSpan.FromMinutes(30); })

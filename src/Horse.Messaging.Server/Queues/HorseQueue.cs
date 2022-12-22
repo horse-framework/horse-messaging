@@ -976,7 +976,6 @@ namespace Horse.Messaging.Server.Queues
                     Info.AddMessageRemove();
                     await Manager.RemoveMessage(message);
                     message.MarkAsRemoved();
-
                     if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
                         Rider.Cluster.SendMessageRemoval(this, message.Message);
                 }

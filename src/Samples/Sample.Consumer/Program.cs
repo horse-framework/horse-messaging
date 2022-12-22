@@ -30,6 +30,7 @@ namespace Sample.Consumer
                 await Task.Delay(250);
                 Console.ReadLine();
                 await Task.Delay(250);
+                
                 var response = await client.Queue.Pull(new PullRequest
                 {
                     Queue = "model-g",
@@ -37,7 +38,11 @@ namespace Sample.Consumer
                     ClearAfter = ClearDecision.None,
                     GetQueueMessageCounts = false,
                     Order = MessageOrder.Default
-                }, async (i, message) => { await client.SendAck(message); });
+                }, async (i, message) =>
+                {
+                    await client.SendAck(message);
+                });
+                
                 Console.WriteLine($"pull response is {response.Status} and received {response.ReceivedCount} messages.");
             }
         }

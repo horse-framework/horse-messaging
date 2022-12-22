@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues;
@@ -10,7 +10,7 @@ namespace Horse.Messaging.Data.Implementation
     /// <summary>
     /// Message store object for persistent queues
     /// </summary>
-    public class PersistentMessageStore : DictionaryMessageStore
+    public class PersistentMessageStore : LinkedMessageStore
     {
         internal Database Database { get; }
 
@@ -26,7 +26,7 @@ namespace Horse.Messaging.Data.Implementation
         /// <summary>
         /// Initializes the store, opens the database file.
         /// </summary>
-        public Task Initialize()
+        public Task<List<HorseMessage>> Initialize()
         {
             return Database.Open();
         }
@@ -66,7 +66,7 @@ namespace Horse.Messaging.Data.Implementation
         {
             base.Remove(message);
         }
-        
+
         /// <summary>
         /// Remoes the message from disk and queue
         /// </summary>

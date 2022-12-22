@@ -79,8 +79,8 @@ namespace Horse.Messaging.Data.Implementation
                                                 "Messages are not deleted from disk with this configuration. " +
                                                 "Please change queue Acknowledge option or ProducerAckDecision option");
 
-            await _priorityMessageStore.Initialize();
-            await _messageStore.Initialize();
+            List<HorseMessage> prioMessages = await _priorityMessageStore.Initialize();
+            List<HorseMessage> messages = await _messageStore.Initialize();
 
             Queue.OnDestroyed += DestoryAsync;
 
@@ -93,38 +93,37 @@ namespace Horse.Messaging.Data.Implementation
                 deliveries = RedeliveryService.GetDeliveries();
             }
 
-            await LoadMessages(_priorityMessageStore.Database, deliveries);
-            await LoadMessages(_messageStore.Database, deliveries);
+            LoadMessages(prioMessages, deliveries);
+            LoadMessages(messages, deliveries);
 
             DeliveryHandler.Tracker.Start();
             PriorityMessageStore.TimeoutTracker.Start();
             MessageStore.TimeoutTracker.Start();
         }
 
-        private async Task LoadMessages(Database database, List<KeyValuePair<string, int>> deliveries)
+        private void LoadMessages(List<HorseMessage> messages, List<KeyValuePair<string, int>> deliveries)
         {
-            var dict = await database.List();
-            if (dict.Count > 0)
-            {
-                QueueFiller filler = new QueueFiller(Queue);
-                PushResult result = filler.FillMessage(dict.Values,
-                    true,
-                    qm =>
-                    {
-                        if (!UseRedelivery ||
-                            deliveries == null ||
-                            deliveries.Count == 0 ||
-                            string.IsNullOrEmpty(qm.Message.MessageId))
-                            return;
+            if (messages.Count == 0)
+                return;
 
-                        var kv = deliveries.FirstOrDefault(x => x.Key == qm.Message.MessageId);
-                        if (kv.Value > 0)
-                            qm.DeliveryCount = kv.Value;
-                    });
+            QueueFiller filler = new QueueFiller(Queue);
+            PushResult result = filler.FillMessage(messages,
+                true,
+                qm =>
+                {
+                    if (!UseRedelivery ||
+                        deliveries == null ||
+                        deliveries.Count == 0 ||
+                        string.IsNullOrEmpty(qm.Message.MessageId))
+                        return;
 
-                if (result != PushResult.Success)
-                    throw new InvalidOperationException($"Cannot fill messages into {Queue.Name} queue : {result}");
-            }
+                    var kv = deliveries.FirstOrDefault(x => x.Key == qm.Message.MessageId);
+                    if (kv.Value > 0)
+                        qm.DeliveryCount = kv.Value;
+                });
+
+            if (result != PushResult.Success)
+                throw new InvalidOperationException($"Cannot fill messages into {Queue.Name} queue : {result}");
         }
 
         private async void DestoryAsync(HorseQueue queue)
