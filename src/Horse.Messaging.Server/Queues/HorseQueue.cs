@@ -159,6 +159,7 @@ namespace Horse.Messaging.Server.Queues
         private readonly SafeList<QueueClient> _clients;
         private readonly SemaphoreSlim _triggerLock = new SemaphoreSlim(1, 1);
         private readonly List<PutBackQueueMessage> _putBackWaitList = new List<PutBackQueueMessage>(8);
+        private readonly SortedSet<string> _messageIdList = new SortedSet<string>(StringComparer.InvariantCulture);
 
         /// <summary>
         /// True if queue is destroyed
@@ -488,6 +489,9 @@ namespace Horse.Messaging.Server.Queues
                 else if (pair.Key.Equals(HorseHeaders.ACK_TIMEOUT, StringComparison.InvariantCultureIgnoreCase))
                     Options.AcknowledgeTimeout = TimeSpan.FromSeconds(Convert.ToInt32(pair.Value));
 
+                else if (pair.Key.Equals(HorseHeaders.MESSAGE_ID_UNIQUE_CHECK, StringComparison.InvariantCultureIgnoreCase))
+                    Options.MessageIdUniqueCheck = pair.Value.Equals("true", StringComparison.InvariantCultureIgnoreCase) || Convert.ToInt32(pair.Value) == 1;
+
                 else if (pair.Key.Equals(HorseHeaders.DELAY_BETWEEN_MESSAGES, StringComparison.InvariantCultureIgnoreCase))
                 {
                     if (!string.IsNullOrEmpty(pair.Value))
@@ -513,6 +517,7 @@ namespace Horse.Messaging.Server.Queues
             Options.ClientLimit = info.ClientLimit;
             Options.MessageLimit = info.MessageLimit;
             Options.MessageSizeLimit = info.MessageSizeLimit;
+            Options.MessageIdUniqueCheck = info.MessageIdUniqueCheck;
 
             if (!string.IsNullOrEmpty(info.LimitExceededStrategy))
                 Options.LimitExceededStrategy = Enums.Parse<MessageLimitExceededStrategy>(info.LimitExceededStrategy, true, EnumFormat.Description);
@@ -594,7 +599,7 @@ namespace Horse.Messaging.Server.Queues
                     {
                         QueueMessage firstMessage = Manager.MessageStore.ConsumeFirst();
                         if (firstMessage != null)
-                            await Manager.RemoveMessage(firstMessage);
+                            await RemoveMessage(firstMessage);
                     }
                     else
                         return PushResult.LimitExceeded;
@@ -603,6 +608,16 @@ namespace Horse.Messaging.Server.Queues
 
             if (Options.MessageSizeLimit > 0 && message.Message.Length > Options.MessageSizeLimit)
                 return PushResult.LimitExceeded;
+
+            if (Options.MessageIdUniqueCheck && !string.IsNullOrEmpty(message.Message.MessageId))
+            {
+                lock (_messageIdList)
+                {
+                    bool added = _messageIdList.Add(message.Message.MessageId);
+                    if (!added)
+                        return PushResult.DuplicateUniqueId;
+                }
+            }
 
             //remove operational headers that are should not be sent to consumers or saved to disk
             message.Message.RemoveHeaders(HorseHeaders.DELAY_BETWEEN_MESSAGES,
@@ -974,7 +989,7 @@ namespace Horse.Messaging.Server.Queues
                 else if (decision.Delete && !message.IsRemoved)
                 {
                     Info.AddMessageRemove();
-                    await Manager.RemoveMessage(message);
+                    await RemoveMessage(message);
                     message.MarkAsRemoved();
                     if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
                         Rider.Cluster.SendMessageRemoval(this, message.Message);
@@ -1069,6 +1084,34 @@ namespace Horse.Messaging.Server.Queues
             }
 
             return message.IsSaved;
+        }
+
+        /// <summary>
+        /// Removes the message from queue
+        /// </summary>
+        public Task RemoveMessage(string messageId)
+        {
+            if (Options.MessageIdUniqueCheck && !string.IsNullOrEmpty(messageId))
+            {
+                lock (_messageIdList)
+                    _messageIdList.Remove(messageId);
+            }
+
+            return Manager.RemoveMessage(messageId);
+        }
+
+        /// <summary>
+        /// Removes the message from queue
+        /// </summary>
+        public Task RemoveMessage(QueueMessage message)
+        {
+            if (Options.MessageIdUniqueCheck && !string.IsNullOrEmpty(message.Message.MessageId))
+            {
+                lock (_messageIdList)
+                    _messageIdList.Remove(message.Message.MessageId);
+            }
+
+            return Manager.RemoveMessage(message);
         }
 
         #endregion

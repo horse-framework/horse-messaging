@@ -411,7 +411,7 @@ namespace Horse.Messaging.Server.Cluster
                     HorseQueue queue = Rider.Queue.Find(message.Target);
 
                     if (queue != null)
-                        _ = queue.Manager.RemoveMessage(message.MessageId);
+                        _ = queue.RemoveMessage(message.MessageId);
 
                     break;
                 }
