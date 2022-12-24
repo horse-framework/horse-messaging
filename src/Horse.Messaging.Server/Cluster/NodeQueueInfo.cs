@@ -29,5 +29,8 @@
         public int DelayBetweenMessages { get; set; }
         public ulong MessageSizeLimit { get; set; }
         public int PutBackDelay { get; set; }
+        
+        public bool MessageIdUniqueCheck { get; set; }
+
     }
 }

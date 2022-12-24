@@ -51,11 +51,6 @@ namespace Horse.Messaging.Data
         private List<string> _deletedMessages = new List<string>();
 
         /// <summary>
-        /// All messages in queue
-        /// </summary>
-        private readonly Dictionary<string, HorseMessage> _messages = new Dictionary<string, HorseMessage>(StringComparer.InvariantCultureIgnoreCase);
-
-        /// <summary>
         /// Database file
         /// </summary>
         public DatabaseFile File { get; }
@@ -88,31 +83,35 @@ namespace Horse.Messaging.Data
         /// <summary>
         /// Opens database connection
         /// </summary>
-        public async Task Open()
+        public async Task<List<HorseMessage>> Open()
         {
             lock (File)
             {
                 if (IsOpen)
-                    return;
+                    return new List<HorseMessage>();
 
                 IsOpen = true;
             }
 
             await File.Open();
-            await Load();
+            List<HorseMessage> messages = await Load();
 
             if (_deletedMessages.Count > 0)
-                await _shrinkManager.FullShrink(_messages, _deletedMessages);
+                await _shrinkManager.FullShrink(messages, _deletedMessages);
 
             if (Options.AutoShrink)
                 _shrinkManager.Start(Options.ShrinkInterval);
+
+            return messages;
         }
 
         /// <summary>
         /// Loads all data into memory from disk
         /// </summary>
-        private async Task Load()
+        private async Task<List<HorseMessage>> Load()
         {
+            List<HorseMessage> messages = new List<HorseMessage>();
+
             await WaitForLock();
             try
             {
@@ -134,7 +133,7 @@ namespace Horse.Messaging.Data
                             if (message.Message?.Content == null || message.Message.Content.Length < 1)
                                 continue;
 
-                            _messages.Add(message.Id, message.Message);
+                            messages.Add(message.Message);
                             break;
 
                         case DataType.Delete:
@@ -147,6 +146,8 @@ namespace Horse.Messaging.Data
             {
                 ReleaseLock();
             }
+
+            return messages;
         }
 
         /// <summary>
@@ -287,10 +288,6 @@ namespace Horse.Messaging.Data
             await WaitForLock();
             try
             {
-                if (_messages.ContainsKey(message.MessageId))
-                    throw new DuplicateNameException("Another message with same id is already in queue");
-
-                _messages.Add(message.MessageId, message);
                 Stream stream = File.GetStream();
                 await _serializer.Write(stream, message);
 
@@ -337,7 +334,6 @@ namespace Horse.Messaging.Data
             {
                 Stream stream = File.GetStream();
                 await _serializer.WriteDelete(stream, message);
-                _messages.Remove(message);
                 _deletedMessages.Add(message);
 
                 if (!_shrinkManager.ShrinkRequired)
@@ -369,7 +365,6 @@ namespace Horse.Messaging.Data
             await WaitForLock();
             try
             {
-                _messages.Clear();
                 Stream stream = File.GetStream();
                 stream.SetLength(0);
                 await stream.FlushAsync();
@@ -378,34 +373,6 @@ namespace Horse.Messaging.Data
             {
                 ReleaseLock();
             }
-        }
-
-        /// <summary>
-        /// Lists all messages in database
-        /// </summary>
-        /// <returns></returns>
-        public async Task<Dictionary<string, HorseMessage>> List()
-        {
-            Dictionary<string, HorseMessage> messages;
-            await WaitForLock();
-            try
-            {
-                messages = new Dictionary<string, HorseMessage>(_messages);
-            }
-            finally
-            {
-                ReleaseLock();
-            }
-
-            return messages;
-        }
-
-        /// <summary>
-        /// Gets message count in database
-        /// </summary>
-        public int MessageCount()
-        {
-            return _messages.Count;
         }
 
         #endregion

@@ -115,6 +115,10 @@ namespace Horse.Messaging.Client.Queues
             if (topicAttr != null)
                 descriptor.Topic = topicAttr.Topic;
 
+            UniqueIdCheckAttribute uidAttr = type.GetCustomAttribute<UniqueIdCheckAttribute>(true);
+            if (uidAttr != null)
+                descriptor.UniqueIdCheck = uidAttr.Value;
+            
             MessageTimeoutAttribute msgTimeoutAttr = type.GetCustomAttribute<MessageTimeoutAttribute>(true);
             if (msgTimeoutAttr != null)
                 descriptor.MessageTimeout = msgTimeoutAttr.Value;

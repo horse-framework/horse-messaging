@@ -60,7 +60,7 @@ namespace Horse.Messaging.Server.Queues.States
                 PushResult pushResult = _queue.AddMessage(message, false);
                 if (pushResult != PushResult.Success)
                     return pushResult;
-                
+
                 return PushResult.NoConsumers;
             }
 
@@ -134,7 +134,7 @@ namespace Horse.Messaging.Server.Queues.States
 
             message.Decision = await deliveryHandler.EndSend(_queue, message);
             await _queue.ApplyDecision(message.Decision, message);
-
+            
             return PushResult.Success;
         }
 

@@ -44,6 +44,10 @@ namespace Benchmark.Queue.Producer
             string x = new string('a', 1);
             MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(x));
             client = new HorseClient();
+            client.Queue.SetOptions("fsd", o =>
+            {
+
+            });
 
             await client.ConnectAsync("horse://localhost:27001");
 

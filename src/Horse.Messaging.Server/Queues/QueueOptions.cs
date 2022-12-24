@@ -87,6 +87,12 @@ namespace Horse.Messaging.Server.Queues
         public bool AutoQueueCreation { get; set; } = true;
 
         /// <summary>
+        /// If true, server checks all message id values and reject new messages with same id.
+        /// Enabling that feature has performance penalty about 0.03 ms for each message. 
+        /// </summary>
+        public bool MessageIdUniqueCheck { get; set; }
+
+        /// <summary>
         /// Creates clone of the object
         /// </summary>
         /// <returns></returns>
@@ -115,7 +121,8 @@ namespace Horse.Messaging.Server.Queues
                 ClientLimit = options.ClientLimit,
                 CommitWhen = options.CommitWhen,
                 PutBack = options.PutBack,
-                AutoQueueCreation = options.AutoQueueCreation
+                AutoQueueCreation = options.AutoQueueCreation,
+                MessageIdUniqueCheck = options.MessageIdUniqueCheck
             };
         }
     }

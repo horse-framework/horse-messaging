@@ -310,5 +310,10 @@ namespace Horse.Messaging.Protocol
         /// </summary>
         public const string REPLICA_NODE = "Replica-Node";
 
+        /// <summary>
+        /// "Message-Id-Unique-Check"
+        /// </summary>
+        public const string MESSAGE_ID_UNIQUE_CHECK = "Message-Id-Unique-Check";
+
     }
 }

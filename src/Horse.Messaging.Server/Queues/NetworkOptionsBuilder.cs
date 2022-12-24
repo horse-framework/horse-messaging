@@ -84,6 +84,13 @@ namespace Horse.Messaging.Server.Queues
         [JsonPropertyName("PutBackDelay")]
         public int? PutBackDelay { get; set; }
 
+        /// <summary>
+        /// If true, server checks all message id values and reject new messages with same id.
+        /// Enabling that feature has performance penalty about 0.03 ms for each message. 
+        /// </summary>
+        [JsonPropertyName("MessageIdUniqueCheck")]
+        public bool? MessageIdUniqueCheck { get; set; }
+
         #endregion
 
         #region Apply
@@ -122,6 +129,9 @@ namespace Horse.Messaging.Server.Queues
 
             if (PutBackDelay.HasValue)
                 target.PutBackDelay = PutBackDelay.Value;
+
+            if (MessageIdUniqueCheck.HasValue)
+                target.MessageIdUniqueCheck = MessageIdUniqueCheck.Value;
         }
 
         #endregion

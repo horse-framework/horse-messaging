@@ -106,6 +106,12 @@ public class QueueConfiguration
     public string AutoDestroy { get; set; }
     
     /// <summary>
+    /// If true, server checks all message id values and reject new messages with same id.
+    /// Enabling that feature has performance penalty about 0.03 ms for each message. 
+    /// </summary>
+    public bool MessageIdUniqueCheck { get; set; }
+    
+    /// <summary>
     /// Creates new queue configuration from queue
     /// </summary>
     public static QueueConfiguration Create(HorseQueue queue)
@@ -129,7 +135,8 @@ public class QueueConfiguration
             DelayBetweenMessages = queue.Options.DelayBetweenMessages,
             PutBackDelay = queue.Options.PutBackDelay,
             MessageSizeLimit = queue.Options.MessageSizeLimit,
-            MessageTimeout = Convert.ToInt64(queue.Options.AcknowledgeTimeout.TotalMilliseconds)
+            MessageTimeout = Convert.ToInt64(queue.Options.AcknowledgeTimeout.TotalMilliseconds),
+            MessageIdUniqueCheck = queue.Options.MessageIdUniqueCheck
         };
     }
 }

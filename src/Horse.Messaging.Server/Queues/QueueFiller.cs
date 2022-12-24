@@ -39,7 +39,7 @@ namespace Horse.Messaging.Server.Queues
                     {
                         QueueMessage firstMessage = _queue.Manager.MessageStore.ConsumeFirst();
                         if (firstMessage != null)
-                            _queue.Manager.RemoveMessage(firstMessage).GetAwaiter().GetResult();
+                            _queue.RemoveMessage(firstMessage).GetAwaiter().GetResult();
                     }
                     else
                         return PushResult.LimitExceeded;
@@ -91,7 +91,7 @@ namespace Horse.Messaging.Server.Queues
                     {
                         QueueMessage firstMessage = _queue.Manager.MessageStore.ConsumeFirst();
                         if (firstMessage != null)
-                            _queue.Manager.RemoveMessage(firstMessage).GetAwaiter().GetResult();
+                            _queue.RemoveMessage(firstMessage).GetAwaiter().GetResult();
                     }
                     else
                         return PushResult.LimitExceeded;
@@ -142,7 +142,7 @@ namespace Horse.Messaging.Server.Queues
                     {
                         QueueMessage firstMessage = _queue.Manager.MessageStore.ConsumeFirst();
                         if (firstMessage != null)
-                            _queue.Manager.RemoveMessage(firstMessage).GetAwaiter().GetResult();
+                            _queue.RemoveMessage(firstMessage).GetAwaiter().GetResult();
                     }
                     else
                         return PushResult.LimitExceeded;
@@ -195,7 +195,7 @@ namespace Horse.Messaging.Server.Queues
                     {
                         QueueMessage firstMessage = _queue.Manager.MessageStore.ConsumeFirst();
                         if (firstMessage != null)
-                            _queue.Manager.RemoveMessage(firstMessage).GetAwaiter().GetResult();
+                            _queue.RemoveMessage(firstMessage).GetAwaiter().GetResult();
                     }
                     else
                         return PushResult.LimitExceeded;
@@ -248,7 +248,7 @@ namespace Horse.Messaging.Server.Queues
                     {
                         QueueMessage firstMessage = _queue.Manager.MessageStore.ConsumeFirst();
                         if (firstMessage != null)
-                            _queue.Manager.RemoveMessage(firstMessage).GetAwaiter().GetResult();
+                            _queue.RemoveMessage(firstMessage).GetAwaiter().GetResult();
                     }
                     else
                         return PushResult.LimitExceeded;

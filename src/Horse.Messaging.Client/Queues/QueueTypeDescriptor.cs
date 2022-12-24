@@ -78,6 +78,12 @@ namespace Horse.Messaging.Client.Queues
         public int? AcknowledgeTimeout { get; set; }
 
         /// <summary>
+        /// If true, server checks all message id values and reject new messages with same id.
+        /// Enabling that feature has performance penalty about 0.03 ms for each message. 
+        /// </summary>
+        public bool? UniqueIdCheck { get; set; }
+
+        /// <summary>
         /// Creates new type delivery descriptor
         /// </summary>
         public QueueTypeDescriptor()
@@ -120,6 +126,9 @@ namespace Horse.Messaging.Client.Queues
 
             if (AcknowledgeTimeout.HasValue)
                 message.AddHeader(HorseHeaders.ACK_TIMEOUT, AcknowledgeTimeout.Value.ToString());
+
+            if (UniqueIdCheck.HasValue)
+                message.AddHeader(HorseHeaders.MESSAGE_ID_UNIQUE_CHECK, UniqueIdCheck.Value ? "1" : "0");
 
             foreach (KeyValuePair<string, string> pair in Headers)
                 message.AddHeader(pair.Key, pair.Value);

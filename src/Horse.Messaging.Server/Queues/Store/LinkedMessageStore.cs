@@ -13,7 +13,7 @@ namespace Horse.Messaging.Server.Queues.Store
     {
         /// <inheritdoc />
         public IHorseQueueManager Manager { get; }
-        
+
         /// <inheritdoc />
         public IMessageTimeoutTracker TimeoutTracker { get; }
 
@@ -115,7 +115,7 @@ namespace Horse.Messaging.Server.Queues.Store
                         continue;
 
                     message.IsInQueue = false;
-                    
+
                     list.Add(message);
                     _messages.RemoveFirst();
                 }
@@ -175,8 +175,9 @@ namespace Horse.Messaging.Server.Queues.Store
         /// <inheritdoc />
         public virtual void Remove(QueueMessage message)
         {
-            lock (_messages)
-                _messages.Remove(message);
+            if (message.IsInQueue)
+                lock (_messages)
+                    _messages.Remove(message);
         }
 
         /// <inheritdoc />
@@ -184,7 +185,7 @@ namespace Horse.Messaging.Server.Queues.Store
         {
             lock (_messages)
                 _messages.Clear();
-            
+
             return Task.CompletedTask;
         }
 

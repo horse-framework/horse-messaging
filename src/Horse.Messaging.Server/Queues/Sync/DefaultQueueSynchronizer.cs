@@ -220,7 +220,7 @@ namespace Horse.Messaging.Server.Queues.Sync
             }
 
             foreach (QueueMessage msg in removing)
-                await Manager.RemoveMessage(msg);
+                await Manager.Queue.RemoveMessage(msg);
 
             if (requestMessages.Count == 0)
             {

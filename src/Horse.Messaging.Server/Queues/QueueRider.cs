@@ -133,7 +133,8 @@ namespace Horse.Messaging.Server.Queues
                         DelayBetweenMessages = configuration.DelayBetweenMessages,
                         LimitExceededStrategy = Enums.Parse<MessageLimitExceededStrategy>(configuration.LimitExceededStrategy, true, EnumFormat.Description),
                         MessageSizeLimit = configuration.MessageSizeLimit,
-                        PutBackDelay = configuration.PutBackDelay
+                        PutBackDelay = configuration.PutBackDelay,
+                        MessageIdUniqueCheck = configuration.MessageIdUniqueCheck
                     };
 
                     QueueStatus status = Enums.Parse<QueueStatus>(configuration.Status, true, EnumFormat.Description);
@@ -382,6 +383,7 @@ namespace Horse.Messaging.Server.Queues
             options.ClientLimit = info.ClientLimit;
             options.MessageLimit = info.MessageLimit;
             options.MessageSizeLimit = info.MessageSizeLimit;
+            options.MessageIdUniqueCheck = info.MessageIdUniqueCheck;
 
             if (!string.IsNullOrEmpty(info.LimitExceededStrategy))
                 options.LimitExceededStrategy = Enums.Parse<MessageLimitExceededStrategy>(info.LimitExceededStrategy, true, EnumFormat.Description);

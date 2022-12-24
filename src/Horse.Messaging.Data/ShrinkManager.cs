@@ -152,7 +152,7 @@ namespace Horse.Messaging.Data
         /// Shrinks whole data in database file.
         /// In this operation, database file will be locked 
         /// </summary>
-        public async Task<bool> FullShrink(Dictionary<string, HorseMessage> messages, List<string> deletedItems)
+        public async Task<bool> FullShrink(List<HorseMessage> messages, List<string> deletedItems)
         {
             _shrinking = true;
             bool backup = false;
@@ -161,14 +161,11 @@ namespace Horse.Messaging.Data
             await _database.WaitForLock();
             try
             {
-                //shrink whole file
-                foreach (string deletedItem in deletedItems)
-                    messages.Remove(deletedItem);
-
+                messages.RemoveAll(x => x.MessageId != null && deletedItems.Contains(x.MessageId));
                 deletedItems.Clear();
 
-                foreach (KeyValuePair<string, HorseMessage> kv in messages)
-                    await _serializer.Write(ms, kv.Value);
+                foreach (HorseMessage message in messages)
+                    await _serializer.Write(ms, message);
 
                 backup = await _database.File.Backup(BackupOption.Move, false);
                 if (!backup)
