@@ -384,14 +384,17 @@ namespace Horse.Messaging.Server.Queues
             if (options == null)
                 return;
 
-            QueueConfiguration configuration = QueueConfiguration.Create(this);
-            QueueConfiguration previous = options.Find(x => x.Name == Name);
+            lock (options)
+            {
+                QueueConfiguration configuration = QueueConfiguration.Create(this);
+                QueueConfiguration previous = options.Find(x => x.Name == Name);
 
-            if (previous != null)
-                options.Remove(previous);
+                if (previous != null)
+                    options.Remove(previous);
 
-            options.Add(configuration);
-            options.Save();
+                options.Add(configuration);
+                options.Save();
+            }
         }
 
         #endregion

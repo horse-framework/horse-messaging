@@ -32,18 +32,19 @@ namespace Horse.Messaging.Server.Routing
                 if (DateTime.UtcNow - _queueUpdateTime > _queueCacheDuration)
                     RefreshQueueCache();
 
+                message.Type = MessageType.QueueMessage;
                 message.WaitResponse = Interaction == BindingInteraction.Response;
 
                 switch (RouteMethod)
                 {
                     case RouteMethod.Distribute:
-                        return await SendDistribute(message);
+                        return await SendDistribute(sender, message);
 
                     case RouteMethod.OnlyFirst:
-                        return await SendOnlyFirst(message);
+                        return await SendOnlyFirst(sender, message);
 
                     case RouteMethod.RoundRobin:
-                        return await SendRoundRobin(message);
+                        return await SendRoundRobin(sender, message);
 
                     default:
                         return false;
@@ -56,7 +57,7 @@ namespace Horse.Messaging.Server.Routing
             }
         }
 
-        private Task<bool> SendDistribute(HorseMessage message)
+        private Task<bool> SendDistribute(MessagingClient sender, HorseMessage message)
         {
             bool sent = false;
             foreach (HorseQueue queue in _queues)
@@ -69,7 +70,10 @@ namespace Horse.Messaging.Server.Routing
                     sent = true;
 
                 HorseMessage msg = message.Clone(true, true, messageId);
+                msg.SetTarget(queue.Name);
+                
                 QueueMessage queueMessage = new QueueMessage(msg);
+                queueMessage.Source = sender;
 
                 PushResult result = queue.AddMessage(queueMessage);
 
@@ -80,7 +84,7 @@ namespace Horse.Messaging.Server.Routing
             return Task.FromResult(sent);
         }
 
-        private async Task<bool> SendRoundRobin(HorseMessage message)
+        private async Task<bool> SendRoundRobin(MessagingClient sender, HorseMessage message)
         {
             Interlocked.Increment(ref _roundRobinIndex);
             int i = _roundRobinIndex;
@@ -104,12 +108,15 @@ namespace Horse.Messaging.Server.Routing
                     true);
             }
 
+            message.SetTarget(queue.Name);
             QueueMessage queueMessage = new QueueMessage(message);
+            queueMessage.Source = sender;
+            
             PushResult result = queue.AddMessage(queueMessage);
             return result == PushResult.Success;
         }
 
-        private async Task<bool> SendOnlyFirst(HorseMessage message)
+        private async Task<bool> SendOnlyFirst(MessagingClient sender, HorseMessage message)
         {
             if (_queues.Length < 1)
                 return false;
@@ -127,7 +134,10 @@ namespace Horse.Messaging.Server.Routing
                     true);
             }
 
+            message.SetTarget(queue.Name);
             QueueMessage queueMessage = new QueueMessage(message);
+            queueMessage.Source = sender;
+            
             queue.AddMessage(queueMessage);
             return true;
         }
