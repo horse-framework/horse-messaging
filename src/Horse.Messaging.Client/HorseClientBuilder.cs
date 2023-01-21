@@ -186,7 +186,7 @@ namespace Horse.Messaging.Client
         /// <summary>
         /// If true, connector subscribes all consuming queues automatically right after connection established.
         /// If false, you need to subscribe manually
-        /// Default is true.
+        /// Default value is true.
         /// </summary>
         public HorseClientBuilder AutoSubscribe(bool value)
         {
@@ -195,8 +195,18 @@ namespace Horse.Messaging.Client
         }
 
         /// <summary>
+        /// Determines if a client should automatically acknowledge a message.
+        /// Default value is false.
+        /// </summary>
+        public HorseClientBuilder AutoAcknowledge(bool value)
+        {
+            _client.AutoAcknowledge = value;
+            return this;
+        }
+
+        /// <summary>
         /// If true, disconnected when any of auto subscribe request fails.
-        /// Default is true.
+        /// Default value is true.
         /// </summary>
         public HorseClientBuilder DisconnectionOnAutoSubscribeFailure(bool value)
         {
@@ -211,23 +221,28 @@ namespace Horse.Messaging.Client
         /// <summary>
         /// Uses Newtonsoft library for JSON serializations
         /// </summary>
-        public HorseClientBuilder UseNewtonsoftJsonSerializer(Newtonsoft.Json.JsonSerializerSettings settings = null)
+        [Obsolete("Newtonsoft.Json support has dropped. If you still want to use Newtonsoft.Json, please create a custom serializer using the IMessageContentSerializer interface and call UseCustomSerializer(). An example can be found here: https://github.com/horse-framework/horse-messaging/blob/v6.3/src/Horse.Messaging.Client/NewtonsoftContentSerializer.cs", true)]
+        public HorseClientBuilder UseNewtonsoftJsonSerializer()
         {
-            _client.MessageSerializer = new NewtonsoftContentSerializer(settings);
             return this;
         }
 
         /// <summary>
-        /// Uses System.Text.Json library for JSON serializations
+        /// Uses System.Text.Json library for JSON serializations.
+        /// This is the default serializer.
         /// </summary>
         public HorseClientBuilder UseSystemJsonSerializer(System.Text.Json.JsonSerializerOptions options = null)
         {
+            if (options is null)
+                return this;
+
             _client.MessageSerializer = new SystemJsonContentSerializer(options);
             return this;
         }
 
         /// <summary>
-        /// Uses custom serializer
+        /// Overrides the default serializer with a custom one.
+        /// The default serializer is <see cref="SystemJsonContentSerializer"/>.
         /// </summary>
         public HorseClientBuilder UseCustomSerializer(IMessageContentSerializer serializer)
         {

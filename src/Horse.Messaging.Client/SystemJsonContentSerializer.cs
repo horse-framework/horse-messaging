@@ -6,18 +6,28 @@ using Horse.Messaging.Protocol;
 namespace Horse.Messaging.Client
 {
     /// <summary>
-    /// JSON Message Content serializer uses System.Text.Json library
+    /// JSON Message Content serializer that uses <see cref="JsonSerializer"/> under the hood.
     /// </summary>
     public class SystemJsonContentSerializer : IMessageContentSerializer
     {
         private readonly JsonSerializerOptions _options;
 
         /// <summary>
-        /// Creates new JSON serializer
+        /// Creates a new JSON serializer using the provided options.
         /// </summary>
         public SystemJsonContentSerializer(JsonSerializerOptions options)
         {
             _options = options;
+            _options.AddContext<HorseJsonSerializerContext>();
+        }
+
+        /// <summary>
+        /// Creates a new JSON serializer using the default options.
+        /// </summary>
+        public SystemJsonContentSerializer()
+        {
+            _options = new JsonSerializerOptions();
+            _options.AddContext<HorseJsonSerializerContext>();
         }
 
         /// <summary>

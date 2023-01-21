@@ -7,6 +7,7 @@ using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Models;
+using System.Text.Json;
 
 namespace Horse.Messaging.Client.Routers
 {
@@ -17,11 +18,13 @@ namespace Horse.Messaging.Client.Routers
     {
         private readonly HorseClient _client;
         private readonly TypeDescriptorContainer<RouterTypeDescriptor> _descriptorContainer;
+        private readonly SystemJsonContentSerializer _serializer;
 
         internal RouterOperator(HorseClient client)
         {
             _client = client;
             _descriptorContainer = new TypeDescriptorContainer<RouterTypeDescriptor>(new RouterTypeResolver());
+            _serializer = new SystemJsonContentSerializer();
         }
 
         #region Actions
@@ -105,7 +108,7 @@ namespace Horse.Messaging.Client.Routers
                 BindingType = type,
                 Method = bindingMethod
             };
-            message.Serialize(info, new NewtonsoftContentSerializer());
+            message.Serialize(info, _serializer);
             return await _client.WaitResponse(message, true);
         }
 

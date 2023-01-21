@@ -25,10 +25,12 @@ namespace Horse.Messaging.Server.Network
         /// Messaging Queue Server
         /// </summary>
         private readonly HorseRider _rider;
+        private readonly SystemJsonContentSerializer _serializer;
 
         public ServerMessageHandler(HorseRider rider)
         {
             _rider = rider;
+            _serializer = new SystemJsonContentSerializer();
         }
 
         #endregion
@@ -681,7 +683,7 @@ namespace Horse.Messaging.Server.Network
             }
 
             HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
-            response.Serialize(items, new NewtonsoftContentSerializer());
+            response.Serialize(items, _serializer);
             await client.SendAsync(response);
         }
 
@@ -697,7 +699,7 @@ namespace Horse.Messaging.Server.Network
                 return;
             }
 
-            BindingInformation info = message.Deserialize<BindingInformation>(new NewtonsoftContentSerializer());
+            BindingInformation info = message.Deserialize<BindingInformation>(_serializer);
 
             //check create queue access
             foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
@@ -807,7 +809,7 @@ namespace Horse.Messaging.Server.Network
             }
 
             HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
-            response.Serialize(items, new NewtonsoftContentSerializer());
+            response.Serialize(items, _serializer);
             await client.SendAsync(response);
         }
 
