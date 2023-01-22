@@ -13,20 +13,11 @@ namespace Horse.Messaging.Client
         private readonly JsonSerializerOptions _options;
 
         /// <summary>
-        /// Creates a new JSON serializer using the provided options.
+        /// Creates a new JSON serializer.
         /// </summary>
-        public SystemJsonContentSerializer(JsonSerializerOptions options)
+        public SystemJsonContentSerializer(JsonSerializerOptions options = null)
         {
-            _options = options;
-            _options.AddContext<HorseJsonSerializerContext>();
-        }
-
-        /// <summary>
-        /// Creates a new JSON serializer using the default options.
-        /// </summary>
-        public SystemJsonContentSerializer()
-        {
-            _options = new JsonSerializerOptions();
+            _options = options ?? new JsonSerializerOptions();
             _options.AddContext<HorseJsonSerializerContext>();
         }
 

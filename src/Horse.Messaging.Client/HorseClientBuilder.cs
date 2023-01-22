@@ -233,9 +233,6 @@ namespace Horse.Messaging.Client
         /// </summary>
         public HorseClientBuilder UseSystemJsonSerializer(System.Text.Json.JsonSerializerOptions options = null)
         {
-            if (options is null)
-                return this;
-
             _client.MessageSerializer = new SystemJsonContentSerializer(options);
             return this;
         }

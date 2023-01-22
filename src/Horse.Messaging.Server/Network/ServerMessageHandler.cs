@@ -25,12 +25,10 @@ namespace Horse.Messaging.Server.Network
         /// Messaging Queue Server
         /// </summary>
         private readonly HorseRider _rider;
-        private readonly SystemJsonContentSerializer _serializer;
 
         public ServerMessageHandler(HorseRider rider)
         {
             _rider = rider;
-            _serializer = new SystemJsonContentSerializer();
         }
 
         #endregion
@@ -270,7 +268,7 @@ namespace Horse.Messaging.Server.Network
         {
             NetworkOptionsBuilder builder = null;
             if (message.Length > 0)
-                builder = await JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content, new JsonSerializerOptions {PropertyNameCaseInsensitive = true});
+                builder = await JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             HorseQueue queue = _rider.Queue.Find(message.Target);
 
@@ -349,7 +347,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task UpdateQueue(MessagingClient client, HorseMessage message)
         {
-            NetworkOptionsBuilder builder = await JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content, new JsonSerializerOptions {PropertyNameCaseInsensitive = true});
+            NetworkOptionsBuilder builder = await JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             HorseQueue queue = _rider.Queue.Find(message.Target);
             if (queue == null)
@@ -618,7 +616,7 @@ namespace Horse.Messaging.Server.Network
             string methodHeader = message.FindHeader(HorseHeaders.ROUTE_METHOD);
             RouteMethod method = RouteMethod.Distribute;
             if (!string.IsNullOrEmpty(methodHeader))
-                method = (RouteMethod) Convert.ToInt32(methodHeader);
+                method = (RouteMethod)Convert.ToInt32(methodHeader);
 
             //check create queue access
             foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
@@ -683,7 +681,7 @@ namespace Horse.Messaging.Server.Network
             }
 
             HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
-            response.Serialize(items, _serializer);
+            response.Serialize(items, _rider.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
@@ -699,7 +697,7 @@ namespace Horse.Messaging.Server.Network
                 return;
             }
 
-            BindingInformation info = message.Deserialize<BindingInformation>(_serializer);
+            BindingInformation info = message.Deserialize<BindingInformation>(_rider.MessageContentSerializer);
 
             //check create queue access
             foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
@@ -725,7 +723,7 @@ namespace Horse.Messaging.Server.Network
                 return;
             }
 
-            Binding binding = (Binding) Activator.CreateInstance(bindingType);
+            Binding binding = (Binding)Activator.CreateInstance(bindingType);
             binding.Name = info.Name;
             binding.Target = info.Target;
             binding.ContentType = info.ContentType;
@@ -809,7 +807,7 @@ namespace Horse.Messaging.Server.Network
             }
 
             HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
-            response.Serialize(items, _serializer);
+            response.Serialize(items, _rider.MessageContentSerializer);
             await client.SendAsync(response);
         }
 
