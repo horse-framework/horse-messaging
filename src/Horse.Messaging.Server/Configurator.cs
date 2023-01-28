@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Horse.Messaging.Server;
@@ -26,7 +27,7 @@ internal class Configurator
 
     public static T LoadConfigurationFromJson<T>(string jsonData) where T : class, new()
     {
-        return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(jsonData);
+        return JsonSerializer.Deserialize<T>(jsonData);
     }
 
     public static T LoadConfiguration<T>(string fullpath) where T : class, new()
@@ -44,7 +45,7 @@ internal class Configurator
 
     public static void SaveConfiguration<T>(string fullpath, T configuration) where T : class, new()
     {
-        string json = Newtonsoft.Json.JsonConvert.SerializeObject(configuration);
+        string json = JsonSerializer.Serialize(configuration);
         File.WriteAllText(fullpath, json);
     }
 }

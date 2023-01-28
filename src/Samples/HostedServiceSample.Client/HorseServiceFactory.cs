@@ -1,5 +1,5 @@
 using System;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace HostedServiceSample.Client
 {
@@ -7,7 +7,12 @@ namespace HostedServiceSample.Client
 	{
 		public static IHorseService Create<T>(string[] args, string clientType) where T: class
 		{
-			Console.WriteLine(JsonConvert.SerializeObject(args, Formatting.Indented));
+            JsonSerializerOptions _options = new JsonSerializerOptions()
+            {
+                WriteIndented = true
+            };
+
+			Console.WriteLine(JsonSerializer.Serialize(args, _options));
 			return new HorseService<T>(args, clientType);
 		}
 	}

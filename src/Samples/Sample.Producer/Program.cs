@@ -34,7 +34,7 @@ namespace Sample.Producer
         {
             HorseClientBuilder builder = new HorseClientBuilder();
             builder.SetHost("horse://localhost:26222");
-            builder.UseNewtonsoftJsonSerializer();
+
             builder.SetResponseTimeout(TimeSpan.FromSeconds(300));
             HorseClient client = builder.Build();
             client.ResponseTimeout = TimeSpan.FromSeconds(300);
