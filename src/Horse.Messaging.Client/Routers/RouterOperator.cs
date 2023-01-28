@@ -1,12 +1,12 @@
+using Horse.Messaging.Client.Internal;
+using Horse.Messaging.Client.Queues;
+using Horse.Messaging.Protocol;
+using Horse.Messaging.Protocol.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Horse.Messaging.Client.Internal;
-using Horse.Messaging.Client.Queues;
-using Horse.Messaging.Protocol;
-using Horse.Messaging.Protocol.Models;
 
 namespace Horse.Messaging.Client.Routers
 {
@@ -105,7 +105,7 @@ namespace Horse.Messaging.Client.Routers
                 BindingType = type,
                 Method = bindingMethod
             };
-            message.Serialize(info, new NewtonsoftContentSerializer());
+            message.Serialize(info, _client.MessageSerializer);
             return await _client.WaitResponse(message, true);
         }
 

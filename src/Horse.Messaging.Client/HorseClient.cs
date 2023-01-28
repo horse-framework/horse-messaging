@@ -241,7 +241,7 @@ namespace Horse.Messaging.Client
         /// <summary>
         /// Serializer object for horse messages
         /// </summary>
-        public IMessageContentSerializer MessageSerializer { get; set; } = new NewtonsoftContentSerializer();
+        public IMessageContentSerializer MessageSerializer { get; set; } = new SystemJsonContentSerializer();
 
         internal IServiceProvider Provider { get; set; }
 

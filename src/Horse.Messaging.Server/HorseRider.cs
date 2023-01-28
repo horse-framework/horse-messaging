@@ -89,7 +89,7 @@ namespace Horse.Messaging.Server
         /// <summary>
         /// Message content serializer
         /// </summary>
-        internal IMessageContentSerializer MessageContentSerializer { get; } = new NewtonsoftContentSerializer();
+        internal IMessageContentSerializer MessageContentSerializer { get; } = new SystemJsonContentSerializer();
 
         private bool _initialized;
 

@@ -172,7 +172,7 @@ namespace Horse.Messaging.Protocol
             MessageIdLength = string.IsNullOrEmpty(MessageId) ? 0 : Encoding.UTF8.GetByteCount(MessageId);
             SourceLength = string.IsNullOrEmpty(Source) ? 0 : Encoding.UTF8.GetByteCount(Source);
             TargetLength = string.IsNullOrEmpty(Target) ? 0 : Encoding.UTF8.GetByteCount(Target);
-            Length = Content != null ? (ulong) Content.Length : 0;
+            Length = Content != null ? (ulong)Content.Length : 0;
         }
 
         /// <summary>
@@ -195,7 +195,7 @@ namespace Horse.Messaging.Protocol
                 return;
 
             Content = new MemoryStream(Encoding.UTF8.GetBytes(content));
-            Length = Content != null ? (ulong) Content.Length : 0;
+            Length = Content != null ? (ulong)Content.Length : 0;
         }
 
         /// <summary>
@@ -211,7 +211,7 @@ namespace Horse.Messaging.Protocol
         /// </summary>
         public TModel Deserialize<TModel>(IMessageContentSerializer serializer)
         {
-            return (TModel) serializer.Deserialize(this, typeof(TModel));
+            return (TModel)serializer.Deserialize(this, typeof(TModel));
         }
 
         /// <summary>
