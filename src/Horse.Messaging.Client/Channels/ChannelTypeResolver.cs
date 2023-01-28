@@ -11,7 +11,7 @@ namespace Horse.Messaging.Client.Channels
     public class ChannelTypeResolver : ITypeDescriptorResolver<ChannelTypeDescriptor>
     {
         private readonly HorseClient _client;
-        
+
         /// <summary>
         /// Creates new channel type resolver
         /// </summary>
@@ -47,10 +47,14 @@ namespace Horse.Messaging.Client.Channels
             if (nameAttr != null)
                 descriptor.Name = nameAttr.Name;
 
+            InitialChannelMessageAttribute initMsgAttr = type.GetCustomAttribute<InitialChannelMessageAttribute>();
+            if (initMsgAttr != null)
+                descriptor.InitialChannelMessage = true;
+
             return descriptor;
         }
-        
-        
+
+
         private bool IsSubscriberType(Type type)
         {
             Type[] interfaceTypes = type.GetInterfaces();
@@ -58,7 +62,7 @@ namespace Horse.Messaging.Client.Channels
                 return false;
 
             Type openGenericType = typeof(IChannelSubscriber<>);
-            
+
             foreach (Type interfaceType in interfaceTypes)
             {
                 if (!interfaceType.IsGenericType)
@@ -75,6 +79,5 @@ namespace Horse.Messaging.Client.Channels
 
             return false;
         }
-
     }
 }

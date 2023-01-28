@@ -17,13 +17,23 @@ namespace Horse.Messaging.Client.Channels
         /// If true, name is specified by previous process
         /// </summary>
         public bool ChannelNameSpecified { get; set; }
-        
+
+        /// <summary>
+        /// If true, initial channel message supported by the channel
+        /// </summary>
+        public bool InitialChannelMessage { get; set; }
+
         /// <summary>
         /// Creates new message
         /// </summary>
         public HorseMessage CreateMessage()
         {
-            return new HorseMessage(MessageType.Channel, Name, KnownContentTypes.ChannelPush);
+            HorseMessage message = new HorseMessage(MessageType.Channel, Name, KnownContentTypes.ChannelPush);
+
+            if (InitialChannelMessage)
+                message.AddHeader(HorseHeaders.CHANNEL_INITIAL_MESSAGE, "1");
+
+            return message;
         }
     }
 }

@@ -21,11 +21,16 @@ namespace Horse.Messaging.Server.Channels
         /// If true, the channel is created when a new message is sent to the channel is not created yet.
         /// </summary>
         public bool AutoChannelCreation { get; set; } = true;
-        
+
         /// <summary>
         /// If true, the channel is destroyed automatically when channel is inactive (no subscribers, no new published messages). 
         /// </summary>
         public bool AutoDestroy { get; set; } = true;
+
+        /// <summary>
+        /// If true, the last published message is sent to clients right after they subscribed to the channel.
+        /// </summary>
+        public bool SendLastMessageAsInitial { get; set; }
 
         /// <summary>
         /// Clones options and return new copy
@@ -36,7 +41,8 @@ namespace Horse.Messaging.Server.Channels
             {
                 ClientLimit = other.ClientLimit,
                 MessageSizeLimit = other.MessageSizeLimit,
-                AutoDestroy = other.AutoDestroy
+                AutoDestroy = other.AutoDestroy,
+                SendLastMessageAsInitial = other.SendLastMessageAsInitial
             };
         }
     }
