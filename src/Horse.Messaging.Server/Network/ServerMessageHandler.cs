@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using EnumsNET;
-using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Models;
 using Horse.Messaging.Server.Clients;

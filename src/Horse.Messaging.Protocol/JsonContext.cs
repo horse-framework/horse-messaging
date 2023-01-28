@@ -23,4 +23,7 @@ namespace Horse.Messaging.Protocol
 
     [JsonSerializable(typeof(RouterInformation))]
     internal partial class RouterInformationSerializerContext : JsonSerializerContext { }
+
+    [JsonSerializable(typeof(HorseMessage))]
+    internal partial class HorseMessageSerializerContext : JsonSerializerContext { }
 }
