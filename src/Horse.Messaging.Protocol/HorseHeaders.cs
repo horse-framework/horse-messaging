@@ -315,5 +315,10 @@ namespace Horse.Messaging.Protocol
         /// </summary>
         public const string MESSAGE_ID_UNIQUE_CHECK = "Message-Id-Unique-Check";
 
+        /// <summary>
+        /// "Channel-Initial-Message"
+        /// </summary>
+        public const string CHANNEL_INITIAL_MESSAGE = "Channel-Initial-Message";
+
     }
 }

@@ -71,6 +71,7 @@ namespace Horse.Messaging.Server.Channels
 
         private readonly ArrayContainer<ChannelClient> _clients = new ArrayContainer<ChannelClient>();
         private Timer _destoryTimer;
+        private byte[] _lastPublishedMessage;
 
         #endregion
 
@@ -125,6 +126,13 @@ namespace Horse.Messaging.Server.Channels
                 string value = autoDestroy.Trim();
                 Options.AutoDestroy = value.Equals("TRUE", StringComparison.CurrentCultureIgnoreCase) || value == "1";
             }
+
+            string initialMessage = message.FindHeader(HorseHeaders.CHANNEL_INITIAL_MESSAGE);
+            if (!string.IsNullOrEmpty(initialMessage))
+            {
+                string value = initialMessage.Trim();
+                Options.SendLastMessageAsInitial = value.Equals("TRUE", StringComparison.CurrentCultureIgnoreCase) || value == "1";
+            }
         }
 
         #endregion
@@ -159,6 +167,7 @@ namespace Horse.Messaging.Server.Channels
             try
             {
                 byte[] messageData = HorseProtocolWriter.Create(message);
+                _lastPublishedMessage = messageData;
 
                 int count = 0;
                 //to all receivers
@@ -234,6 +243,14 @@ namespace Horse.Messaging.Server.Channels
 
             Info.SubscriberCount = _clients.Count();
             Rider.Channel.SubscribeEvent.Trigger(client, Name);
+
+            if (Options.SendLastMessageAsInitial)
+            {
+                byte[] msg = _lastPublishedMessage;
+                if (msg != null)
+                    _ = client.SendAsync(_lastPublishedMessage);
+            }
+
             return SubscriptionResult.Success;
         }
 
