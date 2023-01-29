@@ -1,36 +1,36 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>net6.0</TargetFramework>
-        <LangVersion>10</LangVersion>
-        <Title>Horse.Messaging.Data</Title>
-        <Product>Horse.Messaging.Data</Product>
-        <Description>Persistant queue message data library for Horse Messaging</Description>
-        <PackageTags>horse,server,messaging,queue,mq,persistent,database,db</PackageTags>
-        <AssemblyVersion>6.3.15</AssemblyVersion>
-        <FileVersion>6.3.15</FileVersion>
-        <PackageVersion>6.3.15</PackageVersion>
-        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
-        <PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>
-        <PackageLicenseUrl>https://github.com/horse-framework/horse-messaging/blob/master/LICENSE</PackageLicenseUrl>
-        <RepositoryUrl>https://github.com/horse-framework/horse-messaging</RepositoryUrl>
-    </PropertyGroup>
+	<PropertyGroup>
+		<TargetFrameworks>net6.0;net7.0</TargetFrameworks>
+		<LangVersion>latest</LangVersion>
+		<Title>Horse.Messaging.Data</Title>
+		<Product>Horse.Messaging.Data</Product>
+		<Description>Persistant queue message data library for Horse Messaging</Description>
+		<PackageTags>horse,server,messaging,queue,mq,persistent,database,db</PackageTags>
+		<AssemblyVersion>6.3.16</AssemblyVersion>
+		<FileVersion>6.3.16</FileVersion>
+		<PackageVersion>6.3.16</PackageVersion>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
+		<PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>
+		<PackageLicenseUrl>https://github.com/horse-framework/horse-messaging/blob/master/LICENSE</PackageLicenseUrl>
+		<RepositoryUrl>https://github.com/horse-framework/horse-messaging</RepositoryUrl>
+	</PropertyGroup>
 
-    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-      <DocumentationFile>bin\Debug\Horse.Messaging.Data.xml</DocumentationFile>
-    </PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+		<DocumentationFile>bin\Debug\Horse.Messaging.Data.xml</DocumentationFile>
+	</PropertyGroup>
 
-    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-      <DocumentationFile>bin\Release\Horse.Messaging.Data.xml</DocumentationFile>
-    </PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+		<DocumentationFile>bin\Release\Horse.Messaging.Data.xml</DocumentationFile>
+	</PropertyGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\Horse.Messaging.Server\Horse.Messaging.Server.csproj" />
-    </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Horse.Messaging.Server\Horse.Messaging.Server.csproj" />
+	</ItemGroup>
 
-    <ItemGroup>
-      <PackageReference Include="Enums.NET" Version="4.0.1" />
-    </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Enums.NET" Version="4.0.1" />
+	</ItemGroup>
 
 </Project>
