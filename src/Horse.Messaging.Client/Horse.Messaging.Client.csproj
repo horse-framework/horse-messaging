@@ -1,38 +1,38 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>net6.0</TargetFramework>
-        <LangVersion>10</LangVersion>
-        <Title>Horse.Messaging.Client</Title>
-        <Product>Horse.Messaging.Client</Product>
-        <Description>Horse Messaging Client to connect all Horse Servers</Description>
-        <PackageTags>horse,client,messaging,queue,channel,cache</PackageTags>
-        <AssemblyVersion>6.4.0</AssemblyVersion>
-        <FileVersion>6.4.0</FileVersion>
-        <PackageVersion>6.4.0</PackageVersion>
-        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
-        <PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>
-        <PackageLicenseUrl>https://github.com/horse-framework/horse-messaging/blob/master/LICENSE</PackageLicenseUrl>
-        <RepositoryUrl>https://github.com/horse-framework/horse-messaging</RepositoryUrl>
-        <RootNamespace>Horse.Messaging.Client</RootNamespace>
-    </PropertyGroup>
+	<PropertyGroup>
+		<TargetFrameworks>net6.0;net7.0</TargetFrameworks>
+		<LangVersion>latest</LangVersion>
+		<Title>Horse.Messaging.Client</Title>
+		<Product>Horse.Messaging.Client</Product>
+		<Description>Horse Messaging Client to connect all Horse Servers</Description>
+		<PackageTags>horse,client,messaging,queue,channel,cache</PackageTags>
+		<AssemblyVersion>6.3.16</AssemblyVersion>
+		<FileVersion>6.3.16</FileVersion>
+		<PackageVersion>6.3.16</PackageVersion>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
+		<PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>
+		<PackageLicenseUrl>https://github.com/horse-framework/horse-messaging/blob/master/LICENSE</PackageLicenseUrl>
+		<RepositoryUrl>https://github.com/horse-framework/horse-messaging</RepositoryUrl>
+		<RootNamespace>Horse.Messaging.Client</RootNamespace>
+	</PropertyGroup>
 
-    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-      <DocumentationFile>bin\Debug\Horse.Messaging.Client.xml</DocumentationFile>
-    </PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+		<DocumentationFile>bin\Debug\Horse.Messaging.Client.xml</DocumentationFile>
+	</PropertyGroup>
 
-    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-      <DocumentationFile>bin\Release\Horse.Messaging.Client.xml</DocumentationFile>
-    </PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+		<DocumentationFile>bin\Release\Horse.Messaging.Client.xml</DocumentationFile>
+	</PropertyGroup>
 
-    <ItemGroup>
-        <PackageReference Include="Enums.NET" Version="4.0.1" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
-    </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Enums.NET" Version="4.0.1" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
+	</ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\Horse.Messaging.Protocol\Horse.Messaging.Protocol.csproj" />
-    </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Horse.Messaging.Protocol\Horse.Messaging.Protocol.csproj" />
+	</ItemGroup>
 
 </Project>
