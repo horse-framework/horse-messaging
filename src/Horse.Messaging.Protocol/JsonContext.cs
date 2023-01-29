@@ -1,4 +1,5 @@
-﻿using Horse.Messaging.Protocol.Models;
+﻿using Horse.Messaging.Protocol.Events;
+using Horse.Messaging.Protocol.Models;
 using System.Text.Json.Serialization;
 
 namespace Horse.Messaging.Protocol
@@ -26,4 +27,10 @@ namespace Horse.Messaging.Protocol
 
     [JsonSerializable(typeof(HorseMessage))]
     internal partial class HorseMessageSerializerContext : JsonSerializerContext { }
+
+    [JsonSerializable(typeof(EventSubject))]
+    internal partial class EventSubjectSerializerContext : JsonSerializerContext { }
+
+    [JsonSerializable(typeof(HorseEvent))]
+    internal partial class HorseEventSerializerContext : JsonSerializerContext { }
 }
