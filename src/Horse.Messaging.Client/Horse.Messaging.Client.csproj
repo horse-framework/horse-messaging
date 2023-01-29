@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<TargetFrameworks>net6.0;net7.0</TargetFrameworks>
-		<LangVersion>10</LangVersion>
+		<LangVersion>latest</LangVersion>
 		<Title>Horse.Messaging.Client</Title>
 		<Product>Horse.Messaging.Client</Product>
 		<Description>Horse Messaging Client to connect all Horse Servers</Description>

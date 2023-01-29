@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<TargetFrameworks>net6.0;net7.0</TargetFrameworks>
-		<LangVersion>10</LangVersion>
+		<LangVersion>latest</LangVersion>
 		<Title>Horse.Messaging.Data</Title>
 		<Product>Horse.Messaging.Data</Product>
 		<Description>Horse messaging extensions library</Description>

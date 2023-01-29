@@ -8,7 +8,4 @@ namespace Horse.Messaging.Server
 
     [JsonSerializable(typeof(MainNodeAnnouncement))]
     internal partial class MainNodeAnnouncementSerializerContext : JsonSerializerContext { }
-
-    [JsonSerializable(typeof(NodeInfo))]
-    internal partial class NodeInfoSerializerContext : JsonSerializerContext { }
 }

@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<TargetFrameworks>net6.0;net7.0</TargetFrameworks>
-		<LangVersion>10</LangVersion>
+		<LangVersion>latest</LangVersion>
 		<Title>Horse.Messaging.Protocol</Title>
 		<Product>Horse.Messaging.Protocol</Product>
 		<Description>Horse Messaging Protocol library and server extension for Horse Server</Description>
