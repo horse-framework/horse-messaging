@@ -81,6 +81,12 @@ namespace Horse.Messaging.Client.Channels
 
                 if (o.MessageSizeLimit.HasValue)
                     message.AddHeader(HorseHeaders.MESSAGE_SIZE_LIMIT, o.MessageSizeLimit.Value.ToString());
+
+                if (o.SendLastMessageAsInitial.HasValue)
+                    message.AddHeader(HorseHeaders.CHANNEL_INITIAL_MESSAGE, o.SendLastMessageAsInitial.Value ? "1" : "0");
+
+                if (o.AutoDestroyIdleSeconds.HasValue)
+                    message.AddHeader(HorseHeaders.CHANNEL_DESTROY_IDLE_SECONDS, o.AutoDestroyIdleSeconds.Value.ToString());
             }
 
             if (verifyResponse)

@@ -92,12 +92,8 @@ namespace Horse.Messaging.Server.Channels
 
             _destoryTimer = new Timer(s =>
             {
-                if (Options.AutoDestroy &&
-                    DateTime.UtcNow - LastPublishDate > TimeSpan.FromSeconds(30) &&
-                    _clients.Count() == 0)
-                {
+                if (Options.AutoDestroy && DateTime.UtcNow - LastPublishDate > TimeSpan.FromSeconds(options.AutoDestroyIdleSeconds) && _clients.Count() == 0)
                     Rider.Channel.Remove(this);
-                }
             }, null, 15000, 15000);
         }
 
@@ -133,6 +129,10 @@ namespace Horse.Messaging.Server.Channels
                 string value = initialMessage.Trim();
                 Options.SendLastMessageAsInitial = value.Equals("TRUE", StringComparison.CurrentCultureIgnoreCase) || value == "1";
             }
+            
+            string idleSeconds = message.FindHeader(HorseHeaders.CHANNEL_DESTROY_IDLE_SECONDS);
+            if (!string.IsNullOrEmpty(idleSeconds))
+                Options.AutoDestroyIdleSeconds = Convert.ToInt32(idleSeconds.Trim());
         }
 
         #endregion
