@@ -80,7 +80,7 @@ await client.Queue.SetOptions("queueName", opt =>
 
 And there are some other ways to change (actually to initialize) options of a queue that are explained in Creating Queues section below. 
 
-### Creating Queues
+### Creating Queue
 
 Creating queue from both server and client is possible. We won't discuss creating queues from server side in here.
 In most situations, we need to create queues over clients. And sometimes from an administration panel, you can use Horse Jockey it.
@@ -118,7 +118,9 @@ server understands the request of your queue initialization and initializes the 
 In conclusion, mostly you do not use Create method of queue operators and manage your queue creations automatically by producer and consumer attributes.
 Here are sample codes:
 
-**Creating queues manually via client**
+
+**Creating Queue From Client**
+
 ```csharp
 HorseClient client = new HorseClient();
 await client.ConnectAsync("horse://localhost:port");
@@ -128,7 +130,8 @@ client.Queue.Create("QueueName", opt =>
 });
 ```
 
-**Creating queues by producing messages**
+**Creating Queue By Producing Message**
+
 ```csharp
 [QueueName("demo-queue")]
 [QueueType(MessagingQueueType.Push)]
@@ -142,7 +145,8 @@ await client.ConnectAsync("horse://localhost:port");
 client.Queue.PushJson(new Model { /* stuff .. */ });
 ```
 
-**Creating queues by consuming messages**
+**Creating Queue By Consuming Message**
+
 ```csharp
 [QueueName("demo-queue")]
 [QueueType(MessagingQueueType.Push)]
@@ -197,6 +201,81 @@ In pull state queues, each message is sent to only one consumer at same time.
 
 ### Memory and Persistent Queues
 
-### Infrastructure
+Technically, it's possible and easy to create your own queue management system.
+And there might unlimited kind of queues in same server at same time.
+By default, Horse supports two kind of queues: Memory and Persistent.
+Memory queues keeps all data only in memory and the queue messages are lost when server restarts.
+Horse's default persisent queues keeps messages in HQFS (Horse Queue File System).
+Both queues keeps all messages in memory.
+Even you are using persistent queues, Horse reads all messages from disk and keeps your messages in memory too.
+
+#### Horse Queue File System
+
+HQFS keeps messages in a file as binary data.
+Message consume operations write a new flag for the message, instead of finding and replacing the data.
+That system gives you consuming performance on persistent queues.
+And a shrink operation works always in periodically.
+It shrinks your queue file on disk. Shrink operation may cause queue lock for 500 milliseconds.
+It's recommended to keep shrink period options above 60 seconds or more. It's 15 minutes by default.
+If you increase the duration, you might require more disk space depending on the number of messages processed in the queue.
+
+### Queue Infrastructure
+
+Each queue is represented by a C# class with some components. Each component is usually implements an interface or base class.
+These components consists of two main topics: Queue States and Queue Managers.
+
+#### Queue States
+
+Queue states manage how messages are being processed. There are default queue states Push, Pull and Round Robin.
+Each queue state implements IQueueState interface. If you want to create your own queue state, you must implement that interface.
+
+#### Queue Managers
+
+Queue Manager is an implementation. Each queue manager must implement IHorseQueueManager interface.
+A queue manager includes message stores, queue synchronizer, queue delivery handler and some other functionalities.
+
+Each queue store implements IQueueMessageStore interface. That store determines how the message will be stored, in memory,
+in file or sql server etc.
+
+Queue synchronizer must implement IQueueSynchronizer interface. It manages how messages are being synced between cluster nodes.
+If you do not have really good reason, we strongly recommend to use default synchronizers.
+
+Queue delivery handlers implement IQueueDeliveryHandler interface. That handlers manage lifecycle of a queue message.
+Interface has some event methods returns decisions about the events.
 
 ### Event Handlers
+
+Subscribing Horse event from client is possible but we will describe server side event handlers in this section.
+In order to watch the events from a client, you should read Events topic.
+
+All Horse components supports event handler. For queue events you can use IQueueEventHandler implementation.
+There are 5 different events in that interface:
+
+1. **OnCreated :** Executed when a new queue is created.
+2. **OnRemoved :** Executed when a queue is removed.
+3. **OnConsumerSubscribed :** Executed when a client is subscribed to a queue.
+4. **OnConsumerUnsubscribed :** Executed when a client is unsubscribed from a queue.
+5. **OnStatusChanged :** Executed when a queue status changed.
+
+When you implement your own class you should register your class to Horse Server.
+
+```csharp
+HorseRider rider = HorseRiderBuilder.Create().Build();
+rider.Queue.EventHandlers.Add(new YourEventHandler());
+```
+
+An addition, there is one more event implementation for queues. That implementation for queue messaging events.
+You must implement IQueueMessageEventHandler interface. That interface has 5 different events:
+
+1. **OnProduced :** Executed when a new message is produced to a queue.
+2. **OnConsumed :** Executed when a message is consumed from a queue.
+3. **OnAcknowledged :** Executed when a consumer sends an acknowledge for a consumed message.
+4. **MessageTimedOut :** Executed when a message is expired (not consumed) and removed from a queue.
+5. **OnAcknowledgeTimedOut :** Executed when a consumer consumed message and did not send acknowledge message.
+
+And registering that event handler to Horse is similar.
+
+```csharp
+HorseRider rider = HorseRiderBuilder.Create().Build();
+rider.Queue.MessageHandlers.Add(new YourMessageEventHandler());
+```
