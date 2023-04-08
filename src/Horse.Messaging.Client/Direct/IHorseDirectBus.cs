@@ -9,7 +9,7 @@ namespace Horse.Messaging.Client.Direct
     public interface IHorseDirectBus<TIdentifier> : IHorseDirectBus
     {
     }
-    
+
     /// <summary>
     /// Implementation for direct messages and requests
     /// </summary>
@@ -25,10 +25,10 @@ namespace Horse.Messaging.Client.Direct
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> SendAsync(string target,
-                                    ushort contentType,
-                                    MemoryStream content,
-                                    bool waitForCommit,
-                                    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+            ushort contentType,
+            MemoryStream content,
+            bool waitForCommit,
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Sends a message to receivers with specified name
@@ -40,10 +40,10 @@ namespace Horse.Messaging.Client.Direct
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> SendByName(string name,
-                                     ushort contentType,
-                                     MemoryStream content,
-                                     bool waitForCommit,
-                                     IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+            ushort contentType,
+            MemoryStream content,
+            bool waitForCommit,
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Sends a message to receivers with specified type
@@ -55,10 +55,10 @@ namespace Horse.Messaging.Client.Direct
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> SendByType(string type,
-                                     ushort contentType,
-                                     MemoryStream content,
-                                     bool waitAcknowledge,
-                                     IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+            ushort contentType,
+            MemoryStream content,
+            bool waitAcknowledge,
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Sends a message to a receiver by id
@@ -70,10 +70,10 @@ namespace Horse.Messaging.Client.Direct
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> SendById(string id,
-                                   ushort contentType,
-                                   MemoryStream content,
-                                   bool waitAcknowledge,
-                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+            ushort contentType,
+            MemoryStream content,
+            bool waitAcknowledge,
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Sends a JSON message to targets by name
@@ -85,7 +85,7 @@ namespace Horse.Messaging.Client.Direct
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> SendJsonByName<T>(string name, ushort contentType, T model, bool waitAcknowledge,
-                                            IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Sends a JSON message to targets by target
@@ -97,7 +97,7 @@ namespace Horse.Messaging.Client.Direct
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> SendJsonByType<T>(string type, ushort contentType, T model, bool waitAcknowledge,
-                                            IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Sends a JSON message to a target
@@ -109,7 +109,7 @@ namespace Horse.Messaging.Client.Direct
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> SendJsonById<T>(string id, ushort contentType, T model, bool waitAcknowledge,
-                                          IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Sends a JSON message to a direct receiver
@@ -119,8 +119,8 @@ namespace Horse.Messaging.Client.Direct
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> SendJson(object model,
-                                   bool waitForAcknowledge = false,
-                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+            bool waitForAcknowledge = false,
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Sends a request to a target
@@ -131,9 +131,9 @@ namespace Horse.Messaging.Client.Direct
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseMessage> Request(string target,
-                                   ushort contentType,
-                                   MemoryStream content,
-                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+            ushort contentType,
+            MemoryStream content,
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Sends a request to a target
@@ -144,9 +144,9 @@ namespace Horse.Messaging.Client.Direct
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseMessage> Request(string target,
-                                   ushort contentType,
-                                   string content,
-                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+            ushort contentType,
+            string content,
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Sends an empty request to a target
@@ -156,8 +156,8 @@ namespace Horse.Messaging.Client.Direct
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseMessage> Request(string target,
-                                   ushort contentType,
-                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+            ushort contentType,
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Sends a JSON message to a specified direct receiver
@@ -169,10 +169,10 @@ namespace Horse.Messaging.Client.Direct
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult> SendDirectJsonAsync<T>(string target,
-                                                 ushort contentType,
-                                                 T model,
-                                                 bool waitForAcknowledge = false,
-                                                 IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+            ushort contentType,
+            T model,
+            bool waitForAcknowledge = false,
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Sends a JSON request and waits for it's response
@@ -182,7 +182,20 @@ namespace Horse.Messaging.Client.Direct
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns>Response message</returns>
         Task<HorseResult<TResponse>> RequestJsonAsync<TResponse>(object request,
-                                                                 IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+
+        /// <summary>
+        /// Sends a JSON request to a specific target and waits for it's response
+        /// </summary>
+        /// <param name="target">Receiver target</param>
+        /// <param name="request">Request model</param>
+        /// <typeparam name="TRequest">Should be a class. Primitive types are not supported</typeparam>
+        /// <typeparam name="TResponse">Response model</typeparam>
+        /// <param name="messageHeaders">Additional message headers</param>
+        /// <returns></returns>
+        Task<HorseResult<TResponse>> RequestJsonAsync<TRequest, TResponse>(string target,
+            TRequest request,
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
         /// <summary>
         /// Sends a JSON request to a specific target and waits for it's response
@@ -195,8 +208,8 @@ namespace Horse.Messaging.Client.Direct
         /// <param name="messageHeaders">Additional message headers</param>
         /// <returns></returns>
         Task<HorseResult<TResponse>> RequestJsonAsync<TRequest, TResponse>(string target,
-                                                                           ushort contentType,
-                                                                           TRequest request,
-                                                                           IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+            ushort contentType,
+            TRequest request,
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
     }
 }
