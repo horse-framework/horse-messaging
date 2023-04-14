@@ -487,6 +487,8 @@ namespace Horse.Messaging.Client
                     if (!RemoteHosts.Contains(host, StringComparer.InvariantCultureIgnoreCase))
                         RemoteHosts.Add(host);
 
+                SetAutoReconnect(true);
+                
                 DnsResolver resolver = new DnsResolver();
                 Connect(resolver.Resolve(host));
             }
@@ -502,7 +504,7 @@ namespace Horse.Messaging.Client
         /// <summary>
         /// Connects to well defined remote host
         /// </summary>
-        internal void Connect(DnsInfo host)
+        private void Connect(DnsInfo host)
         {
             if (string.IsNullOrEmpty(_clientId))
                 _clientId = UniqueIdGenerator.Create();
@@ -512,7 +514,6 @@ namespace Horse.Messaging.Client
                 throw new NotSupportedException("Only Horse protocol is supported");
                 */
 
-            SetAutoReconnect(true);
             try
             {
                 _socket = new HorseSocket(this, _data);
@@ -549,6 +550,8 @@ namespace Horse.Messaging.Client
                     if (!RemoteHosts.Contains(host, StringComparer.InvariantCultureIgnoreCase))
                         RemoteHosts.Add(host);
 
+                SetAutoReconnect(true);
+                
                 DnsResolver resolver = new DnsResolver();
                 return ConnectAsync(resolver.Resolve(host));
             }
@@ -566,12 +569,11 @@ namespace Horse.Messaging.Client
         /// <summary>
         /// Connects to well defined remote host
         /// </summary>
-        internal async Task ConnectAsync(DnsInfo host)
+        private async Task ConnectAsync(DnsInfo host)
         {
             if (string.IsNullOrEmpty(_clientId))
                 _clientId = UniqueIdGenerator.Create();
 
-            SetAutoReconnect(true);
             try
             {
                 _socket = new HorseSocket(this, _data);
