@@ -29,7 +29,7 @@ namespace Benchmark.Queue.Consumer
             client.MessageReceived += (c, m) => _counter.Increase();
             client.AutoAcknowledge = true;
             client.Connect("horse://localhost:27001");
-            client.Queue.Subscribe("TestQueue", true);
+            _ = client.Queue.Subscribe("TestQueue", true);
 
             Console.ReadLine();
             client.Disconnect();

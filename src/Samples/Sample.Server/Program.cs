@@ -1,4 +1,8 @@
-﻿using Horse.Messaging.Data;
+﻿using System.Threading.Tasks;
+using Horse.Messaging.Client;
+using Horse.Messaging.Client.Queues;
+using Horse.Messaging.Client.Queues.Annotations;
+using Horse.Messaging.Data;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
@@ -6,32 +10,33 @@ using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Routing;
 using Horse.Server;
 
+[QueueName("demo-queue")]
+[QueueType(MessagingQueueType.Push)]
+public class Model
+{
+    public string Foo { get; set; }
+}
+
+public class ModelConsumer : IQueueConsumer<Model>
+{
+    public Task Consume(HorseMessage message, Model model, HorseClient client)
+    {
+        throw new System.NotImplementedException();
+    }
+}
+
 namespace Sample.Server
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             HorseRider rider = HorseRiderBuilder.Create()
                 .ConfigureQueues(cfg =>
                 {
                     cfg.Options.Type = QueueType.Push;
-                    cfg.EventHandlers.Add(new QueueEventHandler());
-
-                    /* cfg.UseMemoryQueues(c =>
-                    {
-                        c.Options.CommitWhen = CommitWhen.AfterReceived;
-                        c.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-                        c.Options.PutBack = PutBackDecision.Regular;
-                    }); */
-                    
-                    cfg.UsePersistentQueues(null, c =>
-                    {
-                        c.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-                        c.Options.CommitWhen = CommitWhen.AfterReceived;
-                    });
+                    cfg.Options.MessageLimit = 400;
                 })
-                .ConfigureClients(cfg => { cfg.Handlers.Add(new ClientHandler()); })
                 .Build();
 
             IRouter router = rider.Router.Find("test");
@@ -45,7 +50,7 @@ namespace Sample.Server
                 Priority = 400,
                 RouteMethod = RouteMethod.Distribute
             });*/
-            
+
             /*
 
             rider.Transaction.CreateContainer("TransactionName",
@@ -58,6 +63,14 @@ namespace Sample.Server
             server.Options.PingInterval = 10;
             server.UseRider(rider);
             server.Run(26222);
+
+            HorseClient client = new HorseClientBuilder()
+                .AddHost("horse://localhost:post")
+                .AddSingletonConsumer<ModelConsumer>()
+                .Build();
+
+            await client.ConnectAsync();
+
         }
     }
 }

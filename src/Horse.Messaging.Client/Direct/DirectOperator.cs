@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Horse.Messaging.Client.Direct.Annotations;
 using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Protocol;
 
@@ -17,7 +18,7 @@ namespace Horse.Messaging.Client.Direct
         private readonly TypeDescriptorContainer<DirectTypeDescriptor> _descriptorContainer;
 
         internal List<DirectHandlerRegistration> Registrations { get; } = new List<DirectHandlerRegistration>();
-        
+
         internal DirectOperator(HorseClient client)
         {
             _client = client;
@@ -31,8 +32,8 @@ namespace Horse.Messaging.Client.Direct
                 return;
 
             object model = reg.MessageType == typeof(string)
-                               ? message.GetStringContent()
-                               : _client.MessageSerializer.Deserialize(message, reg.MessageType);
+                ? message.GetStringContent()
+                : _client.MessageSerializer.Deserialize(message, reg.MessageType);
 
             try
             {
@@ -50,7 +51,7 @@ namespace Horse.Messaging.Client.Direct
         /// Sends a memory stream message
         /// </summary>
         public async Task<HorseResult> SendAsync(string target, ushort contentType, MemoryStream content, bool waitAcknowledge,
-                                                 IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             HorseMessage message = new HorseMessage();
             message.SetTarget(target);
@@ -71,7 +72,7 @@ namespace Horse.Messaging.Client.Direct
         /// Sends a JSON message by receiver name
         /// </summary>
         public async Task<HorseResult> SendJsonByName<T>(string name, ushort contentType, T model, bool waitAcknowledge,
-                                                         IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             return await SendJsonById("@name:" + name, contentType, model, waitAcknowledge, messageHeaders);
         }
@@ -80,7 +81,7 @@ namespace Horse.Messaging.Client.Direct
         /// Sends a JSON message by receiver type
         /// </summary>
         public async Task<HorseResult> SendJsonByType<T>(string type, ushort contentType, T model, bool waitAcknowledge,
-                                                         IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             return await SendJsonById("@type:" + type, contentType, model, waitAcknowledge, messageHeaders);
         }
@@ -89,7 +90,7 @@ namespace Horse.Messaging.Client.Direct
         /// Sends a JSON message by full name
         /// </summary>
         public async Task<HorseResult> SendJsonById<T>(string id, ushort contentType, T model, bool waitAcknowledge,
-                                                       IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             HorseMessage message = new HorseMessage();
             message.SetTarget(id);
@@ -134,7 +135,7 @@ namespace Horse.Messaging.Client.Direct
         /// Sends a memory stream message by receiver name
         /// </summary>
         public async Task<HorseResult> SendByName(string name, ushort contentType, MemoryStream content, bool waitAcknowledge,
-                                                  IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             return await SendById("@name:" + name, contentType, content, waitAcknowledge, messageHeaders);
         }
@@ -143,7 +144,7 @@ namespace Horse.Messaging.Client.Direct
         /// Sends a memory stream message by receiver type
         /// </summary>
         public async Task<HorseResult> SendByType(string type, ushort contentType, MemoryStream content, bool waitAcknowledge,
-                                                  IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             return await SendById("@type:" + type, contentType, content, waitAcknowledge, messageHeaders);
         }
@@ -152,7 +153,7 @@ namespace Horse.Messaging.Client.Direct
         /// Sends a memory stream message by full name
         /// </summary>
         private async Task<HorseResult> SendById(string id, ushort contentType, MemoryStream content, bool waitAcknowledge,
-                                                 IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             HorseMessage message = new HorseMessage();
             message.SetTarget(id);
@@ -178,7 +179,7 @@ namespace Horse.Messaging.Client.Direct
         /// Sends a request to target with a JSON model, waits response
         /// </summary>
         public Task<HorseResult<TResponse>> RequestJson<TResponse>(object model,
-                                                                   IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             return RequestJson<TResponse>(null, null, model, messageHeaders);
         }
@@ -187,18 +188,27 @@ namespace Horse.Messaging.Client.Direct
         /// Sends a request to target with a JSON model, waits response
         /// </summary>
         public async Task<HorseResult<TResponse>> RequestJson<TResponse>(string target, ushort? contentType, object model,
-                                                                         IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             DirectTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(model.GetType());
 
             if (!string.IsNullOrEmpty(target))
+            {
                 descriptor.DirectTarget = target;
+
+                if (target.StartsWith("@type:", StringComparison.InvariantCultureIgnoreCase))
+                    descriptor.FindBy = FindTargetBy.Type;
+                else if (target.StartsWith("@name:", StringComparison.InvariantCultureIgnoreCase))
+                    descriptor.FindBy = FindTargetBy.Name;
+                else
+                    descriptor.FindBy = FindTargetBy.Id;
+            }
 
             if (contentType.HasValue)
                 descriptor.ContentType = contentType;
-            
+
             HorseMessage message = descriptor.CreateMessage();
-            
+
             message.Serialize(model, _client.MessageSerializer);
 
             if (messageHeaders != null)
@@ -219,7 +229,7 @@ namespace Horse.Messaging.Client.Direct
         /// Sends a request to target, waits response
         /// </summary>
         public async Task<HorseMessage> Request(string target, ushort contentType, MemoryStream content,
-                                                IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             HorseMessage message = new HorseMessage(MessageType.DirectMessage, target, contentType);
             message.Content = content;
@@ -235,7 +245,7 @@ namespace Horse.Messaging.Client.Direct
         /// Sends a request to target, waits response
         /// </summary>
         public async Task<HorseMessage> Request(string target, ushort contentType, string content,
-                                                IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             HorseMessage message = new HorseMessage(MessageType.DirectMessage, target, contentType);
             message.SetStringContent(content);
@@ -251,7 +261,7 @@ namespace Horse.Messaging.Client.Direct
         /// Sends a request to without body
         /// </summary>
         public async Task<HorseMessage> Request(string target, ushort contentType,
-                                                IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             HorseMessage message = new HorseMessage(MessageType.DirectMessage, target, contentType);
 

@@ -118,6 +118,12 @@ namespace Horse.Messaging.Client.Direct
         }
 
         /// <inheritdoc />
+        public Task<HorseResult<TResponse>> RequestJsonAsync<TRequest, TResponse>(string target, TRequest request, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        {
+            return _client.Direct.RequestJson<TResponse>(target, null, request, messageHeaders);
+        }
+
+        /// <inheritdoc />
         public Task<HorseResult<TResponse>> RequestJsonAsync<TRequest, TResponse>(string target, ushort contentType, TRequest request, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
             return _client.Direct.RequestJson<TResponse>(target, contentType, request, messageHeaders);

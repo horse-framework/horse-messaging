@@ -320,5 +320,9 @@ namespace Horse.Messaging.Protocol
         /// </summary>
         public const string CHANNEL_INITIAL_MESSAGE = "Channel-Initial-Message";
 
+        /// <summary>
+        /// "Channel-Destroy-Idle-Seconds"
+        /// </summary>
+        public const string CHANNEL_DESTROY_IDLE_SECONDS = "Channel-Destroy-Idle-Seconds";
     }
 }

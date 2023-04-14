@@ -10,6 +10,7 @@ public class ChannelConfiguration
     public ulong MessageSizeLimit { get; set; }
     public int ClientLimit { get; set; }
     public bool AutoDestroy { get; set; }
+    public bool SendLastMessageAsInitial { get; set; }
 
     public static ChannelConfiguration Create(HorseChannel channel)
     {
@@ -20,8 +21,8 @@ public class ChannelConfiguration
             Topic = channel.Topic,
             AutoDestroy = channel.Options.AutoDestroy,
             ClientLimit = channel.Options.ClientLimit,
-            MessageSizeLimit = channel.Options.MessageSizeLimit
+            MessageSizeLimit = channel.Options.MessageSizeLimit,
+            SendLastMessageAsInitial = channel.Options.SendLastMessageAsInitial
         };
-
     }
 }

@@ -33,6 +33,12 @@ namespace Horse.Messaging.Server.Channels
         public bool SendLastMessageAsInitial { get; set; }
 
         /// <summary>
+        /// If auto destroy is enabled, the idle time before destroy.
+        /// Idle time means there is active produce or consume operations last n seconds.
+        /// </summary>
+        public int AutoDestroyIdleSeconds { get; set; } = 60;
+
+        /// <summary>
         /// Clones options and return new copy
         /// </summary>
         public static HorseChannelOptions Clone(HorseChannelOptions other)
@@ -42,7 +48,8 @@ namespace Horse.Messaging.Server.Channels
                 ClientLimit = other.ClientLimit,
                 MessageSizeLimit = other.MessageSizeLimit,
                 AutoDestroy = other.AutoDestroy,
-                SendLastMessageAsInitial = other.SendLastMessageAsInitial
+                SendLastMessageAsInitial = other.SendLastMessageAsInitial,
+                AutoDestroyIdleSeconds = other.AutoDestroyIdleSeconds
             };
         }
     }
