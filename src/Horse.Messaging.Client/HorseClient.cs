@@ -145,7 +145,12 @@ namespace Horse.Messaging.Client
         /// Default value is false.
         /// </summary>
         public bool ThrowExceptions { get; set; } = false;
-        
+
+        /// <summary>
+        /// Setting true disables Nagle Algorithm
+        /// </summary>
+        public bool? NoDelay { get; set; }
+
         /// <summary>
         /// Maximum time to wait response message
         /// </summary>

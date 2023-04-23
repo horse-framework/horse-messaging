@@ -12,6 +12,8 @@ namespace Horse.Messaging.Extensions.Client
     {
         /// <summary>
         /// Configure your horse client.
+        /// That configuration does not enable Horse Client implementation by itself.
+        /// You MUST use UseHorse method to complete the implementation.
         /// </summary>
         /// <param name="hostBuilder">IHostBuilder</param>
         /// <param name="configureDelegate">Configure delegate</param>
@@ -22,7 +24,9 @@ namespace Horse.Messaging.Extensions.Client
         }
 
         /// <summary>
-        /// Configure your horse client.
+        /// Adds additional configuration to your Horse Client.
+        /// That configuration does not enable Horse Client implementation by itself.
+        /// You MUST use UseHorse method to complete the implementation.
         /// </summary>
         /// <param name="hostBuilder">IHostBuilder</param>
         /// <param name="configureDelegate">Configure delegate</param>
@@ -49,12 +53,13 @@ namespace Horse.Messaging.Extensions.Client
         /// <returns></returns>
         public static IHostBuilder UseHorse(this IHostBuilder host, Action<HorseClientBuilder> cfg, bool autoConnect = true)
         {
-            HorseClientBuilder builder = new HorseClientBuilder(new HorseClient());
-
             host.ConfigureServices((context, services) =>
             {
-                builder.AddServices(services);
-                cfg(builder);
+                services.AddHorseBus(b =>
+                {
+                    b.AddServices(services);
+                    cfg(b);
+                });
 
                 if (autoConnect)
                     services.AddHostedService(p => new HorseRunnerHostedService(p));
@@ -72,17 +77,17 @@ namespace Horse.Messaging.Extensions.Client
         /// <returns></returns>
         public static IHostBuilder UseHorse(this IHostBuilder host, Action<HostBuilderContext, HorseClientBuilder> cfg, bool autoConnect = true)
         {
-            HorseClientBuilder builder = new HorseClientBuilder(new HorseClient());
-
             host.ConfigureServices((context, services) =>
             {
-                builder.AddServices(services);
-                cfg(context, builder);
+                services.AddHorseBus(b =>
+                {
+                    b.AddServices(services);
+                    cfg(context, b);
+                });
 
                 if (autoConnect)
                     services.AddHostedService(p => new HorseRunnerHostedService(p));
             });
-
             return host;
         }
     }

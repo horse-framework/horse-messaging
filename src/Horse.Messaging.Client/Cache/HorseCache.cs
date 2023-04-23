@@ -27,7 +27,7 @@ namespace Horse.Messaging.Client.Cache
         #region Get
 
         /// <inheritdoc />
-        public async Task<string> GetString(string key)
+        public async Task<HorseCacheData<string>> GetString(string key)
         {
             HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);
             HorseResult result = await _client.SendAndGetAck(message);
@@ -35,11 +35,13 @@ namespace Horse.Messaging.Client.Cache
             if (result == null || result.Code != HorseResultCode.Ok)
                 return null;
 
-            return result.Message.GetStringContent();
+            HorseCacheData<string> data = CreateCacheData<string>(key, message);
+            data.Value = result.Message.GetStringContent();
+            return data;
         }
 
         /// <inheritdoc />
-        public async Task<byte[]> GetData(string key)
+        public async Task<HorseCacheData<byte[]>> GetData(string key)
         {
             HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);
             HorseResult result = await _client.SendAndGetAck(message);
@@ -47,11 +49,13 @@ namespace Horse.Messaging.Client.Cache
             if (result == null || result.Code != HorseResultCode.Ok)
                 return null;
 
-            return result.Message.Content.ToArray();
+            HorseCacheData<byte[]> data = CreateCacheData<byte[]>(key, message);
+            data.Value = result.Message.Content.ToArray();
+            return data;
         }
 
         /// <inheritdoc />
-        public async Task<TData> Get<TData>(string key)
+        public async Task<HorseCacheData<TData>> Get<TData>(string key)
         {
             HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);
             HorseModelResult<TData> result = await _client.SendAndGetJson<TData>(message);
@@ -59,7 +63,27 @@ namespace Horse.Messaging.Client.Cache
             if (result == null)
                 return default;
 
-            return result.Model;
+            HorseCacheData<TData> data = CreateCacheData<TData>(key, message);
+            data.Value = result.Model;
+            return data;
+        }
+
+        private static HorseCacheData<T> CreateCacheData<T>(string key, HorseMessage message)
+        {
+            string expiry = message.FindHeader(HorseHeaders.EXPIRY);
+            string warning = message.FindHeader(HorseHeaders.WARNING);
+            string warnCount = message.FindHeader(HorseHeaders.WARN_COUNT);
+
+            HorseCacheData<T> data = new HorseCacheData<T>
+            {
+                Key = key,
+                IsFirstWarnedClient = message.HighPriority,
+                Expiration = string.IsNullOrEmpty(expiry) ? 0 : Convert.ToInt64(expiry),
+                WarningDate = string.IsNullOrEmpty(warning) ? 0 : Convert.ToInt64(warning),
+                WarnCount = string.IsNullOrEmpty(warnCount) ? 0 : Convert.ToInt32(warnCount)
+            };
+
+            return data;
         }
 
         /// <summary>
@@ -69,11 +93,12 @@ namespace Horse.Messaging.Client.Cache
         {
             HorseMessage message = new HorseMessage();
             message.Type = MessageType.Cache;
-            message.SetMessageId( _client.UniqueIdGenerator.Create());
+            message.SetMessageId(_client.UniqueIdGenerator.Create());
             message.ContentType = KnownContentTypes.GetCacheList;
             message.AddHeader(HorseHeaders.FILTER, filter);
             return await _client.SendAndGetJson<List<CacheInformation>>(message);
         }
+
         #endregion
 
         #region Set

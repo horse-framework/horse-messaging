@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Protocol.Models;
 
 namespace Horse.Messaging.Client.Cache
 {
@@ -18,20 +21,27 @@ namespace Horse.Messaging.Client.Cache
         /// Gets an item from cache
         /// </summary>
         /// <param name="key">Cache key</param>
-        Task<TData> Get<TData>(string key);
+        Task<HorseCacheData<TData>> Get<TData>(string key);
 
         /// <summary>
         /// Gets a string from cache
         /// </summary>
         /// <param name="key">Cache key</param>
-        Task<string> GetString(string key);
+        Task<HorseCacheData<string>> GetString(string key);
 
         /// <summary>
         /// Gets the binary data from cache
         /// </summary>
         /// <param name="key">Cache key</param>
-        Task<byte[]> GetData(string key);
+        Task<HorseCacheData<byte[]>> GetData(string key);
 
+        /// <summary>
+        /// Lists all cache keys
+        /// </summary>
+        /// <param name="filter">Cache key filter. Supports * character for filtering.</param>
+        /// <returns></returns>
+        Task<HorseModelResult<List<CacheInformation>>> List(string filter = null);
+        
         /// <summary>
         /// Sets an item to cache store
         /// </summary>
