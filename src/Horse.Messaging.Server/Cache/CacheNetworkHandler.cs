@@ -66,11 +66,11 @@ namespace Horse.Messaging.Server.Cache
                     if (item.Tags != null && item.Tags.Length > 0)
                         response.AddHeader(HorseHeaders.TAG, item.Tags.Aggregate((t, i) => $"{t},{i}"));
 
-                    response.AddHeader(HorseHeaders.EXPIRY, item.Expiration.ToUnixMilliseconds().ToString());
+                    response.AddHeader(HorseHeaders.EXPIRY, item.Expiration.ToUnixSeconds().ToString());
 
                     if (item.ExpirationWarning.HasValue)
                     {
-                        response.AddHeader(HorseHeaders.WARNING, item.ExpirationWarning.Value.ToUnixMilliseconds().ToString());
+                        response.AddHeader(HorseHeaders.WARNING, item.ExpirationWarning.Value.ToUnixSeconds().ToString());
                         if (item.ExpirationWarnCount > 0)
                             response.AddHeader(HorseHeaders.WARN_COUNT, item.ExpirationWarnCount.ToString());
                     }

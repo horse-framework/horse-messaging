@@ -108,8 +108,8 @@ namespace Horse.Messaging.Server.Cache
                     list.Add(new CacheInformation
                     {
                         Key = item.Key,
-                        Expiration = item.Expiration.ToUnixMilliseconds(),
-                        WarningDate = item.ExpirationWarning?.ToUnixMilliseconds() ?? 0,
+                        Expiration = item.Expiration.ToUnixSeconds(),
+                        WarningDate = item.ExpirationWarning?.ToUnixSeconds() ?? 0,
                         WarnCount = item.ExpirationWarnCount,
                         Tags = item.Tags ?? Array.Empty<string>()
                     });

@@ -11,12 +11,12 @@
         public string Key { get; set; }
         
         /// <summary>
-        /// Key expiration in unix milliseconds
+        /// Key expiration in unix seconds
         /// </summary>
         public long Expiration { get; set; }
         
         /// <summary>
-        /// Key expiration warning date in unix milliseconds
+        /// Key expiration warning date in unix seconds
         /// </summary>
         public long WarningDate { get; set; }
 

@@ -23,12 +23,12 @@ public class HorseCacheData<T>
     public string Key { get; set; }
 
     /// <summary>
-    /// Cache expiration data in unix milliseconds
+    /// Cache expiration data in unix seconds
     /// </summary>
     public long Expiration { get; internal set; }
 
     /// <summary>
-    /// If exists, cache warning date in unix milliseconds
+    /// If exists, cache warning date in unix seconds
     /// </summary>
     public long? WarningDate { get; internal set; }
 
