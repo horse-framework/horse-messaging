@@ -73,6 +73,7 @@ namespace Horse.Messaging.Client.Cache
             string expiry = message.FindHeader(HorseHeaders.EXPIRY);
             string warning = message.FindHeader(HorseHeaders.WARNING);
             string warnCount = message.FindHeader(HorseHeaders.WARN_COUNT);
+            string tags = message.FindHeader(HorseHeaders.TAG);
 
             HorseCacheData<T> data = new HorseCacheData<T>
             {
@@ -80,7 +81,8 @@ namespace Horse.Messaging.Client.Cache
                 IsFirstWarnedClient = message.HighPriority,
                 Expiration = string.IsNullOrEmpty(expiry) ? 0 : Convert.ToInt64(expiry),
                 WarningDate = string.IsNullOrEmpty(warning) ? 0 : Convert.ToInt64(warning),
-                WarnCount = string.IsNullOrEmpty(warnCount) ? 0 : Convert.ToInt32(warnCount)
+                WarnCount = string.IsNullOrEmpty(warnCount) ? 0 : Convert.ToInt32(warnCount),
+                Tags = string.IsNullOrEmpty(tags) ? Array.Empty<string>() : tags.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             };
 
             return data;

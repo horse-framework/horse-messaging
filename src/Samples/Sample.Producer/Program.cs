@@ -39,7 +39,6 @@ namespace Sample.Producer
             builder.SetResponseTimeout(TimeSpan.FromSeconds(300));
             HorseClient client = builder.Build();
             client.NoDelay = false;
-            client.QuickTcpAck = false;
             client.Connected += horseClient => Console.WriteLine("connected");
             client.ResponseTimeout = TimeSpan.FromSeconds(300);
             await client.Direct.RequestJson<RequestModel>(new RequestModel());

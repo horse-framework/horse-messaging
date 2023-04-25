@@ -24,5 +24,10 @@
         /// Count value of how many times expiration warned
         /// </summary>
         public int WarnCount { get; set; }
+
+        /// <summary>
+        /// Tags
+        /// </summary>
+        public string[] Tags { get; set; }
     }
 }

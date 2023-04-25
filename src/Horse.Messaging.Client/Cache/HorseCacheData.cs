@@ -36,4 +36,9 @@ public class HorseCacheData<T>
     /// If cache expiration warned more than one, this is the warning value
     /// </summary>
     public int WarnCount { get; internal set; }
+
+    /// <summary>
+    /// Key Tags 
+    /// </summary>
+    public string[] Tags { get; set; }
 }

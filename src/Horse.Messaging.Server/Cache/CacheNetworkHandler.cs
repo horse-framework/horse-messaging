@@ -63,6 +63,9 @@ namespace Horse.Messaging.Server.Cache
                     HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
                     response.SetSource(message.Target);
 
+                    if (item.Tags != null && item.Tags.Length > 0)
+                        response.AddHeader(HorseHeaders.TAG, item.Tags.Aggregate((t, i) => $"{t},{i}"));
+
                     response.AddHeader(HorseHeaders.EXPIRY, item.Expiration.ToUnixMilliseconds().ToString());
 
                     if (item.ExpirationWarning.HasValue)

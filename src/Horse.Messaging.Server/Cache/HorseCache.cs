@@ -110,7 +110,8 @@ namespace Horse.Messaging.Server.Cache
                         Key = item.Key,
                         Expiration = item.Expiration.ToUnixMilliseconds(),
                         WarningDate = item.ExpirationWarning?.ToUnixMilliseconds() ?? 0,
-                        WarnCount = item.ExpirationWarnCount
+                        WarnCount = item.ExpirationWarnCount,
+                        Tags = item.Tags ?? Array.Empty<string>()
                     });
                 }
             }
