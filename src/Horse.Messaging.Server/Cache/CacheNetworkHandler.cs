@@ -53,7 +53,7 @@ namespace Horse.Messaging.Server.Cache
                         }
                     }
 
-                    HorseCacheItem item = _cache.Get(message.Target);
+                    HorseCacheItem item = _cache.Get(message.Target, out bool firstWarningReceiver);
                     if (item == null)
                     {
                         await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
@@ -62,12 +62,27 @@ namespace Horse.Messaging.Server.Cache
 
                     HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
                     response.SetSource(message.Target);
+
+                    if (item.Tags != null && item.Tags.Length > 0)
+                        response.AddHeader(HorseHeaders.TAG, item.Tags.Aggregate((t, i) => $"{t},{i}"));
+
+                    response.AddHeader(HorseHeaders.EXPIRY, item.Expiration.ToUnixSeconds().ToString());
+
+                    if (item.ExpirationWarning.HasValue)
+                    {
+                        response.AddHeader(HorseHeaders.WARNING, item.ExpirationWarning.Value.ToUnixSeconds().ToString());
+                        if (item.ExpirationWarnCount > 0)
+                            response.AddHeader(HorseHeaders.WARN_COUNT, item.ExpirationWarnCount.ToString());
+                    }
+
+                    response.HighPriority = firstWarningReceiver;
                     response.Content = item.Value;
+
                     await client.SendAsync(response);
                     _cache.GetEvent.Trigger(client, message.Target);
                     return;
                 }
-                
+
                 //set cache item
                 case KnownContentTypes.SetCache:
                 {
@@ -81,12 +96,21 @@ namespace Horse.Messaging.Server.Cache
                     }
 
                     string messageTimeout = message.FindHeader(HorseHeaders.MESSAGE_TIMEOUT);
+                    string warningDuration = message.FindHeader(HorseHeaders.WARNING_DURATION);
+                    string tags = message.FindHeader(HorseHeaders.TAG);
+
+                    string[] tagNames = string.IsNullOrEmpty(tags) ? Array.Empty<string>() : tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
 
                     TimeSpan timeout = TimeSpan.Zero;
+                    TimeSpan? warning = null;
+
                     if (!string.IsNullOrEmpty(messageTimeout))
                         timeout = TimeSpan.FromSeconds(Convert.ToInt32(messageTimeout));
 
-                    CacheOperation operation = _cache.Set(message.Target, message.Content, timeout);
+                    if (!string.IsNullOrEmpty(warningDuration))
+                        warning = TimeSpan.FromSeconds(Convert.ToInt32(warningDuration));
+
+                    CacheOperation operation = _cache.Set(message.Target, message.Content, timeout, warning, tagNames);
                     switch (operation.Result)
                     {
                         case CacheResult.Ok:
@@ -111,7 +135,7 @@ namespace Horse.Messaging.Server.Cache
                             return;
                     }
                 }
-                    
+
                 //remove cache item
                 case KnownContentTypes.RemoveCache:
                 {
@@ -129,7 +153,7 @@ namespace Horse.Messaging.Server.Cache
                     _cache.RemoveEvent.Trigger(client, message.Target);
                     return;
                 }
-                
+
                 //purge all caches
                 case KnownContentTypes.PurgeCache:
                 {
@@ -142,7 +166,13 @@ namespace Horse.Messaging.Server.Cache
                         }
                     }
 
-                    _cache.Purge();
+                    string tagName = message.FindHeader(HorseHeaders.TAG);
+
+                    if (string.IsNullOrEmpty(tagName))
+                        _cache.Purge();
+                    else
+                        _cache.PurgeByTag(tagName.Trim());
+
                     await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
                     _cache.PurgeEvent.Trigger(client);
                     return;
@@ -155,7 +185,7 @@ namespace Horse.Messaging.Server.Cache
 
                     if (!string.IsNullOrEmpty(filter))
                         caches = caches.Where(x => Filter.CheckMatch(x.Key, filter)).ToList();
-                    
+
                     HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
                     response.ContentType = KnownContentTypes.ChannelList;
                     response.Serialize(caches, _rider.MessageContentSerializer);

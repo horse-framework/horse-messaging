@@ -2,12 +2,9 @@
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
-using Horse.Messaging.Data;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
-using Horse.Messaging.Server.Queues.Delivery;
-using Horse.Messaging.Server.Routing;
 using Horse.Server;
 
 [QueueName("demo-queue")]
@@ -36,10 +33,11 @@ namespace Sample.Server
                 {
                     cfg.Options.Type = QueueType.Push;
                     cfg.Options.MessageLimit = 400;
+                    cfg.Options.AutoQueueCreation = true;
+                    cfg.UseMemoryQueues();
                 })
                 .Build();
 
-            IRouter router = rider.Router.Find("test");
             /*
             IRouter router = rider.Router.Add("test", RouteMethod.Distribute);
             router.AddBinding(new QueueBinding
@@ -63,13 +61,6 @@ namespace Sample.Server
             server.Options.PingInterval = 10;
             server.UseRider(rider);
             server.Run(26222);
-
-            HorseClient client = new HorseClientBuilder()
-                .AddHost("horse://localhost:post")
-                .AddSingletonConsumer<ModelConsumer>()
-                .Build();
-
-            await client.ConnectAsync();
 
         }
     }

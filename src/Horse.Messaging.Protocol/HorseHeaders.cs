@@ -324,5 +324,30 @@ namespace Horse.Messaging.Protocol
         /// "Channel-Destroy-Idle-Seconds"
         /// </summary>
         public const string CHANNEL_DESTROY_IDLE_SECONDS = "Channel-Destroy-Idle-Seconds";
+
+        /// <summary>
+        /// "Warning-Duration"
+        /// </summary>
+        public const string WARNING_DURATION = "Warning-Duration";
+
+        /// <summary>
+        /// "Tag"
+        /// </summary>
+        public const string TAG = "Tag";
+        
+        /// <summary>
+        /// "Expiry"
+        /// </summary>
+        public const string EXPIRY = "Expiry";
+        
+        /// <summary>
+        /// "Warning"
+        /// </summary>
+        public const string WARNING = "Warning";
+        
+        /// <summary>
+        /// "Warn-Count"
+        /// </summary>
+        public const string WARN_COUNT = "Warn-Count";
     }
 }

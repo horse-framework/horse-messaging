@@ -19,7 +19,7 @@ namespace Horse.Messaging.Client.Routers
         /// True, if router name specified
         /// </summary>
         public bool HasRouterName { get; set; }
-        
+
         /// <summary>
         /// Content Type
         /// </summary>
@@ -56,9 +56,9 @@ namespace Horse.Messaging.Client.Routers
         /// <summary>
         /// Applies descriptor information to the message
         /// </summary>
-        public HorseMessage CreateMessage()
+        public HorseMessage CreateMessage(string overwrittenTarget = null)
         {
-            HorseMessage message = new HorseMessage(MessageType.Router, RouterName, ContentType);
+            HorseMessage message = new HorseMessage(MessageType.Router, overwrittenTarget ?? RouterName, ContentType);
             if (HighPriority)
                 message.HighPriority = HighPriority;
 

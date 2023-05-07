@@ -28,8 +28,8 @@ namespace Benchmark.Cache
 
             Console.Write("Press enter to start to get and check the cache data");
             Console.ReadLine();
-            string data = await client.Cache.GetString("A");
-            Console.WriteLine($"Received: {data}");
+            var cacheData = await client.Cache.GetString("A");
+            Console.WriteLine($"Received: {cacheData.Value}");
             Console.WriteLine();
 
             while (true)

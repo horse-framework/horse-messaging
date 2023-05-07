@@ -12,7 +12,14 @@ namespace Horse.Messaging.Server.Helpers
             TimeSpan span = date - new DateTime(1970, 1, 1);
             return Convert.ToInt64(span.TotalMilliseconds);
         }
-
+        /// <summary>
+        /// Converts DateTime to unix seconds
+        /// </summary>
+        public static long ToUnixSeconds(this DateTime date)
+        {
+            TimeSpan span = date - new DateTime(1970, 1, 1);
+            return Convert.ToInt64(span.TotalSeconds);
+        }
 
         /// <summary>
         /// Converts Unix milliseconds to DateTime

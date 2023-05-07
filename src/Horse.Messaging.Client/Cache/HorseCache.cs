@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
@@ -27,7 +28,7 @@ namespace Horse.Messaging.Client.Cache
         #region Get
 
         /// <inheritdoc />
-        public async Task<string> GetString(string key)
+        public async Task<HorseCacheData<string>> GetString(string key)
         {
             HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);
             HorseResult result = await _client.SendAndGetAck(message);
@@ -35,11 +36,13 @@ namespace Horse.Messaging.Client.Cache
             if (result == null || result.Code != HorseResultCode.Ok)
                 return null;
 
-            return result.Message.GetStringContent();
+            HorseCacheData<string> data = CreateCacheData<string>(key, message);
+            data.Value = result.Message.GetStringContent();
+            return data;
         }
 
         /// <inheritdoc />
-        public async Task<byte[]> GetData(string key)
+        public async Task<HorseCacheData<byte[]>> GetData(string key)
         {
             HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);
             HorseResult result = await _client.SendAndGetAck(message);
@@ -47,11 +50,13 @@ namespace Horse.Messaging.Client.Cache
             if (result == null || result.Code != HorseResultCode.Ok)
                 return null;
 
-            return result.Message.Content.ToArray();
+            HorseCacheData<byte[]> data = CreateCacheData<byte[]>(key, message);
+            data.Value = result.Message.Content.ToArray();
+            return data;
         }
 
         /// <inheritdoc />
-        public async Task<TData> Get<TData>(string key)
+        public async Task<HorseCacheData<TData>> Get<TData>(string key)
         {
             HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);
             HorseModelResult<TData> result = await _client.SendAndGetJson<TData>(message);
@@ -59,7 +64,29 @@ namespace Horse.Messaging.Client.Cache
             if (result == null)
                 return default;
 
-            return result.Model;
+            HorseCacheData<TData> data = CreateCacheData<TData>(key, message);
+            data.Value = result.Model;
+            return data;
+        }
+
+        private static HorseCacheData<T> CreateCacheData<T>(string key, HorseMessage message)
+        {
+            string expiry = message.FindHeader(HorseHeaders.EXPIRY);
+            string warning = message.FindHeader(HorseHeaders.WARNING);
+            string warnCount = message.FindHeader(HorseHeaders.WARN_COUNT);
+            string tags = message.FindHeader(HorseHeaders.TAG);
+
+            HorseCacheData<T> data = new HorseCacheData<T>
+            {
+                Key = key,
+                IsFirstWarnedClient = message.HighPriority,
+                Expiration = string.IsNullOrEmpty(expiry) ? 0 : Convert.ToInt64(expiry),
+                WarningDate = string.IsNullOrEmpty(warning) ? 0 : Convert.ToInt64(warning),
+                WarnCount = string.IsNullOrEmpty(warnCount) ? 0 : Convert.ToInt32(warnCount),
+                Tags = string.IsNullOrEmpty(tags) ? Array.Empty<string>() : tags.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            };
+
+            return data;
         }
 
         /// <summary>
@@ -69,65 +96,130 @@ namespace Horse.Messaging.Client.Cache
         {
             HorseMessage message = new HorseMessage();
             message.Type = MessageType.Cache;
-            message.SetMessageId( _client.UniqueIdGenerator.Create());
+            message.SetMessageId(_client.UniqueIdGenerator.Create());
             message.ContentType = KnownContentTypes.GetCacheList;
             message.AddHeader(HorseHeaders.FILTER, filter);
             return await _client.SendAndGetJson<List<CacheInformation>>(message);
         }
+
         #endregion
 
         #region Set
 
         /// <inheritdoc />
-        public Task<HorseResult> Set<TData>(string key, TData data)
+        public Task<HorseResult> Set<TData>(string key, TData data, string[] tags = null)
         {
             HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
             _client.MessageSerializer.Serialize(message, data);
+            
+            if (tags != null && tags.Length > 0)
+                message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
+
             return _client.SendAndGetAck(message);
         }
 
         /// <inheritdoc />
-        public Task<HorseResult> Set<TData>(string key, TData data, TimeSpan duration)
+        public Task<HorseResult> Set<TData>(string key, TData data, TimeSpan duration, string[] tags = null)
         {
             HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
             _client.MessageSerializer.Serialize(message, data);
             message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
+
+            if (tags != null && tags.Length > 0)
+                message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
+            
+            return _client.SendAndGetAck(message);
+        }
+
+        public Task<HorseResult> Set<TData>(string key, TData data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags = null)
+        {
+            HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
+            _client.MessageSerializer.Serialize(message, data);
+            message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
+            message.SetOrAddHeader(HorseHeaders.WARNING_DURATION, Convert.ToInt32(expirationWarningDuration.TotalSeconds).ToString());
+
+            if (tags != null && tags.Length > 0)
+                message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
+            
             return _client.SendAndGetAck(message);
         }
 
         /// <inheritdoc />
-        public Task<HorseResult> SetString(string key, string data)
+        public Task<HorseResult> SetString(string key, string data, string[] tags = null)
         {
             HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
             message.SetStringContent(data);
+            
+            if (tags != null && tags.Length > 0)
+                message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
+
             return _client.SendAndGetAck(message);
         }
 
         /// <inheritdoc />
-        public Task<HorseResult> SetString(string key, string data, TimeSpan duration)
+        public Task<HorseResult> SetString(string key, string data, TimeSpan duration, string[] tags = null)
         {
             HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
             message.SetStringContent(data);
             message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
+            
+            if (tags != null && tags.Length > 0)
+                message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
+
+            return _client.SendAndGetAck(message);
+        }
+
+        public Task<HorseResult> SetString(string key, string data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags = null)
+        {
+            HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
+            message.SetStringContent(data);
+            message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
+            message.SetOrAddHeader(HorseHeaders.WARNING_DURATION, Convert.ToInt32(expirationWarningDuration.TotalSeconds).ToString());
+            
+            if (tags != null && tags.Length > 0)
+                message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
+
             return _client.SendAndGetAck(message);
         }
 
         /// <inheritdoc />
-        public Task<HorseResult> SetData(string key, byte[] data)
+        public Task<HorseResult> SetData(string key, byte[] data, string[] tags = null)
         {
             HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
+            
+            if (tags != null && tags.Length > 0)
+                message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
+
             message.Content = new MemoryStream(data);
             message.CalculateLengths();
             return _client.SendAndGetAck(message);
         }
 
         /// <inheritdoc />
-        public Task<HorseResult> SetData(string key, byte[] data, TimeSpan duration)
+        public Task<HorseResult> SetData(string key, byte[] data, TimeSpan duration, string[] tags = null)
         {
             HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
+            message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
+            
+            if (tags != null && tags.Length > 0)
+                message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
+
             message.Content = new MemoryStream(data);
             message.CalculateLengths();
+            return _client.SendAndGetAck(message);
+        }
+
+        public Task<HorseResult> SetData(string key, byte[] data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags = null)
+        {
+            HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
             message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
+            message.SetOrAddHeader(HorseHeaders.WARNING_DURATION, Convert.ToInt32(expirationWarningDuration.TotalSeconds).ToString());
+            
+            if (tags != null && tags.Length > 0)
+                message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
+
+            message.Content = new MemoryStream(data);
+            message.CalculateLengths();
             return _client.SendAndGetAck(message);
         }
 
@@ -146,6 +238,13 @@ namespace Horse.Messaging.Client.Cache
         public Task<HorseResult> Purge()
         {
             HorseMessage message = new HorseMessage(MessageType.Cache, null, KnownContentTypes.PurgeCache);
+            return _client.SendAndGetAck(message);
+        }
+
+        public Task<HorseResult> PurgeByTag(string tag)
+        {
+            HorseMessage message = new HorseMessage(MessageType.Cache, null, KnownContentTypes.PurgeCache);
+            message.SetOrAddHeader(HorseHeaders.TAG, tag);
             return _client.SendAndGetAck(message);
         }
 

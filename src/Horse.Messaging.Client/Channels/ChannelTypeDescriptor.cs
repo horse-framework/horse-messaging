@@ -26,9 +26,9 @@ namespace Horse.Messaging.Client.Channels
         /// <summary>
         /// Creates new message
         /// </summary>
-        public HorseMessage CreateMessage()
+        public HorseMessage CreateMessage(string overwrittenTarget = null)
         {
-            HorseMessage message = new HorseMessage(MessageType.Channel, Name, KnownContentTypes.ChannelPush);
+            HorseMessage message = new HorseMessage(MessageType.Channel, overwrittenTarget ?? Name, KnownContentTypes.ChannelPush);
 
             if (InitialChannelMessage)
                 message.AddHeader(HorseHeaders.CHANNEL_INITIAL_MESSAGE, "1");

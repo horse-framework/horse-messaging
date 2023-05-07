@@ -58,6 +58,10 @@ namespace Horse.Messaging.Client
             {
                 IsConnecting = true;
                 Client = new TcpClient();
+                
+                if (_client.NoDelay.HasValue)
+                    Client.NoDelay = _client.NoDelay.Value;
+
                 Client.Connect(host.IPAddress, host.Port);
                 IsConnected = true;
                 IsSsl = host.SSL;
@@ -111,6 +115,10 @@ namespace Horse.Messaging.Client
             {
                 IsConnecting = true;
                 Client = new TcpClient();
+
+                if (_client.NoDelay.HasValue)
+                    Client.NoDelay = _client.NoDelay.Value;
+
                 await Client.ConnectAsync(host.IPAddress, host.Port);
                 IsConnected = true;
                 IsSsl = host.SSL;

@@ -27,14 +27,14 @@ namespace Test.Events
             HorseResult cacheResult = await client.Cache.SetString("cache-key", "Hello, World!");
             Assert.Equal(HorseResultCode.Ok, cacheResult.Code);
 
-            string value = await client.Cache.GetString("cache-key");
-            Assert.Equal("Hello, World!", value);
+            var data = await client.Cache.GetString("cache-key");
+            Assert.Equal("Hello, World!", data.Value);
 
             await Task.Delay(250);
             Assert.Equal(1, CacheGetHandler.Count);
             server.Stop();
         }
-        
+
         [Fact]
         public async Task CacheSet()
         {
@@ -56,7 +56,7 @@ namespace Test.Events
             Assert.Equal(1, CacheSetHandler.Count);
             server.Stop();
         }
-        
+
         [Fact]
         public async Task CacheRemove()
         {
@@ -81,7 +81,7 @@ namespace Test.Events
             Assert.Equal(1, CacheRemoveHandler.Count);
             server.Stop();
         }
-        
+
         [Fact]
         public async Task CachePurge()
         {
