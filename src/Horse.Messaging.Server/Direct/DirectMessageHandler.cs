@@ -55,7 +55,7 @@ namespace Horse.Messaging.Server.Direct
                 List<MessagingClient> receivers = _rider.Client.FindByType(message.Target.Substring(6));
                 if (receivers.Count > 0)
                 {
-                    if (message.HighPriority)
+                    if (message.HighPriority && receivers.Count > 1)
                     {
                         MessagingClient first = receivers.FirstOrDefault();
                         receivers.Clear();

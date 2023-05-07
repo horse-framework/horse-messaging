@@ -10,6 +10,6 @@ namespace Horse.Messaging.Client.Internal
         /// <summary>
         /// Creates new horse message from descriptor
         /// </summary>
-        HorseMessage CreateMessage();
+        HorseMessage CreateMessage(string overwrittenTarget = null);
     }
 }

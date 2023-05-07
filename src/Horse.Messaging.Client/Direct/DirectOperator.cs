@@ -192,22 +192,12 @@ namespace Horse.Messaging.Client.Direct
         {
             DirectTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(model.GetType());
 
-            if (!string.IsNullOrEmpty(target))
-            {
-                descriptor.DirectTarget = target;
-
-                if (target.StartsWith("@type:", StringComparison.InvariantCultureIgnoreCase))
-                    descriptor.FindBy = FindTargetBy.Type;
-                else if (target.StartsWith("@name:", StringComparison.InvariantCultureIgnoreCase))
-                    descriptor.FindBy = FindTargetBy.Name;
-                else
-                    descriptor.FindBy = FindTargetBy.Id;
-            }
+            HorseMessage message = descriptor != null
+                ? descriptor.CreateMessage(target)
+                : new HorseMessage(MessageType.DirectMessage, target, contentType ?? 0);
 
             if (contentType.HasValue)
-                descriptor.ContentType = contentType;
-
-            HorseMessage message = descriptor.CreateMessage();
+                message.ContentType = contentType.Value;
 
             message.Serialize(model, _client.MessageSerializer);
 

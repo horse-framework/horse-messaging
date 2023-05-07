@@ -94,9 +94,9 @@ namespace Horse.Messaging.Client.Queues
         /// <summary>
         /// Applies descriptor information to the message
         /// </summary>
-        public HorseMessage CreateMessage()
+        public HorseMessage CreateMessage(string overwrittenTarget = null)
         {
-            HorseMessage message = new HorseMessage(MessageType.QueueMessage, QueueName, 0);
+            HorseMessage message = new HorseMessage(MessageType.QueueMessage, overwrittenTarget ?? QueueName, 0);
             if (HighPriority)
                 message.HighPriority = HighPriority;
 
