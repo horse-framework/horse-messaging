@@ -53,13 +53,14 @@ namespace Horse.Messaging.Server.Cache
                         }
                     }
 
-                    HorseCacheItem item = _cache.Get(message.Target, out bool firstWarningReceiver);
-                    if (item == null)
+                    GetCacheItemResult result = await _cache.Get(message.Target);
+                    if (result?.item == null)
                     {
                         await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
                         return;
                     }
 
+                    HorseCacheItem item = result.item;
                     HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
                     response.SetSource(message.Target);
 
@@ -75,7 +76,7 @@ namespace Horse.Messaging.Server.Cache
                             response.AddHeader(HorseHeaders.WARN_COUNT, item.ExpirationWarnCount.ToString());
                     }
 
-                    response.HighPriority = firstWarningReceiver;
+                    response.HighPriority = result.IsFirstWarningReceiver;
                     response.Content = item.Value;
 
                     await client.SendAsync(response);
@@ -110,7 +111,7 @@ namespace Horse.Messaging.Server.Cache
                     if (!string.IsNullOrEmpty(warningDuration))
                         warning = TimeSpan.FromSeconds(Convert.ToInt32(warningDuration));
 
-                    CacheOperation operation = _cache.Set(message.Target, message.Content, timeout, warning, tagNames);
+                    CacheOperation operation = await _cache.Set(message.Target, message.Content, timeout, warning, tagNames);
                     switch (operation.Result)
                     {
                         case CacheResult.Ok:
@@ -148,7 +149,7 @@ namespace Horse.Messaging.Server.Cache
                         }
                     }
 
-                    _cache.Remove(message.Target);
+                    await _cache.Remove(message.Target);
                     await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
                     _cache.RemoveEvent.Trigger(client, message.Target);
                     return;
@@ -169,9 +170,9 @@ namespace Horse.Messaging.Server.Cache
                     string tagName = message.FindHeader(HorseHeaders.TAG);
 
                     if (string.IsNullOrEmpty(tagName))
-                        _cache.Purge();
+                        await _cache.Purge();
                     else
-                        _cache.PurgeByTag(tagName.Trim());
+                        await _cache.PurgeByTag(tagName.Trim());
 
                     await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
                     _cache.PurgeEvent.Trigger(client);
@@ -181,7 +182,7 @@ namespace Horse.Messaging.Server.Cache
                 case KnownContentTypes.GetCacheList:
                 {
                     string filter = message.FindHeader(HorseHeaders.FILTER);
-                    List<CacheInformation> caches = _cache.GetCacheKeys();
+                    List<CacheInformation> caches = await _cache.GetCacheKeys();
 
                     if (!string.IsNullOrEmpty(filter))
                         caches = caches.Where(x => Filter.CheckMatch(x.Key, filter)).ToList();

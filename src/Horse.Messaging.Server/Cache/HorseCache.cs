@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Protocol.Models;
 using Horse.Messaging.Server.Containers;
@@ -12,15 +13,18 @@ using Horse.Messaging.Server.Helpers;
 namespace Horse.Messaging.Server.Cache
 {
     /// <summary>
+    /// Cache Item data
+    /// </summary>
+    /// <param name="IsFirstWarningReceiver">True, if first time received the value in warning time range</param>
+    /// <param name="item">Cache item</param>
+    public record GetCacheItemResult(bool IsFirstWarningReceiver, HorseCacheItem item);
+
+    /// <summary>
     /// Horse cache manager
     /// </summary>
     public class HorseCache
     {
         #region Properties
-
-        private Timer _timer;
-        private bool _initialized;
-        private readonly SortedDictionary<string, HorseCacheItem> _items = new SortedDictionary<string, HorseCacheItem>(StringComparer.InvariantCultureIgnoreCase);
 
         /// <summary>
         /// Cache authorizations
@@ -57,6 +61,15 @@ namespace Horse.Messaging.Server.Cache
         /// </summary>
         public EventManager PurgeEvent { get; }
 
+        private Timer _timer;
+        private bool _initialized;
+
+        private readonly SortedDictionary<string, HorseCacheItem> _items = new SortedDictionary<string, HorseCacheItem>(StringComparer.InvariantCultureIgnoreCase);
+
+        private volatile bool _hasChanges;
+        private readonly List<Tuple<bool, HorseCacheItem>> _changes = new List<Tuple<bool, HorseCacheItem>>(16);
+        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+
         #endregion
 
         #region Initialization
@@ -84,7 +97,7 @@ namespace Horse.Messaging.Server.Cache
                     return;
 
                 _initialized = true;
-                _timer = new Timer(o => RemoveExpiredCacheItems(), null, 300000, 120000);
+                _timer = new Timer(o => _ = ApplyChanges(true), null, 300000, 120000);
             }
         }
 
@@ -92,28 +105,73 @@ namespace Horse.Messaging.Server.Cache
 
         #region Actions
 
+        private async Task ApplyChanges(bool removeExpiredKeys = false)
+        {
+            if (_hasChanges || removeExpiredKeys)
+            {
+                await _semaphore.WaitAsync(TimeSpan.FromSeconds(30));
+                try
+                {
+                    foreach (Tuple<bool, HorseCacheItem> tuple in _changes)
+                    {
+                        if (tuple.Item1)
+                            _items[tuple.Item2.Key] = tuple.Item2;
+                        else
+                        {
+                            if (tuple.Item2 == null)
+                                _items.Clear();
+                            else
+                                _items.Remove(tuple.Item2.Key);
+                        }
+                    }
+
+                    if (removeExpiredKeys)
+                    {
+                        List<string> keys = new List<string>();
+
+                        foreach (KeyValuePair<string, HorseCacheItem> item in _items)
+                        {
+                            if (item.Value.Expiration < DateTime.UtcNow)
+                                keys.Add(item.Key);
+                        }
+
+                        foreach (string key in keys)
+                            _items.Remove(key);
+
+                        await Task.Delay(10);
+                    }
+
+                    _hasChanges = false;
+                }
+                finally
+                {
+                    _semaphore.Release();
+                }
+            }
+        }
+
         /// <summary>
         /// Gets all cache keys
         /// </summary>
         /// <returns></returns>
-        public List<CacheInformation> GetCacheKeys()
+        public async Task<List<CacheInformation>> GetCacheKeys()
         {
-            List<CacheInformation> list;
+            await ApplyChanges();
 
-            lock (_items)
+            List<CacheInformation> list = new List<CacheInformation>(_items.Count);
+            foreach (HorseCacheItem item in _items.Values)
             {
-                list = new List<CacheInformation>(_items.Count);
-                foreach (HorseCacheItem item in _items.Values)
+                list.Add(new CacheInformation
                 {
-                    list.Add(new CacheInformation
-                    {
-                        Key = item.Key,
-                        Expiration = item.Expiration.ToUnixSeconds(),
-                        WarningDate = item.ExpirationWarning?.ToUnixSeconds() ?? 0,
-                        WarnCount = item.ExpirationWarnCount,
-                        Tags = item.Tags ?? Array.Empty<string>()
-                    });
-                }
+                    Key = item.Key,
+                    Expiration = item.Expiration.ToUnixSeconds(),
+                    WarningDate = item.ExpirationWarning?.ToUnixSeconds() ?? 0,
+                    WarnCount = item.ExpirationWarnCount,
+                    Tags = item.Tags ?? Array.Empty<string>()
+                });
+
+                if (item.Expiration < DateTime.UtcNow)
+                    await Remove(item.Key);
             }
 
             return list;
@@ -122,7 +180,7 @@ namespace Horse.Messaging.Server.Cache
         /// <summary>
         /// Adds or sets a cache
         /// </summary>
-        public CacheOperation Set(string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null)
+        public async Task<CacheOperation> Set(string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null)
         {
             if (Options.MaximumKeys > 0 && _items.Count >= Options.MaximumKeys)
                 return new CacheOperation(CacheResult.KeyLimit, null);
@@ -152,8 +210,16 @@ namespace Horse.Messaging.Server.Cache
                 Value = new MemoryStream(value.ToArray())
             };
 
-            lock (_items)
-                _items[key] = item;
+            await _semaphore.WaitAsync();
+            try
+            {
+                _hasChanges = true;
+                _changes.Add(new Tuple<bool, HorseCacheItem>(true, item));
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
 
             return new CacheOperation(CacheResult.Ok, item);
         }
@@ -161,18 +227,22 @@ namespace Horse.Messaging.Server.Cache
         /// <summary>
         /// Gets a cache from key
         /// </summary>
-        public HorseCacheItem Get(string key, out bool firstWarningReceiver)
+        public async Task<GetCacheItemResult> Get(string key)
         {
-            HorseCacheItem item;
-            lock (_items)
-                _items.TryGetValue(key, out item);
+            await ApplyChanges();
 
-            if (item == null || item.Expiration < DateTime.UtcNow)
+            _items.TryGetValue(key, out HorseCacheItem item);
+
+            if (item == null)
+                return null;
+
+            if (item.Expiration < DateTime.UtcNow)
             {
-                firstWarningReceiver = false;
+                await Remove(item.Key);
                 return null;
             }
 
+            bool firstWarningReceiver;
             if (item.ExpirationWarning.HasValue && item.ExpirationWarning.Value < DateTime.UtcNow)
                 lock (item)
                 {
@@ -182,63 +252,61 @@ namespace Horse.Messaging.Server.Cache
             else
                 firstWarningReceiver = false;
 
-            return item;
+            return new GetCacheItemResult(firstWarningReceiver, item);
         }
 
         /// <summary>
         /// Removes a key
         /// </summary>
-        public void Remove(string key)
+        public async Task Remove(string key)
         {
-            lock (_items)
-                _items.Remove(key);
+            await _semaphore.WaitAsync(TimeSpan.FromSeconds(30));
+            try
+            {
+                _hasChanges = true;
+                _changes.Add(new Tuple<bool, HorseCacheItem>(false, new HorseCacheItem {Key = key}));
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
         /// <summary>
         /// Purges all keys with specified tagName
         /// </summary>
-        public void PurgeByTag(string tagName)
+        public async Task PurgeByTag(string tagName)
         {
-            List<string> keys = new List<string>(8);
-            lock (_items)
+            await _semaphore.WaitAsync(TimeSpan.FromSeconds(30));
+            try
             {
+                _hasChanges = true;
                 foreach (KeyValuePair<string, HorseCacheItem> pair in _items)
                 {
                     if (pair.Value.Tags.Contains(tagName, StringComparer.CurrentCultureIgnoreCase))
-                        keys.Add(pair.Key);
+                        _changes.Add(new Tuple<bool, HorseCacheItem>(false, pair.Value));
                 }
-
-                foreach (var key in keys)
-                    keys.Remove(key);
+            }
+            finally
+            {
+                _semaphore.Release();
             }
         }
 
         /// <summary>
         /// Purges all keys
         /// </summary>
-        public void Purge()
+        public async Task Purge()
         {
-            lock (_items)
-                _items.Clear();
-        }
-
-        /// <summary>
-        /// Removes expired cache items
-        /// </summary>
-        private void RemoveExpiredCacheItems()
-        {
-            List<string> keys = new List<string>();
-
-            lock (_items)
+            await _semaphore.WaitAsync(TimeSpan.FromSeconds(30));
+            try
             {
-                foreach (KeyValuePair<string, HorseCacheItem> item in _items)
-                {
-                    if (item.Value.Expiration < DateTime.UtcNow)
-                        keys.Add(item.Key);
-                }
-
-                foreach (string key in keys)
-                    _items.Remove(key);
+                _hasChanges = true;
+                _changes.Add(new Tuple<bool, HorseCacheItem>(false, null));
+            }
+            finally
+            {
+                _semaphore.Release();
             }
         }
 
