@@ -45,6 +45,22 @@ All features can be used over only once client and one connection full asynchron
   There is no delay in Horse, latency depends on your network connection.
 
 
+## Quick Start
+
+Install and run basic server application
+
+```docker run -p 2626:2626 -p 2627:2627 horseframework/messaging-server```
+
+Create new .NET Core project and add Horse.Messaging.Client nuget package into your project.
+
+```cs
+HorseClient client = new HorseClient();
+await client.ConnectAsync("horse://localhost:2626");
+```
+
+Navigate to Jockey panel http://localhost:2627 with empty username and password.
+You can see your connected client in clients page.
+
 ## Thanks
 
 Thanks to JetBrains for open source license to use on this project.
