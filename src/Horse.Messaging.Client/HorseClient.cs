@@ -349,7 +349,7 @@ namespace Horse.Messaging.Client
 
                 if (ThrowExceptions)
                     throw;
-                
+
                 return null;
             }
         }
@@ -493,7 +493,7 @@ namespace Horse.Messaging.Client
                         RemoteHosts.Add(host);
 
                 SetAutoReconnect(true);
-                
+
                 DnsResolver resolver = new DnsResolver();
                 Connect(resolver.Resolve(host));
             }
@@ -527,7 +527,7 @@ namespace Horse.Messaging.Client
             catch (Exception e)
             {
                 OnException(e);
-                
+
                 if (ThrowExceptions)
                     throw;
             }
@@ -556,17 +556,17 @@ namespace Horse.Messaging.Client
                         RemoteHosts.Add(host);
 
                 SetAutoReconnect(true);
-                
+
                 DnsResolver resolver = new DnsResolver();
                 return ConnectAsync(resolver.Resolve(host));
             }
             catch (Exception e)
             {
                 OnException(e);
-                
+
                 if (ThrowExceptions)
                     throw;
-                
+
                 return Task.CompletedTask;
             }
         }
@@ -587,7 +587,7 @@ namespace Horse.Messaging.Client
             catch (Exception e)
             {
                 OnException(e);
-                
+
                 if (ThrowExceptions)
                     throw;
             }
@@ -646,6 +646,42 @@ namespace Horse.Messaging.Client
 
             bool sent = await _socket.SendAsync(data);
             return sent ? HorseResult.Ok() : new HorseResult(HorseResultCode.SendError);
+        }
+
+        /// <summary>
+        /// Sends multiple messages
+        /// </summary>
+        public void Send(HorseMessage message, Action<bool> sendCallback)
+        {
+            if (_socket == null)
+            {
+                sendCallback(false);
+                return;
+            }
+
+            message.SetSource(ClientId);
+
+            if (string.IsNullOrEmpty(message.MessageId))
+                message.SetMessageId(UniqueIdGenerator.Create());
+
+            byte[] data = HorseProtocolWriter.Create(message);
+            _socket.Send(data, sendCallback);
+        }
+
+        /// <summary>
+        /// Sends multiple messages
+        /// </summary>
+        public void SendBulk(IEnumerable<HorseMessage> messages, Action<HorseMessage, bool> sendCallback)
+        {
+            if (_socket == null)
+            {
+                foreach (HorseMessage message in messages)
+                    sendCallback?.Invoke(message, false);
+
+                return;
+            }
+
+            _socket.SendBulk(messages, sendCallback);
         }
 
         /// <summary>

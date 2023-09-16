@@ -58,7 +58,7 @@ namespace Horse.Messaging.Client
             {
                 IsConnecting = true;
                 Client = new TcpClient();
-                
+
                 if (_client.NoDelay.HasValue)
                     Client.NoDelay = _client.NoDelay.Value;
 
@@ -295,6 +295,25 @@ namespace Horse.Messaging.Client
             byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
             bool sent = await SendAsync(data);
             return sent ? HorseResult.Ok() : new HorseResult(HorseResultCode.SendError);
+        }
+
+        /// <summary>
+        /// Send bulk messages asynchoronously.
+        /// Callback method result corresponds if the data is written succesfully to the tcp connection or not.
+        /// It does not track acknowledge messages from the server.
+        /// </summary>
+        public void SendBulk(IEnumerable<HorseMessage> messages, Action<HorseMessage, bool> sendCallback)
+        {
+            foreach (HorseMessage message in messages)
+            {
+                message.SetSource(_client.ClientId);
+
+                if (string.IsNullOrEmpty(message.MessageId))
+                    message.SetMessageId(_client.UniqueIdGenerator.Create());
+
+                byte[] data = HorseProtocolWriter.Create(message);
+                Send(data, result => sendCallback?.Invoke(message, result));
+            }
         }
     }
 }
