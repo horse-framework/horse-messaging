@@ -7,52 +7,23 @@ using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Server;
-using HorseService;
 
 // Load Options
 
-string optionsFilename = "/etc/horse/options.json";
-AppOptions appOptions = null;
-
-if (!Directory.Exists("/etc/horse"))
-    Directory.CreateDirectory("/etc/horse");
-
-if (File.Exists(optionsFilename))
-{
-    string json = File.ReadAllText(optionsFilename);
-    appOptions = Newtonsoft.Json.JsonConvert.DeserializeObject<AppOptions>(json);
-}
-else
-{
-    appOptions = new AppOptions();
-}
-
-appOptions.Port = 2626;
-appOptions.JockeyPort = 2627;
-
-string datapath = Environment.GetEnvironmentVariable("HORSE_DATA_PATH");
-string clusterType = Environment.GetEnvironmentVariable("HORSE_CLUSTER_TYPE");
-string nodeName = Environment.GetEnvironmentVariable("HORSE_NODE_NAME");
-string otherNodes = Environment.GetEnvironmentVariable("HORSE_NODES");
-string clusterSecret = Environment.GetEnvironmentVariable("HORSE_CLUSTER_SECRET");
-string jockey = Environment.GetEnvironmentVariable("HORSE_JOCKEY");
-string username = Environment.GetEnvironmentVariable("HORSE_JOCKEY_USERNAME");
-string password = Environment.GetEnvironmentVariable("HORSE_JOCKEY_PASSWORD");
-
-if (!string.IsNullOrEmpty(username))
-    appOptions.JockeyUsername = username;
-
-if (!string.IsNullOrEmpty(password))
-    appOptions.JockeyPassword = password;
-
-if (!string.IsNullOrEmpty(datapath))
-    appOptions.DataPath = datapath;
+string datapath = Environment.GetEnvironmentVariable("HORSE_DATA_PATH") ?? "etc/horse/data\"";
+string clusterType = Environment.GetEnvironmentVariable("HORSE_CLUSTER_TYPE") ?? "scaled";
+string nodeName = Environment.GetEnvironmentVariable("HORSE_NODE_NAME") ?? "Default";
+string otherNodes = Environment.GetEnvironmentVariable("HORSE_NODES") ?? "";
+string clusterSecret = Environment.GetEnvironmentVariable("HORSE_CLUSTER_SECRET") ?? "";
+string jockey = Environment.GetEnvironmentVariable("HORSE_JOCKEY") ?? "1";
+string username = Environment.GetEnvironmentVariable("HORSE_JOCKEY_USERNAME") ?? string.Empty;
+string password = Environment.GetEnvironmentVariable("HORSE_JOCKEY_PASSWORD") ?? string.Empty;
 
 // Initialize Server
 HorseServer server = new HorseServer();
 
 HorseRider rider = HorseRiderBuilder.Create()
-    .ConfigureOptions(o => { o.DataPath = appOptions.DataPath; })
+    .ConfigureOptions(o => { o.DataPath = datapath; })
     .ConfigureChannels(c =>
     {
         c.Options.AutoDestroy = true;
@@ -88,7 +59,7 @@ if (!string.IsNullOrEmpty(otherNodes))
 
     rider.Cluster.Options.Name = nodeName;
     rider.Cluster.Options.NodeHost = "horse://localhost:2628";
-    rider.Cluster.Options.PublicHost = $"horse://localhost:{appOptions.Port}";
+    rider.Cluster.Options.PublicHost = $"horse://localhost:2626";
     rider.Cluster.Options.SharedSecret = clusterSecret;
 
     foreach (string otherNode in otherNodes.Split(',', StringSplitOptions.RemoveEmptyEntries))
@@ -110,10 +81,10 @@ if (!skipJockey)
     {
         o.CustomSecret = $"{Guid.NewGuid()}-{Guid.NewGuid()}-{Guid.NewGuid()}";
 
-        o.Port = appOptions.JockeyPort;
+        o.Port = 2627;
         o.AuthAsync = login =>
         {
-            if (login.Username == appOptions.JockeyUsername && login.Password == appOptions.JockeyPassword)
+            if (login.Username == username && login.Password == password)
                 return Task.FromResult(new UserInfo {Id = "*", Name = "Admin"});
 
             return Task.FromResult<UserInfo>(null);
@@ -124,4 +95,4 @@ if (!skipJockey)
 
 // Run
 server.UseRider(rider);
-server.Run(appOptions.Port);
+server.Run(2626);
