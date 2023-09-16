@@ -176,6 +176,11 @@ namespace Horse.Messaging.Protocol
         public const ushort GetCacheList = 675;
 
         /// <summary>
+        /// "676" Get Incremental Cache
+        /// </summary>
+        public const ushort GetIncrementalCache = 676;
+
+        /// <summary>
         /// "681" Pushes a message to channel
         /// </summary>
         public const ushort ChannelPush = 681;

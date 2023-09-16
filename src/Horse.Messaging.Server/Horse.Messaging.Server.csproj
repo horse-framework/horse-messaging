@@ -7,9 +7,9 @@
 		<Product>Horse.Messaging.Server</Product>
 		<Description>Horse Messaging Server</Description>
 		<PackageTags>horse,server,messaging,queue,channel,cache</PackageTags>
-		<AssemblyVersion>6.5.2</AssemblyVersion>
-		<FileVersion>6.5.2</FileVersion>
-		<PackageVersion>6.5.2</PackageVersion>
+		<AssemblyVersion>6.5.3</AssemblyVersion>
+		<FileVersion>6.5.3</FileVersion>
+		<PackageVersion>6.5.3</PackageVersion>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
 		<PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>
@@ -27,7 +27,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Enums.NET" Version="4.0.1" />
-		<PackageReference Include="Horse.Server" Version="6.4.1" />
+		<PackageReference Include="Horse.Server" Version="6.5.0" />
 	</ItemGroup>
 
 	<ItemGroup>

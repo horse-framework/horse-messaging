@@ -1,38 +1,55 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
+using Horse.Messaging.Client.Queues.Annotations;
+using Horse.Messaging.Protocol;
 
 namespace Playground
 {
+    [QueueName("Test")]
+    public class Foo
+    {
+        public int X { get; set; } = 1;
+    }
+
     class Program
     {
         static async Task Main(string[] args)
         {
             HorseClient client = new HorseClient();
-            await client.ConnectAsync("hmq://localhost:9999");
+            client.MessageSerializer = new SystemJsonContentSerializer();
+            await client.ConnectAsync("localhost:2626");
 
-            Console.ReadLine();
-
-            using (HorseTransaction transaction = new HorseTransaction(client, "TransactionName"))
+            int s = 0;
+            int c = 0;
+            Thread thread = new Thread(() =>
             {
-                await transaction.Begin();
-
-                Console.ReadLine();
-                //todo: do something
-                bool commited = await transaction.Commit();
-            }
-            Console.ReadLine();
-
-            using (HorseTransaction transaction = await HorseTransaction.Begin(client, "Name"))
-            {
-                //todo: do something
-                bool success = true;
-
-                if (success)
+                Thread.Sleep(500);
+                while (true)
                 {
-                    Console.ReadLine();
-                    bool commited = await transaction.Commit();
+                    Thread.Sleep(1000);
+                    s++;
+                    Console.WriteLine(s + " - " + c);
                 }
+            });
+
+            thread.Start();
+
+            List<Foo> items = new List<Foo>();
+            for (int i = 0; i < 5000; i++)
+                items.Add(new Foo {X = i});
+
+            while (true)
+            {
+                client.Queue.PushBulkJson("Test", items, (message, b) =>
+                {
+                    if (b)
+                        c++;
+                });
             }
         }
     }
