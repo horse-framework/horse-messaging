@@ -174,6 +174,7 @@ namespace Horse.Messaging.Server.Cache
                             response.AddHeader(HorseHeaders.WARN_COUNT, item.ExpirationWarnCount.ToString());
                     }
 
+                    response.HighPriority = getResult.IsFirstWarningReceiver;
                     response.Content = item.Value;
 
                     await client.SendAsync(response);
