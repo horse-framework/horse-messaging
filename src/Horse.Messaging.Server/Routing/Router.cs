@@ -144,6 +144,18 @@ namespace Horse.Messaging.Server.Routing
             }
         }
 
+        /// <inheritdoc />
+        public IRouter AddBinding<T>(Action<Binding> options = null) where T : Binding, new()
+        {
+            T binding = new T();
+            options(binding);
+            bool added = AddBinding(binding);
+            if (!added)
+                throw new InvalidOperationException("An error has occured while attempting to add Binding. Exception message is sent to rider error handler");
+            
+            return this;
+        }
+
         /// <summary>
         /// Removes a binding from the route
         /// </summary>

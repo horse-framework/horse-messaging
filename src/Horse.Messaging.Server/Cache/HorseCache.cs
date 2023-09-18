@@ -278,13 +278,15 @@ namespace Horse.Messaging.Server.Cache
                 return new GetCacheItemResult(false, operation.Item);
             }
 
+            MemoryStream previousValue = item.Value;
             lock (item)
             {
                 byte[] valueArray = item.Value.ToArray();
                 int value = BitConverter.ToInt32(valueArray);
-                item.Value.Dispose();
                 item.Value = new MemoryStream(BitConverter.GetBytes(value + 1));
             }
+            
+            previousValue?.Dispose();
 
             return new GetCacheItemResult(false, item);
         }

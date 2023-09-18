@@ -106,12 +106,14 @@ namespace Horse.Messaging.Server.Cluster
         {
             _stateThread = new Thread(() =>
             {
+                Random rnd = new Random();
+
                 while (Rider?.Server == null || !Rider.Server.IsRunning)
                     Thread.Sleep(500);
 
                 while (Rider.Server.IsRunning)
                 {
-                    Thread.Sleep(500);
+                    Thread.Sleep(rnd.Next(500, 750));
 
                     if (Options.Nodes.Count == 0 || Options.Mode == ClusterMode.Scaled)
                         return;
@@ -206,7 +208,7 @@ namespace Horse.Messaging.Server.Cluster
             }
         }
 
-        internal async Task CheckBecomingMainOpportunity()
+        private async Task CheckBecomingMainOpportunity()
         {
             NodeClient remoteClient = Clients.FirstOrDefault(x => x.IsConnected);
             HorseMessage whoIsMain = new HorseMessage(MessageType.Cluster, Rider.Cluster.Options.Name, KnownContentTypes.WhoIsMainNode);
@@ -320,7 +322,7 @@ namespace Horse.Messaging.Server.Cluster
 
                 case NodeState.Single:
                     if (successor.Info.StartDate.HasValue)
-                        approve = successor.Info.StartDate < StartDate;
+                        approve = successor.Info.StartDate <= StartDate;
                     break;
             }
 
@@ -599,7 +601,7 @@ namespace Horse.Messaging.Server.Cluster
             {
                 if (client == null)
                     continue;
-                
+
                 if (!client.IsConnected)
                     continue;
 

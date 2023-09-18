@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
@@ -39,6 +40,12 @@ namespace Horse.Messaging.Server.Routing
         /// Adds new binding to router
         /// </summary>
         bool AddBinding(Binding binding);
+
+        /// <summary>
+        /// Adds new binding intto the router
+        /// </summary>
+        /// <param name="options">Binding options action</param>
+        IRouter AddBinding<T>(Action<Binding> options = null) where T : Binding, new();
 
         /// <summary>
         /// Removes a binding from the route
