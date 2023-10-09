@@ -113,12 +113,12 @@ namespace Horse.Messaging.Server.Cluster
 
                 while (Rider.Server.IsRunning)
                 {
-                    Thread.Sleep(rnd.Next(500, 750));
+                    Thread.Sleep(rnd.Next(2500, 7750));
 
                     if (Options.Nodes.Count == 0 || Options.Mode == ClusterMode.Scaled)
                         return;
 
-                    if (Clients.Length > 0 && (State == NodeState.Successor || State == NodeState.Replica))
+                    if (Clients.Length > 0 && (State == NodeState.Successor || State == NodeState.Replica || State == NodeState.Single))
                     {
                         if (MainNode == null)
                             _ = AskForMain();
@@ -224,10 +224,7 @@ namespace Horse.Messaging.Server.Cluster
             if (Clients.Length == 0)
                 return null;
 
-            NodeClient node = Clients.Where(x => x.IsConnected)
-                .OrderBy(x => x.ConnectedDate)
-                .FirstOrDefault();
-
+            NodeClient node = Clients.Where(x => x.IsConnected).MinBy(x => x.ConnectedDate);
             return node?.Info;
         }
 
@@ -300,7 +297,7 @@ namespace Horse.Messaging.Server.Cluster
         /// <summary>
         /// Sends an answer message to the successor if it can be main or not
         /// </summary>
-        public async Task AnswerMainRequest(NodeClient successor)
+        private async Task AnswerMainRequest(NodeClient successor)
         {
             bool approve = false;
 
@@ -323,6 +320,8 @@ namespace Horse.Messaging.Server.Cluster
                 case NodeState.Single:
                     if (successor.Info.StartDate.HasValue)
                         approve = successor.Info.StartDate <= StartDate;
+                    else
+                        Rider.Server.Logger?.LogEvent("CLUSTER", $"Main requester has no valid start date");
                     break;
             }
 
@@ -331,7 +330,7 @@ namespace Horse.Messaging.Server.Cluster
 
             await successor.SendMessage(message);
 
-            Rider.Server.Logger?.LogEvent("CLUSTER", $"Main request of {successor.Info.Name} has {(approve ? "approved" : "rejected")}");
+            Rider.Server.Logger?.LogEvent("CLUSTER", $"Main request of {successor.Info.Name} has {(approve ? "approved" : "rejected")} as {State}");
 
             if (State == NodeState.Main)
                 await AnnounceMainity();
@@ -374,7 +373,7 @@ namespace Horse.Messaging.Server.Cluster
                 }
 
                 //successor is not available, find next replica
-                NodeClient firstReplica = Clients.Where(x => x.IsConnected).OrderBy(x => x.Info.Id).FirstOrDefault();
+                NodeClient firstReplica = Clients.Where(x => x.IsConnected).MinBy(x => x.Info.Id);
 
                 //if there is no avaiable replica, the node is alone!
                 if (firstReplica == null)
@@ -383,9 +382,7 @@ namespace Horse.Messaging.Server.Cluster
                     return Task.CompletedTask;
                 }
 
-                NodeClient oldestClient = Clients.Where(x => x.Info.StartDate.HasValue)
-                    .OrderBy(x => x.Info.StartDate)
-                    .FirstOrDefault();
+                NodeClient oldestClient = Clients.Where(x => x.Info.StartDate.HasValue).MinBy(x => x.Info.StartDate);
 
                 if (StartDate > oldestClient.Info.StartDate)
                     return AskForMain();
