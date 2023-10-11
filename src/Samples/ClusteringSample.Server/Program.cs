@@ -85,7 +85,7 @@ namespace ClusteringSample.Server
             HorseServer server = new HorseServer();
             server.Logger = new ConsoleLogger();
             server.UseRider(rider);
-            server.Start(port);
+            server.Run(port);
         }
     }
 }

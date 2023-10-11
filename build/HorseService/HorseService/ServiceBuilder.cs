@@ -1,11 +1,8 @@
 ﻿using Horse.Jockey;
 using Horse.Jockey.Models.User;
 using Horse.Messaging.Data;
-using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Cluster;
-using Horse.Messaging.Server.Queues;
-using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Server;
 
 namespace HorseService;
@@ -16,6 +13,16 @@ public class ServiceBuilder
     private HorseRider _rider;
     private AppOptions _options;
 
+    private ServiceBuilder()
+    {
+        _server.Logger = new ConsoleLogger();
+    }
+
+    public static ServiceBuilder Create()
+    {
+        return new ServiceBuilder();
+    }
+    
     public ServiceBuilder SetOptions(AppOptions options)
     {
         _options = options;
@@ -31,26 +38,47 @@ public class ServiceBuilder
             .ConfigureOptions(o => { o.DataPath = _options.DataPath; })
             .ConfigureChannels(c =>
             {
-                c.Options.AutoDestroy = true;
-                c.Options.AutoChannelCreation = true;
+                c.Options.AutoChannelCreation = _options.ChannelAutoCreate;
+                c.Options.AutoDestroy = _options.ChannelAutoDestroy > 0;
+
+                if (_options.ChannelAutoDestroy > 1)
+                    c.Options.AutoDestroyIdleSeconds = _options.ChannelAutoDestroy;
             })
             .ConfigureCache(c =>
             {
+                c.Options.MaximumKeys = _options.CacheMaxKeys;
+                c.Options.ValueMaxSize = _options.CacheMaxValueSize;
                 c.Options.DefaultDuration = TimeSpan.FromMinutes(15);
                 c.Options.MinimumDuration = TimeSpan.FromHours(6);
             })
             .ConfigureQueues(c =>
             {
-                c.Options.AutoQueueCreation = true;
-                c.UsePersistentQueues(d => { d.UseAutoFlush(TimeSpan.FromMilliseconds(50)); },
-                    q =>
-                    {
-                        q.Options.AutoDestroy = QueueDestroy.Disabled;
-                        q.Options.CommitWhen = CommitWhen.AfterReceived;
-                        q.Options.PutBack = PutBackDecision.Regular;
-                        q.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-                        q.Options.PutBackDelay = 5000;
-                    });
+                c.Options.Acknowledge = _options.QueueAck;
+                c.Options.AutoQueueCreation = _options.QueueAutoCreate;
+                c.Options.AutoDestroy = _options.QueueDestroy;
+                c.Options.CommitWhen = _options.QueueCommitWhen;
+
+                c.Options.PutBack = _options.QueuePutback;
+
+                if (_options.QueuePutbackDelay > TimeSpan.Zero)
+                    c.Options.PutBackDelay = Convert.ToInt32(_options.QueuePutbackDelay.TotalMilliseconds);
+
+                if (_options.QueueUsePersistentManagerAsDefault)
+                {
+                    if (_options.QueueUsePersistent)
+                        c.UsePersistentQueues("Persistent", d => { d.UseAutoFlush(TimeSpan.FromMilliseconds(250)); });
+
+                    if (_options.QueueUseMemory)
+                        c.UseMemoryQueues("Memory");
+                }
+                else
+                {
+                    if (_options.QueueUseMemory)
+                        c.UseMemoryQueues("Memory");
+                    
+                    if (_options.QueueUsePersistent)
+                        c.UsePersistentQueues("Persistent", d => { d.UseAutoFlush(TimeSpan.FromMilliseconds(250)); });
+                }
             })
             .Build();
 
@@ -103,7 +131,6 @@ public class ServiceBuilder
         _rider.AddJockey(o =>
         {
             o.CustomSecret = $"{Guid.NewGuid()}-{Guid.NewGuid()}-{Guid.NewGuid()}";
-
             o.Port = _options.JockeyPort;
             o.AuthAsync = login =>
             {
@@ -117,14 +144,13 @@ public class ServiceBuilder
         return this;
     }
 
-    public HorseServer CreateServer()
+    public HorseServer Build()
     {
         _server.Options.Hosts = new List<HostOptions>();
         _server.Options.Hosts.Add(new HostOptions {Port = _options.Port});
 
         _server.UseRider(_rider);
-        _server.Logger = new ConsoleLogger();
-
+        
         return _server;
     }
 }

@@ -14,12 +14,12 @@ namespace Horse.Messaging.Server.Queues.Sync
         /// Queue manager
         /// </summary>
         IHorseQueueManager Manager { get; }
-        
+
         /// <summary>
         /// Synchorization status
         /// </summary>
         QueueSyncStatus Status { get; }
-        
+
         /// <summary>
         /// Client object of the remote node 
         /// </summary>
@@ -50,8 +50,8 @@ namespace Horse.Messaging.Server.Queues.Sync
         /// <summary>
         /// This method is called when main node sends missing messages to the replica.
         /// </summary>
-        Task ProcessReceivedMessages(HorseMessage message);
-        
+        Task ProcessReceivedMessages(HorseMessage message, bool receivedFromMainNode);
+
         /// <summary>
         /// This method is executed in main node right after replica send sync completion message to the main.
         /// It also unlocks the queue to regular queue operations.
@@ -62,6 +62,6 @@ namespace Horse.Messaging.Server.Queues.Sync
         /// This method is executed in replica node.
         /// Completes queue sync operations and sends the sync completion message to the main.
         /// </summary>
-        Task EndReceiving();
+        Task EndReceiving(bool sendLocalMessages);
     }
 }

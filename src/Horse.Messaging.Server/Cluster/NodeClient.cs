@@ -72,10 +72,10 @@ namespace Horse.Messaging.Server.Cluster
             Rider = rider;
             Info = info;
 
-            _mainNodeAnnouncementSerializerOptions = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
+            _mainNodeAnnouncementSerializerOptions = new JsonSerializerOptions() {PropertyNameCaseInsensitive = true};
             _mainNodeAnnouncementSerializerOptions.AddContext<MainNodeAnnouncementSerializerContext>();
 
-            _nodeQueueInfoSerializerOptions = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
+            _nodeQueueInfoSerializerOptions = new JsonSerializerOptions() {PropertyNameCaseInsensitive = true};
             _nodeQueueInfoSerializerOptions.AddContext<NodeQueueInfoSerializerContext>();
 
             _outgoingClient = new HorseClient();
@@ -246,30 +246,30 @@ namespace Horse.Messaging.Server.Cluster
                 #region Node Management
 
                 case KnownContentTypes.NodeInformation:
-                    {
-                        if (fromIncomingClient)
-                            return;
+                {
+                    if (fromIncomingClient)
+                        return;
 
-                        Info.Id = message.FindHeader(HorseHeaders.NODE_ID);
-                        Info.PublicHost = message.FindHeader(HorseHeaders.NODE_PUBLIC_HOST);
-                        Info.Name = message.FindHeader(HorseHeaders.CLIENT_NAME);
-                        break;
-                    }
+                    Info.Id = message.FindHeader(HorseHeaders.NODE_ID);
+                    Info.PublicHost = message.FindHeader(HorseHeaders.NODE_PUBLIC_HOST);
+                    Info.Name = message.FindHeader(HorseHeaders.CLIENT_NAME);
+                    break;
+                }
 
                 case KnownContentTypes.WhoIsMainNode:
-                    {
-                        if (cluster.Options.Mode == ClusterMode.Reliable && cluster.State == NodeState.Main)
-                            _ = cluster.AnnounceMainity();
+                {
+                    if (cluster.Options.Mode == ClusterMode.Reliable && cluster.State == NodeState.Main)
+                        _ = cluster.AnnounceMainity();
 
-                        break;
-                    }
+                    break;
+                }
 
                 case KnownContentTypes.MainNodeAnnouncement:
-                    {
-                        MainNodeAnnouncement msg = JsonSerializer.Deserialize<MainNodeAnnouncement>(message.GetStringContent(), _mainNodeAnnouncementSerializerOptions);
-                        cluster.OnMainAnnounced(this, msg);
-                        break;
-                    }
+                {
+                    MainNodeAnnouncement msg = JsonSerializer.Deserialize<MainNodeAnnouncement>(message.GetStringContent(), _mainNodeAnnouncementSerializerOptions);
+                    cluster.OnMainAnnounced(this, msg);
+                    break;
+                }
 
                 case KnownContentTypes.MainAnnouncementAnswer:
                     bool approved = message.GetStringContent().Trim() == "1";
@@ -288,6 +288,13 @@ namespace Horse.Messaging.Server.Cluster
 
                 #region Queue Sync
 
+                case KnownContentTypes.NodeTriggerQueueListRequest:
+                {
+                    HorseMessage msg = new HorseMessage(MessageType.Cluster, message.Source, KnownContentTypes.NodeQueueListRequest);
+                    _ = SendMessage(msg);
+                    break;
+                }
+
                 case KnownContentTypes.NodeQueueListRequest:
                     if (cluster.State == NodeState.Main)
                     {
@@ -300,92 +307,101 @@ namespace Horse.Messaging.Server.Cluster
                     break;
 
                 case KnownContentTypes.NodeQueueListResponse:
-                    {
-                        List<NodeQueueInfo> infoList = JsonSerializer.Deserialize<List<NodeQueueInfo>>(message.GetStringContent(), _nodeQueueInfoSerializerOptions);
-                        _ = cluster.ProcessQueueList(this, infoList);
-                        break;
-                    }
+                {
+                    List<NodeQueueInfo> infoList = JsonSerializer.Deserialize<List<NodeQueueInfo>>(message.GetStringContent(), _nodeQueueInfoSerializerOptions);
+                    _ = cluster.ProcessQueueList(this, infoList);
+                    break;
+                }
 
                 case KnownContentTypes.NodeQueueSyncRequest:
+                {
+                    if (cluster.State == NodeState.Main)
                     {
-                        if (cluster.State == NodeState.Main)
-                        {
-                            HorseQueue queue = Rider.Queue.Find(message.Target);
+                        HorseQueue queue = Rider.Queue.Find(message.Target);
 
-                            if (queue != null)
-                                _ = queue.Manager.Synchronizer.BeginSharing(this);
-                            else
-                                _ = SendMessage(new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.RemoveQueue));
-                        }
-
-                        break;
+                        if (queue != null)
+                            _ = queue.Manager.Synchronizer.BeginSharing(this);
+                        else
+                            _ = SendMessage(new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.RemoveQueue));
                     }
+
+                    break;
+                }
 
                 case KnownContentTypes.NodeQueueMessageIdList:
-                    {
-                        HorseQueue queue = Rider.Queue.Find(message.Target);
-                        if (queue != null)
-                            _ = queue.Manager.Synchronizer.ProcessMessageList(message);
+                {
+                    HorseQueue queue = Rider.Queue.Find(message.Target);
+                    if (queue != null)
+                        _ = queue.Manager.Synchronizer.ProcessMessageList(message);
 
-                        break;
-                    }
+                    break;
+                }
 
                 case KnownContentTypes.NodeQueueMessageRequest:
-                    {
-                        HorseQueue queue = Rider.Queue.Find(message.Target);
-                        if (queue != null)
-                            _ = queue.Manager.Synchronizer.SendMessages(message);
+                {
+                    HorseQueue queue = Rider.Queue.Find(message.Target);
+                    if (queue != null)
+                        _ = queue.Manager.Synchronizer.SendMessages(message);
 
-                        break;
-                    }
+                    break;
+                }
 
                 case KnownContentTypes.NodeQueueMessageResponse:
-                    {
-                        HorseQueue queue = Rider.Queue.Find(message.Target);
-                        if (queue != null)
-                            _ = ProcessSync(message, queue);
+                {
+                    HorseQueue queue = Rider.Queue.Find(message.Target);
+                    if (queue != null)
+                        _ = ProcessSync(message, queue);
 
-                        break;
-                    }
+                    break;
+                }
+
+                case KnownContentTypes.NodeQueueSyncReverseMessages:
+                {
+                    HorseQueue queue = Rider.Queue.Find(message.Target);
+                    if (queue != null)
+                        _ = queue.Manager.Synchronizer.ProcessReceivedMessages(message, false);
+
+                    break;
+                }
 
                 case KnownContentTypes.NodeQueueSyncCompletion:
-                    {
-                        HorseQueue queue = Rider.Queue.Find(message.Target);
-                        if (queue != null)
-                            _ = queue.Manager.Synchronizer.EndSharing();
+                {
+                    HorseQueue queue = Rider.Queue.Find(message.Target);
+                    if (queue != null)
+                        _ = queue.Manager.Synchronizer.EndSharing();
 
-                        break;
-                    }
+                    break;
+                }
 
                 #endregion
 
                 #region Queue Operations
 
                 case KnownContentTypes.CreateQueue:
+                {
+                    string content = message.GetStringContent();
+
+                    NodeQueueInfo queueInfo = JsonSerializer.Deserialize<NodeQueueInfo>(content, _nodeQueueInfoSerializerOptions);
+
+                    _ = Rider.Queue.CreateReplica(queueInfo);
+                    break;
+                }
+
+                case KnownContentTypes.UpdateQueue:
+                {
+                    HorseQueue queue = Rider.Queue.Find(message.Target);
+
+                    if (queue != null)
                     {
                         string content = message.GetStringContent();
 
                         NodeQueueInfo queueInfo = JsonSerializer.Deserialize<NodeQueueInfo>(content, _nodeQueueInfoSerializerOptions);
 
-                        _ = Rider.Queue.CreateReplica(queueInfo);
-                        break;
+                        queue.UpdateOptionsByNodeInfo(queueInfo);
                     }
 
-                case KnownContentTypes.UpdateQueue:
-                    {
-                        HorseQueue queue = Rider.Queue.Find(message.Target);
-
-                        if (queue != null)
-                        {
-                            string content = message.GetStringContent();
-
-                            NodeQueueInfo queueInfo = JsonSerializer.Deserialize<NodeQueueInfo>(content, _nodeQueueInfoSerializerOptions);
-
-                            queue.UpdateOptionsByNodeInfo(queueInfo);
-                        }
-
-                        break;
-                    }
+                    break;
+                }
 
                 case KnownContentTypes.RemoveQueue:
                     _ = Rider.Queue.Remove(message.Target);
@@ -396,60 +412,64 @@ namespace Horse.Messaging.Server.Cluster
                     break;
 
                 case KnownContentTypes.NodePutBackQueueMessage:
+                {
+                    HorseQueue queue = Rider.Queue.Find(message.Target);
+
+                    if (queue != null)
                     {
-                        HorseQueue queue = Rider.Queue.Find(message.Target);
-
-                        if (queue != null)
+                        QueueMessage found;
+                        if (message.HighPriority)
                         {
-                            QueueMessage found;
-                            if (message.HighPriority)
-                            {
-                                found = queue.Manager.MessageStore.Find(message.MessageId)
-                                        ?? queue.Manager.PriorityMessageStore.Find(message.MessageId);
-                            }
-                            else
-                            {
-                                found = queue.Manager.PriorityMessageStore.Find(message.MessageId)
-                                        ?? queue.Manager.MessageStore.Find(message.MessageId);
-                            }
-
-                            if (found != null)
-                                _ = queue.Manager.ChangeMessagePriority(found, message.HighPriority);
+                            found = queue.Manager.MessageStore.Find(message.MessageId)
+                                    ?? queue.Manager.PriorityMessageStore.Find(message.MessageId);
+                        }
+                        else
+                        {
+                            found = queue.Manager.PriorityMessageStore.Find(message.MessageId)
+                                    ?? queue.Manager.MessageStore.Find(message.MessageId);
                         }
 
-                        break;
+                        if (found != null)
+                            _ = queue.Manager.ChangeMessagePriority(found, message.HighPriority);
                     }
+
+                    break;
+                }
 
                 case KnownContentTypes.NodeRemoveQueueMessage:
-                    {
-                        HorseQueue queue = Rider.Queue.Find(message.Target);
+                {
+                    HorseQueue queue = Rider.Queue.Find(message.Target);
 
-                        if (queue != null)
-                            _ = queue.RemoveMessage(message.MessageId);
+                    if (queue != null)
+                        _ = queue.RemoveMessage(message.MessageId);
 
-                        break;
-                    }
+                    break;
+                }
 
-                    #endregion
+                #endregion
             }
         }
 
         private async Task ProcessSync(HorseMessage message, HorseQueue queue)
         {
-            await queue.Manager.Synchronizer.ProcessReceivedMessages(message);
-            await queue.Manager.Synchronizer.EndReceiving();
+            await queue.Manager.Synchronizer.ProcessReceivedMessages(message, true);
+            await queue.Manager.Synchronizer.EndReceiving(true);
         }
 
         internal async Task<bool> SendMessage(HorseMessage message)
         {
             if (_outgoingClient != null && _outgoingClient.IsConnected)
             {
+                message.Target = _outgoingClient.ClientId;
                 HorseResult result = await _outgoingClient.SendAsync(message);
                 return result.Code == HorseResultCode.Ok;
             }
 
             if (_incomingClient != null && _incomingClient.IsConnected)
+            {
+                message.Target = _incomingClient.UniqueId;
                 return await _incomingClient.SendAsync(message);
+            }
 
             return false;
         }

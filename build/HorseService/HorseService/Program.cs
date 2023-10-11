@@ -1,9 +1,12 @@
 ﻿using HorseService;
 
-new ServiceBuilder()
-    .SetOptions(AppOptions.LoadFromEnvironment())
+ServiceBuilder.Create()
+    .SetOptions(OptionsBuilder
+        .Create()
+        .LoadFromEnvironment()
+        .Build())
     .ConfigureRider()
     .InitializeClusterOptions()
     .InitializeJockey()
-    .CreateServer()
+    .Build()
     .Run();

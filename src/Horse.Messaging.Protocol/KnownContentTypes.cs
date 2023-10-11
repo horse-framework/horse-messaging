@@ -266,6 +266,11 @@ namespace Horse.Messaging.Protocol
         public const ushort WhoIsMainNode = 705;
 
         /// <summary>
+        /// "710" Server sends client requesting queue list
+        /// </summary>
+        public const ushort NodeTriggerQueueListRequest = 710;
+        
+        /// <summary>
         /// "711" Node queue list request
         /// </summary>
         public const ushort NodeQueueListRequest = 711;
@@ -296,9 +301,14 @@ namespace Horse.Messaging.Protocol
         public const ushort NodeQueueMessageResponse = 716;
 
         /// <summary>
-        /// "717" Node queue sync completion
+        /// "717" Node queue sync reverse messages
         /// </summary>
-        public const ushort NodeQueueSyncCompletion = 717;
+        public const ushort NodeQueueSyncReverseMessages = 717;
+
+        /// <summary>
+        /// "718" Node queue sync completion
+        /// </summary>
+        public const ushort NodeQueueSyncCompletion = 718;
 
         /// <summary>
         /// "720" Cluster node acknowledge
