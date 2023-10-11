@@ -1,7 +1,7 @@
 using System;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Horse.Messaging.Protocol;
 using Test.Common.Handlers;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
@@ -54,7 +54,7 @@ namespace Test.Common
                 .ConfigureQueues(q =>
                 {
                     q.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(90);
-                    q.Options.MessageTimeout = TimeSpan.FromSeconds(12);
+                    q.Options.MessageTimeout = new MessageTimeoutStrategy {MessageDuration = 12, Policy = MessageTimeoutPolicy.Delete};
                     q.Options.Type = QueueType.Push;
                     q.Options.AutoQueueCreation = true;
 
@@ -69,10 +69,7 @@ namespace Test.Common
 
                     q.UseCustomPersistentConfigurator(new QueueOptionsConfigurator(q.Rider, $"queues-{Guid.NewGuid()}.json"));
                 })
-                .ConfigureChannels(c =>
-                {
-                    c.UseCustomPersistentConfigurator(null);
-                })
+                .ConfigureChannels(c => { c.UseCustomPersistentConfigurator(null); })
                 .ConfigureClients(c =>
                 {
                     c.Handlers.Add(new TestClientHandler(this));

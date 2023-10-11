@@ -471,7 +471,7 @@ namespace Horse.Messaging.Server.Network
                     DeliveryTrackingMessags = queue.Manager == null ? 0 : queue.Manager.DeliveryHandler.Tracker.GetDeliveryCount(),
                     Acknowledge = ack,
                     AcknowledgeTimeout = Convert.ToInt32(queue.Options.AcknowledgeTimeout.TotalMilliseconds),
-                    MessageTimeout = Convert.ToInt32(queue.Options.MessageTimeout.TotalMilliseconds),
+                    MessageTimeout = queue.Options.MessageTimeout,
                     ReceivedMessages = queue.Info.ReceivedMessages,
                     SentMessages = queue.Info.SentMessages,
                     NegativeAcks = queue.Info.NegativeAcknowledge,

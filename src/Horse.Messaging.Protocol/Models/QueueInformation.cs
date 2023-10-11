@@ -55,7 +55,7 @@ namespace Horse.Messaging.Protocol.Models
         /// <summary>
         /// When message queuing is active, maximum time for a message wait
         /// </summary>
-        public int MessageTimeout { get; set; }
+        public MessageTimeoutStrategy MessageTimeout { get; set; }
 
         /// <summary>
         /// Total messages received from producers

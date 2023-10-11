@@ -70,7 +70,7 @@ namespace Horse.Messaging.Client.Queues
         /// <summary>
         /// Message timeout in seconds
         /// </summary>
-        public int? MessageTimeout { get; set; }
+        public MessageTimeoutStrategyInfo MessageTimeout { get; set; }
 
         /// <summary>
         /// Acknowledge timeout in seconds
@@ -121,8 +121,11 @@ namespace Horse.Messaging.Client.Queues
             if (PutBackDelay.HasValue)
                 message.AddHeader(HorseHeaders.PUT_BACK_DELAY, PutBackDelay.Value.ToString());
 
-            if (MessageTimeout.HasValue)
-                message.AddHeader(HorseHeaders.MESSAGE_TIMEOUT, MessageTimeout.Value.ToString());
+            if (MessageTimeout != null)
+            {
+                string value = $"{MessageTimeout.MessageDuration};{MessageTimeout.Policy};{MessageTimeout.TargetName ?? string.Empty}";
+                message.AddHeader(HorseHeaders.MESSAGE_TIMEOUT, value);
+            }
 
             if (AcknowledgeTimeout.HasValue)
                 message.AddHeader(HorseHeaders.ACK_TIMEOUT, AcknowledgeTimeout.Value.ToString());

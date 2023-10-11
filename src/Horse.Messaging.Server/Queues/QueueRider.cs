@@ -128,7 +128,12 @@ namespace Horse.Messaging.Server.Queues
                         ClientLimit = configuration.ClientLimit,
                         CommitWhen = Enums.Parse<CommitWhen>(configuration.CommitWhen, true, EnumFormat.Description),
                         MessageLimit = configuration.MessageLimit,
-                        MessageTimeout = TimeSpan.FromMilliseconds(configuration.MessageTimeout),
+                        MessageTimeout = new MessageTimeoutStrategy
+                        {
+                            MessageDuration = configuration.MessageTimeout.MessageDuration,
+                            Policy = Enums.Parse<MessageTimeoutPolicy>(configuration.MessageTimeout.Policy, true, EnumFormat.Description),
+                            TargetName = configuration.MessageTimeout.TargetName
+                        },
                         PutBack = Enums.Parse<PutBackDecision>(configuration.PutBack, true, EnumFormat.Description),
                         DelayBetweenMessages = configuration.DelayBetweenMessages,
                         LimitExceededStrategy = Enums.Parse<MessageLimitExceededStrategy>(configuration.LimitExceededStrategy, true, EnumFormat.Description),
@@ -317,7 +322,7 @@ namespace Horse.Messaging.Server.Queues
                 if (initialize && queueManagerFactory != null)
                 {
                     IHorseQueueManager queueManager = await queueManagerFactory(handlerBuilder);
-                    
+
                     if (requestMessage != null)
                         queue.UpdateOptionsByMessage(requestMessage);
 
@@ -375,7 +380,12 @@ namespace Horse.Messaging.Server.Queues
             options.Acknowledge = Enums.Parse<QueueAckDecision>(info.Acknowledge, true, EnumFormat.Description);
             options.Type = Enums.Parse<QueueType>(info.QueueType, true, EnumFormat.Description);
             options.PutBackDelay = info.PutBackDelay;
-            options.MessageTimeout = TimeSpan.FromSeconds(info.MessageTimeout);
+            options.MessageTimeout = new MessageTimeoutStrategy
+            {
+                MessageDuration = info.MessageTimeout.MessageDuration,
+                Policy = Enums.Parse<MessageTimeoutPolicy>(info.MessageTimeout.Policy, true, EnumFormat.Description),
+                TargetName = info.MessageTimeout.TargetName
+            };
             options.AcknowledgeTimeout = TimeSpan.FromMilliseconds(info.AcknowledgeTimeout);
             options.DelayBetweenMessages = info.DelayBetweenMessages;
             options.AutoDestroy = Enums.Parse<QueueDestroy>(info.AutoDestroy, true, EnumFormat.Description);
@@ -422,7 +432,7 @@ namespace Horse.Messaging.Server.Queues
                 }
 
                 _queues.Add(queue);
-                
+
                 if (OptionsConfigurator != null)
                 {
                     QueueConfiguration configuration = OptionsConfigurator.Find(x => x.Name == queue.Name);

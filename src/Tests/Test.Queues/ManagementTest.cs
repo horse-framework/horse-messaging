@@ -123,16 +123,16 @@ namespace Test.Queues
             HorseQueue queue = server.Rider.Queue.Find("push-a");
             Assert.NotNull(queue);
 
-            Assert.Equal(TimeSpan.FromSeconds(12), queue.Options.MessageTimeout);
+            Assert.Equal(12, queue.Options.MessageTimeout.MessageDuration);
 
             HorseClient client = new HorseClient();
             await client.ConnectAsync("horse://localhost:" + port);
             Assert.True(client.IsConnected);
 
-            HorseResult updated = await client.Queue.SetOptions("push-a", o => o.MessageTimeout = 666000);
+            HorseResult updated = await client.Queue.SetOptions("push-a", o => o.MessageTimeout = new MessageTimeoutStrategyInfo(666, "delete", null));
             Assert.Equal(HorseResultCode.Ok, updated.Code);
 
-            Assert.Equal(TimeSpan.FromSeconds(666), queue.Options.MessageTimeout);
+            Assert.Equal(666, queue.Options.MessageTimeout.MessageDuration);
             server.Stop();
         }
 

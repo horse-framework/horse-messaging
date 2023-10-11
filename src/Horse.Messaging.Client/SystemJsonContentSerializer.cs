@@ -28,7 +28,7 @@ namespace Horse.Messaging.Client
         /// </summary>
         public SystemJsonContentSerializer(JsonSerializerOptions options = null)
         {
-            _options = options ?? new JsonSerializerOptions();
+            _options = options ?? new JsonSerializerOptions {PropertyNameCaseInsensitive = true};
 
             _bindingContext = new BindingInformationSerializerContext(new JsonSerializerOptions(_options));
             _cacheContext = new CacheInformationSerializerContext(new JsonSerializerOptions(_options));

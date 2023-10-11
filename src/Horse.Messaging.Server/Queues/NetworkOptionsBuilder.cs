@@ -28,7 +28,7 @@ namespace Horse.Messaging.Server.Queues
         /// When message queuing is active, maximum time for a message wait
         /// </summary>
         [JsonPropertyName("MessageTimeout")]
-        public int? MessageTimeout { get; set; }
+        public MessageTimeoutStrategyInfo MessageTimeout { get; set; }
 
         /// <summary>
         /// Default type for the queue
@@ -109,8 +109,13 @@ namespace Horse.Messaging.Server.Queues
             if (AcknowledgeTimeout.HasValue)
                 target.AcknowledgeTimeout = TimeSpan.FromMilliseconds(AcknowledgeTimeout.Value);
 
-            if (MessageTimeout.HasValue)
-                target.MessageTimeout = TimeSpan.FromMilliseconds(MessageTimeout.Value);
+            if (MessageTimeout != null)
+                target.MessageTimeout = new MessageTimeoutStrategy
+                {
+                    MessageDuration = MessageTimeout.MessageDuration,
+                    Policy = Enums.Parse<MessageTimeoutPolicy>(MessageTimeout.Policy, true, EnumFormat.Description),
+                    TargetName = MessageTimeout.TargetName
+                };
 
             if (Type.HasValue)
                 target.Type = Type.Value;

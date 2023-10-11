@@ -23,9 +23,6 @@ namespace Horse.Messaging.Server.Cluster
         private bool _connectedToRemote;
         public event Action<NodeClient> OnDisconnected;
 
-        private readonly JsonSerializerOptions _mainNodeAnnouncementSerializerOptions;
-        private readonly JsonSerializerOptions _nodeQueueInfoSerializerOptions;
-
         /// <summary>
         /// Node Info
         /// </summary>
@@ -71,12 +68,6 @@ namespace Horse.Messaging.Server.Cluster
         {
             Rider = rider;
             Info = info;
-
-            _mainNodeAnnouncementSerializerOptions = new JsonSerializerOptions() {PropertyNameCaseInsensitive = true};
-            _mainNodeAnnouncementSerializerOptions.AddContext<MainNodeAnnouncementSerializerContext>();
-
-            _nodeQueueInfoSerializerOptions = new JsonSerializerOptions() {PropertyNameCaseInsensitive = true};
-            _nodeQueueInfoSerializerOptions.AddContext<NodeQueueInfoSerializerContext>();
 
             _outgoingClient = new HorseClient();
             _outgoingClient.ReconnectWait = TimeSpan.FromMilliseconds(500);
@@ -266,7 +257,7 @@ namespace Horse.Messaging.Server.Cluster
 
                 case KnownContentTypes.MainNodeAnnouncement:
                 {
-                    MainNodeAnnouncement msg = JsonSerializer.Deserialize<MainNodeAnnouncement>(message.GetStringContent(), _mainNodeAnnouncementSerializerOptions);
+                    MainNodeAnnouncement msg = JsonSerializer.Deserialize<MainNodeAnnouncement>(message.GetStringContent(), new JsonSerializerOptions {PropertyNameCaseInsensitive = true});
                     cluster.OnMainAnnounced(this, msg);
                     break;
                 }
@@ -300,7 +291,7 @@ namespace Horse.Messaging.Server.Cluster
                     {
                         List<NodeQueueInfo> infoList = Rider.Queue.Queues.Select(x => x.CreateNodeQueueInfo()).ToList();
                         HorseMessage listMessage = new HorseMessage(MessageType.Cluster, Info.Id, KnownContentTypes.NodeQueueListResponse);
-                        listMessage.SetStringContent(JsonSerializer.Serialize(infoList, infoList.GetType(), NodeQueueInfoSerializerContext.Default));
+                        listMessage.SetStringContent(JsonSerializer.Serialize(infoList, infoList.GetType()));
                         _ = SendMessage(listMessage);
                     }
 
@@ -308,7 +299,7 @@ namespace Horse.Messaging.Server.Cluster
 
                 case KnownContentTypes.NodeQueueListResponse:
                 {
-                    List<NodeQueueInfo> infoList = JsonSerializer.Deserialize<List<NodeQueueInfo>>(message.GetStringContent(), _nodeQueueInfoSerializerOptions);
+                    List<NodeQueueInfo> infoList = JsonSerializer.Deserialize<List<NodeQueueInfo>>(message.GetStringContent(), new JsonSerializerOptions {PropertyNameCaseInsensitive = true});
                     _ = cluster.ProcessQueueList(this, infoList);
                     break;
                 }
@@ -381,7 +372,7 @@ namespace Horse.Messaging.Server.Cluster
                 {
                     string content = message.GetStringContent();
 
-                    NodeQueueInfo queueInfo = JsonSerializer.Deserialize<NodeQueueInfo>(content, _nodeQueueInfoSerializerOptions);
+                    NodeQueueInfo queueInfo = JsonSerializer.Deserialize<NodeQueueInfo>(content, new JsonSerializerOptions {PropertyNameCaseInsensitive = true});
 
                     _ = Rider.Queue.CreateReplica(queueInfo);
                     break;
@@ -395,7 +386,7 @@ namespace Horse.Messaging.Server.Cluster
                     {
                         string content = message.GetStringContent();
 
-                        NodeQueueInfo queueInfo = JsonSerializer.Deserialize<NodeQueueInfo>(content, _nodeQueueInfoSerializerOptions);
+                        NodeQueueInfo queueInfo = JsonSerializer.Deserialize<NodeQueueInfo>(content, new JsonSerializerOptions {PropertyNameCaseInsensitive = true});
 
                         queue.UpdateOptionsByNodeInfo(queueInfo);
                     }

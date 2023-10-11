@@ -28,8 +28,8 @@ namespace Horse.Messaging.Server.Queues.States
         {
             try
             {
-                if (!message.Deadline.HasValue && _queue.Options.MessageTimeout > TimeSpan.Zero)
-                    message.Deadline = DateTime.UtcNow.Add(_queue.Options.MessageTimeout);
+                if (!message.Deadline.HasValue && _queue.Options.MessageTimeout.Policy != MessageTimeoutPolicy.NoTimeout && _queue.Options.MessageTimeout.MessageDuration > 0)
+                    message.Deadline = DateTime.UtcNow.AddSeconds(_queue.Options.MessageTimeout.MessageDuration);
 
                 ProcessingMessage = message;
                 PushResult result = await ProcessMessage(message);
@@ -134,7 +134,7 @@ namespace Horse.Messaging.Server.Queues.States
 
             message.Decision = await deliveryHandler.EndSend(_queue, message);
             await _queue.ApplyDecision(message.Decision, message);
-            
+
             return PushResult.Success;
         }
 
