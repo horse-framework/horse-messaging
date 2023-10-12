@@ -189,6 +189,8 @@ namespace Horse.Messaging.Server.Cluster
                 State = NodeState.Main;
             else if (SuccessorNode != null && SuccessorNode.Id == Id)
                 State = NodeState.Successor;
+            else if (MainNode == null && SuccessorNode == null)
+                State = NodeState.Single;
             else
                 State = NodeState.Replica;
 
@@ -270,6 +272,10 @@ namespace Horse.Messaging.Server.Cluster
             if (!Clients.Any(x => x.IsConnected))
                 return;
 
+            var oldestClient = Clients.Where(x => x.Info != null && x.Info.StartDate.HasValue).MinBy(x => x.Info.StartDate);
+            if (oldestClient.Info.StartDate != null && StartDate > oldestClient.Info.StartDate.Value)
+                return;
+
             lock (_askLock)
             {
                 if (_askingForMain)
@@ -279,7 +285,7 @@ namespace Horse.Messaging.Server.Cluster
                 }
 
                 _askingForMain = true;
-                _askingForMainExpiration = DateTime.UtcNow.AddSeconds(3);
+                _askingForMainExpiration = DateTime.UtcNow.AddMilliseconds(new Random().Next(2500, 7500));
             }
 
             HorseMessage message = new HorseMessage(MessageType.Cluster, Id, KnownContentTypes.AskForMainPermission);
@@ -461,6 +467,9 @@ namespace Horse.Messaging.Server.Cluster
 
         internal Task OnRequestAnswered(NodeClient client, bool approved)
         {
+            string answer = approved ? "accepted" : "rejected";
+            Rider.Server.Logger?.LogEvent("CLUSTER", $"Main Request {answer} by {client.Info.Name}");
+
             if (Options.Mode == ClusterMode.Scaled)
                 return Task.CompletedTask;
 
