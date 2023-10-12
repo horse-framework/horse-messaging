@@ -8,6 +8,7 @@ using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Direct;
+using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
 
@@ -50,7 +51,7 @@ namespace Horse.Messaging.Server.Transactions
                 return;
 
             string fileContent = System.IO.File.ReadAllText(filename);
-            _data = JsonSerializer.Deserialize<List<TransactionContainerData>>(fileContent, new JsonSerializerOptions {PropertyNameCaseInsensitive = true});
+            _data = JsonSerializer.Deserialize<List<TransactionContainerData>>(fileContent, SerializerFactory.Default());
 
             foreach (TransactionContainerData item in _data)
             {
@@ -77,7 +78,7 @@ namespace Horse.Messaging.Server.Transactions
             try
             {
                 string filename = $"{Rider.Options.DataPath}/transactions.json";
-                string fileContent = System.Text.Json.JsonSerializer.Serialize(_data);
+                string fileContent = System.Text.Json.JsonSerializer.Serialize(_data, SerializerFactory.Default());
                 System.IO.File.WriteAllText(filename, fileContent);
             }
             catch (Exception e)

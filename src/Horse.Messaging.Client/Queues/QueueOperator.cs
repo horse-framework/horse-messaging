@@ -212,7 +212,7 @@ namespace Horse.Messaging.Client.Queues
                 optionsAction(options);
 
                 message.Content = new MemoryStream();
-                await JsonSerializer.SerializeAsync(message.Content, options);
+                await JsonSerializer.SerializeAsync(message.Content, options, SerializerFactory.Default());
             }
 
             message.SetMessageId(Client.UniqueIdGenerator.Create());
@@ -269,7 +269,7 @@ namespace Horse.Messaging.Client.Queues
             optionsAction(options);
 
             message.Content = new MemoryStream();
-            await JsonSerializer.SerializeAsync(message.Content, options);
+            await JsonSerializer.SerializeAsync(message.Content, options, SerializerFactory.Default());
 
             return await Client.WaitResponse(message, true);
         }

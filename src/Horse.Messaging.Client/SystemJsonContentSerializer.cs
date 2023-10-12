@@ -12,32 +12,28 @@ namespace Horse.Messaging.Client
     /// </summary>
     public class SystemJsonContentSerializer : IMessageContentSerializer
     {
-        private readonly JsonSerializerOptions _options;
-
-        readonly BindingInformationSerializerContext _bindingContext;
-        readonly CacheInformationSerializerContext _cacheContext;
-        readonly ChannelInformationSerializerContext _channelContext;
-        readonly ClientInformationSerializerContext _clientContext;
-        readonly NodeInformationSerializerContext _nodeContext;
-        readonly QueueInformationSerializerContext _queueContext;
-        readonly RouterInformationSerializerContext _routerContext;
-        readonly HorseMessageSerializerContext _horseMessageContext;
+        private readonly BindingInformationSerializerContext _bindingContext;
+        private readonly CacheInformationSerializerContext _cacheContext;
+        private readonly ChannelInformationSerializerContext _channelContext;
+        private readonly ClientInformationSerializerContext _clientContext;
+        private readonly NodeInformationSerializerContext _nodeContext;
+        private readonly QueueInformationSerializerContext _queueContext;
+        private readonly RouterInformationSerializerContext _routerContext;
+        private readonly HorseMessageSerializerContext _horseMessageContext;
 
         /// <summary>
         /// Creates a new JSON serializer.
         /// </summary>
         public SystemJsonContentSerializer(JsonSerializerOptions options = null)
         {
-            _options = options ?? new JsonSerializerOptions {PropertyNameCaseInsensitive = true};
-
-            _bindingContext = new BindingInformationSerializerContext(new JsonSerializerOptions(_options));
-            _cacheContext = new CacheInformationSerializerContext(new JsonSerializerOptions(_options));
-            _channelContext = new ChannelInformationSerializerContext(new JsonSerializerOptions(_options));
-            _clientContext = new ClientInformationSerializerContext(new JsonSerializerOptions(_options));
-            _nodeContext = new NodeInformationSerializerContext(new JsonSerializerOptions(_options));
-            _queueContext = new QueueInformationSerializerContext(new JsonSerializerOptions(_options));
-            _routerContext = new RouterInformationSerializerContext(new JsonSerializerOptions(_options));
-            _horseMessageContext = new HorseMessageSerializerContext(new JsonSerializerOptions(_options));
+            _bindingContext = new BindingInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
+            _cacheContext = new CacheInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
+            _channelContext = new ChannelInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
+            _clientContext = new ClientInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
+            _nodeContext = new NodeInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
+            _queueContext = new QueueInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
+            _routerContext = new RouterInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
+            _horseMessageContext = new HorseMessageSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
         }
 
         private JsonSerializerContext GetJsonContextForType(string type) => type switch
@@ -68,7 +64,7 @@ namespace Horse.Messaging.Client
             if (context != null)
                 array = JsonSerializer.SerializeToUtf8Bytes(model, model.GetType(), context);
             else
-                array = JsonSerializer.SerializeToUtf8Bytes(model, model.GetType(), _options);
+                array = JsonSerializer.SerializeToUtf8Bytes(model, model.GetType(), SerializerFactory.Default());
 
             message.Content = new MemoryStream(array);
             message.Content.Position = 0;
@@ -90,8 +86,8 @@ namespace Horse.Messaging.Client
 
             if (context != null)
                 return JsonSerializer.Deserialize(span, type, context);
-            else
-                return JsonSerializer.Deserialize(span, type, _options);
+
+            return JsonSerializer.Deserialize(span, type, SerializerFactory.Default());
         }
     }
 }

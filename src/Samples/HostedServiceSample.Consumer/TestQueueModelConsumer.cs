@@ -21,7 +21,7 @@ namespace HostedServiceSample.Consumer
         public Task Consume(HorseMessage message, TestQueueModel model, HorseClient client)
         {
             _ = Console.Out.WriteLineAsync("Consumed!!!");
-            _ = Console.Out.WriteLineAsync(JsonSerializer.Serialize(model, _options));
+            _ = Console.Out.WriteLineAsync(JsonSerializer.Serialize(model));
             return Task.CompletedTask;
         }
     }
@@ -38,7 +38,7 @@ namespace HostedServiceSample.Consumer
         public Task Consume(HorseMessage message, TestQueueModel2 model, HorseClient client)
         {
             _ = Console.Out.WriteLineAsync("Consumed!!!");
-            _ = Console.Out.WriteLineAsync(JsonSerializer.Serialize(model, _options));
+            _ = Console.Out.WriteLineAsync(JsonSerializer.Serialize(model));
             return Task.CompletedTask;
         }
     }

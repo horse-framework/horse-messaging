@@ -10,6 +10,7 @@ using Horse.Messaging.Client.Channels;
 using Horse.Messaging.Client.Direct;
 using Horse.Messaging.Client.Events;
 using Horse.Messaging.Client.Queues;
+using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Client.Queues.Exceptions;
 using Horse.Messaging.Client.Queues.Internal;
 using Horse.Messaging.Client.Routers;
@@ -259,6 +260,12 @@ namespace Horse.Messaging.Client
         private readonly ConnectionData _data = new ConnectionData();
         private bool _autoConnect;
         private Timer _reconnectTimer;
+
+        static HorseClient()
+        {
+            SerializerFactory.AddConverter(new EnumConverter<PutBack>());
+            SerializerFactory.AddConverter(new EnumConverter<MessagingQueueType>());
+        }
 
         /// <summary>
         /// Creates new horse client

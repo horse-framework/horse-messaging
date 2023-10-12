@@ -11,7 +11,7 @@ namespace HostedServiceSample.Consumer
     [DirectContentType(1)]
     public class TestDirectModelHandler : IDirectMessageHandler<TestDirectModel>
     {
-        readonly JsonSerializerOptions _options = new JsonSerializerOptions()
+        readonly JsonSerializerOptions _options = new JsonSerializerOptions
         {
             WriteIndented = true
         };

@@ -129,7 +129,7 @@ namespace Horse.Messaging.Server.Channels
                 string value = initialMessage.Trim();
                 Options.SendLastMessageAsInitial = value.Equals("TRUE", StringComparison.CurrentCultureIgnoreCase) || value == "1";
             }
-            
+
             string idleSeconds = message.FindHeader(HorseHeaders.CHANNEL_DESTROY_IDLE_SECONDS);
             if (!string.IsNullOrEmpty(idleSeconds))
                 Options.AutoDestroyIdleSeconds = Convert.ToInt32(idleSeconds.Trim());
@@ -163,6 +163,7 @@ namespace Horse.Messaging.Server.Channels
             //remove operational headers that are should not be sent to consumers or saved to disk
             message.RemoveHeaders(HorseHeaders.CHANNEL_NAME, HorseHeaders.CC);
             message.WaitResponse = false;
+            LastPublishDate = DateTime.UtcNow;
 
             try
             {

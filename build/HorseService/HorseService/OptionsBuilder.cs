@@ -48,22 +48,29 @@ public class OptionsBuilder
 
     private void LoadClusterFromEnvironment()
     {
-        _options.NodeName = Environment.GetEnvironmentVariable("HORSE_NODE_NAME") ?? "Server";
-        _options.Host = Environment.GetEnvironmentVariable("HORSE_HOST") ?? "localhost";
+        int instanceCount = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_HOST_COUNT") ?? "1");
+
+        if (instanceCount == 1)
+            return;
+
+        string hostTemplate = Environment.GetEnvironmentVariable("HORSE_HOSTNAME") ?? "localhost";
+        int instanceIndexStart = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_HOST_START_INDEX") ?? "0");
+        string hostname = Environment.GetEnvironmentVariable("HOSTNAME");
+
+        _options.NodeName = hostname;
+        _options.Host = hostname;
         _options.ClusterSecret = Environment.GetEnvironmentVariable("HORSE_CLUSTER_SECRET") ?? "no-secret";
 
-        for (int i = 1; i < 11; i++)
+        int index = instanceIndexStart;
+        for (int i = 0; i < instanceCount; i++)
         {
-            string otherNode = Environment.GetEnvironmentVariable($"HORSE_NODE{i}");
-
-            if (string.IsNullOrEmpty(otherNode))
-                break;
-
-            string[] values = otherNode.Split(';', StringSplitOptions.RemoveEmptyEntries);
-            if (values.Length < 2)
+            string replicaHost = hostTemplate.Replace("INDEX", index.ToString());
+            
+            index++;
+            if (replicaHost.Equals(hostname, StringComparison.InvariantCultureIgnoreCase))
                 continue;
-
-            _options.OtherNodes.Add(new NodeOptions {Name = values[0], Host = values[1]});
+            
+            _options.OtherNodes.Add(new NodeOptions {Name = replicaHost, Host = replicaHost});
         }
 
         _options.ClusterMode = Enums.Parse<ClusterMode>(Environment.GetEnvironmentVariable("HORSE_CLUSTER_TYPE") ?? "Reliable", true, EnumFormat.Name);

@@ -105,7 +105,12 @@ namespace Horse.Messaging.Server.Direct
             }
 
             foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
-                _ = handler.OnDirect(sender, message, receivers);
+            {
+                if (message.Type == MessageType.Response)
+                    _ = handler.OnResponse(sender, message, receivers.FirstOrDefault());
+                else
+                    _ = handler.OnDirect(sender, message, receivers);
+            }
 
             _rider.Direct.DirectEvent.Trigger(sender, message.Target,
                 new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));

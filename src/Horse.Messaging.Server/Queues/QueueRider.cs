@@ -374,7 +374,7 @@ namespace Horse.Messaging.Server.Queues
                 }
             }
         }
-
+        
         internal void FillQueueOptions(QueueOptions options, NodeQueueInfo info)
         {
             options.Acknowledge = Enums.Parse<QueueAckDecision>(info.Acknowledge, true, EnumFormat.Description);

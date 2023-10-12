@@ -246,7 +246,7 @@ namespace Horse.Messaging.Server.Cluster
             };
 
             HorseMessage message = new HorseMessage(MessageType.Cluster, "Node", KnownContentTypes.MainNodeAnnouncement);
-            message.SetStringContent(System.Text.Json.JsonSerializer.Serialize(announcement));
+            message.SetStringContent(System.Text.Json.JsonSerializer.Serialize(announcement, SerializerFactory.Default()));
 
             foreach (NodeClient client in Clients)
             {
@@ -627,7 +627,7 @@ namespace Horse.Messaging.Server.Cluster
 
             NodeQueueInfo info = queue.CreateNodeQueueInfo();
             HorseMessage msg = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.CreateQueue);
-            msg.SetStringContent(System.Text.Json.JsonSerializer.Serialize(info));
+            msg.SetStringContent(System.Text.Json.JsonSerializer.Serialize(info, SerializerFactory.Default()));
 
             foreach (NodeClient client in Clients)
             {
@@ -645,7 +645,7 @@ namespace Horse.Messaging.Server.Cluster
 
             NodeQueueInfo info = queue.CreateNodeQueueInfo();
             HorseMessage msg = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.UpdateQueue);
-            msg.SetStringContent(System.Text.Json.JsonSerializer.Serialize(info));
+            msg.SetStringContent(System.Text.Json.JsonSerializer.Serialize(info, SerializerFactory.Default()));
 
             foreach (NodeClient client in Clients)
             {
@@ -673,6 +673,17 @@ namespace Horse.Messaging.Server.Cluster
         }
 
         #endregion
+
+        internal void SendMessage(HorseMessage message)
+        {
+            foreach (NodeClient client in Clients)
+            {
+                if (!client.IsConnected)
+                    continue;
+
+                _ = client.SendMessage(message);
+            }
+        }
 
         #region Queue Sync
 
