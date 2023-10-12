@@ -1,6 +1,7 @@
 ﻿using Horse.Jockey;
 using Horse.Jockey.Models.User;
 using Horse.Messaging.Data;
+using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Cluster;
 using Horse.Server;
@@ -22,7 +23,7 @@ public class ServiceBuilder
     {
         return new ServiceBuilder();
     }
-    
+
     public ServiceBuilder SetOptions(AppOptions options)
     {
         _options = options;
@@ -39,10 +40,10 @@ public class ServiceBuilder
             .ConfigureChannels(c =>
             {
                 c.Options.AutoChannelCreation = _options.ChannelAutoCreate;
-                c.Options.AutoDestroy = _options.ChannelAutoDestroy > 0;
+                c.Options.AutoDestroy = _options.ChannelAutoDestroy;
 
-                if (_options.ChannelAutoDestroy > 1)
-                    c.Options.AutoDestroyIdleSeconds = _options.ChannelAutoDestroy;
+                if (_options.ChannelAutoDestroy)
+                    c.Options.AutoDestroyIdleSeconds = 15;
             })
             .ConfigureCache(c =>
             {
@@ -57,7 +58,7 @@ public class ServiceBuilder
                 c.Options.AutoQueueCreation = _options.QueueAutoCreate;
                 c.Options.AutoDestroy = _options.QueueDestroy;
                 c.Options.CommitWhen = _options.QueueCommitWhen;
-
+                c.Options.MessageTimeout = _options.QueueMessageTimeout;
                 c.Options.PutBack = _options.QueuePutback;
 
                 if (_options.QueuePutbackDelay > TimeSpan.Zero)
@@ -75,7 +76,7 @@ public class ServiceBuilder
                 {
                     if (_options.QueueUseMemory)
                         c.UseMemoryQueues("Memory");
-                    
+
                     if (_options.QueueUsePersistent)
                         c.UsePersistentQueues("Persistent", d => { d.UseAutoFlush(TimeSpan.FromMilliseconds(250)); });
                 }
@@ -150,7 +151,7 @@ public class ServiceBuilder
         _server.Options.Hosts.Add(new HostOptions {Port = _options.Port});
 
         _server.UseRider(_rider);
-        
+
         return _server;
     }
 }

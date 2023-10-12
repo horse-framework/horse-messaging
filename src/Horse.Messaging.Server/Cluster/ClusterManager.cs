@@ -272,10 +272,6 @@ namespace Horse.Messaging.Server.Cluster
             if (!Clients.Any(x => x.IsConnected))
                 return;
 
-            var oldestClient = Clients.Where(x => x.Info != null && x.Info.StartDate.HasValue).MinBy(x => x.Info.StartDate);
-            if (oldestClient.Info.StartDate != null && StartDate > oldestClient.Info.StartDate.Value)
-                return;
-
             lock (_askLock)
             {
                 if (_askingForMain)

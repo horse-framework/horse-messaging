@@ -35,7 +35,7 @@ public class AppOptions
     public int RouterLimit { get; set; }
 
     public bool ChannelAutoCreate { get; set; } = true;
-    public int ChannelAutoDestroy { get; set; } = 1;
+    public bool ChannelAutoDestroy { get; set; } = true;
     public bool ChannelSendLatestMessage { get; set; } = true;
     public int ChannelSubscriberLimit { get; set; }
 
@@ -54,7 +54,7 @@ public class AppOptions
     public int QueueMessageLimit { get; set; }
     public MessageLimitExceededStrategy QueueMsgExceedStrategy { get; set; }
     public int QueueMessageSizeLimit { get; set; }
-    public TimeSpan QueueMessageTimeout { get; set; }
+    public MessageTimeoutStrategy QueueMessageTimeout { get; set; }
     public int QueueDelayBetweenMsgs { get; set; }
     public bool QueueMessageIdUniqueCheck { get; set; }
     public bool QueueUsePersistent { get; set; }

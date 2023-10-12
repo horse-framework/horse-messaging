@@ -447,16 +447,12 @@ namespace Horse.Messaging.Server.Cluster
         {
             if (_outgoingClient != null && _outgoingClient.IsConnected)
             {
-                message.Target = _outgoingClient.ClientId;
                 HorseResult result = await _outgoingClient.SendAsync(message);
                 return result.Code == HorseResultCode.Ok;
             }
 
             if (_incomingClient != null && _incomingClient.IsConnected)
-            {
-                message.Target = _incomingClient.UniqueId;
                 return await _incomingClient.SendAsync(message);
-            }
 
             return false;
         }

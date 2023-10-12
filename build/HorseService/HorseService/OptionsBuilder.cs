@@ -41,7 +41,7 @@ public class OptionsBuilder
 
     private void LoadJockeyFromEnvironment()
     {
-        _options.JockeyEnabled = Environment.GetEnvironmentVariable("HORSE_JOCKEY") == "1";
+        _options.JockeyEnabled = bool.Parse(Environment.GetEnvironmentVariable("HORSE_JOCKEY") ?? "true");
         _options.JockeyUsername = Environment.GetEnvironmentVariable("HORSE_JOCKEY_USERNAME") ?? "";
         _options.JockeyPassword = Environment.GetEnvironmentVariable("HORSE_JOCKEY_PASSWORD") ?? "";
     }
@@ -65,11 +65,11 @@ public class OptionsBuilder
         for (int i = 0; i < instanceCount; i++)
         {
             string replicaHost = hostTemplate.Replace("INDEX", index.ToString());
-            
+
             index++;
             if (replicaHost.Equals(hostname, StringComparison.InvariantCultureIgnoreCase))
                 continue;
-            
+
             _options.OtherNodes.Add(new NodeOptions {Name = replicaHost, Host = replicaHost});
         }
 
@@ -87,9 +87,9 @@ public class OptionsBuilder
 
     private void LoadChannelFromEnvironment()
     {
-        _options.ChannelAutoCreate = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_CHANNEL_AUTO_DESTROY") ?? "1") == 1;
-        _options.ChannelAutoDestroy = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_CHANNEL_AUTO_CREATE") ?? "1");
-        _options.ChannelSendLatestMessage = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_CHANNEL_SEND_LATEST_MESSAGE") ?? "1") == 1;
+        _options.ChannelAutoCreate = bool.Parse(Environment.GetEnvironmentVariable("HORSE_CHANNEL_AUTO_DESTROY") ?? "true");
+        _options.ChannelAutoDestroy = bool.Parse(Environment.GetEnvironmentVariable("HORSE_CHANNEL_AUTO_CREATE") ?? "true");
+        _options.ChannelSendLatestMessage = bool.Parse(Environment.GetEnvironmentVariable("HORSE_CHANNEL_SEND_LATEST_MESSAGE") ?? "true");
         _options.ChannelSubscriberLimit = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_CHANNEL_SUBSCRIBER_LIMIT") ?? "0");
     }
 
@@ -101,7 +101,7 @@ public class OptionsBuilder
 
     private void LoadQueueFromEnvironment()
     {
-        _options.QueueAutoCreate = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_QUEUE_AUTO_CREATE") ?? "1") == 1;
+        _options.QueueAutoCreate = bool.Parse(Environment.GetEnvironmentVariable("HORSE_QUEUE_AUTO_CREATE") ?? "true");
         _options.QueueAck = Enums.Parse<QueueAckDecision>(Environment.GetEnvironmentVariable("HORSE_QUEUE_ACK") ?? "WaitForAcknowledge");
         _options.QueueDestroy = Enums.Parse<QueueDestroy>(Environment.GetEnvironmentVariable("HORSE_QUEUE_AUTO_DESTROY") ?? "Disabled");
         _options.QueueCommitWhen = Enums.Parse<CommitWhen>(Environment.GetEnvironmentVariable("HORSE_QUEUE_COMMIT_WHEN") ?? "AfterReceived");
@@ -114,12 +114,19 @@ public class OptionsBuilder
         _options.QueueConsumerLimit = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_QUEUE_CONSUMER_LIMIT") ?? "0");
         _options.QueueMessageLimit = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_QUEUE_MESSAGE_LIMIT") ?? "0");
         _options.QueueMessageSizeLimit = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_QUEUE_MESSAGE_SIZE_LIMIT") ?? "0");
-        _options.QueueMessageTimeout = TimeSpan.FromMinutes(Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_QUEUE_MESSAGE_TIMEOUT") ?? "0"));
         _options.QueueDelayBetweenMsgs = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_QUEUE_DELAY_BETWEEN_MSGS") ?? "0");
-        _options.QueueMessageIdUniqueCheck = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_QUEUE_MESSAGE_ID_UNIQUE_CHECK") ?? "0") == 1;
+        _options.QueueMessageIdUniqueCheck = bool.Parse(Environment.GetEnvironmentVariable("HORSE_QUEUE_MESSAGE_ID_UNIQUE_CHECK") ?? "false");
 
-        _options.QueueUsePersistent = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_QUEUE_USE_PERSISTENT") ?? "0") == 1;
-        _options.QueueUseMemory = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_QUEUE_USE_MEMORY") ?? "0") == 1;
+        string[] timeout = (Environment.GetEnvironmentVariable("HORSE_QUEUE_MESSAGE_TIMEOUT") ?? "0;NoTimeout;").Split(';');
+        _options.QueueMessageTimeout = new MessageTimeoutStrategy
+        {
+            MessageDuration = Convert.ToInt32(timeout.Length > 0 ? timeout[0] : "0"),
+            Policy = Enums.Parse<MessageTimeoutPolicy>(timeout.Length > 1 ? timeout[1] : "NoTimeout", true, EnumFormat.Name),
+            TargetName = timeout.Length > 2 ? timeout[2] : string.Empty
+        };
+
+        _options.QueueUsePersistent = bool.Parse(Environment.GetEnvironmentVariable("HORSE_QUEUE_USE_PERSISTENT") ?? "true");
+        _options.QueueUseMemory = bool.Parse(Environment.GetEnvironmentVariable("HORSE_QUEUE_USE_MEMORY") ?? "true");
 
         string defaultManager = Environment.GetEnvironmentVariable("HORSE_QUEUE_DEFAULT_MANAGER") ?? "Persistent";
         _options.QueueUsePersistentManagerAsDefault = defaultManager.Equals("Persistent", StringComparison.InvariantCultureIgnoreCase);
