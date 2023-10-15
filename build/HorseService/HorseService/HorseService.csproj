@@ -9,8 +9,8 @@
 
     <ItemGroup>
         <PackageReference Include="Horse.Jockey" Version="6.6.3" />
-        <PackageReference Include="Horse.Messaging.Data" Version="6.6.3" />
-        <PackageReference Include="Horse.Messaging.Server" Version="6.6.3" />
+        <PackageReference Include="Horse.Messaging.Data" Version="6.6.4" />
+        <PackageReference Include="Horse.Messaging.Server" Version="6.6.4" />
     </ItemGroup>
 
     <ItemGroup>
