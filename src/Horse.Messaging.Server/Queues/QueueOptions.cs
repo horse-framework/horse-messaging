@@ -27,7 +27,7 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// When message queuing is active, maximum time for a message wait
         /// </summary>
-        public TimeSpan MessageTimeout { get; set; } = TimeSpan.Zero;
+        public MessageTimeoutStrategy MessageTimeout { get; set; } = new MessageTimeoutStrategy();
 
         /// <summary>
         /// Default type for the queue

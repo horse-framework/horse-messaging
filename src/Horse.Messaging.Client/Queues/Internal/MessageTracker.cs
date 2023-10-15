@@ -16,7 +16,8 @@ namespace Horse.Messaging.Client.Queues.Internal
         /// <summary>
         /// Sent messages
         /// </summary>
-        private readonly List<MessageDescriptor> _descriptors = new List<MessageDescriptor>();
+        //private readonly List<MessageDescriptor> _descriptors = new List<MessageDescriptor>();
+        private readonly SortedDictionary<string, MessageDescriptor> _sortedDescriptors = new SortedDictionary<string, MessageDescriptor>(StringComparer.InvariantCultureIgnoreCase);
 
         /// <summary>
         /// Temp message descriptor list
@@ -60,21 +61,23 @@ namespace Horse.Messaging.Client.Queues.Internal
         /// </summary>
         private void CheckExpirations()
         {
-            if (_descriptors.Count < 1)
-                return;
-
             _temp.Clear();
 
-            lock (_descriptors)
+            lock (_sortedDescriptors)
             {
-                foreach (MessageDescriptor descriptor in _descriptors)
+                if (_sortedDescriptors.Count < 1)
+                    return;
+
+                foreach (MessageDescriptor descriptor in _sortedDescriptors.Values)
                 {
                     if (descriptor.Completed || descriptor.Expiration < DateTime.UtcNow)
                         _temp.Add(descriptor);
                 }
 
-                if (_temp.Count > 0)
-                    _descriptors.RemoveAll(x => _temp.Contains(x));
+                foreach (MessageDescriptor descriptor in _temp)
+                {
+                    _sortedDescriptors.Remove(descriptor.Message.MessageId);
+                }
             }
 
             foreach (MessageDescriptor descriptor in _temp)
@@ -92,10 +95,10 @@ namespace Horse.Messaging.Client.Queues.Internal
         internal void MarkAllMessagesExpired()
         {
             List<MessageDescriptor> temp;
-            lock (_descriptors)
+            lock (_sortedDescriptors)
             {
-                temp = new List<MessageDescriptor>(_descriptors);
-                _descriptors.Clear();
+                temp = new List<MessageDescriptor>(_sortedDescriptors.Values);
+                _sortedDescriptors.Clear();
             }
 
             foreach (MessageDescriptor descriptor in temp)
@@ -113,11 +116,12 @@ namespace Horse.Messaging.Client.Queues.Internal
             if (message.Type != MessageType.Response || string.IsNullOrEmpty(message.MessageId))
                 return;
 
-            lock (_descriptors)
+            lock (_sortedDescriptors)
             {
-                MessageDescriptor descriptor = _descriptors.Find(x => x.Message.WaitResponse && x.Message.MessageId == message.MessageId && !x.Completed);
+                _sortedDescriptors.TryGetValue(message.MessageId, out MessageDescriptor descriptor);
+                //MessageDescriptor descriptor = _descriptors.Find(x => x.Message.WaitResponse && x.Message.MessageId == message.MessageId && !x.Completed);
 
-                if (descriptor == null)
+                if (descriptor == null || descriptor.Completed || !descriptor.Message.WaitResponse)
                     return;
 
                 descriptor.Completed = true;
@@ -136,10 +140,33 @@ namespace Horse.Messaging.Client.Queues.Internal
             DateTime expiration = DateTime.UtcNow + _client.ResponseTimeout;
             ResponseMessageDescriptor descriptor = new ResponseMessageDescriptor(message, expiration);
 
-            lock (_descriptors)
-                _descriptors.Add(descriptor);
+            lock (_sortedDescriptors)
+                _sortedDescriptors.Add(message.MessageId, descriptor);
 
             return await descriptor.Source.Task;
+        }
+
+        public void TrackMultiple(List<HorseMessage> messages, Action<HorseMessage, bool> callback)
+        {
+            List<CallbackMessageDescriptor> descriptors = new List<CallbackMessageDescriptor>(messages.Count);
+            DateTime expiration = DateTime.UtcNow + _client.ResponseTimeout;
+
+            foreach (HorseMessage message in messages)
+            {
+                if (!message.WaitResponse || string.IsNullOrEmpty(message.MessageId))
+                    throw new Exception("Messages must have MessageId and true value for WaitForResponse property");
+
+                CallbackMessageDescriptor descriptor = new CallbackMessageDescriptor(message, expiration, callback);
+                descriptors.Add(descriptor);
+            }
+
+            lock (_sortedDescriptors)
+            {
+                foreach (CallbackMessageDescriptor descriptor in descriptors)
+                {
+                    _sortedDescriptors.Add(descriptor.Message.MessageId, descriptor);
+                }
+            }
         }
 
         /// <summary>
@@ -147,12 +174,9 @@ namespace Horse.Messaging.Client.Queues.Internal
         /// </summary>
         public void Forget(HorseMessage message)
         {
-            lock (_descriptors)
+            lock (_sortedDescriptors)
             {
-                int index = _descriptors.FindIndex(x => x.Message.MessageId == message.MessageId);
-                if (index < 0)
-                    return;
-                _descriptors.RemoveAt(index);
+                _sortedDescriptors.Remove(message.MessageId);
             }
         }
     }

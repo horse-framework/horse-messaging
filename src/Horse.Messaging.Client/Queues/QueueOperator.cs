@@ -212,7 +212,7 @@ namespace Horse.Messaging.Client.Queues
                 optionsAction(options);
 
                 message.Content = new MemoryStream();
-                await JsonSerializer.SerializeAsync(message.Content, options);
+                await JsonSerializer.SerializeAsync(message.Content, options, SerializerFactory.Default());
             }
 
             message.SetMessageId(Client.UniqueIdGenerator.Create());
@@ -269,7 +269,7 @@ namespace Horse.Messaging.Client.Queues
             optionsAction(options);
 
             message.Content = new MemoryStream();
-            await JsonSerializer.SerializeAsync(message.Content, options);
+            await JsonSerializer.SerializeAsync(message.Content, options, SerializerFactory.Default());
 
             return await Client.WaitResponse(message, true);
         }
@@ -388,6 +388,47 @@ namespace Horse.Messaging.Client.Queues
         /// <summary>
         /// Pushes a message to a queue
         /// </summary>
+        public void PushBulkJson<T>(string queue, List<T> items, Action<HorseMessage, bool> callback, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        {
+            T firstModel = items.FirstOrDefault();
+            QueueTypeDescriptor descriptor = DescriptorContainer.GetDescriptor(firstModel.GetType());
+
+            if (!string.IsNullOrEmpty(queue))
+                descriptor.QueueName = queue;
+
+            if (NameHandler != null)
+                descriptor.QueueName = NameHandler.Invoke(new QueueNameHandlerContext
+                {
+                    Client = Client,
+                    Type = typeof(T)
+                });
+
+            HorseMessage firstMessage = descriptor.CreateMessage();
+            firstMessage.WaitResponse = true;
+            firstMessage.SetMessageId(Client.UniqueIdGenerator.Create());
+
+            if (messageHeaders != null)
+                foreach (KeyValuePair<string, string> pair in messageHeaders)
+                    firstMessage.AddHeader(pair.Key, pair.Value);
+
+            List<HorseMessage> messages = new List<HorseMessage>(items.Count);
+            messages.Add(firstMessage);
+
+            for (int i = 1; i < items.Count; i++)
+            {
+                HorseMessage msg = firstMessage.Clone(true, false, Client.UniqueIdGenerator.Create());
+                msg.SetMessageId(Client.UniqueIdGenerator.Create());
+                msg.Serialize(msg, Client.MessageSerializer);
+                messages.Add(msg);
+            }
+
+            Client.Tracker.TrackMultiple(messages, callback);
+            Client.SendBulk(messages, null);
+        }
+
+        /// <summary>
+        /// Pushes a message to a queue
+        /// </summary>
         public async Task<HorseResult> Push(string queue, string content, bool waitForCommit,
             IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
         {
@@ -433,6 +474,37 @@ namespace Horse.Messaging.Client.Queues
                 message.SetMessageId(Client.UniqueIdGenerator.Create());
 
             return await Client.WaitResponse(message, waitForCommit);
+        }
+
+        /// <summary>
+        /// Pushes a message to a queue
+        /// </summary>
+        public void PushBulk(string queue, List<MemoryStream> contents,
+            bool waitForCommit, Action<HorseMessage, bool> callback,
+            IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        {
+            HorseMessage firstMessage = new HorseMessage(MessageType.QueueMessage, queue, 0);
+            firstMessage.Content = contents.FirstOrDefault();
+            firstMessage.WaitResponse = waitForCommit;
+
+            if (string.IsNullOrEmpty(firstMessage.MessageId) && waitForCommit)
+                firstMessage.SetMessageId(Client.UniqueIdGenerator.Create());
+
+            if (messageHeaders != null)
+                foreach (KeyValuePair<string, string> pair in messageHeaders)
+                    firstMessage.AddHeader(pair.Key, pair.Value);
+
+            List<HorseMessage> messages = new List<HorseMessage>(contents.Count);
+            messages.Add(firstMessage);
+
+            for (int i = 1; i < contents.Count; i++)
+            {
+                HorseMessage msg = firstMessage.Clone(true, false, Client.UniqueIdGenerator.Create());
+                msg.Content = contents[i];
+            }
+
+            Client.Tracker.TrackMultiple(messages, callback);
+            Client.SendBulk(messages, null);
         }
 
         /// <summary>

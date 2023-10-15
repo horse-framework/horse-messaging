@@ -801,16 +801,6 @@ namespace Horse.Messaging.Client
         }
 
         /// <summary>
-        /// Configure default type descriptors for queues
-        /// </summary>
-        public HorseClientBuilder ConfigureQueueTypes(Action<DefaultQueueTypeConfigurator> cfg)
-        {
-            DefaultQueueTypeConfigurator configurator = new DefaultQueueTypeConfigurator(_client.Queue);
-            cfg(configurator);
-            return this;
-        }
-
-        /// <summary>
         /// When application exit triggered, unsubscribes from queues and waits for active consume operations.
         /// Exit process is blocked minimum minWait and maximum maxWait.
         /// IF YOU ARE USING Microsoft.Extensions.Hosting, Hosting library can override and cancel that method's operations.

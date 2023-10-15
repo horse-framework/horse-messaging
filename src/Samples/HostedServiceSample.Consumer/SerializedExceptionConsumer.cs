@@ -14,7 +14,7 @@ namespace HostedServiceSample.Consumer;
 [AutoNack(NegativeReason.Error)]
 internal class SerializedExceptionConsumer: IQueueConsumer<SerializedException>
 {
-	readonly JsonSerializerOptions _options = new JsonSerializerOptions()
+	readonly JsonSerializerOptions _options = new JsonSerializerOptions
 	{
 		WriteIndented = true
 	};

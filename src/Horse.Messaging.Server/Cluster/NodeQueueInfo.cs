@@ -1,4 +1,6 @@
-﻿namespace Horse.Messaging.Server.Cluster
+﻿using Horse.Messaging.Protocol;
+
+namespace Horse.Messaging.Server.Cluster
 {
     internal class NodeQueueHandlerHeader
     {
@@ -25,7 +27,7 @@
         public int ClientLimit { get; set; }
         public int MessageLimit { get; set; }
         public string LimitExceededStrategy { get; set; }
-        public int MessageTimeout { get; set; }
+        public MessageTimeoutStrategyInfo MessageTimeout { get; set; }
         public int DelayBetweenMessages { get; set; }
         public ulong MessageSizeLimit { get; set; }
         public int PutBackDelay { get; set; }

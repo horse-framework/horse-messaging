@@ -256,6 +256,42 @@ namespace Horse.Messaging.Server.Cache
         }
 
         /// <summary>
+        /// Gets an integer value, increases each time received.
+        /// If there is no item with that key, it's created with value of 1.
+        /// If there was an item with that key and it's expired, it's created with value of 1.
+        /// </summary>
+        public async Task<GetCacheItemResult> GetIncremental(string key, TimeSpan duration, string[] tags = null)
+        {
+            await ApplyChanges();
+
+            _items.TryGetValue(key, out HorseCacheItem item);
+
+            if (item.Expiration < DateTime.UtcNow)
+            {
+                await Remove(item.Key);
+                item = null;
+            }
+
+            if (item == null)
+            {
+                CacheOperation operation = await Set(key, new MemoryStream(BitConverter.GetBytes(1)), duration, null, tags);
+                return new GetCacheItemResult(false, operation.Item);
+            }
+
+            MemoryStream previousValue = item.Value;
+            lock (item)
+            {
+                byte[] valueArray = item.Value.ToArray();
+                int value = BitConverter.ToInt32(valueArray);
+                item.Value = new MemoryStream(BitConverter.GetBytes(value + 1));
+            }
+            
+            previousValue?.Dispose();
+
+            return new GetCacheItemResult(false, item);
+        }
+
+        /// <summary>
         /// Removes a key
         /// </summary>
         public async Task Remove(string key)

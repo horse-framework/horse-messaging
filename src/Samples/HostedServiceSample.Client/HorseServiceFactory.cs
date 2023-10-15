@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json;
+using Horse.Messaging.Protocol;
 
 namespace HostedServiceSample.Client
 {
@@ -7,7 +8,7 @@ namespace HostedServiceSample.Client
 	{
 		public static IHorseService Create<T>(string[] args, string clientType) where T: class
 		{
-            JsonSerializerOptions _options = new JsonSerializerOptions()
+            JsonSerializerOptions _options = new JsonSerializerOptions
             {
                 WriteIndented = true
             };

@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using Horse.Messaging.Server.Queues;
 
 namespace Horse.Messaging.Data

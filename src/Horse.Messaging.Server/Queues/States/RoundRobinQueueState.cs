@@ -33,8 +33,8 @@ namespace Horse.Messaging.Server.Queues.States
         {
             try
             {
-                if (!message.Deadline.HasValue && _queue.Options.MessageTimeout > TimeSpan.Zero)
-                    message.Deadline = DateTime.UtcNow.Add(_queue.Options.MessageTimeout);
+                if (!message.Deadline.HasValue && _queue.Options.MessageTimeout.Policy != MessageTimeoutPolicy.NoTimeout && _queue.Options.MessageTimeout.MessageDuration > 0)
+                    message.Deadline = DateTime.UtcNow.AddSeconds(_queue.Options.MessageTimeout.MessageDuration);
 
                 Tuple<QueueClient, int> tuple = await GetNextAvailableRRClient(_roundRobinIndex, message,
                     _queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge);

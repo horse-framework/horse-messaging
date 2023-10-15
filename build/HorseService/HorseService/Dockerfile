@@ -1,13 +1,7 @@
-﻿FROM mcr.microsoft.com/dotnet/runtime:6.0 AS base
+﻿FROM mcr.microsoft.com/dotnet/runtime:7.0 AS base
 WORKDIR /app
 
-ARG port=34000
-ARG jport=34001
-ARG juser="admin"
-ARG jpass=""
-ARG datapath="/etc/horse/data"
-
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 
 WORKDIR /src
 COPY ["HorseService.csproj", "HorseService/"]
@@ -23,13 +17,7 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-ENV HORSE_PORT $port
-ENV HORSE_JOCKEY_PORT $jport
-ENV HORSE_JOCKEY_USERNAME $juser
-ENV HORSE_JOCKEY_PASSWORD $jpass
-ENV HORSE_DATA_PATH $datapath
-
-EXPOSE $port
-EXPOSE $jport
+EXPOSE 2626
+EXPOSE 2627
 
 ENTRYPOINT dotnet HorseService.dll

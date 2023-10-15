@@ -2,15 +2,15 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net7.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Horse.Jockey" Version="6.3.4" />
-        <PackageReference Include="Horse.Messaging.Data" Version="6.3.4" />
-        <PackageReference Include="Horse.Messaging.Server" Version="6.3.4" />
+        <PackageReference Include="Horse.Jockey" Version="6.6.3" />
+        <PackageReference Include="Horse.Messaging.Data" Version="6.6.4" />
+        <PackageReference Include="Horse.Messaging.Server" Version="6.6.4" />
     </ItemGroup>
 
     <ItemGroup>

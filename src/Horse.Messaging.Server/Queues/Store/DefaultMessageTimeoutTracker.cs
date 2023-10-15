@@ -34,7 +34,7 @@ namespace Horse.Messaging.Server.Queues.Store
                     while (_running)
                     {
                         Thread.Sleep(1000);
-                        if (_queue.Options.MessageTimeout == TimeSpan.Zero)
+                        if (_queue.Options.MessageTimeout.Policy == MessageTimeoutPolicy.NoTimeout || _queue.Options.MessageTimeout.MessageDuration == 0)
                         {
                             Thread.Sleep(10000);
                             continue;

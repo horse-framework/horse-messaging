@@ -137,6 +137,51 @@ namespace Horse.Messaging.Server.Cache
                     }
                 }
 
+                case KnownContentTypes.GetIncrementalCache:
+                {
+                    foreach (ICacheAuthorization authorization in _cache.Authorizations.All())
+                    {
+                        if (!authorization.CanSet(client, message.Target, message.Content))
+                        {
+                            await client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
+                            return;
+                        }
+                    }
+
+                    string messageTimeout = message.FindHeader(HorseHeaders.MESSAGE_TIMEOUT);
+                    string tags = message.FindHeader(HorseHeaders.TAG);
+                    string[] tagNames = string.IsNullOrEmpty(tags) ? Array.Empty<string>() : tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
+
+                    TimeSpan timeout = TimeSpan.Zero;
+                    if (!string.IsNullOrEmpty(messageTimeout))
+                        timeout = TimeSpan.FromSeconds(Convert.ToInt32(messageTimeout));
+
+                    GetCacheItemResult getResult = await _cache.GetIncremental(message.Target, timeout, tagNames);
+                    HorseCacheItem item = getResult.item;
+
+                    HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
+                    response.SetSource(message.Target);
+
+                    if (item.Tags != null && item.Tags.Length > 0)
+                        response.AddHeader(HorseHeaders.TAG, item.Tags.Aggregate((t, i) => $"{t},{i}"));
+
+                    response.AddHeader(HorseHeaders.EXPIRY, item.Expiration.ToUnixSeconds().ToString());
+
+                    if (item.ExpirationWarning.HasValue)
+                    {
+                        response.AddHeader(HorseHeaders.WARNING, item.ExpirationWarning.Value.ToUnixSeconds().ToString());
+                        if (item.ExpirationWarnCount > 0)
+                            response.AddHeader(HorseHeaders.WARN_COUNT, item.ExpirationWarnCount.ToString());
+                    }
+
+                    response.HighPriority = getResult.IsFirstWarningReceiver;
+                    response.Content = item.Value;
+
+                    await client.SendAsync(response);
+                    _cache.GetEvent.Trigger(client, message.Target);
+                    break;
+                }
+
                 //remove cache item
                 case KnownContentTypes.RemoveCache:
                 {

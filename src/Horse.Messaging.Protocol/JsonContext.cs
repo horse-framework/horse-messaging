@@ -1,36 +1,57 @@
-﻿using Horse.Messaging.Protocol.Events;
+﻿using System.Text.Json;
+using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Protocol.Models;
 using System.Text.Json.Serialization;
 
 namespace Horse.Messaging.Protocol
 {
     [JsonSerializable(typeof(BindingInformation))]
-    internal partial class BindingInformationSerializerContext : JsonSerializerContext { }
+    internal partial class BindingInformationSerializerContext : JsonSerializerContext
+    {
+    }
 
     [JsonSerializable(typeof(CacheInformation))]
-    internal partial class CacheInformationSerializerContext : JsonSerializerContext { }
+    internal partial class CacheInformationSerializerContext : JsonSerializerContext
+    {
+    }
 
     [JsonSerializable(typeof(ChannelInformation))]
-    internal partial class ChannelInformationSerializerContext : JsonSerializerContext { }
+    internal partial class ChannelInformationSerializerContext : JsonSerializerContext
+    {
+    }
 
     [JsonSerializable(typeof(ClientInformation))]
-    internal partial class ClientInformationSerializerContext : JsonSerializerContext { }
+    internal partial class ClientInformationSerializerContext : JsonSerializerContext
+    {
+    }
 
     [JsonSerializable(typeof(NodeInformation))]
-    internal partial class NodeInformationSerializerContext : JsonSerializerContext { }
+    internal partial class NodeInformationSerializerContext : JsonSerializerContext
+    {
+    }
 
     [JsonSerializable(typeof(QueueInformation))]
-    internal partial class QueueInformationSerializerContext : JsonSerializerContext { }
+    internal partial class QueueInformationSerializerContext : JsonSerializerContext
+    {
+    }
 
     [JsonSerializable(typeof(RouterInformation))]
-    internal partial class RouterInformationSerializerContext : JsonSerializerContext { }
+    internal partial class RouterInformationSerializerContext : JsonSerializerContext
+    {
+    }
 
     [JsonSerializable(typeof(HorseMessage))]
-    internal partial class HorseMessageSerializerContext : JsonSerializerContext { }
+    internal partial class HorseMessageSerializerContext : JsonSerializerContext
+    {
+    }
 
     [JsonSerializable(typeof(EventSubject))]
-    internal partial class EventSubjectSerializerContext : JsonSerializerContext { }
+    internal partial class EventSubjectSerializerContext : JsonSerializerContext
+    {
+    }
 
     [JsonSerializable(typeof(HorseEvent))]
-    internal partial class HorseEventSerializerContext : JsonSerializerContext { }
+    internal partial class HorseEventSerializerContext : JsonSerializerContext
+    {
+    }
 }

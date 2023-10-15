@@ -30,6 +30,13 @@ namespace Horse.Messaging.Client.Cache
         Task<HorseCacheData<string>> GetString(string key);
 
         /// <summary>
+        /// Gets a incremental integer value from cache.
+        /// Each get request increases value by 1.
+        /// </summary>
+        /// <param name="key">Cache key</param>
+        Task<HorseCacheData<int>> GetIncrementalValue(string key);
+
+        /// <summary>
         /// Gets the binary data from cache
         /// </summary>
         /// <param name="key">Cache key</param>

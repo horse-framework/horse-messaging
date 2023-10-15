@@ -5,6 +5,7 @@ using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Routing;
 using Horse.Server;
 
 [QueueName("demo-queue")]
@@ -37,7 +38,6 @@ namespace Sample.Server
                     cfg.UseMemoryQueues();
                 })
                 .Build();
-
             /*
             IRouter router = rider.Router.Add("test", RouteMethod.Distribute);
             router.AddBinding(new QueueBinding
@@ -61,7 +61,6 @@ namespace Sample.Server
             server.Options.PingInterval = 10;
             server.UseRider(rider);
             server.Run(26222);
-
         }
     }
 }

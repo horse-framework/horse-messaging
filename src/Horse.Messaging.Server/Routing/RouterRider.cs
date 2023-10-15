@@ -139,7 +139,7 @@ namespace Horse.Messaging.Server.Routing
         /// Adds new router to server server routers
         /// Throws exception if name is not eligible
         /// </summary>
-        public void Add(IRouter router)
+        public IRouter Add(IRouter router)
         {
             try
             {
@@ -161,6 +161,8 @@ namespace Horse.Messaging.Server.Routing
                     OptionsConfigurator.Add(RouterConfiguration.Create(router));
                     OptionsConfigurator.Save();
                 }
+
+                return router;
             }
             catch (Exception e)
             {

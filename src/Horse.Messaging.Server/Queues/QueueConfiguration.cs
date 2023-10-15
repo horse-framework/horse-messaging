@@ -1,5 +1,6 @@
 ﻿using System;
 using EnumsNET;
+using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Server.Queues;
 
@@ -52,7 +53,7 @@ public class QueueConfiguration
     /// <summary>
     /// When message queuing is active, maximum time for a message wait (in milliseconds)
     /// </summary>
-    public long MessageTimeout { get; set; }
+    public MessageTimeoutStrategyInfo MessageTimeout { get; set; }
 
     /// <summary>
     /// Default type for the queue
@@ -104,13 +105,13 @@ public class QueueConfiguration
     /// Queue auto destroy options. Default value is NoMessagesAndConsumers.
     /// </summary>
     public string AutoDestroy { get; set; }
-    
+
     /// <summary>
     /// If true, server checks all message id values and reject new messages with same id.
     /// Enabling that feature has performance penalty about 0.03 ms for each message. 
     /// </summary>
     public bool MessageIdUniqueCheck { get; set; }
-    
+
     /// <summary>
     /// Creates new queue configuration from queue
     /// </summary>
@@ -135,7 +136,7 @@ public class QueueConfiguration
             DelayBetweenMessages = queue.Options.DelayBetweenMessages,
             PutBackDelay = queue.Options.PutBackDelay,
             MessageSizeLimit = queue.Options.MessageSizeLimit,
-            MessageTimeout = Convert.ToInt64(queue.Options.AcknowledgeTimeout.TotalMilliseconds),
+            MessageTimeout = new MessageTimeoutStrategyInfo(queue.Options.MessageTimeout.MessageDuration, queue.Options.MessageTimeout.Policy.AsString(EnumFormat.Description), queue.Options.MessageTimeout.TargetName),
             MessageIdUniqueCheck = queue.Options.MessageIdUniqueCheck
         };
     }

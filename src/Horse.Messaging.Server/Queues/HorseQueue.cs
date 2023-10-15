@@ -360,7 +360,7 @@ namespace Horse.Messaging.Server.Queues
                 MessageLimit = Options.MessageLimit,
                 LimitExceededStrategy = Options.LimitExceededStrategy.AsString(EnumFormat.Description),
                 ClientLimit = Options.ClientLimit,
-                MessageTimeout = Convert.ToInt32(Options.MessageTimeout.TotalSeconds),
+                MessageTimeout = new MessageTimeoutStrategyInfo(Options.MessageTimeout.MessageDuration, Options.MessageTimeout.Policy.AsString(EnumFormat.Description), Options.MessageTimeout.TargetName),
                 AcknowledgeTimeout = Convert.ToInt32(Options.AcknowledgeTimeout.TotalMilliseconds),
                 DelayBetweenMessages = Options.DelayBetweenMessages,
                 Acknowledge = Options.Acknowledge.AsString(EnumFormat.Description),
@@ -487,7 +487,16 @@ namespace Horse.Messaging.Server.Queues
                     Options.PutBackDelay = Convert.ToInt32(pair.Value);
 
                 else if (pair.Key.Equals(HorseHeaders.MESSAGE_TIMEOUT, StringComparison.InvariantCultureIgnoreCase))
-                    Options.MessageTimeout = TimeSpan.FromSeconds(Convert.ToInt32(pair.Value));
+                {
+                    string[] timeoutValues = pair.Value.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                    if (timeoutValues.Length == 3)
+                        Options.MessageTimeout = new MessageTimeoutStrategy
+                        {
+                            MessageDuration = Convert.ToInt32(timeoutValues[0]),
+                            Policy = Enums.Parse<MessageTimeoutPolicy>(timeoutValues[1], true, EnumFormat.Description),
+                            TargetName = timeoutValues[2]
+                        };
+                }
 
                 else if (pair.Key.Equals(HorseHeaders.ACK_TIMEOUT, StringComparison.InvariantCultureIgnoreCase))
                     Options.AcknowledgeTimeout = TimeSpan.FromSeconds(Convert.ToInt32(pair.Value));
@@ -515,7 +524,12 @@ namespace Horse.Messaging.Server.Queues
                 Options.AutoDestroy = Enums.Parse<QueueDestroy>(info.AutoDestroy, true, EnumFormat.Description);
 
             Options.AcknowledgeTimeout = TimeSpan.FromMilliseconds(info.AcknowledgeTimeout);
-            Options.MessageTimeout = TimeSpan.FromSeconds(info.MessageTimeout);
+            Options.MessageTimeout = new MessageTimeoutStrategy
+            {
+                MessageDuration = info.MessageTimeout.MessageDuration,
+                Policy = Enums.Parse<MessageTimeoutPolicy>(info.MessageTimeout.Policy, true, EnumFormat.Description),
+                TargetName = info.MessageTimeout.TargetName
+            };
 
             Options.ClientLimit = info.ClientLimit;
             Options.MessageLimit = info.MessageLimit;
@@ -645,8 +659,8 @@ namespace Horse.Messaging.Server.Queues
 
             //if we have an option maximum wait duration for message, set it after message joined to the queue.
             //time keeper will check this value and if message time is up, it will remove message from the queue.
-            if (Options.MessageTimeout > TimeSpan.Zero)
-                message.Deadline = DateTime.UtcNow.Add(Options.MessageTimeout);
+            if (Options.MessageTimeout.Policy != MessageTimeoutPolicy.NoTimeout && Options.MessageTimeout.MessageDuration > 0)
+                message.Deadline = DateTime.UtcNow.AddSeconds(Options.MessageTimeout.MessageDuration);
 
             try
             {
@@ -880,8 +894,8 @@ namespace Horse.Messaging.Server.Queues
 
             //if we have an option maximum wait duration for message, set it after message joined to the queue.
             //time keeper will check this value and if message time is up, it will remove message from the queue.
-            if (Options.MessageTimeout > TimeSpan.Zero)
-                message.Deadline = DateTime.UtcNow.Add(Options.MessageTimeout);
+            if (Options.MessageTimeout.Policy != MessageTimeoutPolicy.NoTimeout && Options.MessageTimeout.MessageDuration > 0)
+                message.Deadline = DateTime.UtcNow.AddSeconds(Options.MessageTimeout.MessageDuration);
 
             if (Status == QueueStatus.Syncing)
             {

@@ -131,7 +131,7 @@ namespace Horse.Messaging.Server
                 return;
 
             _initialized = true;
-            
+
             Options.DataPath = Configurator.Initialize(Options.DataPath);
             Transaction.Initialize();
             Router.Initialize();

@@ -42,6 +42,30 @@ namespace Horse.Messaging.Client.Cache
         }
 
         /// <inheritdoc />
+        public async Task<HorseCacheData<int>> GetIncrementalValue(string key)
+        {
+            HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);
+            HorseResult result = await _client.SendAndGetAck(message);
+
+            if (result == null || result.Code != HorseResultCode.Ok)
+                return null;
+
+            HorseCacheData<byte[]> data = CreateCacheData<byte[]>(key, message);
+            data.Value = result.Message.Content.ToArray();
+            int value = BitConverter.ToInt32( data.Value );
+            return new HorseCacheData<int>
+            {
+                Key = data.Key,
+                Expiration = data.Expiration,
+                WarnCount = data.WarnCount,
+                WarningDate = data.WarningDate,
+                IsFirstWarnedClient = data.IsFirstWarnedClient,
+                Tags = data.Tags,
+                Value = value
+            };
+        }
+
+        /// <inheritdoc />
         public async Task<HorseCacheData<byte[]>> GetData(string key)
         {
             HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);

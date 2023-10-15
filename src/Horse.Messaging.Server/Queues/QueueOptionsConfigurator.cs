@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using Horse.Messaging.Server.Helpers;
 
 namespace Horse.Messaging.Server.Queues;
 
@@ -38,14 +39,14 @@ public class QueueOptionsConfigurator : IOptionsConfigurator<QueueConfiguration>
 
         lock (_configurations)
         {
-            _configurations = JsonSerializer.Deserialize<List<QueueConfiguration>>(json, new JsonSerializerOptions {PropertyNameCaseInsensitive = true});
+            _configurations = JsonSerializer.Deserialize<List<QueueConfiguration>>(json, SerializerFactory.Default());
             return _configurations.ToArray();
         }
     }
 
     public void Save()
     {
-        string json = JsonSerializer.Serialize(_configurations);
+        string json = JsonSerializer.Serialize(_configurations, SerializerFactory.Default());
         File.WriteAllText($"{_rider.Options.DataPath}/{_filename}", json);
     }
 

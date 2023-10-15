@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using EnumsNET;
 using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Client.Queues.Annotations;
+using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Queues
 {
@@ -118,10 +120,10 @@ namespace Horse.Messaging.Client.Queues
             UniqueIdCheckAttribute uidAttr = type.GetCustomAttribute<UniqueIdCheckAttribute>(true);
             if (uidAttr != null)
                 descriptor.UniqueIdCheck = uidAttr.Value;
-            
+
             MessageTimeoutAttribute msgTimeoutAttr = type.GetCustomAttribute<MessageTimeoutAttribute>(true);
             if (msgTimeoutAttr != null)
-                descriptor.MessageTimeout = msgTimeoutAttr.Value;
+                descriptor.MessageTimeout = new MessageTimeoutStrategyInfo(msgTimeoutAttr.Duration, msgTimeoutAttr.Policy.AsString(EnumFormat.Description), msgTimeoutAttr.TargetName ?? string.Empty);
 
             AcknowledgeTimeoutAttribute ackTimeoutAttr = type.GetCustomAttribute<AcknowledgeTimeoutAttribute>(true);
             if (ackTimeoutAttr != null)

@@ -10,6 +10,7 @@ using Horse.Messaging.Client.Channels;
 using Horse.Messaging.Client.Direct;
 using Horse.Messaging.Client.Events;
 using Horse.Messaging.Client.Queues;
+using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Client.Queues.Exceptions;
 using Horse.Messaging.Client.Queues.Internal;
 using Horse.Messaging.Client.Routers;
@@ -260,6 +261,12 @@ namespace Horse.Messaging.Client
         private bool _autoConnect;
         private Timer _reconnectTimer;
 
+        static HorseClient()
+        {
+            SerializerFactory.AddConverter(new EnumConverter<PutBack>());
+            SerializerFactory.AddConverter(new EnumConverter<MessagingQueueType>());
+        }
+
         /// <summary>
         /// Creates new horse client
         /// </summary>
@@ -349,7 +356,7 @@ namespace Horse.Messaging.Client
 
                 if (ThrowExceptions)
                     throw;
-                
+
                 return null;
             }
         }
@@ -493,7 +500,7 @@ namespace Horse.Messaging.Client
                         RemoteHosts.Add(host);
 
                 SetAutoReconnect(true);
-                
+
                 DnsResolver resolver = new DnsResolver();
                 Connect(resolver.Resolve(host));
             }
@@ -527,7 +534,7 @@ namespace Horse.Messaging.Client
             catch (Exception e)
             {
                 OnException(e);
-                
+
                 if (ThrowExceptions)
                     throw;
             }
@@ -556,17 +563,17 @@ namespace Horse.Messaging.Client
                         RemoteHosts.Add(host);
 
                 SetAutoReconnect(true);
-                
+
                 DnsResolver resolver = new DnsResolver();
                 return ConnectAsync(resolver.Resolve(host));
             }
             catch (Exception e)
             {
                 OnException(e);
-                
+
                 if (ThrowExceptions)
                     throw;
-                
+
                 return Task.CompletedTask;
             }
         }
@@ -587,7 +594,7 @@ namespace Horse.Messaging.Client
             catch (Exception e)
             {
                 OnException(e);
-                
+
                 if (ThrowExceptions)
                     throw;
             }
@@ -646,6 +653,42 @@ namespace Horse.Messaging.Client
 
             bool sent = await _socket.SendAsync(data);
             return sent ? HorseResult.Ok() : new HorseResult(HorseResultCode.SendError);
+        }
+
+        /// <summary>
+        /// Sends multiple messages
+        /// </summary>
+        public void Send(HorseMessage message, Action<bool> sendCallback)
+        {
+            if (_socket == null)
+            {
+                sendCallback(false);
+                return;
+            }
+
+            message.SetSource(ClientId);
+
+            if (string.IsNullOrEmpty(message.MessageId))
+                message.SetMessageId(UniqueIdGenerator.Create());
+
+            byte[] data = HorseProtocolWriter.Create(message);
+            _socket.Send(data, sendCallback);
+        }
+
+        /// <summary>
+        /// Sends multiple messages
+        /// </summary>
+        public void SendBulk(IEnumerable<HorseMessage> messages, Action<HorseMessage, bool> sendCallback)
+        {
+            if (_socket == null)
+            {
+                foreach (HorseMessage message in messages)
+                    sendCallback?.Invoke(message, false);
+
+                return;
+            }
+
+            _socket.SendBulk(messages, sendCallback);
         }
 
         /// <summary>

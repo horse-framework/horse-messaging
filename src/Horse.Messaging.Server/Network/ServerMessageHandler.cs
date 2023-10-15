@@ -267,7 +267,7 @@ namespace Horse.Messaging.Server.Network
         {
             NetworkOptionsBuilder builder = null;
             if (message.Length > 0)
-                builder = await JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                builder = await JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content, SerializerFactory.Default());
 
             HorseQueue queue = _rider.Queue.Find(message.Target);
 
@@ -346,7 +346,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task UpdateQueue(MessagingClient client, HorseMessage message)
         {
-            NetworkOptionsBuilder builder = await JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            NetworkOptionsBuilder builder = await JsonSerializer.DeserializeAsync<NetworkOptionsBuilder>(message.Content, SerializerFactory.Default());
 
             HorseQueue queue = _rider.Queue.Find(message.Target);
             if (queue == null)
@@ -471,7 +471,7 @@ namespace Horse.Messaging.Server.Network
                     DeliveryTrackingMessags = queue.Manager == null ? 0 : queue.Manager.DeliveryHandler.Tracker.GetDeliveryCount(),
                     Acknowledge = ack,
                     AcknowledgeTimeout = Convert.ToInt32(queue.Options.AcknowledgeTimeout.TotalMilliseconds),
-                    MessageTimeout = Convert.ToInt32(queue.Options.MessageTimeout.TotalMilliseconds),
+                    MessageTimeout = queue.Options.MessageTimeout,
                     ReceivedMessages = queue.Info.ReceivedMessages,
                     SentMessages = queue.Info.SentMessages,
                     NegativeAcks = queue.Info.NegativeAcknowledge,

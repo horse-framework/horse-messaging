@@ -258,7 +258,7 @@ namespace Horse.Messaging.Server.Network
                     return;
                 }
 
-                await RouteToHandler(mc, message, false);
+                await RouteToHandler(mc, message);
             }
             catch
             {
@@ -269,7 +269,7 @@ namespace Horse.Messaging.Server.Network
         /// <summary>
         /// Routes message to it's type handler
         /// </summary>
-        internal Task RouteToHandler(MessagingClient mc, HorseMessage message, bool fromNode)
+        internal Task RouteToHandler(MessagingClient mc, HorseMessage message)
         {
             ClusterMode clusterMode = _rider.Cluster.Options.Mode;
             bool isReplica = _rider.Cluster.Options.Mode == ClusterMode.Reliable &&
@@ -278,37 +278,37 @@ namespace Horse.Messaging.Server.Network
             switch (message.Type)
             {
                 case MessageType.Channel:
-                    if (!fromNode && clusterMode == ClusterMode.Scaled)
+                    if (!mc.IsNodeClient && clusterMode == ClusterMode.Scaled)
                         _rider.Cluster.ProcessMessageFromClient(mc, message);
 
                     if (isReplica)
                         return Task.CompletedTask;
 
-                    return _channelHandler.Handle(mc, message, fromNode);
+                    return _channelHandler.Handle(mc, message, mc.IsNodeClient);
 
                 case MessageType.QueueMessage:
 
                     if (isReplica)
                         return Task.CompletedTask;
 
-                    return _queueMessageHandler.Handle(mc, message, fromNode);
+                    return _queueMessageHandler.Handle(mc, message, mc.IsNodeClient);
 
                 case MessageType.Router:
 
                     if (isReplica)
                         return Task.CompletedTask;
 
-                    return _routerMessageHandler.Handle(mc, message, fromNode);
+                    return _routerMessageHandler.Handle(mc, message, mc.IsNodeClient);
 
                 case MessageType.Cache:
 
-                    if (!fromNode && clusterMode == ClusterMode.Scaled)
+                    if (!mc.IsNodeClient && clusterMode == ClusterMode.Scaled)
                         _rider.Cluster.ProcessMessageFromClient(mc, message);
 
                     if (isReplica)
                         return Task.CompletedTask;
 
-                    return _cacheHandler.Handle(mc, message, fromNode);
+                    return _cacheHandler.Handle(mc, message, mc.IsNodeClient);
 
                 case MessageType.Transaction:
 
@@ -322,20 +322,20 @@ namespace Horse.Messaging.Server.Network
                     if (isReplica)
                         return Task.CompletedTask;
 
-                    return _pullRequestHandler.Handle(mc, message, fromNode);
+                    return _pullRequestHandler.Handle(mc, message, mc.IsNodeClient);
 
                 case MessageType.DirectMessage:
 
-                    if (!fromNode && clusterMode == ClusterMode.Scaled)
+                    if (!mc.IsNodeClient && clusterMode == ClusterMode.Scaled)
                         _rider.Cluster.ProcessMessageFromClient(mc, message);
 
                     if (isReplica)
                         return Task.CompletedTask;
 
-                    return _clientHandler.Handle(mc, message, fromNode);
+                    return _clientHandler.Handle(mc, message, mc.IsNodeClient);
 
                 case MessageType.Response:
-                    if (!fromNode && clusterMode == ClusterMode.Scaled)
+                    if (!mc.IsNodeClient && clusterMode == ClusterMode.Scaled)
                         _rider.Cluster.ProcessMessageFromClient(mc, message);
 
                     if (clusterMode == ClusterMode.Reliable && mc.IsNodeClient && mc.NodeClient != null)
@@ -344,10 +344,10 @@ namespace Horse.Messaging.Server.Network
                     if (isReplica)
                         return Task.CompletedTask;
 
-                    return _responseHandler.Handle(mc, message, fromNode);
+                    return _responseHandler.Handle(mc, message, mc.IsNodeClient);
 
                 case MessageType.Server:
-                    return _serverHandler.Handle(mc, message, fromNode);
+                    return _serverHandler.Handle(mc, message, mc.IsNodeClient);
 
                 case MessageType.Cluster:
                     if (mc.IsNodeClient && mc.NodeClient != null)
@@ -356,7 +356,7 @@ namespace Horse.Messaging.Server.Network
                     return Task.CompletedTask;
 
                 case MessageType.Event:
-                    return _eventHandler.Handle(mc, message, fromNode);
+                    return _eventHandler.Handle(mc, message, mc.IsNodeClient);
 
                 case MessageType.Ping:
                     return mc.SendAsync(PredefinedMessages.PONG);

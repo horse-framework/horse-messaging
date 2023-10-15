@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Queues
 {
@@ -26,7 +27,7 @@ namespace Horse.Messaging.Client.Queues
         /// Used for serializing timespan as integer value in milliseconds
         /// </summary>
         [JsonPropertyName("MessageTimeout")]
-        public int? MessageTimeout { get; set; }
+        public MessageTimeoutStrategyInfo MessageTimeout { get; set; }
 
         /// <summary>
         /// Default type for the queue
