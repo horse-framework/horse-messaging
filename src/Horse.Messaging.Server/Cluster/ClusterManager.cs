@@ -534,49 +534,6 @@ namespace Horse.Messaging.Server.Cluster
 
         #endregion
 
-        #region Router Operations
-
-        internal void SendRouterCreted(Router router)
-        {
-            throw new NotImplementedException();
-        }
-
-        internal void SendBindingAdded(Router router, Binding binding)
-        {
-            throw new NotImplementedException();
-        }
-
-        internal void SendBindingRemoved(Router router, Binding binding)
-        {
-            throw new NotImplementedException();
-        }
-
-        internal void SendRouterRemoved(Router router)
-        {
-            throw new NotImplementedException();
-        }
-
-        #endregion
-
-        #region Channel Operations
-
-        internal void SendChannelCreated(HorseChannel channel)
-        {
-            throw new NotImplementedException();
-        }
-
-        internal void SendChannelUpdated(HorseChannel channel)
-        {
-            throw new NotImplementedException();
-        }
-
-        internal void SendChannelRemoved(HorseChannel channel)
-        {
-            throw new NotImplementedException();
-        }
-
-        #endregion
-
         #region Queue Sync
 
         /// <summary>
