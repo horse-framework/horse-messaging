@@ -1,14 +1,15 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
-using Horse.Messaging.Protocol;
+using Horse.Core;
 
-namespace Horse.Messaging.Server.Clients
+namespace Horse.Messaging.Protocol
 {
     /// <summary>
     /// Custom protocol for MQ Clients.
     /// Protocol implementation, If a client uses different protocol. 
     /// </summary>
-    public interface IClientCustomProtocol
+    public interface ISwitchingProtocol
     {
         /// <summary>
         /// Sends PING over custom protocol
@@ -29,5 +30,15 @@ namespace Horse.Messaging.Server.Clients
         /// Sends a HorseMessage over custom protocol
         /// </summary>
         Task<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null);
+
+        /// <summary>
+        /// Reads protocol messages over network stream and converts the messages to horse message types
+        /// </summary>
+        Task<HorseMessage> Read(Stream stream);
+
+        /// <summary>
+        /// Completes protocol handshake in client side
+        /// </summary>
+        Task ClientProtocolHandshake(ConnectionData data, Stream stream);
     }
 }

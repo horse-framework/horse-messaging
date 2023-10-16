@@ -111,7 +111,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClusteringSample.Consumer",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClusteringSample.Producer", "Samples\ClusteringSample.Producer\ClusteringSample.Producer.csproj", "{612F5D28-FA39-4C92-BA3E-9E5AF0F5C0A4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Messaging.OverWebSockets", "Horse.Messaging.OverWebSockets\Horse.Messaging.OverWebSockets.csproj", "{B46AE74B-337A-44CF-BB24-A192553D6145}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Messaging.Protocol.OverWebSockets", "Horse.Messaging.Protocol.OverWebSockets\Horse.Messaging.Protocol.OverWebSockets.csproj", "{BF355BEF-7229-410C-A2AD-47EC25CBEFD1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -295,10 +295,10 @@ Global
 		{612F5D28-FA39-4C92-BA3E-9E5AF0F5C0A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{612F5D28-FA39-4C92-BA3E-9E5AF0F5C0A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{612F5D28-FA39-4C92-BA3E-9E5AF0F5C0A4}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B46AE74B-337A-44CF-BB24-A192553D6145}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B46AE74B-337A-44CF-BB24-A192553D6145}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B46AE74B-337A-44CF-BB24-A192553D6145}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B46AE74B-337A-44CF-BB24-A192553D6145}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF355BEF-7229-410C-A2AD-47EC25CBEFD1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF355BEF-7229-410C-A2AD-47EC25CBEFD1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF355BEF-7229-410C-A2AD-47EC25CBEFD1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF355BEF-7229-410C-A2AD-47EC25CBEFD1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

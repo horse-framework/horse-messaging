@@ -251,6 +251,11 @@ namespace Horse.Messaging.Client
 
         internal IServiceProvider Provider { get; set; }
 
+        /// <summary>
+        /// Switching protocol
+        /// </summary>
+        public ISwitchingProtocol SwitchingProtocol { get; set; }
+
         #endregion
 
         #region Constructors - Destructors
@@ -619,6 +624,22 @@ namespace Horse.Messaging.Client
         #region Send
 
         /// <summary>
+        /// Sends raw byte array over socket
+        /// </summary>
+        public bool SendRaw(byte[] data)
+        {
+            return _socket.Send(data);
+        }
+
+        /// <summary>
+        /// Sends raw byte array over socket
+        /// </summary>
+        public Task<bool> SendRawAsync(byte[] data)
+        {
+            return _socket.SendAsync(data);
+        }
+
+        /// <summary>
         /// Sends a Horse message
         /// </summary>
         public bool Send(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
@@ -635,6 +656,7 @@ namespace Horse.Messaging.Client
 
             return _socket.Send(data);
         }
+
 
         /// <summary>
         /// Sends a Horse message

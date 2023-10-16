@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net7.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <RootNamespace>Horse.Messaging.Server.OverWebSockets</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Horse.WebSocket.Protocol" Version="6.5.11" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Horse.Messaging.Client\Horse.Messaging.Client.csproj" />
+      <ProjectReference Include="..\Horse.Messaging.Protocol\Horse.Messaging.Protocol.csproj" />
+    </ItemGroup>
+
+</Project>

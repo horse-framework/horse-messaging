@@ -11,7 +11,7 @@ using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
 using Microsoft.Extensions.DependencyInjection;
 
-[assembly:InternalsVisibleTo("Horse.Messaging.Extensions.Client")]
+[assembly: InternalsVisibleTo("Horse.Messaging.Extensions.Client")]
 
 namespace Horse.Messaging.Client
 {
@@ -104,6 +104,12 @@ namespace Horse.Messaging.Client
         #endregion
 
         #region Client Info
+
+        /// <summary>
+        /// Gets premature client object
+        /// </summary>
+        /// <returns></returns>
+        public HorseClient GetClient() => _client;
 
         /// <summary>
         /// Sets client Id. It must be unique.
@@ -214,6 +220,15 @@ namespace Horse.Messaging.Client
             return this;
         }
 
+        /// <summary>
+        /// Uses switching protocol. Horse Protocol streams over that protocol. 
+        /// </summary>
+        public HorseClientBuilder UseSwitchingProtocol(ISwitchingProtocol protocol)
+        {
+            _client.SwitchingProtocol = protocol;
+            return this;
+        }
+
         #endregion
 
         #region Serializers
@@ -221,7 +236,9 @@ namespace Horse.Messaging.Client
         /// <summary>
         /// Uses Newtonsoft library for JSON serializations
         /// </summary>
-        [Obsolete("Newtonsoft.Json support has dropped. If you still want to use Newtonsoft.Json, please create a custom serializer using the IMessageContentSerializer interface and call UseCustomSerializer(). An example can be found here: https://github.com/horse-framework/horse-messaging/blob/v6.3/src/Horse.Messaging.Client/NewtonsoftContentSerializer.cs", true)]
+        [Obsolete(
+            "Newtonsoft.Json support has dropped. If you still want to use Newtonsoft.Json, please create a custom serializer using the IMessageContentSerializer interface and call UseCustomSerializer(). An example can be found here: https://github.com/horse-framework/horse-messaging/blob/v6.3/src/Horse.Messaging.Client/NewtonsoftContentSerializer.cs",
+            true)]
         public HorseClientBuilder UseNewtonsoftJsonSerializer()
         {
             return this;

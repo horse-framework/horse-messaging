@@ -14,7 +14,7 @@ namespace Horse.Messaging.Server.Clients
     /// <summary>
     /// Horse Server client
     /// </summary>
-    public class MessagingClient : HorseServerSocket
+    public class MessagingClient : HorseServerSocket, ISwitchingProtocolClient
     {
         #region Properties
 
@@ -93,7 +93,7 @@ namespace Horse.Messaging.Server.Clients
         /// <summary>
         /// Custom protocol for the client
         /// </summary>
-        public IClientCustomProtocol CustomProtocol { get; set; }
+        public ISwitchingProtocol SwitchingProtocol { get; set; }
 
         #endregion
 
@@ -212,8 +212,8 @@ namespace Horse.Messaging.Server.Clients
         /// </summary>
         public override void Ping()
         {
-            if (CustomProtocol != null)
-                CustomProtocol.Ping();
+            if (SwitchingProtocol != null)
+                SwitchingProtocol.Ping();
             else
                 base.Ping();
         }
@@ -223,8 +223,8 @@ namespace Horse.Messaging.Server.Clients
         /// </summary>
         public override void Pong(object pingMessage = null)
         {
-            if (CustomProtocol != null)
-                CustomProtocol.Pong(pingMessage);
+            if (SwitchingProtocol != null)
+                SwitchingProtocol.Pong(pingMessage);
             else
                 base.Pong(pingMessage);
         }
@@ -234,8 +234,8 @@ namespace Horse.Messaging.Server.Clients
         /// </summary>
         public override bool Send(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
-            if (CustomProtocol != null)
-                return CustomProtocol.Send(message, additionalHeaders);
+            if (SwitchingProtocol != null)
+                return SwitchingProtocol.Send(message, additionalHeaders);
 
             return base.Send(message, additionalHeaders);
         }
@@ -245,8 +245,8 @@ namespace Horse.Messaging.Server.Clients
         /// </summary>
         public override Task<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
-            if (CustomProtocol != null)
-                return CustomProtocol.SendAsync(message, additionalHeaders);
+            if (SwitchingProtocol != null)
+                return SwitchingProtocol.SendAsync(message, additionalHeaders);
 
             return base.SendAsync(message, additionalHeaders);
         }

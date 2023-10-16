@@ -20,6 +20,8 @@ namespace Horse.Messaging.Client
         private readonly HorseClient _client;
         internal bool IsConnecting { get; private set; }
 
+        private readonly HorseProtocolReader _reader = new HorseProtocolReader();
+
         internal HorseSocket(HorseClient client, ConnectionData data)
         {
             _client = client;
@@ -36,7 +38,10 @@ namespace Horse.Messaging.Client
         /// </summary>
         public override void Ping()
         {
-            Send(PredefinedMessages.PING);
+            if (_client.SwitchingProtocol != null)
+                _client.SwitchingProtocol.Ping();
+            else
+                Send(PredefinedMessages.PING);
         }
 
         /// <summary>
@@ -44,7 +49,10 @@ namespace Horse.Messaging.Client
         /// </summary>
         public override void Pong(object pingMessage = null)
         {
-            Send(PredefinedMessages.PONG);
+            if (_client.SwitchingProtocol != null)
+                _client.SwitchingProtocol.Pong();
+            else
+                Send(PredefinedMessages.PONG);
         }
 
         #endregion
@@ -84,14 +92,19 @@ namespace Horse.Messaging.Client
                 else
                     Stream = Client.GetStream();
 
-                Stream.Write(PredefinedMessages.PROTOCOL_BYTES_V3);
-                SendInfoMessage(host).Wait();
+                if (_client.SwitchingProtocol != null)
+                    _client.SwitchingProtocol.ClientProtocolHandshake(Data, Stream).Wait();
+                else
+                {
+                    Stream.Write(PredefinedMessages.PROTOCOL_BYTES_V3);
+                    SendInfoMessage(host).Wait();
 
-                //Reads the protocol response
-                byte[] buffer = new byte[PredefinedMessages.PROTOCOL_BYTES_V3.Length];
-                int len = Stream.Read(buffer, 0, buffer.Length);
+                    //Reads the protocol response
+                    byte[] buffer = new byte[PredefinedMessages.PROTOCOL_BYTES_V3.Length];
+                    int len = Stream.Read(buffer, 0, buffer.Length);
 
-                CheckProtocolResponse(buffer, len);
+                    CheckProtocolResponse(buffer, len);
+                }
 
                 Start();
             }
@@ -141,14 +154,19 @@ namespace Horse.Messaging.Client
                 else
                     Stream = Client.GetStream();
 
-                await Stream.WriteAsync(PredefinedMessages.PROTOCOL_BYTES_V3);
-                await SendInfoMessage(host);
+                if (_client.SwitchingProtocol != null)
+                    await _client.SwitchingProtocol.ClientProtocolHandshake(Data, Stream);
+                else
+                {
+                    await Stream.WriteAsync(PredefinedMessages.PROTOCOL_BYTES_V3);
+                    await SendInfoMessage(host);
 
-                //Reads the protocol response
-                byte[] buffer = new byte[PredefinedMessages.PROTOCOL_BYTES_V3.Length];
-                int len = await Stream.ReadAsync(buffer, 0, buffer.Length);
+                    //Reads the protocol response
+                    byte[] buffer = new byte[PredefinedMessages.PROTOCOL_BYTES_V3.Length];
+                    int len = await Stream.ReadAsync(buffer);
 
-                CheckProtocolResponse(buffer, len);
+                    CheckProtocolResponse(buffer, len);
+                }
 
                 Start();
             }
@@ -249,8 +267,12 @@ namespace Horse.Messaging.Client
         /// <returns></returns>
         protected override async Task Read()
         {
-            HorseProtocolReader reader = new HorseProtocolReader();
-            HorseMessage message = await reader.Read(Stream);
+            HorseMessage message;
+
+            if (_client.SwitchingProtocol != null)
+                message = await _client.SwitchingProtocol.Read(Stream);
+            else
+                message = await _reader.Read(Stream);
 
             if (message == null)
             {
@@ -292,8 +314,15 @@ namespace Horse.Messaging.Client
             if (string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(_client.UniqueIdGenerator.Create());
 
-            byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
-            bool sent = await SendAsync(data);
+            bool sent;
+            if (_client.SwitchingProtocol != null)
+                sent = _client.SwitchingProtocol.Send(message, additionalHeaders);
+            else
+            {
+                byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
+                sent = await SendAsync(data);
+            }
+
             return sent ? HorseResult.Ok() : new HorseResult(HorseResultCode.SendError);
         }
 
@@ -304,6 +333,9 @@ namespace Horse.Messaging.Client
         /// </summary>
         public void SendBulk(IEnumerable<HorseMessage> messages, Action<HorseMessage, bool> sendCallback)
         {
+            if (_client.SwitchingProtocol != null)
+                throw new NotSupportedException("Sending Bulk messages are not supported via Switching Protocol");
+
             foreach (HorseMessage message in messages)
             {
                 message.SetSource(_client.ClientId);

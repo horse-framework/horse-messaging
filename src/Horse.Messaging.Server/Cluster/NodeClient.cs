@@ -539,6 +539,46 @@ namespace Horse.Messaging.Server.Cluster
                 }
 
                 #endregion
+
+                #region Cache
+
+                case KnownContentTypes.SetCache:
+                {
+                    string messageTimeout = message.FindHeader(HorseHeaders.MESSAGE_TIMEOUT);
+                    string warningDuration = message.FindHeader(HorseHeaders.WARNING_DURATION);
+                    string tags = message.FindHeader(HorseHeaders.TAG);
+
+                    string[] tagNames = string.IsNullOrEmpty(tags) ? Array.Empty<string>() : tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
+
+                    TimeSpan timeout = TimeSpan.Zero;
+                    TimeSpan? warning = null;
+
+                    if (!string.IsNullOrEmpty(messageTimeout))
+                        timeout = TimeSpan.FromSeconds(Convert.ToInt32(messageTimeout));
+
+                    if (!string.IsNullOrEmpty(warningDuration))
+                        warning = TimeSpan.FromSeconds(Convert.ToInt32(warningDuration));
+
+                    _ = Rider.Cache.Set(null, false, message.Target, message.Content, timeout, warning, tagNames);
+                    break;
+                }
+
+                case KnownContentTypes.RemoveCache:
+                {
+                    _ = Rider.Cache.Remove(null, message.Target, false);
+                    break;
+                }
+
+                case KnownContentTypes.PurgeCache:
+                {
+                    if (string.IsNullOrEmpty(message.Target))
+                        _ = Rider.Cache.Purge(null, false);
+                    else
+                        _ = Rider.Cache.PurgeByTag(message.Target, null, false);
+                    break;
+                }
+
+                #endregion
             }
         }
 
