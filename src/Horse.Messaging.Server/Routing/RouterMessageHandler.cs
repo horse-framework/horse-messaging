@@ -24,7 +24,7 @@ namespace Horse.Messaging.Server.Routing
 
         public async Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
         {
-            IRouter router = _rider.Router.Find(message.Target);
+            Router router = _rider.Router.Find(message.Target);
             if (router == null)
             {
                 await SendResponse(RouterPublishResult.Disabled, client, message);

@@ -9,7 +9,7 @@ namespace HostedServiceSample.Server.RouteBindings
     {
         public static void ConfigureServiceRoutes(this HorseRider rider)
         {
-            IRouter directRouter = rider.Router.Add("test-router", RouteMethod.Distribute);
+            Router directRouter = rider.Router.Add("test-router", RouteMethod.Distribute);
             SampleDirectBinding testDirectBinding = new SampleDirectBinding
             {
                 Name = "test-binding",
@@ -20,7 +20,7 @@ namespace HostedServiceSample.Server.RouteBindings
             };
             directRouter.AddBinding(testDirectBinding);
 
-            IRouter queueRouter = rider.Router.Add("test-queue-router", RouteMethod.Distribute);
+            Router queueRouter = rider.Router.Add("test-queue-router", RouteMethod.Distribute);
             QueueBinding testQueueBinding = new QueueBinding
             {
                 Name = "test-queue-binding",

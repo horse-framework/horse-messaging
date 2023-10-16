@@ -9,7 +9,7 @@ namespace AdvancedSample.Messaging.Server.RouteBindings
     {
         public static void ConfigureServiceRoutes(this HorseRider rider)
         {
-            IRouter router = rider.Router.Add(AdvancedSampleServiceRoutes.TestService, RouteMethod.Distribute);
+            Router router = rider.Router.Add(AdvancedSampleServiceRoutes.TestService, RouteMethod.Distribute);
             DirectBinding binding = new DirectBinding
             {
                 Name = "test-binding",

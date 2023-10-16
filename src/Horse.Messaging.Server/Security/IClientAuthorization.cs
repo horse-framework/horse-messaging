@@ -46,12 +46,12 @@ namespace Horse.Messaging.Server.Security
         /// <summary>
         /// Returns true, if client can remove a router
         /// </summary>
-        Task<bool> CanRemoveRouter(MessagingClient client, IRouter router);
+        Task<bool> CanRemoveRouter(MessagingClient client, Router router);
         
         /// <summary>
         /// Returns true, if client can create a binding in a router
         /// </summary>
-        Task<bool> CanCreateBinding(MessagingClient client, IRouter router, BindingInformation binding);
+        Task<bool> CanCreateBinding(MessagingClient client, Router router, BindingInformation binding);
 
         /// <summary>
         /// Returns true, if client can remove a binding from a router

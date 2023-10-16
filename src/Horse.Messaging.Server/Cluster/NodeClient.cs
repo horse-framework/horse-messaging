@@ -489,8 +489,7 @@ namespace Horse.Messaging.Server.Cluster
                     if (router != null)
                     {
                         Binding binding = Rider.Router.CreateBinding(configuration);
-                        router.AddBinding(binding);
-                        //todo: !recursive?
+                        router.AddBinding(binding, false);
                     }
 
                     break;
@@ -498,6 +497,9 @@ namespace Horse.Messaging.Server.Cluster
 
                 case KnownContentTypes.RemoveBinding:
                 {
+                    string bindingName = message.GetStringContent();
+                    Router router = Rider.Router.Find(message.Target);
+                    router?.RemoveBinding(bindingName, false);
                     break;
                 }
 

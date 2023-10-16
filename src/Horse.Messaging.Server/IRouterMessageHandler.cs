@@ -18,11 +18,11 @@ namespace Horse.Messaging.Server
         /// <summary>
         /// Triggered when a client sends a message, router exists but there are no available bindings
         /// </summary>
-        Task OnNotRouted(MessagingClient sender, IRouter router, HorseMessage message);
+        Task OnNotRouted(MessagingClient sender, Router router, HorseMessage message);
 
         /// <summary>
         /// Triggered when a client sends a message to a router
         /// </summary>
-        Task OnRouted(MessagingClient sender, IRouter router, HorseMessage message);
+        Task OnRouted(MessagingClient sender, Router router, HorseMessage message);
     }
 }
