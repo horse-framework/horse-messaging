@@ -14,6 +14,7 @@ using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.Managers;
 using Horse.Messaging.Server.Queues.States;
+using Horse.Messaging.Server.Queues.Sync;
 using Horse.Messaging.Server.Security;
 
 namespace Horse.Messaging.Server.Queues
@@ -60,6 +61,12 @@ namespace Horse.Messaging.Server.Queues
         /// Current status state object
         /// </summary>
         internal IQueueState State { get; private set; }
+
+        /// <summary>
+        /// Cluster Notifier for the Queue.
+        /// Sends queue events between cluster nodes.
+        /// </summary>
+        internal QueueClusterNotifier ClusterNotifier { get; }
 
         /// <summary>
         /// Message store of the queue
@@ -207,6 +214,7 @@ namespace Horse.Messaging.Server.Queues
             Type = options.Type;
             _clients = new SafeList<QueueClient>(256);
             Status = QueueStatus.NotInitialized;
+            ClusterNotifier = new QueueClusterNotifier(this, rider.Cluster);
 
             PushEvent = new EventManager(rider, HorseEventType.QueuePush, name);
             MessageAckEvent = new EventManager(rider, HorseEventType.QueueMessageAck, name);
@@ -232,6 +240,11 @@ namespace Horse.Messaging.Server.Queues
 
             Status = newStatus;
             UpdateConfiguration();
+
+            if (Rider.Cluster.State == NodeState.Replica || Rider.Cluster.State == NodeState.Successor)
+                return;
+
+            ClusterNotifier.SendStateChanged();
 
             if (newStatus == QueueStatus.OnlyConsume || newStatus == QueueStatus.Running)
                 _ = Trigger();
@@ -313,8 +326,7 @@ namespace Horse.Messaging.Server.Queues
             }
 
             _clients.Clear();
-
-            Rider.Cluster.SendQueueRemoved(this);
+            ClusterNotifier.SendRemoved();
         }
 
         /// <summary>
@@ -347,33 +359,6 @@ namespace Horse.Messaging.Server.Queues
             }
         }
 
-        internal NodeQueueInfo CreateNodeQueueInfo()
-        {
-            return new NodeQueueInfo
-            {
-                Name = Name,
-                Topic = Topic,
-                HandlerName = ManagerName,
-                Initialized = Status != QueueStatus.NotInitialized,
-                PutBackDelay = Options.PutBackDelay,
-                MessageSizeLimit = Options.MessageSizeLimit,
-                MessageLimit = Options.MessageLimit,
-                LimitExceededStrategy = Options.LimitExceededStrategy.AsString(EnumFormat.Description),
-                ClientLimit = Options.ClientLimit,
-                MessageTimeout = new MessageTimeoutStrategyInfo(Options.MessageTimeout.MessageDuration, Options.MessageTimeout.Policy.AsString(EnumFormat.Description), Options.MessageTimeout.TargetName),
-                AcknowledgeTimeout = Convert.ToInt32(Options.AcknowledgeTimeout.TotalMilliseconds),
-                DelayBetweenMessages = Options.DelayBetweenMessages,
-                Acknowledge = Options.Acknowledge.AsString(EnumFormat.Description),
-                AutoDestroy = Options.AutoDestroy.AsString(EnumFormat.Description),
-                QueueType = Options.Type.AsString(EnumFormat.Description),
-                Headers = InitializationMessageHeaders?.Select(x => new NodeQueueHandlerHeader
-                {
-                    Key = x.Key,
-                    Value = x.Value
-                }).ToArray()
-            };
-        }
-
         /// <summary>
         /// Saves persistent configurations
         /// </summary>
@@ -395,6 +380,8 @@ namespace Horse.Messaging.Server.Queues
                 options.Add(configuration);
                 options.Save();
             }
+
+            ClusterNotifier.SendQueueUpdated();
         }
 
         #endregion
@@ -681,7 +668,7 @@ namespace Horse.Messaging.Server.Queues
                         QueueLock.Release();
                     }
 
-                    bool ack = await Rider.Cluster.SendQueueMessage(message.Message);
+                    bool ack = await ClusterNotifier.SendMessagePush(message.Message);
                     if (!ack)
                         return PushResult.Error;
                 }
@@ -1008,8 +995,6 @@ namespace Horse.Messaging.Server.Queues
                     Info.AddMessageRemove();
                     await RemoveMessage(message);
                     message.MarkAsRemoved();
-                    if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
-                        Rider.Cluster.SendMessageRemoval(this, message.Message);
                 }
             }
             catch (Exception e)
@@ -1042,9 +1027,7 @@ namespace Horse.Messaging.Server.Queues
                         if (item.PutBackDate > DateTime.UtcNow)
                             return;
 
-                        if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
-                            Rider.Cluster.SendPutBack(this, item.Message.Message, !item.Message.Message.HighPriority);
-
+                        ClusterNotifier.SendPutBack(item.Message.Message, !item.Message.Message.HighPriority);
                         AddMessage(item.Message);
                         _putBackWaitList.RemoveAt(0);
                     }
@@ -1066,9 +1049,7 @@ namespace Horse.Messaging.Server.Queues
             if (Options.PutBackDelay == 0 && forceDelay == 0)
             {
                 AddMessage(message);
-
-                if (Rider.Cluster.State == NodeState.Main && Rider.Cluster.Options.Mode == ClusterMode.Reliable)
-                    Rider.Cluster.SendPutBack(this, message.Message, true);
+                ClusterNotifier.SendPutBack(message.Message, true);
             }
             else
             {
@@ -1122,13 +1103,45 @@ namespace Horse.Messaging.Server.Queues
         /// </summary>
         public Task RemoveMessage(QueueMessage message)
         {
+            return RemoveMessage(message, true);
+        }
+
+        /// <summary>
+        /// Removes the message from queue
+        /// </summary>
+        private async Task RemoveMessage(QueueMessage message, bool notifyCluster)
+        {
             if (Options.MessageIdUniqueCheck && !string.IsNullOrEmpty(message.Message.MessageId))
             {
                 lock (_messageIdList)
                     _messageIdList.Remove(message.Message.MessageId);
             }
 
-            return Manager.RemoveMessage(message);
+            bool removed = await Manager.RemoveMessage(message);
+
+            if (removed && notifyCluster)
+                ClusterNotifier.SendMessageRemoval(message.Message);
+        }
+
+        /// <summary>
+        /// Clears all messages in queue
+        /// </summary>
+        public void ClearMessages()
+        {
+            ClearMessages(true);
+        }
+
+        /// <summary>
+        /// Clears all messages in queue
+        /// </summary>
+        internal void ClearMessages(bool notifyCluster)
+        {
+            ClearPuttingBackMessages();
+            _manager.PriorityMessageStore.Clear();
+            _manager.MessageStore.Clear();
+
+            if (notifyCluster)
+                ClusterNotifier.SendMessagesClear();
         }
 
         #endregion

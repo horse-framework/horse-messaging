@@ -5,10 +5,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
+using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Routing;
 
 namespace Horse.Messaging.Server.Cluster
 {
@@ -519,176 +521,61 @@ namespace Horse.Messaging.Server.Cluster
                     _ = node.SendMessage(message);
         }
 
-        internal async Task<bool> SendQueueMessage(HorseMessage message)
-        {
-            if (State == NodeState.Single)
-                return true;
-
-            HorseMessage clone = message.Clone(true, true, message.MessageId);
-
-            clone.Type = MessageType.Cluster;
-            clone.ContentType = KnownContentTypes.NodePushQueueMessage;
-
-            switch (Options.Acknowledge)
-            {
-                case ReplicaAcknowledge.None:
-                    foreach (NodeClient client in Clients)
-                        _ = client.SendMessage(clone);
-
-                    return true;
-
-                case ReplicaAcknowledge.OnlySuccessor:
-                {
-                    if (SuccessorNode == null)
-                        return false;
-
-                    NodeClient successorClient = Clients.FirstOrDefault(x => x.Info.Id == SuccessorNode.Id);
-
-                    if (successorClient == null || !successorClient.IsConnected)
-                        return false;
-
-                    bool ack = await successorClient.SendMessageAndWaitAck(clone);
-
-                    if (ack)
-                    {
-                        foreach (NodeClient client in Clients)
-                            if (client != successorClient)
-                                _ = client.SendMessage(clone);
-                    }
-
-                    return ack;
-                }
-
-                case ReplicaAcknowledge.AllNodes:
-                {
-                    if (SuccessorNode == null)
-                        return false;
-
-                    NodeClient successorClient = Clients.FirstOrDefault(x => x.Info.Id == SuccessorNode.Id);
-
-                    if (successorClient == null || !successorClient.IsConnected)
-                        return false;
-
-                    bool successorAck = await successorClient.SendMessageAndWaitAck(clone);
-                    if (!successorAck)
-                        return false;
-
-                    List<Task<bool>> tasks = new List<Task<bool>>();
-
-                    foreach (NodeClient client in Clients)
-                    {
-                        if (!client.IsConnected || client == successorClient)
-                            continue;
-
-                        Task<bool> task = client.SendMessageAndWaitAck(clone);
-                        tasks.Add(task);
-                    }
-
-                    await Task.WhenAll(tasks);
-                    return true;
-                }
-
-                default:
-                    return false;
-            }
-        }
-
-        internal void SendPutBack(HorseQueue queue, HorseMessage message, bool end)
-        {
-            HorseMessage msg = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.NodePutBackQueueMessage);
-            msg.SetMessageId(message.MessageId);
-            msg.SetStringContent(end ? "1" : "0");
-
-            foreach (NodeClient client in Clients)
-            {
-                if (client == null)
-                    continue;
-
-                if (!client.IsConnected)
-                    continue;
-
-                _ = client.SendMessage(msg);
-            }
-        }
-
-        internal void SendMessageRemoval(HorseQueue queue, HorseMessage message)
-        {
-            HorseMessage msg = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.NodeRemoveQueueMessage);
-            msg.SetMessageId(message.MessageId);
-
-            foreach (NodeClient client in Clients)
-            {
-                if (!client.IsConnected)
-                    continue;
-
-                _ = client.SendMessage(msg);
-            }
-        }
-
-        internal void SendQueueCreated(HorseQueue queue)
-        {
-            if (Options.Mode != ClusterMode.Reliable || State != NodeState.Main)
-                return;
-
-            NodeQueueInfo info = queue.CreateNodeQueueInfo();
-            HorseMessage msg = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.CreateQueue);
-            msg.SetStringContent(System.Text.Json.JsonSerializer.Serialize(info, SerializerFactory.Default()));
-
-            foreach (NodeClient client in Clients)
-            {
-                if (!client.IsConnected)
-                    continue;
-
-                _ = client.SendMessage(msg);
-            }
-        }
-
-        internal void SendQueueUpdated(HorseQueue queue)
-        {
-            if (Options.Mode != ClusterMode.Reliable || State != NodeState.Main)
-                return;
-
-            NodeQueueInfo info = queue.CreateNodeQueueInfo();
-            HorseMessage msg = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.UpdateQueue);
-            msg.SetStringContent(System.Text.Json.JsonSerializer.Serialize(info, SerializerFactory.Default()));
-
-            foreach (NodeClient client in Clients)
-            {
-                if (!client.IsConnected)
-                    continue;
-
-                _ = client.SendMessage(msg);
-            }
-        }
-
-        internal void SendQueueRemoved(HorseQueue queue)
-        {
-            if (Options.Mode != ClusterMode.Reliable || State != NodeState.Main)
-                return;
-
-            HorseMessage msg = new HorseMessage(MessageType.Cluster, queue.Name, KnownContentTypes.RemoveQueue);
-
-            foreach (NodeClient client in Clients)
-            {
-                if (!client.IsConnected)
-                    continue;
-
-                _ = client.SendMessage(msg);
-            }
-        }
-
-        #endregion
-
         internal void SendMessage(HorseMessage message)
         {
             foreach (NodeClient client in Clients)
             {
-                if (!client.IsConnected)
+                if (client == null || !client.IsConnected)
                     continue;
 
                 _ = client.SendMessage(message);
             }
         }
+
+        #endregion
+
+        #region Router Operations
+
+        internal void SendRouterCreted(Router router)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal void SendBindingAdded(Router router, Binding binding)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal void SendBindingRemoved(Router router, Binding binding)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal void SendRouterRemoved(Router router)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+        #region Channel Operations
+
+        internal void SendChannelCreated(HorseChannel channel)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal void SendChannelUpdated(HorseChannel channel)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal void SendChannelRemoved(HorseChannel channel)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
 
         #region Queue Sync
 

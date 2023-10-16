@@ -338,7 +338,7 @@ namespace Horse.Messaging.Server.Queues
                     handlerBuilder.TriggerAfterCompleted();
 
                 CreateEvent.Trigger(client, queue.Name);
-                Rider.Cluster.SendQueueCreated(queue);
+                queue.ClusterNotifier.SendCreated();
 
                 if (OptionsConfigurator != null)
                 {

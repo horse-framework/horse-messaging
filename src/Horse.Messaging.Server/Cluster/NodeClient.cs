@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using EnumsNET;
 using Horse.Core;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Routing;
 
 namespace Horse.Messaging.Server.Cluster
 {
@@ -17,6 +19,8 @@ namespace Horse.Messaging.Server.Cluster
     /// </summary>
     public class NodeClient
     {
+        #region Fields - Properties
+
         private readonly HorseClient _outgoingClient;
         private readonly NodeDeliveryTracker _deliveryTracker;
         private MessagingClient _incomingClient;
@@ -61,6 +65,8 @@ namespace Horse.Messaging.Server.Cluster
             }
         }
 
+        #endregion
+
         /// <summary>
         /// Creates new node client
         /// </summary>
@@ -90,6 +96,8 @@ namespace Horse.Messaging.Server.Cluster
             _deliveryTracker = new NodeDeliveryTracker(this);
             _deliveryTracker.Run();
         }
+
+        #region Connections
 
         internal void Start()
         {
@@ -198,6 +206,10 @@ namespace Horse.Messaging.Server.Cluster
             cluster.UpdateState();
         }
 
+        #endregion
+
+        #region Receive and Process
+
         internal void ProcessReceivedMessage(HorseClient client, HorseMessage message)
         {
             if (message.Type == MessageType.Cluster)
@@ -289,7 +301,7 @@ namespace Horse.Messaging.Server.Cluster
                 case KnownContentTypes.NodeQueueListRequest:
                     if (cluster.State == NodeState.Main)
                     {
-                        List<NodeQueueInfo> infoList = Rider.Queue.Queues.Select(x => x.CreateNodeQueueInfo()).ToList();
+                        List<NodeQueueInfo> infoList = Rider.Queue.Queues.Select(x => x.ClusterNotifier.CreateNodeQueueInfo()).ToList();
                         HorseMessage listMessage = new HorseMessage(MessageType.Cluster, Info.Id, KnownContentTypes.NodeQueueListResponse);
                         listMessage.SetStringContent(JsonSerializer.Serialize(infoList, infoList.GetType(), SerializerFactory.Default()));
                         _ = SendMessage(listMessage);
@@ -433,6 +445,81 @@ namespace Horse.Messaging.Server.Cluster
                     break;
                 }
 
+                case KnownContentTypes.NodeClearQueueMessage:
+                {
+                    HorseQueue queue = Rider.Queue.Find(message.Target);
+                    queue?.ClearMessages(false);
+                    break;
+                }
+
+                case KnownContentTypes.NodeQueueStateMessage:
+                {
+                    HorseQueue queue = Rider.Queue.Find(message.Target);
+                    queue?.SetStatus(Enums.Parse<QueueStatus>(message.GetStringContent()));
+                    break;
+                }
+
+                #endregion
+
+                #region Routers
+
+                case KnownContentTypes.CreateRouter:
+                {
+                    string content = message.GetStringContent();
+                    RouterConfiguration configuration = JsonSerializer.Deserialize<RouterConfiguration>(content, SerializerFactory.Default());
+                    Router router = Rider.Router.CreateRouter(configuration);
+                    Rider.Router.Add(router, false);
+                    break;
+                }
+
+                case KnownContentTypes.RemoveRouter:
+                {
+                    Router router = Rider.Router.Find(message.Target);
+                    if (router != null)
+                        Rider.Router.Remove(router, false);
+                    break;
+                }
+
+                case KnownContentTypes.AddBinding:
+                {
+                    string content = message.GetStringContent();
+                    BindingConfiguration configuration = JsonSerializer.Deserialize<BindingConfiguration>(content, SerializerFactory.Default());
+                    Router router = Rider.Router.Find(message.Target);
+
+                    if (router != null)
+                    {
+                        Binding binding = Rider.Router.CreateBinding(configuration);
+                        router.AddBinding(binding);
+                        //todo: !recursive?
+                    }
+
+                    break;
+                }
+
+                case KnownContentTypes.RemoveBinding:
+                {
+                    break;
+                }
+
+                #endregion
+
+                #region Channels
+
+                case KnownContentTypes.ChannelCreate:
+                {
+                    break;
+                }
+
+                case KnownContentTypes.ChannelRemove:
+                {
+                    break;
+                }
+
+                case KnownContentTypes.ChannelUpdate:
+                {
+                    break;
+                }
+
                 #endregion
             }
         }
@@ -442,6 +529,10 @@ namespace Horse.Messaging.Server.Cluster
             await queue.Manager.Synchronizer.ProcessReceivedMessages(message, true);
             await queue.Manager.Synchronizer.EndReceiving(true);
         }
+
+        #endregion
+
+        #region Send
 
         internal async Task<bool> SendMessage(HorseMessage message)
         {
@@ -499,5 +590,7 @@ namespace Horse.Messaging.Server.Cluster
             HorseMessage ack = message.CreateAcknowledge(result == PushResult.Success ? null : HorseHeaders.ERROR);
             await SendMessage(ack);
         }
+
+        #endregion
     }
 }
