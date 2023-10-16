@@ -7,6 +7,7 @@ using EnumsNET;
 using Horse.Core;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Queues;
@@ -509,16 +510,31 @@ namespace Horse.Messaging.Server.Cluster
 
                 case KnownContentTypes.ChannelCreate:
                 {
+                    string content = message.GetStringContent();
+                    HorseChannelOptions options = JsonSerializer.Deserialize<HorseChannelOptions>(content, SerializerFactory.Default());
+                    _ = Rider.Channel.Create(message.Target, options, null, true, true, false);
                     break;
                 }
 
                 case KnownContentTypes.ChannelRemove:
                 {
+                    HorseChannel channel = Rider.Channel.Find(message.Target);
+                    if (channel != null)
+                        Rider.Channel.Remove(channel, false);
                     break;
                 }
 
                 case KnownContentTypes.ChannelUpdate:
                 {
+                    HorseChannel channel = Rider.Channel.Find(message.Target);
+                    if (channel != null)
+                    {
+                        string content = message.GetStringContent();
+                        HorseChannelOptions options = JsonSerializer.Deserialize<HorseChannelOptions>(content, SerializerFactory.Default());
+                        channel.Options.ApplyFrom(options);
+                        Rider.Channel.ApplyChangedOptions(channel);
+                    }
+
                     break;
                 }
 

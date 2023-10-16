@@ -52,5 +52,17 @@ namespace Horse.Messaging.Server.Channels
                 AutoDestroyIdleSeconds = other.AutoDestroyIdleSeconds
             };
         }
+
+        /// <summary>
+        /// Applies all configuration from other options
+        /// </summary>
+        public void ApplyFrom(HorseChannelOptions other)
+        {
+            ClientLimit = other.ClientLimit;
+            MessageSizeLimit = other.MessageSizeLimit;
+            AutoDestroy = other.AutoDestroy;
+            SendLastMessageAsInitial = other.SendLastMessageAsInitial;
+            AutoDestroyIdleSeconds = other.AutoDestroyIdleSeconds;
+        }
     }
 }

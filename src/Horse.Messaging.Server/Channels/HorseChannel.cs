@@ -133,6 +133,8 @@ namespace Horse.Messaging.Server.Channels
             string idleSeconds = message.FindHeader(HorseHeaders.CHANNEL_DESTROY_IDLE_SECONDS);
             if (!string.IsNullOrEmpty(idleSeconds))
                 Options.AutoDestroyIdleSeconds = Convert.ToInt32(idleSeconds.Trim());
+
+            Rider.Channel.ClusterNotifier.SendChannelUpdated(this);
         }
 
         #endregion

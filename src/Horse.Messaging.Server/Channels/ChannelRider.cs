@@ -78,6 +78,11 @@ namespace Horse.Messaging.Server.Channels
         /// </summary>
         public EventManager UnsubscribeEvent { get; }
 
+        /// <summary>
+        /// Channel cluster notifier
+        /// </summary>
+        internal ChannelClusterNotifier ClusterNotifier { get; }
+
         #endregion
 
         #region Init - Load - Save
@@ -90,6 +95,7 @@ namespace Horse.Messaging.Server.Channels
         internal ChannelRider(HorseRider rider)
         {
             Rider = rider;
+            ClusterNotifier = new ChannelClusterNotifier(this, rider.Cluster);
             CreateEvent = new EventManager(rider, HorseEventType.ChannelCreate);
             RemoveEvent = new EventManager(rider, HorseEventType.ChannelRemove);
             SubscribeEvent = new EventManager(rider, HorseEventType.ChannelSubscribe);
@@ -170,14 +176,15 @@ namespace Horse.Messaging.Server.Channels
         /// <exception cref="DuplicateNameException">Thrown when there is already a channel with same id</exception>
         public Task<HorseChannel> Create(string channelName, HorseChannelOptions options)
         {
-            return Create(channelName, options, null, false, false);
+            return Create(channelName, options, null, false, false, true);
         }
 
-        private async Task<HorseChannel> Create(string channelName,
+        internal async Task<HorseChannel> Create(string channelName,
             HorseChannelOptions options,
             HorseMessage requestMessage,
             bool hideException,
-            bool returnIfExists)
+            bool returnIfExists,
+            bool notifyCluster)
         {
             await _createLock.WaitAsync();
             try
@@ -214,7 +221,10 @@ namespace Horse.Messaging.Server.Channels
                     OptionsConfigurator.Add(configuration);
                     OptionsConfigurator.Save();
                 }
-                
+
+                if (notifyCluster)
+                    ClusterNotifier.SendChannelCreated(channel);
+
                 return channel;
             }
             catch (Exception e)
@@ -255,6 +265,11 @@ namespace Horse.Messaging.Server.Channels
         /// </summary>
         public void Remove(HorseChannel channel)
         {
+            Remove(channel, true);
+        }
+
+        internal void Remove(HorseChannel channel, bool notifyCluster)
+        {
             try
             {
                 _channels.Remove(channel);
@@ -265,18 +280,29 @@ namespace Horse.Messaging.Server.Channels
 
                 RemoveEvent.Trigger(channel.Name);
                 channel.Destroy();
-                
+
                 if (OptionsConfigurator != null)
                 {
                     OptionsConfigurator.Remove(x => x.Name == channel.Name);
                     OptionsConfigurator.Save();
                 }
 
+                if (notifyCluster)
+                    ClusterNotifier.SendChannelRemoved(channel);
             }
             catch (Exception e)
             {
                 Rider.SendError("REMOVE_CHANNEL", e, $"ChannelName:{channel?.Name}");
             }
+        }
+
+        /// <summary>
+        /// If channel options changed by Options property.
+        /// Applies new configurationsa and triggers sync operations between nodes. 
+        /// </summary>
+        public void ApplyChangedOptions(HorseChannel channel)
+        {
+            ClusterNotifier.SendChannelUpdated(channel);
         }
 
         #endregion
