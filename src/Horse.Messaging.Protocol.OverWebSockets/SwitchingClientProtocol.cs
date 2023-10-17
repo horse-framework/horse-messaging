@@ -73,12 +73,17 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
             Content = new MemoryStream(bytes)
         };
 
+        msg.Content.Position = 0;
         return _client.SendRawAsync(_writer.Create(msg));
     }
 
     public async Task<HorseMessage> Read(Stream stream)
     {
         WebSocketMessage wsMsg = await _reader.Read(stream);
+        
+        if (wsMsg == null)
+            return null;
+        
         wsMsg.Content.Position = 0;
         HorseMessage message = await _horseReader.Read(wsMsg.Content);
         return message;

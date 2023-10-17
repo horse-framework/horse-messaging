@@ -1,4 +1,6 @@
-﻿using Horse.Messaging.Protocol;
+﻿using Horse.Core.Protocols;
+using Horse.Messaging.Protocol;
+using Horse.Protocols.Http;
 using Horse.Server;
 using Horse.WebSocket.Protocol;
 
@@ -14,19 +16,10 @@ public static class ServerExtensions
     /// </summary>
     public static HorseServer UseHorseOverWebsockets(this HorseServer server, Action<HostOptions> configure)
     {
-        HorseProtocol horseProtocol = server.FindProtocol("horse") as HorseProtocol;
-
-        if (horseProtocol == null)
-            throw new InvalidOperationException("Complete Horse implementation before using Horse over WebSockets");
-
-        OverWsHandler handler = new OverWsHandler(horseProtocol.GetHandler());
-        HorseWebSocketProtocol protocol = new HorseWebSocketProtocol(server, handler);
-        server.UseProtocol(protocol);
-
+        InitializeHorseOverWebsockets(server);
         HostOptions options = new HostOptions();
         configure(options);
         server.Options.Hosts.Add(options);
-
         return server;
     }
 
@@ -35,17 +28,27 @@ public static class ServerExtensions
     /// </summary>
     public static HorseServer UseHorseOverWebsockets(this HorseServer server, HostOptions host)
     {
+        InitializeHorseOverWebsockets(server);
+        server.Options.Hosts.Add(host);
+        return server;
+    }
+
+    private static void InitializeHorseOverWebsockets(HorseServer server)
+    {
         HorseProtocol horseProtocol = server.FindProtocol("horse") as HorseProtocol;
 
         if (horseProtocol == null)
             throw new InvalidOperationException("Complete Horse implementation before using Horse over WebSockets");
 
+        IHorseProtocol http = server.FindProtocol("http");
+        if (http == null)
+        {
+            HorseHttpProtocol httpProtocol = new HorseHttpProtocol(server, new WebSocketHttpHandler(), HttpOptions.CreateDefault());
+            server.UseProtocol(httpProtocol);
+        }
+
         OverWsHandler handler = new OverWsHandler(horseProtocol.GetHandler());
         HorseWebSocketProtocol protocol = new HorseWebSocketProtocol(server, handler);
         server.UseProtocol(protocol);
-
-        server.Options.Hosts.Add(host);
-
-        return server;
     }
 }

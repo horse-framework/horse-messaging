@@ -14,30 +14,32 @@ internal class OverWsHandler : IProtocolConnectionHandler<WsServerSocket, WebSoc
         _horseHandler = horseHandler;
     }
 
-    public async Task<WsServerSocket> Connected(IHorseServer server, IConnectionInfo connection, ConnectionData data)
+    public Task<WsServerSocket> Connected(IHorseServer server, IConnectionInfo connection, ConnectionData data)
     {
+        data.Properties.Add(HorseHeaders.UNDERLYING_PROTOCOL, "websocket");
+        
         OverWsServerSocket socket = new OverWsServerSocket(server, connection);
+        socket.Data = data;
+        return Task.FromResult<WsServerSocket>(socket);
+    }
 
-        //todo: set client information
-
-        HorseServerSocket horseSocket = await _horseHandler.Connected(server, connection, data);
+    public async Task Ready(IHorseServer server, WsServerSocket client)
+    {
+        OverWsServerSocket socket = (OverWsServerSocket) client;
+        HorseServerSocket horseSocket = await _horseHandler.Connected(server, socket.Info, socket.Data);
 
         ISwitchingProtocolClient switchingClient = horseSocket as ISwitchingProtocolClient;
         if (switchingClient == null)
-            return null;
+        {
+            socket.Disconnect();
+            return;
+        }
 
-        switchingClient.SwitchingProtocol = new SwitchingServerProtocol(socket);
         socket.HorseClient = switchingClient;
         socket.ServerSocket = horseSocket;
+        switchingClient.SwitchingProtocol = new SwitchingServerProtocol(socket);
 
-        return socket;
-    }
-
-    public Task Ready(IHorseServer server, WsServerSocket client)
-    {
-        OverWsServerSocket socket = (OverWsServerSocket) client;
-        _horseHandler.Ready(server, socket.ServerSocket);
-        return Task.CompletedTask;
+        await _horseHandler.Ready(server, socket.ServerSocket);
     }
 
     public async Task Received(IHorseServer server, IConnectionInfo info, WsServerSocket client, WebSocketMessage message)

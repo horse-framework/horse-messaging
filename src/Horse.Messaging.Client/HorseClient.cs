@@ -668,12 +668,18 @@ namespace Horse.Messaging.Client
             if (string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(UniqueIdGenerator.Create());
 
-            byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
-
             if (_socket == null)
                 return new HorseResult(HorseResultCode.SendError);
 
-            bool sent = await _socket.SendAsync(data);
+            bool sent;
+            if (SwitchingProtocol != null)
+                sent = await SwitchingProtocol.SendAsync(message, additionalHeaders);
+            else
+            {
+                byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
+                sent = await _socket.SendAsync(data);
+            }
+
             return sent ? HorseResult.Ok() : new HorseResult(HorseResultCode.SendError);
         }
 
@@ -693,8 +699,13 @@ namespace Horse.Messaging.Client
             if (string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(UniqueIdGenerator.Create());
 
-            byte[] data = HorseProtocolWriter.Create(message);
-            _socket.Send(data, sendCallback);
+            if (SwitchingProtocol != null)
+                SwitchingProtocol.Send(message);
+            else
+            {
+                byte[] data = HorseProtocolWriter.Create(message);
+                _socket.Send(data, sendCallback);
+            }
         }
 
         /// <summary>

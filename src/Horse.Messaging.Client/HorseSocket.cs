@@ -106,7 +106,7 @@ namespace Horse.Messaging.Client
                     CheckProtocolResponse(buffer, len);
                 }
 
-                Start();
+                _ = Start();
             }
             catch
             {
@@ -168,7 +168,7 @@ namespace Horse.Messaging.Client
                     CheckProtocolResponse(buffer, len);
                 }
 
-                Start();
+                _ = Start();
             }
             catch
             {
@@ -198,26 +198,18 @@ namespace Horse.Messaging.Client
         /// <summary>
         /// Startes to read messages from server
         /// </summary>
-        private void Start()
+        private async Task Start()
         {
-            //fire connected events and start to read data from the server until disconnected
-            Thread thread = new Thread(async () =>
-            {
-                try
-                {
-                    while (IsConnected)
-                        await Read();
-                }
-                catch
-                {
-                    Disconnect();
-                }
-            });
-
-            thread.IsBackground = true;
-            thread.Start();
-
             OnConnected();
+            try
+            {
+                while (IsConnected)
+                    await Read();
+            }
+            catch
+            {
+                Disconnect();
+            }
         }
 
         /// <summary>

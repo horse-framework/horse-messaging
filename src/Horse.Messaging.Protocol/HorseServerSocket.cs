@@ -50,7 +50,7 @@ namespace Horse.Messaging.Protocol
         protected override void OnDisconnected()
         {
             IsConnected = false;
-            
+
             if (_cleanupAction != null)
                 _cleanupAction(this);
 

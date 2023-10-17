@@ -163,7 +163,11 @@ namespace Horse.Messaging.Server.Network
                     accepted.AddHeader(HorseHeaders.REPLICA_NODE, alternate);
             }
 
-            await client.SendAsync(accepted);
+            string underlyingProtocol = data.Properties.GetStringValue(HorseHeaders.UNDERLYING_PROTOCOL);
+            if (!string.IsNullOrEmpty(underlyingProtocol))
+                client.PendingMessages.Add(accepted);
+            else
+                await client.SendAsync(accepted);
 
             foreach (IClientHandler handler in _rider.Client.Handlers.All())
                 _ = handler.Connected(_rider, client);

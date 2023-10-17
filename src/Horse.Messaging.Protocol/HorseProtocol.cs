@@ -123,8 +123,7 @@ namespace Horse.Messaging.Protocol
             }
             catch (Exception e)
             {
-                if (_server.Logger != null)
-                    _server.Logger.LogException("Unhandled Exception", e);
+                _server.Logger?.LogException("Unhandled Exception", e);
             }
 
             HorseProtocolReader reader = new HorseProtocolReader();
@@ -156,8 +155,7 @@ namespace Horse.Messaging.Protocol
             }
             catch (Exception e)
             {
-                if (_server.Logger != null)
-                    _server.Logger.LogException("Unhandled Exception", e);
+                _server.Logger?.LogException("Unhandled Exception", e);
             }
         }
 

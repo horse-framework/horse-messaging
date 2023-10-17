@@ -10,4 +10,9 @@ public interface ISwitchingProtocolClient
     /// Custom protocol for the client
     /// </summary>
     public ISwitchingProtocol SwitchingProtocol { get; set; }
+
+    /// <summary>
+    /// Keeps client alive and prevents ping timeout
+    /// </summary>
+    public void KeepAlive();
 }

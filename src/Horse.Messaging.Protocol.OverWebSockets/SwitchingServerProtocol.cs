@@ -21,6 +21,7 @@ internal class SwitchingServerProtocol : ISwitchingProtocol
 
     public void Pong(object pingMessage = null)
     {
+        _socket.HorseClient.KeepAlive();
         _socket.Pong(pingMessage);
     }
 
@@ -32,6 +33,7 @@ internal class SwitchingServerProtocol : ISwitchingProtocol
             OpCode = SocketOpCode.Binary,
             Content = new MemoryStream(bytes)
         };
+        msg.Content.Position = 0;
         return _socket.Send(msg);
     }
 
@@ -43,6 +45,7 @@ internal class SwitchingServerProtocol : ISwitchingProtocol
             OpCode = SocketOpCode.Binary,
             Content = new MemoryStream(bytes)
         };
+        msg.Content.Position = 0;
         return _socket.SendAsync(msg);
     }
 

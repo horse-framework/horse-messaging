@@ -90,10 +90,34 @@ namespace Horse.Messaging.Server.Clients
         /// </summary>
         public string RemoteHost { get; set; }
 
+
+        private ISwitchingProtocol _switchingProtocol;
+
         /// <summary>
         /// Custom protocol for the client
         /// </summary>
-        public ISwitchingProtocol SwitchingProtocol { get; set; }
+        public ISwitchingProtocol SwitchingProtocol
+        {
+            get => _switchingProtocol;
+            set
+            {
+                _switchingProtocol = value;
+                if (_switchingProtocol != null && PendingMessages.Count > 0)
+                {
+                    foreach (HorseMessage pendingMessage in PendingMessages)
+                        Send(pendingMessage);
+                    
+                    PendingMessages.Clear();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Pending messages for sending.
+        /// It's used while switching to another protocol.
+        /// Some messages may need to sent after protocol has switched.
+        /// </summary>
+        internal List<HorseMessage> PendingMessages { get; } = new List<HorseMessage>();
 
         #endregion
 
