@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Horse.Core;
@@ -88,8 +89,14 @@ namespace Horse.Messaging.Server.Clients
         /// <summary>
         /// Remote host of the node server
         /// </summary>
-        public string RemoteHost { get; set; }
-
+        public string RemoteHost
+        {
+            get
+            {
+                IPEndPoint remoteIpEndPoint = Client?.Client.RemoteEndPoint as IPEndPoint;
+                return remoteIpEndPoint?.Address?.ToString();
+            }
+        }
 
         private ISwitchingProtocol _switchingProtocol;
 
@@ -106,12 +113,12 @@ namespace Horse.Messaging.Server.Clients
                 {
                     foreach (HorseMessage pendingMessage in PendingMessages)
                         Send(pendingMessage);
-                    
+
                     PendingMessages.Clear();
                 }
             }
         }
-        
+
         /// <summary>
         /// Pending messages for sending.
         /// It's used while switching to another protocol.
