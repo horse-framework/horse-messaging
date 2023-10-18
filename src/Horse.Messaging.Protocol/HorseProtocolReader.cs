@@ -213,7 +213,7 @@ namespace Horse.Messaging.Protocol
             int total = 0;
             do
             {
-                int read = await stream.ReadAsync(buffer, start + total, length - total);
+                int read = await stream.ReadAsync(buffer.AsMemory(start + total, length - total));
                 if (read == 0)
                     return false;
 

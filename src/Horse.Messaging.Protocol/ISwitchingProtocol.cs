@@ -12,6 +12,11 @@ namespace Horse.Messaging.Protocol
     public interface ISwitchingProtocol
     {
         /// <summary>
+        /// Name of the protocol such as horse, websocket
+        /// </summary>
+        string ProtocolName { get; }
+
+        /// <summary>
         /// Sends PING over custom protocol
         /// </summary>
         void Ping();

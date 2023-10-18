@@ -1,4 +1,5 @@
-﻿using Horse.Core;
+﻿using System.Threading.Tasks;
+using Horse.Core;
 using Horse.Core.Protocols;
 using Horse.Messaging.Protocol;
 using Horse.WebSocket.Protocol;

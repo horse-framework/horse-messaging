@@ -1,5 +1,10 @@
-﻿using System.Security.Cryptography;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using Horse.Core;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -21,6 +26,8 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
     {
         _client = client;
     }
+
+    public string ProtocolName => "websocket";
 
     public void Ping()
     {

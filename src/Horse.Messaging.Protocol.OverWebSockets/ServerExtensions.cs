@@ -1,4 +1,5 @@
-﻿using Horse.Core.Protocols;
+﻿using System;
+using Horse.Core.Protocols;
 using Horse.Messaging.Protocol;
 using Horse.Protocols.Http;
 using Horse.Server;

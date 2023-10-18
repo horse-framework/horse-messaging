@@ -1,4 +1,8 @@
-﻿using Horse.Core;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
+using Horse.Core;
 using Horse.Messaging.Protocol;
 using Horse.WebSocket.Protocol;
 
@@ -8,6 +12,8 @@ internal class SwitchingServerProtocol : ISwitchingProtocol
 {
     private readonly OverWsServerSocket _socket;
     private readonly WebSocketReader _wsReader = new WebSocketReader();
+
+    public string ProtocolName => "websocket";
 
     internal SwitchingServerProtocol(OverWsServerSocket socket)
     {
