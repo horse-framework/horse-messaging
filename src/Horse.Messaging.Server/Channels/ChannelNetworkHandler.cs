@@ -66,6 +66,10 @@ namespace Horse.Messaging.Server.Channels
                     }
 
                     PushResult result = channel.Push(message);
+
+                    if (result == PushResult.Success)
+                        client.Stats.ChannelPublishes++;
+
                     if (waitResponse)
                     {
                         HorseMessage response = result == PushResult.Success

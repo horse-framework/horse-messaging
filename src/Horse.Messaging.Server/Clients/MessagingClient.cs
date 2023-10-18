@@ -87,6 +87,11 @@ namespace Horse.Messaging.Server.Clients
         public DateTime ConnectedDate { get; } = DateTime.UtcNow;
 
         /// <summary>
+        /// Stats of the client
+        /// </summary>
+        public ClientStats Stats { get; } = new ClientStats();
+
+        /// <summary>
         /// Remote host of the node server
         /// </summary>
         public string RemoteHost
@@ -162,6 +167,19 @@ namespace Horse.Messaging.Server.Clients
 
             lock (_queues)
                 list = new List<QueueClient>(_queues);
+
+            return list;
+        }
+
+        /// <summary>
+        /// Gets all subscribed channels of client
+        /// </summary>
+        public IEnumerable<ChannelClient> GetChannels()
+        {
+            List<ChannelClient> list;
+
+            lock (_channels)
+                list = new List<ChannelClient>(_channels);
 
             return list;
         }

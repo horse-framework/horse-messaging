@@ -36,6 +36,10 @@ namespace Horse.Messaging.Server.Routing
             }
 
             RouterPublishResult result = await router.Publish(client, message);
+            
+            if (result == RouterPublishResult.OkWillNotRespond || result == RouterPublishResult.OkAndWillBeRespond)
+                client.Stats.RouterPublishes++;
+
             foreach (IRouterMessageHandler handler in _rider.Router.MessageHandlers.All())
             {
                 if (result == RouterPublishResult.OkWillNotRespond || result == RouterPublishResult.OkAndWillBeRespond)

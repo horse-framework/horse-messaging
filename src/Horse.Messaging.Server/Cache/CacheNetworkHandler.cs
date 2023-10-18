@@ -76,6 +76,7 @@ namespace Horse.Messaging.Server.Cache
                             response.AddHeader(HorseHeaders.WARN_COUNT, item.ExpirationWarnCount.ToString());
                     }
 
+                    client.Stats.CacheGets++;
                     response.HighPriority = result.IsFirstWarningReceiver;
                     response.Content = item.Value;
 
@@ -115,6 +116,7 @@ namespace Horse.Messaging.Server.Cache
                     switch (operation.Result)
                     {
                         case CacheResult.Ok:
+                            client.Stats.CacheSets++;
                             await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
                             return;
 
@@ -173,6 +175,7 @@ namespace Horse.Messaging.Server.Cache
                             response.AddHeader(HorseHeaders.WARN_COUNT, item.ExpirationWarnCount.ToString());
                     }
 
+                    client.Stats.CacheGets++;
                     response.HighPriority = getResult.IsFirstWarningReceiver;
                     response.Content = item.Value;
 

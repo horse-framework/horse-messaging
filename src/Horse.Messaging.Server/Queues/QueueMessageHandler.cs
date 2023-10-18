@@ -96,6 +96,7 @@ namespace Horse.Messaging.Server.Queues
 
             //push the message
             PushResult result = await queue.Push(queueMessage, client);
+            
             if (answerSender)
             {
                 switch (result)

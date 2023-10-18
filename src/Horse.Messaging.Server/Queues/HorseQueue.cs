@@ -696,6 +696,9 @@ namespace Horse.Messaging.Server.Queues
 
                 PushEvent.Trigger(sender, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
 
+                if (sender != null)
+                    sender.Stats.QueuePushes++;
+
                 return PushResult.Success;
             }
             catch (DuplicateNameException)
