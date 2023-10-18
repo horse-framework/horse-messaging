@@ -1172,7 +1172,6 @@ namespace Horse.Messaging.Server.Queues
 
                 MessageDelivery delivery = Manager.DeliveryHandler.Tracker.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
 
-                //when server and consumer are in pc,
                 //sometimes consumer sends ack before server start to follow ack of the message
                 //that happens when ack message is arrived in less than 0.01ms
                 //in that situation, server can't find the delivery with FindAndRemoveDelivery, it returns null
@@ -1193,8 +1192,9 @@ namespace Horse.Messaging.Server.Queues
                 if (delivery == null)
                 {
                     QueueClient queueClient = ClientsClone.FirstOrDefault(x => x.Client == from);
-                    if (queueClient != null && queueClient.CurrentlyProcessing != null && queueClient.CurrentlyProcessing.Message.MessageId == deliveryMessage.MessageId)
-                        queueClient.CurrentlyProcessing = null;
+                    if (queueClient != null)
+                        if (queueClient.CurrentlyProcessing != null && queueClient.CurrentlyProcessing.Message.MessageId == deliveryMessage.MessageId)
+                            queueClient.CurrentlyProcessing = null;
 
                     return;
                 }
@@ -1202,8 +1202,7 @@ namespace Horse.Messaging.Server.Queues
                 if (delivery.Acknowledge == DeliveryAcknowledge.Timeout)
                     return;
 
-                bool success = !(deliveryMessage.HasHeader &&
-                                 deliveryMessage.Headers.Any(x => x.Key.Equals(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)));
+                bool success = !(deliveryMessage.HasHeader && deliveryMessage.Headers.Any(x => x.Key.Equals(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)));
 
                 delivery.MarkAsAcknowledged(success);
                 ReleaseAcknowledgeLock(true);

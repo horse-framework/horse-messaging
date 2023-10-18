@@ -99,6 +99,7 @@ namespace Horse.Messaging.Server.Queues.States
 
                 if (sent)
                 {
+                    client.ConsumeCount++;
                     if (_queue.Options.Acknowledge != QueueAckDecision.None)
                     {
                         client.CurrentlyProcessing = message;

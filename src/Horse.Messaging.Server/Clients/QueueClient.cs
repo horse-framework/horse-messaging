@@ -35,6 +35,22 @@ namespace Horse.Messaging.Server.Clients
         public DateTime ProcessDeadline { get; set; }
 
         /// <summary>
+        /// Total consume count.
+        /// If consumer consume same message twice, it's count two. 
+        /// </summary>
+        public long ConsumeCount { get; set; }
+
+        /// <summary>
+        /// Total consume acknowledge count
+        /// </summary>
+        public long AcknowledgeCount { get; set; }
+
+        /// <summary>
+        /// Total count of how many times consumer received a message but could not send ack in time
+        /// </summary>
+        public long AckTimeoutCount { get; set; }
+
+        /// <summary>
         /// Creates new queue client pair descriptor
         /// </summary>
         public QueueClient(HorseQueue queue, MessagingClient client)
