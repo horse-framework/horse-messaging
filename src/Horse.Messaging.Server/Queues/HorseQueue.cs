@@ -283,6 +283,7 @@ namespace Horse.Messaging.Server.Queues
                 }, null, TimeSpan.FromMilliseconds(5000), TimeSpan.FromMilliseconds(5000));
 
                 _delayedPutBackTimer = new Timer(ExecutePutBack, null, TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500));
+                UpdateConfiguration();
             }
             catch (Exception e)
             {

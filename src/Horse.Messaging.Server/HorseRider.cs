@@ -109,6 +109,7 @@ namespace Horse.Messaging.Server
         {
             Options = options ?? new HorseRiderOptions();
 
+            Cluster = new ClusterManager(this);
             Client = new ClientRider(this);
             Queue = new QueueRider(this);
             Direct = new DirectRider(this);
@@ -116,7 +117,6 @@ namespace Horse.Messaging.Server
             Channel = new ChannelRider(this);
             Transaction = new TransactionRider(this);
             Cache = new HorseCache(this);
-            Cluster = new ClusterManager(this);
 
             Cache.Initialize();
             Cluster.Initialize();

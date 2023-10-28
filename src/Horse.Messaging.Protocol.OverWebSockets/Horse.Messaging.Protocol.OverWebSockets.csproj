@@ -7,9 +7,9 @@
         <Product>Horse.Messaging.Server.OverWebSockets</Product>
         <Description>Horse Messaging Client to connect all Horse Servers</Description>
         <PackageTags>horse,client,messaging,queue,channel,cache</PackageTags>
-        <AssemblyVersion>6.7.0-beta</AssemblyVersion>
-        <FileVersion>6.7.0-beta</FileVersion>
-        <PackageVersion>6.7.0-beta</PackageVersion>
+        <AssemblyVersion>6.7.0</AssemblyVersion>
+        <FileVersion>6.7.0</FileVersion>
+        <PackageVersion>6.7.0-beta.2</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
         <PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>
