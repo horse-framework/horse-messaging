@@ -239,7 +239,7 @@ namespace Horse.Messaging.Server.Queues
                 new KeyValuePair<string, string>($"Next-{HorseHeaders.STATUS}", newStatus.ToString()));
 
             Status = newStatus;
-            UpdateConfiguration();
+            UpdateConfiguration(true);
 
             if (Rider.Cluster.State == NodeState.Replica || Rider.Cluster.State == NodeState.Successor)
                 return;
@@ -253,7 +253,7 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Initializes queue to first use
         /// </summary>
-        internal async Task InitializeQueue(IHorseQueueManager queueManager = null)
+        internal async Task InitializeQueue(IHorseQueueManager queueManager = null, bool notifyCluster = true)
         {
             await QueueLock.WaitAsync();
             try
@@ -283,7 +283,7 @@ namespace Horse.Messaging.Server.Queues
                 }, null, TimeSpan.FromMilliseconds(5000), TimeSpan.FromMilliseconds(5000));
 
                 _delayedPutBackTimer = new Timer(ExecutePutBack, null, TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(500));
-                UpdateConfiguration();
+                UpdateConfiguration(notifyCluster);
             }
             catch (Exception e)
             {
@@ -363,7 +363,7 @@ namespace Horse.Messaging.Server.Queues
         /// <summary>
         /// Saves persistent configurations
         /// </summary>
-        public void UpdateConfiguration()
+        public void UpdateConfiguration(bool notifyCluster)
         {
             IOptionsConfigurator<QueueConfiguration> options = Rider.Queue.OptionsConfigurator;
 
@@ -382,7 +382,8 @@ namespace Horse.Messaging.Server.Queues
                 options.Save();
             }
 
-            ClusterNotifier.SendQueueUpdated();
+            if (notifyCluster)
+                ClusterNotifier.SendQueueUpdated();
         }
 
         #endregion
@@ -872,7 +873,7 @@ namespace Horse.Messaging.Server.Queues
                     Func<QueueManagerBuilder, Task<IHorseQueueManager>> factory = Rider.Queue.QueueManagerFactories[handlerBuilder.ManagerName];
                     IHorseQueueManager queueManager = await factory(handlerBuilder);
 
-                    await InitializeQueue(queueManager);
+                    await InitializeQueue(queueManager, false);
 
                     handlerBuilder.TriggerAfterCompleted();
                 }
