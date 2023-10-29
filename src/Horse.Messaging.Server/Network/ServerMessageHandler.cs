@@ -371,13 +371,11 @@ namespace Horse.Messaging.Server.Network
 
             builder.Type = null;
             builder.ApplyToQueue(queue.Options);
-            queue.UpdateConfiguration();
+            queue.UpdateConfiguration(true);
 
             //if creation successful, sends response
             if (message.WaitResponse)
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
-
-            _rider.Cluster.SendQueueUpdated(queue);
         }
 
         /// <summary>
@@ -605,7 +603,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task CreateRouter(MessagingClient client, HorseMessage message)
         {
-            IRouter found = _rider.Router.Find(message.Target);
+            Router found = _rider.Router.Find(message.Target);
             if (found != null)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
@@ -637,7 +635,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task RemoveRouter(MessagingClient client, HorseMessage message)
         {
-            IRouter found = _rider.Router.Find(message.Target);
+            Router found = _rider.Router.Find(message.Target);
             if (found == null)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
@@ -665,7 +663,7 @@ namespace Horse.Messaging.Server.Network
         private async Task ListRouters(MessagingClient client, HorseMessage message)
         {
             List<RouterInformation> items = new List<RouterInformation>();
-            foreach (IRouter router in _rider.Router.Routers)
+            foreach (Router router in _rider.Router.Routers)
             {
                 RouterInformation info = new RouterInformation
                 {
@@ -689,7 +687,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task CreateRouterBinding(MessagingClient client, HorseMessage message)
         {
-            IRouter router = _rider.Router.Find(message.Target);
+            Router router = _rider.Router.Find(message.Target);
             if (router == null)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
@@ -739,7 +737,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task RemoveRouterBinding(MessagingClient client, HorseMessage message)
         {
-            IRouter router = _rider.Router.Find(message.Target);
+            Router router = _rider.Router.Find(message.Target);
             if (router == null)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
@@ -781,7 +779,7 @@ namespace Horse.Messaging.Server.Network
         /// </summary>
         private async Task ListRouterBindings(MessagingClient client, HorseMessage message)
         {
-            IRouter router = _rider.Router.Find(message.Target);
+            Router router = _rider.Router.Find(message.Target);
             if (router == null)
             {
                 await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));

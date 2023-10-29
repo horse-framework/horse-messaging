@@ -248,6 +248,7 @@ namespace Horse.Messaging.Server.Queues.States
 
             if (sent)
             {
+                requester.ConsumeCount++;
                 message.CurrentDeliveryReceivers.Add(requester);
                 deliveryHandler.Tracker.Track(delivery);
                 delivery.MarkAsSent();

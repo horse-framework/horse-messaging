@@ -338,7 +338,7 @@ namespace Horse.Messaging.Server.Queues
                     handlerBuilder.TriggerAfterCompleted();
 
                 CreateEvent.Trigger(client, queue.Name);
-                Rider.Cluster.SendQueueCreated(queue);
+                queue.ClusterNotifier.SendCreated();
 
                 if (OptionsConfigurator != null)
                 {
@@ -374,7 +374,7 @@ namespace Horse.Messaging.Server.Queues
                 }
             }
         }
-        
+
         internal void FillQueueOptions(QueueOptions options, NodeQueueInfo info)
         {
             options.Acknowledge = Enums.Parse<QueueAckDecision>(info.Acknowledge, true, EnumFormat.Description);
@@ -428,7 +428,7 @@ namespace Horse.Messaging.Server.Queues
                 if (info.Initialized && queueManagerFactory != null)
                 {
                     IHorseQueueManager deliveryHandler = await queueManagerFactory(handlerBuilder);
-                    await queue.InitializeQueue(deliveryHandler);
+                    await queue.InitializeQueue(deliveryHandler, false);
                 }
 
                 _queues.Add(queue);

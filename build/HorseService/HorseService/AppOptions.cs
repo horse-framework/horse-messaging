@@ -60,4 +60,5 @@ public class AppOptions
     public bool QueueUsePersistent { get; set; }
     public bool QueueUseMemory { get; set; }
     public bool QueueUsePersistentManagerAsDefault { get; set; }
+    public bool OverWebSocket { get; set; }
 }

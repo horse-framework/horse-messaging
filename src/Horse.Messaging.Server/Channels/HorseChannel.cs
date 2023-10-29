@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Protocol.Models;
@@ -71,7 +73,7 @@ namespace Horse.Messaging.Server.Channels
 
         private readonly ArrayContainer<ChannelClient> _clients = new ArrayContainer<ChannelClient>();
         private Timer _destoryTimer;
-        private byte[] _lastPublishedMessage;
+        private byte[] _initialMessage;
 
         #endregion
 
@@ -133,6 +135,8 @@ namespace Horse.Messaging.Server.Channels
             string idleSeconds = message.FindHeader(HorseHeaders.CHANNEL_DESTROY_IDLE_SECONDS);
             if (!string.IsNullOrEmpty(idleSeconds))
                 Options.AutoDestroyIdleSeconds = Convert.ToInt32(idleSeconds.Trim());
+
+            Rider.Channel.ClusterNotifier.SendChannelUpdated(this);
         }
 
         #endregion
@@ -168,7 +172,7 @@ namespace Horse.Messaging.Server.Channels
             try
             {
                 byte[] messageData = HorseProtocolWriter.Create(message);
-                _lastPublishedMessage = messageData;
+                _initialMessage = messageData;
 
                 int count = 0;
                 //to all receivers
@@ -201,6 +205,19 @@ namespace Horse.Messaging.Server.Channels
                 Rider.SendError("PUSH", ex, $"ChannelName:{Name}");
                 return PushResult.Error;
             }
+        }
+
+        /// <summary>
+        /// Returns latest published message
+        /// </summary>
+        public async Task<HorseMessage> GetInitialMessage()
+        {
+            if (_initialMessage == null)
+                return null;
+
+            HorseProtocolReader reader = new HorseProtocolReader();
+            HorseMessage message = await reader.Read(new MemoryStream(_initialMessage));
+            return message;
         }
 
         #endregion
@@ -247,9 +264,9 @@ namespace Horse.Messaging.Server.Channels
 
             if (Options.SendLastMessageAsInitial)
             {
-                byte[] msg = _lastPublishedMessage;
+                byte[] msg = _initialMessage;
                 if (msg != null)
-                    _ = client.SendAsync(_lastPublishedMessage);
+                    _ = client.SendAsync(_initialMessage);
             }
 
             return SubscriptionResult.Success;

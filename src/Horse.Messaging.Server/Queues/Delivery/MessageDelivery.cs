@@ -122,8 +122,12 @@ namespace Horse.Messaging.Server.Queues.Delivery
 
             AcknowledgeDate = DateTime.UtcNow;
 
-            if (Receiver != null && Receiver.CurrentlyProcessing == Message)
-                Receiver.CurrentlyProcessing = null;
+            if (Receiver != null)
+            {
+                Receiver.AcknowledgeCount++;
+                if (Receiver.CurrentlyProcessing == Message)
+                    Receiver.CurrentlyProcessing = null;
+            }
         }
 
         /// <summary>
@@ -131,8 +135,12 @@ namespace Horse.Messaging.Server.Queues.Delivery
         /// </summary>
         public bool MarkAsAcknowledgeTimeout()
         {
-            if (Receiver != null && Receiver.CurrentlyProcessing == Message)
-                Receiver.CurrentlyProcessing = null;
+            if (Receiver != null)
+            {
+                Receiver.AcknowledgeCount++;
+                if (Receiver.CurrentlyProcessing == Message)
+                    Receiver.CurrentlyProcessing = null;
+            }
 
             if (Acknowledge != DeliveryAcknowledge.None)
                 return false;

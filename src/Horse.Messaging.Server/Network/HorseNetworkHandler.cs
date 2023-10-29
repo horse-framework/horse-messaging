@@ -163,7 +163,11 @@ namespace Horse.Messaging.Server.Network
                     accepted.AddHeader(HorseHeaders.REPLICA_NODE, alternate);
             }
 
-            await client.SendAsync(accepted);
+            string underlyingProtocol = data.Properties.GetStringValue(HorseHeaders.UNDERLYING_PROTOCOL);
+            if (!string.IsNullOrEmpty(underlyingProtocol))
+                client.PendingMessages.Add(accepted);
+            else
+                await client.SendAsync(accepted);
 
             foreach (IClientHandler handler in _rider.Client.Handlers.All())
                 _ = handler.Connected(_rider, client);
@@ -178,7 +182,7 @@ namespace Horse.Messaging.Server.Network
         {
             if (client == null)
                 return;
-            
+
             MessagingClient mc = (MessagingClient) client;
 
             if (mc.IsNodeClient && mc.NodeClient != null)
@@ -186,7 +190,7 @@ namespace Horse.Messaging.Server.Network
                 mc.NodeClient.IncomingClientConnected(mc, mc.Data);
                 return;
             }
-            
+
             if (_rider.Cluster.Options.Mode == ClusterMode.Reliable && _rider.Cluster.State > NodeState.Main)
             {
                 HorseMessage message = MessageBuilder.StatusCodeMessage(KnownContentTypes.Found, mc.UniqueId);
@@ -269,70 +273,54 @@ namespace Horse.Messaging.Server.Network
         /// <summary>
         /// Routes message to it's type handler
         /// </summary>
-        internal Task RouteToHandler(MessagingClient mc, HorseMessage message)
+        private Task RouteToHandler(MessagingClient mc, HorseMessage message)
         {
             ClusterMode clusterMode = _rider.Cluster.Options.Mode;
-            bool isReplica = _rider.Cluster.Options.Mode == ClusterMode.Reliable &&
-                             (_rider.Cluster.State == NodeState.Replica || _rider.Cluster.State == NodeState.Successor);
+            bool isReplica = _rider.Cluster.Options.Mode == ClusterMode.Reliable && (_rider.Cluster.State == NodeState.Replica || _rider.Cluster.State == NodeState.Successor);
 
             switch (message.Type)
             {
                 case MessageType.Channel:
                     if (!mc.IsNodeClient && clusterMode == ClusterMode.Scaled)
                         _rider.Cluster.ProcessMessageFromClient(mc, message);
-
-                    if (isReplica)
-                        return Task.CompletedTask;
-
-                    return _channelHandler.Handle(mc, message, mc.IsNodeClient);
+                    
+                    return isReplica
+                        ? Task.CompletedTask
+                        : _channelHandler.Handle(mc, message, mc.IsNodeClient);
 
                 case MessageType.QueueMessage:
-
-                    if (isReplica)
-                        return Task.CompletedTask;
-
-                    return _queueMessageHandler.Handle(mc, message, mc.IsNodeClient);
+                    return isReplica
+                        ? Task.CompletedTask
+                        : _queueMessageHandler.Handle(mc, message, mc.IsNodeClient);
 
                 case MessageType.Router:
-
-                    if (isReplica)
-                        return Task.CompletedTask;
-
-                    return _routerMessageHandler.Handle(mc, message, mc.IsNodeClient);
+                    return isReplica
+                        ? Task.CompletedTask
+                        : _routerMessageHandler.Handle(mc, message, mc.IsNodeClient);
 
                 case MessageType.Cache:
-
-                    if (!mc.IsNodeClient && clusterMode == ClusterMode.Scaled)
+                    if (!mc.IsNodeClient)
                         _rider.Cluster.ProcessMessageFromClient(mc, message);
-
-                    if (isReplica)
-                        return Task.CompletedTask;
-
+                    
                     return _cacheHandler.Handle(mc, message, mc.IsNodeClient);
 
                 case MessageType.Transaction:
-
-                    if (isReplica)
-                        return Task.CompletedTask;
-
-                    return _transactionHandler.Handle(mc, message, false);
+                    return isReplica
+                        ? Task.CompletedTask
+                        : _transactionHandler.Handle(mc, message, false);
 
                 case MessageType.QueuePullRequest:
-
-                    if (isReplica)
-                        return Task.CompletedTask;
-
-                    return _pullRequestHandler.Handle(mc, message, mc.IsNodeClient);
+                    return isReplica
+                        ? Task.CompletedTask
+                        : _pullRequestHandler.Handle(mc, message, mc.IsNodeClient);
 
                 case MessageType.DirectMessage:
-
                     if (!mc.IsNodeClient && clusterMode == ClusterMode.Scaled)
                         _rider.Cluster.ProcessMessageFromClient(mc, message);
-
-                    if (isReplica)
-                        return Task.CompletedTask;
-
-                    return _clientHandler.Handle(mc, message, mc.IsNodeClient);
+                    
+                    return isReplica
+                        ? Task.CompletedTask
+                        : _clientHandler.Handle(mc, message, mc.IsNodeClient);
 
                 case MessageType.Response:
                     if (!mc.IsNodeClient && clusterMode == ClusterMode.Scaled)
@@ -340,11 +328,10 @@ namespace Horse.Messaging.Server.Network
 
                     if (clusterMode == ClusterMode.Reliable && mc.IsNodeClient && mc.NodeClient != null)
                         mc.NodeClient.ProcessReceivedMessage(mc, message);
-
-                    if (isReplica)
-                        return Task.CompletedTask;
-
-                    return _responseHandler.Handle(mc, message, mc.IsNodeClient);
+                    
+                    return isReplica
+                        ? Task.CompletedTask
+                        : _responseHandler.Handle(mc, message, mc.IsNodeClient);
 
                 case MessageType.Server:
                     return _serverHandler.Handle(mc, message, mc.IsNodeClient);

@@ -15,7 +15,7 @@ namespace Horse.Messaging.Server.Routing
     /// </summary>
     public class RouterRider
     {
-        private readonly ArrayContainer<IRouter> _routers = new ArrayContainer<IRouter>();
+        private readonly ArrayContainer<Router> _routers = new ArrayContainer<Router>();
 
         /// <summary>
         /// Router message event handlers
@@ -25,12 +25,17 @@ namespace Horse.Messaging.Server.Routing
         /// <summary>
         /// All Queues of the server
         /// </summary>
-        public IEnumerable<IRouter> Routers => _routers.All();
+        public IEnumerable<Router> Routers => _routers.All();
 
         /// <summary>
         /// Root horse rider object
         /// </summary>
         public HorseRider Rider { get; }
+
+        /// <summary>
+        /// Cluster notifier for router operations
+        /// </summary>
+        internal RouterClusterNotifier ClusterNotifier { get; }
 
         /// <summary>
         /// Persistence configurator for routers.
@@ -72,6 +77,7 @@ namespace Horse.Messaging.Server.Routing
         internal RouterRider(HorseRider rider)
         {
             Rider = rider;
+            ClusterNotifier = new RouterClusterNotifier(this, Rider.Cluster);
             CreateEvent = new EventManager(rider, HorseEventType.RouterCreate);
             RemoveEvent = new EventManager(rider, HorseEventType.RouterRemove);
             BindingAddEvent = new EventManager(rider, HorseEventType.RouterBindingAdd);
@@ -89,7 +95,7 @@ namespace Horse.Messaging.Server.Routing
                 RouterConfiguration[] configurations = OptionsConfigurator.Load();
                 foreach (RouterConfiguration config in configurations)
                 {
-                    IRouter router = CreateRouter(config);
+                    Router router = CreateRouter(config);
                     if (router != null)
                         _routers.Add(router);
                 }
@@ -102,7 +108,16 @@ namespace Horse.Messaging.Server.Routing
         /// Creates new Router and adds it to server routers.
         /// Throws exception if name is not eligible
         /// </summary>
-        public IRouter Add(string name, RouteMethod method)
+        public Router Add(string name, RouteMethod method)
+        {
+            return Add(name, method, true);
+        }
+
+        /// <summary>
+        /// Creates new Router and adds it to server routers.
+        /// Throws exception if name is not eligible
+        /// </summary>
+        internal Router Add(string name, RouteMethod method, bool notifyCluster)
         {
             try
             {
@@ -126,6 +141,9 @@ namespace Horse.Messaging.Server.Routing
                     OptionsConfigurator.Save();
                 }
 
+                if (notifyCluster)
+                    ClusterNotifier.SendRouterCreated(router);
+
                 return router;
             }
             catch (Exception e)
@@ -139,7 +157,16 @@ namespace Horse.Messaging.Server.Routing
         /// Adds new router to server server routers
         /// Throws exception if name is not eligible
         /// </summary>
-        public IRouter Add(IRouter router)
+        public Router Add(Router router)
+        {
+            return Add(router, true);
+        }
+
+        /// <summary>
+        /// Adds new router to server server routers
+        /// Throws exception if name is not eligible
+        /// </summary>
+        internal Router Add(Router router, bool notifyCluster)
         {
             try
             {
@@ -162,6 +189,9 @@ namespace Horse.Messaging.Server.Routing
                     OptionsConfigurator.Save();
                 }
 
+                if (notifyCluster)
+                    ClusterNotifier.SendRouterCreated(router);
+
                 return router;
             }
             catch (Exception e)
@@ -174,7 +204,15 @@ namespace Horse.Messaging.Server.Routing
         /// <summary>
         /// Removes the router from server routers
         /// </summary>
-        public void Remove(IRouter router)
+        public void Remove(Router router)
+        {
+            Remove(router, true);
+        }
+
+        /// <summary>
+        /// Removes the router from server routers
+        /// </summary>
+        internal void Remove(Router router, bool notifyCluster)
         {
             _routers.Remove(router);
             RemoveEvent.Trigger(router.Name);
@@ -188,43 +226,54 @@ namespace Horse.Messaging.Server.Routing
                     OptionsConfigurator.Save();
                 }
             }
+
+            if (notifyCluster)
+                ClusterNotifier.SendRouterRemoved(router);
         }
 
         /// <summary>
         /// Finds router by it's name
         /// </summary>
-        public IRouter Find(string name)
+        public Router Find(string name)
         {
             return _routers.Find(x => x.Name == name);
         }
 
-        private IRouter CreateRouter(RouterConfiguration configuration)
+        internal Router CreateRouter(RouterConfiguration configuration)
         {
             Router router = new Router(Rider, configuration.Name, Enums.Parse<RouteMethod>(configuration.Method, true, EnumFormat.Description));
             router.IsEnabled = configuration.IsEnabled;
 
             foreach (BindingConfiguration bd in configuration.Bindings)
             {
-                Type type = Type.GetType(bd.Type);
-                if (type == null)
-                {
-                    Rider.SendError("CreateRouter", new ArgumentException($"Type resolve error for binding {bd.Type}"), "Loading from Binding Definition");
-                    continue;
-                }
+                Binding binding = CreateBinding(bd);
 
-                Binding binding = (Binding) Activator.CreateInstance(type);
-                binding.Name = bd.Name;
-                binding.Target = bd.Target;
-                binding.Priority = bd.Priority;
-                binding.Interaction = Enums.Parse<BindingInteraction>(bd.Interaction, true, EnumFormat.Description);
-                binding.RouteMethod = string.IsNullOrEmpty(bd.Method)
-                    ? RouteMethod.Distribute
-                    : Enums.Parse<RouteMethod>(bd.Method, true, EnumFormat.Description);
-
-                router.AddBinding(binding);
+                if (binding != null)
+                    router.AddBinding(binding);
             }
 
             return router;
+        }
+
+        internal Binding CreateBinding(BindingConfiguration configuration)
+        {
+            Type type = Type.GetType(configuration.Type);
+            if (type == null)
+            {
+                Rider.SendError("CreateRouter", new ArgumentException($"Type resolve error for binding {configuration.Type}"), "Loading from Binding Definition");
+                return null;
+            }
+
+            Binding binding = (Binding) Activator.CreateInstance(type);
+            binding.Name = configuration.Name;
+            binding.Target = configuration.Target;
+            binding.Priority = configuration.Priority;
+            binding.Interaction = Enums.Parse<BindingInteraction>(configuration.Interaction, true, EnumFormat.Description);
+            binding.RouteMethod = string.IsNullOrEmpty(configuration.Method)
+                ? RouteMethod.Distribute
+                : Enums.Parse<RouteMethod>(configuration.Method, true, EnumFormat.Description);
+
+            return binding;
         }
     }
 }

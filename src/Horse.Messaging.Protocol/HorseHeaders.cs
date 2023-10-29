@@ -349,5 +349,11 @@ namespace Horse.Messaging.Protocol
         /// "Warn-Count"
         /// </summary>
         public const string WARN_COUNT = "Warn-Count";
+        
+        /// <summary>
+        /// "Underlying-Protocol"
+        /// </summary>
+        public const string UNDERLYING_PROTOCOL = "Underlying-Protocol";
+
     }
 }

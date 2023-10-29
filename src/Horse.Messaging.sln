@@ -111,6 +111,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClusteringSample.Consumer",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClusteringSample.Producer", "Samples\ClusteringSample.Producer\ClusteringSample.Producer.csproj", "{612F5D28-FA39-4C92-BA3E-9E5AF0F5C0A4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Messaging.Protocol.OverWebSockets", "Horse.Messaging.Protocol.OverWebSockets\Horse.Messaging.Protocol.OverWebSockets.csproj", "{BF355BEF-7229-410C-A2AD-47EC25CBEFD1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "HorseOverWebSockets", "HorseOverWebSockets", "{95E6B917-47D3-4403-B812-A8339AF2BFF6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HorseOverWebSockets.Server", "Samples\HorseOverWebSockets.Server\HorseOverWebSockets.Server.csproj", "{A32B7F2A-8A87-4995-93F4-B023E64D7728}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HorseOverWebSockets.Consumer", "Samples\HorseOverWebSockets.Consumer\HorseOverWebSockets.Consumer.csproj", "{4E04FFC4-3443-483F-850D-53B97B94FA7A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HorseOverWebSockets.Producer", "Samples\HorseOverWebSockets.Producer\HorseOverWebSockets.Producer.csproj", "{5681D2F4-BFF8-497B-944A-C97DB1F2D89A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -293,6 +303,22 @@ Global
 		{612F5D28-FA39-4C92-BA3E-9E5AF0F5C0A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{612F5D28-FA39-4C92-BA3E-9E5AF0F5C0A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{612F5D28-FA39-4C92-BA3E-9E5AF0F5C0A4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF355BEF-7229-410C-A2AD-47EC25CBEFD1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF355BEF-7229-410C-A2AD-47EC25CBEFD1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF355BEF-7229-410C-A2AD-47EC25CBEFD1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF355BEF-7229-410C-A2AD-47EC25CBEFD1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A32B7F2A-8A87-4995-93F4-B023E64D7728}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A32B7F2A-8A87-4995-93F4-B023E64D7728}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A32B7F2A-8A87-4995-93F4-B023E64D7728}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A32B7F2A-8A87-4995-93F4-B023E64D7728}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4E04FFC4-3443-483F-850D-53B97B94FA7A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E04FFC4-3443-483F-850D-53B97B94FA7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E04FFC4-3443-483F-850D-53B97B94FA7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E04FFC4-3443-483F-850D-53B97B94FA7A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5681D2F4-BFF8-497B-944A-C97DB1F2D89A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5681D2F4-BFF8-497B-944A-C97DB1F2D89A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5681D2F4-BFF8-497B-944A-C97DB1F2D89A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5681D2F4-BFF8-497B-944A-C97DB1F2D89A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -344,6 +370,10 @@ Global
 		{83BD4C12-6E6E-4408-8656-D3E24E24DA89} = {F0F10EB9-BD4E-473C-868A-80B3AAE47006}
 		{D5068C28-6750-4917-9B49-D875EB7CCC38} = {F0F10EB9-BD4E-473C-868A-80B3AAE47006}
 		{612F5D28-FA39-4C92-BA3E-9E5AF0F5C0A4} = {F0F10EB9-BD4E-473C-868A-80B3AAE47006}
+		{95E6B917-47D3-4403-B812-A8339AF2BFF6} = {2BAA30B9-6118-4C33-BD6B-AC6A5827EC7E}
+		{A32B7F2A-8A87-4995-93F4-B023E64D7728} = {95E6B917-47D3-4403-B812-A8339AF2BFF6}
+		{4E04FFC4-3443-483F-850D-53B97B94FA7A} = {95E6B917-47D3-4403-B812-A8339AF2BFF6}
+		{5681D2F4-BFF8-497B-944A-C97DB1F2D89A} = {95E6B917-47D3-4403-B812-A8339AF2BFF6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A73712E1-2BB7-4F7D-852F-ED8FE4ABA180}

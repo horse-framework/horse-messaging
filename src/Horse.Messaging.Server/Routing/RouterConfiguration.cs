@@ -11,7 +11,7 @@ namespace Horse.Messaging.Server.Routing
         public string Method { get; set; }
         public List<BindingConfiguration> Bindings { get; set; } = new List<BindingConfiguration>();
 
-        public static RouterConfiguration Create(IRouter router)
+        public static RouterConfiguration Create(Router router)
         {
             RouterConfiguration configuration = new RouterConfiguration
             {

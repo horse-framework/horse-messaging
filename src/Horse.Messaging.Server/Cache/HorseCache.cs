@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Protocol.Models;
+using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
@@ -61,6 +62,11 @@ namespace Horse.Messaging.Server.Cache
         /// </summary>
         public EventManager PurgeEvent { get; }
 
+        /// <summary>
+        /// Cluster notifier
+        /// </summary>
+        internal CacheClusterNotifier ClusterNotifier { get; }
+
         private Timer _timer;
         private bool _initialized;
 
@@ -80,6 +86,7 @@ namespace Horse.Messaging.Server.Cache
         public HorseCache(HorseRider rider)
         {
             Rider = rider;
+            ClusterNotifier = new CacheClusterNotifier(this, rider.Cluster);
             GetEvent = new EventManager(rider, HorseEventType.CacheGet);
             SetEvent = new EventManager(rider, HorseEventType.CacheSet);
             RemoveEvent = new EventManager(rider, HorseEventType.CacheRemove);
@@ -180,7 +187,15 @@ namespace Horse.Messaging.Server.Cache
         /// <summary>
         /// Adds or sets a cache
         /// </summary>
-        public async Task<CacheOperation> Set(string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null)
+        public Task<CacheOperation> Set(string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null)
+        {
+            return Set(null, true, key, value, duration, expirationWarning, tags);
+        }
+
+        /// <summary>
+        /// Adds or sets a cache
+        /// </summary>
+        internal async Task<CacheOperation> Set(MessagingClient client, bool notifyCluster, string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null)
         {
             if (Options.MaximumKeys > 0 && _items.Count >= Options.MaximumKeys)
                 return new CacheOperation(CacheResult.KeyLimit, null);
@@ -221,6 +236,10 @@ namespace Horse.Messaging.Server.Cache
                 _semaphore.Release();
             }
 
+            Rider.Cache.SetEvent.Trigger(client, key);
+            if (notifyCluster)
+                ClusterNotifier.SendSet(item);
+
             return new CacheOperation(CacheResult.Ok, item);
         }
 
@@ -260,7 +279,17 @@ namespace Horse.Messaging.Server.Cache
         /// If there is no item with that key, it's created with value of 1.
         /// If there was an item with that key and it's expired, it's created with value of 1.
         /// </summary>
-        public async Task<GetCacheItemResult> GetIncremental(string key, TimeSpan duration, string[] tags = null)
+        public Task<GetCacheItemResult> GetIncremental(string key, TimeSpan duration, string[] tags = null)
+        {
+            return GetIncremental(true, key, duration, tags);
+        }
+
+        /// <summary>
+        /// Gets an integer value, increases each time received.
+        /// If there is no item with that key, it's created with value of 1.
+        /// If there was an item with that key and it's expired, it's created with value of 1.
+        /// </summary>
+        internal async Task<GetCacheItemResult> GetIncremental(bool notifyCluster, string key, TimeSpan duration, string[] tags = null)
         {
             await ApplyChanges();
 
@@ -285,8 +314,11 @@ namespace Horse.Messaging.Server.Cache
                 int value = BitConverter.ToInt32(valueArray);
                 item.Value = new MemoryStream(BitConverter.GetBytes(value + 1));
             }
-            
+
             previousValue?.Dispose();
+
+            if (notifyCluster)
+                ClusterNotifier.SendSet(item);
 
             return new GetCacheItemResult(false, item);
         }
@@ -294,7 +326,15 @@ namespace Horse.Messaging.Server.Cache
         /// <summary>
         /// Removes a key
         /// </summary>
-        public async Task Remove(string key)
+        public Task Remove(string key)
+        {
+            return Remove(null, key, true);
+        }
+
+        /// <summary>
+        /// Removes a key
+        /// </summary>
+        internal async Task Remove(MessagingClient client, string key, bool notifyCluster)
         {
             await _semaphore.WaitAsync(TimeSpan.FromSeconds(30));
             try
@@ -306,12 +346,25 @@ namespace Horse.Messaging.Server.Cache
             {
                 _semaphore.Release();
             }
+
+            Rider.Cache.RemoveEvent.Trigger(client, key);
+            
+            if (notifyCluster)
+                ClusterNotifier.SendRemove(key);
         }
 
         /// <summary>
         /// Purges all keys with specified tagName
         /// </summary>
-        public async Task PurgeByTag(string tagName)
+        public Task PurgeByTag(string tagName)
+        {
+            return PurgeByTag(tagName, null, true);
+        }
+
+        /// <summary>
+        /// Purges all keys with specified tagName
+        /// </summary>
+        internal async Task PurgeByTag(string tagName, MessagingClient client, bool notifyCluster)
         {
             await _semaphore.WaitAsync(TimeSpan.FromSeconds(30));
             try
@@ -327,12 +380,25 @@ namespace Horse.Messaging.Server.Cache
             {
                 _semaphore.Release();
             }
+
+            Rider.Cache.PurgeEvent.Trigger(client);
+            
+            if (notifyCluster)
+                ClusterNotifier.SendPurge(tagName);
         }
 
         /// <summary>
         /// Purges all keys
         /// </summary>
-        public async Task Purge()
+        public Task Purge()
+        {
+            return Purge(null, true);
+        }
+
+        /// <summary>
+        /// Purges all keys
+        /// </summary>
+        internal async Task Purge(MessagingClient client, bool notifyCluster)
         {
             await _semaphore.WaitAsync(TimeSpan.FromSeconds(30));
             try
@@ -344,6 +410,11 @@ namespace Horse.Messaging.Server.Cache
             {
                 _semaphore.Release();
             }
+
+            Rider.Cache.PurgeEvent.Trigger(client);
+            
+            if (notifyCluster)
+                ClusterNotifier.SendPurge(null);
         }
 
         #endregion

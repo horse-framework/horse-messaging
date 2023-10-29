@@ -87,8 +87,11 @@ namespace Horse.Messaging.Server.Direct
                 return;
             }
 
+            bool allDenied = true;
             foreach (MessagingClient receiver in receivers)
             {
+                bool denied = false;
+
                 //check sending message authority
                 foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
                 {
@@ -96,14 +99,26 @@ namespace Horse.Messaging.Server.Direct
                     if (!grant)
                     {
                         await sender.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
-                        return;
+                        denied = true;
+                        break;
                     }
                 }
 
-                //send the message
+                if (denied)
+                    continue;
+
+                allDenied = false;
+                receiver.Stats.ReceivedDirectMessages++;
                 await receiver.SendAsync(message);
             }
 
+            if (allDenied)
+            {
+                await sender.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
+                return;
+            }
+
+            sender.Stats.SentDirectMessages++;
             foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
             {
                 if (message.Type == MessageType.Response)
@@ -112,8 +127,7 @@ namespace Horse.Messaging.Server.Direct
                     _ = handler.OnDirect(sender, message, receivers);
             }
 
-            _rider.Direct.DirectEvent.Trigger(sender, message.Target,
-                new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
+            _rider.Direct.DirectEvent.Trigger(sender, message.Target, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
         }
 
         /// <summary>

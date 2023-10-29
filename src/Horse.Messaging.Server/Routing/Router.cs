@@ -14,7 +14,7 @@ namespace Horse.Messaging.Server.Routing
     /// Horse MQ Router object.
     /// A router, routes messages to its' bindings
     /// </summary>
-    public class Router : IRouter
+    public class Router
     {
         #region Properties
 
@@ -86,7 +86,29 @@ namespace Horse.Messaging.Server.Routing
         /// <summary>
         /// Adds new binding to router
         /// </summary>
-        public bool AddBinding<TBinding>(TBinding binding) where TBinding : Binding, new()
+        public virtual Router AddBinding<T>(Action<Binding> options = null) where T : Binding, new()
+        {
+            T binding = new T();
+            options(binding);
+            bool added = AddBinding(binding);
+            if (!added)
+                throw new InvalidOperationException("An error has occured while attempting to add Binding. Exception message is sent to rider error handler");
+
+            return this;
+        }
+
+        /// <summary>
+        /// Adds new binding to router
+        /// </summary>
+        public virtual bool AddBinding<TBinding>(TBinding binding) where TBinding : Binding, new()
+        {
+            return AddBinding(binding, true);
+        }
+
+        /// <summary>
+        /// Adds new binding to router
+        /// </summary>
+        internal virtual bool AddBinding<TBinding>(TBinding binding, bool notifyCluster) where TBinding : Binding, new()
         {
             try
             {
@@ -100,6 +122,10 @@ namespace Horse.Messaging.Server.Routing
                 Bindings = list.OrderByDescending(x => x.Priority).ToArray();
                 Rider.Router.BindingAddEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
                 UpdateRouterConfiguration();
+
+                if (notifyCluster)
+                    Rider.Router.ClusterNotifier.SendRouterAddBinding(this, binding);
+                
                 return true;
             }
             catch (Exception e)
@@ -115,7 +141,18 @@ namespace Horse.Messaging.Server.Routing
         /// Otherwise an exception is thrown.
         /// </summary>
         /// <exception cref="InvalidOperationException">Binding type must have parameterless constructor</exception>
-        public bool AddBinding(Binding binding)
+        public virtual bool AddBinding(Binding binding)
+        {
+            return AddBinding(binding, true);
+        }
+
+        /// <summary>
+        /// Adds new binding.
+        /// Binding type must have parameterless constructor.
+        /// Otherwise an exception is thrown.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Binding type must have parameterless constructor</exception>
+        internal virtual bool AddBinding(Binding binding, bool notifyCluster)
         {
             Type type = binding.GetType();
             ConstructorInfo[] ctors = type.GetConstructors();
@@ -135,6 +172,10 @@ namespace Horse.Messaging.Server.Routing
                 Bindings = list.OrderByDescending(x => x.Priority).ToArray();
                 Rider.Router.BindingAddEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
                 UpdateRouterConfiguration();
+
+                if (notifyCluster)
+                    Rider.Router.ClusterNotifier.SendRouterAddBinding(this, binding);
+
                 return true;
             }
             catch (Exception e)
@@ -144,22 +185,18 @@ namespace Horse.Messaging.Server.Routing
             }
         }
 
-        /// <inheritdoc />
-        public IRouter AddBinding<T>(Action<Binding> options = null) where T : Binding, new()
+        /// <summary>
+        /// Removes a binding from the route
+        /// </summary>
+        public virtual void RemoveBinding(string bindingName)
         {
-            T binding = new T();
-            options(binding);
-            bool added = AddBinding(binding);
-            if (!added)
-                throw new InvalidOperationException("An error has occured while attempting to add Binding. Exception message is sent to rider error handler");
-            
-            return this;
+            RemoveBinding(bindingName, true);
         }
 
         /// <summary>
         /// Removes a binding from the route
         /// </summary>
-        public void RemoveBinding(string bindingName)
+        internal virtual void RemoveBinding(string bindingName, bool notifyCluster)
         {
             try
             {
@@ -176,6 +213,10 @@ namespace Horse.Messaging.Server.Routing
                 binding.Router = null;
                 Bindings = list.OrderByDescending(x => x.Priority).ToArray();
                 Rider.Router.BindingRemoveEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
+                
+                if (notifyCluster)
+                    Rider.Router.ClusterNotifier.SendRouterRemoveBinding(this, binding);
+                
                 UpdateRouterConfiguration();
             }
             catch (Exception e)
@@ -187,7 +228,15 @@ namespace Horse.Messaging.Server.Routing
         /// <summary>
         /// Removes a binding from the route
         /// </summary>
-        public void RemoveBinding(Binding binding)
+        public virtual void RemoveBinding(Binding binding)
+        {
+            RemoveBinding(binding, true);
+        }
+
+        /// <summary>
+        /// Removes a binding from the route
+        /// </summary>
+        internal virtual void RemoveBinding(Binding binding, bool notifyCluster)
         {
             try
             {
@@ -201,6 +250,10 @@ namespace Horse.Messaging.Server.Routing
                 list.Remove(binding);
                 Bindings = list.OrderByDescending(x => x.Priority).ToArray();
                 Rider.Router.BindingRemoveEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
+                
+                if (notifyCluster)
+                    Rider.Router.ClusterNotifier.SendRouterRemoveBinding(this, binding);
+                
             }
             catch (Exception e)
             {
@@ -215,7 +268,7 @@ namespace Horse.Messaging.Server.Routing
         /// <summary>
         /// Pushes a message to router
         /// </summary>
-        public async Task<RouterPublishResult> Publish(MessagingClient sender, HorseMessage message)
+        public virtual async Task<RouterPublishResult> Publish(MessagingClient sender, HorseMessage message)
         {
             try
             {

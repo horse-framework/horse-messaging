@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Horse.Core;
@@ -14,7 +15,7 @@ namespace Horse.Messaging.Server.Clients
     /// <summary>
     /// Horse Server client
     /// </summary>
-    public class MessagingClient : HorseServerSocket
+    public class MessagingClient : HorseServerSocket, ISwitchingProtocolClient
     {
         #region Properties
 
@@ -86,14 +87,49 @@ namespace Horse.Messaging.Server.Clients
         public DateTime ConnectedDate { get; } = DateTime.UtcNow;
 
         /// <summary>
+        /// Stats of the client
+        /// </summary>
+        public ClientStats Stats { get; } = new ClientStats();
+
+        /// <summary>
         /// Remote host of the node server
         /// </summary>
-        public string RemoteHost { get; set; }
+        public string RemoteHost
+        {
+            get
+            {
+                IPEndPoint remoteIpEndPoint = Client?.Client.RemoteEndPoint as IPEndPoint;
+                return remoteIpEndPoint?.Address?.ToString();
+            }
+        }
+
+        private ISwitchingProtocol _switchingProtocol;
 
         /// <summary>
         /// Custom protocol for the client
         /// </summary>
-        public IClientCustomProtocol CustomProtocol { get; set; }
+        public ISwitchingProtocol SwitchingProtocol
+        {
+            get => _switchingProtocol;
+            set
+            {
+                _switchingProtocol = value;
+                if (_switchingProtocol != null && PendingMessages.Count > 0)
+                {
+                    foreach (HorseMessage pendingMessage in PendingMessages)
+                        Send(pendingMessage);
+
+                    PendingMessages.Clear();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Pending messages for sending.
+        /// It's used while switching to another protocol.
+        /// Some messages may need to sent after protocol has switched.
+        /// </summary>
+        internal List<HorseMessage> PendingMessages { get; } = new List<HorseMessage>();
 
         #endregion
 
@@ -131,6 +167,19 @@ namespace Horse.Messaging.Server.Clients
 
             lock (_queues)
                 list = new List<QueueClient>(_queues);
+
+            return list;
+        }
+
+        /// <summary>
+        /// Gets all subscribed channels of client
+        /// </summary>
+        public IEnumerable<ChannelClient> GetChannels()
+        {
+            List<ChannelClient> list;
+
+            lock (_channels)
+                list = new List<ChannelClient>(_channels);
 
             return list;
         }
@@ -212,8 +261,8 @@ namespace Horse.Messaging.Server.Clients
         /// </summary>
         public override void Ping()
         {
-            if (CustomProtocol != null)
-                CustomProtocol.Ping();
+            if (SwitchingProtocol != null)
+                SwitchingProtocol.Ping();
             else
                 base.Ping();
         }
@@ -223,8 +272,8 @@ namespace Horse.Messaging.Server.Clients
         /// </summary>
         public override void Pong(object pingMessage = null)
         {
-            if (CustomProtocol != null)
-                CustomProtocol.Pong(pingMessage);
+            if (SwitchingProtocol != null)
+                SwitchingProtocol.Pong(pingMessage);
             else
                 base.Pong(pingMessage);
         }
@@ -234,8 +283,8 @@ namespace Horse.Messaging.Server.Clients
         /// </summary>
         public override bool Send(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
-            if (CustomProtocol != null)
-                return CustomProtocol.Send(message, additionalHeaders);
+            if (SwitchingProtocol != null)
+                return SwitchingProtocol.Send(message, additionalHeaders);
 
             return base.Send(message, additionalHeaders);
         }
@@ -245,8 +294,8 @@ namespace Horse.Messaging.Server.Clients
         /// </summary>
         public override Task<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
         {
-            if (CustomProtocol != null)
-                return CustomProtocol.SendAsync(message, additionalHeaders);
+            if (SwitchingProtocol != null)
+                return SwitchingProtocol.SendAsync(message, additionalHeaders);
 
             return base.SendAsync(message, additionalHeaders);
         }

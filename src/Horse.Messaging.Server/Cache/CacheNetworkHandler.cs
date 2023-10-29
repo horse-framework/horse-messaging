@@ -76,6 +76,7 @@ namespace Horse.Messaging.Server.Cache
                             response.AddHeader(HorseHeaders.WARN_COUNT, item.ExpirationWarnCount.ToString());
                     }
 
+                    client.Stats.CacheGets++;
                     response.HighPriority = result.IsFirstWarningReceiver;
                     response.Content = item.Value;
 
@@ -111,12 +112,12 @@ namespace Horse.Messaging.Server.Cache
                     if (!string.IsNullOrEmpty(warningDuration))
                         warning = TimeSpan.FromSeconds(Convert.ToInt32(warningDuration));
 
-                    CacheOperation operation = await _cache.Set(message.Target, message.Content, timeout, warning, tagNames);
+                    CacheOperation operation = await _cache.Set(client, !client.IsNodeClient, message.Target, message.Content, timeout, warning, tagNames);
                     switch (operation.Result)
                     {
                         case CacheResult.Ok:
+                            client.Stats.CacheSets++;
                             await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
-                            _cache.SetEvent.Trigger(client, message.Target);
                             return;
 
                         case CacheResult.KeyLimit:
@@ -174,6 +175,7 @@ namespace Horse.Messaging.Server.Cache
                             response.AddHeader(HorseHeaders.WARN_COUNT, item.ExpirationWarnCount.ToString());
                     }
 
+                    client.Stats.CacheGets++;
                     response.HighPriority = getResult.IsFirstWarningReceiver;
                     response.Content = item.Value;
 
@@ -194,9 +196,8 @@ namespace Horse.Messaging.Server.Cache
                         }
                     }
 
-                    await _cache.Remove(message.Target);
+                    await _cache.Remove(client, message.Target, true);
                     await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
-                    _cache.RemoveEvent.Trigger(client, message.Target);
                     return;
                 }
 
@@ -215,12 +216,11 @@ namespace Horse.Messaging.Server.Cache
                     string tagName = message.FindHeader(HorseHeaders.TAG);
 
                     if (string.IsNullOrEmpty(tagName))
-                        await _cache.Purge();
+                        await _cache.Purge(client, true);
                     else
-                        await _cache.PurgeByTag(tagName.Trim());
+                        await _cache.PurgeByTag(tagName.Trim(), client, true);
 
                     await client.SendAsync(message.CreateResponse(HorseResultCode.Ok));
-                    _cache.PurgeEvent.Trigger(client);
                     return;
                 }
 

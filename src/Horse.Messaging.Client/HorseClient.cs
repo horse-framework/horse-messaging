@@ -251,6 +251,11 @@ namespace Horse.Messaging.Client
 
         internal IServiceProvider Provider { get; set; }
 
+        /// <summary>
+        /// Switching protocol
+        /// </summary>
+        public ISwitchingProtocol SwitchingProtocol { get; set; }
+
         #endregion
 
         #region Constructors - Destructors
@@ -619,6 +624,22 @@ namespace Horse.Messaging.Client
         #region Send
 
         /// <summary>
+        /// Sends raw byte array over socket
+        /// </summary>
+        public bool SendRaw(byte[] data)
+        {
+            return _socket.Send(data);
+        }
+
+        /// <summary>
+        /// Sends raw byte array over socket
+        /// </summary>
+        public Task<bool> SendRawAsync(byte[] data)
+        {
+            return _socket.SendAsync(data);
+        }
+
+        /// <summary>
         /// Sends a Horse message
         /// </summary>
         public bool Send(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
@@ -636,6 +657,7 @@ namespace Horse.Messaging.Client
             return _socket.Send(data);
         }
 
+
         /// <summary>
         /// Sends a Horse message
         /// </summary>
@@ -646,12 +668,18 @@ namespace Horse.Messaging.Client
             if (string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(UniqueIdGenerator.Create());
 
-            byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
-
             if (_socket == null)
                 return new HorseResult(HorseResultCode.SendError);
 
-            bool sent = await _socket.SendAsync(data);
+            bool sent;
+            if (SwitchingProtocol != null)
+                sent = await SwitchingProtocol.SendAsync(message, additionalHeaders);
+            else
+            {
+                byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
+                sent = await _socket.SendAsync(data);
+            }
+
             return sent ? HorseResult.Ok() : new HorseResult(HorseResultCode.SendError);
         }
 
@@ -671,8 +699,13 @@ namespace Horse.Messaging.Client
             if (string.IsNullOrEmpty(message.MessageId))
                 message.SetMessageId(UniqueIdGenerator.Create());
 
-            byte[] data = HorseProtocolWriter.Create(message);
-            _socket.Send(data, sendCallback);
+            if (SwitchingProtocol != null)
+                SwitchingProtocol.Send(message);
+            else
+            {
+                byte[] data = HorseProtocolWriter.Create(message);
+                _socket.Send(data, sendCallback);
+            }
         }
 
         /// <summary>

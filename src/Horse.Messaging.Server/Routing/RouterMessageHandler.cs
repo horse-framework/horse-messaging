@@ -24,7 +24,7 @@ namespace Horse.Messaging.Server.Routing
 
         public async Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
         {
-            IRouter router = _rider.Router.Find(message.Target);
+            Router router = _rider.Router.Find(message.Target);
             if (router == null)
             {
                 await SendResponse(RouterPublishResult.Disabled, client, message);
@@ -36,6 +36,10 @@ namespace Horse.Messaging.Server.Routing
             }
 
             RouterPublishResult result = await router.Publish(client, message);
+            
+            if (result == RouterPublishResult.OkWillNotRespond || result == RouterPublishResult.OkAndWillBeRespond)
+                client.Stats.RouterPublishes++;
+
             foreach (IRouterMessageHandler handler in _rider.Router.MessageHandlers.All())
             {
                 if (result == RouterPublishResult.OkWillNotRespond || result == RouterPublishResult.OkAndWillBeRespond)

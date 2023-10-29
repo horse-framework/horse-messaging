@@ -24,7 +24,7 @@ namespace Horse.Messaging.Protocol
         /// Server object
         /// </summary>
         private readonly IHorseServer _server;
-
+        
         /// <summary>
         /// Creates new Horse Protocol handler
         /// </summary>
@@ -33,6 +33,11 @@ namespace Horse.Messaging.Protocol
             _server = server;
             _handler = handler;
         }
+
+        /// <summary>
+        /// Returns Horse Protocol Message Handler
+        /// </summary>
+        public IProtocolConnectionHandler<HorseServerSocket, HorseMessage> GetHandler() => _handler;
 
         /// <summary>
         /// Checks if received data is a Horse protocol message
@@ -118,8 +123,7 @@ namespace Horse.Messaging.Protocol
             }
             catch (Exception e)
             {
-                if (_server.Logger != null)
-                    _server.Logger.LogException("Unhandled Exception", e);
+                _server.Logger?.LogException("Unhandled Exception", e);
             }
 
             HorseProtocolReader reader = new HorseProtocolReader();
@@ -151,8 +155,7 @@ namespace Horse.Messaging.Protocol
             }
             catch (Exception e)
             {
-                if (_server.Logger != null)
-                    _server.Logger.LogException("Unhandled Exception", e);
+                _server.Logger?.LogException("Unhandled Exception", e);
             }
         }
 
