@@ -18,4 +18,12 @@ public static class ClientExtensions
         builder.UseSwitchingProtocol(protocol);
         return builder;
     }
+
+    /// <summary>
+    /// Implements horse over websockets to the client
+    /// </summary>
+    public static void UseHorseOverWebSockets(this HorseClient client)
+    {
+        client.SwitchingProtocol = new SwitchingClientProtocol(client);
+    }
 }

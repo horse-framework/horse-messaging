@@ -4,6 +4,7 @@ using Horse.Messaging.Data;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Cluster;
+using Horse.Messaging.Server.OverWebSockets;
 using Horse.Server;
 
 namespace HorseService;
@@ -151,6 +152,9 @@ public class ServiceBuilder
         _server.Options.Hosts.Add(new HostOptions {Port = _options.Port});
 
         _server.UseRider(_rider);
+
+        if (_options.OverWebSocket)
+            _server.UseHorseOverWebsockets(opt => opt.Port = 2680);
 
         return _server;
     }

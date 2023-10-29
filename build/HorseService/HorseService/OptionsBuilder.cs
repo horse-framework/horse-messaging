@@ -22,12 +22,14 @@ public class OptionsBuilder
     public OptionsBuilder LoadFromEnvironment()
     {
         string datapath = Environment.GetEnvironmentVariable("HORSE_DATA_PATH");
+        _options.OverWebSocket = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_OVER_WEBSOCKETS") ?? "0") > 0;
 
         if (!string.IsNullOrEmpty(datapath))
             _options.DataPath = datapath;
 
         if (!Directory.Exists(_options.DataPath))
             Directory.CreateDirectory(_options.DataPath);
+
 
         LoadJockeyFromEnvironment();
         LoadClusterFromEnvironment();
