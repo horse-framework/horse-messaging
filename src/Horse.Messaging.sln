@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29424.173
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34221.43
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{2BAA30B9-6118-4C33-BD6B-AC6A5827EC7E}"
 EndProject
@@ -9,117 +9,121 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{41761E68
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Playground", "Samples\Playground\Playground.csproj", "{3A3A6CBA-E31C-4E63-A06A-E0FF5DFE1619}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Messaging.Server", "Horse.Messaging.Server\Horse.Messaging.Server.csproj", "{CFB19F80-FBC0-4999-BD95-44CF0B916B86}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Horse.Messaging.Server", "Horse.Messaging.Server\Horse.Messaging.Server.csproj", "{CFB19F80-FBC0-4999-BD95-44CF0B916B86}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Messaging.Protocol", "Horse.Messaging.Protocol\Horse.Messaging.Protocol.csproj", "{D0F826C2-8B03-48D1-88C1-8BFF917C8EBC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Horse.Messaging.Protocol", "Horse.Messaging.Protocol\Horse.Messaging.Protocol.csproj", "{D0F826C2-8B03-48D1-88C1-8BFF917C8EBC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Messaging.Client", "Horse.Messaging.Client\Horse.Messaging.Client.csproj", "{A75CABEB-197E-457A-AAC9-4C59D49DDF68}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Horse.Messaging.Client", "Horse.Messaging.Client\Horse.Messaging.Client.csproj", "{A75CABEB-197E-457A-AAC9-4C59D49DDF68}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Messaging.Data", "Horse.Messaging.Data\Horse.Messaging.Data.csproj", "{45017EA4-63E1-49BF-8B53-25A45ADF8FCD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Horse.Messaging.Data", "Horse.Messaging.Data\Horse.Messaging.Data.csproj", "{45017EA4-63E1-49BF-8B53-25A45ADF8FCD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Common", "Tests\Test.Common\Test.Common.csproj", "{66F442DC-EC31-4BD9-B124-64D343B45A6A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Common", "Tests\Test.Common\Test.Common.csproj", "{66F442DC-EC31-4BD9-B124-64D343B45A6A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Queues", "Tests\Test.Queues\Test.Queues.csproj", "{E7ADC6AE-2393-4422-87E7-1CD9A9B4B124}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Queues", "Tests\Test.Queues\Test.Queues.csproj", "{E7ADC6AE-2393-4422-87E7-1CD9A9B4B124}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Persistency", "Tests\Test.Persistency\Test.Persistency.csproj", "{F7C4DC6A-01D7-4D1A-893D-58DB39027759}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Persistency", "Tests\Test.Persistency\Test.Persistency.csproj", "{F7C4DC6A-01D7-4D1A-893D-58DB39027759}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Events", "Tests\Test.Events\Test.Events.csproj", "{410C6A1F-34B3-40B8-8807-17B57409E611}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Events", "Tests\Test.Events\Test.Events.csproj", "{410C6A1F-34B3-40B8-8807-17B57409E611}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Nodes", "Tests\Test.Nodes\Test.Nodes.csproj", "{42128A82-DC39-4401-9D90-968FE2510E67}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Nodes", "Tests\Test.Nodes\Test.Nodes.csproj", "{42128A82-DC39-4401-9D90-968FE2510E67}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Direct", "Tests\Test.Direct\Test.Direct.csproj", "{0D589E82-42FA-4970-A1FA-C5D2C921CD35}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Direct", "Tests\Test.Direct\Test.Direct.csproj", "{0D589E82-42FA-4970-A1FA-C5D2C921CD35}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Routers", "Tests\Test.Routers\Test.Routers.csproj", "{EABE1565-9513-4704-872E-F801AF29C456}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Routers", "Tests\Test.Routers\Test.Routers.csproj", "{EABE1565-9513-4704-872E-F801AF29C456}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Server", "Samples\Sample.Server\Sample.Server.csproj", "{407CA4E7-57AF-4AF7-92CA-44DFA26CCC6C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sample.Server", "Samples\Sample.Server\Sample.Server.csproj", "{407CA4E7-57AF-4AF7-92CA-44DFA26CCC6C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Producer", "Samples\Sample.Producer\Sample.Producer.csproj", "{A0D7D361-89FA-48F5-8B66-B2AB5126B210}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sample.Producer", "Samples\Sample.Producer\Sample.Producer.csproj", "{A0D7D361-89FA-48F5-8B66-B2AB5126B210}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Consumer", "Samples\Sample.Consumer\Sample.Consumer.csproj", "{2AF41E76-D345-46F9-A783-FF0AEDD2526F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sample.Consumer", "Samples\Sample.Consumer\Sample.Consumer.csproj", "{2AF41E76-D345-46F9-A783-FF0AEDD2526F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Cache", "Samples\Sample.Cache\Sample.Cache.csproj", "{78630FD3-DA2F-45B6-91B3-18D08707D6C8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sample.Cache", "Samples\Sample.Cache\Sample.Cache.csproj", "{78630FD3-DA2F-45B6-91B3-18D08707D6C8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.Cluster", "Samples\Sample.Cluster\Sample.Cluster.csproj", "{60E80FB8-47E0-4836-A439-17DE6A39C4F4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sample.Cluster", "Samples\Sample.Cluster\Sample.Cluster.csproj", "{60E80FB8-47E0-4836-A439-17DE6A39C4F4}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Benchmarks", "Benchmarks", "{95F840D9-C0FD-4679-A308-0E77316750FD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmark.Server", "Benchmarks\Benchmark.Server\Benchmark.Server.csproj", "{5ECCB141-4C45-4307-9551-C920414B7B86}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmark.Server", "Benchmarks\Benchmark.Server\Benchmark.Server.csproj", "{5ECCB141-4C45-4307-9551-C920414B7B86}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmark.Channel.Publisher", "Benchmarks\Benchmark.Channel.Publisher\Benchmark.Channel.Publisher.csproj", "{9F8F2687-5087-4941-A3DC-E68686CB425D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmark.Channel.Publisher", "Benchmarks\Benchmark.Channel.Publisher\Benchmark.Channel.Publisher.csproj", "{9F8F2687-5087-4941-A3DC-E68686CB425D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmark.Channel.Subscriber", "Benchmarks\Benchmark.Channel.Subscriber\Benchmark.Channel.Subscriber.csproj", "{BF89E491-7C21-4115-99D6-33E2C18E997A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmark.Channel.Subscriber", "Benchmarks\Benchmark.Channel.Subscriber\Benchmark.Channel.Subscriber.csproj", "{BF89E491-7C21-4115-99D6-33E2C18E997A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmark.Cache", "Benchmarks\Benchmark.Cache\Benchmark.Cache.csproj", "{3F9EBD9F-0D13-43A1-904D-203AEB453C77}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmark.Cache", "Benchmarks\Benchmark.Cache\Benchmark.Cache.csproj", "{3F9EBD9F-0D13-43A1-904D-203AEB453C77}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmark.Queue.Producer", "Benchmarks\Benchmark.Queue.Producer\Benchmark.Queue.Producer.csproj", "{8F2FFF04-9548-4901-A741-63D2C2350686}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmark.Queue.Producer", "Benchmarks\Benchmark.Queue.Producer\Benchmark.Queue.Producer.csproj", "{8F2FFF04-9548-4901-A741-63D2C2350686}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmark.Queue.Consumer", "Benchmarks\Benchmark.Queue.Consumer\Benchmark.Queue.Consumer.csproj", "{7ABFB86B-EBEF-4513-A66E-3E594191E13B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmark.Queue.Consumer", "Benchmarks\Benchmark.Queue.Consumer\Benchmark.Queue.Consumer.csproj", "{7ABFB86B-EBEF-4513-A66E-3E594191E13B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmark.Helper", "Benchmarks\Benchmark.Helper\Benchmark.Helper.csproj", "{1FA1F66F-56F0-4CE4-8103-0B1B4B65C366}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmark.Helper", "Benchmarks\Benchmark.Helper\Benchmark.Helper.csproj", "{1FA1F66F-56F0-4CE4-8103-0B1B4B65C366}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Client", "Tests\Test.Client\Test.Client.csproj", "{05257B96-8D69-4ECB-BEA1-D5CC56ABDB88}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Client", "Tests\Test.Client\Test.Client.csproj", "{05257B96-8D69-4ECB-BEA1-D5CC56ABDB88}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Cache", "Tests\Test.Cache\Test.Cache.csproj", "{BC085985-6405-40B3-A05D-E9F6267000CE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Cache", "Tests\Test.Cache\Test.Cache.csproj", "{BC085985-6405-40B3-A05D-E9F6267000CE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Channels", "Tests\Test.Channels\Test.Channels.csproj", "{DC93CD1E-D2BC-4B50-9E00-EA516AE0C759}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Channels", "Tests\Test.Channels\Test.Channels.csproj", "{DC93CD1E-D2BC-4B50-9E00-EA516AE0C759}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample.DirectHandler", "Samples\Sample.DirectHandler\Sample.DirectHandler.csproj", "{9F9C0F3D-F6FB-4469-B259-4392A1339775}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sample.DirectHandler", "Samples\Sample.DirectHandler\Sample.DirectHandler.csproj", "{9F9C0F3D-F6FB-4469-B259-4392A1339775}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Transaction", "Tests\Test.Transaction\Test.Transaction.csproj", "{C1F953E0-4684-4CDA-8AFD-3ABC58D55C11}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Transaction", "Tests\Test.Transaction\Test.Transaction.csproj", "{C1F953E0-4684-4CDA-8AFD-3ABC58D55C11}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AdvancedSample", "AdvancedSample", "{FBEC06DF-D8C7-4F08-8869-6A71C7F286FC}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{BF019F64-2B4E-4163-9897-CBEB23A3B6DD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdvancedSample.Core", "Samples\AdvancedSample.Core\AdvancedSample.Core.csproj", "{4C676D7B-5386-43C3-B085-A59D14960DB6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdvancedSample.Core", "Samples\AdvancedSample.Core\AdvancedSample.Core.csproj", "{4C676D7B-5386-43C3-B085-A59D14960DB6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdvancedSample.Service", "Samples\AdvancedSample.Service\AdvancedSample.Service.csproj", "{AED9BD3B-185A-4EB7-B0C3-C852F70A7DE2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdvancedSample.Service", "Samples\AdvancedSample.Service\AdvancedSample.Service.csproj", "{AED9BD3B-185A-4EB7-B0C3-C852F70A7DE2}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Playground", "Playground", "{713ECD3D-40D5-4454-B204-E2DD15764F18}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestService", "Samples\TestService\TestService.csproj", "{4BDCB0C5-B9FC-4C05-B30F-498BDC301518}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestService", "Samples\TestService\TestService.csproj", "{4BDCB0C5-B9FC-4C05-B30F-498BDC301518}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Messaging.Extensions.Client", "Horse.Messaging.Extensions.Client\Horse.Messaging.Extensions.Client.csproj", "{A5AEC2D1-50D6-48AC-9FFE-09EDBC99F133}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Horse.Messaging.Extensions.Client", "Horse.Messaging.Extensions.Client\Horse.Messaging.Extensions.Client.csproj", "{A5AEC2D1-50D6-48AC-9FFE-09EDBC99F133}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Messaging", "Messaging", "{DBA4F334-D178-4270-88A3-7EDE516AC988}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdvancedSample.Messaging.Server", "Samples\AdvancedSample.Messaging.Server\AdvancedSample.Messaging.Server.csproj", "{BAA58A68-A0D9-4596-ACAC-D02DE978590B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdvancedSample.Messaging.Server", "Samples\AdvancedSample.Messaging.Server\AdvancedSample.Messaging.Server.csproj", "{BAA58A68-A0D9-4596-ACAC-D02DE978590B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdvancedSample.Messaging.Common", "Samples\AdvancedSample.Messaging.Common\AdvancedSample.Messaging.Common.csproj", "{A272D843-37A2-4D57-A0F7-52F043763F4F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdvancedSample.Messaging.Common", "Samples\AdvancedSample.Messaging.Common\AdvancedSample.Messaging.Common.csproj", "{A272D843-37A2-4D57-A0F7-52F043763F4F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Models", "Models", "{F1F65C5B-64FA-4925-82FD-B9C9F1902C60}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdvancedSample.ServiceModels", "Samples\AdvancedSample.ServiceModels\AdvancedSample.ServiceModels.csproj", "{794EA8FF-65FF-4C62-AEAB-B792803FD6CE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdvancedSample.ServiceModels", "Samples\AdvancedSample.ServiceModels\AdvancedSample.ServiceModels.csproj", "{794EA8FF-65FF-4C62-AEAB-B792803FD6CE}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "HostedServiceSample", "HostedServiceSample", "{24766CCD-1FBF-4BAD-BD2D-BFB86D6A5B12}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HostedServiceSample.Server", "Samples\HostedServiceSample.Server\HostedServiceSample.Server.csproj", "{456F09C6-DDEA-4DD9-BDF8-2B06645037C7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HostedServiceSample.Server", "Samples\HostedServiceSample.Server\HostedServiceSample.Server.csproj", "{456F09C6-DDEA-4DD9-BDF8-2B06645037C7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HostedServiceSample.Client", "Samples\HostedServiceSample.Client\HostedServiceSample.Client.csproj", "{D333A6C3-E710-4D0E-84AC-FA33691DC939}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HostedServiceSample.Client", "Samples\HostedServiceSample.Client\HostedServiceSample.Client.csproj", "{D333A6C3-E710-4D0E-84AC-FA33691DC939}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HostedServiceSample.Common", "Samples\HostedServiceSample.Common\HostedServiceSample.Common.csproj", "{F71A1B96-842D-40E2-AEBC-1B6D2E8F3F6C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HostedServiceSample.Common", "Samples\HostedServiceSample.Common\HostedServiceSample.Common.csproj", "{F71A1B96-842D-40E2-AEBC-1B6D2E8F3F6C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HostedServiceSample.Producer", "Samples\HostedServiceSample.Producer\HostedServiceSample.Producer.csproj", "{CA7012E9-C651-4F71-B7A1-957F3318B912}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HostedServiceSample.Producer", "Samples\HostedServiceSample.Producer\HostedServiceSample.Producer.csproj", "{CA7012E9-C651-4F71-B7A1-957F3318B912}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HostedServiceSample.Consumer", "Samples\HostedServiceSample.Consumer\HostedServiceSample.Consumer.csproj", "{45C322D8-3432-433B-A188-A856F6A1644F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HostedServiceSample.Consumer", "Samples\HostedServiceSample.Consumer\HostedServiceSample.Consumer.csproj", "{45C322D8-3432-433B-A188-A856F6A1644F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ClusteringSample", "ClusteringSample", "{F0F10EB9-BD4E-473C-868A-80B3AAE47006}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClusteringSample.Server", "Samples\ClusteringSample.Server\ClusteringSample.Server.csproj", "{83BD4C12-6E6E-4408-8656-D3E24E24DA89}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClusteringSample.Server", "Samples\ClusteringSample.Server\ClusteringSample.Server.csproj", "{83BD4C12-6E6E-4408-8656-D3E24E24DA89}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClusteringSample.Consumer", "Samples\ClusteringSample.Consumer\ClusteringSample.Consumer.csproj", "{D5068C28-6750-4917-9B49-D875EB7CCC38}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClusteringSample.Consumer", "Samples\ClusteringSample.Consumer\ClusteringSample.Consumer.csproj", "{D5068C28-6750-4917-9B49-D875EB7CCC38}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClusteringSample.Producer", "Samples\ClusteringSample.Producer\ClusteringSample.Producer.csproj", "{612F5D28-FA39-4C92-BA3E-9E5AF0F5C0A4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClusteringSample.Producer", "Samples\ClusteringSample.Producer\ClusteringSample.Producer.csproj", "{612F5D28-FA39-4C92-BA3E-9E5AF0F5C0A4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Horse.Messaging.Protocol.OverWebSockets", "Horse.Messaging.Protocol.OverWebSockets\Horse.Messaging.Protocol.OverWebSockets.csproj", "{BF355BEF-7229-410C-A2AD-47EC25CBEFD1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Horse.Messaging.Protocol.OverWebSockets", "Horse.Messaging.Protocol.OverWebSockets\Horse.Messaging.Protocol.OverWebSockets.csproj", "{BF355BEF-7229-410C-A2AD-47EC25CBEFD1}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "HorseOverWebSockets", "HorseOverWebSockets", "{95E6B917-47D3-4403-B812-A8339AF2BFF6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HorseOverWebSockets.Server", "Samples\HorseOverWebSockets.Server\HorseOverWebSockets.Server.csproj", "{A32B7F2A-8A87-4995-93F4-B023E64D7728}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HorseOverWebSockets.Server", "Samples\HorseOverWebSockets.Server\HorseOverWebSockets.Server.csproj", "{A32B7F2A-8A87-4995-93F4-B023E64D7728}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HorseOverWebSockets.Consumer", "Samples\HorseOverWebSockets.Consumer\HorseOverWebSockets.Consumer.csproj", "{4E04FFC4-3443-483F-850D-53B97B94FA7A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HorseOverWebSockets.Consumer", "Samples\HorseOverWebSockets.Consumer\HorseOverWebSockets.Consumer.csproj", "{4E04FFC4-3443-483F-850D-53B97B94FA7A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HorseOverWebSockets.Producer", "Samples\HorseOverWebSockets.Producer\HorseOverWebSockets.Producer.csproj", "{5681D2F4-BFF8-497B-944A-C97DB1F2D89A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HorseOverWebSockets.Producer", "Samples\HorseOverWebSockets.Producer\HorseOverWebSockets.Producer.csproj", "{5681D2F4-BFF8-497B-944A-C97DB1F2D89A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Server", "Server", "{6C893C08-2FF2-4DD9-8364-D8A37F55FC29}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdvancedSample.Server", "Samples\AdvancedSample.Server\AdvancedSample.Server.csproj", "{53B8AA02-3823-4888-A3FD-F42D9EB4E50E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -319,6 +323,10 @@ Global
 		{5681D2F4-BFF8-497B-944A-C97DB1F2D89A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5681D2F4-BFF8-497B-944A-C97DB1F2D89A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5681D2F4-BFF8-497B-944A-C97DB1F2D89A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{53B8AA02-3823-4888-A3FD-F42D9EB4E50E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{53B8AA02-3823-4888-A3FD-F42D9EB4E50E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{53B8AA02-3823-4888-A3FD-F42D9EB4E50E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{53B8AA02-3823-4888-A3FD-F42D9EB4E50E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -374,6 +382,8 @@ Global
 		{A32B7F2A-8A87-4995-93F4-B023E64D7728} = {95E6B917-47D3-4403-B812-A8339AF2BFF6}
 		{4E04FFC4-3443-483F-850D-53B97B94FA7A} = {95E6B917-47D3-4403-B812-A8339AF2BFF6}
 		{5681D2F4-BFF8-497B-944A-C97DB1F2D89A} = {95E6B917-47D3-4403-B812-A8339AF2BFF6}
+		{6C893C08-2FF2-4DD9-8364-D8A37F55FC29} = {FBEC06DF-D8C7-4F08-8869-6A71C7F286FC}
+		{53B8AA02-3823-4888-A3FD-F42D9EB4E50E} = {6C893C08-2FF2-4DD9-8364-D8A37F55FC29}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A73712E1-2BB7-4F7D-852F-ED8FE4ABA180}
