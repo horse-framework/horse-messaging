@@ -1,15 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net6.0;net7.0</TargetFrameworks>
+		<TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
 		<Title>Horse.Messaging.Data</Title>
 		<Product>Horse.Messaging.Data</Product>
 		<Description>Horse messaging extensions library</Description>
 		<PackageTags>horse,server,messaging,queue,mq,persistent,database,db</PackageTags>
-		<AssemblyVersion>6.7.1</AssemblyVersion>
-		<FileVersion>6.7.1</FileVersion>
-		<PackageVersion>6.7.1</PackageVersion>
+		<AssemblyVersion>6.8.0</AssemblyVersion>
+		<FileVersion>6.8.0</FileVersion>
+		<PackageVersion>6.8.0</PackageVersion>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
 		<PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>
@@ -26,7 +26,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="7.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
