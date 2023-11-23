@@ -9,10 +9,10 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Horse.Jockey" Version="6.7.1" />
-        <PackageReference Include="Horse.Messaging.Data" Version="6.7.1" />
-        <PackageReference Include="Horse.Messaging.Protocol.OverWebSockets" Version="6.7.1" />
-        <PackageReference Include="Horse.Messaging.Server" Version="6.7.1" />
+        <PackageReference Include="Horse.Jockey" Version="6.8.0" />
+        <PackageReference Include="Horse.Messaging.Data" Version="6.8.0" />
+        <PackageReference Include="Horse.Messaging.Protocol.OverWebSockets" Version="6.8.0" />
+        <PackageReference Include="Horse.Messaging.Server" Version="6.8.0" />
     </ItemGroup>
 
     <ItemGroup>
