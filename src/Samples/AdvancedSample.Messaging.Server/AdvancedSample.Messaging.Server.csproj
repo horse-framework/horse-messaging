@@ -2,16 +2,16 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net7.0</TargetFramework>
-        <LangVersion>10</LangVersion>
+        <LangVersion>default</LangVersion>
+        <TargetFrameworks>net7.0;net8.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Horse.Server" Version="6.5.0" />
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
-        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="7.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
-        <PackageReference Include="Microsoft.Extensions.Options" Version="7.0.1" />
+        <PackageReference Include="Horse.Server" Version="6.6.0" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
     </ItemGroup>
 
     <ItemGroup>
