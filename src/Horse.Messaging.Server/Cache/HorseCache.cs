@@ -279,9 +279,9 @@ public class HorseCache
     /// If there is no item with that key, it's created with value of 1.
     /// If there was an item with that key and it's expired, it's created with value of 1.
     /// </summary>
-    public Task<GetCacheItemResult> GetIncremental(string key, TimeSpan duration, string[] tags = null)
+    public Task<GetCacheItemResult> GetIncremental(string key, TimeSpan duration, int incrementValue = 1, string[] tags = null)
     {
-        return GetIncremental(true, key, duration, tags);
+        return GetIncremental(true, key, duration, incrementValue, tags);
     }
 
     /// <summary>
@@ -289,7 +289,7 @@ public class HorseCache
     /// If there is no item with that key, it's created with value of 1.
     /// If there was an item with that key and it's expired, it's created with value of 1.
     /// </summary>
-    internal async Task<GetCacheItemResult> GetIncremental(bool notifyCluster, string key, TimeSpan duration, string[] tags = null)
+    internal async Task<GetCacheItemResult> GetIncremental(bool notifyCluster, string key, TimeSpan duration, int incrementValue, string[] tags = null)
     {
         await ApplyChanges();
 
@@ -312,7 +312,7 @@ public class HorseCache
         {
             byte[] valueArray = item.Value.ToArray();
             int value = BitConverter.ToInt32(valueArray);
-            item.Value = new MemoryStream(BitConverter.GetBytes(value + 1));
+            item.Value = new MemoryStream(BitConverter.GetBytes(value + incrementValue));
         }
 
         previousValue?.Dispose();
