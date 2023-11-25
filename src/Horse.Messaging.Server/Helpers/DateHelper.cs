@@ -1,40 +1,39 @@
 using System;
 
-namespace Horse.Messaging.Server.Helpers
+namespace Horse.Messaging.Server.Helpers;
+
+internal static class DateHelper
 {
-    internal static class DateHelper
+    /// <summary>
+    /// Converts DateTime to unix milliseconds
+    /// </summary>
+    public static long ToUnixMilliseconds(this DateTime date)
     {
-        /// <summary>
-        /// Converts DateTime to unix milliseconds
-        /// </summary>
-        public static long ToUnixMilliseconds(this DateTime date)
-        {
-            TimeSpan span = date - new DateTime(1970, 1, 1);
-            return Convert.ToInt64(span.TotalMilliseconds);
-        }
-        /// <summary>
-        /// Converts DateTime to unix seconds
-        /// </summary>
-        public static long ToUnixSeconds(this DateTime date)
-        {
-            TimeSpan span = date - new DateTime(1970, 1, 1);
-            return Convert.ToInt64(span.TotalSeconds);
-        }
+        TimeSpan span = date - new DateTime(1970, 1, 1);
+        return Convert.ToInt64(span.TotalMilliseconds);
+    }
+    /// <summary>
+    /// Converts DateTime to unix seconds
+    /// </summary>
+    public static long ToUnixSeconds(this DateTime date)
+    {
+        TimeSpan span = date - new DateTime(1970, 1, 1);
+        return Convert.ToInt64(span.TotalSeconds);
+    }
 
-        /// <summary>
-        /// Converts Unix milliseconds to DateTime
-        /// </summary>
-        public static DateTime ToUnixDate(this long unixMilliseconds)
-        {
-            return new DateTime(1970, 1, 1).AddMilliseconds(unixMilliseconds);
-        }
+    /// <summary>
+    /// Converts Unix milliseconds to DateTime
+    /// </summary>
+    public static DateTime ToUnixDate(this long unixMilliseconds)
+    {
+        return new DateTime(1970, 1, 1).AddMilliseconds(unixMilliseconds);
+    }
 
-        /// <summary>
-        /// Returns total milliseconds between UTC now and the date
-        /// </summary>
-        public static long LifetimeMilliseconds(this DateTime date)
-        {
-            return Convert.ToInt64((DateTime.UtcNow - date).TotalMilliseconds);
-        }
+    /// <summary>
+    /// Returns total milliseconds between UTC now and the date
+    /// </summary>
+    public static long LifetimeMilliseconds(this DateTime date)
+    {
+        return Convert.ToInt64((DateTime.UtcNow - date).TotalMilliseconds);
     }
 }

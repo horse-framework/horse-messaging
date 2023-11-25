@@ -1,30 +1,28 @@
 using System;
 using System.Threading.Tasks;
-using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Protocol;
 
-namespace Horse.Messaging.Client.Queues.Internal
+namespace Horse.Messaging.Client.Queues.Internal;
+
+/// <summary>
+/// Followed acknowledge message descriptor 
+/// </summary>
+internal class AcknowledgeMessageDescriptor : MessageDescriptor
 {
-    /// <summary>
-    /// Followed acknowledge message descriptor 
-    /// </summary>
-    internal class AcknowledgeMessageDescriptor : MessageDescriptor
+    public TaskCompletionSource<HorseResult> Source { get; }
+
+    public AcknowledgeMessageDescriptor(HorseMessage message, DateTime expiration) : base(message, expiration)
     {
-        public TaskCompletionSource<HorseResult> Source { get; }
+        Source = new TaskCompletionSource<HorseResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+    }
 
-        public AcknowledgeMessageDescriptor(HorseMessage message, DateTime expiration) : base(message, expiration)
-        {
-            Source = new TaskCompletionSource<HorseResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        }
+    /// <inheritdoc />
+    public override void Set(bool successful, object value)
+    {
+        if (SourceCompleted)
+            return;
 
-        /// <inheritdoc />
-        public override void Set(bool successful, object value)
-        {
-            if (SourceCompleted)
-                return;
-
-            SourceCompleted = true;
-            Source.SetResult(successful ? HorseResult.Ok() : (HorseResult) value);
-        }
+        SourceCompleted = true;
+        Source.SetResult(successful ? HorseResult.Ok() : (HorseResult) value);
     }
 }

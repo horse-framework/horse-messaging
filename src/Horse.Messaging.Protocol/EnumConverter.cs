@@ -11,7 +11,7 @@ public class EnumConverter<T> : JsonConverter<T> where T : struct, Enum
     /// <inheritdoc />
     public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        return Enums.Parse<T>(reader.GetString(), true, EnumFormat.Description);
+        return Enums.Parse<T>(reader.GetString() ?? string.Empty, true, EnumFormat.Description);
     }
 
     /// <inheritdoc />

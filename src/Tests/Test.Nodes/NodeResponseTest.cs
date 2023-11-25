@@ -1,7 +1,6 @@
-namespace Test.Nodes
+namespace Test.Nodes;
+
+public class NodeResponseTest
 {
-    public class NodeResponseTest
-    {
         
-    }
 }

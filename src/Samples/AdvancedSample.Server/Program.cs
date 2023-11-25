@@ -19,43 +19,42 @@ using AdvancedSample.Server.Models;
 using Serilog;
 using ILogger = Serilog.ILogger;
 
-namespace AdvancedSample.Server
+namespace AdvancedSample.Server;
+
+public class Program
 {
-    public class Program
+    public static string RootAddress;
+    private static ILogger _serilogLogger;
+    private static LogConfig logConfig = new();
+    public static IConfiguration Configuration { get; set; }
+
+    public static void Main(string[] args)
     {
-        public static string RootAddress;
-        private static ILogger _serilogLogger;
-        private static LogConfig logConfig = new LogConfig();
-        public static IConfiguration Configuration { get; set; }
-
-        public static void Main(string[] args)
-        {
-            RootAddress = AppDomain.CurrentDomain.BaseDirectory;
-            CreateHostBuilder(args).Build().Run();
-        }
-
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureServices((hostContext, services) =>
-                {
-                    Configuration = hostContext.Configuration;
-                    services.AddHostedService<Worker>();
-
-                }).ConfigureLogging(logger =>
-                {
-                    Configuration.Bind("LogConfig", logConfig);
-
-                    _serilogLogger = new LoggerConfiguration()
-                        .WriteTo
-                        .File(
-                             Path.Combine(RootAddress, logConfig.LogFileAddressDirectory, logConfig.LogFileName),
-                             rollingInterval: RollingInterval.Day,
-                             fileSizeLimitBytes: logConfig.FileSizeLimit
-                             )
-                        .CreateLogger();
-
-                    logger.AddSerilog(_serilogLogger);
-                })
-                .UseWindowsService();
+        RootAddress = AppDomain.CurrentDomain.BaseDirectory;
+        CreateHostBuilder(args).Build().Run();
     }
+
+    public static IHostBuilder CreateHostBuilder(string[] args) =>
+        Host.CreateDefaultBuilder(args)
+            .ConfigureServices((hostContext, services) =>
+            {
+                Configuration = hostContext.Configuration;
+                services.AddHostedService<Worker>();
+
+            }).ConfigureLogging(logger =>
+            {
+                Configuration.Bind("LogConfig", logConfig);
+
+                _serilogLogger = new LoggerConfiguration()
+                    .WriteTo
+                    .File(
+                        Path.Combine(RootAddress, logConfig.LogFileAddressDirectory, logConfig.LogFileName),
+                        rollingInterval: RollingInterval.Day,
+                        fileSizeLimitBytes: logConfig.FileSizeLimit
+                    )
+                    .CreateLogger();
+
+                logger.AddSerilog(_serilogLogger);
+            })
+            .UseWindowsService();
 }

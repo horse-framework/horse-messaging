@@ -5,204 +5,203 @@ using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Queues.Delivery;
 
-namespace Horse.Messaging.Server.Queues.States
+namespace Horse.Messaging.Server.Queues.States;
+
+internal class RoundRobinQueueState : IQueueState
 {
-    internal class RoundRobinQueueState : IQueueState
+    public QueueMessage ProcessingMessage { get; private set; }
+    public bool TriggerSupported => true;
+
+    private readonly HorseQueue _queue;
+
+    /// <summary>
+    /// Round robin client list index
+    /// </summary>
+    private int _roundRobinIndex = -1;
+
+    public RoundRobinQueueState(HorseQueue queue)
     {
-        public QueueMessage ProcessingMessage { get; private set; }
-        public bool TriggerSupported => true;
+        _queue = queue;
+    }
 
-        private readonly HorseQueue _queue;
+    public Task<PullResult> Pull(QueueClient client, HorseMessage request)
+    {
+        return Task.FromResult(PullResult.StatusNotSupported);
+    }
 
-        /// <summary>
-        /// Round robin client list index
-        /// </summary>
-        private int _roundRobinIndex = -1;
-
-        public RoundRobinQueueState(HorseQueue queue)
+    public async Task<PushResult> Push(QueueMessage message)
+    {
+        try
         {
-            _queue = queue;
-        }
+            if (!message.Deadline.HasValue && _queue.Options.MessageTimeout.Policy != MessageTimeoutPolicy.NoTimeout && _queue.Options.MessageTimeout.MessageDuration > 0)
+                message.Deadline = DateTime.UtcNow.AddSeconds(_queue.Options.MessageTimeout.MessageDuration);
 
-        public Task<PullResult> Pull(QueueClient client, HorseMessage request)
-        {
-            return Task.FromResult(PullResult.StatusNotSupported);
-        }
+            Tuple<QueueClient, int> tuple = await GetNextAvailableRRClient(_roundRobinIndex, message,
+                _queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge);
+            QueueClient cc = tuple.Item1;
 
-        public async Task<PushResult> Push(QueueMessage message)
-        {
-            try
-            {
-                if (!message.Deadline.HasValue && _queue.Options.MessageTimeout.Policy != MessageTimeoutPolicy.NoTimeout && _queue.Options.MessageTimeout.MessageDuration > 0)
-                    message.Deadline = DateTime.UtcNow.AddSeconds(_queue.Options.MessageTimeout.MessageDuration);
+            if (cc != null)
+                _roundRobinIndex = tuple.Item2;
 
-                Tuple<QueueClient, int> tuple = await GetNextAvailableRRClient(_roundRobinIndex, message,
-                    _queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge);
-                QueueClient cc = tuple.Item1;
-
-                if (cc != null)
-                    _roundRobinIndex = tuple.Item2;
-
-                if (cc == null)
-                {
-                    PushResult pushResult = _queue.AddMessage(message, false);
-                    if (pushResult != PushResult.Success)
-                        return pushResult;
-                    
-                    return PushResult.NoConsumers;
-                }
-
-                ProcessingMessage = message;
-                PushResult result = await ProcessMessage(message, cc);
-
-                return result;
-            }
-            catch (Exception e)
-            {
-                _queue.Rider.SendError("PUSH", e, $"QueueName:{_queue.Name}, State:RoundRobin");
-                return PushResult.Error;
-            }
-            finally
-            {
-                ProcessingMessage = null;
-            }
-        }
-
-        private async Task<PushResult> ProcessMessage(QueueMessage message, QueueClient receiver)
-        {
-            //if we need acknowledge from receiver, it has a deadline.
-            DateTime? deadline = null;
-            if (_queue.Options.Acknowledge != QueueAckDecision.None)
-                deadline = DateTime.UtcNow.Add(_queue.Options.AcknowledgeTimeout);
-
-            //return if client unsubsribes while waiting ack of previous message
-            if (!_queue.ClientsClone.Contains(receiver))
+            if (cc == null)
             {
                 PushResult pushResult = _queue.AddMessage(message, false);
                 if (pushResult != PushResult.Success)
                     return pushResult;
-                
+                    
                 return PushResult.NoConsumers;
             }
 
-            if (message.CurrentDeliveryReceivers.Count > 0)
-                message.CurrentDeliveryReceivers.Clear();
+            ProcessingMessage = message;
+            PushResult result = await ProcessMessage(message, cc);
 
-            IQueueDeliveryHandler deliveryHandler = _queue.Manager.DeliveryHandler;
+            return result;
+        }
+        catch (Exception e)
+        {
+            _queue.Rider.SendError("PUSH", e, $"QueueName:{_queue.Name}, State:RoundRobin");
+            return PushResult.Error;
+        }
+        finally
+        {
+            ProcessingMessage = null;
+        }
+    }
 
-            message.Decision = await deliveryHandler.BeginSend(_queue, message);
-            if (!await _queue.ApplyDecision(message.Decision, message))
-                return PushResult.Success;
+    private async Task<PushResult> ProcessMessage(QueueMessage message, QueueClient receiver)
+    {
+        //if we need acknowledge from receiver, it has a deadline.
+        DateTime? deadline = null;
+        if (_queue.Options.Acknowledge != QueueAckDecision.None)
+            deadline = DateTime.UtcNow.Add(_queue.Options.AcknowledgeTimeout);
 
-            //create prepared message data
-            byte[] messageData = HorseProtocolWriter.Create(message.Message);
+        //return if client unsubsribes while waiting ack of previous message
+        if (!_queue.ClientsClone.Contains(receiver))
+        {
+            PushResult pushResult = _queue.AddMessage(message, false);
+            if (pushResult != PushResult.Success)
+                return pushResult;
+                
+            return PushResult.NoConsumers;
+        }
 
-            //create delivery object
-            MessageDelivery delivery = new MessageDelivery(message, receiver, deadline);
+        if (message.CurrentDeliveryReceivers.Count > 0)
+            message.CurrentDeliveryReceivers.Clear();
 
-            //send the message
-            bool sent = await receiver.Client.SendAsync(messageData);
+        IQueueDeliveryHandler deliveryHandler = _queue.Manager.DeliveryHandler;
 
-            if (sent)
-            {
-                receiver.ConsumeCount++;
-                if (_queue.Options.Acknowledge != QueueAckDecision.None)
-                {
-                    receiver.CurrentlyProcessing = message;
-                    receiver.ProcessDeadline = deadline ?? DateTime.UtcNow;
-                    message.CurrentDeliveryReceivers.Add(receiver);
-                }
-
-                //adds the delivery to time keeper to check timing up
-                deliveryHandler.Tracker.Track(delivery);
-
-                //mark message is sent
-                delivery.MarkAsSent();
-                _queue.Info.AddMessageSend();
-
-                foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
-                    _ = handler.OnConsumed(_queue, delivery, receiver.Client);
-            }
-            else
-                message.Decision = await deliveryHandler.ConsumerReceiveFailed(_queue, delivery, receiver.Client);
-
-            if (!await _queue.ApplyDecision(message.Decision, message))
-                return PushResult.Success;
-
-            message.Decision = await deliveryHandler.EndSend(_queue, message);
-            await _queue.ApplyDecision(message.Decision, message);
-
+        message.Decision = await deliveryHandler.BeginSend(_queue, message);
+        if (!await _queue.ApplyDecision(message.Decision, message))
             return PushResult.Success;
-        }
 
-        public Task<QueueStatusAction> EnterStatus(QueueStatus previousStatus)
+        //create prepared message data
+        byte[] messageData = HorseProtocolWriter.Create(message.Message);
+
+        //create delivery object
+        MessageDelivery delivery = new MessageDelivery(message, receiver, deadline);
+
+        //send the message
+        bool sent = await receiver.Client.SendAsync(messageData);
+
+        if (sent)
         {
-            return Task.FromResult(QueueStatusAction.AllowAndTrigger);
-        }
-
-        public Task<QueueStatusAction> LeaveStatus(QueueStatus nextStatus)
-        {
-            return Task.FromResult(QueueStatusAction.Allow);
-        }
-
-        /// <summary>
-        /// Gets next available client which is not currently consuming any message.
-        /// Used for wait for acknowledge situations
-        /// </summary>
-        private async Task<Tuple<QueueClient, int>> GetNextAvailableRRClient(int currentIndex, QueueMessage message, bool waitForAcknowledge)
-        {
-            List<QueueClient> clients = _queue.ClientsClone;
-            if (clients.Count == 0)
-                return new Tuple<QueueClient, int>(null, currentIndex);
-
-            DateTime retryExpiration = DateTime.UtcNow.AddSeconds(30);
-            while (true)
+            receiver.ConsumeCount++;
+            if (_queue.Options.Acknowledge != QueueAckDecision.None)
             {
-                int index = currentIndex < 0 ? 0 : currentIndex;
-                for (int i = 0; i < clients.Count; i++)
+                receiver.CurrentlyProcessing = message;
+                receiver.ProcessDeadline = deadline ?? DateTime.UtcNow;
+                message.CurrentDeliveryReceivers.Add(receiver);
+            }
+
+            //adds the delivery to time keeper to check timing up
+            deliveryHandler.Tracker.Track(delivery);
+
+            //mark message is sent
+            delivery.MarkAsSent();
+            _queue.Info.AddMessageSend();
+
+            foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
+                _ = handler.OnConsumed(_queue, delivery, receiver.Client);
+        }
+        else
+            message.Decision = await deliveryHandler.ConsumerReceiveFailed(_queue, delivery, receiver.Client);
+
+        if (!await _queue.ApplyDecision(message.Decision, message))
+            return PushResult.Success;
+
+        message.Decision = await deliveryHandler.EndSend(_queue, message);
+        await _queue.ApplyDecision(message.Decision, message);
+
+        return PushResult.Success;
+    }
+
+    public Task<QueueStatusAction> EnterStatus(QueueStatus previousStatus)
+    {
+        return Task.FromResult(QueueStatusAction.AllowAndTrigger);
+    }
+
+    public Task<QueueStatusAction> LeaveStatus(QueueStatus nextStatus)
+    {
+        return Task.FromResult(QueueStatusAction.Allow);
+    }
+
+    /// <summary>
+    /// Gets next available client which is not currently consuming any message.
+    /// Used for wait for acknowledge situations
+    /// </summary>
+    private async Task<Tuple<QueueClient, int>> GetNextAvailableRRClient(int currentIndex, QueueMessage message, bool waitForAcknowledge)
+    {
+        List<QueueClient> clients = _queue.ClientsClone;
+        if (clients.Count == 0)
+            return new Tuple<QueueClient, int>(null, currentIndex);
+
+        DateTime retryExpiration = DateTime.UtcNow.AddSeconds(30);
+        while (true)
+        {
+            int index = currentIndex < 0 ? 0 : currentIndex;
+            for (int i = 0; i < clients.Count; i++)
+            {
+                if (index >= clients.Count)
+                    index = 0;
+
+                QueueClient client = clients[index];
+
+                if (waitForAcknowledge && client.CurrentlyProcessing != null)
                 {
-                    if (index >= clients.Count)
-                        index = 0;
-
-                    QueueClient client = clients[index];
-
-                    if (waitForAcknowledge && client.CurrentlyProcessing != null)
+                    if (client.ProcessDeadline < DateTime.UtcNow)
                     {
-                        if (client.ProcessDeadline < DateTime.UtcNow)
-                        {
-                            client.CurrentlyProcessing = null;
-                        }
-                        else
-                        {
-                            index++;
-                            continue;
-                        }
+                        client.CurrentlyProcessing = null;
                     }
-
-                    var deliveryHandler = _queue.Manager.DeliveryHandler;
-                    bool canReceive = await deliveryHandler.CanConsumerReceive(_queue, message, client.Client);
-                    if (!canReceive)
+                    else
                     {
                         index++;
                         continue;
                     }
-
-                    index++;
-                    return new Tuple<QueueClient, int>(client, index);
                 }
 
-                await Task.Delay(3);
-                clients = _queue.ClientsClone;
-                if (clients.Count == 0)
-                    break;
+                var deliveryHandler = _queue.Manager.DeliveryHandler;
+                bool canReceive = await deliveryHandler.CanConsumerReceive(_queue, message, client.Client);
+                if (!canReceive)
+                {
+                    index++;
+                    continue;
+                }
 
-                //don't try hard so much, wait for next trigger operation of the queue.
-                //it will be triggered in 5 secs, anyway
-                if (DateTime.UtcNow > retryExpiration)
-                    break;
+                index++;
+                return new Tuple<QueueClient, int>(client, index);
             }
 
-            return new Tuple<QueueClient, int>(null, currentIndex);
+            await Task.Delay(3);
+            clients = _queue.ClientsClone;
+            if (clients.Count == 0)
+                break;
+
+            //don't try hard so much, wait for next trigger operation of the queue.
+            //it will be triggered in 5 secs, anyway
+            if (DateTime.UtcNow > retryExpiration)
+                break;
         }
+
+        return new Tuple<QueueClient, int>(null, currentIndex);
     }
 }

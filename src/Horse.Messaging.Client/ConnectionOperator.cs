@@ -4,51 +4,50 @@ using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Models;
 
-namespace Horse.Messaging.Client
+namespace Horse.Messaging.Client;
+
+/// <summary>
+///     Connection manager object for horse client
+/// </summary>
+public class ConnectionOperator
 {
+    private readonly HorseClient _client;
+
+    internal ConnectionOperator(HorseClient client)
+    {
+        _client = client;
+    }
+
+    #region Get Items
+
     /// <summary>
-    ///     Connection manager object for horse client
+    ///     Gets all instances connected to server
     /// </summary>
-    public class ConnectionOperator
-	{
-		private readonly HorseClient _client;
+    public Task<HorseModelResult<List<NodeInformation>>> GetInstances()
+    {
+        HorseMessage message = new()
+        {
+            Type = MessageType.Server,
+            ContentType = KnownContentTypes.NodeList
+        };
 
-		internal ConnectionOperator(HorseClient client)
-		{
-			_client = client;
-		}
+        return _client.SendAndGetJson<List<NodeInformation>>(message);
+    }
 
-		#region Get Items
+    /// <summary>
+    ///     Gets all consumers of queue
+    /// </summary>
+    public Task<HorseModelResult<List<ClientInformation>>> GetConnectedClients(string typeFilter = null)
+    {
+        HorseMessage message = new()
+        {
+            Type = MessageType.Server,
+            ContentType = KnownContentTypes.ClientList
+        };
+        message.SetTarget(typeFilter);
 
-        /// <summary>
-        ///     Gets all instances connected to server
-        /// </summary>
-        public Task<HorseModelResult<List<NodeInformation>>> GetInstances()
-		{
-			HorseMessage message = new()
-			{
-				Type = MessageType.Server,
-				ContentType = KnownContentTypes.NodeList
-			};
+        return _client.SendAndGetJson<List<ClientInformation>>(message);
+    }
 
-			return _client.SendAndGetJson<List<NodeInformation>>(message);
-		}
-
-        /// <summary>
-        ///     Gets all consumers of queue
-        /// </summary>
-        public Task<HorseModelResult<List<ClientInformation>>> GetConnectedClients(string typeFilter = null)
-		{
-			HorseMessage message = new()
-			{
-				Type = MessageType.Server,
-				ContentType = KnownContentTypes.ClientList
-			};
-			message.SetTarget(typeFilter);
-
-			return _client.SendAndGetJson<List<ClientInformation>>(message);
-		}
-
-		#endregion
-	}
+    #endregion
 }

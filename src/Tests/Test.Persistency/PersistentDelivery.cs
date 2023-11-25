@@ -10,73 +10,72 @@ using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Server;
 using Xunit;
 
-namespace Test.Persistency
+namespace Test.Persistency;
+
+public class PersistentDelivery
 {
-    public class PersistentDelivery
+    [Fact]
+    public async Task InPersistentHandler()
     {
-        [Fact]
-        public async Task InPersistentHandler()
-        {
-            HorseServer server = new HorseServer();
-            HorseRider rider = server.UseRider(cfg => cfg
-                .ConfigureChannels(c =>
-                {
-                    c.UseCustomPersistentConfigurator(null);
-                })
-                .ConfigureQueues(q =>
-                {
-                    q.UsePersistentQueues(q =>
-                        {
-                            q.UseInstantFlush()
-                                .KeepLastBackup()
-                                .SetAutoShrink(true, TimeSpan.FromSeconds(60));
-                        },
-                        c =>
-                        {
-                            c.Options.CommitWhen = CommitWhen.AfterSent;
-                            c.Options.PutBack = PutBackDecision.No;
-                        },
-                        true);
-                }));
+        HorseServer server = new HorseServer();
+        HorseRider rider = server.UseRider(cfg => cfg
+            .ConfigureChannels(c =>
+            {
+                c.UseCustomPersistentConfigurator(null);
+            })
+            .ConfigureQueues(q =>
+            {
+                q.UsePersistentQueues(q =>
+                    {
+                        q.UseInstantFlush()
+                            .KeepLastBackup()
+                            .SetAutoShrink(true, TimeSpan.FromSeconds(60));
+                    },
+                    c =>
+                    {
+                        c.Options.CommitWhen = CommitWhen.AfterSent;
+                        c.Options.PutBack = PutBackDecision.No;
+                    },
+                    true);
+            }));
 
-            string queueName = $"test{Environment.TickCount}";
+        string queueName = $"test{Environment.TickCount}";
 
-            HorseQueue queue = await rider.Queue.Create(queueName);
+        HorseQueue queue = await rider.Queue.Create(queueName);
 
-            HorseMessage message = new HorseMessage(MessageType.QueueMessage, queueName);
-            message.SetMessageId("id");
-            message.SetStringContent("Hello, World!");
-            QueueMessage queueMessage = new QueueMessage(message);
+        HorseMessage message = new HorseMessage(MessageType.QueueMessage, queueName);
+        message.SetMessageId("id");
+        message.SetStringContent("Hello, World!");
+        QueueMessage queueMessage = new QueueMessage(message);
 
-            PersistentQueueManager manager = queue.Manager as PersistentQueueManager;
-            await manager.DeliveryHandler.BeginSend(queue, queueMessage);
+        PersistentQueueManager manager = queue.Manager as PersistentQueueManager;
+        await manager.DeliveryHandler.BeginSend(queue, queueMessage);
 
-            List<KeyValuePair<string, int>> deliveries = manager.RedeliveryService.GetDeliveries();
-            Assert.Single(deliveries);
-            Assert.Equal("id", deliveries[0].Key);
-            Assert.Equal(1, deliveries[0].Value);
+        List<KeyValuePair<string, int>> deliveries = manager.RedeliveryService.GetDeliveries();
+        Assert.Single(deliveries);
+        Assert.Equal("id", deliveries[0].Key);
+        Assert.Equal(1, deliveries[0].Value);
 
-            string header = message.FindHeader(HorseHeaders.DELIVERY);
-            Assert.Null(header);
+        string header = message.FindHeader(HorseHeaders.DELIVERY);
+        Assert.Null(header);
 
-            await manager.DeliveryHandler.BeginSend(queue, queueMessage);
-            deliveries = manager.RedeliveryService.GetDeliveries();
-            Assert.Single(deliveries);
-            Assert.Equal("id", deliveries[0].Key);
-            Assert.Equal(2, deliveries[0].Value);
+        await manager.DeliveryHandler.BeginSend(queue, queueMessage);
+        deliveries = manager.RedeliveryService.GetDeliveries();
+        Assert.Single(deliveries);
+        Assert.Equal("id", deliveries[0].Key);
+        Assert.Equal(2, deliveries[0].Value);
 
-            header = message.FindHeader(HorseHeaders.DELIVERY);
-            Assert.NotNull(header);
-            Assert.Equal(2, Convert.ToInt32(header));
+        header = message.FindHeader(HorseHeaders.DELIVERY);
+        Assert.NotNull(header);
+        Assert.Equal(2, Convert.ToInt32(header));
 
-            queueMessage.MarkAsSent();
+        queueMessage.MarkAsSent();
 
-            await manager.DeliveryHandler.EndSend(queue, queueMessage);
-            await manager.RemoveMessage(queueMessage);
+        await manager.DeliveryHandler.EndSend(queue, queueMessage);
+        await manager.RemoveMessage(queueMessage);
 
-            deliveries = manager.RedeliveryService.GetDeliveries();
-            Assert.Empty(deliveries);
-            server.Stop();
-        }
+        deliveries = manager.RedeliveryService.GetDeliveries();
+        Assert.Empty(deliveries);
+        server.Stop();
     }
 }

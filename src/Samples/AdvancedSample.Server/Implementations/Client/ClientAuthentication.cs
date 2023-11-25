@@ -1,7 +1,6 @@
-﻿namespace AdvancedSample.Server.Implementations.Client
+﻿namespace AdvancedSample.Server.Implementations.Client;
+
+public class ClientAuthentication
 {
-    public class ClientAuthentication
-    {
-        public string AsymmetricKey { get; set; }
-    }
+    public string AsymmetricKey { get; set; }
 }

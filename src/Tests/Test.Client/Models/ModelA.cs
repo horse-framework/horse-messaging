@@ -1,10 +1,9 @@
 using Horse.Messaging.Client.Channels.Annotations;
 
-namespace Test.Client.Models
+namespace Test.Client.Models;
+
+[ChannelName("overwritten-channel-name")]
+public class ModelA
 {
-    [ChannelName("overwritten-channel-name")]
-    public class ModelA
-    {
-        public string Foo { get; set; }
-    }
+    public string Foo { get; set; }
 }

@@ -32,355 +32,354 @@ using Horse.Messaging.Server.Queues.Sync;
 using Horse.Messaging.Server.Routing;
 using Horse.Server;
 
-namespace AdvancedSample.Server
+namespace AdvancedSample.Server;
+
+public class Worker : BackgroundService
 {
-    public class Worker : BackgroundService
+    public static  ILogger<Worker> _logger;
+    private QueueConfig queueConfig = new();
+    private ChennelsOptionsConfig channelConfig = new();
+    private CacheConfig cacheConfig = new();
+    private ClientsConfig clientsConfig = new();
+    private ClusterConfig clusterConfig = new();
+    private ServerConfig serverConfig = new();
+    private List<RouterConfig> routerConfig = new();
+    private ConnectorOptionsConfig connectorConfig = new();
+    private string serverName = string.Empty;
+    private ClientAuthentication authentication = new();
+
+    public Worker(ILogger<Worker> logger)
     {
-        public static  ILogger<Worker> _logger;
-        private QueueConfig queueConfig = new QueueConfig();
-        private ChennelsOptionsConfig channelConfig = new ChennelsOptionsConfig();
-        private CacheConfig cacheConfig = new CacheConfig();
-        private ClientsConfig clientsConfig = new ClientsConfig();
-        private ClusterConfig clusterConfig = new ClusterConfig();
-        private ServerConfig serverConfig = new ServerConfig();
-        private List<RouterConfig> routerConfig = new List<RouterConfig>();
-        private ConnectorOptionsConfig connectorConfig = new ConnectorOptionsConfig();
-        private string serverName = string.Empty;
-        private ClientAuthentication authentication = new ClientAuthentication();
+        _logger = logger;
 
-        public Worker(ILogger<Worker> logger)
+        Program.Configuration.Bind("HorseServerConfig:QueueConfig", queueConfig);
+        Program.Configuration.Bind("HorseServerConfig:ClientsConfig", clientsConfig);
+        Program.Configuration.Bind("HorseServerConfig:CacheConfig", cacheConfig);
+        Program.Configuration.Bind("HorseServerConfig:ServerName", serverName);
+        Program.Configuration.Bind("HorseServerConfig:Server", serverConfig);
+        Program.Configuration.Bind("HorseServerConfig:Limitations", connectorConfig);
+        Program.Configuration.Bind("HorseServerConfig:Routers", routerConfig);
+        Program.Configuration.Bind("HorseServerConfig:ClusterConfiguration", clusterConfig);
+        Program.Configuration.Bind("HorseServerConfig:ChannelsOptions", channelConfig);
+        Program.Configuration.Bind("HorseServerConfig:Authentication", authentication);
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        StartServer();
+
+    }
+
+    #region private methods
+    private Action<HorseChannelConfigurator> SetChannelsConfig()
+    {
+        return cfg =>
         {
-            _logger = logger;
-
-            Program.Configuration.Bind("HorseServerConfig:QueueConfig", queueConfig);
-            Program.Configuration.Bind("HorseServerConfig:ClientsConfig", clientsConfig);
-            Program.Configuration.Bind("HorseServerConfig:CacheConfig", cacheConfig);
-            Program.Configuration.Bind("HorseServerConfig:ServerName", serverName);
-            Program.Configuration.Bind("HorseServerConfig:Server", serverConfig);
-            Program.Configuration.Bind("HorseServerConfig:Limitations", connectorConfig);
-            Program.Configuration.Bind("HorseServerConfig:Routers", routerConfig);
-            Program.Configuration.Bind("HorseServerConfig:ClusterConfiguration", clusterConfig);
-            Program.Configuration.Bind("HorseServerConfig:ChannelsOptions", channelConfig);
-            Program.Configuration.Bind("HorseServerConfig:Authentication", authentication);
-        }
-
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+            cfg.Options.AutoChannelCreation = channelConfig.AutoChannelCreation;
+            cfg.Options.AutoDestroy = channelConfig.AutoDestroy;
+            cfg.Options.ClientLimit = channelConfig.ClientLimit;
+            cfg.Options.MessageSizeLimit = channelConfig.MessageSizeLimit;
+        };
+    }
+    private Action<HorseRouterConfigurator> SetRoutersConfig()
+    {
+        return cfg =>
         {
-            StartServer();
-
-        }
-
-        #region private methods
-        private Action<HorseChannelConfigurator> SetChannelsConfig()
+            cfg.MessageHandlers.Add(new CustomRouterHandler());
+        };
+    }
+    private Action<HorseQueueConfigurator> SetQueueConfig()
+    {
+        return cfg =>
         {
-            return cfg =>
+            cfg.EventHandlers.Add(new CustomQueueEventHandler());
+            cfg.MessageHandlers.Add(new CustomMessageEventHandler());
+
+            cfg.UsePersistentQueues("Persistent", dataConfigurator =>
             {
-                cfg.Options.AutoChannelCreation = channelConfig.AutoChannelCreation;
-                cfg.Options.AutoDestroy = channelConfig.AutoDestroy;
-                cfg.Options.ClientLimit = channelConfig.ClientLimit;
-                cfg.Options.MessageSizeLimit = channelConfig.MessageSizeLimit;
-            };
-        }
-        private Action<HorseRouterConfigurator> SetRoutersConfig()
-        {
-            return cfg =>
-            {
-                cfg.MessageHandlers.Add(new CustomRouterHandler());
-            };
-        }
-        private Action<HorseQueueConfigurator> SetQueueConfig()
-        {
-            return cfg =>
-            {
-                cfg.EventHandlers.Add(new CustomQueueEventHandler());
-                cfg.MessageHandlers.Add(new CustomMessageEventHandler());
+                var basPath = Path.Combine(Program.RootAddress, !string.IsNullOrWhiteSpace(queueConfig.Persistent.DataConfig.DefaultRelativeDataPath)
+                    ? queueConfig.Persistent.DataConfig.DefaultRelativeDataPath
+                    : "data/config.json");
 
-                cfg.UsePersistentQueues("Persistent", dataConfigurator =>
+                dataConfigurator.SetPhysicalPath(queue => CustomSetDataPath(basPath, queue, queueConfig.Persistent.DataConfig.UseSeperateFolder));
+
+                if (queueConfig.Persistent.DataConfig.AutoShrink.Enabled)
                 {
-                    var basPath = Path.Combine(Program.RootAddress, !string.IsNullOrWhiteSpace(queueConfig.Persistent.DataConfig.DefaultRelativeDataPath)
-                        ? queueConfig.Persistent.DataConfig.DefaultRelativeDataPath
-                        : "data/config.json");
+                    var timeInterval = queueConfig.Persistent.DataConfig.AutoShrink.Interval;
 
-                    dataConfigurator.SetPhysicalPath(queue => CustomSetDataPath(basPath, queue, queueConfig.Persistent.DataConfig.UseSeperateFolder));
+                    dataConfigurator.SetAutoShrink(true, StringToTimeSpan(timeInterval));
 
-                    if (queueConfig.Persistent.DataConfig.AutoShrink.Enabled)
-                    {
-                        var timeInterval = queueConfig.Persistent.DataConfig.AutoShrink.Interval;
-
-                        dataConfigurator.SetAutoShrink(true, StringToTimeSpan(timeInterval));
-
-                    }
-
-
-                    dataConfigurator.KeepLastBackup(queueConfig.Persistent.DataConfig.KeepLastBackup);
-
-                    //dataConfigurator.SetConfigFile(Path.Combine(Program.RootAddress, queueConfig.Persistent.DataConfig.ConfigRelativePath ?? "data"));
-
-                    var autoFlashInterval = StringToTimeSpan(queueConfig.Persistent.DataConfig.AutoFlushInterval);
-
-                    if (autoFlashInterval != TimeSpan.Zero)
-                    {
-                        dataConfigurator.UseAutoFlush(autoFlashInterval);
-                    }
-                    else
-                    {
-                        dataConfigurator.UseInstantFlush();
-                    }
-
-                }, queue =>
-                {
-                    queue.Options.AutoDestroy = queueConfig.Persistent.Options.QueueAutoDestroy;
-                    queue.Options.AutoQueueCreation = queueConfig.Persistent.Options.AutoQueueCreation;
-                    queue.Options.Acknowledge = queueConfig.Persistent.Options.Acknowledge;
-                    queue.Options.DelayBetweenMessages = queueConfig.Persistent.Options.DelayBetweenMessages;
-                    queue.Options.ClientLimit = queueConfig.Persistent.Options.ClientLimit;
-                    queue.Options.CommitWhen = queueConfig.Persistent.Options.CommitWhen;
-                    queue.Options.LimitExceededStrategy = queueConfig.Persistent.Options.LimitExceededStrategy;
-                    queue.Options.MessageLimit = queueConfig.Persistent.Options.MessageLimit;
-                    queue.Options.MessageSizeLimit = queueConfig.Persistent.Options.MessageSizeLimit;
-                    queue.Options.PutBack = queueConfig.Persistent.Options.PutBackDecision;
-                    queue.Options.PutBackDelay = queueConfig.Persistent.Options.PutBackDelay;
-                    queue.Options.MessageTimeout = new() {MessageDuration = 5, Policy = MessageTimeoutPolicy.PushQueue};
-                    queue.Options.AcknowledgeTimeout = StringToTimeSpan(queueConfig.Persistent.Options.AcknowledgeTimeout);
-                });
-
-
-
-            };
-        }
-        private Action<HorseCacheConfigurator> SetCacheConfig()
-        {
-            return cfg =>
-            {
-                cfg.Options.DefaultDuration = StringToTimeSpan(cacheConfig.DefaultDuration);
-                cfg.Options.MaximumDuration = StringToTimeSpan(cacheConfig.MaximumDuration);
-                cfg.Options.ValueMaxSize = cacheConfig.ValueMaxSize;
-                cfg.Options.MaximumKeys = cacheConfig.MaximumKeys;
-            };
-        }
-        private Action<HorseRiderOptions> SetHorseConnectorOptions()
-        {
-            return cfg =>
-            {
-                cfg.RouterLimit = connectorConfig.Routers;
-                cfg.ClientLimit = connectorConfig.Clients;
-                cfg.ChannelLimit = connectorConfig.Channels;
-                cfg.QueueLimit = connectorConfig.Queues;
-            };
-        }
-        private Action<HorseClientConfigurator> SetClientConfig()
-        {
-            return cfg =>
-            {
-                cfg.Handlers.Add(new ClientHandler(_logger));
-                //    cfg.Authorizations.Add(new CustomClientAuthorizer());
-                //   cfg.Authenticators.Add(new CustomClientAuthenticator(_logger, authentication.AsymmetricKey, clientsConfig.UseTokenValidation));
-            };
-        }
-        private void StartServer()
-        {
-            try
-            {
-                HorseRider connector = HorseRiderBuilder.Create()
-
-              .ConfigureQueues(SetQueueConfig())
-              .ConfigureClients(SetClientConfig())
-              .ConfigureCache(SetCacheConfig())
-              .ConfigureOptions(SetHorseConnectorOptions())
-              .ConfigureRouters(SetRoutersConfig())
-              //.ConfigureDirect(SetDirectMessageConfig())
-              .ConfigureChannels(SetChannelsConfig())
-               //.UseClientIdGenerator<CustomClientIdGenerator>()
-               //.UseMessageIdGenerator<CustomMessageIdGenerator>()
-
-              .Build();
-
-
-                if (routerConfig.Any())
-                {
-                    foreach (var router in routerConfig)
-                    {
-                        var addedRouter = connector.Router.Add(router.Name, router.Method);
-                        addedRouter.IsEnabled = router.IsEnabled;
-
-                        foreach (var binding in router.Bindings)
-                        {
-                            addedRouter.AddBinding(MapBindingFromConfig(binding));
-                        }
-                    }
                 }
 
-                connector = ConfigClusters(connector);
 
-                HorseServer server = new HorseServer(SetServerConfig());
+                dataConfigurator.KeepLastBackup(queueConfig.Persistent.DataConfig.KeepLastBackup);
 
-                server.Options.PingInterval = 10;
+                //dataConfigurator.SetConfigFile(Path.Combine(Program.RootAddress, queueConfig.Persistent.DataConfig.ConfigRelativePath ?? "data"));
 
-                server.UseRider(connector);
+                var autoFlashInterval = StringToTimeSpan(queueConfig.Persistent.DataConfig.AutoFlushInterval);
 
-                _ = Task.Factory.StartNew(async () =>
+                if (autoFlashInterval != TimeSpan.Zero)
                 {
-                    while (true)
-                        try
-                        {
-                            await Task.Delay(5000);
-                            foreach (HorseQueue queue in connector.Queue.Queues)
-                            {
-                                Console.WriteLine($"QUEUE {queue.Name} has {queue.Manager.MessageStore.Count()} Messages");
-                                if (queue.Manager == null)
-                                    continue;
+                    dataConfigurator.UseAutoFlush(autoFlashInterval);
+                }
+                else
+                {
+                    dataConfigurator.UseInstantFlush();
+                }
 
-                                if (queue.Manager.Synchronizer.Status == QueueSyncStatus.None)
-                                    continue;
-
-                                Console.WriteLine($"Queue {queue.Name} Sync Status is {queue.Manager.Synchronizer.Status}");
-                            }
-                        }
-                        catch
-                        {
-                        }
-                });
-
-
-                _logger.LogInformation("HorseService started.");
-                server.Run();
-
-
-
-
-            }
-            catch (Exception e)
+            }, queue =>
             {
-                _logger.LogError(e.Message);
-            }
-        }
-        private ServerOptions SetServerConfig()
+                queue.Options.AutoDestroy = queueConfig.Persistent.Options.QueueAutoDestroy;
+                queue.Options.AutoQueueCreation = queueConfig.Persistent.Options.AutoQueueCreation;
+                queue.Options.Acknowledge = queueConfig.Persistent.Options.Acknowledge;
+                queue.Options.DelayBetweenMessages = queueConfig.Persistent.Options.DelayBetweenMessages;
+                queue.Options.ClientLimit = queueConfig.Persistent.Options.ClientLimit;
+                queue.Options.CommitWhen = queueConfig.Persistent.Options.CommitWhen;
+                queue.Options.LimitExceededStrategy = queueConfig.Persistent.Options.LimitExceededStrategy;
+                queue.Options.MessageLimit = queueConfig.Persistent.Options.MessageLimit;
+                queue.Options.MessageSizeLimit = queueConfig.Persistent.Options.MessageSizeLimit;
+                queue.Options.PutBack = queueConfig.Persistent.Options.PutBackDecision;
+                queue.Options.PutBackDelay = queueConfig.Persistent.Options.PutBackDelay;
+                queue.Options.MessageTimeout = new() {MessageDuration = 5, Policy = MessageTimeoutPolicy.PushQueue};
+                queue.Options.AcknowledgeTimeout = StringToTimeSpan(queueConfig.Persistent.Options.AcknowledgeTimeout);
+            });
+
+
+
+        };
+    }
+    private Action<HorseCacheConfigurator> SetCacheConfig()
+    {
+        return cfg =>
         {
-            try
-            {
-                return new ServerOptions()
-                {
-                    Hosts = serverConfig.Hosts,
-                    ContentEncoding = serverConfig.ContentEncoding,
-                    MaximumPendingConnections = serverConfig.MaximumPendingConnections,
-                    PingInterval = serverConfig.PingInterval,
-                    RequestTimeout = serverConfig.RequestTimeout
-                };
-            }
-            catch (Exception)
-            {
-                return ServerOptions.CreateDefault();
-            }
-        }
-        private HorseRider ConfigClusters(HorseRider connector)
+            cfg.Options.DefaultDuration = StringToTimeSpan(cacheConfig.DefaultDuration);
+            cfg.Options.MaximumDuration = StringToTimeSpan(cacheConfig.MaximumDuration);
+            cfg.Options.ValueMaxSize = cacheConfig.ValueMaxSize;
+            cfg.Options.MaximumKeys = cacheConfig.MaximumKeys;
+        };
+    }
+    private Action<HorseRiderOptions> SetHorseConnectorOptions()
+    {
+        return cfg =>
         {
-            if (clusterConfig.Enabled)
-            {
-                connector.Cluster.Options.Mode = clusterConfig.Mode;
-                connector.Cluster.Options.Acknowledge = clusterConfig.Acknowledge;
-                connector.Cluster.Options.Name = clusterConfig.Name;
-                connector.Cluster.Options.SharedSecret = clusterConfig.SharedSecret;
-                connector.Cluster.Options.NodeHost = clusterConfig.NodeHost;
-                connector.Cluster.Options.PublicHost = clusterConfig.PublicHost;
+            cfg.RouterLimit = connectorConfig.Routers;
+            cfg.ClientLimit = connectorConfig.Clients;
+            cfg.ChannelLimit = connectorConfig.Channels;
+            cfg.QueueLimit = connectorConfig.Queues;
+        };
+    }
+    private Action<HorseClientConfigurator> SetClientConfig()
+    {
+        return cfg =>
+        {
+            cfg.Handlers.Add(new ClientHandler(_logger));
+            //    cfg.Authorizations.Add(new CustomClientAuthorizer());
+            //   cfg.Authenticators.Add(new CustomClientAuthenticator(_logger, authentication.AsymmetricKey, clientsConfig.UseTokenValidation));
+        };
+    }
+    private void StartServer()
+    {
+        try
+        {
+            HorseRider connector = HorseRiderBuilder.Create()
 
-                clusterConfig.Nodes.ForEach(node =>
+                .ConfigureQueues(SetQueueConfig())
+                .ConfigureClients(SetClientConfig())
+                .ConfigureCache(SetCacheConfig())
+                .ConfigureOptions(SetHorseConnectorOptions())
+                .ConfigureRouters(SetRoutersConfig())
+                //.ConfigureDirect(SetDirectMessageConfig())
+                .ConfigureChannels(SetChannelsConfig())
+                //.UseClientIdGenerator<CustomClientIdGenerator>()
+                //.UseMessageIdGenerator<CustomMessageIdGenerator>()
+
+                .Build();
+
+
+            if (routerConfig.Any())
+            {
+                foreach (var router in routerConfig)
                 {
-                    connector.Cluster.Options.Nodes.Add(new NodeInfo
+                    var addedRouter = connector.Router.Add(router.Name, router.Method);
+                    addedRouter.IsEnabled = router.IsEnabled;
+
+                    foreach (var binding in router.Bindings)
                     {
-                        Name = node.Name,
-                        Host = node.Host,
-                        PublicHost = node.PublicHost
-                    });
-                });
-            }
-
-            return connector;
-        }
-        private static TimeSpan StringToTimeSpan(string input)
-        {
-            if (string.IsNullOrWhiteSpace(input))
-            {
-                throw new InvalidDataException();
-            }
-
-            try
-            {
-                var timeIndicator = input.LastOrDefault();
-                var timeValue = Convert.ToUInt64(input.Substring(0, input.Length - 1));
-
-                switch (timeIndicator)
-                {
-                    case 's':
-                        return TimeSpan.FromSeconds(timeValue);
-
-                    case 'm':
-                        return TimeSpan.FromMinutes(timeValue);
-
-                    case 'h':
-                        return TimeSpan.FromHours(timeValue);
-
-                    default:
-                        throw new InvalidDataException();
+                        addedRouter.AddBinding(MapBindingFromConfig(binding));
+                    }
                 }
             }
-            catch (Exception)
+
+            connector = ConfigClusters(connector);
+
+            HorseServer server = new HorseServer(SetServerConfig());
+
+            server.Options.PingInterval = 10;
+
+            server.UseRider(connector);
+
+            _ = Task.Factory.StartNew(async () =>
             {
-                throw new InvalidDataException();
-            }
+                while (true)
+                    try
+                    {
+                        await Task.Delay(5000);
+                        foreach (HorseQueue queue in connector.Queue.Queues)
+                        {
+                            Console.WriteLine($"QUEUE {queue.Name} has {queue.Manager.MessageStore.Count()} Messages");
+                            if (queue.Manager == null)
+                                continue;
+
+                            if (queue.Manager.Synchronizer.Status == QueueSyncStatus.None)
+                                continue;
+
+                            Console.WriteLine($"Queue {queue.Name} Sync Status is {queue.Manager.Synchronizer.Status}");
+                        }
+                    }
+                    catch
+                    {
+                    }
+            });
+
+
+            _logger.LogInformation("HorseService started.");
+            server.Run();
+
+
+
+
         }
-        private static string CustomSetDataPath(string basePath, HorseQueue queue, bool createInSeparateFolder)
+        catch (Exception e)
         {
-            try
-            {
-                basePath = createInSeparateFolder ? Path.Combine(basePath, queue.Name) : basePath;
-
-                if (!Directory.Exists(basePath))
-                    Directory.CreateDirectory(basePath);
-
-                return basePath + "/" + queue.Name + ".tdb";
-            }
-            catch
-            {
-                return "data-" + queue.Name + ".tdb";
-            }
+            _logger.LogError(e.Message);
         }
-        private Binding MapBindingFromConfig(BindingConfig conf)
+    }
+    private ServerOptions SetServerConfig()
+    {
+        try
         {
-            Binding bind;
-            switch (conf.Type)
+            return new ServerOptions()
             {
-                case nameof(QueueBinding):
-                    bind = new QueueBinding();
-                    break;
+                Hosts = serverConfig.Hosts,
+                ContentEncoding = serverConfig.ContentEncoding,
+                MaximumPendingConnections = serverConfig.MaximumPendingConnections,
+                PingInterval = serverConfig.PingInterval,
+                RequestTimeout = serverConfig.RequestTimeout
+            };
+        }
+        catch (Exception)
+        {
+            return ServerOptions.CreateDefault();
+        }
+    }
+    private HorseRider ConfigClusters(HorseRider connector)
+    {
+        if (clusterConfig.Enabled)
+        {
+            connector.Cluster.Options.Mode = clusterConfig.Mode;
+            connector.Cluster.Options.Acknowledge = clusterConfig.Acknowledge;
+            connector.Cluster.Options.Name = clusterConfig.Name;
+            connector.Cluster.Options.SharedSecret = clusterConfig.SharedSecret;
+            connector.Cluster.Options.NodeHost = clusterConfig.NodeHost;
+            connector.Cluster.Options.PublicHost = clusterConfig.PublicHost;
 
-                case nameof(DirectBinding):
-                    bind = new DirectBinding();
-                    break;
+            clusterConfig.Nodes.ForEach(node =>
+            {
+                connector.Cluster.Options.Nodes.Add(new NodeInfo
+                {
+                    Name = node.Name,
+                    Host = node.Host,
+                    PublicHost = node.PublicHost
+                });
+            });
+        }
 
-                case nameof(AutoQueueBinding):
-                    bind = new AutoQueueBinding();
-                    break;
+        return connector;
+    }
+    private static TimeSpan StringToTimeSpan(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            throw new InvalidDataException();
+        }
 
-                case nameof(HttpBinding):
-                    bind = new HttpBinding();
-                    break;
+        try
+        {
+            var timeIndicator = input.LastOrDefault();
+            var timeValue = Convert.ToUInt64(input.Substring(0, input.Length - 1));
 
-                case nameof(TopicBinding):
-                    bind = new TopicBinding();
-                    break;
+            switch (timeIndicator)
+            {
+                case 's':
+                    return TimeSpan.FromSeconds(timeValue);
+
+                case 'm':
+                    return TimeSpan.FromMinutes(timeValue);
+
+                case 'h':
+                    return TimeSpan.FromHours(timeValue);
 
                 default:
                     throw new InvalidDataException();
             }
-
-            bind.RouteMethod = conf.RouteMethod;
-            bind.Target = conf.Target;
-            bind.ContentType = conf.ContentType;
-            bind.Name = conf.Name;
-            bind.Interaction = conf.Interaction;
-
-            return bind;
         }
-        #endregion
+        catch (Exception)
+        {
+            throw new InvalidDataException();
+        }
     }
+    private static string CustomSetDataPath(string basePath, HorseQueue queue, bool createInSeparateFolder)
+    {
+        try
+        {
+            basePath = createInSeparateFolder ? Path.Combine(basePath, queue.Name) : basePath;
+
+            if (!Directory.Exists(basePath))
+                Directory.CreateDirectory(basePath);
+
+            return basePath + "/" + queue.Name + ".tdb";
+        }
+        catch
+        {
+            return "data-" + queue.Name + ".tdb";
+        }
+    }
+    private Binding MapBindingFromConfig(BindingConfig conf)
+    {
+        Binding bind;
+        switch (conf.Type)
+        {
+            case nameof(QueueBinding):
+                bind = new QueueBinding();
+                break;
+
+            case nameof(DirectBinding):
+                bind = new DirectBinding();
+                break;
+
+            case nameof(AutoQueueBinding):
+                bind = new AutoQueueBinding();
+                break;
+
+            case nameof(HttpBinding):
+                bind = new HttpBinding();
+                break;
+
+            case nameof(TopicBinding):
+                bind = new TopicBinding();
+                break;
+
+            default:
+                throw new InvalidDataException();
+        }
+
+        bind.RouteMethod = conf.RouteMethod;
+        bind.Target = conf.Target;
+        bind.ContentType = conf.ContentType;
+        bind.Name = conf.Name;
+        bind.Interaction = conf.Interaction;
+
+        return bind;
+    }
+    #endregion
 }

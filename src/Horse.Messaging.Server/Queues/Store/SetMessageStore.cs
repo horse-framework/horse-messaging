@@ -25,7 +25,7 @@ public class SetMessageStore : IQueueMessageStore
         }
     }
 
-    private HashSet<QueueMessage> _messages = new HashSet<QueueMessage>(new MessageEqualityComparer());
+    private HashSet<QueueMessage> _messages = new(new MessageEqualityComparer());
 
     /// <summary>
     /// Creates new dictionary based message store

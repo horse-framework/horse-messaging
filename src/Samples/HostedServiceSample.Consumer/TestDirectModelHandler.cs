@@ -6,21 +6,20 @@ using Horse.Messaging.Client.Direct;
 using Horse.Messaging.Client.Direct.Annotations;
 using Horse.Messaging.Protocol;
 
-namespace HostedServiceSample.Consumer
-{
-    [DirectContentType(1)]
-    public class TestDirectModelHandler : IDirectMessageHandler<TestDirectModel>
-    {
-        readonly JsonSerializerOptions _options = new JsonSerializerOptions
-        {
-            WriteIndented = true
-        };
+namespace HostedServiceSample.Consumer;
 
-        public Task Handle(HorseMessage message, TestDirectModel model, HorseClient client)
-        {
-            _ = Console.Out.WriteLineAsync("Consumed!!!");
-            _ = Console.Out.WriteLineAsync(JsonSerializer.Serialize(model, _options));
-            return Task.CompletedTask;
-        }
+[DirectContentType(1)]
+public class TestDirectModelHandler : IDirectMessageHandler<TestDirectModel>
+{
+    readonly JsonSerializerOptions _options = new()
+    {
+        WriteIndented = true
+    };
+
+    public Task Handle(HorseMessage message, TestDirectModel model, HorseClient client)
+    {
+        _ = Console.Out.WriteLineAsync("Consumed!!!");
+        _ = Console.Out.WriteLineAsync(JsonSerializer.Serialize(model, _options));
+        return Task.CompletedTask;
     }
 }

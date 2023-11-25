@@ -2,36 +2,35 @@ using System.Threading.Tasks;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Queues;
 
-namespace Horse.Messaging.Server
+namespace Horse.Messaging.Server;
+
+/// <summary>
+/// Queue event handler implementation (client join/leave, queue created/removed, status changes)
+/// </summary>
+public interface IQueueEventHandler
 {
     /// <summary>
-    /// Queue event handler implementation (client join/leave, queue created/removed, status changes)
+    /// Called when a new queue is created
     /// </summary>
-    public interface IQueueEventHandler
-    {
-        /// <summary>
-        /// Called when a new queue is created
-        /// </summary>
-        Task OnCreated(HorseQueue queue);
+    Task OnCreated(HorseQueue queue);
 
-        /// <summary>
-        /// Called when a queue is removed
-        /// </summary>
-        Task OnRemoved(HorseQueue queue);
+    /// <summary>
+    /// Called when a queue is removed
+    /// </summary>
+    Task OnRemoved(HorseQueue queue);
 
-        /// <summary>
-        /// Called when a client subscribes to the queue
-        /// </summary>
-        Task OnConsumerSubscribed(QueueClient client);
+    /// <summary>
+    /// Called when a client subscribes to the queue
+    /// </summary>
+    Task OnConsumerSubscribed(QueueClient client);
 
-        /// <summary>
-        /// Called when a client unsubscribes from the queue
-        /// </summary>
-        Task OnConsumerUnsubscribed(QueueClient client);
+    /// <summary>
+    /// Called when a client unsubscribes from the queue
+    /// </summary>
+    Task OnConsumerUnsubscribed(QueueClient client);
 
-        /// <summary>
-        /// Called when queue status has changed
-        /// </summary>
-        Task OnStatusChanged(HorseQueue queue, QueueStatus from, QueueStatus to);
-    }
+    /// <summary>
+    /// Called when queue status has changed
+    /// </summary>
+    Task OnStatusChanged(HorseQueue queue, QueueStatus from, QueueStatus to);
 }

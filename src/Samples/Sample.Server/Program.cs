@@ -5,7 +5,6 @@ using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
-using Horse.Messaging.Server.Routing;
 using Horse.Server;
 
 [QueueName("demo-queue")]

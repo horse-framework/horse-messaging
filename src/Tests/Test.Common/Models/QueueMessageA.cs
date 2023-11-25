@@ -1,12 +1,11 @@
-namespace Test.Common.Models
-{
-    public class QueueMessageA
-    {
-        public string Foo { get; set; }
+namespace Test.Common.Models;
 
-        public QueueMessageA(string foo)
-        {
-            Foo = foo;
-        }
+public class QueueMessageA
+{
+    public string Foo { get; set; }
+
+    public QueueMessageA(string foo)
+    {
+        Foo = foo;
     }
 }

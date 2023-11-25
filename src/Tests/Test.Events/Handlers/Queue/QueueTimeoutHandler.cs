@@ -4,17 +4,16 @@ using Horse.Messaging.Client.Events;
 using Horse.Messaging.Client.Events.Annotations;
 using Horse.Messaging.Protocol.Events;
 
-namespace Test.Events.Handlers.Queue
-{
-    [HorseEvent(HorseEventType.QueueMessageTimeout, "test-queue")]
-    public class QueueTimeoutHandler : IHorseEventHandler
-    {
-        public static int Count { get; private set; }
+namespace Test.Events.Handlers.Queue;
 
-        public Task Handle(HorseEvent horseEvent, HorseClient client)
-        {
-            Count++;
-            return Task.CompletedTask;
-        }
+[HorseEvent(HorseEventType.QueueMessageTimeout, "test-queue")]
+public class QueueTimeoutHandler : IHorseEventHandler
+{
+    public static int Count { get; private set; }
+
+    public Task Handle(HorseEvent horseEvent, HorseClient client)
+    {
+        Count++;
+        return Task.CompletedTask;
     }
 }

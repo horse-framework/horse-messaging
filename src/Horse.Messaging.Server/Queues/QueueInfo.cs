@@ -2,227 +2,226 @@ using System;
 using System.Threading;
 using Horse.Messaging.Server.Helpers;
 
-namespace Horse.Messaging.Server.Queues
+namespace Horse.Messaging.Server.Queues;
+
+/// <summary>
+/// Queue statistics information
+/// </summary>
+public class QueueInfo
 {
+    #region Properties
+
     /// <summary>
-    /// Queue statistics information
+    /// Queue creation date
     /// </summary>
-    public class QueueInfo
+    public DateTime CreatedDate { get; }
+
+
+    /// <summary>
+    /// Total received messages from producers
+    /// </summary>
+    public long ReceivedMessages => _receivedMessages;
+
+    private long _receivedMessages;
+
+    /// <summary>
+    /// Total send messages.
+    /// Each message may be sent to many consumers but all of them counts one.
+    /// </summary>
+    public long SentMessages => _sentMessages;
+
+    private long _sentMessages;
+
+    /// <summary>
+    /// Timed out message count
+    /// </summary>
+    public long TimedOutMessages => _timedOutMessages;
+
+    private long _timedOutMessages;
+
+    /// <summary>
+    /// Acknowledge count
+    /// </summary>
+    public long Acknowledges => _acknowledges;
+
+    /// <summary>
+    /// Timed out acknowledge count
+    /// </summary>
+    public long Unacknowledges => _unacknowledges;
+
+    private long _acknowledges;
+    private long _unacknowledges;
+
+    /// <summary>
+    /// Acknowledge timed out message count.
+    /// When a message is sent to x consumers, x ack should be received.
+    /// If received ack messages less than x, this value will increase.
+    /// </summary>
+    public long NegativeAcknowledge => _negativeAcknowledge;
+
+    private long _negativeAcknowledge;
+
+    /// <summary>
+    /// Removed message count
+    /// </summary>
+    public long MessageRemoved => _messageRemoved;
+
+    private long _messageRemoved;
+
+    /// <summary>
+    /// Saved message count
+    /// </summary>
+    public long MessageSaved => _messageSaved;
+
+    private long _messageSaved;
+
+    /// <summary>
+    /// Error count
+    /// </summary>
+    public long ErrorCount => _errorCount;
+
+    private long _errorCount;
+
+    /// <summary>
+    /// Last message received date
+    /// </summary>
+    public DateTime? LastMessageReceiveDate { get; private set; }
+
+    /// <summary>
+    /// Last message sent date
+    /// </summary>
+    public DateTime? LastMessageSendDate { get; private set; }
+
+    /// <summary>
+    /// Returns last message received date in unix milliseconds
+    /// </summary>
+    public long GetLastMessageReceiveUnix()
     {
-        #region Properties
+        if (!LastMessageReceiveDate.HasValue)
+            return 0;
 
-        /// <summary>
-        /// Queue creation date
-        /// </summary>
-        public DateTime CreatedDate { get; }
-
-
-        /// <summary>
-        /// Total received messages from producers
-        /// </summary>
-        public long ReceivedMessages => _receivedMessages;
-
-        private long _receivedMessages;
-
-        /// <summary>
-        /// Total send messages.
-        /// Each message may be sent to many consumers but all of them counts one.
-        /// </summary>
-        public long SentMessages => _sentMessages;
-
-        private long _sentMessages;
-
-        /// <summary>
-        /// Timed out message count
-        /// </summary>
-        public long TimedOutMessages => _timedOutMessages;
-
-        private long _timedOutMessages;
-
-        /// <summary>
-        /// Acknowledge count
-        /// </summary>
-        public long Acknowledges => _acknowledges;
-
-        /// <summary>
-        /// Timed out acknowledge count
-        /// </summary>
-        public long Unacknowledges => _unacknowledges;
-
-        private long _acknowledges;
-        private long _unacknowledges;
-
-        /// <summary>
-        /// Acknowledge timed out message count.
-        /// When a message is sent to x consumers, x ack should be received.
-        /// If received ack messages less than x, this value will increase.
-        /// </summary>
-        public long NegativeAcknowledge => _negativeAcknowledge;
-
-        private long _negativeAcknowledge;
-
-        /// <summary>
-        /// Removed message count
-        /// </summary>
-        public long MessageRemoved => _messageRemoved;
-
-        private long _messageRemoved;
-
-        /// <summary>
-        /// Saved message count
-        /// </summary>
-        public long MessageSaved => _messageSaved;
-
-        private long _messageSaved;
-
-        /// <summary>
-        /// Error count
-        /// </summary>
-        public long ErrorCount => _errorCount;
-
-        private long _errorCount;
-
-        /// <summary>
-        /// Last message received date
-        /// </summary>
-        public DateTime? LastMessageReceiveDate { get; private set; }
-
-        /// <summary>
-        /// Last message sent date
-        /// </summary>
-        public DateTime? LastMessageSendDate { get; private set; }
-
-        /// <summary>
-        /// Returns last message received date in unix milliseconds
-        /// </summary>
-        public long GetLastMessageReceiveUnix()
-        {
-            if (!LastMessageReceiveDate.HasValue)
-                return 0;
-
-            return LastMessageReceiveDate.Value.ToUnixMilliseconds();
-        }
-
-        /// <summary>
-        /// Returns last message sent date in unix milliseconds
-        /// </summary>
-        public long GetLastMessageSendUnix()
-        {
-            if (!LastMessageSendDate.HasValue)
-                return 0;
-
-            return LastMessageSendDate.Value.ToUnixMilliseconds();
-        }
-
-        #endregion
-
-        #region Constructor - Reset
-
-        /// <summary>
-        /// Creates new queue statistics information object
-        /// </summary>
-        public QueueInfo()
-        {
-            CreatedDate = DateTime.UtcNow;
-        }
-
-        /// <summary>
-        /// Resets all statistics for the queue
-        /// </summary>
-        public void Reset()
-        {
-            Volatile.Write(ref _receivedMessages, 0);
-            Volatile.Write(ref _sentMessages, 0);
-            Volatile.Write(ref _timedOutMessages, 0);
-            Volatile.Write(ref _acknowledges, 0);
-            Volatile.Write(ref _unacknowledges, 0);
-            Volatile.Write(ref _negativeAcknowledge, 0);
-            Volatile.Write(ref _messageRemoved, 0);
-            Volatile.Write(ref _messageSaved, 0);
-            Volatile.Write(ref _errorCount, 0);
-
-            LastMessageReceiveDate = null;
-            LastMessageSendDate = null;
-        }
-
-        #endregion
-
-        #region Increments
-
-        /// <summary>
-        /// Increases message receive count
-        /// </summary>
-        internal void AddMessageReceive()
-        {
-            LastMessageReceiveDate = DateTime.UtcNow;
-            Interlocked.Increment(ref _receivedMessages);
-        }
-
-        /// <summary>
-        /// Increases message send count
-        /// </summary>
-        internal void AddMessageSend()
-        {
-            LastMessageSendDate = DateTime.UtcNow;
-            Interlocked.Increment(ref _sentMessages);
-        }
-
-        /// <summary>
-        /// Increases message timeout count
-        /// </summary>
-        internal void AddMessageTimeout()
-        {
-            Interlocked.Increment(ref _timedOutMessages);
-        }
-
-        /// <summary>
-        /// Increases acknowledge count
-        /// </summary>
-        internal void AddAcknowledge()
-        {
-            Interlocked.Increment(ref _acknowledges);
-        }
-
-        /// <summary>
-        /// Increases acknowledge timeout count
-        /// </summary>
-        internal void AddNegativeAcknowledge()
-        {
-            Interlocked.Increment(ref _negativeAcknowledge);
-        }
-
-        /// <summary>
-        /// Increases acknowledge timeout count
-        /// </summary>
-        internal void AddUnacknowledge()
-        {
-            Interlocked.Increment(ref _unacknowledges);
-        }
-
-        /// <summary>
-        /// Increases message remove count
-        /// </summary>
-        internal void AddMessageRemove()
-        {
-            Interlocked.Increment(ref _messageRemoved);
-        }
-
-        /// <summary>
-        /// Increases message save count
-        /// </summary>
-        internal void AddMessageSave()
-        {
-            Interlocked.Increment(ref _messageSaved);
-        }
-
-        /// <summary>
-        /// Increases error count
-        /// </summary>
-        internal void AddError()
-        {
-            Interlocked.Increment(ref _errorCount);
-        }
-
-        #endregion
+        return LastMessageReceiveDate.Value.ToUnixMilliseconds();
     }
+
+    /// <summary>
+    /// Returns last message sent date in unix milliseconds
+    /// </summary>
+    public long GetLastMessageSendUnix()
+    {
+        if (!LastMessageSendDate.HasValue)
+            return 0;
+
+        return LastMessageSendDate.Value.ToUnixMilliseconds();
+    }
+
+    #endregion
+
+    #region Constructor - Reset
+
+    /// <summary>
+    /// Creates new queue statistics information object
+    /// </summary>
+    public QueueInfo()
+    {
+        CreatedDate = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Resets all statistics for the queue
+    /// </summary>
+    public void Reset()
+    {
+        Volatile.Write(ref _receivedMessages, 0);
+        Volatile.Write(ref _sentMessages, 0);
+        Volatile.Write(ref _timedOutMessages, 0);
+        Volatile.Write(ref _acknowledges, 0);
+        Volatile.Write(ref _unacknowledges, 0);
+        Volatile.Write(ref _negativeAcknowledge, 0);
+        Volatile.Write(ref _messageRemoved, 0);
+        Volatile.Write(ref _messageSaved, 0);
+        Volatile.Write(ref _errorCount, 0);
+
+        LastMessageReceiveDate = null;
+        LastMessageSendDate = null;
+    }
+
+    #endregion
+
+    #region Increments
+
+    /// <summary>
+    /// Increases message receive count
+    /// </summary>
+    internal void AddMessageReceive()
+    {
+        LastMessageReceiveDate = DateTime.UtcNow;
+        Interlocked.Increment(ref _receivedMessages);
+    }
+
+    /// <summary>
+    /// Increases message send count
+    /// </summary>
+    internal void AddMessageSend()
+    {
+        LastMessageSendDate = DateTime.UtcNow;
+        Interlocked.Increment(ref _sentMessages);
+    }
+
+    /// <summary>
+    /// Increases message timeout count
+    /// </summary>
+    internal void AddMessageTimeout()
+    {
+        Interlocked.Increment(ref _timedOutMessages);
+    }
+
+    /// <summary>
+    /// Increases acknowledge count
+    /// </summary>
+    internal void AddAcknowledge()
+    {
+        Interlocked.Increment(ref _acknowledges);
+    }
+
+    /// <summary>
+    /// Increases acknowledge timeout count
+    /// </summary>
+    internal void AddNegativeAcknowledge()
+    {
+        Interlocked.Increment(ref _negativeAcknowledge);
+    }
+
+    /// <summary>
+    /// Increases acknowledge timeout count
+    /// </summary>
+    internal void AddUnacknowledge()
+    {
+        Interlocked.Increment(ref _unacknowledges);
+    }
+
+    /// <summary>
+    /// Increases message remove count
+    /// </summary>
+    internal void AddMessageRemove()
+    {
+        Interlocked.Increment(ref _messageRemoved);
+    }
+
+    /// <summary>
+    /// Increases message save count
+    /// </summary>
+    internal void AddMessageSave()
+    {
+        Interlocked.Increment(ref _messageSaved);
+    }
+
+    /// <summary>
+    /// Increases error count
+    /// </summary>
+    internal void AddError()
+    {
+        Interlocked.Increment(ref _errorCount);
+    }
+
+    #endregion
 }

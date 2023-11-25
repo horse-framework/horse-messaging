@@ -1,7 +1,6 @@
-namespace AdvancedSample.Messaging.Common
+namespace AdvancedSample.Messaging.Common;
+
+public sealed class AdvancedSampleServiceClientTypes
 {
-	public sealed class AdvancedSampleServiceClientTypes
-	{
-		public const string TestService = "test-service";
-	}
+    public const string TestService = "test-service";
 }

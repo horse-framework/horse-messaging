@@ -1,24 +1,23 @@
-namespace Horse.Messaging.Client.Direct.Annotations
+namespace Horse.Messaging.Client.Direct.Annotations;
+
+/// <summary>
+/// Used for direct receiver attribute.
+/// Describes how the target will be found.
+/// </summary>
+public enum FindTargetBy
 {
     /// <summary>
-    /// Used for direct receiver attribute.
-    /// Describes how the target will be found.
+    /// Finds client by Id
     /// </summary>
-    public enum FindTargetBy
-    {
-        /// <summary>
-        /// Finds client by Id
-        /// </summary>
-        Id,
+    Id,
 
-        /// <summary>
-        /// Finds client by type
-        /// </summary>
-        Type,
+    /// <summary>
+    /// Finds client by type
+    /// </summary>
+    Type,
 
-        /// <summary>
-        /// Finds client by name
-        /// </summary>
-        Name
-    }
+    /// <summary>
+    /// Finds client by name
+    /// </summary>
+    Name
 }

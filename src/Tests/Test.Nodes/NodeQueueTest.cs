@@ -1,13 +1,11 @@
-using System;
 using Xunit;
 
-namespace Test.Nodes
+namespace Test.Nodes;
+
+public class NodeQueueTest
 {
-    public class NodeQueueTest
+    [Fact]
+    public void Test1()
     {
-        [Fact]
-        public void Test1()
-        {
-        }
     }
 }

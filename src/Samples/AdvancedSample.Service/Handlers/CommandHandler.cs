@@ -7,22 +7,21 @@ using Horse.Messaging.Client.Direct;
 using Horse.Messaging.Client.Direct.Annotations;
 using Horse.Messaging.Protocol;
 
-namespace AdvancedSample.Service.Handlers
+namespace AdvancedSample.Service.Handlers;
+
+[AutoResponse(AutoResponse.OnSuccess)]
+[Interceptor(typeof(TestInterceptor))]
+public abstract class CommandHandler<T> : IDirectMessageHandler<T>
 {
-	[AutoResponse(AutoResponse.OnSuccess)]
-	[Interceptor(typeof(TestInterceptor))]
-	public abstract class CommandHandler<T> : IDirectMessageHandler<T>
-	{
-		protected abstract Task Execute(T command, HorseClient client);
+    protected abstract Task Execute(T command, HorseClient client);
 
-		public async Task Handle(HorseMessage message, T model, HorseClient client)
-		{
-			await Execute(model, client);
-		}
+    public async Task Handle(HorseMessage message, T model, HorseClient client)
+    {
+        await Execute(model, client);
+    }
 
-		private static async Task OnError(HorseMessage message, HorseClient client, Exception exception)
-		{
-			await client.SendNegativeAck(message, exception.Message);
-		}
-	}
+    private static async Task OnError(HorseMessage message, HorseClient client, Exception exception)
+    {
+        await client.SendNegativeAck(message, exception.Message);
+    }
 }

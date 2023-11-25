@@ -1,7 +1,6 @@
-namespace Test.Routers
+namespace Test.Routers;
+
+public class DirectBindingTest
 {
-    public class DirectBindingTest
-    {
         
-    }
 }

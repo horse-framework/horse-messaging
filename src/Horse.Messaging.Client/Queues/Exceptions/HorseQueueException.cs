@@ -1,15 +1,14 @@
 using System;
 
-namespace Horse.Messaging.Client.Queues.Exceptions
+namespace Horse.Messaging.Client.Queues.Exceptions;
+
+/// <summary>
+/// Thrown when an error occured on queue operations
+/// </summary>
+public class HorseQueueException : Exception
 {
     /// <summary>
-    /// Thrown when an error occured on queue operations
+    /// Created new HorseQueueException
     /// </summary>
-    public class HorseQueueException : Exception
-    {
-        /// <summary>
-        /// Created new HorseQueueException
-        /// </summary>
-        public HorseQueueException(string message) : base(message) { }
-    }
+    public HorseQueueException(string message) : base(message) { }
 }

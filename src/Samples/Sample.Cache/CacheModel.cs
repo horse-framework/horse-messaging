@@ -1,7 +1,6 @@
-namespace Sample.Cache
+namespace Sample.Cache;
+
+public class CacheModel
 {
-    public class CacheModel
-    {
-        public string Foo { get; set; }
-    }
+    public string Foo { get; set; }
 }

@@ -1,18 +1,17 @@
-namespace Horse.Messaging.Server
+namespace Horse.Messaging.Server;
+
+/// <summary>
+/// Acknowledge message decision
+/// </summary>
+public enum AcknowledgeDecision
 {
     /// <summary>
-    /// Acknowledge message decision
+    /// Do nothing
     /// </summary>
-    public enum AcknowledgeDecision
-    {
-        /// <summary>
-        /// Do nothing
-        /// </summary>
-        Nothing,
+    Nothing,
 
-        /// <summary>
-        /// Sends acknowldege message to it's owner
-        /// </summary>
-        SendToOwner
-    }
+    /// <summary>
+    /// Sends acknowledge message to it's owner
+    /// </summary>
+    SendToOwner
 }

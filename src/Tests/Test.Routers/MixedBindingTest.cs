@@ -1,7 +1,6 @@
-namespace Test.Routers
+namespace Test.Routers;
+
+public class MixedBindingTest
 {
-    public class MixedBindingTest
-    {
         
-    }
 }

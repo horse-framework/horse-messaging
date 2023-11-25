@@ -6,7 +6,7 @@ using HostOptions = Horse.Server.HostOptions;
 HorseServer server = new HorseServer();
 server.Options.Hosts = new List<HostOptions>
 {
-    new HostOptions {Port = 2626}
+    new() {Port = 2626}
 };
 HorseRider rider = HorseRiderBuilder
     .Create()

@@ -1,7 +1,6 @@
-namespace AdvancedSample.Messaging.Common
+namespace AdvancedSample.Messaging.Common;
+
+public sealed class AdvancedSampleServiceRoutes
 {
-	public sealed class AdvancedSampleServiceRoutes
-	{
-		public const string TestService = "test-service-route";
-	}
+    public const string TestService = "test-service-route";
 }

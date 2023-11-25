@@ -1,13 +1,11 @@
-using System;
 using Xunit;
 
-namespace Test.Routers
+namespace Test.Routers;
+
+public class QueueBindingTest
 {
-    public class QueueBindingTest
+    [Fact]
+    public void Test1()
     {
-        [Fact]
-        public void Test1()
-        {
-        }
     }
 }

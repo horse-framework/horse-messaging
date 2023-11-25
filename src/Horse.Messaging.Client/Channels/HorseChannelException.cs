@@ -1,17 +1,16 @@
 using System;
 
-namespace Horse.Messaging.Client.Channels
+namespace Horse.Messaging.Client.Channels;
+
+/// <summary>
+/// Horse channel exception
+/// </summary>
+public class HorseChannelException : Exception
 {
     /// <summary>
-    /// Horse channel exception
+    /// Creates new horse channel exception
     /// </summary>
-    public class HorseChannelException : Exception
+    public HorseChannelException(string message) : base(message)
     {
-        /// <summary>
-        /// Creates new horse channel exception
-        /// </summary>
-        public HorseChannelException(string message) : base(message)
-        {
-        }
     }
 }

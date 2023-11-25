@@ -1,43 +1,42 @@
-namespace Horse.Messaging.Client.Queues
+namespace Horse.Messaging.Client.Queues;
+
+/// <summary>
+/// Pull process status
+/// </summary>
+public enum PullProcess
 {
     /// <summary>
-    /// Pull process status
+    /// Still receiving messages from server
     /// </summary>
-    public enum PullProcess
-    {
-        /// <summary>
-        /// Still receiving messages from server
-        /// </summary>
-        Receiving,
+    Receiving,
 
-        /// <summary>
-        /// Server respond unacceptable request
-        /// </summary>
-        Unacceptable,
+    /// <summary>
+    /// Server respond unacceptable request
+    /// </summary>
+    Unacceptable,
 
-        /// <summary>
-        /// Unauthorized process
-        /// </summary>
-        Unauthorized,
+    /// <summary>
+    /// Unauthorized process
+    /// </summary>
+    Unauthorized,
 
-        /// <summary>
-        /// Queue is empty
-        /// </summary>
-        Empty,
+    /// <summary>
+    /// Queue is empty
+    /// </summary>
+    Empty,
 
-        /// <summary>
-        /// All messages are received, process completed.
-        /// </summary>
-        Completed,
+    /// <summary>
+    /// All messages are received, process completed.
+    /// </summary>
+    Completed,
 
-        /// <summary>
-        /// Message receive operation timed out.
-        /// </summary>
-        Timeout,
+    /// <summary>
+    /// Message receive operation timed out.
+    /// </summary>
+    Timeout,
 
-        /// <summary>
-        /// Disconnected from server while receiving messages
-        /// </summary>
-        NetworkError
-    }
+    /// <summary>
+    /// Disconnected from server while receiving messages
+    /// </summary>
+    NetworkError
 }

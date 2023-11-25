@@ -9,253 +9,252 @@ using Horse.Messaging.Server.Queues.Managers;
 using Horse.Messaging.Server.Queues.Store;
 using Horse.Messaging.Server.Queues.Sync;
 
-namespace Horse.Messaging.Data.Implementation
+namespace Horse.Messaging.Data.Implementation;
+
+/// <summary>
+/// Queue manager for persistent queues
+/// </summary>
+public class PersistentQueueManager : IHorseQueueManager
 {
     /// <summary>
-    /// Queue manager for persistent queues
+    /// Redelivery service for the queue
     /// </summary>
-    public class PersistentQueueManager : IHorseQueueManager
+    public RedeliveryService RedeliveryService { get; private set; }
+
+    /// <summary>
+    /// True If redelivery is used for the queue
+    /// </summary>
+    public bool UseRedelivery { get; }
+
+    /// <inheritdoc />
+    public HorseQueue Queue { get; }
+
+    /// <inheritdoc />
+    public IQueueMessageStore MessageStore => _messageStore;
+
+    /// <inheritdoc />
+    public IQueueMessageStore PriorityMessageStore => _priorityMessageStore;
+
+    /// <inheritdoc />
+    public IQueueDeliveryHandler DeliveryHandler { get; protected set; }
+
+    /// <inheritdoc />
+    public IQueueSynchronizer Synchronizer { get; }
+
+    private readonly PersistentMessageStore _priorityMessageStore;
+    private readonly PersistentMessageStore _messageStore;
+
+    /// <summary>
+    /// Creates new persistent queue manager
+    /// </summary>
+    public PersistentQueueManager(HorseQueue queue, DatabaseOptions databaseOptions, bool useRedelivery = false)
     {
-        /// <summary>
-        /// Redelivery service for the queue
-        /// </summary>
-        public RedeliveryService RedeliveryService { get; private set; }
+        Queue = queue;
+        UseRedelivery = useRedelivery;
+        queue.Manager = this;
 
-        /// <summary>
-        /// True If redelivery is used for the queue
-        /// </summary>
-        public bool UseRedelivery { get; }
+        DeliveryHandler = new PersistentMessageDeliveryHandler(this);
 
-        /// <inheritdoc />
-        public HorseQueue Queue { get; }
+        DatabaseOptions prioDbOptions = databaseOptions.Clone();
+        if (prioDbOptions.Filename.EndsWith(".hdb", StringComparison.InvariantCultureIgnoreCase))
+            prioDbOptions.Filename = prioDbOptions.Filename.Substring(0, prioDbOptions.Filename.Length - 4) +
+                                     "_prio" +
+                                     ".hdb";
+        else
+            prioDbOptions.Filename += "_prio";
 
-        /// <inheritdoc />
-        public IQueueMessageStore MessageStore => _messageStore;
+        _priorityMessageStore = new PersistentMessageStore(this, prioDbOptions);
+        _messageStore = new PersistentMessageStore(this, databaseOptions);
 
-        /// <inheritdoc />
-        public IQueueMessageStore PriorityMessageStore => _priorityMessageStore;
+        Synchronizer = new DefaultQueueSynchronizer(this);
+    }
 
-        /// <inheritdoc />
-        public IQueueDeliveryHandler DeliveryHandler { get; protected set; }
+    /// <summary>
+    /// Initializes the manager, loads messages from disk and initializes redelivery
+    /// </summary>
+    public async Task Initialize()
+    {
+        if (Queue.Options.Acknowledge == QueueAckDecision.None && Queue.Options.CommitWhen == CommitWhen.AfterAcknowledge)
+            throw new NotSupportedException("Producer Ack option is AfterConsumerAckReceived but queue Acknowledge option is None. " +
+                                            "Messages are not deleted from disk with this configuration. " +
+                                            "Please change queue Acknowledge option or ProducerAckDecision option");
 
-        /// <inheritdoc />
-        public IQueueSynchronizer Synchronizer { get; }
+        List<HorseMessage> prioMessages = await _priorityMessageStore.Initialize();
+        List<HorseMessage> messages = await _messageStore.Initialize();
 
-        private readonly PersistentMessageStore _priorityMessageStore;
-        private readonly PersistentMessageStore _messageStore;
+        Queue.OnDestroyed += DestoryAsync;
 
-        /// <summary>
-        /// Creates new persistent queue manager
-        /// </summary>
-        public PersistentQueueManager(HorseQueue queue, DatabaseOptions databaseOptions, bool useRedelivery = false)
+        string path = _messageStore.Database.File.Filename;
+        List<KeyValuePair<string, int>> deliveries = null;
+        if (UseRedelivery)
         {
-            Queue = queue;
-            UseRedelivery = useRedelivery;
-            queue.Manager = this;
-
-            DeliveryHandler = new PersistentMessageDeliveryHandler(this);
-
-            DatabaseOptions prioDbOptions = databaseOptions.Clone();
-            if (prioDbOptions.Filename.EndsWith(".hdb", StringComparison.InvariantCultureIgnoreCase))
-                prioDbOptions.Filename = prioDbOptions.Filename.Substring(0, prioDbOptions.Filename.Length - 4) +
-                                         "_prio" +
-                                         ".hdb";
-            else
-                prioDbOptions.Filename += "_prio";
-
-            _priorityMessageStore = new PersistentMessageStore(this, prioDbOptions);
-            _messageStore = new PersistentMessageStore(this, databaseOptions);
-
-            Synchronizer = new DefaultQueueSynchronizer(this);
+            RedeliveryService = new RedeliveryService($"{path}.delivery");
+            await RedeliveryService.Load();
+            deliveries = RedeliveryService.GetDeliveries();
         }
 
-        /// <summary>
-        /// Initializes the manager, loads messages from disk and initializes redelivery
-        /// </summary>
-        public async Task Initialize()
-        {
-            if (Queue.Options.Acknowledge == QueueAckDecision.None && Queue.Options.CommitWhen == CommitWhen.AfterAcknowledge)
-                throw new NotSupportedException("Producer Ack option is AfterConsumerAckReceived but queue Acknowledge option is None. " +
-                                                "Messages are not deleted from disk with this configuration. " +
-                                                "Please change queue Acknowledge option or ProducerAckDecision option");
+        LoadMessages(prioMessages, deliveries);
+        LoadMessages(messages, deliveries);
 
-            List<HorseMessage> prioMessages = await _priorityMessageStore.Initialize();
-            List<HorseMessage> messages = await _messageStore.Initialize();
+        DeliveryHandler.Tracker.Start();
+        PriorityMessageStore.TimeoutTracker.Start();
+        MessageStore.TimeoutTracker.Start();
+    }
 
-            Queue.OnDestroyed += DestoryAsync;
+    private void LoadMessages(List<HorseMessage> messages, List<KeyValuePair<string, int>> deliveries)
+    {
+        if (messages.Count == 0)
+            return;
 
-            string path = _messageStore.Database.File.Filename;
-            List<KeyValuePair<string, int>> deliveries = null;
-            if (UseRedelivery)
+        QueueFiller filler = new QueueFiller(Queue);
+        PushResult result = filler.FillMessage(messages,
+            true,
+            qm =>
             {
-                RedeliveryService = new RedeliveryService($"{path}.delivery");
-                await RedeliveryService.Load();
-                deliveries = RedeliveryService.GetDeliveries();
-            }
+                if (!UseRedelivery ||
+                    deliveries == null ||
+                    deliveries.Count == 0 ||
+                    string.IsNullOrEmpty(qm.Message.MessageId))
+                    return;
 
-            LoadMessages(prioMessages, deliveries);
-            LoadMessages(messages, deliveries);
+                var kv = deliveries.FirstOrDefault(x => x.Key == qm.Message.MessageId);
+                if (kv.Value > 0)
+                    qm.DeliveryCount = kv.Value;
+            });
 
-            DeliveryHandler.Tracker.Start();
-            PriorityMessageStore.TimeoutTracker.Start();
-            MessageStore.TimeoutTracker.Start();
+        if (result != PushResult.Success)
+            throw new InvalidOperationException($"Cannot fill messages into {Queue.Name} queue : {result}");
+    }
+
+    private async void DestoryAsync(HorseQueue queue)
+    {
+        try
+        {
+            await Destroy();
+        }
+        catch
+        {
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task Destroy()
+    {
+        if (UseRedelivery)
+        {
+            await RedeliveryService.Close();
+            RedeliveryService.Delete();
         }
 
-        private void LoadMessages(List<HorseMessage> messages, List<KeyValuePair<string, int>> deliveries)
+        try
         {
-            if (messages.Count == 0)
-                return;
-
-            QueueFiller filler = new QueueFiller(Queue);
-            PushResult result = filler.FillMessage(messages,
-                true,
-                qm =>
-                {
-                    if (!UseRedelivery ||
-                        deliveries == null ||
-                        deliveries.Count == 0 ||
-                        string.IsNullOrEmpty(qm.Message.MessageId))
-                        return;
-
-                    var kv = deliveries.FirstOrDefault(x => x.Key == qm.Message.MessageId);
-                    if (kv.Value > 0)
-                        qm.DeliveryCount = kv.Value;
-                });
-
-            if (result != PushResult.Success)
-                throw new InvalidOperationException($"Cannot fill messages into {Queue.Name} queue : {result}");
+            await _priorityMessageStore.Destroy();
+            await _messageStore.Destroy();
+        }
+        catch (Exception e)
+        {
+            Queue.Rider.SendError("PersistentQueueDestroy", e, Queue.Name);
         }
 
-        private async void DestoryAsync(HorseQueue queue)
+        PriorityMessageStore.TimeoutTracker.Stop();
+        MessageStore.TimeoutTracker.Stop();
+
+        await DeliveryHandler.Tracker.Destroy();
+        await PriorityMessageStore.Destroy();
+        await MessageStore.Destroy();
+    }
+
+    /// <inheritdoc />
+    public Task OnExceptionThrown(string hint, QueueMessage message, Exception exception)
+    {
+        Queue.Rider.SendError(hint, exception, $"MessageId: {message.Message.MessageId}");
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public async Task OnMessageTimeout(QueueMessage message)
+    {
+        if (UseRedelivery)
+            await RedeliveryService.Remove(message.Message.MessageId);
+    }
+
+    /// <inheritdoc />
+    public bool AddMessage(QueueMessage message)
+    {
+        if (message.Message.HighPriority)
+            _priorityMessageStore.Put(message);
+        else
+            _messageStore.Put(message);
+
+        return true;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> RemoveMessage(QueueMessage message)
+    {
+        if (UseRedelivery)
+            await RedeliveryService.Remove(message.Message.MessageId);
+
+        bool deleted = message.Message.HighPriority
+            ? await _priorityMessageStore.RemoveMessage(message)
+            : await _messageStore.RemoveMessage(message);
+
+        return deleted;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> RemoveMessage(string messageId)
+    {
+        if (UseRedelivery)
+            await RedeliveryService.Remove(messageId);
+
+        bool deleted = await _messageStore.RemoveMessage(messageId);
+
+        if (!deleted)
+            deleted = await _priorityMessageStore.RemoveMessage(messageId);
+
+        return deleted;
+    }
+
+    /// <inheritdoc />
+    public Task<bool> SaveMessage(QueueMessage message)
+    {
+        if (message.Message.HighPriority)
         {
-            try
+            return _priorityMessageStore.Database.Insert(message.Message);
+        }
+
+        return _messageStore.Database.Insert(message.Message);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> ChangeMessagePriority(QueueMessage message, bool priority)
+    {
+        if (message.Message.HighPriority == priority)
+            return Task.FromResult(false);
+
+        bool oldValue = message.Message.HighPriority;
+        message.Message.HighPriority = priority;
+
+        try
+        {
+            if (priority)
             {
-                await Destroy();
-            }
-            catch
-            {
-            }
-        }
-
-        /// <inheritdoc />
-        public async Task Destroy()
-        {
-            if (UseRedelivery)
-            {
-                await RedeliveryService.Close();
-                RedeliveryService.Delete();
-            }
-
-            try
-            {
-                await _priorityMessageStore.Destroy();
-                await _messageStore.Destroy();
-            }
-            catch (Exception e)
-            {
-                Queue.Rider.SendError("PersistentQueueDestroy", e, Queue.Name);
-            }
-
-            PriorityMessageStore.TimeoutTracker.Stop();
-            MessageStore.TimeoutTracker.Stop();
-
-            await DeliveryHandler.Tracker.Destroy();
-            await PriorityMessageStore.Destroy();
-            await MessageStore.Destroy();
-        }
-
-        /// <inheritdoc />
-        public Task OnExceptionThrown(string hint, QueueMessage message, Exception exception)
-        {
-            Queue.Rider.SendError(hint, exception, $"MessageId: {message.Message.MessageId}");
-            return Task.CompletedTask;
-        }
-
-        /// <inheritdoc />
-        public async Task OnMessageTimeout(QueueMessage message)
-        {
-            if (UseRedelivery)
-                await RedeliveryService.Remove(message.Message.MessageId);
-        }
-
-        /// <inheritdoc />
-        public bool AddMessage(QueueMessage message)
-        {
-            if (message.Message.HighPriority)
+                _messageStore.RemoveFromOnlyMemory(message);
                 _priorityMessageStore.Put(message);
+            }
             else
+            {
+                _priorityMessageStore.RemoveFromOnlyMemory(message);
                 _messageStore.Put(message);
-
-            return true;
-        }
-
-        /// <inheritdoc />
-        public async Task<bool> RemoveMessage(QueueMessage message)
-        {
-            if (UseRedelivery)
-                await RedeliveryService.Remove(message.Message.MessageId);
-
-            bool deleted = message.Message.HighPriority
-                ? await _priorityMessageStore.RemoveMessage(message)
-                : await _messageStore.RemoveMessage(message);
-
-            return deleted;
-        }
-
-        /// <inheritdoc />
-        public async Task<bool> RemoveMessage(string messageId)
-        {
-            if (UseRedelivery)
-                await RedeliveryService.Remove(messageId);
-
-            bool deleted = await _messageStore.RemoveMessage(messageId);
-
-            if (!deleted)
-                deleted = await _priorityMessageStore.RemoveMessage(messageId);
-
-            return deleted;
-        }
-
-        /// <inheritdoc />
-        public Task<bool> SaveMessage(QueueMessage message)
-        {
-            if (message.Message.HighPriority)
-            {
-                return _priorityMessageStore.Database.Insert(message.Message);
             }
 
-            return _messageStore.Database.Insert(message.Message);
+            return Task.FromResult(true);
         }
-
-        /// <inheritdoc />
-        public Task<bool> ChangeMessagePriority(QueueMessage message, bool priority)
+        catch
         {
-            if (message.Message.HighPriority == priority)
-                return Task.FromResult(false);
-
-            bool oldValue = message.Message.HighPriority;
-            message.Message.HighPriority = priority;
-
-            try
-            {
-                if (priority)
-                {
-                    _messageStore.RemoveFromOnlyMemory(message);
-                    _priorityMessageStore.Put(message);
-                }
-                else
-                {
-                    _priorityMessageStore.RemoveFromOnlyMemory(message);
-                    _messageStore.Put(message);
-                }
-
-                return Task.FromResult(true);
-            }
-            catch
-            {
-                message.Message.HighPriority = oldValue;
-                return Task.FromResult(false);
-            }
+            message.Message.HighPriority = oldValue;
+            return Task.FromResult(false);
         }
     }
 }

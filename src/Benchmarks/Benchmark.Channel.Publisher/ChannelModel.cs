@@ -1,10 +1,9 @@
 using Horse.Messaging.Client.Channels.Annotations;
 
-namespace Benchmark.Channel.Publisher
+namespace Benchmark.Channel.Publisher;
+
+[ChannelName("channel")]
+public class ChannelModel
 {
-    [ChannelName("channel")]
-    public class ChannelModel
-    {
-        public string Foo { get; set; }
-    }
+    public string Foo { get; set; }
 }
