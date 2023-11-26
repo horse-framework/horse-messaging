@@ -1,7 +1,6 @@
-﻿namespace AdvancedSample.Server.Models
+﻿namespace AdvancedSample.Server.Models;
+
+public class ClientsConfig
 {
-    public class ClientsConfig
-    {
-        public bool UseTokenValidation { get; set; }
-    }
+    public bool UseTokenValidation { get; set; }
 }

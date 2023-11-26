@@ -6,7 +6,6 @@ using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Protocol;
 using HostedServiceSample.Common;
-using HostedServiceSample.Producer;
 
 namespace HostedServiceSample.Consumer;
 
@@ -14,8 +13,8 @@ namespace HostedServiceSample.Consumer;
 [AutoNack(NegativeReason.Error)]
 internal class SerializedExceptionConsumer: IQueueConsumer<SerializedException>
 {
-	readonly JsonSerializerOptions _options = new JsonSerializerOptions
-	{
+	readonly JsonSerializerOptions _options = new()
+    {
 		WriteIndented = true
 	};
 

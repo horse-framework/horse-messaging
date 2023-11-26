@@ -1,7 +1,6 @@
-namespace Test.Common.Models
+namespace Test.Common.Models;
+
+public class RouterMessageA
 {
-    public class RouterMessageA
-    {
         
-    }
 }

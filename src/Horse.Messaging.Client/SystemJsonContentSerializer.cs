@@ -5,89 +5,88 @@ using System.Text.Json.Serialization;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Models;
 
-namespace Horse.Messaging.Client
+namespace Horse.Messaging.Client;
+
+/// <summary>
+/// JSON Message Content serializer that uses <see cref="JsonSerializer"/> under the hood.
+/// </summary>
+public class SystemJsonContentSerializer : IMessageContentSerializer
 {
+    private readonly BindingInformationSerializerContext _bindingContext;
+    private readonly CacheInformationSerializerContext _cacheContext;
+    private readonly ChannelInformationSerializerContext _channelContext;
+    private readonly ClientInformationSerializerContext _clientContext;
+    private readonly NodeInformationSerializerContext _nodeContext;
+    private readonly QueueInformationSerializerContext _queueContext;
+    private readonly RouterInformationSerializerContext _routerContext;
+    private readonly HorseMessageSerializerContext _horseMessageContext;
+
     /// <summary>
-    /// JSON Message Content serializer that uses <see cref="JsonSerializer"/> under the hood.
+    /// Creates a new JSON serializer.
     /// </summary>
-    public class SystemJsonContentSerializer : IMessageContentSerializer
+    public SystemJsonContentSerializer(JsonSerializerOptions options = null)
     {
-        private readonly BindingInformationSerializerContext _bindingContext;
-        private readonly CacheInformationSerializerContext _cacheContext;
-        private readonly ChannelInformationSerializerContext _channelContext;
-        private readonly ClientInformationSerializerContext _clientContext;
-        private readonly NodeInformationSerializerContext _nodeContext;
-        private readonly QueueInformationSerializerContext _queueContext;
-        private readonly RouterInformationSerializerContext _routerContext;
-        private readonly HorseMessageSerializerContext _horseMessageContext;
+        _bindingContext = new BindingInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
+        _cacheContext = new CacheInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
+        _channelContext = new ChannelInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
+        _clientContext = new ClientInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
+        _nodeContext = new NodeInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
+        _queueContext = new QueueInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
+        _routerContext = new RouterInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
+        _horseMessageContext = new HorseMessageSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
+    }
 
-        /// <summary>
-        /// Creates a new JSON serializer.
-        /// </summary>
-        public SystemJsonContentSerializer(JsonSerializerOptions options = null)
-        {
-            _bindingContext = new BindingInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
-            _cacheContext = new CacheInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
-            _channelContext = new ChannelInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
-            _clientContext = new ClientInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
-            _nodeContext = new NodeInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
-            _queueContext = new QueueInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
-            _routerContext = new RouterInformationSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
-            _horseMessageContext = new HorseMessageSerializerContext(new JsonSerializerOptions(SerializerFactory.Default()));
-        }
+    private JsonSerializerContext GetJsonContextForType(string type) => type switch
+    {
+        nameof(BindingInformation) => _bindingContext,
+        nameof(CacheInformation) => _cacheContext,
+        nameof(ChannelInformation) => _channelContext,
+        nameof(ClientInformation) => _clientContext,
+        nameof(NodeInformation) => _nodeContext,
+        nameof(QueueInformation) => _queueContext,
+        nameof(RouterInformation) => _routerContext,
+        nameof(HorseMessage) => _horseMessageContext,
 
-        private JsonSerializerContext GetJsonContextForType(string type) => type switch
-        {
-            nameof(BindingInformation) => _bindingContext,
-            nameof(CacheInformation) => _cacheContext,
-            nameof(ChannelInformation) => _channelContext,
-            nameof(ClientInformation) => _clientContext,
-            nameof(NodeInformation) => _nodeContext,
-            nameof(QueueInformation) => _queueContext,
-            nameof(RouterInformation) => _routerContext,
-            nameof(HorseMessage) => _horseMessageContext,
+        _ => null
+    };
 
-            _ => null
-        };
+    /// <summary>
+    /// Serializes message content and converts the result to byte array
+    /// </summary>
+    /// <param name="message">Message</param>
+    /// <param name="model">Model that will be serialized into the horse message</param>
+    public void Serialize(HorseMessage message, object model)
+    {
+        var context = GetJsonContextForType(model.GetType().Name);
 
-        /// <summary>
-        /// Serializes message content and converts the result to byte array
-        /// </summary>
-        /// <param name="message">Message</param>
-        /// <param name="model">Model that will be serialized into the horse message</param>
-        public void Serialize(HorseMessage message, object model)
-        {
-            var context = GetJsonContextForType(model.GetType().Name);
+        byte[] array;
 
-            byte[] array;
+        if (context != null)
+            array = JsonSerializer.SerializeToUtf8Bytes(model, model.GetType(), context);
+        else
+            array = JsonSerializer.SerializeToUtf8Bytes(model, model.GetType(), SerializerFactory.Default());
 
-            if (context != null)
-                array = JsonSerializer.SerializeToUtf8Bytes(model, model.GetType(), context);
-            else
-                array = JsonSerializer.SerializeToUtf8Bytes(model, model.GetType(), SerializerFactory.Default());
+        message.Content = new MemoryStream(array);
+        message.Content.Position = 0;
+    }
 
-            message.Content = new MemoryStream(array);
-            message.Content.Position = 0;
-        }
+    /// <summary>
+    /// Deserializes message content and returns the object
+    /// </summary>
+    /// <param name="message">Message</param>
+    /// <param name="type">Model type</param>
+    public object Deserialize(HorseMessage message, Type type)
+    {
+        if (message.Content == null || message.Content.Length < 1)
+            return null;
 
-        /// <summary>
-        /// Deserializes message content and returns the object
-        /// </summary>
-        /// <param name="message">Message</param>
-        /// <param name="type">Model type</param>
-        public object Deserialize(HorseMessage message, Type type)
-        {
-            if (message.Content == null || message.Content.Length < 1)
-                return null;
+        ReadOnlySpan<byte> span = message.Content.ToArray();
 
-            ReadOnlySpan<byte> span = message.Content.ToArray();
+        var context = GetJsonContextForType(type.Name);
 
-            var context = GetJsonContextForType(type.Name);
+        if (context != null)
+            return JsonSerializer.Deserialize(span, type, context);
 
-            if (context != null)
-                return JsonSerializer.Deserialize(span, type, context);
-
-            return JsonSerializer.Deserialize(span, type, SerializerFactory.Default());
-        }
+        return JsonSerializer.Deserialize(span, type, SerializerFactory.Default());
     }
 }

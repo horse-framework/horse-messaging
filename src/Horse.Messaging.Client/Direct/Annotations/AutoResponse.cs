@@ -1,24 +1,23 @@
-namespace Horse.Messaging.Client.Direct.Annotations
+namespace Horse.Messaging.Client.Direct.Annotations;
+
+/// <summary>
+/// Auto response type.
+/// Describes when response message will be sent to server.
+/// </summary>
+public enum AutoResponse
 {
     /// <summary>
-    /// Auto response type.
-    /// Describes when response message will be sent to server.
+    /// Only success operations sends successful response
     /// </summary>
-    public enum AutoResponse
-    {
-        /// <summary>
-        /// Only success operations sends successful response
-        /// </summary>
-        OnSuccess,
+    OnSuccess,
 
-        /// <summary>
-        /// Only failed operations sends failed response
-        /// </summary>
-        OnError,
+    /// <summary>
+    /// Only failed operations sends failed response
+    /// </summary>
+    OnError,
 
-        /// <summary>
-        /// Both success and error operations sends response
-        /// </summary>
-        All
-    }
+    /// <summary>
+    /// Both success and error operations sends response
+    /// </summary>
+    All
 }

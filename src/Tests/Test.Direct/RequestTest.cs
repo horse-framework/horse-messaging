@@ -1,7 +1,6 @@
-namespace Test.Direct
+namespace Test.Direct;
+
+public class RequestTest
 {
-    public class RequestTest
-    {
         
-    }
 }

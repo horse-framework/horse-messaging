@@ -1,46 +1,45 @@
 using System.ComponentModel;
 
-namespace Horse.Messaging.Server.Queues
+namespace Horse.Messaging.Server.Queues;
+
+/// <summary>
+/// Queue status
+/// </summary>
+public enum QueueStatus
 {
     /// <summary>
-    /// Queue status
+    /// Queue is not initialized
     /// </summary>
-    public enum QueueStatus
-    {
-        /// <summary>
-        /// Queue is not initialized
-        /// </summary>
-        [Description("not-initialized")]
-        NotInitialized,
+    [Description("not-initialized")]
+    NotInitialized,
 
-        /// <summary>
-        /// Queue initialized and running
-        /// </summary>
-        [Description("running")]
-        Running,
+    /// <summary>
+    /// Queue initialized and running
+    /// </summary>
+    [Description("running")]
+    Running,
 
-        /// <summary>
-        /// Queue allows to push but messages are not consumed
-        /// </summary>
-        [Description("only-push")]
-        OnlyPush,
+    /// <summary>
+    /// Queue allows to push but messages are not consumed
+    /// </summary>
+    [Description("only-push")]
+    OnlyPush,
 
-        /// <summary>
-        /// Queue allows to consume but new messages are not allowed
-        /// </summary>
-        [Description("consume")]
-        OnlyConsume,
+    /// <summary>
+    /// Queue allows to consume but new messages are not allowed
+    /// </summary>
+    [Description("consume")]
+    OnlyConsume,
 
-        /// <summary>
-        /// All push and consume operations are paused
-        /// </summary>
-        [Description("paused")]
-        Paused,
+    /// <summary>
+    /// All push and consume operations are paused
+    /// </summary>
+    [Description("paused")]
+    Paused,
 
-        /// <summary>
-        /// Queue messages are being synced
-        /// </summary>
-        [Description("syncing")]
-        Syncing
-    }
+    /// <summary>
+    /// Queue messages are being synced
+    /// </summary>
+    [Description("syncing")]
+    Syncing
 }

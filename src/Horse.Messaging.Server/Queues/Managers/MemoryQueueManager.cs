@@ -4,149 +4,148 @@ using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.Store;
 using Horse.Messaging.Server.Queues.Sync;
 
-namespace Horse.Messaging.Server.Queues.Managers
+namespace Horse.Messaging.Server.Queues.Managers;
+
+/// <summary>
+/// Default memory queue manager implementation for non persistent queues
+/// </summary>
+public class MemoryQueueManager : IHorseQueueManager
 {
+    /// <inheritdoc />
+    public HorseQueue Queue { get; }
+
+    /// <inheritdoc />
+    public IQueueMessageStore MessageStore { get; protected set; }
+
+    /// <inheritdoc />
+    public IQueueMessageStore PriorityMessageStore { get; protected set; }
+
+    /// <inheritdoc />
+    public IQueueDeliveryHandler DeliveryHandler { get; protected set; }
+
+    /// <inheritdoc />
+    public IQueueSynchronizer Synchronizer { get; protected set; }
+
     /// <summary>
-    /// Default memory queue manager implementation for non persistent queues
+    /// Creates new memory queue manager
     /// </summary>
-    public class MemoryQueueManager : IHorseQueueManager
+    public MemoryQueueManager(HorseQueue queue)
     {
-        /// <inheritdoc />
-        public HorseQueue Queue { get; }
+        Queue = queue;
 
-        /// <inheritdoc />
-        public IQueueMessageStore MessageStore { get; protected set; }
+        MessageStore = new LinkedMessageStore(this);
+        PriorityMessageStore = new LinkedMessageStore(this);
+        Synchronizer = new DefaultQueueSynchronizer(this);
+        DeliveryHandler = new MemoryDeliveryHandler(this);
+    }
 
-        /// <inheritdoc />
-        public IQueueMessageStore PriorityMessageStore { get; protected set; }
+    /// <inheritdoc />
+    public virtual Task Initialize()
+    {
+        DeliveryHandler.Tracker.Start();
+        PriorityMessageStore.TimeoutTracker.Start();
+        MessageStore.TimeoutTracker.Start();
+        return Task.CompletedTask;
+    }
 
-        /// <inheritdoc />
-        public IQueueDeliveryHandler DeliveryHandler { get; protected set; }
+    /// <inheritdoc />
+    public virtual async Task Destroy()
+    {
+        PriorityMessageStore.TimeoutTracker.Stop();
+        MessageStore.TimeoutTracker.Stop();
 
-        /// <inheritdoc />
-        public IQueueSynchronizer Synchronizer { get; protected set; }
+        await DeliveryHandler.Tracker.Destroy();
+        await PriorityMessageStore.Destroy();
+        await MessageStore.Destroy();
+    }
 
-        /// <summary>
-        /// Creates new memory queue manager
-        /// </summary>
-        public MemoryQueueManager(HorseQueue queue)
-        {
-            Queue = queue;
+    /// <inheritdoc />
+    public virtual Task OnExceptionThrown(string hint, QueueMessage message, Exception exception)
+    {
+        return Task.CompletedTask;
+    }
 
-            MessageStore = new LinkedMessageStore(this);
-            PriorityMessageStore = new LinkedMessageStore(this);
-            Synchronizer = new DefaultQueueSynchronizer(this);
-            DeliveryHandler = new MemoryDeliveryHandler(this);
-        }
+    /// <inheritdoc />
+    public virtual Task OnMessageTimeout(QueueMessage message)
+    {
+        return Task.CompletedTask;
+    }
 
-        /// <inheritdoc />
-        public virtual Task Initialize()
-        {
-            DeliveryHandler.Tracker.Start();
-            PriorityMessageStore.TimeoutTracker.Start();
-            MessageStore.TimeoutTracker.Start();
-            return Task.CompletedTask;
-        }
+    #region Add- Remove
 
-        /// <inheritdoc />
-        public virtual async Task Destroy()
-        {
-            PriorityMessageStore.TimeoutTracker.Stop();
-            MessageStore.TimeoutTracker.Stop();
+    /// <inheritdoc />
+    public virtual bool AddMessage(QueueMessage message)
+    {
+        if (message.Message.HighPriority)
+            PriorityMessageStore.Put(message);
+        else
+            MessageStore.Put(message);
 
-            await DeliveryHandler.Tracker.Destroy();
-            await PriorityMessageStore.Destroy();
-            await MessageStore.Destroy();
-        }
+        return true;
+    }
 
-        /// <inheritdoc />
-        public virtual Task OnExceptionThrown(string hint, QueueMessage message, Exception exception)
-        {
-            return Task.CompletedTask;
-        }
-
-        /// <inheritdoc />
-        public virtual Task OnMessageTimeout(QueueMessage message)
-        {
-            return Task.CompletedTask;
-        }
-
-        #region Add- Remove
-
-        /// <inheritdoc />
-        public virtual bool AddMessage(QueueMessage message)
+    /// <inheritdoc />
+    public virtual Task<bool> RemoveMessage(QueueMessage message)
+    {
+        if (message.IsInQueue)
         {
             if (message.Message.HighPriority)
-                PriorityMessageStore.Put(message);
+                PriorityMessageStore.Remove(message);
             else
-                MessageStore.Put(message);
-
-            return true;
+                MessageStore.Remove(message);
         }
 
-        /// <inheritdoc />
-        public virtual Task<bool> RemoveMessage(QueueMessage message)
+        return Task.FromResult(true);
+    }
+
+    /// <inheritdoc />
+    public virtual Task<bool> RemoveMessage(string messageId)
+    {
+        bool removed = PriorityMessageStore.Remove(messageId);
+        if (removed)
+            return Task.FromResult(true);
+
+        removed = MessageStore.Remove(messageId);
+
+        return Task.FromResult(removed);
+    }
+
+    /// <inheritdoc />
+    public virtual Task<bool> SaveMessage(QueueMessage message)
+    {
+        return Task.FromResult(false);
+    }
+
+    /// <inheritdoc />
+    public virtual Task<bool> ChangeMessagePriority(QueueMessage message, bool priority)
+    {
+        if (message.Message.HighPriority == priority)
+            return Task.FromResult(false);
+
+        bool oldValue = message.Message.HighPriority;
+        message.Message.HighPriority = priority;
+            
+        try
         {
-            if (message.IsInQueue)
+            if (priority)
             {
-                if (message.Message.HighPriority)
-                    PriorityMessageStore.Remove(message);
-                else
-                    MessageStore.Remove(message);
+                MessageStore.Remove(message);
+                PriorityMessageStore.Put(message);
+            }
+            else
+            {
+                PriorityMessageStore.Remove(message);
+                MessageStore.Put(message);
             }
 
             return Task.FromResult(true);
         }
-
-        /// <inheritdoc />
-        public virtual Task<bool> RemoveMessage(string messageId)
+        catch
         {
-            bool removed = PriorityMessageStore.Remove(messageId);
-            if (removed)
-                return Task.FromResult(true);
-
-            removed = MessageStore.Remove(messageId);
-
-            return Task.FromResult(removed);
-        }
-
-        /// <inheritdoc />
-        public virtual Task<bool> SaveMessage(QueueMessage message)
-        {
+            message.Message.HighPriority = oldValue;
             return Task.FromResult(false);
         }
-
-        /// <inheritdoc />
-        public virtual Task<bool> ChangeMessagePriority(QueueMessage message, bool priority)
-        {
-            if (message.Message.HighPriority == priority)
-                return Task.FromResult(false);
-
-            bool oldValue = message.Message.HighPriority;
-            message.Message.HighPriority = priority;
-            
-            try
-            {
-                if (priority)
-                {
-                    MessageStore.Remove(message);
-                    PriorityMessageStore.Put(message);
-                }
-                else
-                {
-                    PriorityMessageStore.Remove(message);
-                    MessageStore.Put(message);
-                }
-
-                return Task.FromResult(true);
-            }
-            catch
-            {
-                message.Message.HighPriority = oldValue;
-                return Task.FromResult(false);
-            }
-        }
-
-        #endregion
     }
+
+    #endregion
 }

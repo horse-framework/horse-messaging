@@ -1,4 +1,1 @@
-﻿namespace AdvancedSample.Server.Implementations.Direct
-{
-    
-}
+﻿namespace AdvancedSample.Server.Implementations.Direct;

@@ -1,23 +1,22 @@
-namespace Horse.Messaging.Protocol.Events
+namespace Horse.Messaging.Protocol.Events;
+
+/// <summary>
+/// Event subject model
+/// </summary>
+public class EventSubject
 {
     /// <summary>
-    /// Event subject model
+    /// Event subject unique id
     /// </summary>
-    public class EventSubject
-    {
-        /// <summary>
-        /// Event subject unique id
-        /// </summary>
-        public string Id { get; set; }
+    public string Id { get; set; }
         
-        /// <summary>
-        /// Event subject name
-        /// </summary>
-        public string Name { get; set; }
+    /// <summary>
+    /// Event subject name
+    /// </summary>
+    public string Name { get; set; }
         
-        /// <summary>
-        /// Event subject type
-        /// </summary>
-        public string Type { get; set; }
-    }
+    /// <summary>
+    /// Event subject type
+    /// </summary>
+    public string Type { get; set; }
 }

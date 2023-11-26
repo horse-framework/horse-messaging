@@ -1,48 +1,47 @@
 using System;
 
-namespace Horse.Messaging.Server.Cache
+namespace Horse.Messaging.Server.Cache;
+
+/// <summary>
+/// Horse cache options
+/// </summary>
+public class HorseCacheOptions
 {
     /// <summary>
-    /// Horse cache options
+    /// Maximum cache duration
     /// </summary>
-    public class HorseCacheOptions
-    {
-        /// <summary>
-        /// Maximum cache duration
-        /// </summary>
-        public TimeSpan MaximumDuration { get; set; }
+    public TimeSpan MaximumDuration { get; set; }
 
-        /// <summary>
-        /// Minimum cache duration
-        /// </summary>
-        public TimeSpan MinimumDuration { get; set; }
+    /// <summary>
+    /// Minimum cache duration
+    /// </summary>
+    public TimeSpan MinimumDuration { get; set; }
 
-        /// <summary>
-        /// default cache duration.
-        /// Used if setter client does not speficy the duration.
-        /// Default value is 30 minutes. 
-        /// </summary>
-        public TimeSpan DefaultDuration { get; set; } = TimeSpan.FromMinutes(30);
+    /// <summary>
+    /// default cache duration.
+    /// Used if setter client does not speficy the duration.
+    /// Default value is 30 minutes. 
+    /// </summary>
+    public TimeSpan DefaultDuration { get; set; } = TimeSpan.FromMinutes(30);
 
-        /// <summary>
-        /// Default cache expiration warning time.
-        /// Default value is 27 minutes.
-        /// </summary>
-        public TimeSpan DefaultExpirationWarning { get; set; } = TimeSpan.FromMinutes(27);
+    /// <summary>
+    /// Default cache expiration warning time.
+    /// Default value is 27 minutes.
+    /// </summary>
+    public TimeSpan DefaultExpirationWarning { get; set; } = TimeSpan.FromMinutes(27);
 
-        /// <summary>
-        /// Expiration warning status
-        /// </summary>
-        public bool ExpirationWarningIsEnabled { get; set; } = true;
+    /// <summary>
+    /// Expiration warning status
+    /// </summary>
+    public bool ExpirationWarningIsEnabled { get; set; } = true;
         
-        /// <summary>
-        /// Maximum cache key count
-        /// </summary>
-        public int MaximumKeys { get; set; }
+    /// <summary>
+    /// Maximum cache key count
+    /// </summary>
+    public int MaximumKeys { get; set; }
 
-        /// <summary>
-        /// Maximum value size in bytes
-        /// </summary>
-        public int ValueMaxSize { get; set; }
-    }
+    /// <summary>
+    /// Maximum value size in bytes
+    /// </summary>
+    public int ValueMaxSize { get; set; }
 }

@@ -1,20 +1,19 @@
 using System;
 
-namespace Horse.Messaging.Client.Channels
+namespace Horse.Messaging.Client.Channels;
+
+/// <summary>
+/// Channel name handler context
+/// </summary>
+public class ChannelNameHandlerContext
 {
     /// <summary>
-    /// Channel name handler context
+    /// Client
     /// </summary>
-    public class ChannelNameHandlerContext
-    {
-        /// <summary>
-        /// Client
-        /// </summary>
-        public HorseClient Client { get; set; }
+    public HorseClient Client { get; set; }
 
-        /// <summary>
-        /// Model type
-        /// </summary>
-        public Type Type { get; set; }
-    }
+    /// <summary>
+    /// Model type
+    /// </summary>
+    public Type Type { get; set; }
 }

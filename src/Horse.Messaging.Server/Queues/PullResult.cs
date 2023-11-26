@@ -1,28 +1,27 @@
-namespace Horse.Messaging.Server.Queues
+namespace Horse.Messaging.Server.Queues;
+
+/// <summary>
+/// Result sets of pull operations
+/// </summary>
+public enum PullResult
 {
     /// <summary>
-    /// Result sets of pull operations
+    /// Message is pulled successfuly
     /// </summary>
-    public enum PullResult
-    {
-        /// <summary>
-        /// Message is pulled successfuly
-        /// </summary>
-        Success,
+    Success,
 
-        /// <summary>
-        /// Queue is empty
-        /// </summary>
-        Empty,
+    /// <summary>
+    /// Queue is empty
+    /// </summary>
+    Empty,
 
-        /// <summary>
-        /// Queue status does not support pulling messages 
-        /// </summary>
-        StatusNotSupported,
+    /// <summary>
+    /// Queue status does not support pulling messages 
+    /// </summary>
+    StatusNotSupported,
         
-        /// <summary>
-        /// Pull request is unacceptable
-        /// </summary>
-        Unacceptable
-    }
+    /// <summary>
+    /// Pull request is unacceptable
+    /// </summary>
+    Unacceptable
 }

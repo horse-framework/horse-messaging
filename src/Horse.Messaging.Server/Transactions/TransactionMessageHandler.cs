@@ -4,56 +4,55 @@ using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Network;
 
-namespace Horse.Messaging.Server.Transactions
+namespace Horse.Messaging.Server.Transactions;
+
+internal class TransactionMessageHandler : INetworkMessageHandler
 {
-    internal class TransactionMessageHandler : INetworkMessageHandler
+    #region Fields
+
+    /// <summary>
+    /// Messaging Queue Server
+    /// </summary>
+    private readonly HorseRider _rider;
+
+    internal TransactionMessageHandler(HorseRider rider)
     {
-        #region Fields
+        _rider = rider;
+    }
 
-        /// <summary>
-        /// Messaging Queue Server
-        /// </summary>
-        private readonly HorseRider _rider;
+    #endregion
 
-        internal TransactionMessageHandler(HorseRider rider)
+    public async Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
+    {
+        try
         {
-            _rider = rider;
+            await HandleUnsafe(client, message);
         }
-
-        #endregion
-
-        public async Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
+        catch (OperationCanceledException)
         {
-            try
-            {
-                await HandleUnsafe(client, message);
-            }
-            catch (OperationCanceledException)
-            {
-                await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
-            }
-            catch
-            {
-                await client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
-            }
+            await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
         }
-
-        private Task HandleUnsafe(MessagingClient client, HorseMessage message)
+        catch
         {
-            switch (message.ContentType)
-            {
-                case KnownContentTypes.TransactionBegin:
-                    return _rider.Transaction.Begin(client, message);
+            await client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
+        }
+    }
 
-                case KnownContentTypes.TransactionCommit:
-                    return _rider.Transaction.Commit(client, message);
+    private Task HandleUnsafe(MessagingClient client, HorseMessage message)
+    {
+        switch (message.ContentType)
+        {
+            case KnownContentTypes.TransactionBegin:
+                return _rider.Transaction.Begin(client, message);
 
-                case KnownContentTypes.TransactionRollback:
-                    return _rider.Transaction.Rollback(client, message);
+            case KnownContentTypes.TransactionCommit:
+                return _rider.Transaction.Commit(client, message);
 
-                default:
-                    throw new OperationCanceledException();
-            }
+            case KnownContentTypes.TransactionRollback:
+                return _rider.Transaction.Rollback(client, message);
+
+            default:
+                throw new OperationCanceledException();
         }
     }
 }

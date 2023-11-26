@@ -1,8 +1,11 @@
 ﻿using System;
-using System.Threading.Tasks;
 
 namespace Horse.Messaging.Server;
 
+/// <summary>
+/// Provides methods for handling messages.
+/// </summary>
+/// <typeparam name="T"></typeparam>
 public interface IOptionsConfigurator<T>
 {
     T[] Load();

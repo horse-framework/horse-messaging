@@ -7,406 +7,406 @@ using System.Threading.Tasks;
 using Horse.Core;
 using Horse.Messaging.Protocol;
 
-namespace Horse.Messaging.Data
+namespace Horse.Messaging.Data;
+
+/// <summary>
+/// Manages shrink operations for the database
+/// </summary>
+public class ShrinkManager
 {
+    #region Fields - Properties
+
     /// <summary>
-    /// Manages shrink operations for the database
+    /// Database itself
     /// </summary>
-    public class ShrinkManager
+    private readonly Database _database;
+
+    /// <summary>
+    /// Default data serializer
+    /// </summary>
+    private readonly DataMessageSerializer _serializer = new();
+
+    /// <summary>
+    /// Source database stream that will be shrunken
+    /// </summary>
+    private MemoryStream _source;
+
+    /// <summary>
+    /// New file stream, shrunken data will be writted to this stream
+    /// </summary>
+    private FileStream _target;
+
+    /// <summary>
+    /// True, if shrink operation is in process
+    /// </summary>
+    private volatile bool _shrinking;
+
+    /// <summary>
+    /// Source stream's ending position
+    /// </summary>
+    private long _end;
+
+    /// <summary>
+    /// Auto shrink timer object
+    /// </summary>
+    private ThreadTimer _autoShrinkTimer;
+
+    /// <summary>
+    /// If true, a new delete request is proceed and database file requires to be shrunken
+    /// </summary>
+    internal bool ShrinkRequired { get; set; }
+
+    /// <summary>
+    /// Found and deleted files after shrink operation
+    /// </summary>
+    private HashSet<string> _deletingMessages;
+
+    /// <summary>
+    /// Buffer for shrink operations
+    /// </summary>
+    private readonly byte[] _buffer = new byte[10240];
+
+    private ShrinkInfo _info;
+
+    #endregion
+
+    #region Create - Start - Stop - Dispose
+
+    /// <summary>
+    /// Creates new shrink manager for the database
+    /// </summary>
+    public ShrinkManager(Database database)
     {
-        #region Fields - Properties
+        _database = database;
+    }
 
-        /// <summary>
-        /// Database itself
-        /// </summary>
-        private readonly Database _database;
+    /// <summary>
+    /// Starts shrink timer
+    /// </summary>
+    internal void Start(TimeSpan interval)
+    {
+        if (_autoShrinkTimer != null)
+            Stop();
 
-        /// <summary>
-        /// Default data serializer
-        /// </summary>
-        private readonly DataMessageSerializer _serializer = new DataMessageSerializer();
+        _autoShrinkTimer = new ThreadTimer(ElapseShrink, interval);
+        _autoShrinkTimer.Start(ThreadPriority.BelowNormal);
+    }
 
-        /// <summary>
-        /// Source database stream that will be shrunken
-        /// </summary>
-        private MemoryStream _source;
-
-        /// <summary>
-        /// New file stream, shrunken data will be writted to this stream
-        /// </summary>
-        private FileStream _target;
-
-        /// <summary>
-        /// True, if shrink operation is in process
-        /// </summary>
-        private volatile bool _shrinking;
-
-        /// <summary>
-        /// Source stream's ending position
-        /// </summary>
-        private long _end;
-
-        /// <summary>
-        /// Auto shrink timer object
-        /// </summary>
-        private ThreadTimer _autoShrinkTimer;
-
-        /// <summary>
-        /// If true, a new delete request is proceed and database file requires to be shrunken
-        /// </summary>
-        internal bool ShrinkRequired { get; set; }
-
-        /// <summary>
-        /// Found and deleted files after shrink operation
-        /// </summary>
-        private HashSet<string> _deletingMessages;
-
-        /// <summary>
-        /// Buffer for shrink operations
-        /// </summary>
-        private readonly byte[] _buffer = new byte[10240];
-
-        private ShrinkInfo _info;
-
-        #endregion
-
-        #region Create - Start - Stop - Dispose
-
-        /// <summary>
-        /// Creates new shrink manager for the database
-        /// </summary>
-        public ShrinkManager(Database database)
+    private async void ElapseShrink()
+    {
+        try
         {
-            _database = database;
+            if (_shrinking) return;
+
+            if (ShrinkRequired)
+                await _database.Shrink();
         }
-
-        /// <summary>
-        /// Starts shrink timer
-        /// </summary>
-        internal void Start(TimeSpan interval)
+        catch
         {
-            if (_autoShrinkTimer != null)
-                Stop();
-
-            _autoShrinkTimer = new ThreadTimer(ElapseShrink, interval);
-            _autoShrinkTimer.Start(ThreadPriority.BelowNormal);
         }
+    }
 
-        private async void ElapseShrink()
+    /// <summary>
+    /// Stop shrink timer
+    /// </summary>
+    internal void Stop()
+    {
+        if (_autoShrinkTimer != null)
         {
-            try
-            {
-                if (_shrinking) return;
-
-                if (ShrinkRequired)
-                    await _database.Shrink();
-            }
-            catch
-            {
-            }
+            _autoShrinkTimer.Stop();
+            _autoShrinkTimer = null;
         }
+    }
 
-        /// <summary>
-        /// Stop shrink timer
-        /// </summary>
-        internal void Stop()
+    /// <summary>
+    /// Disposes source shrink stream
+    /// </summary>
+    private async Task DisposeSource()
+    {
+        if (_source == null)
+            return;
+
+        _source.Close();
+        await _source.DisposeAsync();
+        _source = null;
+    }
+
+    /// <summary>
+    /// Closes target shrink file stream
+    /// </summary>
+    private async Task CloseTarget()
+    {
+        if (_target == null)
+            return;
+
+        _target.Close();
+        await _target.DisposeAsync();
+        _target = null;
+    }
+
+    #endregion
+
+    #region Shrink
+
+    /// <summary>
+    /// Shrinks whole data in database file.
+    /// In this operation, database file will be locked 
+    /// </summary>
+    public async Task<bool> FullShrink(List<HorseMessage> messages, List<string> deletedItems)
+    {
+        _shrinking = true;
+        bool backup = false;
+        await using MemoryStream ms = new MemoryStream();
+
+        await _database.WaitForLock();
+        try
         {
-            if (_autoShrinkTimer != null)
-            {
-                _autoShrinkTimer.Stop();
-                _autoShrinkTimer = null;
-            }
-        }
+            messages.RemoveAll(x => x.MessageId != null && deletedItems.Contains(x.MessageId));
+            deletedItems.Clear();
 
-        /// <summary>
-        /// Disposes source shrink stream
-        /// </summary>
-        private async Task DisposeSource()
-        {
-            if (_source == null)
-                return;
+            foreach (HorseMessage message in messages)
+                await _serializer.Write(ms, message);
 
-            _source.Close();
-            await _source.DisposeAsync();
-            _source = null;
-        }
-
-        /// <summary>
-        /// Closes target shrink file stream
-        /// </summary>
-        private async Task CloseTarget()
-        {
-            if (_target == null)
-                return;
-
-            _target.Close();
-            await _target.DisposeAsync();
-            _target = null;
-        }
-
-        #endregion
-
-        #region Shrink
-
-        /// <summary>
-        /// Shrinks whole data in database file.
-        /// In this operation, database file will be locked 
-        /// </summary>
-        public async Task<bool> FullShrink(List<HorseMessage> messages, List<string> deletedItems)
-        {
-            _shrinking = true;
-            bool backup = false;
-            await using MemoryStream ms = new MemoryStream();
-
-            await _database.WaitForLock();
-            try
-            {
-                messages.RemoveAll(x => x.MessageId != null && deletedItems.Contains(x.MessageId));
-                deletedItems.Clear();
-
-                foreach (HorseMessage message in messages)
-                    await _serializer.Write(ms, message);
-
-                backup = await _database.File.Backup(BackupOption.Move, false);
-                if (!backup)
-                    return false;
-
-                ms.Position = 0;
-                await _database.File.Open();
-                await ms.CopyToAsync(_database.File.GetStream());
-                await _database.File.Flush(false);
-
-                if (!_database.Options.CreateBackupOnShrink)
-                {
-                    try
-                    {
-                        File.Delete(_database.File.Filename + ".backup");
-                    }
-                    catch
-                    {
-                    }
-                }
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _database.TriggerError(ErrorHint.ShrinkAfterLoad, ex);
-                //reverse
-                if (backup)
-                {
-                    try
-                    {
-                        File.Delete(_database.File.Filename);
-                        File.Move(_database.File.Filename + ".backup", _database.File.Filename);
-                    }
-                    catch (Exception e)
-                    {
-                        _database.TriggerError(ErrorHint.ReverseFromBackup, e);
-                    }
-                }
-
+            backup = await _database.File.Backup(BackupOption.Move, false);
+            if (!backup)
                 return false;
-            }
-            finally
-            {
-                _shrinking = false;
-                _database.ReleaseLock();
-            }
-        }
-
-        /// <summary>
-        /// Shrinks database file from begin to position pointer.
-        /// This is a partial shrink and can run almost without any lock and thread-block operations.
-        /// </summary>
-        public async Task<ShrinkInfo> Shrink(long position, List<string> deletedMessages)
-        {
-            _info = new ShrinkInfo();
-
-            if (_shrinking)
-                return _info;
-
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
-
-            try
-            {
-                _shrinking = true;
-                _end = position;
-                _deletingMessages = new HashSet<string>(deletedMessages);
-                _info.OldSize = _end;
-
-                if (_source != null)
-                    await DisposeSource();
-
-                await using (FileStream file = new FileStream(_database.File.Filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                {
-                    int capacity = Convert.ToInt32(_end);
-                    _source = new MemoryStream(capacity);
-                    await CopyStream(file, _source, capacity);
-                    _source.Position = 0;
-                }
-
-                _target = new FileStream(_database.File.Filename + ".shrink", FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-
-                sw.Stop();
-                _info.PreparationDuration = sw.Elapsed;
-                sw.Reset();
-                sw.Start();
-
-                bool proceed = await ProcessShrink();
-                sw.Stop();
-                _info.TruncateDuration = sw.Elapsed;
-                sw.Reset();
-
-                if (!proceed)
-                {
-                    _shrinking = false;
-                    return _info;
-                }
-
-                sw.Start();
-                bool sync = await SyncShrink();
-                sw.Stop();
-
-                _info.SyncDuration = sw.Elapsed;
-                _info.Successful = sync;
-
-                return _info;
-            }
-            finally
-            {
-                ShrinkRequired = false;
-                _shrinking = false;
-            }
-        }
-
-        /// <summary>
-        /// Reads all shrink area and process messages if they are deleted or not
-        /// </summary>
-        private async Task<bool> ProcessShrink()
-        {
-            await using MemoryStream ms = new MemoryStream(Convert.ToInt32(_end));
-
-            while (_source.Position < _source.Length)
-            {
-                DataType type = _serializer.ReadType(_source);
-                string id = await _serializer.ReadId(_source);
-
-                bool deleted = _deletingMessages.Contains(id);
-
-                switch (type)
-                {
-                    case DataType.Insert:
-                        int length = await _serializer.ReadLength(_source);
-                        if (deleted)
-                            _source.Seek(length, SeekOrigin.Current);
-                        else
-                        {
-                            ms.WriteByte((byte) type);
-                            await _serializer.WriteId(ms, id);
-                            bool written = await _serializer.WriteContent(length, _source, ms);
-                            if (!written)
-                                return false;
-                        }
-
-                        break;
-
-                    case DataType.Delete:
-                        if (!deleted)
-                            await _serializer.WriteDelete(ms, id);
-
-                        break;
-                }
-            }
 
             ms.Position = 0;
-            await ms.CopyToAsync(_target);
+            await _database.File.Open();
+            await ms.CopyToAsync(_database.File.GetStream());
+            await _database.File.Flush(false);
+
+            if (!_database.Options.CreateBackupOnShrink)
+            {
+                try
+                {
+                    File.Delete(_database.File.Filename + ".backup");
+                }
+                catch
+                {
+                    // ignored
+                }
+            }
 
             return true;
         }
-
-        /// <summary>
-        /// Merges shrink file with current database file and completes shrink operation
-        /// </summary>
-        private async Task<bool> SyncShrink()
+        catch (Exception ex)
         {
-            await _target.FlushAsync();
-            await DisposeSource();
-
-            _info.NewSize = _target.Length;
-
-            await _database.WaitForLock();
-            try
+            _database.TriggerError(ErrorHint.ShrinkAfterLoad, ex);
+            //reverse
+            if (backup)
             {
-                //write left data from file to shrink file before swap-chain
-                Stream stream = _database.File.GetStream();
-                if (stream.Length > _end)
+                try
                 {
-                    stream.Seek(_end, SeekOrigin.Begin);
-                    while (stream.Position < stream.Length)
-                    {
-                        int read = await stream.ReadAsync(_buffer, 0, _buffer.Length);
-                        if (read == 0)
-                            break;
-
-                        await _target.WriteAsync(_buffer, 0, read);
-                    }
+                    File.Delete(_database.File.Filename);
+                    File.Move(_database.File.Filename + ".backup", _database.File.Filename);
                 }
-
-                await _target.FlushAsync();
-                _info.CurrentDatabaseSize = _target.Length;
-
-                await CloseTarget();
-                await _database.File.Close(false);
-
-                File.Move(_database.File.Filename, _database.File.Filename + ".backup", true);
-                File.Move(_database.File.Filename + ".shrink", _database.File.Filename, true);
-
-                if (!_database.Options.CreateBackupOnShrink)
+                catch (Exception e)
                 {
-                    try
-                    {
-                        File.Delete(_database.File.Filename + ".backup");
-                    }
-                    catch
-                    {
-                    }
+                    _database.TriggerError(ErrorHint.ReverseFromBackup, e);
                 }
+            }
 
-                await _database.File.Open();
-                return true;
-            }
-            catch (Exception e)
-            {
-                _database.TriggerError(ErrorHint.SyncShrinkFiles, e);
-                return false;
-            }
-            finally
-            {
-                _database.ReleaseLock();
-            }
+            return false;
         }
-
-        #endregion
-
-        #region Helpers
-
-        /// <summary>
-        /// Copies data from source stream to target stream only first length bytes.
-        /// </summary>
-        private async Task CopyStream(Stream from, Stream to, int length)
+        finally
         {
-            int left = length;
-            while (left > 0)
-            {
-                int size = left < _buffer.Length ? left : _buffer.Length;
-                int read = await from.ReadAsync(_buffer, 0, size);
-                left -= read;
-                await to.WriteAsync(_buffer, 0, read);
-            }
+            _shrinking = false;
+            _database.ReleaseLock();
         }
-
-        #endregion
     }
+
+    /// <summary>
+    /// Shrinks database file from begin to position pointer.
+    /// This is a partial shrink and can run almost without any lock and thread-block operations.
+    /// </summary>
+    public async Task<ShrinkInfo> Shrink(long position, List<string> deletedMessages)
+    {
+        _info = new ShrinkInfo();
+
+        if (_shrinking)
+            return _info;
+
+        Stopwatch sw = new Stopwatch();
+        sw.Start();
+
+        try
+        {
+            _shrinking = true;
+            _end = position;
+            _deletingMessages = new HashSet<string>(deletedMessages);
+            _info.OldSize = _end;
+
+            if (_source != null)
+                await DisposeSource();
+
+            await using (FileStream file = new FileStream(_database.File.Filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                int capacity = Convert.ToInt32(_end);
+                _source = new MemoryStream(capacity);
+                await CopyStream(file, _source, capacity);
+                _source.Position = 0;
+            }
+
+            _target = new FileStream(_database.File.Filename + ".shrink", FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+
+            sw.Stop();
+            _info.PreparationDuration = sw.Elapsed;
+            sw.Reset();
+            sw.Start();
+
+            bool proceed = await ProcessShrink();
+            sw.Stop();
+            _info.TruncateDuration = sw.Elapsed;
+            sw.Reset();
+
+            if (!proceed)
+            {
+                _shrinking = false;
+                return _info;
+            }
+
+            sw.Start();
+            bool sync = await SyncShrink();
+            sw.Stop();
+
+            _info.SyncDuration = sw.Elapsed;
+            _info.Successful = sync;
+
+            return _info;
+        }
+        finally
+        {
+            ShrinkRequired = false;
+            _shrinking = false;
+        }
+    }
+
+    /// <summary>
+    /// Reads all shrink area and process messages if they are deleted or not
+    /// </summary>
+    private async Task<bool> ProcessShrink()
+    {
+        await using MemoryStream ms = new MemoryStream(Convert.ToInt32(_end));
+
+        while (_source.Position < _source.Length)
+        {
+            DataType type = _serializer.ReadType(_source);
+            string id = await _serializer.ReadId(_source);
+
+            bool deleted = _deletingMessages.Contains(id);
+
+            switch (type)
+            {
+                case DataType.Insert:
+                    int length = await _serializer.ReadLength(_source);
+                    if (deleted)
+                        _source.Seek(length, SeekOrigin.Current);
+                    else
+                    {
+                        ms.WriteByte((byte) type);
+                        await _serializer.WriteId(ms, id);
+                        bool written = await _serializer.WriteContent(length, _source, ms);
+                        if (!written)
+                            return false;
+                    }
+
+                    break;
+
+                case DataType.Delete:
+                    if (!deleted)
+                        await _serializer.WriteDelete(ms, id);
+
+                    break;
+            }
+        }
+
+        ms.Position = 0;
+        await ms.CopyToAsync(_target);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Merges shrink file with current database file and completes shrink operation
+    /// </summary>
+    private async Task<bool> SyncShrink()
+    {
+        await _target.FlushAsync();
+        await DisposeSource();
+
+        _info.NewSize = _target.Length;
+
+        await _database.WaitForLock();
+        try
+        {
+            //write left data from file to shrink file before swap-chain
+            Stream stream = _database.File.GetStream();
+            if (stream.Length > _end)
+            {
+                stream.Seek(_end, SeekOrigin.Begin);
+                while (stream.Position < stream.Length)
+                {
+                    int read = await stream.ReadAsync(_buffer, 0, _buffer.Length);
+                    if (read == 0)
+                        break;
+
+                    await _target.WriteAsync(_buffer, 0, read);
+                }
+            }
+
+            await _target.FlushAsync();
+            _info.CurrentDatabaseSize = _target.Length;
+
+            await CloseTarget();
+            await _database.File.Close(false);
+
+            File.Move(_database.File.Filename, _database.File.Filename + ".backup", true);
+            File.Move(_database.File.Filename + ".shrink", _database.File.Filename, true);
+
+            if (!_database.Options.CreateBackupOnShrink)
+            {
+                try
+                {
+                    File.Delete(_database.File.Filename + ".backup");
+                }
+                catch
+                {
+                }
+            }
+
+            await _database.File.Open();
+            return true;
+        }
+        catch (Exception e)
+        {
+            _database.TriggerError(ErrorHint.SyncShrinkFiles, e);
+            return false;
+        }
+        finally
+        {
+            _database.ReleaseLock();
+        }
+    }
+
+    #endregion
+
+    #region Helpers
+
+    /// <summary>
+    /// Copies data from source stream to target stream only first length bytes.
+    /// </summary>
+    private async Task CopyStream(Stream from, Stream to, int length)
+    {
+        int left = length;
+        while (left > 0)
+        {
+            int size = left < _buffer.Length ? left : _buffer.Length;
+            int read = await from.ReadAsync(_buffer, 0, size);
+            left -= read;
+            await to.WriteAsync(_buffer, 0, read);
+        }
+    }
+
+    #endregion
 }

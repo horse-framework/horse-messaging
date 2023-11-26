@@ -5,144 +5,143 @@ using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Security;
 
-namespace Horse.Messaging.Server.Clients
+namespace Horse.Messaging.Server.Clients;
+
+/// <summary>
+/// Manages clients in messaging server
+/// </summary>
+public class ClientRider
 {
+    #region Properties
+
+    private readonly SafeList<MessagingClient> _clients = new(2048);
+
     /// <summary>
-    /// Manages clients in messaging server
+    /// Client connect and disconnect operations
     /// </summary>
-    public class ClientRider
-    {
-        #region Properties
+    public ArrayContainer<IClientHandler> Handlers { get; } = new();
 
-        private readonly SafeList<MessagingClient> _clients = new SafeList<MessagingClient>(2048);
+    /// <summary>
+    /// Client authenticator implementations.
+    /// If null, all clients will be accepted.
+    /// </summary>
+    public ArrayContainer<IClientAuthenticator> Authenticators { get; } = new();
 
-        /// <summary>
-        /// Client connect and disconnect operations
-        /// </summary>
-        public ArrayContainer<IClientHandler> Handlers { get; } = new ArrayContainer<IClientHandler>();
+    /// <summary>
+    /// Authorization implementations for client operations
+    /// </summary>
+    public ArrayContainer<IClientAuthorization> Authorizations { get; } = new();
 
-        /// <summary>
-        /// Client authenticator implementations.
-        /// If null, all clients will be accepted.
-        /// </summary>
-        public ArrayContainer<IClientAuthenticator> Authenticators { get; } = new ArrayContainer<IClientAuthenticator>();
+    /// <summary>
+    /// Authorization implementations for administration operations
+    /// </summary>
+    public ArrayContainer<IAdminAuthorization> AdminAuthorizations { get; } = new();
 
-        /// <summary>
-        /// Authorization implementations for client operations
-        /// </summary>
-        public ArrayContainer<IClientAuthorization> Authorizations { get; } = new ArrayContainer<IClientAuthorization>();
+    /// <summary>
+    /// All connected clients in the server
+    /// </summary>
+    public IEnumerable<MessagingClient> Clients => _clients.GetAsClone();
 
-        /// <summary>
-        /// Authorization implementations for administration operations
-        /// </summary>
-        public ArrayContainer<IAdminAuthorization> AdminAuthorizations { get; } = new ArrayContainer<IAdminAuthorization>();
+    /// <summary>
+    /// Id generator for clients which has no specified unique id 
+    /// </summary>
+    public IUniqueIdGenerator ClientIdGenerator { get; internal set; } = new DefaultUniqueIdGenerator();
 
-        /// <summary>
-        /// All connected clients in the server
-        /// </summary>
-        public IEnumerable<MessagingClient> Clients => _clients.GetAsClone();
-
-        /// <summary>
-        /// Id generator for clients which has no specified unique id 
-        /// </summary>
-        public IUniqueIdGenerator ClientIdGenerator { get; internal set; } = new DefaultUniqueIdGenerator();
-
-        /// <summary>
-        /// Root horse rider object
-        /// </summary>
-        public HorseRider Rider { get; }
+    /// <summary>
+    /// Root horse rider object
+    /// </summary>
+    public HorseRider Rider { get; }
         
-        /// <summary>
-        /// Event Manager for HorseEventType.ClientConnect 
-        /// </summary>
-        public EventManager ConnectEvent { get; }
+    /// <summary>
+    /// Event Manager for HorseEventType.ClientConnect 
+    /// </summary>
+    public EventManager ConnectEvent { get; }
 
-        /// <summary>
-        /// Event Manager for HorseEventType.ClientDisconnect 
-        /// </summary>
-        public EventManager DisconnectEvent { get; }
+    /// <summary>
+    /// Event Manager for HorseEventType.ClientDisconnect 
+    /// </summary>
+    public EventManager DisconnectEvent { get; }
 
-        #endregion
+    #endregion
 
-        /// <summary>
-        /// Creates new client rider
-        /// </summary>
-        internal ClientRider(HorseRider rider)
+    /// <summary>
+    /// Creates new client rider
+    /// </summary>
+    internal ClientRider(HorseRider rider)
+    {
+        Rider = rider;
+        ConnectEvent = new EventManager(Rider, HorseEventType.ClientConnect);
+        DisconnectEvent = new EventManager(Rider, HorseEventType.ClientDisconnect);
+    }
+
+    #region Actions
+
+    /// <summary>
+    /// Adds new client to the server
+    /// </summary>
+    internal void Add(MessagingClient client)
+    {
+        _clients.Add(client);
+        ConnectEvent.Trigger(client);
+    }
+
+    /// <summary>
+    /// Removes the client from the server
+    /// </summary>
+    internal void Remove(MessagingClient client)
+    {
+        _clients.Remove(client);
+        client.UnsubscribeFromAllQueues();
+        client.UnsubscribeFromAllChannels();
+        DisconnectEvent.Trigger(client);
+    }
+
+    /// <summary>
+    /// Removes all connected clients
+    /// </summary>
+    internal void DisconnectAllClients()
+    {
+        foreach (MessagingClient client in _clients.GetAsClone())
         {
-            Rider = rider;
-            ConnectEvent = new EventManager(Rider, HorseEventType.ClientConnect);
-            DisconnectEvent = new EventManager(Rider, HorseEventType.ClientDisconnect);
-        }
-
-        #region Actions
-
-        /// <summary>
-        /// Adds new client to the server
-        /// </summary>
-        internal void Add(MessagingClient client)
-        {
-            _clients.Add(client);
-            ConnectEvent.Trigger(client);
-        }
-
-        /// <summary>
-        /// Removes the client from the server
-        /// </summary>
-        internal void Remove(MessagingClient client)
-        {
-            _clients.Remove(client);
             client.UnsubscribeFromAllQueues();
             client.UnsubscribeFromAllChannels();
-            DisconnectEvent.Trigger(client);
+            client.Disconnect();
         }
-
-        /// <summary>
-        /// Removes all connected clients
-        /// </summary>
-        internal void DisconnectAllClients()
-        {
-            foreach (MessagingClient client in _clients.GetAsClone())
-            {
-                client.UnsubscribeFromAllQueues();
-                client.UnsubscribeFromAllChannels();
-                client.Disconnect();
-            }
             
-            _clients.Clear();
-        }
-
-        /// <summary>
-        /// Finds client from unique id
-        /// </summary>
-        public MessagingClient Find(string uniqueId)
-        {
-            return _clients.Find(x => x.UniqueId == uniqueId && x.IsConnected);
-        }
-
-        /// <summary>
-        /// Finds all connected client with specified name
-        /// </summary>
-        public List<MessagingClient> FindClientByName(string name)
-        {
-            return _clients.FindAll(x => x.Name == name && x.IsConnected);
-        }
-
-        /// <summary>
-        /// Finds all connected client with specified type
-        /// </summary>
-        public List<MessagingClient> FindByType(string type)
-        {
-            return _clients.FindAll(x => x.Type == type && x.IsConnected);
-        }
-
-        /// <summary>
-        /// Returns online clients
-        /// </summary>
-        public int GetOnlineClients()
-        {
-            return _clients.Count;
-        }
-
-        #endregion
+        _clients.Clear();
     }
+
+    /// <summary>
+    /// Finds client from unique id
+    /// </summary>
+    public MessagingClient Find(string uniqueId)
+    {
+        return _clients.Find(x => x.UniqueId == uniqueId && x.IsConnected);
+    }
+
+    /// <summary>
+    /// Finds all connected client with specified name
+    /// </summary>
+    public List<MessagingClient> FindClientByName(string name)
+    {
+        return _clients.FindAll(x => x.Name == name && x.IsConnected);
+    }
+
+    /// <summary>
+    /// Finds all connected client with specified type
+    /// </summary>
+    public List<MessagingClient> FindByType(string type)
+    {
+        return _clients.FindAll(x => x.Type == type && x.IsConnected);
+    }
+
+    /// <summary>
+    /// Returns online clients
+    /// </summary>
+    public int GetOnlineClients()
+    {
+        return _clients.Count;
+    }
+
+    #endregion
 }

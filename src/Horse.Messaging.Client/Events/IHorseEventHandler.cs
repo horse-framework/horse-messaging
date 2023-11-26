@@ -1,16 +1,15 @@
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol.Events;
 
-namespace Horse.Messaging.Client.Events
+namespace Horse.Messaging.Client.Events;
+
+/// <summary>
+/// Horse event consumer implementation
+/// </summary>
+public interface IHorseEventHandler
 {
     /// <summary>
-    /// Horse event consumer implementation
+    /// Called when the event is triggered 
     /// </summary>
-    public interface IHorseEventHandler
-    {
-        /// <summary>
-        /// Called when the event is triggered 
-        /// </summary>
-        Task Handle(HorseEvent horseEvent, HorseClient client);
-    }
+    Task Handle(HorseEvent horseEvent, HorseClient client);
 }

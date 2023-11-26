@@ -1,10 +1,7 @@
-namespace HostedServiceSample.Consumer
+namespace HostedServiceSample.Consumer;
+
+public class TestDirectModel
 {
-    public class TestDirectModel
-    {
-        public string Foo { get; set; }
-        public string Bar { get; set; }
-    }
-
-
+    public string Foo { get; set; }
+    public string Bar { get; set; }
 }

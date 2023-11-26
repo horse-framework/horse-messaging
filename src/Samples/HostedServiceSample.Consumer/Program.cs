@@ -1,8 +1,5 @@
-﻿using System;
-using Horse.Messaging.Extensions.Client;
-using HostedServiceSample.Client;
+﻿using HostedServiceSample.Client;
 using HostedServiceSample.Consumer;
-using Microsoft.Extensions.Hosting;
 
 IHorseService service = HorseServiceFactory.Create<Program>(args, "test-consumer");
 service.ConfigureHorseClient(clientBuilder =>

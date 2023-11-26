@@ -1,17 +1,16 @@
 using System;
 
-namespace Horse.Messaging.Client.Queues.Exceptions
+namespace Horse.Messaging.Client.Queues.Exceptions;
+
+/// <summary>
+/// Throw when reigstered same type of Exception with PushExceptions attribute
+/// </summary>
+public class DuplicatePushException : Exception
 {
     /// <summary>
-    /// Throw when reigstered same type of Exception with PushExceptions attribute
+    /// Creates new DuplicatePushException
     /// </summary>
-    public class DuplicatePushException : Exception
+    public DuplicatePushException(string message) : base(message)
     {
-        /// <summary>
-        /// Creates new DuplicatePushException
-        /// </summary>
-        public DuplicatePushException(string message) : base(message)
-        {
-        }
     }
 }

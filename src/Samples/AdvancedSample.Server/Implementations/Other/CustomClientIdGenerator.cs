@@ -1,14 +1,13 @@
 ﻿using Horse.Messaging.Protocol;
 
-namespace AdvancedSample.Server.Implementations.Other
+namespace AdvancedSample.Server.Implementations.Other;
+
+public class CustomClientIdGenerator : IUniqueIdGenerator
 {
-    public class CustomClientIdGenerator : IUniqueIdGenerator
-    {
-        private static int counter = 0;
+    private static int counter = 0;
        
-        public string Create()
-        {
-            return Interlocked.Increment(ref counter).ToString();
-        }
+    public string Create()
+    {
+        return Interlocked.Increment(ref counter).ToString();
     }
 }

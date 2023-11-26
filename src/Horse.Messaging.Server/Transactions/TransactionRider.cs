@@ -12,314 +12,313 @@ using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
 
-namespace Horse.Messaging.Server.Transactions
+namespace Horse.Messaging.Server.Transactions;
+
+/// <summary>
+/// Manages remote transactions in messaging server
+/// </summary>
+public class TransactionRider
 {
     /// <summary>
-    /// Manages remote transactions in messaging server
+    /// Root horse rider object
     /// </summary>
-    public class TransactionRider
+    public HorseRider Rider { get; }
+
+    /// <summary>
+    /// Default custom transaction handler implementation for all kind of transactions
+    /// </summary>
+    public IServerTransactionHandler DefaultHandler { get; set; }
+
+    private readonly Dictionary<string, ServerTransactionContainer> _containers = new();
+    private List<TransactionContainerData> _data = new();
+
+    /// <summary>
+    /// Creates new transaction rider
+    /// </summary>
+    public TransactionRider(HorseRider rider)
     {
-        /// <summary>
-        /// Root horse rider object
-        /// </summary>
-        public HorseRider Rider { get; }
+        Rider = rider;
+    }
 
-        /// <summary>
-        /// Default custom transaction handler implementation for all kind of transactions
-        /// </summary>
-        public IServerTransactionHandler DefaultHandler { get; set; }
+    /// <summary>
+    /// Initializes transaction rider and saved containers
+    /// </summary>
+    public void Initialize()
+    {
+        string filename = "Data/transactions.json";
 
-        private readonly Dictionary<string, ServerTransactionContainer> _containers = new();
-        private List<TransactionContainerData> _data = new();
+        if (!System.IO.File.Exists(filename))
+            return;
 
-        /// <summary>
-        /// Creates new transaction rider
-        /// </summary>
-        public TransactionRider(HorseRider rider)
+        string fileContent = System.IO.File.ReadAllText(filename);
+        _data = JsonSerializer.Deserialize<List<TransactionContainerData>>(fileContent, SerializerFactory.Default());
+
+        foreach (TransactionContainerData item in _data)
         {
-            Rider = rider;
+            ServerTransactionContainer container = new ServerTransactionContainer(item.Name, TimeSpan.FromMilliseconds(item.Timeout));
+
+            container.CommitEndpoint = ResolveAndCreateEndpoint(container, item.CommitType, item.CommitParam);
+            container.RollbackEndpoint = ResolveAndCreateEndpoint(container, item.RollbackType, item.RollbackParam);
+            container.TimeoutEndpoint = ResolveAndCreateEndpoint(container, item.TimeoutType, item.TimeoutParam);
+
+            container.Handler = string.IsNullOrEmpty(item.HandlerType)
+                ? DefaultHandler
+                : ResolveAndCreateHandler(item.HandlerType);
+
+            if (container.Handler != null)
+                _ = container.Handler.Load(container);
+
+            lock (_containers)
+                _containers.Add(item.Name, container);
+        }
+    }
+
+    private void SaveTransactionContainers()
+    {
+        try
+        {
+            string filename = $"{Rider.Options.DataPath}/transactions.json";
+            string fileContent = System.Text.Json.JsonSerializer.Serialize(_data, SerializerFactory.Default());
+            System.IO.File.WriteAllText(filename, fileContent);
+        }
+        catch (Exception e)
+        {
+            Rider.SendError("TransactionRider.SaveTransactionContainers", e, string.Empty);
+        }
+    }
+
+    private Type ResolveType(string fullname)
+    {
+        Assembly assembly = Assembly.GetExecutingAssembly();
+        Type type = assembly.GetType(fullname);
+
+        if (type == null)
+        {
+            assembly = Assembly.GetCallingAssembly();
+            type = assembly.GetType(fullname);
         }
 
-        /// <summary>
-        /// Initializes transaction rider and saved containers
-        /// </summary>
-        public void Initialize()
+        return type;
+    }
+
+    private IServerTransactionHandler ResolveAndCreateHandler(string fullname)
+    {
+        Type handlerType = ResolveType(fullname);
+
+        if (handlerType == null)
+            throw new Exception($"Transaction Handler type not found: {fullname}");
+
+        IServerTransactionHandler handler = Activator.CreateInstance(handlerType) as IServerTransactionHandler;
+
+        if (handler == null)
+            throw new Exception($"Transaction handler creation failed: {fullname}");
+
+        return handler;
+    }
+
+    private IServerTransactionEndpoint ResolveAndCreateEndpoint(ServerTransactionContainer container, string fullname, string parameter)
+    {
+        Type endpointType = ResolveType(fullname);
+
+        if (endpointType == null)
+            throw new Exception($"Endpoint Type type not found: {fullname}");
+
+        ConstructorInfo[] ctors = endpointType.GetConstructors()
+            .OrderByDescending(x => x.GetParameters().Length)
+            .ToArray();
+
+        ConstructorInfo constructor = null;
+        object[] parameters = null;
+
+        foreach (ConstructorInfo ctor in ctors)
         {
-            string filename = "Data/transactions.json";
+            ParameterInfo[] parameterInfos = ctor.GetParameters();
+            parameters = new object[parameterInfos.Length];
+            bool skip = false;
 
-            if (!System.IO.File.Exists(filename))
-                return;
-
-            string fileContent = System.IO.File.ReadAllText(filename);
-            _data = JsonSerializer.Deserialize<List<TransactionContainerData>>(fileContent, SerializerFactory.Default());
-
-            foreach (TransactionContainerData item in _data)
+            for (int i = 0; i < parameterInfos.Length; i++)
             {
-                ServerTransactionContainer container = new ServerTransactionContainer(item.Name, TimeSpan.FromMilliseconds(item.Timeout));
+                ParameterInfo parameterInfo = parameterInfos[i];
 
-                container.CommitEndpoint = ResolveAndCreateEndpoint(container, item.CommitType, item.CommitParam);
-                container.RollbackEndpoint = ResolveAndCreateEndpoint(container, item.RollbackType, item.RollbackParam);
-                container.TimeoutEndpoint = ResolveAndCreateEndpoint(container, item.TimeoutType, item.TimeoutParam);
+                if (parameterInfo.ParameterType.IsEquivalentTo(typeof(QueueRider)))
+                    parameters[i] = Rider.Queue;
 
-                container.Handler = string.IsNullOrEmpty(item.HandlerType)
-                    ? DefaultHandler
-                    : ResolveAndCreateHandler(item.HandlerType);
+                else if (parameterInfo.ParameterType.IsEquivalentTo(typeof(DirectRider)))
+                    parameters[i] = Rider.Direct;
 
-                if (container.Handler != null)
-                    _ = container.Handler.Load(container);
+                else if (parameterInfo.ParameterType.IsEquivalentTo(typeof(ChannelRider)))
+                    parameters[i] = Rider.Channel;
 
-                lock (_containers)
-                    _containers.Add(item.Name, container);
-            }
-        }
+                else if (parameterInfo.ParameterType.IsEquivalentTo(typeof(RouterRider)))
+                    parameters[i] = Rider.Router;
 
-        private void SaveTransactionContainers()
-        {
-            try
-            {
-                string filename = $"{Rider.Options.DataPath}/transactions.json";
-                string fileContent = System.Text.Json.JsonSerializer.Serialize(_data, SerializerFactory.Default());
-                System.IO.File.WriteAllText(filename, fileContent);
-            }
-            catch (Exception e)
-            {
-                Rider.SendError("TransactionRider.SaveTransactionContainers", e, string.Empty);
-            }
-        }
+                else if (parameterInfo.ParameterType.IsEquivalentTo(typeof(HorseRider)))
+                    parameters[i] = Rider;
 
-        private Type ResolveType(string fullname)
-        {
-            Assembly assembly = Assembly.GetExecutingAssembly();
-            Type type = assembly.GetType(fullname);
+                else if (parameterInfo.ParameterType.IsEquivalentTo(typeof(ServerTransactionContainer)))
+                    parameters[i] = container;
 
-            if (type == null)
-            {
-                assembly = Assembly.GetCallingAssembly();
-                type = assembly.GetType(fullname);
-            }
+                else if (parameterInfo.ParameterType.IsEquivalentTo(typeof(string)))
+                    parameters[i] = parameter;
 
-            return type;
-        }
-
-        private IServerTransactionHandler ResolveAndCreateHandler(string fullname)
-        {
-            Type handlerType = ResolveType(fullname);
-
-            if (handlerType == null)
-                throw new Exception($"Transaction Handler type not found: {fullname}");
-
-            IServerTransactionHandler handler = Activator.CreateInstance(handlerType) as IServerTransactionHandler;
-
-            if (handler == null)
-                throw new Exception($"Transaction handler creation failed: {fullname}");
-
-            return handler;
-        }
-
-        private IServerTransactionEndpoint ResolveAndCreateEndpoint(ServerTransactionContainer container, string fullname, string parameter)
-        {
-            Type endpointType = ResolveType(fullname);
-
-            if (endpointType == null)
-                throw new Exception($"Endpoint Type type not found: {fullname}");
-
-            ConstructorInfo[] ctors = endpointType.GetConstructors()
-                .OrderByDescending(x => x.GetParameters().Length)
-                .ToArray();
-
-            ConstructorInfo constructor = null;
-            object[] parameters = null;
-
-            foreach (ConstructorInfo ctor in ctors)
-            {
-                ParameterInfo[] parameterInfos = ctor.GetParameters();
-                parameters = new object[parameterInfos.Length];
-                bool skip = false;
-
-                for (int i = 0; i < parameterInfos.Length; i++)
+                else
                 {
-                    ParameterInfo parameterInfo = parameterInfos[i];
-
-                    if (parameterInfo.ParameterType.IsEquivalentTo(typeof(QueueRider)))
-                        parameters[i] = Rider.Queue;
-
-                    else if (parameterInfo.ParameterType.IsEquivalentTo(typeof(DirectRider)))
-                        parameters[i] = Rider.Direct;
-
-                    else if (parameterInfo.ParameterType.IsEquivalentTo(typeof(ChannelRider)))
-                        parameters[i] = Rider.Channel;
-
-                    else if (parameterInfo.ParameterType.IsEquivalentTo(typeof(RouterRider)))
-                        parameters[i] = Rider.Router;
-
-                    else if (parameterInfo.ParameterType.IsEquivalentTo(typeof(HorseRider)))
-                        parameters[i] = Rider;
-
-                    else if (parameterInfo.ParameterType.IsEquivalentTo(typeof(ServerTransactionContainer)))
-                        parameters[i] = container;
-
-                    else if (parameterInfo.ParameterType.IsEquivalentTo(typeof(string)))
-                        parameters[i] = parameter;
-
-                    else
-                    {
-                        skip = true;
-                        break;
-                    }
+                    skip = true;
+                    break;
                 }
-
-                if (skip)
-                    continue;
-
-                constructor = ctor;
-                break;
             }
 
-            if (constructor == null)
-                throw new Exception($"No suitable constructor found for endpoint: {fullname}");
+            if (skip)
+                continue;
 
-            IServerTransactionEndpoint endpoint = constructor.Invoke(parameters) as IServerTransactionEndpoint;
-
-            if (endpoint == null)
-                throw new Exception($"Endpoint creation failed: {fullname}");
-
-            return endpoint;
+            constructor = ctor;
+            break;
         }
 
-        /// <summary>
-        /// Creates new transaction container.
-        /// Each transaction container represents same kind of transactions.
-        /// </summary>
-        /// <param name="name">Name for the transactions</param>
-        /// <param name="timeout">Transaction timeout</param>
-        /// <param name="commitEndpoint">Endpoint for commited transactions</param>
-        /// <param name="rollbackEndpoint">Endpoint for rolled back transactions</param>
-        /// <param name="timeoutEndpoint">Endpoint for timed out transactions</param>
-        /// <param name="handler">Custom transaction handler implementation, if exists</param>
-        /// <returns></returns>
-        public ServerTransactionContainer CreateContainer(string name, TimeSpan timeout,
-            IServerTransactionEndpoint commitEndpoint,
-            IServerTransactionEndpoint rollbackEndpoint,
-            IServerTransactionEndpoint timeoutEndpoint,
-            IServerTransactionHandler handler = null)
+        if (constructor == null)
+            throw new Exception($"No suitable constructor found for endpoint: {fullname}");
+
+        IServerTransactionEndpoint endpoint = constructor.Invoke(parameters) as IServerTransactionEndpoint;
+
+        if (endpoint == null)
+            throw new Exception($"Endpoint creation failed: {fullname}");
+
+        return endpoint;
+    }
+
+    /// <summary>
+    /// Creates new transaction container.
+    /// Each transaction container represents same kind of transactions.
+    /// </summary>
+    /// <param name="name">Name for the transactions</param>
+    /// <param name="timeout">Transaction timeout</param>
+    /// <param name="commitEndpoint">Endpoint for commited transactions</param>
+    /// <param name="rollbackEndpoint">Endpoint for rolled back transactions</param>
+    /// <param name="timeoutEndpoint">Endpoint for timed out transactions</param>
+    /// <param name="handler">Custom transaction handler implementation, if exists</param>
+    /// <returns></returns>
+    public ServerTransactionContainer CreateContainer(string name, TimeSpan timeout,
+        IServerTransactionEndpoint commitEndpoint,
+        IServerTransactionEndpoint rollbackEndpoint,
+        IServerTransactionEndpoint timeoutEndpoint,
+        IServerTransactionHandler handler = null)
+    {
+        ServerTransactionContainer container;
+
+        lock (_containers)
         {
-            ServerTransactionContainer container;
+            if (_containers.ContainsKey(name))
+                throw new($"There is already a transaction container with name: {name}");
 
-            lock (_containers)
-            {
-                if (_containers.ContainsKey(name))
-                    throw new($"There is already a transaction container with name: {name}");
+            container = new ServerTransactionContainer(name, timeout);
 
-                container = new ServerTransactionContainer(name, timeout);
+            container.CommitEndpoint = commitEndpoint;
+            container.RollbackEndpoint = rollbackEndpoint;
+            container.TimeoutEndpoint = timeoutEndpoint;
+            container.Handler = handler ?? DefaultHandler;
 
-                container.CommitEndpoint = commitEndpoint;
-                container.RollbackEndpoint = rollbackEndpoint;
-                container.TimeoutEndpoint = timeoutEndpoint;
-                container.Handler = handler ?? DefaultHandler;
-
-                _containers.Add(name, container);
-            }
-
-            TransactionContainerData data = new TransactionContainerData();
-
-            data.Name = name;
-            data.Timeout = Convert.ToInt32(timeout.TotalMilliseconds);
-
-            data.HandlerType = container.Handler != null ? container.Handler.GetType().FullName : null;
-
-            data.CommitType = commitEndpoint.GetType().FullName;
-            data.CommitParam = commitEndpoint.InitParameter;
-
-            data.RollbackType = rollbackEndpoint.GetType().FullName;
-            data.RollbackParam = rollbackEndpoint.InitParameter;
-
-            data.TimeoutType = timeoutEndpoint.GetType().FullName;
-            data.TimeoutParam = timeoutEndpoint.InitParameter;
-
-            lock (_data)
-                _data.Add(data);
-
-            SaveTransactionContainers();
-
-            return container;
+            _containers.Add(name, container);
         }
 
-        /// <summary>
-        /// Deletes a transaction container
-        /// </summary>
-        public void DeleteContainer(string name)
+        TransactionContainerData data = new TransactionContainerData();
+
+        data.Name = name;
+        data.Timeout = Convert.ToInt32(timeout.TotalMilliseconds);
+
+        data.HandlerType = container.Handler != null ? container.Handler.GetType().FullName : null;
+
+        data.CommitType = commitEndpoint.GetType().FullName;
+        data.CommitParam = commitEndpoint.InitParameter;
+
+        data.RollbackType = rollbackEndpoint.GetType().FullName;
+        data.RollbackParam = rollbackEndpoint.InitParameter;
+
+        data.TimeoutType = timeoutEndpoint.GetType().FullName;
+        data.TimeoutParam = timeoutEndpoint.InitParameter;
+
+        lock (_data)
+            _data.Add(data);
+
+        SaveTransactionContainers();
+
+        return container;
+    }
+
+    /// <summary>
+    /// Deletes a transaction container
+    /// </summary>
+    public void DeleteContainer(string name)
+    {
+        ServerTransactionContainer container;
+        bool found;
+
+        lock (_containers)
+            found = _containers.TryGetValue(name, out container);
+
+        if (!found)
+            return;
+
+        lock (_containers)
+            _containers.Remove(name);
+
+        lock (_data)
+            _data.RemoveAll(x => x.Name == name);
+
+        SaveTransactionContainers();
+
+        _ = container.Handler?.Destroy(container);
+    }
+
+    /// <summary>
+    /// Begins new transaction from remote
+    /// </summary>
+    public async Task Begin(MessagingClient client, HorseMessage message)
+    {
+        ServerTransactionContainer container;
+        lock (_containers)
+            _containers.TryGetValue(message.Target, out container);
+
+        if (container == null)
         {
-            ServerTransactionContainer container;
-            bool found;
-
-            lock (_containers)
-                found = _containers.TryGetValue(name, out container);
-
-            if (!found)
-                return;
-
-            lock (_containers)
-                _containers.Remove(name);
-
-            lock (_data)
-                _data.RemoveAll(x => x.Name == name);
-
-            SaveTransactionContainers();
-
-            _ = container.Handler?.Destroy(container);
+            await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+            return;
         }
 
-        /// <summary>
-        /// Begins new transaction from remote
-        /// </summary>
-        public async Task Begin(MessagingClient client, HorseMessage message)
+        bool created = await container.Create(client, message);
+        await client.SendAsync(message.CreateResponse(created ? HorseResultCode.Ok : HorseResultCode.Failed));
+    }
+
+    /// <summary>
+    /// Commits a transaction
+    /// </summary>
+    public Task Commit(MessagingClient client, HorseMessage message)
+    {
+        ServerTransactionContainer container;
+        lock (_containers)
+            _containers.TryGetValue(message.Target, out container);
+
+        if (container == null)
         {
-            ServerTransactionContainer container;
-            lock (_containers)
-                _containers.TryGetValue(message.Target, out container);
-
-            if (container == null)
-            {
-                await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
-                return;
-            }
-
-            bool created = await container.Create(client, message);
-            await client.SendAsync(message.CreateResponse(created ? HorseResultCode.Ok : HorseResultCode.Failed));
+            return client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
         }
 
-        /// <summary>
-        /// Commits a transaction
-        /// </summary>
-        public Task Commit(MessagingClient client, HorseMessage message)
+        return container.Commit(client, message);
+    }
+
+    /// <summary>
+    /// Rollbacks a transaction
+    /// </summary>
+    public Task Rollback(MessagingClient client, HorseMessage message)
+    {
+        ServerTransactionContainer container;
+        lock (_containers)
+            _containers.TryGetValue(message.Target, out container);
+
+        if (container == null)
         {
-            ServerTransactionContainer container;
-            lock (_containers)
-                _containers.TryGetValue(message.Target, out container);
-
-            if (container == null)
-            {
-                return client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
-            }
-
-            return container.Commit(client, message);
+            return client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
         }
 
-        /// <summary>
-        /// Rollbacks a transaction
-        /// </summary>
-        public Task Rollback(MessagingClient client, HorseMessage message)
-        {
-            ServerTransactionContainer container;
-            lock (_containers)
-                _containers.TryGetValue(message.Target, out container);
-
-            if (container == null)
-            {
-                return client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
-            }
-
-            return container.Rollback(client, message);
-        }
+        return container.Rollback(client, message);
     }
 }

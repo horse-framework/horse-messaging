@@ -1,38 +1,37 @@
 using System;
 
-namespace Horse.Messaging.Client.Annotations
+namespace Horse.Messaging.Client.Annotations;
+
+/// <summary>
+/// Publishes exceptions to routers when thrown by consumer objects
+/// </summary>
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
+public class PublishExceptionsAttribute : Attribute
 {
     /// <summary>
-    /// Publishes exceptions to routers when thrown by consumer objects
+    /// Exception type
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-    public class PublishExceptionsAttribute : Attribute
+    public Type ExceptionType { get; }
+
+    /// <summary>
+    /// Exception model type
+    /// </summary>
+    public Type ModelType { get; }
+
+    /// <summary>
+    /// Publishes all exceptions
+    /// </summary>
+    public PublishExceptionsAttribute(Type modelType)
     {
-        /// <summary>
-        /// Exception type
-        /// </summary>
-        public Type ExceptionType { get; }
+        ModelType = modelType;
+    }
 
-        /// <summary>
-        /// Exception model type
-        /// </summary>
-        public Type ModelType { get; }
-
-        /// <summary>
-        /// Publishes all exceptions
-        /// </summary>
-        public PublishExceptionsAttribute(Type modelType)
-        {
-            ModelType = modelType;
-        }
-
-        /// <summary>
-        /// Publishes specified type of exceptions
-        /// </summary>
-        public PublishExceptionsAttribute(Type modelType, Type exceptionType)
-        {
-            ModelType = modelType;
-            ExceptionType = exceptionType;
-        }
+    /// <summary>
+    /// Publishes specified type of exceptions
+    /// </summary>
+    public PublishExceptionsAttribute(Type modelType, Type exceptionType)
+    {
+        ModelType = modelType;
+        ExceptionType = exceptionType;
     }
 }

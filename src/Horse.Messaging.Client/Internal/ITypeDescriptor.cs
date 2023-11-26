@@ -1,15 +1,14 @@
 using Horse.Messaging.Protocol;
 
-namespace Horse.Messaging.Client.Internal
+namespace Horse.Messaging.Client.Internal;
+
+/// <summary>
+/// Descriptor implementation for sending model types
+/// </summary>
+public interface ITypeDescriptor
 {
     /// <summary>
-    /// Descriptor implementation for sending model types
+    /// Creates new horse message from descriptor
     /// </summary>
-    public interface ITypeDescriptor
-    {
-        /// <summary>
-        /// Creates new horse message from descriptor
-        /// </summary>
-        HorseMessage CreateMessage(string overwrittenTarget = null);
-    }
+    HorseMessage CreateMessage(string overwrittenTarget = null);
 }

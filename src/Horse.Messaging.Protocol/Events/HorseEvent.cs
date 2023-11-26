@@ -1,30 +1,29 @@
 using System.Collections.Generic;
 
-namespace Horse.Messaging.Protocol.Events
+namespace Horse.Messaging.Protocol.Events;
+
+/// <summary>
+/// Horse event model
+/// </summary>
+public class HorseEvent
 {
     /// <summary>
-    /// Horse event model
+    /// Event type
     /// </summary>
-    public class HorseEvent
-    {
-        /// <summary>
-        /// Event type
-        /// </summary>
-        public HorseEventType Type { get; set; }
+    public HorseEventType Type { get; set; }
 
-        /// <summary>
-        /// Event subject client
-        /// </summary>
-        public EventSubject Subject { get; set; }
+    /// <summary>
+    /// Event subject client
+    /// </summary>
+    public EventSubject Subject { get; set; }
 
-        /// <summary>
-        /// Event target
-        /// </summary>
-        public string Target { get; set; }
+    /// <summary>
+    /// Event target
+    /// </summary>
+    public string Target { get; set; }
 
-        /// <summary>
-        /// Event parameters
-        /// </summary>
-        public IEnumerable<KeyValuePair<string, string>> Parameters { get; set; }
-    }
+    /// <summary>
+    /// Event parameters
+    /// </summary>
+    public IEnumerable<KeyValuePair<string, string>> Parameters { get; set; }
 }

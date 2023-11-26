@@ -10,226 +10,225 @@ using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Queues;
 using Xunit;
 
-namespace Test.Queues
+namespace Test.Queues;
+
+public class ManagementTest
 {
-    public class ManagementTest
+    /// <summary>
+    /// Client sends a queue subscription message to server
+    /// </summary>
+    [Fact]
+    public async Task SubscribeToQueue()
     {
-        /// <summary>
-        /// Client sends a queue subscription message to server
-        /// </summary>
-        [Fact]
-        public async Task SubscribeToQueue()
+        TestHorseRider server = new TestHorseRider();
+        await server.Initialize();
+        int port = server.Start();
+
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync("horse://localhost:" + port);
+
+        HorseResult joined = await client.Queue.Subscribe("push-a", true);
+        Assert.Equal(HorseResultCode.Ok, joined.Code);
+
+        HorseQueue queue = server.Rider.Queue.Queues.FirstOrDefault();
+        Assert.NotNull(queue);
+
+        List<QueueClient> clients = queue.ClientsClone;
+        Assert.Single(clients);
+        server.Stop();
+    }
+
+    /// <summary>
+    /// Client sends a queue unsubscription message to server
+    /// </summary>
+    [Fact]
+    public async Task UnsubscribeToQueue()
+    {
+        TestHorseRider server = new TestHorseRider();
+        await server.Initialize();
+        int port = server.Start();
+
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync("horse://localhost:" + port);
+
+        HorseResult joined = await client.Queue.Subscribe("broadcast-a", true);
+        Assert.Equal(HorseResultCode.Ok, joined.Code);
+
+        HorseResult left = await client.Queue.Unsubscribe("broadcast-a", true);
+        Assert.Equal(HorseResultCode.Ok, left.Code);
+
+        HorseQueue queue = server.Rider.Queue.Queues.FirstOrDefault();
+        Assert.NotNull(queue);
+
+        List<QueueClient> clients = queue.ClientsClone;
+        Assert.Empty(clients);
+        server.Stop();
+    }
+
+    /// <summary>
+    /// Client sends a queue creation message
+    /// </summary>
+    [Fact]
+    public async Task Create()
+    {
+        TestHorseRider server = new TestHorseRider();
+        await server.Initialize();
+        int port = server.Start();
+
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync("horse://localhost:" + port);
+
+        HorseResult created = await client.Queue.Create("queue-new");
+        Assert.Equal(HorseResultCode.Ok, created.Code);
+
+        HorseQueue queue = server.Rider.Queue.Queues.FirstOrDefault(x => x.Name == "queue-new");
+        Assert.NotNull(queue);
+        Assert.Equal("queue-new", queue.Name);
+        server.Stop();
+    }
+
+    [Fact]
+    public async Task CreateWithProperties()
+    {
+        TestHorseRider server = new TestHorseRider();
+        await server.Initialize();
+        int port = server.Start();
+
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync("horse://localhost:" + port);
+        Assert.True(client.IsConnected);
+
+        HorseResult created = await client.Queue.Create("queue-test", o =>
         {
-            TestHorseRider server = new TestHorseRider();
-            await server.Initialize();
-            int port = server.Start();
+            o.AcknowledgeTimeout = 33000;
+            o.Type = MessagingQueueType.Pull;
+        });
+        Assert.Equal(HorseResultCode.Ok, created.Code);
 
-            HorseClient client = new HorseClient();
-            await client.ConnectAsync("horse://localhost:" + port);
+        HorseQueue queue = server.Rider.Queue.Find("queue-test");
+        Assert.NotNull(queue);
 
-            HorseResult joined = await client.Queue.Subscribe("push-a", true);
-            Assert.Equal(HorseResultCode.Ok, joined.Code);
+        Assert.Equal(TimeSpan.FromSeconds(33), queue.Options.AcknowledgeTimeout);
+        Assert.Equal(QueueType.Pull, queue.Type);
+        server.Stop();
+    }
 
-            HorseQueue queue = server.Rider.Queue.Queues.FirstOrDefault();
-            Assert.NotNull(queue);
+    [Fact]
+    public async Task Update()
+    {
+        TestHorseRider server = new TestHorseRider();
+        await server.Initialize();
+        int port = server.Start();
 
-            List<QueueClient> clients = queue.ClientsClone;
-            Assert.Single(clients);
-            server.Stop();
-        }
+        HorseQueue queue = server.Rider.Queue.Find("push-a");
+        Assert.NotNull(queue);
 
-        /// <summary>
-        /// Client sends a queue unsubscription message to server
-        /// </summary>
-        [Fact]
-        public async Task UnsubscribeToQueue()
-        {
-            TestHorseRider server = new TestHorseRider();
-            await server.Initialize();
-            int port = server.Start();
+        Assert.Equal(12, queue.Options.MessageTimeout.MessageDuration);
 
-            HorseClient client = new HorseClient();
-            await client.ConnectAsync("horse://localhost:" + port);
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync("horse://localhost:" + port);
+        Assert.True(client.IsConnected);
 
-            HorseResult joined = await client.Queue.Subscribe("broadcast-a", true);
-            Assert.Equal(HorseResultCode.Ok, joined.Code);
+        HorseResult updated = await client.Queue.SetOptions("push-a", o => o.MessageTimeout = new MessageTimeoutStrategyInfo(666, "delete", null));
+        Assert.Equal(HorseResultCode.Ok, updated.Code);
 
-            HorseResult left = await client.Queue.Unsubscribe("broadcast-a", true);
-            Assert.Equal(HorseResultCode.Ok, left.Code);
+        Assert.Equal(666, queue.Options.MessageTimeout.MessageDuration);
+        server.Stop();
+    }
 
-            HorseQueue queue = server.Rider.Queue.Queues.FirstOrDefault();
-            Assert.NotNull(queue);
+    [Fact]
+    public async Task Delete()
+    {
+        TestHorseRider server = new TestHorseRider();
+        await server.Initialize();
+        int port = server.Start();
 
-            List<QueueClient> clients = queue.ClientsClone;
-            Assert.Empty(clients);
-            server.Stop();
-        }
+        HorseQueue queue = server.Rider.Queue.Find("push-a");
+        Assert.NotNull(queue);
 
-        /// <summary>
-        /// Client sends a queue creation message
-        /// </summary>
-        [Fact]
-        public async Task Create()
-        {
-            TestHorseRider server = new TestHorseRider();
-            await server.Initialize();
-            int port = server.Start();
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync("horse://localhost:" + port);
+        Assert.True(client.IsConnected);
 
-            HorseClient client = new HorseClient();
-            await client.ConnectAsync("horse://localhost:" + port);
+        HorseResult done = await client.Queue.Remove("push-a");
+        Assert.Equal(HorseResultCode.Ok, done.Code);
 
-            HorseResult created = await client.Queue.Create("queue-new");
-            Assert.Equal(HorseResultCode.Ok, created.Code);
+        queue = server.Rider.Queue.Find("push-a");
+        Assert.Null(queue);
+        server.Stop();
+    }
 
-            HorseQueue queue = server.Rider.Queue.Queues.FirstOrDefault(x => x.Name == "queue-new");
-            Assert.NotNull(queue);
-            Assert.Equal("queue-new", queue.Name);
-            server.Stop();
-        }
+    [Fact]
+    public async Task GetQueueInfo()
+    {
+        TestHorseRider server = new TestHorseRider();
+        await server.Initialize();
+        int port = server.Start();
 
-        [Fact]
-        public async Task CreateWithProperties()
-        {
-            TestHorseRider server = new TestHorseRider();
-            await server.Initialize();
-            int port = server.Start();
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync("horse://localhost:" + port);
 
-            HorseClient client = new HorseClient();
-            await client.ConnectAsync("horse://localhost:" + port);
-            Assert.True(client.IsConnected);
+        await Task.Delay(250);
+        var queues = await client.Queue.List("push-a");
+        Assert.Equal(HorseResultCode.Ok, queues.Result.Code);
+        Assert.NotNull(queues.Model);
+        var pushQueue = queues.Model.FirstOrDefault(x => x.Name == "push-a");
+        Assert.NotNull(pushQueue);
+        server.Stop();
+    }
 
-            HorseResult created = await client.Queue.Create("queue-test", o =>
-            {
-                o.AcknowledgeTimeout = 33000;
-                o.Type = MessagingQueueType.Pull;
-            });
-            Assert.Equal(HorseResultCode.Ok, created.Code);
+    [Fact]
+    public async Task GetQueueList()
+    {
+        TestHorseRider server = new TestHorseRider();
+        await server.Initialize();
+        int port = server.Start();
 
-            HorseQueue queue = server.Rider.Queue.Find("queue-test");
-            Assert.NotNull(queue);
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync("horse://localhost:" + port);
 
-            Assert.Equal(TimeSpan.FromSeconds(33), queue.Options.AcknowledgeTimeout);
-            Assert.Equal(QueueType.Pull, queue.Type);
-            server.Stop();
-        }
+        var result = await client.Queue.List();
+        Assert.Equal(HorseResultCode.Ok, result.Result.Code);
+        Assert.NotNull(result.Model);
+        var queue = result.Model.FirstOrDefault();
+        Assert.NotNull(queue);
+        server.Stop();
+    }
 
-        [Fact]
-        public async Task Update()
-        {
-            TestHorseRider server = new TestHorseRider();
-            await server.Initialize();
-            int port = server.Start();
+    /// <summary>
+    /// Clears messages in queue
+    /// </summary>
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task ClearMessages(bool priorityMessages, bool messages)
+    {
+        TestHorseRider server = new TestHorseRider();
+        await server.Initialize();
+        int port = server.Start();
 
-            HorseQueue queue = server.Rider.Queue.Find("push-a");
-            Assert.NotNull(queue);
+        HorseQueue queue = server.Rider.Queue.Find("push-a");
+        await queue.Push("Hello, World");
+        await queue.Push("Hello, World", true);
+        await Task.Delay(500);
 
-            Assert.Equal(12, queue.Options.MessageTimeout.MessageDuration);
+        HorseClient client = new HorseClient();
+        await client.ConnectAsync("horse://localhost:" + port);
 
-            HorseClient client = new HorseClient();
-            await client.ConnectAsync("horse://localhost:" + port);
-            Assert.True(client.IsConnected);
+        var result = await client.Queue.ClearMessages("push-a", priorityMessages, messages);
+        Assert.Equal(HorseResultCode.Ok, result.Code);
 
-            HorseResult updated = await client.Queue.SetOptions("push-a", o => o.MessageTimeout = new MessageTimeoutStrategyInfo(666, "delete", null));
-            Assert.Equal(HorseResultCode.Ok, updated.Code);
+        if (priorityMessages)
+            Assert.Equal(0, queue.Manager.PriorityMessageStore.Count());
+        else
+            Assert.NotEqual(0, queue.Manager.PriorityMessageStore.Count());
 
-            Assert.Equal(666, queue.Options.MessageTimeout.MessageDuration);
-            server.Stop();
-        }
-
-        [Fact]
-        public async Task Delete()
-        {
-            TestHorseRider server = new TestHorseRider();
-            await server.Initialize();
-            int port = server.Start();
-
-            HorseQueue queue = server.Rider.Queue.Find("push-a");
-            Assert.NotNull(queue);
-
-            HorseClient client = new HorseClient();
-            await client.ConnectAsync("horse://localhost:" + port);
-            Assert.True(client.IsConnected);
-
-            HorseResult done = await client.Queue.Remove("push-a");
-            Assert.Equal(HorseResultCode.Ok, done.Code);
-
-            queue = server.Rider.Queue.Find("push-a");
-            Assert.Null(queue);
-            server.Stop();
-        }
-
-        [Fact]
-        public async Task GetQueueInfo()
-        {
-            TestHorseRider server = new TestHorseRider();
-            await server.Initialize();
-            int port = server.Start();
-
-            HorseClient client = new HorseClient();
-            await client.ConnectAsync("horse://localhost:" + port);
-
-            await Task.Delay(250);
-            var queues = await client.Queue.List("push-a");
-            Assert.Equal(HorseResultCode.Ok, queues.Result.Code);
-            Assert.NotNull(queues.Model);
-            var pushQueue = queues.Model.FirstOrDefault(x => x.Name == "push-a");
-            Assert.NotNull(pushQueue);
-            server.Stop();
-        }
-
-        [Fact]
-        public async Task GetQueueList()
-        {
-            TestHorseRider server = new TestHorseRider();
-            await server.Initialize();
-            int port = server.Start();
-
-            HorseClient client = new HorseClient();
-            await client.ConnectAsync("horse://localhost:" + port);
-
-            var result = await client.Queue.List();
-            Assert.Equal(HorseResultCode.Ok, result.Result.Code);
-            Assert.NotNull(result.Model);
-            var queue = result.Model.FirstOrDefault();
-            Assert.NotNull(queue);
-            server.Stop();
-        }
-
-        /// <summary>
-        /// Clears messages in queue
-        /// </summary>
-        [Theory]
-        [InlineData(true, true)]
-        [InlineData(true, false)]
-        [InlineData(false, true)]
-        public async Task ClearMessages(bool priorityMessages, bool messages)
-        {
-            TestHorseRider server = new TestHorseRider();
-            await server.Initialize();
-            int port = server.Start();
-
-            HorseQueue queue = server.Rider.Queue.Find("push-a");
-            await queue.Push("Hello, World");
-            await queue.Push("Hello, World", true);
-            await Task.Delay(500);
-
-            HorseClient client = new HorseClient();
-            await client.ConnectAsync("horse://localhost:" + port);
-
-            var result = await client.Queue.ClearMessages("push-a", priorityMessages, messages);
-            Assert.Equal(HorseResultCode.Ok, result.Code);
-
-            if (priorityMessages)
-                Assert.Equal(0, queue.Manager.PriorityMessageStore.Count());
-            else
-                Assert.NotEqual(0, queue.Manager.PriorityMessageStore.Count());
-
-            if (messages)
-                Assert.Equal(0, queue.Manager.MessageStore.Count());
-            else
-                Assert.NotEqual(0, queue.Manager.MessageStore.Count());
+        if (messages)
+            Assert.Equal(0, queue.Manager.MessageStore.Count());
+        else
+            Assert.NotEqual(0, queue.Manager.MessageStore.Count());
             
-            server.Stop();
-        }
+        server.Stop();
     }
 }

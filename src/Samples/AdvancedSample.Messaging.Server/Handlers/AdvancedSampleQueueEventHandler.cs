@@ -4,45 +4,44 @@ using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Queues;
 using Microsoft.Extensions.Logging;
 
-namespace AdvancedSample.Messaging.Server.Handlers
+namespace AdvancedSample.Messaging.Server.Handlers;
+
+internal class AdvancedSampleQueueEventHandler : IQueueEventHandler
 {
-	internal class AdvancedSampleQueueEventHandler : IQueueEventHandler
-	{
-		private readonly ILogger<AdvancedSampleQueueEventHandler> _logger;
+    private readonly ILogger<AdvancedSampleQueueEventHandler> _logger;
 
-		public AdvancedSampleQueueEventHandler(ILogger<AdvancedSampleQueueEventHandler> logger)
-		{
-			_logger = logger;
-		}
+    public AdvancedSampleQueueEventHandler(ILogger<AdvancedSampleQueueEventHandler> logger)
+    {
+        _logger = logger;
+    }
 
-		public Task OnCreated(HorseQueue queue)
-		{
-			_logger.LogInformation("[QUEUE CREATED] {Name}", queue.Name);
-			return Task.CompletedTask;
-		}
+    public Task OnCreated(HorseQueue queue)
+    {
+        _logger.LogInformation("[QUEUE CREATED] {Name}", queue.Name);
+        return Task.CompletedTask;
+    }
 
-		public Task OnRemoved(HorseQueue queue)
-		{
-			_logger.LogInformation("[QUEUE REMOVED] {Name}", queue.Name);
-			return Task.CompletedTask;
-		}
+    public Task OnRemoved(HorseQueue queue)
+    {
+        _logger.LogInformation("[QUEUE REMOVED] {Name}", queue.Name);
+        return Task.CompletedTask;
+    }
 
-		public Task OnConsumerSubscribed(QueueClient client)
-		{
-			_logger.LogInformation("[CONSUMER SUBSCRIBED] {Name} {Type}", client.Queue.Name, client.Client.Type);
-			return Task.CompletedTask;
-		}
+    public Task OnConsumerSubscribed(QueueClient client)
+    {
+        _logger.LogInformation("[CONSUMER SUBSCRIBED] {Name} {Type}", client.Queue.Name, client.Client.Type);
+        return Task.CompletedTask;
+    }
 
-		public Task OnConsumerUnsubscribed(QueueClient client)
-		{
-			_logger.LogInformation("[CONSUMER UNSUBSCRIBED] {Name} {Type}", client.Queue.Name, client.Client.Type);
-			return Task.CompletedTask;
-		}
+    public Task OnConsumerUnsubscribed(QueueClient client)
+    {
+        _logger.LogInformation("[CONSUMER UNSUBSCRIBED] {Name} {Type}", client.Queue.Name, client.Client.Type);
+        return Task.CompletedTask;
+    }
 
-		public Task OnStatusChanged(HorseQueue queue, QueueStatus from, QueueStatus to)
-		{
-			_logger.LogInformation("[QUEUE STATUS CHANGED][{Name}] {From} TO {To}", queue.Name, from, to);
-			return Task.CompletedTask;
-		}
-	}
+    public Task OnStatusChanged(HorseQueue queue, QueueStatus from, QueueStatus to)
+    {
+        _logger.LogInformation("[QUEUE STATUS CHANGED][{Name}] {From} TO {To}", queue.Name, from, to);
+        return Task.CompletedTask;
+    }
 }

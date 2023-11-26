@@ -1,23 +1,22 @@
 using System;
 
-namespace Horse.Messaging.Client.Queues.Annotations
+namespace Horse.Messaging.Client.Queues.Annotations;
+
+/// <summary>
+/// Queue Topic attribute for queue messages
+/// </summary>
+public class QueueTopicAttribute : Attribute
 {
     /// <summary>
-    /// Queue Topic attribute for queue messages
+    /// The queue topic for the type
     /// </summary>
-    public class QueueTopicAttribute : Attribute
-    {
-        /// <summary>
-        /// The queue topic for the type
-        /// </summary>
-        public string Topic { get; }
+    public string Topic { get; }
 
-        /// <summary>
-        /// Creates new queue topic attribute
-        /// </summary>
-        public QueueTopicAttribute(string topic)
-        {
-            Topic = topic;
-        }
+    /// <summary>
+    /// Creates new queue topic attribute
+    /// </summary>
+    public QueueTopicAttribute(string topic)
+    {
+        Topic = topic;
     }
 }

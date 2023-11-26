@@ -1,13 +1,12 @@
 using System;
 using Horse.Messaging.Server;
 
-namespace Benchmark.Server
+namespace Benchmark.Server;
+
+public class ErrorHandler : IErrorHandler
 {
-    public class ErrorHandler : IErrorHandler
+    public void Error(string hint, Exception exception, string payload)
     {
-        public void Error(string hint, Exception exception, string payload)
-        {
-            Console.WriteLine($"ERROR\t{hint} : {exception}");
-        }
+        Console.WriteLine($"ERROR\t{hint} : {exception}");
     }
 }

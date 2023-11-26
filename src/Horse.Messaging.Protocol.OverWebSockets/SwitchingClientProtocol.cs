@@ -18,9 +18,9 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
 {
     private string _websocketKey;
     private readonly HorseClient _client;
-    private readonly WebSocketReader _reader = new WebSocketReader();
-    private readonly WebSocketWriter _writer = new WebSocketWriter();
-    private readonly HorseProtocolReader _horseReader = new HorseProtocolReader();
+    private readonly WebSocketReader _reader = new();
+    private readonly WebSocketWriter _writer = new();
+    private readonly HorseProtocolReader _horseReader = new();
 
     internal SwitchingClientProtocol(HorseClient client)
     {

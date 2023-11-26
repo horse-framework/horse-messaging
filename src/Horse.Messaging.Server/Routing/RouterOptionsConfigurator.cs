@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using Horse.Messaging.Client;
 using Horse.Messaging.Server.Helpers;
 
 namespace Horse.Messaging.Server.Routing;
@@ -13,7 +12,7 @@ public class RouterOptionsConfigurator : IOptionsConfigurator<RouterConfiguratio
     private readonly HorseRider _rider;
     private readonly string _filename;
 
-    private List<RouterConfiguration> _configurations = new List<RouterConfiguration>();
+    private List<RouterConfiguration> _configurations = new();
 
     public RouterOptionsConfigurator(HorseRider rider, string filename)
     {

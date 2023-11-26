@@ -4,17 +4,16 @@ using Horse.Messaging.Client.Events;
 using Horse.Messaging.Client.Events.Annotations;
 using Horse.Messaging.Protocol.Events;
 
-namespace Test.Events.Handlers.Cache
-{
-    [HorseEvent(HorseEventType.CacheRemove)]
-    public class CacheRemoveHandler : IHorseEventHandler
-    {
-        public static int Count { get; private set; }
+namespace Test.Events.Handlers.Cache;
 
-        public Task Handle(HorseEvent horseEvent, HorseClient client)
-        {
-            Count++;
-            return Task.CompletedTask;
-        }
+[HorseEvent(HorseEventType.CacheRemove)]
+public class CacheRemoveHandler : IHorseEventHandler
+{
+    public static int Count { get; private set; }
+
+    public Task Handle(HorseEvent horseEvent, HorseClient client)
+    {
+        Count++;
+        return Task.CompletedTask;
     }
 }

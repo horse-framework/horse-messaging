@@ -1,43 +1,42 @@
-namespace Horse.Messaging.Server.Queues
+namespace Horse.Messaging.Server.Queues;
+
+/// <summary>
+/// Result sets of push operations
+/// </summary>
+public enum PushResult
 {
     /// <summary>
-    /// Result sets of push operations
+    /// Message is pushed successfuly
     /// </summary>
-    public enum PushResult
-    {
-        /// <summary>
-        /// Message is pushed successfuly
-        /// </summary>
-        Success,
+    Success,
 
-        /// <summary>
-        /// Queue is empty
-        /// </summary>
-        Empty,
+    /// <summary>
+    /// Queue is empty
+    /// </summary>
+    Empty,
 
-        /// <summary>
-        /// There are no consumers in queue
-        /// </summary>
-        NoConsumers,
+    /// <summary>
+    /// There are no consumers in queue
+    /// </summary>
+    NoConsumers,
 
-        /// <summary>
-        /// Message limit is exceeded in queue, push failed
-        /// </summary>
-        LimitExceeded,
+    /// <summary>
+    /// Message limit is exceeded in queue, push failed
+    /// </summary>
+    LimitExceeded,
 
-        /// <summary>
-        /// Queue status does not support pushing messages 
-        /// </summary>
-        StatusNotSupported,
+    /// <summary>
+    /// Queue status does not support pushing messages 
+    /// </summary>
+    StatusNotSupported,
 
-        /// <summary>
-        /// An error has occured
-        /// </summary>
-        Error,
+    /// <summary>
+    /// An error has occured
+    /// </summary>
+    Error,
         
-        /// <summary>
-        /// Another message in queue with same unique id
-        /// </summary>
-        DuplicateUniqueId
-    }
+    /// <summary>
+    /// Another message in queue with same unique id
+    /// </summary>
+    DuplicateUniqueId
 }

@@ -12,7 +12,7 @@ public class QueueOptionsConfigurator : IOptionsConfigurator<QueueConfiguration>
     private readonly HorseRider _rider;
     private readonly string _filename;
 
-    private List<QueueConfiguration> _configurations = new List<QueueConfiguration>();
+    private List<QueueConfiguration> _configurations = new();
 
     public QueueOptionsConfigurator(HorseRider rider, string filename)
     {

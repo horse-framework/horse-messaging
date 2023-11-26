@@ -3,14 +3,13 @@ using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 
-namespace AdvancedSample.Service.Interceptors
+namespace AdvancedSample.Service.Interceptors;
+
+internal class TestInterceptor : IHorseInterceptor
 {
-	internal class TestInterceptor : IHorseInterceptor
-	{
-		public Task Intercept(HorseMessage message, HorseClient client)
-		{
-			Console.WriteLine("INTERCEPT");
-			return Task.CompletedTask;
-		}
-	}
+    public Task Intercept(HorseMessage message, HorseClient client)
+    {
+        Console.WriteLine("INTERCEPT");
+        return Task.CompletedTask;
+    }
 }

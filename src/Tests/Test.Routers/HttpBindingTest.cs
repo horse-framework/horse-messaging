@@ -1,7 +1,6 @@
-namespace Test.Routers
+namespace Test.Routers;
+
+public class HttpBindingTest
 {
-    public class HttpBindingTest
-    {
         
-    }
 }

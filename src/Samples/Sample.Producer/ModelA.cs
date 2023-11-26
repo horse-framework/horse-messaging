@@ -4,24 +4,23 @@ using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Protocol;
 
-namespace Sample.Producer
+namespace Sample.Producer;
+
+[QueueName("model-g")]
+[QueueType(MessagingQueueType.Pull)]
+[Acknowledge(QueueAckDecision.JustRequest)]
+[Interceptor(typeof(TestModelInterceptor1))]
+public class ModelA
 {
-    [QueueName("model-g")]
-    [QueueType(MessagingQueueType.Pull)]
-    [Acknowledge(QueueAckDecision.JustRequest)]
-    [Interceptor(typeof(TestModelInterceptor1))]
-    public class ModelA
-    {
-        [JsonPropertyName("no")]
-        public int No { get; set; }
+    [JsonPropertyName("no")]
+    public int No { get; set; }
 
-        [JsonPropertyName("foo")]
-        public string Foo { get; set; }
-    }
+    [JsonPropertyName("foo")]
+    public string Foo { get; set; }
+}
 
-    public class ModelC
-    {
-        [JsonPropertyName("no")]
-        public int No { get; set; }
-    }
+public class ModelC
+{
+    [JsonPropertyName("no")]
+    public int No { get; set; }
 }

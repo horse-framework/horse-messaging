@@ -1,13 +1,12 @@
 using System;
 
-namespace Horse.Messaging.Client.Queues.Annotations
+namespace Horse.Messaging.Client.Queues.Annotations;
+
+/// <summary>
+/// Used on Consumer Interfaces.
+/// Sends acknowledge for the message if it's required after consume operation completed successfuly
+/// </summary>
+[AttributeUsage(AttributeTargets.Class)]
+public class AutoAckAttribute : Attribute
 {
-    /// <summary>
-    /// Used on Consumer Interfaces.
-    /// Sends acknowledge for the message if it's required after consume operation completed successfuly
-    /// </summary>
-    [AttributeUsage(AttributeTargets.Class)]
-    public class AutoAckAttribute : Attribute
-    {
-    }
 }

@@ -6,19 +6,18 @@ using Horse.Messaging.Client.Direct.Annotations;
 using Horse.Messaging.Protocol;
 using Test.Client.Models;
 
-namespace Test.Client.Handlers
-{
-    [DirectContentType(300)]
-    public class RequestHandler : IHorseRequestHandler<ModelC, ModelA>
-    {
-        public Task<ModelA> Handle(ModelC request, HorseMessage rawMessage, HorseClient client)
-        {
-            return Task.FromResult(new ModelA());
-        }
+namespace Test.Client.Handlers;
 
-        public Task<ErrorResponse> OnError(Exception exception, ModelC request, HorseMessage rawMessage, HorseClient client)
-        {
-            return Task.FromResult(new ErrorResponse());
-        }
+[DirectContentType(300)]
+public class RequestHandler : IHorseRequestHandler<ModelC, ModelA>
+{
+    public Task<ModelA> Handle(ModelC request, HorseMessage rawMessage, HorseClient client)
+    {
+        return Task.FromResult(new ModelA());
+    }
+
+    public Task<ErrorResponse> OnError(Exception exception, ModelC request, HorseMessage rawMessage, HorseClient client)
+    {
+        return Task.FromResult(new ErrorResponse());
     }
 }

@@ -4,17 +4,16 @@ using Horse.Messaging.Client.Events;
 using Horse.Messaging.Client.Events.Annotations;
 using Horse.Messaging.Protocol.Events;
 
-namespace Test.Events.Handlers.Router
-{
-    [HorseEvent(HorseEventType.RouterBindingAdd)]
-    public class AddBindingHandler : IHorseEventHandler
-    {
-        public static int Count { get; private set; }
+namespace Test.Events.Handlers.Router;
 
-        public Task Handle(HorseEvent horseEvent, HorseClient client)
-        {
-            Count++;
-            return Task.CompletedTask;
-        }
+[HorseEvent(HorseEventType.RouterBindingAdd)]
+public class AddBindingHandler : IHorseEventHandler
+{
+    public static int Count { get; private set; }
+
+    public Task Handle(HorseEvent horseEvent, HorseClient client)
+    {
+        Count++;
+        return Task.CompletedTask;
     }
 }

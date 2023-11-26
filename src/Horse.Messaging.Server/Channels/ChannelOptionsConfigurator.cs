@@ -12,7 +12,7 @@ public class ChannelOptionsConfigurator : IOptionsConfigurator<ChannelConfigurat
     private readonly HorseRider _rider;
     private readonly string _filename;
 
-    private List<ChannelConfiguration> _configurations = new List<ChannelConfiguration>();
+    private List<ChannelConfiguration> _configurations = new();
 
     public ChannelOptionsConfigurator(HorseRider rider, string filename)
     {

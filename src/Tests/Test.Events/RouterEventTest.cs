@@ -7,141 +7,140 @@ using Test.Common;
 using Test.Events.Handlers.Router;
 using Xunit;
 
-namespace Test.Events
+namespace Test.Events;
+
+public class RouterEventTest
 {
-    public class RouterEventTest
+    [Fact]
+    public async Task RouterCreate()
     {
-        [Fact]
-        public async Task RouterCreate()
-        {
-            TestHorseRider server = new TestHorseRider();
-            await server.Initialize();
-            int port = server.Start(300, 300);
+        TestHorseRider server = new TestHorseRider();
+        await server.Initialize();
+        int port = server.Start(300, 300);
 
-            HorseClient client = new HorseClient();
+        HorseClient client = new HorseClient();
 
-            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
-            registrar.RegisterHandler<RouterCreateHandler>();
+        EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
+        registrar.RegisterHandler<RouterCreateHandler>();
 
-            await client.ConnectAsync($"horse://localhost:{port}");
+        await client.ConnectAsync($"horse://localhost:{port}");
 
-            HorseResult createResult = await client.Router.Create("test-router", RouteMethod.Distribute);
-            Assert.Equal(HorseResultCode.Ok, createResult.Code);
+        HorseResult createResult = await client.Router.Create("test-router", RouteMethod.Distribute);
+        Assert.Equal(HorseResultCode.Ok, createResult.Code);
 
-            await Task.Delay(250);
-            Assert.Equal(1, RouterCreateHandler.Count);
-            server.Stop();
-        }
+        await Task.Delay(250);
+        Assert.Equal(1, RouterCreateHandler.Count);
+        server.Stop();
+    }
 
-        [Fact]
-        public async Task RouterRemove()
-        {
-            TestHorseRider server = new TestHorseRider();
-            await server.Initialize();
-            int port = server.Start(300, 300);
+    [Fact]
+    public async Task RouterRemove()
+    {
+        TestHorseRider server = new TestHorseRider();
+        await server.Initialize();
+        int port = server.Start(300, 300);
 
-            HorseClient client = new HorseClient();
+        HorseClient client = new HorseClient();
 
-            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
-            registrar.RegisterHandler<RouterRemoveHandler>();
+        EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
+        registrar.RegisterHandler<RouterRemoveHandler>();
 
-            await client.ConnectAsync($"horse://localhost:{port}");
+        await client.ConnectAsync($"horse://localhost:{port}");
 
-            HorseResult createResult = await client.Router.Create("test-router", RouteMethod.Distribute);
-            Assert.Equal(HorseResultCode.Ok, createResult.Code);
+        HorseResult createResult = await client.Router.Create("test-router", RouteMethod.Distribute);
+        Assert.Equal(HorseResultCode.Ok, createResult.Code);
 
-            await Task.Delay(250);
-            Assert.Equal(0, RouterRemoveHandler.Count);
+        await Task.Delay(250);
+        Assert.Equal(0, RouterRemoveHandler.Count);
 
-            HorseResult removeResult = await client.Router.Remove("test-router");
-            Assert.Equal(HorseResultCode.Ok, removeResult.Code);
+        HorseResult removeResult = await client.Router.Remove("test-router");
+        Assert.Equal(HorseResultCode.Ok, removeResult.Code);
 
-            await Task.Delay(250);
-            Assert.Equal(1, RouterRemoveHandler.Count);
-            server.Stop();
-        }
+        await Task.Delay(250);
+        Assert.Equal(1, RouterRemoveHandler.Count);
+        server.Stop();
+    }
 
-        [Fact]
-        public async Task BindingAdd()
-        {
-            TestHorseRider server = new TestHorseRider();
-            await server.Initialize();
-            int port = server.Start(300, 300);
+    [Fact]
+    public async Task BindingAdd()
+    {
+        TestHorseRider server = new TestHorseRider();
+        await server.Initialize();
+        int port = server.Start(300, 300);
 
-            HorseClient client = new HorseClient();
+        HorseClient client = new HorseClient();
 
-            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
-            registrar.RegisterHandler<AddBindingHandler>();
+        EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
+        registrar.RegisterHandler<AddBindingHandler>();
 
-            await client.ConnectAsync($"horse://localhost:{port}");
+        await client.ConnectAsync($"horse://localhost:{port}");
 
-            HorseResult createResult = await client.Router.Create("test-router", RouteMethod.Distribute);
-            Assert.Equal(HorseResultCode.Ok, createResult.Code);
+        HorseResult createResult = await client.Router.Create("test-router", RouteMethod.Distribute);
+        Assert.Equal(HorseResultCode.Ok, createResult.Code);
 
-            HorseResult bindingResult = await client.Router.AddBinding("test-router", "DirectBinding", "binding-1", "@name:client-test", BindingInteraction.None);
-            Assert.Equal(HorseResultCode.Ok, bindingResult.Code);
+        HorseResult bindingResult = await client.Router.AddBinding("test-router", "DirectBinding", "binding-1", "@name:client-test", BindingInteraction.None);
+        Assert.Equal(HorseResultCode.Ok, bindingResult.Code);
 
-            await Task.Delay(250);
-            Assert.Equal(1, AddBindingHandler.Count);
-            server.Stop();
-        }
+        await Task.Delay(250);
+        Assert.Equal(1, AddBindingHandler.Count);
+        server.Stop();
+    }
 
-        [Fact]
-        public async Task BindingRemove()
-        {
-            TestHorseRider server = new TestHorseRider();
-            await server.Initialize();
-            int port = server.Start(300, 300);
+    [Fact]
+    public async Task BindingRemove()
+    {
+        TestHorseRider server = new TestHorseRider();
+        await server.Initialize();
+        int port = server.Start(300, 300);
 
-            HorseClient client = new HorseClient();
+        HorseClient client = new HorseClient();
 
-            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
-            registrar.RegisterHandler<RemoveBindingHandler>();
+        EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
+        registrar.RegisterHandler<RemoveBindingHandler>();
 
-            await client.ConnectAsync($"horse://localhost:{port}");
+        await client.ConnectAsync($"horse://localhost:{port}");
 
-            HorseResult createResult = await client.Router.Create("test-router", RouteMethod.Distribute);
-            Assert.Equal(HorseResultCode.Ok, createResult.Code);
+        HorseResult createResult = await client.Router.Create("test-router", RouteMethod.Distribute);
+        Assert.Equal(HorseResultCode.Ok, createResult.Code);
 
-            HorseResult bindingResult = await client.Router.AddBinding("test-router", "Direct", "binding-1", "@name:client-test", BindingInteraction.None);
-            Assert.Equal(HorseResultCode.Ok, bindingResult.Code);
+        HorseResult bindingResult = await client.Router.AddBinding("test-router", "Direct", "binding-1", "@name:client-test", BindingInteraction.None);
+        Assert.Equal(HorseResultCode.Ok, bindingResult.Code);
 
-            await Task.Delay(250);
-            Assert.Equal(0, RemoveBindingHandler.Count);
+        await Task.Delay(250);
+        Assert.Equal(0, RemoveBindingHandler.Count);
 
-            HorseResult removeResult = await client.Router.RemoveBinding("test-router", "binding-1");
-            Assert.Equal(HorseResultCode.Ok, removeResult.Code);
+        HorseResult removeResult = await client.Router.RemoveBinding("test-router", "binding-1");
+        Assert.Equal(HorseResultCode.Ok, removeResult.Code);
 
-            await Task.Delay(250);
-            Assert.Equal(1, RemoveBindingHandler.Count);
-            server.Stop();
-        }
+        await Task.Delay(250);
+        Assert.Equal(1, RemoveBindingHandler.Count);
+        server.Stop();
+    }
 
-        [Fact]
-        public async Task Publish()
-        {
-            TestHorseRider server = new TestHorseRider();
-            await server.Initialize();
-            int port = server.Start(300, 300);
+    [Fact]
+    public async Task Publish()
+    {
+        TestHorseRider server = new TestHorseRider();
+        await server.Initialize();
+        int port = server.Start(300, 300);
 
-            HorseClient client = new HorseClient();
+        HorseClient client = new HorseClient();
 
-            EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
-            registrar.RegisterHandler<RouterPublishHandler>();
+        EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
+        registrar.RegisterHandler<RouterPublishHandler>();
 
-            await client.ConnectAsync($"horse://localhost:{port}");
+        await client.ConnectAsync($"horse://localhost:{port}");
 
-            HorseResult createResult = await client.Router.Create("router", RouteMethod.Distribute);
-            Assert.Equal(HorseResultCode.Ok, createResult.Code);
+        HorseResult createResult = await client.Router.Create("router", RouteMethod.Distribute);
+        Assert.Equal(HorseResultCode.Ok, createResult.Code);
             
-            HorseResult result = await client.Event.Subscribe(HorseEventType.RouterPublish, "router", true);
-            Assert.Equal(HorseResultCode.Ok, result.Code);
+        HorseResult result = await client.Event.Subscribe(HorseEventType.RouterPublish, "router", true);
+        Assert.Equal(HorseResultCode.Ok, result.Code);
 
-            await client.Router.Publish("router", "Hello, World!", false);
+        await client.Router.Publish("router", "Hello, World!", false);
 
-            await Task.Delay(250);
-            Assert.Equal(1, RouterPublishHandler.Count);
-            server.Stop();
-        }
+        await Task.Delay(250);
+        Assert.Equal(1, RouterPublishHandler.Count);
+        server.Stop();
     }
 }

@@ -1,28 +1,27 @@
-namespace Horse.Messaging.Server.Cache
+namespace Horse.Messaging.Server.Cache;
+
+/// <summary>
+/// Cache operation result
+/// </summary>
+public enum CacheResult
 {
     /// <summary>
-    /// Cache operation result
+    /// Operation is successful
     /// </summary>
-    public enum CacheResult
-    {
-        /// <summary>
-        /// Operation is successful
-        /// </summary>
-        Ok,
+    Ok,
 
-        /// <summary>
-        /// Operation failed because maximum key limit exeeded
-        /// </summary>
-        KeyLimit,
+    /// <summary>
+    /// Operation failed because maximum key limit exceeded
+    /// </summary>
+    KeyLimit,
 
-        /// <summary>
-        /// Operation failed because key size is too large
-        /// </summary>
-        KeySizeLimit,
+    /// <summary>
+    /// Operation failed because key size is too large
+    /// </summary>
+    KeySizeLimit,
 
-        /// <summary>
-        /// Operation failed because item size is too large
-        /// </summary>
-        ItemSizeLimit
-    }
+    /// <summary>
+    /// Operation failed because item size is too large
+    /// </summary>
+    ItemSizeLimit
 }
