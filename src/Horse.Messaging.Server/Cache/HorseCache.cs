@@ -312,7 +312,9 @@ public class HorseCache
         {
             byte[] valueArray = item.Value.ToArray();
             int value = BitConverter.ToInt32(valueArray);
-            item.Value = new MemoryStream(BitConverter.GetBytes(value + incrementValue));
+            byte[] data = BitConverter.GetBytes(value + incrementValue);
+            item.Value.Position = 0;
+            item.Value.Write(data);
         }
 
         previousValue?.Dispose();
@@ -348,7 +350,7 @@ public class HorseCache
         }
 
         Rider.Cache.RemoveEvent.Trigger(client, key);
-            
+
         if (notifyCluster)
             ClusterNotifier.SendRemove(key);
     }
@@ -382,7 +384,7 @@ public class HorseCache
         }
 
         Rider.Cache.PurgeEvent.Trigger(client);
-            
+
         if (notifyCluster)
             ClusterNotifier.SendPurge(tagName);
     }
@@ -412,7 +414,7 @@ public class HorseCache
         }
 
         Rider.Cache.PurgeEvent.Trigger(client);
-            
+
         if (notifyCluster)
             ClusterNotifier.SendPurge(null);
     }
