@@ -42,9 +42,13 @@ internal class HorseCache : IHorseCache
     }
 
     /// <inheritdoc />
-    public async Task<HorseCacheData<int>> GetIncrementalValue(string key)
+    public async Task<HorseCacheData<int>> GetIncrementalValue(string key, int increment = 1)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);
+
+        if (increment > 1)
+            message.AddHeader(HorseHeaders.VALUE, increment.ToString());
+
         HorseResult result = await _client.SendAndGetAck(message);
 
         if (result == null || result.Code != HorseResultCode.Ok)
@@ -52,7 +56,7 @@ internal class HorseCache : IHorseCache
 
         HorseCacheData<byte[]> data = CreateCacheData<byte[]>(key, message);
         data.Value = result.Message.Content.ToArray();
-        int value = BitConverter.ToInt32( data.Value );
+        int value = BitConverter.ToInt32(data.Value);
         return new HorseCacheData<int>
         {
             Key = data.Key,
@@ -135,7 +139,7 @@ internal class HorseCache : IHorseCache
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         _client.MessageSerializer.Serialize(message, data);
-            
+
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
@@ -151,7 +155,7 @@ internal class HorseCache : IHorseCache
 
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
-            
+
         return _client.SendAndGetAck(message);
     }
 
@@ -164,7 +168,7 @@ internal class HorseCache : IHorseCache
 
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
-            
+
         return _client.SendAndGetAck(message);
     }
 
@@ -173,7 +177,7 @@ internal class HorseCache : IHorseCache
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         message.SetStringContent(data);
-            
+
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
@@ -186,7 +190,7 @@ internal class HorseCache : IHorseCache
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         message.SetStringContent(data);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
-            
+
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
@@ -199,7 +203,7 @@ internal class HorseCache : IHorseCache
         message.SetStringContent(data);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
         message.SetOrAddHeader(HorseHeaders.WARNING_DURATION, Convert.ToInt32(expirationWarningDuration.TotalSeconds).ToString());
-            
+
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
@@ -210,7 +214,7 @@ internal class HorseCache : IHorseCache
     public Task<HorseResult> SetData(string key, byte[] data, string[] tags = null)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
-            
+
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
@@ -224,7 +228,7 @@ internal class HorseCache : IHorseCache
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
-            
+
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
@@ -238,7 +242,7 @@ internal class HorseCache : IHorseCache
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
         message.SetOrAddHeader(HorseHeaders.WARNING_DURATION, Convert.ToInt32(expirationWarningDuration.TotalSeconds).ToString());
-            
+
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 

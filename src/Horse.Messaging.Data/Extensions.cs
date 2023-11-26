@@ -93,8 +93,7 @@ public static class Extensions
             return Task.FromResult<IHorseQueueManager>(manager);
         });
 
-        if (!cfg.Rider.Queue.QueueManagerFactories.ContainsKey("Default"))
-            cfg.Rider.Queue.QueueManagerFactories.Add("Default", cfg.Rider.Queue.QueueManagerFactories["Persistent"]);
+        cfg.Rider.Queue.QueueManagerFactories.TryAdd("Default", cfg.Rider.Queue.QueueManagerFactories["Persistent"]);
 
         return cfg;
     }

@@ -150,6 +150,8 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                 }
 
                 string messageTimeout = message.FindHeader(HorseHeaders.MESSAGE_TIMEOUT);
+                string incrementalValue = message.FindHeader(HorseHeaders.VALUE);
+                int increment = string.IsNullOrEmpty(incrementalValue) ? 1 : Convert.ToInt32(incrementalValue);
                 string tags = message.FindHeader(HorseHeaders.TAG);
                 string[] tagNames = string.IsNullOrEmpty(tags) ? Array.Empty<string>() : tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
 
@@ -157,7 +159,7 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                 if (!string.IsNullOrEmpty(messageTimeout))
                     timeout = TimeSpan.FromSeconds(Convert.ToInt32(messageTimeout));
 
-                GetCacheItemResult getResult = await _cache.GetIncremental(message.Target, timeout, tagNames);
+                GetCacheItemResult getResult = await _cache.GetIncremental(message.Target, timeout, increment, tagNames);
                 HorseCacheItem item = getResult.item;
 
                 HorseMessage response = message.CreateResponse(HorseResultCode.Ok);

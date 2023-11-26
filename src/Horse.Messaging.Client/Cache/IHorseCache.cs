@@ -33,8 +33,7 @@ public interface IHorseCache
     /// Gets a incremental integer value from cache.
     /// Each get request increases value by 1.
     /// </summary>
-    /// <param name="key">Cache key</param>
-    Task<HorseCacheData<int>> GetIncrementalValue(string key);
+    Task<HorseCacheData<int>> GetIncrementalValue(string key, int increment = 1);
 
     /// <summary>
     /// Gets the binary data from cache
