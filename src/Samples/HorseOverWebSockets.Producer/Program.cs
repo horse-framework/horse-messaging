@@ -9,7 +9,7 @@ HorseClient client = null;
 IHost host = Host.CreateDefaultBuilder(args)
     .UseHorse(cfg =>
     {
-        cfg.AddHost("localhost:8080");
+        cfg.AddHost("ws://localhost:8080");
         cfg.SetClientName("Test");
         cfg.UseHorseOverWebSockets();
         cfg.OnConnected(async c =>
@@ -21,7 +21,6 @@ IHost host = Host.CreateDefaultBuilder(args)
     .Build();
 
 host.Start();
-
 
 while (true)
 {

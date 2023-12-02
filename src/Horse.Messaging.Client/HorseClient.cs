@@ -507,7 +507,8 @@ public class HorseClient : IDisposable
             SetAutoReconnect(true);
 
             DnsResolver resolver = new DnsResolver();
-            Connect(resolver.Resolve(host));
+            DnsInfo info = resolver.Resolve(host);
+            Connect(info);
         }
         catch (Exception e)
         {
@@ -533,6 +534,7 @@ public class HorseClient : IDisposable
 
         try
         {
+            _data.Properties["Host"] = host.Hostname;
             _socket = new HorseSocket(this, _data);
             _socket.Connect(host);
         }
@@ -570,7 +572,8 @@ public class HorseClient : IDisposable
             SetAutoReconnect(true);
 
             DnsResolver resolver = new DnsResolver();
-            return ConnectAsync(resolver.Resolve(host));
+            DnsInfo info = resolver.Resolve(host);
+            return ConnectAsync(info);
         }
         catch (Exception e)
         {
@@ -593,6 +596,7 @@ public class HorseClient : IDisposable
 
         try
         {
+            _data.Properties["Host"] = host.Hostname;
             _socket = new HorseSocket(this, _data);
             await _socket.ConnectAsync(host);
         }

@@ -30,7 +30,6 @@ public class OptionsBuilder
         if (!Directory.Exists(_options.DataPath))
             Directory.CreateDirectory(_options.DataPath);
 
-
         LoadJockeyFromEnvironment();
         LoadClusterFromEnvironment();
         LoadLimitsFromEnvironment();

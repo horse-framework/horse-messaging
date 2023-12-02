@@ -8,13 +8,13 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Horse.Messaging.Protocol.OverWebSockets" Version="6.8.1" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\..\Horse.Messaging.Client\Horse.Messaging.Client.csproj" />
       <ProjectReference Include="..\..\Horse.Messaging.Extensions.Client\Horse.Messaging.Extensions.Client.csproj" />
-      <ProjectReference Include="..\..\Horse.Messaging.Protocol.OverWebSockets\Horse.Messaging.Protocol.OverWebSockets.csproj" />
     </ItemGroup>
 
     <ItemGroup>
