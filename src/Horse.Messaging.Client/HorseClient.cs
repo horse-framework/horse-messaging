@@ -967,6 +967,7 @@ public class HorseClient : IDisposable
         {
             case MessageType.Channel:
                 await Channel.OnChannelMessage(message);
+                InvokeMessageReceived(message);
                 break;
 
             case MessageType.QueueMessage:
@@ -974,8 +975,8 @@ public class HorseClient : IDisposable
                 if (message.WaitResponse && AutoAcknowledge)
                     await SendAsync(message.CreateAcknowledge());
 
-                InvokeMessageReceived(message);
                 await Queue.OnQueueMessage(message);
+                InvokeMessageReceived(message);
                 break;
 
             case MessageType.DirectMessage:
@@ -983,8 +984,8 @@ public class HorseClient : IDisposable
                 if (message.WaitResponse && AutoAcknowledge)
                     await SendAsync(message.CreateAcknowledge());
 
-                InvokeMessageReceived(message);
                 await Direct.OnDirectMessage(message);
+                InvokeMessageReceived(message);
                 break;
 
             case MessageType.Server:
@@ -1034,6 +1035,7 @@ public class HorseClient : IDisposable
 
             case MessageType.Event:
                 _ = Event.OnEventMessage(message);
+                InvokeMessageReceived(message);
                 break;
         }
     }

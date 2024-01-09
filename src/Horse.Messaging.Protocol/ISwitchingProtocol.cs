@@ -37,6 +37,11 @@ public interface ISwitchingProtocol
     Task<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null);
 
     /// <summary>
+    /// Sends raw data over custom protocol
+    /// </summary>
+    Task<bool> SendAsync(byte[] data);
+    
+    /// <summary>
     /// Reads protocol messages over network stream and converts the messages to horse message types
     /// </summary>
     Task<HorseMessage> Read(Stream stream);

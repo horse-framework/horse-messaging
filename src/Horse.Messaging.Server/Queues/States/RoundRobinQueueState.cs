@@ -101,7 +101,7 @@ internal class RoundRobinQueueState : IQueueState
         MessageDelivery delivery = new MessageDelivery(message, receiver, deadline);
 
         //send the message
-        bool sent = await receiver.Client.SendAsync(messageData);
+        bool sent = await receiver.Client.SendRawAsync(messageData);
 
         if (sent)
         {

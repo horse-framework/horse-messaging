@@ -55,12 +55,39 @@ internal class SwitchingServerProtocol : ISwitchingProtocol
         return _socket.SendAsync(msg);
     }
 
+    public Task<bool> SendAsync(byte[] data)
+    {
+        WebSocketMessage msg = new WebSocketMessage
+        {
+            OpCode = SocketOpCode.Binary,
+            Content = new MemoryStream(data)
+        };
+
+        msg.Content.Position = 0;
+        return _socket.SendAsync(msg);
+    }
+
     public async Task<HorseMessage> Read(Stream stream)
     {
         WebSocketMessage wsMsg = await _wsReader.Read(stream);
-        wsMsg.Content.Position = 0;
-        HorseMessage message = await _socket.HorseReader.Read(wsMsg.Content);
-        return message;
+
+        if (wsMsg == null)
+            return null;
+
+        if (wsMsg.Content != null)
+        {
+            wsMsg.Content.Position = 0;
+            HorseMessage message = await _socket.HorseReader.Read(wsMsg.Content);
+            return message;
+        }
+
+        if (wsMsg.OpCode == SocketOpCode.Ping)
+            return new HorseMessage(MessageType.Ping);
+
+        if (wsMsg.OpCode == SocketOpCode.Pong)
+            return new HorseMessage(MessageType.Pong);
+
+        return null;
     }
 
     public Task ClientProtocolHandshake(ConnectionData data, Stream stream)

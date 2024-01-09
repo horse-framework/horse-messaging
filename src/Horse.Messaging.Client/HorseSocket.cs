@@ -200,6 +200,8 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
     private async Task Start()
     {
         OnConnected();
+        _ = _client.OnConnected();
+
         try
         {
             while (IsConnected)
@@ -237,10 +239,7 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
         string first = Data.Method + " " + Data.Path + "\r\n";
         await message.Content.WriteAsync(Encoding.UTF8.GetBytes(first));
 
-        if (Data.Properties.ContainsKey(HorseHeaders.CLIENT_ID))
-            Data.Properties[HorseHeaders.CLIENT_ID] = _client.ClientId;
-        else
-            Data.Properties.Add(HorseHeaders.CLIENT_ID, _client.ClientId);
+        Data.Properties[HorseHeaders.CLIENT_ID] = _client.ClientId;
 
         foreach (var prop in Data.Properties)
         {
@@ -275,15 +274,6 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
             KeepAlive();
 
         _ = _client.OnMessageReceived(message);
-    }
-
-    /// <summary>
-    /// Client connected to the server
-    /// </summary>
-    protected override void OnConnected()
-    {
-        base.OnConnected();
-        _ = _client.OnConnected();
     }
 
     /// <summary>

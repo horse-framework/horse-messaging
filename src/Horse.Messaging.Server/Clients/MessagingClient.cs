@@ -300,5 +300,16 @@ public class MessagingClient : HorseServerSocket, ISwitchingProtocolClient
         return base.SendAsync(message, additionalHeaders);
     }
 
+    /// <summary>
+    /// Sends raw data
+    /// </summary>
+    public Task<bool> SendRawAsync(byte[] data)
+    {
+        if (SwitchingProtocol != null)
+            return SwitchingProtocol.SendAsync(data);
+
+        return base.SendAsync(data);
+    }
+
     #endregion
 }

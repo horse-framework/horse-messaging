@@ -128,7 +128,7 @@ public class EventManager : IDisposable
             foreach (MessagingClient subscriber in Subscribers.All())
             {
                 if (subscriber.IsConnected)
-                    _ = subscriber.SendAsync(data);
+                    _ = subscriber.SendRawAsync(data);
             }
         }
         catch (Exception e)

@@ -255,12 +255,8 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
             if (string.IsNullOrEmpty(message.Source))
                 message.SetSource(mc.UniqueId);
 
-            //if client sending messages like someone another, kick him
             else if (message.Source != mc.UniqueId)
-            {
-                client.Disconnect();
-                return;
-            }
+                message.SetSource(mc.UniqueId);
 
             await RouteToHandler(mc, message);
         }
@@ -283,7 +279,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
             case MessageType.Channel:
                 if (!mc.IsNodeClient && clusterMode == ClusterMode.Scaled)
                     _rider.Cluster.ProcessMessageFromClient(mc, message);
-                    
+
                 return isReplica
                     ? Task.CompletedTask
                     : _channelHandler.Handle(mc, message, mc.IsNodeClient);
@@ -301,7 +297,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
             case MessageType.Cache:
                 if (!mc.IsNodeClient)
                     _rider.Cluster.ProcessMessageFromClient(mc, message);
-                    
+
                 return _cacheHandler.Handle(mc, message, mc.IsNodeClient);
 
             case MessageType.Transaction:
@@ -317,7 +313,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
             case MessageType.DirectMessage:
                 if (!mc.IsNodeClient && clusterMode == ClusterMode.Scaled)
                     _rider.Cluster.ProcessMessageFromClient(mc, message);
-                    
+
                 return isReplica
                     ? Task.CompletedTask
                     : _clientHandler.Handle(mc, message, mc.IsNodeClient);
@@ -328,7 +324,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
 
                 if (clusterMode == ClusterMode.Reliable && mc.IsNodeClient && mc.NodeClient != null)
                     mc.NodeClient.ProcessReceivedMessage(mc, message);
-                    
+
                 return isReplica
                     ? Task.CompletedTask
                     : _responseHandler.Handle(mc, message, mc.IsNodeClient);
@@ -346,7 +342,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
                 return _eventHandler.Handle(mc, message, mc.IsNodeClient);
 
             case MessageType.Ping:
-                return mc.SendAsync(PredefinedMessages.PONG);
+                return mc.SendRawAsync(PredefinedMessages.PONG);
 
             case MessageType.Pong:
                 mc.KeepAlive();

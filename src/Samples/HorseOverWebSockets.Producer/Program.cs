@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Extensions.Client;
 using Horse.Messaging.Server.OverWebSockets;
@@ -14,13 +15,28 @@ IHost host = Host.CreateDefaultBuilder(args)
         cfg.UseHorseOverWebSockets();
         cfg.OnConnected(async c =>
         {
-            Console.WriteLine("Connected");
             client = c;
+            await Task.Delay(2500);
+            await c.Channel.Subscribe("Test", false);
+            await Task.Delay(2500);
+            string abc = new string('x', 60000);
+            await c.Channel.PublishString("Test", abc);
         });
+        cfg.OnMessageReceived(msg => Console.WriteLine(msg.ToString().Substring(0, 14)));
     })
     .Build();
 
 host.Start();
+
+
+while (true)
+{
+    await Task.Delay(5000);
+    //   await client.Channel.Subscribe("Test", true);
+}
+
+Console.ReadLine();
+Console.ReadLine();
 
 while (true)
 {
@@ -30,6 +46,7 @@ while (true)
         Console.WriteLine("Client is null");
         continue;
     }
+
     var result = await client.Queue.Push("Foo", line, true);
     Console.WriteLine("result: " + result.Code);
 }

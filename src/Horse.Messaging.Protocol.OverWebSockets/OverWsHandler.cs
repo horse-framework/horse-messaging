@@ -28,7 +28,7 @@ internal class OverWsHandler : IProtocolConnectionHandler<WsServerSocket, WebSoc
     {
         OverWsServerSocket socket = (OverWsServerSocket) client;
         HorseServerSocket horseSocket = await _horseHandler.Connected(server, socket.Info, socket.Data);
-
+        
         ISwitchingProtocolClient switchingClient = horseSocket as ISwitchingProtocolClient;
         if (switchingClient == null)
         {
@@ -39,7 +39,6 @@ internal class OverWsHandler : IProtocolConnectionHandler<WsServerSocket, WebSoc
         socket.HorseClient = switchingClient;
         socket.ServerSocket = horseSocket;
         switchingClient.SwitchingProtocol = new SwitchingServerProtocol(socket);
-
         await _horseHandler.Ready(server, socket.ServerSocket);
     }
 

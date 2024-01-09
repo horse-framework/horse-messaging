@@ -95,7 +95,7 @@ internal class PushQueueState : IQueueState
             MessageDelivery delivery = new MessageDelivery(message, client, ackDeadline);
 
             //send the message
-            bool sent = await client.Client.SendAsync(messageData);
+            bool sent = await client.Client.SendRawAsync(messageData);
 
             if (sent)
             {

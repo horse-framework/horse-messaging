@@ -53,8 +53,6 @@ public class Program
                         fileSizeLimitBytes: logConfig.FileSizeLimit
                     )
                     .CreateLogger();
-
-                logger.AddSerilog(_serilogLogger);
             })
             .UseWindowsService();
 }
