@@ -59,7 +59,7 @@ namespace Sample.Server
             HorseServer server = new HorseServer();
             server.Options.PingInterval = 10;
             server.UseRider(rider);
-            server.Run(26222);
+            server.Run(2626);
         }
     }
 }

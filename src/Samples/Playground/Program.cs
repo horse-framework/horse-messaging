@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues.Annotations;
+using Microsoft.Extensions.Hosting;
 
 namespace Playground;
 
@@ -17,6 +18,8 @@ class Program
 {
     static async Task Main(string[] args)
     {
+        var host = Host.CreateDefaultBuilder(args);
+            
         HorseClient client = new HorseClient();
         client.MessageSerializer = new SystemJsonContentSerializer();
         await client.ConnectAsync("localhost:2626");

@@ -506,8 +506,17 @@ public class HorseClient : IDisposable
 
             SetAutoReconnect(true);
 
-            DnsResolver resolver = new DnsResolver();
-            DnsInfo info = resolver.Resolve(host);
+            DnsInfo info = null;
+            try
+            {
+                DnsResolver resolver = new DnsResolver();
+                info = resolver.Resolve(host);
+            }
+            catch
+            {
+                info = CreateDnsFromString(host);
+            }
+
             Connect(info);
         }
         catch (Exception e)
@@ -517,6 +526,23 @@ public class HorseClient : IDisposable
             if (ThrowExceptions)
                 throw;
         }
+    }
+
+    private DnsInfo CreateDnsFromString(string host)
+    {
+        string[] split = host.Split(':');
+        string ip = (split.Length == 3 ? split[1] : split[0]).Replace("/", "");
+        string port = split[^1];
+        bool portSpecified = int.TryParse(port, out int portNumber);
+
+        return new DnsInfo
+        {
+            Hostname = ip,
+            Protocol = Core.Protocol.Horse,
+            IPAddress = ip,
+            SSL = split.Length > 2 && split[0].ToLower().EndsWith("s"),
+            Port = portSpecified ? portNumber : 2626
+        };
     }
 
     /// <summary>
@@ -571,8 +597,17 @@ public class HorseClient : IDisposable
 
             SetAutoReconnect(true);
 
-            DnsResolver resolver = new DnsResolver();
-            DnsInfo info = resolver.Resolve(host);
+            DnsInfo info = null;
+            try
+            {
+                DnsResolver resolver = new DnsResolver();
+                info = resolver.Resolve(host);
+            }
+            catch
+            {
+                info = CreateDnsFromString(host);
+            }
+
             return ConnectAsync(info);
         }
         catch (Exception e)
