@@ -796,6 +796,39 @@ public class HorseClient : IDisposable
     }
 
     /// <summary>
+    /// Sends multiple horses messages in a single horse message and waits for acknowledge
+    /// </summary>
+    public async Task<HorseResult> SendEnvelopedAndGetAck(IEnumerable<HorseMessage> messages, string envelopeTarget = null, IList<KeyValuePair<string, string>> additionalHeaders = null)
+    {
+        HorseMessage envelope = new HorseMessage(MessageType.Envelope, string.IsNullOrEmpty(envelopeTarget) ? "*" : envelopeTarget, 0);
+        envelope.SetSource(_clientId);
+        envelope.WaitResponse = true;
+        envelope.SetMessageId(UniqueIdGenerator.Create());
+        envelope.Content = new MemoryStream();
+
+        foreach (HorseMessage message in messages)
+        {
+            message.SetSource(_clientId);
+            message.WaitResponse = true;
+
+            if (string.IsNullOrEmpty(message.MessageId))
+                message.SetMessageId(UniqueIdGenerator.Create());
+
+            if (message.Type == MessageType.DirectMessage)
+                message.HighPriority = true;
+
+            if (additionalHeaders != null)
+                foreach (KeyValuePair<string, string> pair in additionalHeaders)
+                    message.AddHeader(pair.Key, pair.Value);
+
+            envelope.Content.Write(HorseProtocolWriter.Create(message));
+        }
+
+        envelope.CalculateLengths();
+        return await WaitResponse(envelope, true);
+    }
+
+    /// <summary>
     /// Sends a message, waits response and deserializes JSON response to T template type
     /// </summary>
     public async Task<HorseModelResult<T>> SendAndGetJson<T>(HorseMessage message)

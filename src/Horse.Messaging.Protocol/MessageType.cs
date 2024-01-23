@@ -85,5 +85,10 @@ public enum MessageType : byte
     /// <summary>
     /// Clustering and node messages
     /// </summary>
-    Cluster = 0x1C
+    Cluster = 0x1C,
+    
+    /// <summary>
+    /// Envelope Message contains multiple messages in it
+    /// </summary>
+    Envelope = 0x1D
 }

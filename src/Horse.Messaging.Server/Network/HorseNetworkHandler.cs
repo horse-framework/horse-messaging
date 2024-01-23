@@ -276,6 +276,9 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
 
         switch (message.Type)
         {
+            case MessageType.Envelope:
+                return OpenEnvelope(mc, message);
+
             case MessageType.Channel:
                 if (!mc.IsNodeClient && clusterMode == ClusterMode.Scaled)
                     _rider.Cluster.ProcessMessageFromClient(mc, message);
@@ -354,6 +357,23 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         }
 
         return Task.CompletedTask;
+    }
+
+    private async Task OpenEnvelope(MessagingClient mc, HorseMessage message)
+    {
+        HorseProtocolReader reader = new HorseProtocolReader();
+        message.Content.Position = 0;
+        while (message.Content.Position < message.Content.Length)
+        {
+            HorseMessage item = await reader.Read(message.Content);
+
+            if (item == null)
+                break;
+
+            await RouteToHandler(mc, item);
+        }
+
+        await mc.SendAsync(message.CreateAcknowledge());
     }
 
     #endregion
