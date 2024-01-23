@@ -44,13 +44,17 @@ public class DirectEventTest
 
         HorseClient client = new HorseClient();
         client.SetClientName("test-client");
-        client.MessageReceived += (c, m) => { c.SendAsync(m.CreateResponse(HorseResultCode.Ok)); };
+        client.CatchResponseMessages = false;
+        client.CatchEventMessages = false;
+        client.MessageReceived += (c, m) =>
+        {
+            c.SendAsync(m.CreateResponse(HorseResultCode.Ok));
+        };
 
         EventSubscriberRegistrar registrar = new EventSubscriberRegistrar(client.Event);
         registrar.RegisterHandler<DirectResponseHandler>();
 
         await client.ConnectAsync($"horse://localhost:{port}");
-
         await client.Direct.Request("@name:test-client", 0, new MemoryStream(Encoding.UTF8.GetBytes("Hello, World!")));
 
         await Task.Delay(250);

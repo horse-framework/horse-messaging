@@ -137,8 +137,16 @@ public class HorseClient : IDisposable
     /// <summary>
     /// If true, response messages will trigger on message received events.
     /// If false, response messages are proceed silently.
+    /// Default is false.
     /// </summary>
     public bool CatchResponseMessages { get; set; }
+
+    /// <summary>
+    /// If true, event messages will trigger on message received events.
+    /// If false, event messages will be proceed but message received event actions will not triggered.
+    /// Default is false.
+    /// </summary>
+    public bool CatchEventMessages { get; set; }
 
     /// <summary>
     /// If true, throws all exceptions about connections.
@@ -1103,7 +1111,9 @@ public class HorseClient : IDisposable
 
             case MessageType.Event:
                 _ = Event.OnEventMessage(message);
-                InvokeMessageReceived(message);
+
+                if (CatchEventMessages)
+                    InvokeMessageReceived(message);
                 break;
         }
     }

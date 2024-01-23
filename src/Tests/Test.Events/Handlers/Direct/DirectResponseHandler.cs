@@ -9,7 +9,7 @@ namespace Test.Events.Handlers.Direct;
 [HorseEvent(HorseEventType.DirectMessageResponse)]
 public class DirectResponseHandler : IHorseEventHandler
 {
-    public static int Count { get; private set; }
+    public static int Count { get; set; }
 
     public Task Handle(HorseEvent horseEvent, HorseClient client)
     {
