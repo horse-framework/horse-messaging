@@ -12,12 +12,12 @@ public class PushExceptionsAttribute : Attribute
     /// Exception type
     /// </summary>
     public Type ExceptionType { get; }
-        
+
     /// <summary>
     /// Exception model type
     /// </summary>
     public Type ModelType { get; }
-        
+
     /// <summary>
     /// Pushes all exceptions
     /// </summary>

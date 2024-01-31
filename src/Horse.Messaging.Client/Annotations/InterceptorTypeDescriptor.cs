@@ -22,7 +22,9 @@ public class InterceptorTypeDescriptor
     /// </summary>
     internal IHorseInterceptor Instance { get; set; }
 
-    private InterceptorTypeDescriptor() { }
+    private InterceptorTypeDescriptor()
+    {
+    }
 
     /// <summary>
     /// Interceptor type descriptor factory

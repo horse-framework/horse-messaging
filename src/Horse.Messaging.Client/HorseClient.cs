@@ -264,6 +264,11 @@ public class HorseClient : IDisposable
     /// </summary>
     public ISwitchingProtocol SwitchingProtocol { get; set; }
 
+    /// <summary>
+    /// If horse protocol is specified on host when switching protocol is enabled. Switching protocol will be discarded for the session.
+    /// </summary>
+    public bool AutoDiscardSwitchingProtocol { get; set; } = true;
+
     #endregion
 
     #region Constructors - Destructors
@@ -273,6 +278,7 @@ public class HorseClient : IDisposable
     private readonly ConnectionData _data = new();
     private bool _autoConnect;
     private Timer _reconnectTimer;
+    private ISwitchingProtocol _discardedSwitchProtocol;
 
     static HorseClient()
     {
@@ -525,6 +531,20 @@ public class HorseClient : IDisposable
                 info = CreateDnsFromString(host);
             }
 
+            if (AutoDiscardSwitchingProtocol)
+            {
+                if (info.Protocol == Core.Protocol.Horse && SwitchingProtocol != null)
+                {
+                    _discardedSwitchProtocol = SwitchingProtocol;
+                    SwitchingProtocol = null;
+                }
+                else if (info.Protocol != Core.Protocol.Horse && SwitchingProtocol == null)
+                {
+                    SwitchingProtocol = _discardedSwitchProtocol;
+                    _discardedSwitchProtocol = null;
+                }
+            }
+
             Connect(info);
         }
         catch (Exception e)
@@ -614,6 +634,20 @@ public class HorseClient : IDisposable
             catch
             {
                 info = CreateDnsFromString(host);
+            }
+
+            if (AutoDiscardSwitchingProtocol)
+            {
+                if (info.Protocol == Core.Protocol.Horse && SwitchingProtocol != null)
+                {
+                    _discardedSwitchProtocol = SwitchingProtocol;
+                    SwitchingProtocol = null;
+                }
+                else if (info.Protocol != Core.Protocol.Horse && SwitchingProtocol == null)
+                {
+                    SwitchingProtocol = _discardedSwitchProtocol;
+                    _discardedSwitchProtocol = null;
+                }
             }
 
             return ConnectAsync(info);

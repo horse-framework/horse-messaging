@@ -13,7 +13,7 @@ public class AutoResponseAttribute : Attribute
     /// Decides when message will be respond
     /// </summary>
     public AutoResponse Response { get; }
-        
+
     /// <summary>
     /// Error type for failed operations
     /// </summary>

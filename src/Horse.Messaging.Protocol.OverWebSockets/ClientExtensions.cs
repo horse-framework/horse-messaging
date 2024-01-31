@@ -22,8 +22,9 @@ public static class ClientExtensions
     /// <summary>
     /// Implements horse over websockets to the client
     /// </summary>
-    public static void UseHorseOverWebSockets(this HorseClient client)
+    public static void UseHorseOverWebSockets(this HorseClient client, bool autoDiscardIfHorseProtocolSpecified = true)
     {
         client.SwitchingProtocol = new SwitchingClientProtocol(client);
+        client.AutoDiscardSwitchingProtocol = autoDiscardIfHorseProtocolSpecified;
     }
 }

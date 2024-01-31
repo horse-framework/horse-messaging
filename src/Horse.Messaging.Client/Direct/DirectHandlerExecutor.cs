@@ -47,7 +47,7 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
 
     public override async Task Execute(HorseClient client, HorseMessage message, object model)
     {
-        TModel t = (TModel)model;
+        TModel t = (TModel) model;
         ProvidedHandler providedHandler = null;
 
         try
@@ -62,7 +62,7 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
             {
                 IHandlerFactory handlerFactory = _consumerFactoryCreator();
                 providedHandler = handlerFactory.CreateHandler(_consumerType);
-                IDirectMessageHandler<TModel> messageHandler = (IDirectMessageHandler<TModel>)providedHandler.Service;
+                IDirectMessageHandler<TModel> messageHandler = (IDirectMessageHandler<TModel>) providedHandler.Service;
                 await RunBeforeInterceptors(message, client, handlerFactory);
                 await Handle(messageHandler, message, t, client);
                 await RunAfterInterceptors(message, client, handlerFactory);
@@ -104,7 +104,7 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
             catch (Exception e)
             {
                 Type type = e.GetType();
-                if (Retry.IgnoreExceptions is { Length: > 0 })
+                if (Retry.IgnoreExceptions is {Length: > 0})
                     if (Retry.IgnoreExceptions.Any(x => x.IsAssignableFrom(type)))
                         throw;
 

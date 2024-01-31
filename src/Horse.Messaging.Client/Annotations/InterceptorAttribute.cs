@@ -29,7 +29,7 @@ public sealed class InterceptorAttribute : Attribute
     /// <param name="interceptorType">Interceptor type</param>
     /// <param name="order">Execution order</param>
     /// <param name="runBefore">Interception method</param>
-    public InterceptorAttribute(Type interceptorType, int order = 0,  bool runBefore = true)
+    public InterceptorAttribute(Type interceptorType, int order = 0, bool runBefore = true)
     {
         InterceptorType = interceptorType;
         RunBefore = runBefore;

@@ -86,7 +86,7 @@ internal class ChannelSubscriberExecutor<TModel> : ExecutorBase
             catch (Exception e)
             {
                 Type type = e.GetType();
-                if (Retry.IgnoreExceptions is { Length: > 0 })
+                if (Retry.IgnoreExceptions is {Length: > 0})
                 {
                     if (Retry.IgnoreExceptions.Any(x => x.IsAssignableFrom(type)))
                         throw;

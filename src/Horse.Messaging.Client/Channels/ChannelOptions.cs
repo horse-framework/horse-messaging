@@ -10,7 +10,7 @@ public class ChannelOptions
     /// Set null for server defaults. 
     /// </summary>
     public bool? AutoDestroy { get; set; }
-        
+
     /// <summary>
     /// Maximum message size limit
     /// Zero is unlimited
@@ -22,7 +22,7 @@ public class ChannelOptions
     /// Zero is unlimited
     /// </summary>
     public int? ClientLimit { get; set; }
-        
+
     /// <summary>
     /// If true, the last published message is sent to clients right after they subscribed to the channel.
     /// </summary>
@@ -33,5 +33,4 @@ public class ChannelOptions
     /// Idle time means there is active produce or consume operations last n seconds.
     /// </summary>
     public int? AutoDestroyIdleSeconds { get; set; }
-
 }
