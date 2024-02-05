@@ -449,6 +449,19 @@ public class HorseQueue
         return result;
     }
 
+    /// <summary>
+    /// Gets messages which are waiting for put back and returns all of them
+    /// </summary>
+    public List<QueueMessage> GetPuttingBackMessages()
+    {
+        List<QueueMessage> result;
+
+        lock (_putBackWaitList)
+            result = _putBackWaitList.Select(x => x.Message).ToList();
+
+        return result;
+    }
+
     #endregion
 
     #region Type Actions
