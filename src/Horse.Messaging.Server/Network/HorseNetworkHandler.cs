@@ -363,6 +363,17 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
     {
         HorseProtocolReader reader = new HorseProtocolReader();
         message.Content.Position = 0;
+
+        string wmstr = message.FindHeader(HorseHeaders.WAIT_MESSAGES);
+        int operationWaitMsgCount = 0;
+
+        if (!string.IsNullOrEmpty(wmstr))
+        {
+            bool parsed = int.TryParse(wmstr, out int value);
+            if (parsed)
+                operationWaitMsgCount = value;
+        }
+
         while (message.Content.Position < message.Content.Length)
         {
             HorseMessage item = await reader.Read(message.Content);
@@ -370,7 +381,12 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
             if (item == null)
                 break;
 
-            await RouteToHandler(mc, item);
+            Task task = RouteToHandler(mc, item);
+            if (operationWaitMsgCount > 0)
+            {
+                operationWaitMsgCount--;
+                await task;
+            }
         }
 
         await mc.SendAsync(message.CreateAcknowledge());
