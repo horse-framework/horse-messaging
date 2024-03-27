@@ -6,5 +6,15 @@
 /// </summary>
 public interface IHorsePluginBuilder
 {
+    /// <summary>
+    /// Returns name of the plugin
+    /// </summary>
+    /// <returns></returns>
+    public string GetName();
+
+    /// <summary>
+    /// Build a new Horse Plugin
+    /// </summary>
+    /// <returns></returns>
     public HorsePlugin Build();
 }
