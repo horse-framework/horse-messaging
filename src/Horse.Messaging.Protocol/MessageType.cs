@@ -90,5 +90,10 @@ public enum MessageType : byte
     /// <summary>
     /// Envelope Message contains multiple messages in it
     /// </summary>
-    Envelope = 0x1D
+    Envelope = 0x1D,
+    
+    /// <summary>
+    /// Message is request to a plugin
+    /// </summary>
+    Plugin = 0x1E
 }

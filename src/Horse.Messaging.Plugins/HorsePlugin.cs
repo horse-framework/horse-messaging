@@ -22,6 +22,7 @@ public abstract class HorsePlugin
 
     internal SortedDictionary<string, IHorsePluginHandler> Handlers { get; } = new SortedDictionary<string, IHorsePluginHandler>(StringComparer.InvariantCultureIgnoreCase);
 
+    private IHorsePluginHandler _requestHandler;
     private Timer[] _timers = Array.Empty<Timer>();
 
     internal void Set(IPluginRider rider)
@@ -87,5 +88,8 @@ public abstract class HorsePlugin
     public void AddRequestHandler(IHorsePluginHandler handler)
     {
         Handlers.Add($"@plugin", handler);
+        _requestHandler = handler;
     }
+
+    internal IHorsePluginHandler GetRequestHandler() => _requestHandler;
 }
