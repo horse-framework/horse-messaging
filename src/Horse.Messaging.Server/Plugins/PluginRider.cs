@@ -88,6 +88,44 @@ public class PluginRider : IPluginRider
     }
 
     /// <summary>
+    /// Returns the plugin data.
+    /// The result model is clone of the original.
+    /// Modifying properties in this model will not affect anything. Anyway, changes are not allowed to be made from here.
+    /// </summary>
+    public PluginAssemblyData[] GetPluginData()
+    {
+        List<PluginAssemblyData> list = new List<PluginAssemblyData>(16);
+        lock (_data)
+        {
+            foreach (PluginAssemblyData item in _data)
+            {
+                PluginAssemblyData clone = new PluginAssemblyData
+                {
+                    Filename = item.Filename,
+                    Fullname = item.Fullname,
+                    Location = item.Location,
+                    AssemblyVersion = item.AssemblyVersion,
+                    LoadedAssembly = item.LoadedAssembly
+                };
+
+                clone.Plugins = item.Plugins
+                    .Select(x => new PluginData
+                    {
+                        Name = x.Name,
+                        Disabled = x.Disabled,
+                        Removed = x.Removed,
+                        BuilderTypeName = x.BuilderTypeName
+                    })
+                    .ToList();
+
+                list.Add(clone);
+            }
+        }
+
+        return list.ToArray();
+    }
+
+    /// <summary>
     /// Loads all IHorsePluginBuilder types from assembly and adds all plugins
     /// </summary>
     private async Task LoadAssemblyPlugins(PluginAssemblyData data)
@@ -100,7 +138,7 @@ public class PluginRider : IPluginRider
             try
             {
                 IHorsePluginBuilder builder = (IHorsePluginBuilder) Activator.CreateInstance(type);
-                PluginData pluginData = data.Plugins.FirstOrDefault(x => x.FullTypeName == type.FullName);
+                PluginData pluginData = data.Plugins.FirstOrDefault(x => x.BuilderTypeName == type.FullName);
 
                 if (pluginData != null && pluginData.Removed)
                     continue;
@@ -118,7 +156,7 @@ public class PluginRider : IPluginRider
                     pluginData = new PluginData
                     {
                         Name = plugin.Name,
-                        FullTypeName = type.FullName,
+                        BuilderTypeName = type.FullName,
                         Removed = false,
                         Disabled = false
                     };
@@ -402,7 +440,7 @@ public class PluginRider : IPluginRider
                 yield return type;
         }
     }
-    
+
     /// <inheritdoc />
     public async Task<bool> SendMessage(HorseMessage message)
     {
