@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using System.Timers;
 using Horse.Messaging.Protocol;
 
 [assembly: InternalsVisibleTo("Horse.Messaging.Server")]
@@ -20,6 +22,8 @@ public abstract class HorsePlugin
 
     internal SortedDictionary<string, IHorsePluginHandler> Handlers { get; } = new SortedDictionary<string, IHorsePluginHandler>(StringComparer.InvariantCultureIgnoreCase);
 
+    private Timer[] _timers = Array.Empty<Timer>();
+
     internal void Set(IPluginRider rider)
     {
         Plugin = rider;
@@ -27,13 +31,42 @@ public abstract class HorsePlugin
 
     public abstract Task Initialize();
 
-    public abstract Task<bool> Remove();
+    public virtual Task<bool> Remove()
+    {
+        foreach (Timer timer in _timers)
+        {
+            try
+            {
+                timer.Stop();
+                timer.Dispose();
+            }
+            catch
+            {
+            }
+        }
+
+        _timers = Array.Empty<Timer>();
+        Removed = true;
+
+        return Task.FromResult(true);
+    }
 
     public void AddTimer(TimeSpan interval, IHorsePluginHandler handler)
     {
         string timerGuid = Guid.NewGuid().ToString();
         long milliseconds = Convert.ToInt64(interval.TotalMilliseconds);
+
         Handlers.Add($"@timer:{timerGuid}:{milliseconds}", handler);
+
+        Timer timer = new Timer(interval.TotalMilliseconds);
+        timer.Elapsed += (sender, args) => { handler.Execute(new HorsePluginContext(HorsePluginEvent.TimerElapse, this, Plugin, null)); };
+
+        timer.AutoReset = true;
+        timer.Start();
+
+        var timers = _timers.ToList();
+        timers.Add(timer);
+        _timers = timers.ToArray();
     }
 
     public void AddChannelPublish(string channelName, IHorsePluginHandler handler)
@@ -54,10 +87,5 @@ public abstract class HorsePlugin
     public void AddRequestHandler(IHorsePluginHandler handler)
     {
         Handlers.Add($"@plugin", handler);
-    }
-
-    public async Task SendMessage(HorseMessage message)
-    {
-        throw new NotImplementedException();
     }
 }

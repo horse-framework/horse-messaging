@@ -7,21 +7,20 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Horse.Messaging.Plugins;
-using Horse.Messaging.Plugins.Channels;
-using Horse.Messaging.Plugins.Clients;
-using Horse.Messaging.Plugins.Queues;
-using Horse.Messaging.Plugins.Routers;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Channels;
+using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Routing;
 
 namespace Horse.Messaging.Server.Plugins;
 
+/// <inheritdoc />
 public class PluginRider : IPluginRider
 {
-    public IPluginQueueRider Queue { get; private set; }
-    public IPluginClientRider Client { get; private set; }
-    public IPluginRouterRider Router { get; private set; }
-    public IPluginChannelRider Channel { get; private set; }
+    /// <inheritdoc />
+    public int ServerPort { get; set; }
 
     /// <summary>
     /// Implemented Plugins
@@ -34,6 +33,7 @@ public class PluginRider : IPluginRider
 
     internal PluginRider(HorseRider rider)
     {
+        ServerPort = rider.Server.Options.Hosts.FirstOrDefault(x => !x.SslEnabled)?.Port ?? 0;
         _rider = rider;
     }
 
@@ -42,11 +42,6 @@ public class PluginRider : IPluginRider
     /// </summary>
     public void Initialize()
     {
-        Queue = new PluginQueueRider(_rider, this);
-        Client = new PluginClientRider(_rider, this);
-        Router = new PluginRouterRider(_rider, this);
-        Channel = new PluginChannelRider(_rider, this);
-
         LoadData();
 
         lock (_data)
@@ -346,7 +341,10 @@ public class PluginRider : IPluginRider
     /// </summary>
     internal void TriggerPluginHandlers(HorsePluginEvent sourceEvent, string targetName, HorseMessage message)
     {
-        if (Plugins.Length == 0)
+        if (Plugins == null || Plugins.Length == 0)
+            return;
+
+        if (string.IsNullOrEmpty(targetName))
             return;
 
         string target = targetName;
@@ -374,6 +372,12 @@ public class PluginRider : IPluginRider
 
         foreach (HorsePlugin plugin in Plugins)
         {
+            if (target.StartsWith("@plugin:") && !string.Equals(plugin.Name, target.Substring(8)))
+                continue;
+
+            if (plugin.Handlers.Count == 0)
+                continue;
+
             bool found = plugin.Handlers.TryGetValue(target, out var handler);
 
             if (!found)
@@ -393,5 +397,97 @@ public class PluginRider : IPluginRider
             if (typeof(IHorsePluginBuilder).IsAssignableFrom(type))
                 yield return type;
         }
+    }
+
+    public async Task<bool> SendMessage(HorseMessage message)
+    {
+        switch (message.Type)
+        {
+            case MessageType.Channel:
+
+                HorseChannel channel = _rider.Channel.Find(message.Target);
+                if (channel == null)
+                    return false;
+
+                PushResult channelResult = channel.Push(message);
+                return channelResult == PushResult.Success;
+
+            case MessageType.Response:
+                MessagingClient responseClient = _rider.Client.Find(message.Target);
+                if (responseClient == null)
+                    return false;
+
+                await responseClient.SendAsync(message);
+                return true;
+
+            case MessageType.Router:
+
+                Router router = _rider.Router.Find(message.Target);
+                if (router == null)
+                    return false;
+
+                RouterPublishResult result = await router.Publish(null, message);
+                return result == RouterPublishResult.OkWillNotRespond || result == RouterPublishResult.OkAndWillBeRespond;
+
+            case MessageType.DirectMessage:
+
+                if (message.Target.StartsWith("@type:", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    List<MessagingClient> receivers = _rider.Client.FindByType(message.Target.Substring(6));
+                    if (receivers.Count == 0)
+                        return false;
+
+                    if (message.HighPriority)
+                    {
+                        await receivers[0].SendAsync(message);
+                        return true;
+                    }
+
+                    foreach (MessagingClient receiver in receivers)
+                        _ = receiver.SendAsync(message);
+
+                    return true;
+                }
+
+                if (message.Target.StartsWith("@name:", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    List<MessagingClient> receivers = _rider.Client.FindClientByName(message.Target.Substring(6));
+                    if (receivers.Count == 0)
+                        return false;
+
+                    if (message.HighPriority)
+                    {
+                        await receivers[0].SendAsync(message);
+                        return true;
+                    }
+
+                    foreach (MessagingClient receiver in receivers)
+                        _ = receiver.SendAsync(message);
+
+                    return true;
+                }
+
+                MessagingClient directClient = _rider.Client.Find(message.Target);
+                if (directClient == null)
+                    return false;
+
+                await directClient.SendAsync(message);
+                return true;
+
+            case MessageType.QueueMessage:
+
+                HorseQueue queue = _rider.Queue.Find(message.Target);
+
+                if (queue == null && _rider.Queue.Options.AutoQueueCreation)
+                    queue = await _rider.Queue.Create(message.Target);
+
+                if (queue == null)
+                    return false;
+
+                PushResult queueResult = await queue.Push(message);
+                return queueResult == PushResult.Success;
+        }
+
+        return false;
     }
 }
