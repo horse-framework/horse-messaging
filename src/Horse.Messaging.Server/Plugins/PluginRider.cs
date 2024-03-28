@@ -192,6 +192,8 @@ public class PluginRider : IPluginRider
                 }
             }
         }
+
+        SaveData();
     }
 
     /// <summary>
@@ -333,6 +335,8 @@ public class PluginRider : IPluginRider
             Plugins = list.ToArray();
         }
 
+        SaveData();
+
         return true;
     }
 
@@ -398,7 +402,8 @@ public class PluginRider : IPluginRider
                 yield return type;
         }
     }
-
+    
+    /// <inheritdoc />
     public async Task<bool> SendMessage(HorseMessage message)
     {
         switch (message.Type)
