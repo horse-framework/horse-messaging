@@ -2,6 +2,8 @@
 
 [![NuGet](https://img.shields.io/nuget/v/Horse.Messaging.Server?label=Server%20NuGet)](https://www.nuget.org/packages/Horse.Messaging.Server)
 [![NuGet](https://img.shields.io/nuget/v/Horse.Messaging.Client?label=Client%20NuGet)](https://www.nuget.org/packages/Horse.Messaging.Client)
+[![NuGet](https://img.shields.io/nuget/v/Horse.Messaging.Plugins?label=Plugins%20NuGet)](https://www.nuget.org/packages/Horse.Messaging.Plugins)
+[![NuGet](https://img.shields.io/nuget/v/Horse.Jockey?label=Jockey%20Panel%20NuGet)](https://www.nuget.org/packages/Horse.Jockey)
 
 ## What's Horse Messaging
 
@@ -61,8 +63,5 @@ await client.ConnectAsync("horse://localhost:2626");
 Navigate to Jockey panel http://localhost:2627 with empty username and password.
 You can see your connected client in clients page.
 
-## Thanks
-
-Thanks to JetBrains for open source license to use on this project.
 
 [![jetbrains](https://user-images.githubusercontent.com/21208762/90192662-10043700-ddcc-11ea-9533-c43b99801d56.png)](https://www.jetbrains.com/?from=horse-framework)
