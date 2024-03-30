@@ -11,6 +11,7 @@ using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Direct;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Plugins;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
 using Horse.Messaging.Server.Security;
@@ -40,6 +41,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
     private readonly INetworkMessageHandler _eventHandler;
     private readonly INetworkMessageHandler _cacheHandler;
     private readonly INetworkMessageHandler _transactionHandler;
+    private readonly INetworkMessageHandler _pluginHandler;
 
     public HorseNetworkHandler(HorseRider rider)
     {
@@ -54,6 +56,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         _cacheHandler = new CacheNetworkHandler(rider);
         _channelHandler = new ChannelNetworkHandler(rider);
         _transactionHandler = new TransactionMessageHandler(rider);
+        _pluginHandler = new PluginMessageHandler(rider);
     }
 
     #endregion
@@ -332,6 +335,9 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
                     ? Task.CompletedTask
                     : _responseHandler.Handle(mc, message, mc.IsNodeClient);
 
+            case MessageType.Plugin:
+                return _pluginHandler.Handle(mc, message, mc.IsNodeClient);
+
             case MessageType.Server:
                 return _serverHandler.Handle(mc, message, mc.IsNodeClient);
 
@@ -363,6 +369,17 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
     {
         HorseProtocolReader reader = new HorseProtocolReader();
         message.Content.Position = 0;
+
+        string wmstr = message.FindHeader(HorseHeaders.WAIT_MESSAGES);
+        int operationWaitMsgCount = 0;
+
+        if (!string.IsNullOrEmpty(wmstr))
+        {
+            bool parsed = int.TryParse(wmstr, out int value);
+            if (parsed)
+                operationWaitMsgCount = value;
+        }
+
         while (message.Content.Position < message.Content.Length)
         {
             HorseMessage item = await reader.Read(message.Content);
@@ -370,7 +387,12 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
             if (item == null)
                 break;
 
-            await RouteToHandler(mc, item);
+            Task task = RouteToHandler(mc, item);
+            if (operationWaitMsgCount > 0)
+            {
+                operationWaitMsgCount--;
+                await task;
+            }
         }
 
         await mc.SendAsync(message.CreateAcknowledge());

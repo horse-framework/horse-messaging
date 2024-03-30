@@ -44,7 +44,7 @@ internal class DirectMessageHandler : INetworkMessageHandler
                 await ProcessMultipleReceiverClientMessage(client, receivers, message);
             }
             else if (message.WaitResponse)
-                await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+                await client?.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
 
             if (receivers.Count == 0)
                 foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
@@ -65,7 +65,7 @@ internal class DirectMessageHandler : INetworkMessageHandler
                 await ProcessMultipleReceiverClientMessage(client, receivers, message);
             }
             else if (message.WaitResponse)
-                await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+                await client?.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
 
             if (receivers.Count == 0)
                 foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
@@ -83,7 +83,7 @@ internal class DirectMessageHandler : INetworkMessageHandler
     {
         if (receivers.Count < 1)
         {
-            await sender.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+            await sender?.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
             return;
         }
 
@@ -93,16 +93,17 @@ internal class DirectMessageHandler : INetworkMessageHandler
             bool denied = false;
 
             //check sending message authority
-            foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
-            {
-                bool grant = await authorization.CanDirectMessage(sender, message, receiver);
-                if (!grant)
+            if (sender != null)
+                foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
                 {
-                    await sender.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
-                    denied = true;
-                    break;
+                    bool grant = await authorization.CanDirectMessage(sender, message, receiver);
+                    if (!grant)
+                    {
+                        await sender.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
+                        denied = true;
+                        break;
+                    }
                 }
-            }
 
             if (denied)
                 continue;
@@ -114,11 +115,13 @@ internal class DirectMessageHandler : INetworkMessageHandler
 
         if (allDenied)
         {
-            await sender.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
+            await sender?.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
             return;
         }
 
-        sender.Stats.SentDirectMessages++;
+        if (sender != null)
+            sender.Stats.SentDirectMessages++;
+
         foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
         {
             if (message.Type == MessageType.Response)
@@ -139,7 +142,7 @@ internal class DirectMessageHandler : INetworkMessageHandler
         MessagingClient other = _rider.Client.Find(message.Target);
         if (other == null)
         {
-            await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+            await client?.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
 
             foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
                 _ = handler.OnNotFound(client, message);
@@ -148,15 +151,16 @@ internal class DirectMessageHandler : INetworkMessageHandler
         }
 
         //check sending message authority
-        foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
-        {
-            bool grant = await authorization.CanDirectMessage(client, message, other);
-            if (!grant)
+        if (client != null)
+            foreach (IClientAuthorization authorization in _rider.Client.Authorizations.All())
             {
-                await client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
-                return;
+                bool grant = await authorization.CanDirectMessage(client, message, other);
+                if (!grant)
+                {
+                    await client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
+                    return;
+                }
             }
-        }
 
         //send the message
         await other.SendAsync(message);

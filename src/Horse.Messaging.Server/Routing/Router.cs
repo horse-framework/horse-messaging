@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Horse.Messaging.Plugins;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Clients;
@@ -125,7 +126,7 @@ public class Router
 
             if (notifyCluster)
                 Rider.Router.ClusterNotifier.SendRouterAddBinding(this, binding);
-                
+
             return true;
         }
         catch (Exception e)
@@ -213,10 +214,10 @@ public class Router
             binding.Router = null;
             Bindings = list.OrderByDescending(x => x.Priority).ToArray();
             Rider.Router.BindingRemoveEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
-                
+
             if (notifyCluster)
                 Rider.Router.ClusterNotifier.SendRouterRemoveBinding(this, binding);
-                
+
             UpdateRouterConfiguration();
         }
         catch (Exception e)
@@ -250,10 +251,9 @@ public class Router
             list.Remove(binding);
             Bindings = list.OrderByDescending(x => x.Priority).ToArray();
             Rider.Router.BindingRemoveEvent.Trigger(Name, new KeyValuePair<string, string>("Binding-Name", binding.Name));
-                
+
             if (notifyCluster)
                 Rider.Router.ClusterNotifier.SendRouterRemoveBinding(this, binding);
-                
         }
         catch (Exception e)
         {
@@ -278,20 +278,29 @@ public class Router
             if (Bindings.Length == 0)
                 return RouterPublishResult.NoBindings;
 
+            RouterPublishResult result;
             switch (Method)
             {
                 case RouteMethod.Distribute:
-                    return await Distribute(sender, message);
+                    result = await Distribute(sender, message);
+                    break;
 
                 case RouteMethod.OnlyFirst:
-                    return await OnlyFirst(sender, message);
+                    result = await OnlyFirst(sender, message);
+                    break;
 
                 case RouteMethod.RoundRobin:
-                    return await RoundRobin(sender, message);
+                    result = await RoundRobin(sender, message);
+                    break;
 
                 default:
                     return RouterPublishResult.Disabled;
             }
+
+            if (result == RouterPublishResult.OkWillNotRespond || result == RouterPublishResult.OkAndWillBeRespond)
+                Rider.Plugin.TriggerPluginHandlers(HorsePluginEvent.RouterPublish, Name, message);
+
+            return result;
         }
         catch (Exception e)
         {

@@ -86,6 +86,7 @@ internal class QueueMessageHandler : INetworkMessageHandler
             {
                 if (answerSender && !string.IsNullOrEmpty(message.MessageId))
                     await client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
+                
                 return;
             }
         }

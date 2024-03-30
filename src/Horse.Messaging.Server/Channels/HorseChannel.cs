@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Horse.Messaging.Plugins;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Protocol.Models;
@@ -198,6 +199,7 @@ public class HorseChannel
             foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
                 _ = handler.OnPublish(this, message);
 
+            Rider.Plugin.TriggerPluginHandlers(HorsePluginEvent.ChannelPublish, Name, message);
             return PushResult.Success;
         }
         catch (Exception ex)

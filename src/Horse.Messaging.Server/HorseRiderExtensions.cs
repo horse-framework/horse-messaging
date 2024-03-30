@@ -1,10 +1,12 @@
 using System;
+using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Cache;
 using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Direct;
 using Horse.Messaging.Server.Network;
+using Horse.Messaging.Server.Plugins;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
 using Horse.Server;
@@ -28,7 +30,7 @@ public static class HorseRiderExtensions
 
         horseRider.Initialize();
         horseRider.Cluster.Start();
-            
+
         server.UseHorseProtocol(handler);
 
         return server;
@@ -47,10 +49,10 @@ public static class HorseRiderExtensions
         builder.Rider = rider;
 
         cfg(builder);
-            
+
         rider.Initialize();
         rider.Cluster.Start();
-            
+
         server.UseHorseProtocol(handler);
 
         return rider;
@@ -173,6 +175,17 @@ public static class HorseRiderExtensions
     {
         HorseDirectConfigurator configurator = new HorseDirectConfigurator(builder.Rider);
         cfg(configurator);
+        return builder;
+    }
+
+    /// <summary>
+    /// Configure plugins
+    /// </summary>
+    public static HorseRiderBuilder ConfigurePlugins(this HorseRiderBuilder builder, Func<HorsePluginConfigurator, Task> cfg)
+    {
+        HorsePluginConfigurator configurator = new HorsePluginConfigurator(builder.Rider);
+        var task = cfg(configurator);
+        task.GetAwaiter().GetResult();
         return builder;
     }
 

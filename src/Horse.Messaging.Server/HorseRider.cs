@@ -7,6 +7,7 @@ using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Direct;
+using Horse.Messaging.Server.Plugins;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
 using Horse.Messaging.Server.Transactions;
@@ -72,6 +73,11 @@ public class HorseRider
     public ClusterManager Cluster { get; }
 
     /// <summary>
+    /// Plugin Manager
+    /// </summary>
+    public PluginRider Plugin { get; }
+
+    /// <summary>
     /// Error handlers
     /// </summary>
     public ArrayContainer<IErrorHandler> ErrorHandlers { get; } = new();
@@ -117,9 +123,11 @@ public class HorseRider
         Channel = new ChannelRider(this);
         Transaction = new TransactionRider(this);
         Cache = new HorseCache(this);
+        Plugin = new PluginRider(this);
 
         Cache.Initialize();
         Cluster.Initialize();
+        Plugin.Initialize();
     }
 
     /// <summary>

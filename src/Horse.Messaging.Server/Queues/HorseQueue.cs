@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using EnumsNET;
+using Horse.Messaging.Plugins;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Clients;
@@ -709,6 +710,7 @@ public class HorseQueue
             foreach (IQueueMessageEventHandler handler in Rider.Queue.MessageHandlers.All())
                 _ = handler.OnProduced(this, message, sender);
 
+            Rider.Plugin.TriggerPluginHandlers(HorsePluginEvent.QueuePush, Name, message.Message);
             PushEvent.Trigger(sender, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.Message.MessageId));
 
             if (sender != null)

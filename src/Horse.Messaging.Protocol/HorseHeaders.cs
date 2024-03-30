@@ -359,4 +359,10 @@ public class HorseHeaders
     /// "Value"
     /// </summary>
     public const string VALUE = "Value";
+    
+    /// <summary>
+    /// "Wait-Messages"
+    /// </summary>
+    public const string WAIT_MESSAGES = "Wait-Messages";
+
 }

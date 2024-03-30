@@ -13,11 +13,12 @@ internal class SerializerFactory
 {
     private static JsonSerializerOptions _options;
 
-    internal static JsonSerializerOptions Default()
+    internal static JsonSerializerOptions Default(bool caseInsensetive = true, bool writeIndented = false)
     {
         return _options ??= new JsonSerializerOptions
         {
-            PropertyNameCaseInsensitive = true,
+            PropertyNameCaseInsensitive = caseInsensetive,
+            WriteIndented = writeIndented,
             Converters =
             {
                 new EnumConverter<QueueAckDecision>(),
