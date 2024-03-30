@@ -4,7 +4,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Timers;
-using Horse.Messaging.Protocol;
 
 [assembly: InternalsVisibleTo("Horse.Messaging.Server")]
 
@@ -48,6 +47,7 @@ public abstract class HorsePlugin
 
         _timers = Array.Empty<Timer>();
         Removed = true;
+        Handlers.Clear();
 
         return Task.FromResult(true);
     }

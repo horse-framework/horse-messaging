@@ -20,11 +20,6 @@ public class PluginAssemblyData
     public string Location { get; set; }
 
     /// <summary>
-    /// Assembly filename
-    /// </summary>
-    public string Filename { get; set; }
-
-    /// <summary>
     /// Assembly file version
     /// </summary>
     public string AssemblyVersion { get; set; }

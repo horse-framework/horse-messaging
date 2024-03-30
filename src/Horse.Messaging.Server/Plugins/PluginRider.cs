@@ -19,9 +19,6 @@ namespace Horse.Messaging.Server.Plugins;
 /// <inheritdoc />
 public class PluginRider : IPluginRider
 {
-    /// <inheritdoc />
-    public int ServerPort { get; set; }
-
     /// <summary>
     /// Implemented Plugins
     /// </summary>
@@ -33,8 +30,23 @@ public class PluginRider : IPluginRider
 
     internal PluginRider(HorseRider rider)
     {
-        ServerPort = rider.Server.Options.Hosts.FirstOrDefault(x => !x.SslEnabled)?.Port ?? 0;
         _rider = rider;
+    }
+
+    /// <summary>
+    /// Returns server ports for secure horse protocol
+    /// </summary>
+    public IEnumerable<int> GetSecureServerPorts()
+    {
+        return _rider.Server.Options.Hosts.Where(x => x.SslEnabled).Select(x => x.Port);
+    }
+
+    /// <summary>
+    /// Returns server ports for plain horse protocol
+    /// </summary>
+    public IEnumerable<int> GetServerPorts()
+    {
+        return _rider.Server.Options.Hosts.Where(x => !x.SslEnabled).Select(x => x.Port);
     }
 
     /// <summary>
@@ -62,6 +74,9 @@ public class PluginRider : IPluginRider
 
         if (!File.Exists(fullname))
         {
+            if (!Directory.Exists(_rider.Options.DataPath))
+                Directory.CreateDirectory(_rider.Options.DataPath);
+
             File.WriteAllText(fullname, "[]");
 
             lock (_data)
@@ -101,7 +116,6 @@ public class PluginRider : IPluginRider
             {
                 PluginAssemblyData clone = new PluginAssemblyData
                 {
-                    Filename = item.Filename,
                     Fullname = item.Fullname,
                     Location = item.Location,
                     AssemblyVersion = item.AssemblyVersion,
@@ -189,6 +203,14 @@ public class PluginRider : IPluginRider
     public async Task AddAssemblyPlugins(string filename)
     {
         Assembly assembly = Assembly.LoadFrom(filename);
+
+        string assemblyVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location).FileVersion;
+        lock (_data)
+        {
+            if (_data.Any(x => x.Location.Equals(assembly.Location) || (x.Fullname.Equals(assembly.FullName) && x.AssemblyVersion.Equals(assemblyVersion))))
+                throw new DuplicateNameException("The assembly is already loaded");
+        }
+
         PluginAssemblyData assemblyData = null;
         foreach (Type type in assembly.GetExportedTypes())
         {
@@ -206,11 +228,66 @@ public class PluginRider : IPluginRider
                         {
                             assemblyData = new PluginAssemblyData
                             {
-                                Filename = filename,
                                 Location = assembly.Location,
                                 Fullname = assembly.FullName,
                                 Plugins = new List<PluginData>(),
-                                AssemblyVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location).FileVersion
+                                AssemblyVersion = assemblyVersion
+                            };
+                            _data.Add(assemblyData);
+                        }
+                    }
+
+                    assemblyData.LoadedAssembly = assembly;
+                }
+
+                try
+                {
+                    IHorsePluginBuilder builder = (IHorsePluginBuilder) Activator.CreateInstance(type);
+                    await AddPlugin(assemblyData, builder);
+                }
+                catch (Exception e)
+                {
+                    _rider.SendError("Plugin", e, type.FullName);
+                }
+            }
+        }
+
+        SaveData();
+    }
+
+    /// <summary>
+    /// Loads all IHorsePluginBuilder types from assembly and adds all plugins.
+    /// </summary>
+    public async Task AddAssemblyPlugins(Assembly assembly)
+    {
+        string assemblyVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location).FileVersion;
+        lock (_data)
+        {
+            if (_data.Any(x => x.Location.Equals(assembly.Location) || (x.Fullname.Equals(assembly.FullName) && x.AssemblyVersion.Equals(assemblyVersion))))
+                throw new DuplicateNameException("The assembly is already loaded");
+        }
+
+        PluginAssemblyData assemblyData = null;
+        foreach (Type type in assembly.GetExportedTypes())
+        {
+            if (type.IsAbstract || type.IsInterface)
+                continue;
+
+            if (typeof(IHorsePluginBuilder).IsAssignableFrom(type))
+            {
+                if (assemblyData == null)
+                {
+                    lock (_data)
+                    {
+                        assemblyData = _data.FirstOrDefault(x => x.Fullname == assembly.FullName);
+                        if (assemblyData == null)
+                        {
+                            assemblyData = new PluginAssemblyData
+                            {
+                                Location = assembly.Location,
+                                Fullname = assembly.FullName,
+                                Plugins = new List<PluginData>(),
+                                AssemblyVersion = assemblyVersion
                             };
                             _data.Add(assemblyData);
                         }
@@ -256,6 +333,7 @@ public class PluginRider : IPluginRider
 
         PluginData data = new PluginData();
         data.Name = plugin.Name;
+        data.BuilderTypeName = builder.GetType().FullName;
         data.Disabled = false;
 
         lock (_data)
@@ -332,7 +410,7 @@ public class PluginRider : IPluginRider
             }
         }
 
-        if (pdata == null)
+        if (assemblyData == null || pdata == null)
             return false;
 
         HorsePlugin plugin = Plugins.FirstOrDefault(x => x.Name.Equals(pluginName, StringComparison.InvariantCultureIgnoreCase));
@@ -340,9 +418,6 @@ public class PluginRider : IPluginRider
         bool addAfterInit = false;
         if (plugin == null)
         {
-            if (assemblyData == null)
-                return false;
-
             if (assemblyData.LoadedAssembly == null)
                 assemblyData.LoadedAssembly = Assembly.LoadFrom(assemblyData.Location);
 
