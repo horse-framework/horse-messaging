@@ -257,7 +257,34 @@ public class PluginRider : IPluginRider
 
     /// <summary>
     /// Loads all IHorsePluginBuilder types from assembly and adds all plugins.
+    /// Instead of throwing exception if the assembly is already loaded, returns false.
     /// </summary>
+    public async Task<bool> TryToAddAssemblyPlugins(Assembly assembly)
+    {
+        try
+        {
+            await AddAssemblyPlugins(assembly);
+            return true;
+        }
+        catch (DuplicateNameException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Loads all IHorsePluginBuilder types from assembly and adds all plugins.
+    /// Instead of throwing exception if the assembly is already loaded, returns false.
+    /// </summary>
+    public Task<bool> TryToAddAssemblyPlugins(Type typeInAssembly)
+    {
+        return TryToAddAssemblyPlugins(typeInAssembly.Assembly);
+    }
+
+    /// <summary>
+    /// Loads all IHorsePluginBuilder types from assembly and adds all plugins.
+    /// </summary>
+    /// <exception cref="DuplicateNameException">If the assembly is already loaded. Checks filename or (fullname and version)</exception>
     public async Task AddAssemblyPlugins(Assembly assembly)
     {
         string assemblyVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location).FileVersion;

@@ -1,6 +1,5 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
-using System.Data;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
@@ -15,16 +14,9 @@ HorseRider rider = HorseRiderBuilder.Create()
         cfg.Options.AutoQueueCreation = true;
         cfg.UseMemoryQueues();
     })
+    .ConfigurePlugins(async cfg => { await cfg.Plugin.TryToAddAssemblyPlugins(typeof(Program).Assembly); })
     .Build();
 
-try
-{
-    await rider.Plugin.AddAssemblyPlugins(typeof(Program).Assembly);
-}
-catch (DuplicateNameException)
-{
-    //assembly already added, skip.
-}
 
 HorseServer server = new HorseServer();
 server.Options.PingInterval = 10;

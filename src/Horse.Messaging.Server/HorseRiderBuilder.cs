@@ -20,7 +20,7 @@ public class HorseRiderBuilder
     }
 
     /// <summary>
-    /// Creates new Horse MQ Builder
+    /// Creates new Horse Rider Builder
     /// </summary>
     public static HorseRiderBuilder Create()
     {
@@ -28,7 +28,7 @@ public class HorseRiderBuilder
     }
 
     /// <summary>
-    /// Gets Horse MQ Object
+    /// Gets Horse Rider Object
     /// </summary>
     public HorseRider Build()
     {
