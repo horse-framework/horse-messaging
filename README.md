@@ -22,7 +22,7 @@ All features can be used over only once client and one connection full asynchron
 
 ## Why should I use it ?
 
-* First or all, **Horse Messaging is a framework, not an application.**
+* First of all, **Horse Messaging is a framework, not an application.**
   That gives you unlimited customization opportunity. 
   Horse Messaging Server provides you many many implementation options to customize everything in it. 
   On the other hand, if you want to use Horse Messaging Server with default implementations, 
