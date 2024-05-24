@@ -215,7 +215,7 @@ public class HorseCache
         HorseCacheItem item = new HorseCacheItem
         {
             Key = key,
-            Tags = tags ?? Array.Empty<string>(),
+            Tags = tags ?? [],
             Expiration = DateTime.UtcNow + d,
             ExpirationWarning = expirationWarning.HasValue
                 ? DateTime.UtcNow + expirationWarning.Value

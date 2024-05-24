@@ -51,7 +51,7 @@ public class ServiceBuilder
                 c.Options.MaximumKeys = _options.CacheMaxKeys;
                 c.Options.ValueMaxSize = _options.CacheMaxValueSize;
                 c.Options.DefaultDuration = TimeSpan.FromMinutes(15);
-                c.Options.MinimumDuration = TimeSpan.FromHours(6);
+                c.Options.MinimumDuration = TimeSpan.Zero;
             })
             .ConfigureQueues(c =>
             {

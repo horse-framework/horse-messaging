@@ -19,7 +19,7 @@ IHost host = Host.CreateDefaultBuilder(args)
             await Task.Delay(2500);
             await c.Channel.Subscribe("Test", false);
             await Task.Delay(2500);
-            string abc = new string('x', 60000);
+            string abc = new string('x', 560000);
             await c.Channel.PublishString("Test", abc);
         });
         cfg.OnMessageReceived(msg => Console.WriteLine(msg.ToString().Substring(0, 14)));
