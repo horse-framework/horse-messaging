@@ -294,20 +294,24 @@ public class HorseCache
         await ApplyChanges();
 
         _items.TryGetValue(key, out HorseCacheItem item);
-
-        if (item.Expiration < DateTime.UtcNow)
-        {
-            await Remove(item.Key);
-            item = null;
-        }
-
         if (item == null)
         {
             CacheOperation operation = await Set(key, new MemoryStream(BitConverter.GetBytes(1)), duration, null, tags);
             return new GetCacheItemResult(false, operation.Item);
         }
 
-        MemoryStream previousValue = item.Value;
+        if (item.Expiration < DateTime.UtcNow)
+        {
+            await Remove(item.Key);
+            item = null;
+        }
+        
+        if (item == null)
+        {
+            CacheOperation operation = await Set(key, new MemoryStream(BitConverter.GetBytes(1)), duration, null, tags);
+            return new GetCacheItemResult(false, operation.Item);
+        }
+        
         lock (item)
         {
             byte[] valueArray = item.Value.ToArray();
@@ -316,8 +320,6 @@ public class HorseCache
             item.Value.Position = 0;
             item.Value.Write(data);
         }
-
-        previousValue?.Dispose();
 
         if (notifyCluster)
             ClusterNotifier.SendSet(item);
