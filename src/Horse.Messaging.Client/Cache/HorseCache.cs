@@ -42,12 +42,20 @@ internal class HorseCache : IHorseCache
     }
 
     /// <inheritdoc />
-    public async Task<HorseCacheData<int>> GetIncrementalValue(string key, int increment = 1)
+    public Task<HorseCacheData<int>> GetIncrementalValue(string key, int increment = 1)
+    {
+        return GetIncrementalValue(key, TimeSpan.Zero, increment);
+    }
+
+    public async Task<HorseCacheData<int>> GetIncrementalValue(string key, TimeSpan duration, int increment = 1)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetIncrementalCache);
 
         if (increment > 1)
             message.AddHeader(HorseHeaders.VALUE, increment.ToString());
+
+        if (duration > TimeSpan.Zero)
+            message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
 
         HorseResult result = await _client.SendAndGetAck(message);
 

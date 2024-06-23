@@ -296,7 +296,7 @@ public class HorseCache
         _items.TryGetValue(key, out HorseCacheItem item);
         if (item == null)
         {
-            CacheOperation operation = await Set(key, new MemoryStream(BitConverter.GetBytes(1)), duration, null, tags);
+            CacheOperation operation = await Set(key, new MemoryStream(BitConverter.GetBytes(incrementValue)), duration, null, tags);
             return new GetCacheItemResult(false, operation.Item);
         }
 
@@ -308,7 +308,7 @@ public class HorseCache
         
         if (item == null)
         {
-            CacheOperation operation = await Set(key, new MemoryStream(BitConverter.GetBytes(1)), duration, null, tags);
+            CacheOperation operation = await Set(key, new MemoryStream(BitConverter.GetBytes(incrementValue)), duration, null, tags);
             return new GetCacheItemResult(false, operation.Item);
         }
         
