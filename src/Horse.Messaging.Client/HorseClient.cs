@@ -816,7 +816,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends a Horse message and waits for acknowledge
     /// </summary>
-    public async Task<HorseResult> SendAndGetAck(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
+    public Task<HorseResult> SendAndGetAck(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
         message.SetSource(_clientId);
         message.WaitResponse = true;
@@ -834,13 +834,13 @@ public class HorseClient : IDisposable
         if (string.IsNullOrEmpty(message.MessageId))
             throw new ArgumentNullException("Messages without unique id cannot be acknowledged");
 
-        return await WaitResponse(message, true);
+        return WaitResponse(message, true);
     }
 
     /// <summary>
     /// Sends multiple horses messages in a single horse message and waits for acknowledge
     /// </summary>
-    public async Task<HorseResult> SendEnvelopedAndGetAck(IEnumerable<HorseMessage> messages, string envelopeTarget = null, IList<KeyValuePair<string, string>> additionalHeaders = null)
+    public Task<HorseResult> SendEnvelopedAndGetAck(IEnumerable<HorseMessage> messages, string envelopeTarget = null, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
         HorseMessage envelope = new HorseMessage(MessageType.Envelope, string.IsNullOrEmpty(envelopeTarget) ? "*" : envelopeTarget, 0);
         envelope.SetSource(_clientId);
@@ -867,7 +867,7 @@ public class HorseClient : IDisposable
         }
 
         envelope.CalculateLengths();
-        return await WaitResponse(envelope, true);
+        return WaitResponse(envelope, true);
     }
 
     /// <summary>

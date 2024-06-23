@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
+using Horse.Messaging.Client.Cache;
 using Horse.Messaging.Server;
 using Horse.Server;
 
@@ -13,11 +14,28 @@ class Program
         HorseRider rider = StartServer();
 
         HorseClientBuilder builder = new HorseClientBuilder();
-        builder.SetHost("horse://localhost:26223");
-        HorseClient client = builder.Build();
+        builder.AddHost("horse://localhost:2626");
 
-        client.Connect();
-            
+        HorseClient client = builder.Build();
+        client.ResponseTimeout = TimeSpan.FromMinutes(30);
+        client.Connected += c => Console.WriteLine("Connected");
+        client.Disconnected += c => Console.WriteLine("Disconnected");
+
+        await client.ConnectAsync();
+
+        HorseCacheData<int> incrementalData;
+
+        while (true)
+        {
+            try
+            {
+                Console.ReadLine();
+                incrementalData = await client.Cache.GetIncrementalValue("IncrementalTestKey");
+                Console.WriteLine($"Incremental value: {incrementalData.Value}");
+            }
+            catch { }
+        }
+        
         //client.Cache.Set<CacheModel>("modelA", null);
         // client.Cache.Get<CacheModel>();
 

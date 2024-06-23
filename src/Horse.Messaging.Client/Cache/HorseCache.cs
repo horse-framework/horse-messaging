@@ -44,7 +44,7 @@ internal class HorseCache : IHorseCache
     /// <inheritdoc />
     public async Task<HorseCacheData<int>> GetIncrementalValue(string key, int increment = 1)
     {
-        HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetCache);
+        HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.GetIncrementalCache);
 
         if (increment > 1)
             message.AddHeader(HorseHeaders.VALUE, increment.ToString());
