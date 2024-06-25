@@ -161,6 +161,8 @@ public class PluginRider : IPluginRider
                 if (pluginData == null)
                 {
                     plugin = builder.Build();
+                    plugin.SetName(builder.GetName());
+                    
                     if (Plugins.Any(x => string.Equals(x.Name, plugin.Name)))
                     {
                         _ = plugin.Remove();
@@ -349,6 +351,7 @@ public class PluginRider : IPluginRider
             throw new DuplicateNameException($"There is already active plugin with name: {plugin.Name}. Please remove it first.");
 
         plugin.Set(this);
+        plugin.SetName(builder.GetName());
         await plugin.Initialize();
 
         plugin.Initialized = true;
