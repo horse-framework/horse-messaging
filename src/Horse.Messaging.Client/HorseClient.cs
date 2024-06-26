@@ -894,6 +894,32 @@ public class HorseClient : IDisposable
     }
 
     /// <summary>
+    /// Sends a request to a plugin and received the response
+    /// </summary>
+    public async Task<HorseModelResult<T>> SendPluginMessage<T>(string pluginName, object requestModel, ushort contentType = 0)
+    {
+        HorseMessage message = new HorseMessage(MessageType.Plugin, pluginName, contentType);
+        MessageSerializer.Serialize(message, requestModel);
+
+        message.WaitResponse = true;
+
+        if (string.IsNullOrEmpty(message.MessageId))
+            message.SetMessageId(UniqueIdGenerator.Create());
+
+        Task<HorseMessage> task = Tracker.Track(message);
+        HorseResult sent = await SendAsync(message);
+        if (sent.Code != HorseResultCode.Ok)
+            return new HorseModelResult<T>(new HorseResult(HorseResultCode.SendError));
+
+        HorseMessage response = await task;
+        if (response?.Content == null || response.Length == 0 || response.Content.Length == 0)
+            return HorseModelResult<T>.FromContentType(message.ContentType);
+
+        T model = response.Deserialize<T>(MessageSerializer);
+        return new HorseModelResult<T>(HorseResult.Ok(), model);
+    }
+
+    /// <summary>
     /// Sends a response message to the request
     /// </summary>
     public async Task<HorseResult> SendResponseAsync<TModel>(HorseMessage requestMessage, TModel responseModel)

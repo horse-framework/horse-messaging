@@ -180,7 +180,10 @@ public class PluginRider : IPluginRider
                     data.Plugins.Add(pluginData);
                 }
                 else
+                {
                     plugin = builder.Build();
+                    plugin.SetName(builder.GetName());
+                }
 
                 plugin.Set(this);
                 await plugin.Initialize();
