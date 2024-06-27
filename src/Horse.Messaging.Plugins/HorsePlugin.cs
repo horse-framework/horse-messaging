@@ -29,6 +29,11 @@ public abstract class HorsePlugin
         Plugin = rider;
     }
 
+    internal void SetName(string name)
+    {
+        Name = name;
+    }
+
     public abstract Task Initialize();
 
     public virtual Task<bool> Remove()
