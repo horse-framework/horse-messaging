@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Horse.Messaging.Client.Internal;
+using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Channels;
 
@@ -69,7 +70,7 @@ public class ChannelConsumerRegistrar
     /// <summary>
     /// Registers a single IDirectReceiver or IRequestHandler
     /// </summary>
-    public void RegisterHandler<THandler>(Func<IHandlerFactory> consumerFactoryBuilder = null, Delegate filter = null)
+    public void RegisterHandler<THandler>(Func<IHandlerFactory> consumerFactoryBuilder = null, Func<HorseMessage, object, bool> filter = null)
     {
         RegisterHandler(typeof(THandler), consumerFactoryBuilder, filter);
     }
@@ -77,7 +78,7 @@ public class ChannelConsumerRegistrar
     /// <summary>
     /// Registers a single IDirectReceiver or IRequestHandler
     /// </summary>
-    public void RegisterHandler(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder = null, Delegate filter = null)
+    public void RegisterHandler(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder = null, Func<HorseMessage, object, bool> filter = null)
     {
         List<ModelTypeInfo> types = FindModelTypes(consumerType);
 

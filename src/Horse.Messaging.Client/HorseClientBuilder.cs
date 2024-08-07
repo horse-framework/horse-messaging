@@ -399,7 +399,7 @@ public class HorseClientBuilder
                                             "Build HorseClient with IServiceCollection");
 
         ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
-        registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), filter);
+        registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), (h, m) => filter(h, (TModel) m));
         _services.AddTransient<THandler>();
         return this;
     }
@@ -433,7 +433,7 @@ public class HorseClientBuilder
                                             "Build HorseClient with IServiceCollection");
 
         ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
-        registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), filter);
+        registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), (h, m) => filter(h, (TModel) m));
         _services.AddScoped<THandler>();
         return this;
     }
@@ -467,7 +467,7 @@ public class HorseClientBuilder
             registrar.RegisterHandler(typeof(THandler));
         else
         {
-            registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), filter);
+            registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), (h, m) => filter(h, (TModel) m));
             _services.AddSingleton<THandler>();
         }
 
