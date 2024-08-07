@@ -49,6 +49,9 @@ public class ChannelOperator
 
         try
         {
+            if (reg.Filter != null && !reg.Filter(message, model))
+                return;
+
             await reg.Executer.Execute(Client, message, model);
         }
         catch (Exception ex)

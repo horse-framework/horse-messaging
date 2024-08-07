@@ -387,6 +387,24 @@ public class HorseClientBuilder
     }
 
     /// <summary>
+    /// Adds a channel subscriber with transient life time
+    /// </summary>
+    public HorseClientBuilder AddTransientChannelSubscriber<THandler, TModel>(Func<HorseMessage, TModel, bool> filter)
+        where THandler : class, IChannelSubscriber<TModel>
+        where TModel : class
+    {
+        if (_services == null)
+            throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                            "If you want to use transient channel handlers " +
+                                            "Build HorseClient with IServiceCollection");
+
+        ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
+        registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), filter);
+        _services.AddTransient<THandler>();
+        return this;
+    }
+
+    /// <summary>
     /// Adds a channel subscriber with scoped life time
     /// </summary>
     public HorseClientBuilder AddScopedChannelSubscriber<THandler>() where THandler : class
@@ -403,6 +421,24 @@ public class HorseClientBuilder
     }
 
     /// <summary>
+    /// Adds a channel subscriber with scoped life time
+    /// </summary>
+    public HorseClientBuilder AddScopedChannelSubscriber<THandler, TModel>(Func<HorseMessage, TModel, bool> filter)
+        where THandler : class, IChannelSubscriber<TModel>
+        where TModel : class
+    {
+        if (_services == null)
+            throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                            "If you want to use scoped channel handlers " +
+                                            "Build HorseClient with IServiceCollection");
+
+        ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
+        registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), filter);
+        _services.AddScoped<THandler>();
+        return this;
+    }
+
+    /// <summary>
     /// Adds a channel subscriber with singleton life time
     /// </summary>
     public HorseClientBuilder AddSingletonChannelSubscriber<THandler>() where THandler : class
@@ -413,6 +449,25 @@ public class HorseClientBuilder
         else
         {
             registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton));
+            _services.AddSingleton<THandler>();
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a channel subscriber with singleton life time
+    /// </summary>
+    public HorseClientBuilder AddSingletonChannelSubscriber<THandler, TModel>(Func<HorseMessage, TModel, bool> filter)
+        where THandler : class, IChannelSubscriber<TModel>
+        where TModel : class
+    {
+        ChannelConsumerRegistrar registrar = new ChannelConsumerRegistrar(_client.Channel);
+        if (_services == null)
+            registrar.RegisterHandler(typeof(THandler));
+        else
+        {
+            registrar.RegisterHandler(typeof(THandler), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), filter);
             _services.AddSingleton<THandler>();
         }
 

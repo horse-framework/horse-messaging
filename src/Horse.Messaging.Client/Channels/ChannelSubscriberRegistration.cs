@@ -11,4 +11,5 @@ internal class ChannelSubscriberRegistration
     public Type MessageType { get; set; }
 
     internal ExecutorBase Executer { get; set; }
+    internal dynamic Filter { get; set; }
 }
