@@ -30,7 +30,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Enums.NET" Version="4.0.2" />
+		<PackageReference Include="Enums.NET" Version="5.0.0" />
 	</ItemGroup>
 
 </Project>

@@ -127,7 +127,6 @@ public class HorseRider
 
         Cache.Initialize();
         Cluster.Initialize();
-        Plugin.Initialize();
     }
 
     /// <summary>
@@ -145,6 +144,7 @@ public class HorseRider
         Router.Initialize();
         Channel.Initialize();
         Queue.Initialize();
+        Plugin.Initialize();
     }
 
     /// <summary>

@@ -13,4 +13,8 @@
       <ProjectReference Include="..\..\Horse.Messaging.Protocol\Horse.Messaging.Protocol.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Horse.Jockey" Version="6.9.2" />
+    </ItemGroup>
+
 </Project>
