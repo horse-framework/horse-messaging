@@ -28,10 +28,6 @@
 
 	<ItemGroup>
 		<PackageReference Include="Enums.NET" Version="5.0.0" />
-		<AssemblyVersion>6.9.6</AssemblyVersion>
-		<FileVersion>6.9.6</FileVersion>
-		<PackageVersion>6.9.6</PackageVersion>
-		<PackageReference Include="Enums.NET" Version="5.0.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
 	</ItemGroup>
 
