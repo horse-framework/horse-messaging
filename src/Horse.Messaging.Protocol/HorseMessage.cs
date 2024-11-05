@@ -32,6 +32,11 @@ public class HorseMessage
     /// If true, message has header data
     /// </summary>
     public bool HasHeader { get; internal set; }
+    
+    /// <summary>
+    /// If true, message has additional content, added end of the message
+    /// </summary>
+    public bool HasAdditionalContent { get; internal set; }
 
     /// <summary>
     /// Message type
@@ -83,6 +88,17 @@ public class HorseMessage
     /// Message content stream
     /// </summary>
     public MemoryStream Content { get; set; }
+    
+    /// <summary>
+    /// Length of additional content.
+    /// It's always 4 bytes in protocol frame.
+    /// </summary>
+    public int AdditionalContentLength { get; set; }
+    
+    /// <summary>
+    /// Additional content
+    /// </summary>
+    public MemoryStream AdditionalContent { get; set; }
 
     /// <summary>
     /// Message headers

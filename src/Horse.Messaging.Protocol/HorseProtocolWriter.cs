@@ -86,8 +86,13 @@ public class HorseProtocolWriter
             proto += 32;
 
         ms.WriteByte(proto);
-        byte reserved = 0;
-        ms.WriteByte(reserved);
+
+        byte addContent = 0;
+        if (message.HasAdditionalContent)
+            addContent += 128;
+
+        ms.WriteByte(addContent);
+
         ms.WriteByte((byte) message.MessageIdLength);
         ms.WriteByte((byte) message.SourceLength);
         ms.WriteByte((byte) message.TargetLength);
@@ -114,6 +119,9 @@ public class HorseProtocolWriter
             ms.WriteByte(255);
             ms.Write(BitConverter.GetBytes(message.Length));
         }
+
+        if (message.HasAdditionalContent)
+            ms.Write(BitConverter.GetBytes(message.AdditionalContentLength));
 
         if (message.MessageIdLength > 0)
         {
@@ -163,6 +171,9 @@ public class HorseProtocolWriter
     {
         if (message.Length > 0 && message.Content != null)
             message.Content.WriteTo(ms);
+
+        if (message.HasAdditionalContent && message.AdditionalContent != null)
+            message.AdditionalContent.WriteTo(ms);
 
         ms.Position = 0;
     }

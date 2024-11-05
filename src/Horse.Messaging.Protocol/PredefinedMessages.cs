@@ -13,6 +13,11 @@ public static class PredefinedMessages
     public static readonly byte[] PROTOCOL_BYTES_V3 = Encoding.ASCII.GetBytes("HORSE/30");
 
     /// <summary>
+    /// "HORSE/40" as bytes, protocol handshaking message
+    /// </summary>
+    public static readonly byte[] PROTOCOL_BYTES_V4 = Encoding.ASCII.GetBytes("HORSE/40");
+
+    /// <summary>
     /// PING message for Horse "0x89, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00"
     /// </summary>
     public static readonly byte[] PING = { 0x89, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };

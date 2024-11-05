@@ -58,7 +58,7 @@ public class HorseProtocol : IHorseProtocol
         HorseMessage message = await reader.Read(info.GetStream());
 
         //sends protocol message
-        await info.GetStream().WriteAsync(PredefinedMessages.PROTOCOL_BYTES_V3);
+        await info.GetStream().WriteAsync(PredefinedMessages.PROTOCOL_BYTES_V4);
 
         bool alive = await ProcessFirstMessage(message, info, result);
         if (!alive)
@@ -165,7 +165,7 @@ public class HorseProtocol : IHorseProtocol
     private static ProtocolVersion CheckProtocol(byte[] data)
     {
         ReadOnlySpan<byte> span = data;
-        bool v2 = span.StartsWith(PredefinedMessages.PROTOCOL_BYTES_V3);
+        bool v2 = span.StartsWith(PredefinedMessages.PROTOCOL_BYTES_V4);
         if (v2)
             return ProtocolVersion.Version2;
 
