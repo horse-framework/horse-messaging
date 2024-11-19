@@ -49,26 +49,6 @@ public class HorseProtocolWriter
     }
 
     /// <summary>
-    /// Creates byte array of only Horse message frame
-    /// </summary>
-    public static byte[] CreateFrame(HorseMessage value)
-    {
-        using MemoryStream ms = new MemoryStream();
-        WriteFrame(ms, value, false);
-        return ms.ToArray();
-    }
-
-    /// <summary>
-    /// Creates byte array of only Horse message content
-    /// </summary>
-    public static byte[] CreateContent(HorseMessage value)
-    {
-        using MemoryStream ms = new MemoryStream();
-        WriteContent(ms, value);
-        return ms.ToArray();
-    }
-
-    /// <summary>
     /// Writes frame to stream
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

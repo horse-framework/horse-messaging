@@ -32,7 +32,7 @@ public class HorseMessage
     /// If true, message has header data
     /// </summary>
     public bool HasHeader { get; internal set; }
-    
+
     /// <summary>
     /// If true, message has additional content, added end of the message
     /// </summary>
@@ -88,13 +88,13 @@ public class HorseMessage
     /// Message content stream
     /// </summary>
     public MemoryStream Content { get; set; }
-    
+
     /// <summary>
     /// Length of additional content.
     /// It's always 4 bytes in protocol frame.
     /// </summary>
     public int AdditionalContentLength { get; set; }
-    
+
     /// <summary>
     /// Additional content
     /// </summary>
@@ -188,7 +188,7 @@ public class HorseMessage
         MessageIdLength = string.IsNullOrEmpty(MessageId) ? 0 : Encoding.UTF8.GetByteCount(MessageId);
         SourceLength = string.IsNullOrEmpty(Source) ? 0 : Encoding.UTF8.GetByteCount(Source);
         TargetLength = string.IsNullOrEmpty(Target) ? 0 : Encoding.UTF8.GetByteCount(Target);
-        Length = Content != null ? (ulong)Content.Length : 0;
+        Length = Content != null ? (ulong) Content.Length : 0;
     }
 
     /// <summary>
@@ -211,7 +211,20 @@ public class HorseMessage
             return;
 
         Content = new MemoryStream(Encoding.UTF8.GetBytes(content));
-        Length = Content != null ? (ulong)Content.Length : 0;
+        Length = Content != null ? (ulong) Content.Length : 0;
+    }
+
+    /// <summary>
+    /// Sets message additional content as string content
+    /// </summary>
+    public void SetStringAdditionalContent(string content)
+    {
+        if (string.IsNullOrEmpty(content))
+            return;
+
+        AdditionalContent = new MemoryStream(Encoding.UTF8.GetBytes(content));
+        AdditionalContentLength = AdditionalContent != null ? (int) AdditionalContent.Length : 0;
+        HasAdditionalContent = AdditionalContentLength > 0;
     }
 
     /// <summary>
@@ -227,7 +240,7 @@ public class HorseMessage
     /// </summary>
     public TModel Deserialize<TModel>(IMessageContentSerializer serializer)
     {
-        return (TModel)serializer.Deserialize(this, typeof(TModel));
+        return (TModel) serializer.Deserialize(this, typeof(TModel));
     }
 
     /// <summary>
@@ -265,6 +278,7 @@ public class HorseMessage
         clone.HighPriority = HighPriority;
         clone.WaitResponse = WaitResponse;
         clone.ContentType = ContentType;
+        clone.HasAdditionalContent = HasAdditionalContent;
 
         if (cloneHeaders && HasHeader)
         {
@@ -283,12 +297,23 @@ public class HorseMessage
                 clone.HeadersList.AddRange(additionalHeaders);
         }
 
-        if (cloneContent && Content != null && Content.Length > 0)
+        if (cloneContent)
         {
-            Content.Position = 0;
-            clone.Content = new MemoryStream();
-            Content.WriteTo(clone.Content);
-            clone.Length = Convert.ToUInt64(clone.Content.Length);
+            if (Content != null && Content.Length > 0)
+            {
+                Content.Position = 0;
+                clone.Content = new MemoryStream();
+                Content.WriteTo(clone.Content);
+                clone.Length = Convert.ToUInt64(clone.Content.Length);
+            }
+
+            if (AdditionalContent != null && AdditionalContent.Length > 0)
+            {
+                AdditionalContent.Position = 0;
+                clone.AdditionalContent = new MemoryStream();
+                AdditionalContent.WriteTo(clone.AdditionalContent);
+                clone.AdditionalContentLength = (int) clone.AdditionalContent.Length;
+            }
         }
 
         return clone;

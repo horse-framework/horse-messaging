@@ -11,17 +11,17 @@ public enum ProtocolVersion
     Unknown,
         
     /// <summary>
-    /// Horse MQ Protocol Version 1
+    /// Horse Messaging Protocol Version 1
     /// </summary>
     Version1,
         
     /// <summary>
-    /// Horse MQ Protocol Version 2
+    /// Horse Messaging Protocol Version 2
     /// </summary>
     Version2,
         
     /// <summary>
-    /// Horse MQ Protocol Version 4
+    /// Horse Messaging Protocol Version 4
     /// </summary>
     Version4
 }

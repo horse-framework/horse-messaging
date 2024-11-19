@@ -993,10 +993,10 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends acknowledge message for the message.
     /// </summary>
-    public async Task<HorseResult> SendAck(HorseMessage message)
+    public Task<HorseResult> SendAck(HorseMessage message)
     {
         HorseMessage ack = message.CreateAcknowledge();
-        return await SendAsync(ack);
+        return SendAsync(ack);
     }
 
     /// <summary>
