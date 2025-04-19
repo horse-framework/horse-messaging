@@ -1,4 +1,6 @@
-﻿namespace Horse.Messaging.Client.Cache;
+#nullable enable
+
+namespace Horse.Messaging.Client.Cache;
 
 /// <summary>
 /// Horse Cache Data
@@ -9,7 +11,7 @@ public class HorseCacheData<T>
     /// <summary>
     /// Cache data value
     /// </summary>
-    public T Value { get; internal set; }
+    public T? Value { get; internal set; }
 
     /// <summary>
     /// True, if first expiration warning message sent to the client.
@@ -20,7 +22,7 @@ public class HorseCacheData<T>
     /// <summary>
     /// Cache key
     /// </summary>
-    public string Key { get; set; }
+    public required string Key { get; set; }
 
     /// <summary>
     /// Cache expiration data in unix seconds
@@ -40,5 +42,5 @@ public class HorseCacheData<T>
     /// <summary>
     /// Key Tags 
     /// </summary>
-    public string[] Tags { get; set; }
+    public string[]? Tags { get; set; }
 }
