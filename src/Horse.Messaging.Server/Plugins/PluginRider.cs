@@ -349,12 +349,12 @@ public class PluginRider : IPluginRider
     private async Task AddPlugin(PluginAssemblyData assemblyData, IHorsePluginBuilder builder)
     {
         HorsePlugin plugin = builder.Build();
+        plugin.SetName(builder.GetName());
 
         if (Plugins.Any(x => string.Equals(x.Name, plugin.Name, StringComparison.InvariantCultureIgnoreCase)))
             throw new DuplicateNameException($"There is already active plugin with name: {plugin.Name}. Please remove it first.");
 
         plugin.Set(this);
-        plugin.SetName(builder.GetName());
         await plugin.Initialize();
 
         plugin.Initialized = true;
