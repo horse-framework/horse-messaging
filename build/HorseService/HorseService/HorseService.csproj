@@ -5,11 +5,11 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
         <LangVersion>default</LangVersion>
-        <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+        <TargetFramework>net9.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Horse.Jockey" Version="6.9.5" />
+        <PackageReference Include="Horse.Jockey" Version="6.9.9" />
         <PackageReference Include="Horse.Messaging.Data" Version="6.9.9" />
         <PackageReference Include="Horse.Messaging.Protocol.OverWebSockets" Version="6.9.9" />
         <PackageReference Include="Horse.Messaging.Server" Version="6.9.9" />
@@ -32,6 +32,12 @@
       <None Update="linux\horse.init.d">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
     </ItemGroup>
 
 </Project>
