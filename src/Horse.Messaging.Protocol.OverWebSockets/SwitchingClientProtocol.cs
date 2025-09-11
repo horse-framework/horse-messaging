@@ -19,7 +19,7 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
     private string _websocketKey;
     private readonly HorseClient _client;
     private readonly WebSocketReader _reader = new();
-    private readonly WebSocketWriter _writer = new();
+    private readonly WebSocketWriter _writer = new(true);
     private readonly HorseProtocolReader _horseReader = new();
 
     internal SwitchingClientProtocol(HorseClient client)
@@ -55,7 +55,7 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
         if (ping.Length > 0)
             pong.Content = new MemoryStream(ping.Content.ToArray());
 
-        byte[] data = new WebSocketWriter().Create(pong, null);
+        byte[] data = new WebSocketWriter(true).Create(pong, null);
         _client.SendRaw(data);
     }
 

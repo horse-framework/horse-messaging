@@ -11,7 +11,7 @@ internal class OverWsServerSocket : WsServerSocket
     internal ConnectionData Data { get; set; }
     internal HorseProtocolReader HorseReader { get; set; }
     
-    public OverWsServerSocket(IHorseServer server, IConnectionInfo info) : base(server, info)
+    public OverWsServerSocket(IHorseServer server, IConnectionInfo info) : base(server, info, null)
     {
         HorseReader = new HorseProtocolReader();
     }

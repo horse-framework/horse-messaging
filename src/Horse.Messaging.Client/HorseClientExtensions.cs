@@ -23,7 +23,7 @@ public static class HorseClientExtensions
         HorseClient<TIdentifier> client = builder.Build();
         services.AddSingleton(client);
 
-        services.AddSingleton<IHorseCache<TIdentifier>>((HorseCache<TIdentifier>) client.Cache);
+        services.AddSingleton<IHorseCache<TIdentifier>>((HorseCache<TIdentifier>)client.Cache);
         services.AddSingleton<IHorseChannelBus<TIdentifier>>(new HorseChannelBus<TIdentifier>(client));
         services.AddSingleton<IHorseQueueBus<TIdentifier>>(new HorseQueueBus<TIdentifier>(client));
         services.AddSingleton<IHorseRouterBus<TIdentifier>>(new HorseRouterBus<TIdentifier>(client));
@@ -51,11 +51,40 @@ public static class HorseClientExtensions
     }
 
     /// <summary>
+    /// Adds Horse connector with configuration
+    /// </summary>
+    public static IServiceCollection AddKeyedHorseBus(this IServiceCollection services, string key, Action<HorseClientBuilder> config)
+    {
+        HorseClientBuilder builder = new(services);
+        config(builder);
+        HorseClient client = builder.Build();
+        services.AddKeyedSingleton(key, client);
+        services.AddKeyedSingleton(key, client.Cache);
+        services.AddKeyedSingleton<IHorseChannelBus>(key, new HorseChannelBus(client));
+        services.AddKeyedSingleton<IHorseQueueBus>(key, new HorseQueueBus(client));
+        services.AddKeyedSingleton<IHorseRouterBus>(key, new HorseRouterBus(client));
+        services.AddKeyedSingleton<IHorseDirectBus>(key, new HorseDirectBus(client));
+
+        return services;
+    }
+
+    /// <summary>
     /// Uses horse bus and connects to the server
     /// </summary>
     public static IServiceProvider UseHorseBus(this IServiceProvider provider)
     {
         HorseClient client = provider.GetRequiredService<HorseClient>();
+        client.Provider = provider;
+        client.Connect();
+        return provider;
+    }
+
+    /// <summary>
+    /// Uses horse bus and connects to the server
+    /// </summary>
+    public static IServiceProvider UseKeyedHorseBus(this IServiceProvider provider, string key)
+    {
+        HorseClient client = provider.GetRequiredKeyedService<HorseClient>(key);
         client.Provider = provider;
         client.Connect();
         return provider;

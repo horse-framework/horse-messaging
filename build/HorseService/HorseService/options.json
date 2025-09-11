@@ -1,6 +1,6 @@
 {
-  "Port": 34000,
-  "JockeyPort": 34001,
+  "Port": 2626,
+  "JockeyPort": 2627,
   "JockeyUsername": "admin",
   "JockeyPassword": "",
   "DataPath": "/etc/horse/data"
