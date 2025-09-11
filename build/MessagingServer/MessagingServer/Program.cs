@@ -4,6 +4,7 @@ using Horse.Messaging.Data;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Cluster;
+using Horse.Messaging.Server.OverWebSockets;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Server;
@@ -85,7 +86,7 @@ if (!skipJockey)
         o.AuthAsync = login =>
         {
             if (login.Username == username && login.Password == password)
-                return Task.FromResult(new UserInfo {Id = "*", Name = "Admin"});
+                return Task.FromResult(new UserInfo { Id = "*", Name = "Admin" });
 
             return Task.FromResult<UserInfo>(null);
         };
@@ -95,4 +96,8 @@ if (!skipJockey)
 
 // Run
 server.UseRider(rider);
-server.Run(2626);
+
+server.UseHorseOverWebsockets(opt => { opt.Port = 2680; });
+server.Options.Hosts.Add(new HostOptions { Port = 2626 });
+
+server.Run();
