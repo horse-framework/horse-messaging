@@ -28,9 +28,15 @@ public class PluginRider : IPluginRider
     private readonly HorseRider _rider;
     private readonly string _dataFilename = "plugins.json";
 
+    /// <summary>
+    /// Cache operation manager
+    /// </summary>
+    public IPluginCacheRider Cache { get; private set; }
+
     internal PluginRider(HorseRider rider)
     {
         _rider = rider;
+        Cache = new PluginCacheRider(rider);
     }
 
     /// <summary>

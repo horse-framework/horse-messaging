@@ -7,6 +7,11 @@ namespace Horse.Messaging.Plugins;
 public interface IPluginRider
 {
     /// <summary>
+    /// Cache operation manager
+    /// </summary>
+    IPluginCacheRider Cache { get; }
+    
+    /// <summary>
     /// Returns server ports for plain horse protocol
     /// Server port could be used if plugin needs some client operations, it can connect to the server itself with using a horse client
     /// </summary>
