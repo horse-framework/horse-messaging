@@ -42,7 +42,7 @@ class Program
         client.ResponseTimeout = TimeSpan.FromSeconds(300);
         await client.Direct.RequestJson<RequestModel>(new RequestModel());
         await client.ConnectAsync();
-
+        
         var r = await client.Queue.Create("test", new List<KeyValuePair<string, string>> {new(HorseHeaders.QUEUE_TYPE, "push")});
         Console.WriteLine(r);
         ModelC c = new ModelC();

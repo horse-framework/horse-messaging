@@ -270,9 +270,6 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
             return;
         }
 
-        if (SmartHealthCheck)
-            KeepAlive();
-
         _ = _client.OnMessageReceived(message);
     }
 
@@ -303,6 +300,9 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
             byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
             sent = await SendAsync(data);
         }
+
+        if (sent && SmartHealthCheck)
+            KeepAlive();
 
         return sent ? HorseResult.Ok() : new HorseResult(HorseResultCode.SendError);
     }
