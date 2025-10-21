@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using EnumsNET;
@@ -7,6 +8,7 @@ using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Logging;
 
 namespace Horse.Messaging.Server.Routing;
 
@@ -15,7 +17,7 @@ namespace Horse.Messaging.Server.Routing;
 /// </summary>
 public class RouterRider
 {
-    private readonly ArrayContainer<Router> _routers = new();
+    private readonly ConcurrentDictionary<string, Router> _routers = new ConcurrentDictionary<string, Router>();
 
     /// <summary>
     /// Router message event handlers
@@ -25,7 +27,7 @@ public class RouterRider
     /// <summary>
     /// All Queues of the server
     /// </summary>
-    public IEnumerable<Router> Routers => _routers.All();
+    public IEnumerable<Router> Routers => _routers.Values;
 
     /// <summary>
     /// Root horse rider object
@@ -97,7 +99,7 @@ public class RouterRider
             {
                 Router router = CreateRouter(config);
                 if (router != null)
-                    _routers.Add(router);
+                    _routers.TryAdd(router.Name, router);
             }
         }
 
@@ -124,14 +126,14 @@ public class RouterRider
             if (!Filter.CheckNameEligibility(name))
                 throw new NotSupportedException("Invalid router name");
 
-            if (Rider.Options.RouterLimit > 0 && Rider.Options.RouterLimit >= _routers.Count())
+            if (Rider.Options.RouterLimit > 0 && Rider.Options.RouterLimit >= _routers.Count)
                 throw new OperationCanceledException("Router limit is exceeded for the server");
 
-            if (_routers.Find(x => x.Name == name) != null)
+            if (_routers.ContainsKey(name))
                 throw new DuplicateNameException();
 
             Router router = new Router(Rider, name, method);
-            _routers.Add(router);
+            _routers.TryAdd(router.Name, router);
 
             CreateEvent.Trigger(name, new KeyValuePair<string, string>(HorseHeaders.ROUTE_METHOD, method.ToString()));
 
@@ -148,7 +150,7 @@ public class RouterRider
         }
         catch (Exception e)
         {
-            Rider.SendError("ADD_ROUTER", e, $"RouterName:{name}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.RouterAdd, $"Add Router: {name}", e);
             throw;
         }
     }
@@ -173,15 +175,15 @@ public class RouterRider
             if (!Filter.CheckNameEligibility(router.Name))
                 throw new InvalidOperationException("Invalid router name");
 
-            if (Rider.Options.RouterLimit > 0 && Rider.Options.RouterLimit >= _routers.Count())
+            if (Rider.Options.RouterLimit > 0 && Rider.Options.RouterLimit >= _routers.Count)
                 throw new OperationCanceledException("Router limit is exceeded for the server");
 
-            if (_routers.Find(x => x.Name == router.Name) != null)
+            if (_routers.ContainsKey(router.Name))
                 throw new DuplicateNameException();
 
             CreateEvent.Trigger(router.Name, new KeyValuePair<string, string>(HorseHeaders.ROUTE_METHOD, router.Method.ToString()));
 
-            _routers.Add(router);
+            _routers.TryAdd(router.Name, router);
 
             if (OptionsConfigurator != null)
             {
@@ -196,7 +198,7 @@ public class RouterRider
         }
         catch (Exception e)
         {
-            Rider.SendError("ADD_ROUTER", e, $"RouterName:{router?.Name}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.RouterAdd, $"Add Router: {router?.Name}", e);
             throw;
         }
     }
@@ -214,7 +216,7 @@ public class RouterRider
     /// </summary>
     internal void Remove(Router router, bool notifyCluster)
     {
-        _routers.Remove(router);
+        _routers.TryRemove(router.Name, out _);
         RemoveEvent.Trigger(router.Name);
 
         if (OptionsConfigurator != null)
@@ -236,7 +238,8 @@ public class RouterRider
     /// </summary>
     public Router Find(string name)
     {
-        return _routers.Find(x => x.Name == name);
+        _routers.TryGetValue(name, out Router router);
+        return router;
     }
 
     internal Router CreateRouter(RouterConfiguration configuration)
@@ -260,11 +263,11 @@ public class RouterRider
         Type type = Type.GetType(configuration.Type);
         if (type == null)
         {
-            Rider.SendError("CreateRouter", new ArgumentException($"Type resolve error for binding {configuration.Type}"), "Loading from Binding Definition");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.RouterCreate, $"Type resolve error for binding {configuration.Type}, Loading from Binding Definition", null);
             return null;
         }
 
-        Binding binding = (Binding) Activator.CreateInstance(type);
+        Binding binding = (Binding)Activator.CreateInstance(type);
         binding.Name = configuration.Name;
         binding.Target = configuration.Target;
         binding.Priority = configuration.Priority;

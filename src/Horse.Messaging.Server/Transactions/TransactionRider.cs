@@ -9,6 +9,7 @@ using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Direct;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
 
@@ -83,7 +84,7 @@ public class TransactionRider
         }
         catch (Exception e)
         {
-            Rider.SendError("TransactionRider.SaveTransactionContainers", e, string.Empty);
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.SaveTransactionContainer, "TransactionRider.SaveTransactionContainers", e);
         }
     }
 

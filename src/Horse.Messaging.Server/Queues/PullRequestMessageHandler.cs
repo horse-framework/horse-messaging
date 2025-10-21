@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Network;
 using Horse.Messaging.Server.Security;
 
@@ -49,7 +50,7 @@ internal class PullRequestMessageHandler : INetworkMessageHandler
         }
         catch (Exception e)
         {
-            _rider.SendError("PULL_REQUEST", e, $"QueueName:{message.Target}");
+            _rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueuePullRequest, $"Pull Request Queue: {message.Target}", e);
         }
     }
 

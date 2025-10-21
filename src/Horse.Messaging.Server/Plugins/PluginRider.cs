@@ -11,6 +11,7 @@ using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
 
@@ -203,7 +204,7 @@ public class PluginRider : IPluginRider
             }
             catch (Exception e)
             {
-                _rider.SendError("Plugin", e, type.FullName);
+                _rider.SendError(HorseLogLevel.Error, HorseLogEvents.PluginLoadAssembly, "Assembly Name: " + type.FullName, e);
             }
         }
     }
@@ -257,7 +258,7 @@ public class PluginRider : IPluginRider
                 }
                 catch (Exception e)
                 {
-                    _rider.SendError("Plugin", e, type.FullName);
+                    _rider.SendError(HorseLogLevel.Error, HorseLogEvents.PluginAddAssembly, "Assembly Name: " + type.FullName, e);
                 }
             }
         }
@@ -340,7 +341,7 @@ public class PluginRider : IPluginRider
                 }
                 catch (Exception e)
                 {
-                    _rider.SendError("Plugin", e, type.FullName);
+                    _rider.SendError(HorseLogLevel.Error, HorseLogEvents.PluginAddAssembly, "Assembly Name: " + type.FullName, e);
                 }
             }
         }

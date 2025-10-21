@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues.Managers;
 
 namespace Horse.Messaging.Server.Queues.Delivery;
@@ -52,7 +53,7 @@ public class DefaultDeliveryTracker : IDeliveryTracker
                 }
                 catch (Exception e)
                 {
-                    _queue.Rider.SendError("PROCESS_DELIVERIES", e, $"QueueName:{_queue.Name}");
+                    _queue.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueDeliveryProcess, "Process Deliveries of Queue: " + _queue.Name, e);
                 }
             }
         });

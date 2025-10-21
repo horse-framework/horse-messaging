@@ -5,6 +5,7 @@ using AdvancedSample.Messaging.Server.RouteBindings;
 using Horse.Messaging.Data;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Transactions;

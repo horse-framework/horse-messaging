@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues.Delivery;
 
 namespace Horse.Messaging.Server.Queues.States;
@@ -36,7 +37,7 @@ internal class PushQueueState : IQueueState
         }
         catch (Exception e)
         {
-            _queue.Rider.SendError("PUSH", e, $"QueueName:{_queue.Name}, State:Push");
+            _queue.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueuePush, "PushState Queue Push: " + _queue.Name, e);
             return PushResult.Error;
         }
         finally

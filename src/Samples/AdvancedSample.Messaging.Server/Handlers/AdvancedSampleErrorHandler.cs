@@ -1,5 +1,6 @@
 using System;
 using Horse.Messaging.Server;
+using Horse.Messaging.Server.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace AdvancedSample.Messaging.Server.Handlers;
@@ -13,7 +14,7 @@ internal class AdvancedSampleErrorHandler : IErrorHandler
         _logger = logger;
     }
 
-    public void Error(string hint, Exception exception, string payload)
+    public void Error(HorseLogLevel logLevel, int eventId, string message, Exception exception)
     {
         _logger.LogCritical(exception, "[EXCEPTION] {Message}", exception.Message);
     }

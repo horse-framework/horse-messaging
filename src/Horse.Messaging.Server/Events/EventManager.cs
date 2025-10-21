@@ -5,6 +5,7 @@ using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Containers;
+using Horse.Messaging.Server.Logging;
 
 namespace Horse.Messaging.Server.Events;
 
@@ -92,7 +93,7 @@ public class EventManager : IDisposable
     /// </summary>
     internal void Trigger(string target, params KeyValuePair<string, string>[] parameters)
     {
-        Trigger((EventSubject) null, target, parameters);
+        Trigger((EventSubject)null, target, parameters);
     }
 
     /// <summary>
@@ -100,7 +101,7 @@ public class EventManager : IDisposable
     /// </summary>
     internal void Trigger(params KeyValuePair<string, string>[] parameters)
     {
-        Trigger((EventSubject) null, null, parameters);
+        Trigger((EventSubject)null, null, parameters);
     }
 
     /// <summary>
@@ -133,7 +134,7 @@ public class EventManager : IDisposable
         }
         catch (Exception e)
         {
-            _server.SendError("EVENT_TRIGGER", e, $"Type:{Type}, Target:{Target}");
+            _server.SendError(HorseLogLevel.Error, HorseLogEvents.EventTrigger, $"Event Trigger Type:{Type}, Target:{Target}", e);
         }
     }
 }

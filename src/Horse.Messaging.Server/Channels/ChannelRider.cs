@@ -9,6 +9,7 @@ using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Logging;
 
 namespace Horse.Messaging.Server.Channels;
 
@@ -229,7 +230,7 @@ public class ChannelRider
         }
         catch (Exception e)
         {
-            Rider.SendError("CREATE_CHANNEL", e, $"ChannelName:{channelName}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.ChannelCreate, "Channel Create Error: " + channelName, e);
 
             if (!hideException)
                 throw;
@@ -292,7 +293,7 @@ public class ChannelRider
         }
         catch (Exception e)
         {
-            Rider.SendError("REMOVE_CHANNEL", e, $"ChannelName:{channel?.Name}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.ChannelRemove, "Channel Remove Error: " + channel?.Name, e);
         }
     }
 

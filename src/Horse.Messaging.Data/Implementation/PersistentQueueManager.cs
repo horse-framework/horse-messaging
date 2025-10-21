@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.Managers;
@@ -153,7 +154,7 @@ public class PersistentQueueManager : IHorseQueueManager
         }
         catch (Exception e)
         {
-            Queue.Rider.SendError("PersistentQueueDestroy", e, Queue.Name);
+            Queue.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueuePersistentDestroy, $"Persistent Queue Destroy: {Queue.Name}", e);
         }
 
         PriorityMessageStore.TimeoutTracker.Stop();
@@ -162,13 +163,6 @@ public class PersistentQueueManager : IHorseQueueManager
         await DeliveryHandler.Tracker.Destroy();
         await PriorityMessageStore.Destroy();
         await MessageStore.Destroy();
-    }
-
-    /// <inheritdoc />
-    public Task OnExceptionThrown(string hint, QueueMessage message, Exception exception)
-    {
-        Queue.Rider.SendError(hint, exception, $"MessageId: {message.Message.MessageId}");
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc />

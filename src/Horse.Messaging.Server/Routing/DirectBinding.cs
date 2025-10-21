@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Logging;
 
 namespace Horse.Messaging.Server.Routing;
 
@@ -76,7 +77,7 @@ public class DirectBinding : Binding
         }
         catch (Exception e)
         {
-            Router.Rider.SendError("BINDING_SEND", e, $"Type:Direct, Binding:{Name}");
+            Router.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.RouterBindingSend, $"BindingSend Type:Direct, Router:{Router.Name}, Binding:{Name}", e);
             return false;
         }
     }

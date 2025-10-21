@@ -12,6 +12,7 @@ using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.Managers;
 using Horse.Messaging.Server.Security;
@@ -356,7 +357,7 @@ public class QueueRider
         }
         catch (Exception e)
         {
-            Rider.SendError("CREATE_QUEUE", e, $"QueueName:{queueName}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueCreate, $"CreateQueue: {queueName}", e);
 
             if (!hideException)
                 throw;
@@ -452,7 +453,7 @@ public class QueueRider
         }
         catch (Exception e)
         {
-            Rider.SendError("CREATE_QUEUE", e, $"Replicated Queue:{info.Name}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueCreate, $"CreateQueue Replicated: {info.Name}", e);
             return null;
         }
         finally
@@ -503,7 +504,7 @@ public class QueueRider
         }
         catch (Exception e)
         {
-            Rider.SendError("REMOVE_QUEUE", e, $"QueueName:{queue?.Name}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueRemove, $"Remove Queue: {queue?.Name}", e);
         }
     }
 

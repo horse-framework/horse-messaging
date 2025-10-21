@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Logging;
 
 namespace Horse.Messaging.Server.Queues.Store;
 
@@ -72,7 +73,7 @@ public class DefaultMessageTimeoutTracker : IMessageTimeoutTracker
             }
             catch (Exception e)
             {
-                _queue.Rider.SendError("CheckMessageTimeout", e, null);
+                _queue.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueCheckMessageTimeout, "CheckMessageTimeout: " + _queue.Name, e);
             }
         });
     }

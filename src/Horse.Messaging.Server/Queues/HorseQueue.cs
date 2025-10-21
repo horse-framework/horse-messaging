@@ -11,6 +11,7 @@ using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Events;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.Managers;
 using Horse.Messaging.Server.Queues.States;
@@ -288,7 +289,7 @@ public class HorseQueue
         }
         catch (Exception e)
         {
-            Rider.SendError("InitializeQueue", e, Name);
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueInitialize, $"Initialize Queue: {Name}", e);
             throw;
         }
         finally
@@ -604,7 +605,7 @@ public class HorseQueue
             }
             catch (Exception e)
             {
-                Rider.SendError("INITIALIZE_IN_PUSH", e, $"QueueName:{Name}");
+                Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueInitialize, $"Initialize In Push Queue: {Name}", e);
                 throw;
             }
         }
@@ -726,12 +727,10 @@ public class HorseQueue
         }
         catch (Exception ex)
         {
-            Rider.SendError("PUSH", ex, $"QueueName:{Name}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueuePush, $"Push Queue: {Name}", ex);
             Info.AddError();
             try
             {
-                await Manager.OnExceptionThrown("PUSH", State.ProcessingMessage, ex);
-
                 //the message is removed from the queue and it's not sent to consumers
                 //we should put the message back into the queue
                 if (!message.IsInQueue && !message.IsSent)
@@ -846,12 +845,10 @@ public class HorseQueue
                 if (waitForAck)
                     ReleaseAcknowledgeLock(false);
 
-                Rider.SendError("PROCESS_MESSAGES", ex, $"QueueName:{Name}");
+                Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueProcessMessage, $"Process Messages in Queue: {Name}", ex);
                 Info.AddError();
                 try
                 {
-                    await Manager.OnExceptionThrown("PROCESS_MESSAGES", message, ex);
-
                     //the message is removed from the queue and it's not sent to consumers
                     //we should put the message back into the queue
                     if (!message.IsInQueue && !message.IsSent)
@@ -896,7 +893,7 @@ public class HorseQueue
             }
             catch (Exception e)
             {
-                Rider.SendError("INITIALIZE_IN_PUSH", e, $"QueueName:{Name}");
+                Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueInitialize, $"Initialize in Push Queue: {Name}", e);
                 throw;
             }
         }
@@ -942,12 +939,10 @@ public class HorseQueue
         }
         catch (Exception ex)
         {
-            Rider.SendError("PUSH", ex, $"QueueName:{Name}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueuePush, $"Push Queue: {Name}", ex);
             Info.AddError();
             try
             {
-                await Manager.OnExceptionThrown("PUSH", State.ProcessingMessage, ex);
-
                 //the message is removed from the queue and it's not sent to consumers
                 //we should put the message back into the queue
                 if (!message.IsInQueue && !message.IsSent)
@@ -1021,7 +1016,7 @@ public class HorseQueue
         }
         catch (Exception e)
         {
-            Rider.SendError("APPLY_DECISION", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueApplyDecision, $"Apply Decision Queue: {Name}, MessageId: {message.Message.MessageId}", e);
         }
 
         return !decision.Interrupt;
@@ -1057,7 +1052,7 @@ public class HorseQueue
         }
         catch (Exception e)
         {
-            Rider.SendError("EXECUTE_DELAYED_PUTBACK", e, $"QueueName:{Name}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueDelayedPutback, $"Execute Delayed Putback Queue: {Name}", e);
         }
     }
 
@@ -1100,7 +1095,7 @@ public class HorseQueue
         }
         catch (Exception e)
         {
-            Rider.SendError("SAVE_MESSAGE", e, $"QueueName:{Name}, MessageId:{message.Message.MessageId}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueSaveMessage, $"Save Message Queue: {Name}, MessageId: {message.Message.MessageId}", e);
         }
 
         return message.IsSaved;
@@ -1250,7 +1245,7 @@ public class HorseQueue
         }
         catch (Exception e)
         {
-            Rider.SendError("QUEUE_ACK_RECEIVED", e, $"QueueName:{Name}, MessageId:{deliveryMessage.MessageId}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueAckReceived, $"Ack Received Queue: {Name}, MessageId: {deliveryMessage.MessageId}", e);
         }
     }
 

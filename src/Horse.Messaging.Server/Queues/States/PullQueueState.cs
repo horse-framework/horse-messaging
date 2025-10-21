@@ -5,6 +5,7 @@ using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues.Delivery;
 
 namespace Horse.Messaging.Server.Queues.States;
@@ -155,20 +156,14 @@ internal class PullQueueState : IQueueState
                 index++;
                 if (index > count)
                     break;
-                    
+
                 messageTuple = DequeueMessage(sendInfo, count == index ? clear : ClearDecision.None);
                 headers.Clear();
             }
             catch (Exception ex)
             {
                 _queue.Info.AddError();
-                try
-                {
-                    await _queue.Manager.OnExceptionThrown("PULL", message, ex);
-                }
-                catch
-                {
-                }
+                _queue.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueuePull, "Pull Queue: " + _queue.Name, ex);
 
                 await client.Client.SendAsync(MessageBuilder.CreateNoContentPullResponse(request, HorseHeaders.ERROR));
                 return PullResult.Unacceptable;

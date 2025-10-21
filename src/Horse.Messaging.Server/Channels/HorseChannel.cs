@@ -10,6 +10,7 @@ using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Protocol.Models;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Events;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues;
 
 namespace Horse.Messaging.Server.Channels;
@@ -211,7 +212,7 @@ public class HorseChannel
         }
         catch (Exception ex)
         {
-            Rider.SendError("PUSH", ex, $"ChannelName:{Name}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.ChannelPush, "Channel Push Error: " + Name, ex);
             return PushResult.Error;
         }
     }
