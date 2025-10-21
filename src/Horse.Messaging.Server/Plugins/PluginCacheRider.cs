@@ -25,13 +25,13 @@ internal class PluginCacheRider : IPluginCacheRider
     public async Task<PluginCacheItemResult> Get(string key)
     {
         var result = await _rider.Cache.Get(key);
-        return new PluginCacheItemResult(result.IsFirstWarningReceiver, GetCacheItem(result.item));
+        return new PluginCacheItemResult(result.IsFirstWarningReceiver, GetCacheItem(result.Item));
     }
 
     public async Task<PluginCacheItemResult> GetIncremental(string key, TimeSpan duration, int incrementValue = 1, string[] tags = null)
     {
         var result = await _rider.Cache.GetIncremental(key, duration, incrementValue, tags);
-        return new PluginCacheItemResult(result.IsFirstWarningReceiver, GetCacheItem(result.item));
+        return new PluginCacheItemResult(result.IsFirstWarningReceiver, GetCacheItem(result.Item));
     }
 
     public Task Remove(string key)

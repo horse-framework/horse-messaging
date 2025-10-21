@@ -157,7 +157,7 @@ public class PluginRider : IPluginRider
         {
             try
             {
-                IHorsePluginBuilder builder = (IHorsePluginBuilder) Activator.CreateInstance(type);
+                IHorsePluginBuilder builder = (IHorsePluginBuilder)Activator.CreateInstance(type);
                 PluginData pluginData = data.Plugins.FirstOrDefault(x => x.BuilderTypeName == type.FullName);
 
                 if (pluginData != null && pluginData.Removed)
@@ -168,7 +168,7 @@ public class PluginRider : IPluginRider
                 {
                     plugin = builder.Build();
                     plugin.SetName(builder.GetName());
-                    
+
                     if (Plugins.Any(x => string.Equals(x.Name, plugin.Name)))
                     {
                         _ = plugin.Remove();
@@ -252,7 +252,7 @@ public class PluginRider : IPluginRider
 
                 try
                 {
-                    IHorsePluginBuilder builder = (IHorsePluginBuilder) Activator.CreateInstance(type);
+                    IHorsePluginBuilder builder = (IHorsePluginBuilder)Activator.CreateInstance(type);
                     await AddPlugin(assemblyData, builder);
                 }
                 catch (Exception e)
@@ -335,7 +335,7 @@ public class PluginRider : IPluginRider
 
                 try
                 {
-                    IHorsePluginBuilder builder = (IHorsePluginBuilder) Activator.CreateInstance(type);
+                    IHorsePluginBuilder builder = (IHorsePluginBuilder)Activator.CreateInstance(type);
                     await AddPlugin(assemblyData, builder);
                 }
                 catch (Exception e)
@@ -462,7 +462,7 @@ public class PluginRider : IPluginRider
 
             foreach (Type type in GetPluginBuilderTypesOfAssembly(assemblyData.LoadedAssembly))
             {
-                IHorsePluginBuilder builder = (IHorsePluginBuilder) Activator.CreateInstance(type);
+                IHorsePluginBuilder builder = (IHorsePluginBuilder)Activator.CreateInstance(type);
                 string builderPluginName = builder.GetName();
 
                 if (string.Equals(builderPluginName, pluginName))
@@ -504,7 +504,11 @@ public class PluginRider : IPluginRider
             return;
 
         string target = targetName;
-        if (!targetName.StartsWith('@'))
+        bool pluginTarget = false;
+
+        if (targetName.StartsWith('@'))
+            pluginTarget = target.StartsWith("@plugin:");
+        else
         {
             switch (sourceEvent)
             {
@@ -528,7 +532,7 @@ public class PluginRider : IPluginRider
 
         foreach (HorsePlugin plugin in Plugins)
         {
-            if (target.StartsWith("@plugin:") && !string.Equals(plugin.Name, target.Substring(8)))
+            if (pluginTarget && !string.Equals(plugin.Name, target.Substring(8)))
                 continue;
 
             if (plugin.Handlers.Count == 0)
@@ -539,7 +543,7 @@ public class PluginRider : IPluginRider
             if (!found)
                 continue;
 
-            _ = handler.Execute(new HorsePluginContext(sourceEvent, plugin, null, message));
+            _ = handler.Execute(new HorsePluginContext(sourceEvent, plugin, this, message));
         }
     }
 

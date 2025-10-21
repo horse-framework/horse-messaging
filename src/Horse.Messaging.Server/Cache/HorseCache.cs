@@ -18,8 +18,8 @@ namespace Horse.Messaging.Server.Cache;
 /// Cache Item data
 /// </summary>
 /// <param name="IsFirstWarningReceiver">True, if first time received the value in warning time range</param>
-/// <param name="item">Cache item</param>
-public record GetCacheItemResult(bool IsFirstWarningReceiver, HorseCacheItem item);
+/// <param name="Item">Cache item</param>
+public record GetCacheItemResult(bool IsFirstWarningReceiver, HorseCacheItem Item);
 
 /// <summary>
 /// Horse cache manager
@@ -72,9 +72,6 @@ public class HorseCache
     private bool _initialized;
 
     private readonly ConcurrentDictionary<string, HorseCacheItem> _items = new(StringComparer.InvariantCultureIgnoreCase);
-
-    private volatile bool _hasChanges;
-    private readonly List<Tuple<bool, HorseCacheItem>> _changes = new(16);
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
     #endregion
@@ -105,7 +102,7 @@ public class HorseCache
                 return;
 
             _initialized = true;
-            _timer = new Timer(o => _ = ApplyChanges(true), null, 300000, 120000);
+            _timer = new Timer(o => _ = RemoveExpiredKeys(), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
         }
     }
 
@@ -113,50 +110,18 @@ public class HorseCache
 
     #region Actions
 
-    private async Task ApplyChanges(bool removeExpiredKeys = false)
+    private async Task RemoveExpiredKeys()
     {
-        if (_hasChanges || removeExpiredKeys)
+        List<string> keys = new List<string>();
+
+        foreach (KeyValuePair<string, HorseCacheItem> item in _items)
         {
-            await _semaphore.WaitAsync(TimeSpan.FromSeconds(30));
-            try
-            {
-                foreach (Tuple<bool, HorseCacheItem> tuple in _changes)
-                {
-                    if (tuple.Item1)
-                        _items[tuple.Item2.Key] = tuple.Item2;
-                    else
-                    {
-                        if (tuple.Item2 == null)
-                            _items.Clear();
-                        else
-                            _items.TryRemove(tuple.Item2.Key, out _);
-                    }
-                }
-
-                if (removeExpiredKeys)
-                {
-                    List<string> keys = new List<string>();
-
-                    foreach (KeyValuePair<string, HorseCacheItem> item in _items)
-                    {
-                        if (item.Value.Expiration < DateTime.UtcNow)
-                            keys.Add(item.Key);
-                    }
-
-                    foreach (string key in keys)
-                        _items.TryRemove(key, out _);
-
-                    await Task.Delay(10);
-                }
-
-                _changes.Clear();
-                _hasChanges = false;
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
+            if (item.Value.Expiration < DateTime.UtcNow)
+                keys.Add(item.Key);
         }
+
+        foreach (string key in keys)
+            _items.TryRemove(key, out _);
     }
 
     /// <summary>
@@ -165,7 +130,7 @@ public class HorseCache
     /// <returns></returns>
     public async Task<List<CacheInformation>> GetCacheKeys()
     {
-        await ApplyChanges();
+        await RemoveExpiredKeys();
 
         List<CacheInformation> list = new List<CacheInformation>(_items.Count);
         foreach (HorseCacheItem item in _items.Values)
@@ -227,16 +192,7 @@ public class HorseCache
             Value = new MemoryStream(value.ToArray())
         };
 
-        await _semaphore.WaitAsync();
-        try
-        {
-            _hasChanges = true;
-            _changes.Add(new Tuple<bool, HorseCacheItem>(true, item));
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
+        _items[key] = item;
 
         Rider.Cache.SetEvent.Trigger(client, key);
         if (notifyCluster)
@@ -250,7 +206,7 @@ public class HorseCache
     /// </summary>
     public async Task<GetCacheItemResult> Get(string key)
     {
-        await ApplyChanges();
+        await RemoveExpiredKeys();
 
         _items.TryGetValue(key, out HorseCacheItem item);
 
@@ -293,7 +249,7 @@ public class HorseCache
     /// </summary>
     internal async Task<GetCacheItemResult> GetIncremental(bool notifyCluster, string key, TimeSpan duration, int incrementValue, string[] tags = null)
     {
-        await ApplyChanges();
+        await RemoveExpiredKeys();
 
         _items.TryGetValue(key, out HorseCacheItem item);
         if (item == null)
@@ -307,13 +263,13 @@ public class HorseCache
             await Remove(item.Key);
             item = null;
         }
-        
+
         if (item == null)
         {
             CacheOperation operation = await Set(key, new MemoryStream(BitConverter.GetBytes(incrementValue)), duration, null, tags);
             return new GetCacheItemResult(false, operation.Item);
         }
-        
+
         lock (item)
         {
             byte[] valueArray = item.Value.ToArray();
@@ -340,23 +296,15 @@ public class HorseCache
     /// <summary>
     /// Removes a key
     /// </summary>
-    internal async Task Remove(MessagingClient client, string key, bool notifyCluster)
+    internal Task Remove(MessagingClient client, string key, bool notifyCluster)
     {
-        await _semaphore.WaitAsync(TimeSpan.FromSeconds(30));
-        try
-        {
-            _hasChanges = true;
-            _changes.Add(new Tuple<bool, HorseCacheItem>(false, new HorseCacheItem {Key = key}));
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
-
+        _items.TryRemove(key, out _);
         Rider.Cache.RemoveEvent.Trigger(client, key);
 
         if (notifyCluster)
             ClusterNotifier.SendRemove(key);
+
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -372,20 +320,15 @@ public class HorseCache
     /// </summary>
     internal async Task PurgeByTag(string tagName, MessagingClient client, bool notifyCluster)
     {
-        await _semaphore.WaitAsync(TimeSpan.FromSeconds(30));
-        try
+        List<string> removingKeys = new List<string>();
+        foreach (KeyValuePair<string, HorseCacheItem> pair in _items)
         {
-            _hasChanges = true;
-            foreach (KeyValuePair<string, HorseCacheItem> pair in _items)
-            {
-                if (pair.Value.Tags.Contains(tagName, StringComparer.CurrentCultureIgnoreCase))
-                    _changes.Add(new Tuple<bool, HorseCacheItem>(false, pair.Value));
-            }
+            if (pair.Value.Tags.Contains(tagName, StringComparer.CurrentCultureIgnoreCase))
+                removingKeys.Add(pair.Key);
         }
-        finally
-        {
-            _semaphore.Release();
-        }
+
+        foreach (string key in removingKeys)
+            _items.TryRemove(key, out _);
 
         Rider.Cache.PurgeEvent.Trigger(client);
 
@@ -404,23 +347,15 @@ public class HorseCache
     /// <summary>
     /// Purges all keys
     /// </summary>
-    internal async Task Purge(MessagingClient client, bool notifyCluster)
+    internal Task Purge(MessagingClient client, bool notifyCluster)
     {
-        await _semaphore.WaitAsync(TimeSpan.FromSeconds(30));
-        try
-        {
-            _hasChanges = true;
-            _changes.Add(new Tuple<bool, HorseCacheItem>(false, null));
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
-
+        _items.Clear();
         Rider.Cache.PurgeEvent.Trigger(client);
 
         if (notifyCluster)
             ClusterNotifier.SendPurge(null);
+
+        return Task.CompletedTask;
     }
 
     #endregion

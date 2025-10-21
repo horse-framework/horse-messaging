@@ -54,13 +54,13 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                 }
 
                 GetCacheItemResult result = await _cache.Get(message.Target);
-                if (result?.item == null)
+                if (result?.Item == null)
                 {
                     await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
                     return;
                 }
 
-                HorseCacheItem item = result.item;
+                HorseCacheItem item = result.Item;
                 HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
                 response.SetSource(message.Target);
 
@@ -160,7 +160,7 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                     timeout = TimeSpan.FromSeconds(Convert.ToInt32(messageTimeout));
 
                 GetCacheItemResult getResult = await _cache.GetIncremental(message.Target, timeout, increment, tagNames);
-                HorseCacheItem item = getResult.item;
+                HorseCacheItem item = getResult.Item;
 
                 HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
                 response.SetSource(message.Target);
