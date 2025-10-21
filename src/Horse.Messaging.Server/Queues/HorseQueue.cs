@@ -10,7 +10,6 @@ using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Cluster;
-using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.Managers;
@@ -155,19 +154,18 @@ public class HorseQueue
     public event QueueEventHandler OnDestroyed;
 
     /// <summary>
-    /// Clients in the queue as thread-unsafe list
-    /// </summary>
-    public IEnumerable<QueueClient> ClientsUnsafe => _clients.GetUnsafeList();
-
-    /// <summary>
     /// Clients in the queue as cloned list
     /// </summary>
-    public List<QueueClient> ClientsClone => _clients.GetAsClone();
+    public IEnumerable<QueueClient> Clients => _queueClients.Where(x => x != null);
 
-    private readonly SafeList<QueueClient> _clients;
+    internal QueueClient[] ClientsArray => _queueClients;
+
     private readonly SemaphoreSlim _triggerLock = new(1, 1);
     private readonly List<PutBackQueueMessage> _putBackWaitList = new(8);
     private readonly SortedSet<string> _messageIdList = new(StringComparer.InvariantCulture);
+
+    private readonly object _queueClientLock = new();
+    private readonly QueueClient[] _queueClients = new QueueClient[1];
 
     /// <summary>
     /// True if queue is destroyed
@@ -213,9 +211,11 @@ public class HorseQueue
         Name = name;
         Options = options;
         Type = options.Type;
-        _clients = new SafeList<QueueClient>(256);
         Status = QueueStatus.NotInitialized;
         ClusterNotifier = new QueueClusterNotifier(this, rider.Cluster);
+
+        if (options.ClientLimit > 1)
+            _queueClients = new QueueClient[options.ClientLimit];
 
         PushEvent = new EventManager(rider, HorseEventType.QueuePush, name);
         MessageAckEvent = new EventManager(rider, HorseEventType.QueueMessageAck, name);
@@ -327,7 +327,9 @@ public class HorseQueue
             OnDestroyed?.Invoke(this);
         }
 
-        _clients.Clear();
+        for (int i = 0; i < _queueClients.Length; i++)
+            _queueClients[i] = null;
+
         ClusterNotifier.SendRemoved();
     }
 
@@ -342,7 +344,7 @@ public class HorseQueue
         switch (Options.AutoDestroy)
         {
             case QueueDestroy.NoConsumers:
-                if (_clients.Count == 0)
+                if (_queueClients.All(x => x == null))
                     await Rider.Queue.Remove(this);
 
                 break;
@@ -354,7 +356,7 @@ public class HorseQueue
                 break;
 
             case QueueDestroy.Empty:
-                if (_clients.Count == 0 && IsEmpty && Manager.DeliveryHandler.Tracker.GetDeliveryCount() == 0)
+                if (_queueClients.All(x => x == null) && IsEmpty && Manager.DeliveryHandler.Tracker.GetDeliveryCount() == 0)
                     await Rider.Queue.Remove(this);
 
                 break;
@@ -781,7 +783,7 @@ public class HorseQueue
     {
         while (State.TriggerSupported)
         {
-            if (_clients.Count == 0)
+            if (_queueClients[0] == null)
                 return;
 
             if (!(Status == QueueStatus.Running || Status == QueueStatus.OnlyConsume))
@@ -1211,7 +1213,7 @@ public class HorseQueue
 
             if (delivery == null)
             {
-                QueueClient queueClient = ClientsClone.FirstOrDefault(x => x.Client == from);
+                QueueClient queueClient = FindClient(from);
                 if (queueClient != null)
                     if (queueClient.CurrentlyProcessing != null && queueClient.CurrentlyProcessing.Message.MessageId == deliveryMessage.MessageId)
                         queueClient.CurrentlyProcessing = null;
@@ -1281,7 +1283,13 @@ public class HorseQueue
     /// <returns></returns>
     public int ClientsCount()
     {
-        return _clients.Count;
+        for (int i = 0; i < _queueClients.Length; i++)
+        {
+            if (_queueClients[i] == null)
+                return i;
+        }
+
+        return 0;
     }
 
     /// <summary>
@@ -1296,11 +1304,27 @@ public class HorseQueue
                 return SubscriptionResult.Unauthorized;
         }
 
-        if (Options.ClientLimit > 0 && _clients.Count >= Options.ClientLimit)
+        QueueClient cc = new QueueClient(this, client);
+        bool added = false;
+        lock (_queueClientLock)
+        {
+            for (int i = 0; i < _queueClients.Length; i++)
+            {
+                if (Options.ClientLimit > 0 && i >= Options.ClientLimit)
+                    return SubscriptionResult.Full;
+
+                if (_queueClients[i] == null)
+                {
+                    _queueClients[i] = cc;
+                    added = true;
+                    break;
+                }
+            }
+        }
+
+        if (!added)
             return SubscriptionResult.Full;
 
-        QueueClient cc = new QueueClient(this, client);
-        _clients.Add(cc);
         client.AddSubscription(cc);
 
         foreach (IQueueEventHandler handler in Rider.Queue.EventHandlers.All())
@@ -1314,12 +1338,72 @@ public class HorseQueue
         return SubscriptionResult.Success;
     }
 
+    private QueueClient RemoveClientFromArray(QueueClient client)
+    {
+        bool removed = false;
+        QueueClient removedClient = null;
+        lock (_queueClientLock)
+        {
+            for (int i = 0; i < _queueClients.Length; i++)
+            {
+                QueueClient qc = _queueClients[i];
+
+                if (qc == null)
+                    break;
+
+                if (removed && i > 0)
+                {
+                    _queueClients[i - 1] = qc;
+                    _queueClients[i] = null;
+                }
+                else if (qc == client)
+                {
+                    removedClient = qc;
+                    _queueClients[i] = null;
+                    removed = true;
+                }
+            }
+        }
+
+        return removedClient;
+    }
+
+    private QueueClient RemoveClientFromArray(MessagingClient client)
+    {
+        bool removed = false;
+        QueueClient removedClient = null;
+        lock (_queueClientLock)
+        {
+            for (int i = 0; i < _queueClients.Length; i++)
+            {
+                QueueClient qc = _queueClients[i];
+
+                if (qc == null)
+                    break;
+
+                if (removed && i > 0)
+                {
+                    _queueClients[i - 1] = qc;
+                    _queueClients[i] = null;
+                }
+                else if (qc.Client == client)
+                {
+                    removedClient = qc;
+                    _queueClients[i] = null;
+                    removed = true;
+                }
+            }
+        }
+
+        return removedClient;
+    }
+
     /// <summary>
     /// Removes client from the queue
     /// </summary>
     public void RemoveClient(QueueClient client)
     {
-        _clients.Remove(client);
+        RemoveClientFromArray(client);
         client.Client.RemoveSubscription(client);
 
         foreach (IQueueEventHandler handler in Rider.Queue.EventHandlers.All())
@@ -1333,8 +1417,7 @@ public class HorseQueue
     /// </summary>
     internal void RemoveClientSilent(QueueClient client)
     {
-        _clients.Remove(client);
-
+        RemoveClientFromArray(client);
         foreach (IQueueEventHandler handler in Rider.Queue.EventHandlers.All())
             _ = handler.OnConsumerUnsubscribed(client);
 
@@ -1346,7 +1429,7 @@ public class HorseQueue
     /// </summary>
     public bool RemoveClient(MessagingClient client)
     {
-        QueueClient cc = _clients.FindAndRemove(x => x.Client == client);
+        QueueClient cc = RemoveClientFromArray(client);
 
         if (cc == null)
             return false;
@@ -1366,7 +1449,7 @@ public class HorseQueue
     /// </summary>
     public QueueClient FindClient(string uniqueId)
     {
-        return _clients.Find(x => x.Client.UniqueId == uniqueId);
+        return _queueClients.FirstOrDefault(x => x?.Client.UniqueId == uniqueId);
     }
 
     /// <summary>
@@ -1374,7 +1457,7 @@ public class HorseQueue
     /// </summary>
     public QueueClient FindClient(MessagingClient client)
     {
-        return _clients.Find(x => x.Client == client);
+        return _queueClients.FirstOrDefault(x => x?.Client == client);
     }
 
     #endregion

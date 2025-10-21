@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
@@ -54,8 +53,7 @@ internal class PushQueueState : IQueueState
             ackDeadline = DateTime.UtcNow.Add(_queue.Options.AcknowledgeTimeout);
 
         //if there are not receivers, complete send operation
-        List<QueueClient> clients = _queue.ClientsClone;
-        if (clients.Count == 0)
+        if (_queue.ClientsCount() == 0)
         {
             PushResult pushResult = _queue.AddMessage(message, false);
             if (pushResult != PushResult.Success)
@@ -80,7 +78,7 @@ internal class PushQueueState : IQueueState
         bool messageIsSent = false;
 
         //to all receivers
-        foreach (QueueClient client in clients)
+        foreach (QueueClient client in _queue.Clients)
         {
             //to only online receivers
             if (!client.Client.IsConnected)

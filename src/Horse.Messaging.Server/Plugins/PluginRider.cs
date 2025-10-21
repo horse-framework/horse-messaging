@@ -594,8 +594,8 @@ public class PluginRider : IPluginRider
 
                 if (message.Target.StartsWith("@type:", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    List<MessagingClient> receivers = _rider.Client.FindByType(message.Target.Substring(6));
-                    if (receivers.Count == 0)
+                    MessagingClient[] receivers = _rider.Client.FindByType(message.Target.Substring(6));
+                    if (receivers.Length == 0)
                         return false;
 
                     if (message.HighPriority)
@@ -612,8 +612,8 @@ public class PluginRider : IPluginRider
 
                 if (message.Target.StartsWith("@name:", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    List<MessagingClient> receivers = _rider.Client.FindClientByName(message.Target.Substring(6));
-                    if (receivers.Count == 0)
+                    MessagingClient[] receivers = _rider.Client.FindClientByName(message.Target.Substring(6));
+                    if (receivers.Length == 0)
                         return false;
 
                     if (message.HighPriority)

@@ -25,7 +25,7 @@ public class SamplePersistentDeliveryHandler: PersistentMessageDeliveryHandler
         string userIdParam = message.Message.FindHeader("UserId");
         userIdParam = string.IsNullOrEmpty(userIdParam) ? "0" : userIdParam;
         int messageOwner = int.Parse(userIdParam);
-        bool hasDebugClient = messageOwner > 0 && queue.ClientsClone.Any(m => int.Parse(m.Client.Name) == messageOwner);
+        bool hasDebugClient = messageOwner > 0 && queue.Clients.Any(m => int.Parse(m.Client.Name) == messageOwner);
         if (hasDebugClient) return Task.FromResult(receiver.Name == messageOwner.ToString());
         return Task.FromResult(receiver.Name == "0");
     }

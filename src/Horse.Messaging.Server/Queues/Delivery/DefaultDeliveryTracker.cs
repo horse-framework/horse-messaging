@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -15,10 +16,7 @@ namespace Horse.Messaging.Server.Queues.Delivery;
 /// </summary>
 public class DefaultDeliveryTracker : IDeliveryTracker
 {
-    /// <summary>
-    /// All following deliveries
-    /// </summary>
-    private readonly List<MessageDelivery> _deliveries = new(1024);
+    private readonly ConcurrentDictionary<string, MessageDelivery> _deliveries = new ConcurrentDictionary<string, MessageDelivery>();
 
     private readonly IHorseQueueManager _manager;
     private readonly HorseQueue _queue;
@@ -69,8 +67,7 @@ public class DefaultDeliveryTracker : IDeliveryTracker
     /// </summary>
     public void Reset()
     {
-        lock (_deliveries)
-            _deliveries.Clear();
+        _deliveries.Clear();
     }
 
     /// <summary>
@@ -90,12 +87,7 @@ public class DefaultDeliveryTracker : IDeliveryTracker
     public List<QueueMessage> GetDeliveringMessages()
     {
         List<QueueMessage> messages;
-
-        lock (_deliveries)
-        {
-            messages = _deliveries.Select(x => x.Message).ToList();
-        }
-
+        messages = _deliveries.Values.Select(x => x.Message).ToList();
         return messages;
     }
 
@@ -106,28 +98,28 @@ public class DefaultDeliveryTracker : IDeliveryTracker
     {
         var rdlist = new List<Tuple<bool, MessageDelivery>>(16);
 
-        lock (_deliveries)
-            foreach (MessageDelivery delivery in _deliveries)
+        foreach (var pair in _deliveries)
+        {
+            var delivery = pair.Value;
+            //message acknowledge or came here accidently :)
+            if (delivery.Acknowledge != DeliveryAcknowledge.None || !delivery.AcknowledgeDeadline.HasValue)
+                rdlist.Add(new Tuple<bool, MessageDelivery>(false, delivery));
+
+            //expired
+            else if (DateTime.UtcNow > delivery.AcknowledgeDeadline.Value)
+                rdlist.Add(new Tuple<bool, MessageDelivery>(true, delivery));
+
+            //check if all receivers disconnected
+            else if (delivery.Message.CurrentDeliveryReceivers.Count > 0)
             {
-                //message acknowledge or came here accidently :)
-                if (delivery.Acknowledge != DeliveryAcknowledge.None || !delivery.AcknowledgeDeadline.HasValue)
-                    rdlist.Add(new Tuple<bool, MessageDelivery>(false, delivery));
-
-                //expired
-                else if (DateTime.UtcNow > delivery.AcknowledgeDeadline.Value)
-                    rdlist.Add(new Tuple<bool, MessageDelivery>(true, delivery));
-
-                //check if all receivers disconnected
-                else if (delivery.Message.CurrentDeliveryReceivers.Count > 0)
+                bool allDisconnected = delivery.Message.CurrentDeliveryReceivers.All(x => x.Client == null || !x.Client.IsConnected);
+                if (allDisconnected)
                 {
-                    bool allDisconnected = delivery.Message.CurrentDeliveryReceivers.All(x => x.Client == null || !x.Client.IsConnected);
-                    if (allDisconnected)
-                    {
-                        rdlist.Add(new Tuple<bool, MessageDelivery>(true, delivery));
-                        delivery.Message.CurrentDeliveryReceivers.Clear();
-                    }
+                    rdlist.Add(new Tuple<bool, MessageDelivery>(true, delivery));
+                    delivery.Message.CurrentDeliveryReceivers.Clear();
                 }
             }
+        }
 
         if (rdlist.Count == 0)
             return;
@@ -145,7 +137,7 @@ public class DefaultDeliveryTracker : IDeliveryTracker
                 Decision decision = await _manager.DeliveryHandler.AcknowledgeTimeout(_queue, delivery);
 
                 HorseMessage ackTimeoutMessage = delivery.Message.Message.CreateAcknowledge("ack-timeout");
-                ackTimeoutMessage.ContentType = (ushort) HorseResultCode.RequestTimeout;
+                ackTimeoutMessage.ContentType = (ushort)HorseResultCode.RequestTimeout;
 
                 if (delivery.Message != null)
                     _ = _queue.ApplyDecision(decision, delivery.Message, ackTimeoutMessage);
@@ -155,14 +147,15 @@ public class DefaultDeliveryTracker : IDeliveryTracker
 
                 _queue.MessageUnackEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, delivery.Message.Message.MessageId));
             }
+
+            string messageId = tuple.Item2?.Message?.Message?.MessageId;
+
+            if (!string.IsNullOrEmpty(messageId))
+                _deliveries.TryRemove(messageId, out _);
         }
 
         if (rdlist.Count > 0)
             _queue.ReleaseAcknowledgeLock(false);
-
-        IEnumerable<MessageDelivery> rdm = rdlist.Select(x => x.Item2);
-        lock (_deliveries)
-            _deliveries.RemoveAll(x => rdm.Contains(x));
     }
 
     /// <summary>
@@ -173,8 +166,7 @@ public class DefaultDeliveryTracker : IDeliveryTracker
         if (!delivery.Message.Message.WaitResponse || !delivery.AcknowledgeDeadline.HasValue)
             return;
 
-        lock (_deliveries)
-            _deliveries.Add(delivery);
+        _deliveries.TryAdd(delivery.Message.Message.MessageId, delivery);
     }
 
     /// <summary>
@@ -182,13 +174,7 @@ public class DefaultDeliveryTracker : IDeliveryTracker
     /// </summary>
     public MessageDelivery FindDelivery(MessagingClient client, string messageId)
     {
-        MessageDelivery delivery;
-
-        lock (_deliveries)
-            delivery = _deliveries.Find(x => x.Receiver != null
-                                             && x.Receiver.Client.UniqueId == client.UniqueId
-                                             && x.Message.Message.MessageId == messageId);
-
+        _deliveries.TryGetValue(messageId, out MessageDelivery delivery);
         return delivery;
     }
 
@@ -197,21 +183,7 @@ public class DefaultDeliveryTracker : IDeliveryTracker
     /// </summary>
     public MessageDelivery FindAndRemoveDelivery(MessagingClient client, string messageId)
     {
-        MessageDelivery delivery;
-
-        lock (_deliveries)
-        {
-            int index = _deliveries.FindIndex(x => x.Receiver != null
-                                                   && x.Receiver.Client.UniqueId == client.UniqueId
-                                                   && x.Message.Message.MessageId == messageId);
-
-            if (index < 0)
-                return null;
-
-            delivery = _deliveries[index];
-            _deliveries.RemoveAt(index);
-        }
-
+        _deliveries.TryRemove(messageId, out MessageDelivery delivery);
         return delivery;
     }
 
@@ -220,8 +192,7 @@ public class DefaultDeliveryTracker : IDeliveryTracker
     /// </summary>
     public void RemoveDelivery(MessageDelivery delivery)
     {
-        lock (_deliveries)
-            _deliveries.Remove(delivery);
+        _deliveries.TryRemove(delivery.Message.Message.MessageId, out _);
     }
 
     /// <summary>
@@ -229,10 +200,6 @@ public class DefaultDeliveryTracker : IDeliveryTracker
     /// </summary>
     public int GetDeliveryCount()
     {
-        int count;
-        lock (_deliveries)
-            count = _deliveries.Count;
-
-        return count;
+        return _deliveries.Count;
     }
 }

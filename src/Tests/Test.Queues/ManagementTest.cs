@@ -33,7 +33,7 @@ public class ManagementTest
         HorseQueue queue = server.Rider.Queue.Queues.FirstOrDefault();
         Assert.NotNull(queue);
 
-        List<QueueClient> clients = queue.ClientsClone;
+        List<QueueClient> clients = queue.Clients.ToList();
         Assert.Single(clients);
         server.Stop();
     }
@@ -60,7 +60,7 @@ public class ManagementTest
         HorseQueue queue = server.Rider.Queue.Queues.FirstOrDefault();
         Assert.NotNull(queue);
 
-        List<QueueClient> clients = queue.ClientsClone;
+        List<QueueClient> clients = queue.Clients.ToList();
         Assert.Empty(clients);
         server.Stop();
     }

@@ -31,43 +31,41 @@ internal class DirectMessageHandler : INetworkMessageHandler
 
         if (message.Target.StartsWith("@name:"))
         {
-            List<MessagingClient> receivers = _rider.Client.FindClientByName(message.Target.Substring(6));
-            if (receivers.Count > 0)
+            MessagingClient[] receivers = _rider.Client.FindClientByName(message.Target.Substring(6));
+            if (receivers.Length > 0)
             {
-                if (message.HighPriority && receivers.Count > 1)
+                if (message.HighPriority && receivers.Length > 1)
                 {
-                    MessagingClient first = receivers.FirstOrDefault();
-                    receivers.Clear();
-                    receivers.Add(first);
+                    for (int i = 1; i < receivers.Length; i++)
+                        receivers[i] = null;
                 }
 
                 await ProcessMultipleReceiverClientMessage(client, receivers, message);
             }
             else if (message.WaitResponse)
-                await client?.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+                await client?.SendAsync(message.CreateResponse(HorseResultCode.NotFound))!;
 
-            if (receivers.Count == 0)
+            if (receivers.Length == 0)
                 foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
                     _ = handler.OnNotFound(client, message);
         }
         else if (message.Target.StartsWith("@type:"))
         {
-            List<MessagingClient> receivers = _rider.Client.FindByType(message.Target.Substring(6));
-            if (receivers.Count > 0)
+            MessagingClient[] receivers = _rider.Client.FindByType(message.Target.Substring(6));
+            if (receivers.Length > 0)
             {
-                if (message.HighPriority && receivers.Count > 1)
+                if (message.HighPriority && receivers.Length > 1)
                 {
-                    MessagingClient first = receivers.FirstOrDefault();
-                    receivers.Clear();
-                    receivers.Add(first);
+                    for (int i = 1; i < receivers.Length; i++)
+                        receivers[i] = null;
                 }
 
                 await ProcessMultipleReceiverClientMessage(client, receivers, message);
             }
             else if (message.WaitResponse)
-                await client?.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+                await client?.SendAsync(message.CreateResponse(HorseResultCode.NotFound))!;
 
-            if (receivers.Count == 0)
+            if (receivers.Length == 0)
                 foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
                     _ = handler.OnNotFound(client, message);
         }
@@ -79,17 +77,20 @@ internal class DirectMessageHandler : INetworkMessageHandler
     /// <summary>
     /// Processes the client message which has multiple receivers (message by name or type)
     /// </summary>
-    private async Task ProcessMultipleReceiverClientMessage(MessagingClient sender, List<MessagingClient> receivers, HorseMessage message)
+    private async Task ProcessMultipleReceiverClientMessage(MessagingClient sender, MessagingClient[] receivers, HorseMessage message)
     {
-        if (receivers.Count < 1)
+        if (receivers.Length < 1)
         {
-            await sender?.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+            await sender?.SendAsync(message.CreateResponse(HorseResultCode.NotFound))!;
             return;
         }
 
         bool allDenied = true;
         foreach (MessagingClient receiver in receivers)
         {
+            if (receiver == null)
+                break;
+
             bool denied = false;
 
             //check sending message authority
@@ -115,19 +116,25 @@ internal class DirectMessageHandler : INetworkMessageHandler
 
         if (allDenied)
         {
-            await sender?.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
+            await sender?.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized))!;
             return;
         }
 
         if (sender != null)
             sender.Stats.SentDirectMessages++;
 
+        List<MessagingClient> receiverList = null;
         foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
         {
             if (message.Type == MessageType.Response)
                 _ = handler.OnResponse(sender, message, receivers.FirstOrDefault());
             else
-                _ = handler.OnDirect(sender, message, receivers);
+            {
+                if (receiverList == null)
+                    receiverList = receivers.Where(x => x != null).ToList();
+
+                _ = handler.OnDirect(sender, message, receiverList);
+            }
         }
 
         _rider.Direct.DirectEvent.Trigger(sender, message.Target, new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, message.MessageId));
@@ -170,7 +177,7 @@ internal class DirectMessageHandler : INetworkMessageHandler
             if (message.Type == MessageType.Response)
                 _ = handler.OnResponse(client, message, other);
             else
-                _ = handler.OnDirect(client, message, new List<MessagingClient> {other});
+                _ = handler.OnDirect(client, message, new List<MessagingClient> { other });
         }
 
         _rider.Direct.DirectEvent.Trigger(client, message.Target,

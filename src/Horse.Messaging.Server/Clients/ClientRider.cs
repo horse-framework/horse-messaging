@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Containers;
@@ -14,7 +16,12 @@ public class ClientRider
 {
     #region Properties
 
-    private readonly SafeList<MessagingClient> _clients = new(2048);
+    private readonly object _clientsByNameLock = new();
+    private readonly object _clientsByTypeLock = new();
+
+    private readonly ConcurrentDictionary<string, MessagingClient> _clientsById = new();
+    private readonly ConcurrentDictionary<string, MessagingClient[]> _clientsByName = new();
+    private readonly ConcurrentDictionary<string, MessagingClient[]> _clientsByType = new();
 
     /// <summary>
     /// Client connect and disconnect operations
@@ -40,7 +47,7 @@ public class ClientRider
     /// <summary>
     /// All connected clients in the server
     /// </summary>
-    public IEnumerable<MessagingClient> Clients => _clients.GetAsClone();
+    public IEnumerable<MessagingClient> Clients => _clientsById.Values;
 
     /// <summary>
     /// Id generator for clients which has no specified unique id 
@@ -51,7 +58,7 @@ public class ClientRider
     /// Root horse rider object
     /// </summary>
     public HorseRider Rider { get; }
-        
+
     /// <summary>
     /// Event Manager for HorseEventType.ClientConnect 
     /// </summary>
@@ -81,7 +88,32 @@ public class ClientRider
     /// </summary>
     internal void Add(MessagingClient client)
     {
-        _clients.Add(client);
+        _clientsById[client.UniqueId] = client;
+
+        lock (_clientsByNameLock)
+        {
+            if (_clientsByName.TryGetValue(client.Name, out MessagingClient[] nameClients))
+            {
+                var list = nameClients.ToList();
+                list.Add(client);
+                _clientsByName[client.Name] = list.ToArray();
+            }
+            else
+                _clientsByName[client.Name] = [client];
+        }
+
+        lock (_clientsByTypeLock)
+        {
+            if (_clientsByType.TryGetValue(client.Type, out MessagingClient[] typeClients))
+            {
+                var list = typeClients.ToList();
+                list.Add(client);
+                _clientsByType[client.Type] = list.ToArray();
+            }
+            else
+                _clientsByType[client.Type] = [client];
+        }
+
         ConnectEvent.Trigger(client);
     }
 
@@ -90,7 +122,16 @@ public class ClientRider
     /// </summary>
     internal void Remove(MessagingClient client)
     {
-        _clients.Remove(client);
+        _clientsById.TryRemove(client.UniqueId, out _);
+
+        lock (_clientsByNameLock)
+            if (_clientsByName.TryGetValue(client.Name, out MessagingClient[] nameClients))
+                _clientsByName[client.Name] = nameClients.Where(x => x != client).ToArray();
+
+        lock (_clientsByTypeLock)
+            if (_clientsByType.TryGetValue(client.Type, out MessagingClient[] typeClients))
+                _clientsByType[client.Type] = typeClients.Where(x => x != client).ToArray();
+
         client.UnsubscribeFromAllQueues();
         client.UnsubscribeFromAllChannels();
         DisconnectEvent.Trigger(client);
@@ -101,14 +142,21 @@ public class ClientRider
     /// </summary>
     internal void DisconnectAllClients()
     {
-        foreach (MessagingClient client in _clients.GetAsClone())
+        foreach (var pair in _clientsById)
         {
+            MessagingClient client = pair.Value;
             client.UnsubscribeFromAllQueues();
             client.UnsubscribeFromAllChannels();
             client.Disconnect();
         }
-            
-        _clients.Clear();
+
+        _clientsById.Clear();
+
+        lock (_clientsByNameLock)
+            _clientsByName.Clear();
+
+        lock (_clientsByTypeLock)
+            _clientsByType.Clear();
     }
 
     /// <summary>
@@ -116,23 +164,26 @@ public class ClientRider
     /// </summary>
     public MessagingClient Find(string uniqueId)
     {
-        return _clients.Find(x => x.UniqueId == uniqueId && x.IsConnected);
+        _clientsById.TryGetValue(uniqueId, out MessagingClient client);
+        return client;
     }
 
     /// <summary>
     /// Finds all connected client with specified name
     /// </summary>
-    public List<MessagingClient> FindClientByName(string name)
+    public MessagingClient[] FindClientByName(string name)
     {
-        return _clients.FindAll(x => x.Name == name && x.IsConnected);
+        _clientsByName.TryGetValue(name, out MessagingClient[] clients);
+        return clients;
     }
 
     /// <summary>
     /// Finds all connected client with specified type
     /// </summary>
-    public List<MessagingClient> FindByType(string type)
+    public MessagingClient[] FindByType(string type)
     {
-        return _clients.FindAll(x => x.Type == type && x.IsConnected);
+        _clientsByType.TryGetValue(type, out MessagingClient[] clients);
+        return clients;
     }
 
     /// <summary>
@@ -140,7 +191,7 @@ public class ClientRider
     /// </summary>
     public int GetOnlineClients()
     {
-        return _clients.Count;
+        return _clientsById.Count;
     }
 
     #endregion
