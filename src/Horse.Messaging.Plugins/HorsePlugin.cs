@@ -22,7 +22,7 @@ public abstract class HorsePlugin
     internal SortedDictionary<string, IHorsePluginHandler> Handlers { get; } = new SortedDictionary<string, IHorsePluginHandler>(StringComparer.InvariantCultureIgnoreCase);
 
     private IHorsePluginHandler _requestHandler;
-    private Timer[] _timers = Array.Empty<Timer>();
+    private Timer[] _timers = [];
 
     internal void Set(IPluginRider rider)
     {

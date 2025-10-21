@@ -208,7 +208,6 @@ public class PluginRider : IPluginRider
     public async Task AddAssemblyPlugins(string filename)
     {
         Assembly assembly = Assembly.LoadFrom(filename);
-
         string assemblyVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location).FileVersion;
         lock (_data)
         {
@@ -351,7 +350,7 @@ public class PluginRider : IPluginRider
         HorsePlugin plugin = builder.Build();
         plugin.SetName(builder.GetName());
 
-        if (Plugins.Any(x => string.Equals(x.Name, plugin.Name, StringComparison.InvariantCultureIgnoreCase)))
+        if (Plugins.Any(x => string.Equals(x.Name, plugin.Name, StringComparison.InvariantCultureIgnoreCase) && !x.Removed))
             throw new DuplicateNameException($"There is already active plugin with name: {plugin.Name}. Please remove it first.");
 
         plugin.Set(this);
@@ -361,6 +360,7 @@ public class PluginRider : IPluginRider
         plugin.Removed = false;
 
         var plugins = Plugins.ToList();
+        plugins.RemoveAll(x => string.Equals(x.Name, plugin.Name, StringComparison.InvariantCultureIgnoreCase) && x.Removed);
         plugins.Add(plugin);
         Plugins = plugins.ToArray();
 
@@ -443,7 +443,7 @@ public class PluginRider : IPluginRider
             }
         }
 
-        if (assemblyData == null || pdata == null)
+        if (assemblyData == null)
             return false;
 
         HorsePlugin plugin = Plugins.FirstOrDefault(x => x.Name.Equals(pluginName, StringComparison.InvariantCultureIgnoreCase));

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -70,7 +71,7 @@ public class HorseCache
     private Timer _timer;
     private bool _initialized;
 
-    private readonly SortedDictionary<string, HorseCacheItem> _items = new(StringComparer.InvariantCultureIgnoreCase);
+    private readonly ConcurrentDictionary<string, HorseCacheItem> _items = new(StringComparer.InvariantCultureIgnoreCase);
 
     private volatile bool _hasChanges;
     private readonly List<Tuple<bool, HorseCacheItem>> _changes = new(16);
@@ -128,7 +129,7 @@ public class HorseCache
                         if (tuple.Item2 == null)
                             _items.Clear();
                         else
-                            _items.Remove(tuple.Item2.Key);
+                            _items.TryRemove(tuple.Item2.Key, out _);
                     }
                 }
 
@@ -143,11 +144,12 @@ public class HorseCache
                     }
 
                     foreach (string key in keys)
-                        _items.Remove(key);
+                        _items.TryRemove(key, out _);
 
                     await Task.Delay(10);
                 }
 
+                _changes.Clear();
                 _hasChanges = false;
             }
             finally
