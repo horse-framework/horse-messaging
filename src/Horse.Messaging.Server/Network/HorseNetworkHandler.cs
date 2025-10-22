@@ -220,11 +220,10 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         MessagingClient messagingClient = (MessagingClient) client;
 
         if (messagingClient.IsNodeClient)
-        {
             return Task.CompletedTask;
-        }
 
         _rider.Client.Remove(messagingClient);
+        
         foreach (IClientHandler handler in _rider.Client.Handlers.All())
             _ = handler.Disconnected(_rider, messagingClient);
 

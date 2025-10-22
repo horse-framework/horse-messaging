@@ -35,10 +35,7 @@ internal class DirectMessageHandler : INetworkMessageHandler
             if (receivers.Length > 0)
             {
                 if (message.HighPriority && receivers.Length > 1)
-                {
-                    for (int i = 1; i < receivers.Length; i++)
-                        receivers[i] = null;
-                }
+                    receivers = [receivers[0]];
 
                 await ProcessMultipleReceiverClientMessage(client, receivers, message);
             }
@@ -55,10 +52,7 @@ internal class DirectMessageHandler : INetworkMessageHandler
             if (receivers.Length > 0)
             {
                 if (message.HighPriority && receivers.Length > 1)
-                {
-                    for (int i = 1; i < receivers.Length; i++)
-                        receivers[i] = null;
-                }
+                    receivers = [receivers[0]];
 
                 await ProcessMultipleReceiverClientMessage(client, receivers, message);
             }
