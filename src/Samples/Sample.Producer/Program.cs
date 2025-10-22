@@ -33,17 +33,29 @@ class Program
     static async Task Main(string[] args)
     {
         HorseClientBuilder builder = new HorseClientBuilder();
-        builder.AddHost("horse://localhost:26222");
+        builder.AddHost("horse://localhost:2626");
+        builder.SetClientType("Test1");
+        builder.SetClientName("Test1-Name");
 
         builder.SetResponseTimeout(TimeSpan.FromSeconds(300));
         HorseClient client = builder.Build();
         client.NoDelay = false;
         client.Connected += horseClient => Console.WriteLine("connected");
         client.ResponseTimeout = TimeSpan.FromSeconds(300);
+        
+        client.MessageReceived += (horseClient, message) => Console.WriteLine(message.GetStringContent());
+
+        
         await client.Direct.RequestJson<RequestModel>(new RequestModel());
         await client.ConnectAsync();
+
+        while (true)
+        {
+            Console.ReadLine();
+         
+        }
         
-        var r = await client.Queue.Create("test", new List<KeyValuePair<string, string>> {new(HorseHeaders.QUEUE_TYPE, "push")});
+        var r = await client.Queue.Create("test", new List<KeyValuePair<string, string>> { new(HorseHeaders.QUEUE_TYPE, "push") });
         Console.WriteLine(r);
         ModelC c = new ModelC();
 
@@ -56,9 +68,9 @@ class Program
             Stopwatch sw = Stopwatch.StartNew();
             for (int i = 0; i < 10; i++)
                 await client.Queue.PushJson(a, true);
-                
+
             sw.Stop();
-                
+
             Console.WriteLine($"Push: in {sw.ElapsedTicks} ticks ({sw.ElapsedMilliseconds} ms)");
 
             // HorseResult result = await client.Router.PublishRequestJson<TestQuery, TestQueryResult>("test-service-route", query, 1);
