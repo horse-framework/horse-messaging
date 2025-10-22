@@ -1183,7 +1183,7 @@ public class HorseClient : IDisposable
                 break;
 
             case MessageType.Ping:
-                _socket.Pong();
+                _socket.Pong(message);
                 break;
 
             case MessageType.Response:

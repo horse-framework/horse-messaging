@@ -76,7 +76,7 @@ public class HorseChannel
     private Timer _destoryTimer;
     private byte[] _initialMessage;
     private readonly object _channelClientLock = new();
-    private ChannelClient[] _channelClients = new ChannelClient[1];
+    private readonly ChannelClient[] _channelClients = new ChannelClient[256];
 
     #endregion
 
@@ -246,7 +246,7 @@ public class HorseChannel
                 return i;
         }
 
-        return 0;
+        return _channelClients.Length;
     }
 
     /// <summary>
@@ -267,7 +267,7 @@ public class HorseChannel
         {
             for (int i = 0; i < _channelClients.Length; i++)
             {
-                if (Options.ClientLimit > 0 && i >= Options.ClientLimit)
+                if (Options.ClientLimit > 0 && i + 1 >= Options.ClientLimit)
                     return SubscriptionResult.Full;
 
                 if (_channelClients[i] == null)

@@ -166,7 +166,7 @@ public class HorseQueue
     private readonly SortedSet<string> _messageIdList = new(StringComparer.InvariantCulture);
 
     private readonly object _queueClientLock = new();
-    private readonly QueueClient[] _queueClients = new QueueClient[1];
+    private readonly QueueClient[] _queueClients = new QueueClient[32];
 
     /// <summary>
     /// True if queue is destroyed
@@ -1284,7 +1284,7 @@ public class HorseQueue
                 return i;
         }
 
-        return 0;
+        return _queueClients.Length;
     }
 
     /// <summary>
@@ -1305,7 +1305,7 @@ public class HorseQueue
         {
             for (int i = 0; i < _queueClients.Length; i++)
             {
-                if (Options.ClientLimit > 0 && i >= Options.ClientLimit)
+                if (Options.ClientLimit > 0 && i + 1 >= Options.ClientLimit)
                     return SubscriptionResult.Full;
 
                 if (_queueClients[i] == null)

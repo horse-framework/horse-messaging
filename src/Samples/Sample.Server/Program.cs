@@ -33,7 +33,7 @@ namespace Sample.Server
                 .ConfigureQueues(cfg =>
                 {
                     cfg.Options.Type = QueueType.Push;
-                    cfg.Options.MessageLimit = 400;
+                    cfg.Options.MessageLimit = 10;
                     cfg.Options.AutoQueueCreation = true;
                     cfg.UseMemoryQueues();
                 })
