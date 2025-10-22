@@ -260,7 +260,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
             else if (message.Source != mc.UniqueId)
                 message.SetSource(mc.UniqueId);
 
-            await RouteToHandler(mc, message);
+            await RouteToHandler(mc, message).ConfigureAwait(false);
         }
         catch
         {

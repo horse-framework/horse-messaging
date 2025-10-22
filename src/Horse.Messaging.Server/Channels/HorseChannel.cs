@@ -196,11 +196,8 @@ public class HorseChannel
                 count++;
             }
 
-            lock (Info)
-            {
-                Info.Published++;
-                Info.Received += count;
-            }
+            Interlocked.Increment(ref Info.PublishedValue);
+            Interlocked.Add(ref Info.ReceivedValue, count);
 
             PublishEvent.Trigger(Name);
 
@@ -208,6 +205,7 @@ public class HorseChannel
                 _ = handler.OnPublish(this, message);
 
             Rider.Plugin.TriggerPluginHandlers(HorsePluginEvent.ChannelPublish, Name, message);
+            
             return PushResult.Success;
         }
         catch (Exception ex)

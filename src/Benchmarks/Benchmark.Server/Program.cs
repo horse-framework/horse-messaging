@@ -1,4 +1,5 @@
 ﻿using System;
+using Horse.Jockey;
 using Horse.Messaging.Data;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
@@ -29,6 +30,11 @@ class Program
         Console.ReadLine();
 
         _rider = HorseRiderBuilder.Create()
+            .ConfigureChannels(cfg =>
+            {
+                cfg.Options.AutoChannelCreation = true;
+                cfg.Options.AutoDestroy = false;
+            })
             .ConfigureQueues(cfg =>
             {
                 cfg.EventHandlers.Add(new QueueEventHandler());
@@ -59,12 +65,13 @@ class Program
                     cfg.UseMemoryQueues();
                 }
             })
+            .AddJockey(cfg => { cfg.Port = 2627; })
             .ConfigureCache(cfg => { cfg.Options.DefaultDuration = TimeSpan.FromMinutes(30); })
             .AddErrorHandler<ErrorHandler>()
             .Build();
 
         HorseServer server = new HorseServer();
         server.UseRider(_rider);
-        server.Run(27001);
+        server.Run(2626);
     }
 }

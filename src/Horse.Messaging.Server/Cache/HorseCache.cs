@@ -72,7 +72,6 @@ public class HorseCache
     private bool _initialized;
 
     private readonly ConcurrentDictionary<string, HorseCacheItem> _items = new(StringComparer.InvariantCultureIgnoreCase);
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
 
     #endregion
 

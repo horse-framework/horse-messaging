@@ -23,18 +23,29 @@ public class ChannelInformation
     /// <summary>
     /// Total published message count by publishers
     /// </summary>
-    public long Published { get; set; }
-        
+    public long Published
+    {
+        get => PublishedValue;
+        set => PublishedValue = value;
+    }
+
     /// <summary>
     /// Total receive count by subscribers.
     /// (Published Message Count x Subscriber Count) 
     /// An example, if there are 5 consumers in channel,
     /// When publisher publishes 10 messages, received value will be 50.
     /// </summary>
-    public long Received { get; set; }
+    public long Received
+    {
+        get => ReceivedValue;
+        set => ReceivedValue = value;
+    }
 
     /// <summary>
     /// Active subscriber count of the channel
     /// </summary>
     public int SubscriberCount { get; set; }
+
+    internal long PublishedValue;
+    internal long ReceivedValue;
 }

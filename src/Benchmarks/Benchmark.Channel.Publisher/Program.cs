@@ -25,9 +25,11 @@ class Program
         _counter.Run(c => Console.WriteLine($"{c.ChangeInSecond} m/s \t {c.Total} total \t"));
 
         HorseClient client = new HorseClient();
-        await client.ConnectAsync("horse://localhost:27001");
+        client.SetClientName("publisher");
+        client.SetClientType("publisher");
+        await client.ConnectAsync("horse://localhost:2626");
 
-        ChannelModel model = new ChannelModel {Foo = "123"};
+        ChannelModel model = new ChannelModel { Foo = "123" };
 
         HorseResult result = await client.Channel.Publish("channel", model, true);
         Console.WriteLine($"First publish result: {result.Code}");
@@ -44,12 +46,25 @@ class Program
 
     private static async Task Run(bool waitForAck)
     {
-        ChannelModel model = new ChannelModel {Foo = "123"};
+        ChannelModel model = new ChannelModel { Foo = "123" };
         HorseClient client = new HorseClient();
-        await client.ConnectAsync("horse://localhost:27001");
+        client.SetClientName("publisher");
+        client.SetClientType("publisher");
+        int i = 0;
+        await client.ConnectAsync("horse://localhost:2626");
         while (true)
         {
-            await client.Channel.Publish("channel", model, waitForAck);
+            if (i == 100)
+            {
+                i = 0;
+                await client.Channel.PublishString("channel", "hello world", waitForAck);
+            }
+            else
+            {
+                i++;
+                _ = client.Channel.PublishString("channel", "hello world", waitForAck);
+            }
+
             _counter.Increase();
         }
     }
