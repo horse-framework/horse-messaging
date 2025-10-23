@@ -95,6 +95,12 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         client.Name = data.Properties.GetStringValue(HorseHeaders.CLIENT_NAME);
         client.Type = data.Properties.GetStringValue(HorseHeaders.CLIENT_TYPE);
 
+        if (string.IsNullOrEmpty(client.Name))
+            client.Name = "(Unknown)";
+
+        if (string.IsNullOrEmpty(client.Type))
+            client.Type = "(Unknown)";
+
         if (isNode)
         {
             if (_rider.Cluster.Options.SharedSecret != client.Token)
