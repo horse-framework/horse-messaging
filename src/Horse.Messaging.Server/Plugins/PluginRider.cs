@@ -23,7 +23,7 @@ public class PluginRider : IPluginRider
     /// <summary>
     /// Implemented Plugins
     /// </summary>
-    public HorsePlugin[] Plugins { get; private set; } = Array.Empty<HorsePlugin>();
+    public HorsePlugin[] Plugins { get; private set; } = [];
 
     private readonly List<PluginAssemblyData> _data = new List<PluginAssemblyData>();
     private readonly HorseRider _rider;
@@ -93,6 +93,9 @@ public class PluginRider : IPluginRider
         string json = File.ReadAllText(fullname);
         var data = JsonSerializer.Deserialize<List<PluginAssemblyData>>(json, SerializerFactory.Default(true, true));
 
+        foreach (PluginAssemblyData d in data)
+            d.Plugins = d.Plugins.Where(x => !x.Removed).ToList();
+        
         lock (_data)
         {
             _data.Clear();
@@ -151,7 +154,8 @@ public class PluginRider : IPluginRider
     /// </summary>
     private async Task LoadAssemblyPlugins(PluginAssemblyData data)
     {
-        Assembly assembly = Assembly.LoadFrom(data.Location);
+        var context = new PluginAssemblyLoadContext();
+        Assembly assembly = context.LoadFromAssemblyPath(Path.GetFullPath(data.Location));
         data.LoadedAssembly = assembly;
 
         foreach (Type type in GetPluginBuilderTypesOfAssembly(assembly))
@@ -214,7 +218,9 @@ public class PluginRider : IPluginRider
     /// </summary>
     public async Task AddAssemblyPlugins(string filename)
     {
-        Assembly assembly = Assembly.LoadFrom(filename);
+        var context = new PluginAssemblyLoadContext();
+        Assembly assembly = context.LoadFromAssemblyPath(Path.GetFullPath(filename));
+
         string assemblyVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location).FileVersion;
         lock (_data)
         {
@@ -459,7 +465,10 @@ public class PluginRider : IPluginRider
         if (plugin == null)
         {
             if (assemblyData.LoadedAssembly == null)
-                assemblyData.LoadedAssembly = Assembly.LoadFrom(assemblyData.Location);
+            {
+                var context = new PluginAssemblyLoadContext();
+                assemblyData.LoadedAssembly = context.LoadFromAssemblyPath(Path.GetFullPath(assemblyData.Location));
+            }
 
             foreach (Type type in GetPluginBuilderTypesOfAssembly(assemblyData.LoadedAssembly))
             {
