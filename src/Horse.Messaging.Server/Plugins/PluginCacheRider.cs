@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Plugins;
 using Horse.Messaging.Plugins.Cache;
 using Horse.Messaging.Server.Cache;
@@ -25,12 +26,18 @@ internal class PluginCacheRider : IPluginCacheRider
     public async Task<PluginCacheItemResult> Get(string key)
     {
         var result = await _rider.Cache.Get(key);
+        if (result == null)
+            return null;
+        
         return new PluginCacheItemResult(result.IsFirstWarningReceiver, GetCacheItem(result.Item));
     }
 
     public async Task<PluginCacheItemResult> GetIncremental(string key, TimeSpan duration, int incrementValue = 1, string[] tags = null)
     {
         var result = await _rider.Cache.GetIncremental(key, duration, incrementValue, tags);
+        if (result == null)
+            return null;
+        
         return new PluginCacheItemResult(result.IsFirstWarningReceiver, GetCacheItem(result.Item));
     }
 
