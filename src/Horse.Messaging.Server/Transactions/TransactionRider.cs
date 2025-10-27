@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -30,7 +31,7 @@ public class TransactionRider
     /// </summary>
     public IServerTransactionHandler DefaultHandler { get; set; }
 
-    private readonly Dictionary<string, ServerTransactionContainer> _containers = new();
+    private readonly ConcurrentDictionary<string, ServerTransactionContainer> _containers = new();
     private List<TransactionContainerData> _data = new();
 
     /// <summary>
@@ -69,8 +70,7 @@ public class TransactionRider
             if (container.Handler != null)
                 _ = container.Handler.Load(container);
 
-            lock (_containers)
-                _containers.Add(item.Name, container);
+            _containers.TryAdd(item.Name, container);
         }
     }
 
@@ -206,20 +206,17 @@ public class TransactionRider
     {
         ServerTransactionContainer container;
 
-        lock (_containers)
-        {
-            if (_containers.ContainsKey(name))
-                throw new($"There is already a transaction container with name: {name}");
+        if (_containers.ContainsKey(name))
+            throw new($"There is already a transaction container with name: {name}");
 
-            container = new ServerTransactionContainer(name, timeout);
+        container = new ServerTransactionContainer(name, timeout);
 
-            container.CommitEndpoint = commitEndpoint;
-            container.RollbackEndpoint = rollbackEndpoint;
-            container.TimeoutEndpoint = timeoutEndpoint;
-            container.Handler = handler ?? DefaultHandler;
+        container.CommitEndpoint = commitEndpoint;
+        container.RollbackEndpoint = rollbackEndpoint;
+        container.TimeoutEndpoint = timeoutEndpoint;
+        container.Handler = handler ?? DefaultHandler;
 
-            _containers.Add(name, container);
-        }
+        _containers.TryAdd(name, container);
 
         TransactionContainerData data = new TransactionContainerData();
 
@@ -250,17 +247,12 @@ public class TransactionRider
     /// </summary>
     public void DeleteContainer(string name)
     {
-        ServerTransactionContainer container;
-        bool found;
-
-        lock (_containers)
-            found = _containers.TryGetValue(name, out container);
+        bool found = _containers.TryGetValue(name, out ServerTransactionContainer container);
 
         if (!found)
             return;
 
-        lock (_containers)
-            _containers.Remove(name);
+        _containers.TryRemove(name, out _);
 
         lock (_data)
             _data.RemoveAll(x => x.Name == name);
@@ -275,9 +267,7 @@ public class TransactionRider
     /// </summary>
     public async Task Begin(MessagingClient client, HorseMessage message)
     {
-        ServerTransactionContainer container;
-        lock (_containers)
-            _containers.TryGetValue(message.Target, out container);
+        _containers.TryGetValue(message.Target, out ServerTransactionContainer container);
 
         if (container == null)
         {
@@ -294,14 +284,10 @@ public class TransactionRider
     /// </summary>
     public Task Commit(MessagingClient client, HorseMessage message)
     {
-        ServerTransactionContainer container;
-        lock (_containers)
-            _containers.TryGetValue(message.Target, out container);
+        _containers.TryGetValue(message.Target, out ServerTransactionContainer container);
 
         if (container == null)
-        {
             return client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
-        }
 
         return container.Commit(client, message);
     }
@@ -311,14 +297,10 @@ public class TransactionRider
     /// </summary>
     public Task Rollback(MessagingClient client, HorseMessage message)
     {
-        ServerTransactionContainer container;
-        lock (_containers)
-            _containers.TryGetValue(message.Target, out container);
+        _containers.TryGetValue(message.Target, out ServerTransactionContainer container);
 
         if (container == null)
-        {
             return client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
-        }
 
         return container.Rollback(client, message);
     }

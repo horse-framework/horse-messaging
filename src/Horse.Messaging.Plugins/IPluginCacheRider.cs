@@ -14,10 +14,11 @@ public record PluginCacheItemResult(bool IsFirstWarningReceiver, PluginCacheItem
 
 public interface IPluginCacheRider
 {
-    Task<PluginCacheOperation> Set(string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null);
+    Task<PluginCacheOperation> Set(string key, string value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false);
+    Task<PluginCacheOperation> Set(string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false);
     Task<PluginCacheItemResult> Get(string key);
     Task<PluginCacheItemResult> GetIncremental(string key, TimeSpan duration, int incrementValue = 1, string[] tags = null);
-    
+
     Task Remove(string key);
     Task PurgeByTag(string tagName);
     Task Purge();

@@ -35,5 +35,7 @@ internal static class HorseLogEvents
 
     internal const int SaveTransactionContainer = 601;
 
-    internal const int EventTrigger = 701;
+    internal const int LoadPersistentCache = 701;
+
+    internal const int EventTrigger = 801;
 }

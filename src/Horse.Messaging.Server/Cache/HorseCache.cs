@@ -11,6 +11,7 @@ using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Logging;
 
 namespace Horse.Messaging.Server.Cache;
 
@@ -102,6 +103,8 @@ public class HorseCache
 
             _initialized = true;
             _timer = new Timer(o => _ = RemoveExpiredKeys(), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+
+            LoadPersistentItems();
         }
     }
 
@@ -153,15 +156,24 @@ public class HorseCache
     /// <summary>
     /// Adds or sets a cache
     /// </summary>
-    public Task<CacheOperation> Set(string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null)
+    public Task<CacheOperation> Set(string key, string value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
     {
-        return Set(null, true, key, value, duration, expirationWarning, tags);
+        return Set(null, true, key, new MemoryStream(System.Text.Encoding.UTF8.GetBytes(value)), duration, expirationWarning, tags, persistent);
+    }
+
+
+    /// <summary>
+    /// Adds or sets a cache
+    /// </summary>
+    public Task<CacheOperation> Set(string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
+    {
+        return Set(null, true, key, value, duration, expirationWarning, tags, persistent);
     }
 
     /// <summary>
     /// Adds or sets a cache
     /// </summary>
-    internal async Task<CacheOperation> Set(MessagingClient client, bool notifyCluster, string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null)
+    internal async Task<CacheOperation> Set(MessagingClient client, bool notifyCluster, string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
     {
         if (Options.MaximumKeys > 0 && _items.Count >= Options.MaximumKeys)
             return new CacheOperation(CacheResult.KeyLimit, null);
@@ -196,6 +208,12 @@ public class HorseCache
         Rider.Cache.SetEvent.Trigger(client, key);
         if (notifyCluster)
             ClusterNotifier.SendSet(item);
+
+        if (persistent)
+        {
+            item.IsPersistent = true;
+            WritePersistentItem(item);
+        }
 
         return new CacheOperation(CacheResult.Ok, item);
     }
@@ -297,11 +315,23 @@ public class HorseCache
     /// </summary>
     internal Task Remove(MessagingClient client, string key, bool notifyCluster)
     {
-        _items.TryRemove(key, out _);
+        _items.TryRemove(key, out var item);
         Rider.Cache.RemoveEvent.Trigger(client, key);
 
         if (notifyCluster)
             ClusterNotifier.SendRemove(key);
+
+        if (item != null && item.IsPersistent)
+        {
+            string directory = $"{Rider.Options.DataPath}/Cache/";
+            try
+            {
+                File.Delete(directory + key + ".hci");
+            }
+            catch
+            {
+            }
+        }
 
         return Task.CompletedTask;
     }
@@ -320,10 +350,15 @@ public class HorseCache
     internal async Task PurgeByTag(string tagName, MessagingClient client, bool notifyCluster)
     {
         List<string> removingKeys = new List<string>();
+        List<string> removingFiles = new List<string>();
         foreach (KeyValuePair<string, HorseCacheItem> pair in _items)
         {
             if (pair.Value.Tags.Contains(tagName, StringComparer.CurrentCultureIgnoreCase))
+            {
                 removingKeys.Add(pair.Key);
+                if (pair.Value.IsPersistent)
+                    removingFiles.Add(pair.Key);
+            }
         }
 
         foreach (string key in removingKeys)
@@ -333,6 +368,24 @@ public class HorseCache
 
         if (notifyCluster)
             ClusterNotifier.SendPurge(tagName);
+
+        if (removingFiles.Count == 0)
+            return;
+
+        string directory = $"{Rider.Options.DataPath}/Cache/";
+        if (!Directory.Exists(directory))
+            return;
+
+        foreach (string key in removingFiles)
+        {
+            try
+            {
+                File.Delete(directory + key + ".hci");
+            }
+            catch
+            {
+            }
+        }
     }
 
     /// <summary>
@@ -348,13 +401,122 @@ public class HorseCache
     /// </summary>
     internal Task Purge(MessagingClient client, bool notifyCluster)
     {
+        bool hasPersistentCache = _items.Values.Any(x => x.IsPersistent);
+
         _items.Clear();
         Rider.Cache.PurgeEvent.Trigger(client);
 
         if (notifyCluster)
             ClusterNotifier.SendPurge(null);
 
+        if (!hasPersistentCache)
+            return Task.CompletedTask;
+
+        string directory = $"{Rider.Options.DataPath}/Cache/";
+        if (Directory.Exists(directory))
+        {
+            string[] filenames = Directory.GetFiles(directory);
+            foreach (string filename in filenames)
+            {
+                try
+                {
+                    File.Delete(filename);
+                }
+                catch
+                {
+                }
+            }
+        }
+
         return Task.CompletedTask;
+    }
+
+    #endregion
+
+    #region Persistence
+
+    private void LoadPersistentItems()
+    {
+        try
+        {
+            string directory = $"{Rider.Options.DataPath}/Cache/";
+
+            if (!Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+                return;
+            }
+
+            List<string> expiredFiles = new List<string>();
+
+            string[] filenames = Directory.GetFiles(directory);
+            foreach (string filename in filenames)
+            {
+                using FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read);
+                using BinaryReader reader = new BinaryReader(fs, System.Text.Encoding.UTF8);
+                HorseCacheItem item = new HorseCacheItem();
+                item.Key = reader.ReadString();
+                item.Expiration = reader.ReadInt64().ToUnixDate();
+                item.ExpirationWarnCount = reader.ReadInt32();
+
+                if (item.Expiration < DateTime.UtcNow)
+                {
+                    expiredFiles.Add(filename);
+                    continue;
+                }
+
+                bool hasWarningDate = reader.ReadBoolean();
+                if (hasWarningDate)
+                    item.ExpirationWarning = reader.ReadInt64().ToUnixDate();
+
+                item.IsPersistent = true;
+                int tagCount = reader.ReadInt32();
+                item.Tags = new string[tagCount];
+                for (int i = 0; i < tagCount; i++)
+                    item.Tags[i] = reader.ReadString();
+
+                int dataLength = reader.ReadInt32();
+                item.Value = new MemoryStream(reader.ReadBytes(dataLength));
+
+                _items.TryAdd(item.Key, item);
+            }
+
+            foreach (string expiredFile in expiredFiles)
+                File.Delete(expiredFile);
+        }
+        catch (Exception e)
+        {
+            Rider.SendError(HorseLogLevel.Critical, HorseLogEvents.LoadPersistentCache, "Load Persistent Cache Items", e);
+        }
+    }
+
+    private void WritePersistentItem(HorseCacheItem item)
+    {
+        string directory = $"{Rider.Options.DataPath}/Cache";
+        if (!Directory.Exists(directory))
+            Directory.CreateDirectory(directory);
+
+        string filename = $"{directory}/{item.Key}.hci";
+
+        using FileStream fs = new FileStream(filename, FileMode.OpenOrCreate, FileAccess.Write);
+        using BinaryWriter writer = new BinaryWriter(fs, System.Text.Encoding.UTF8);
+
+        writer.Write(item.Key);
+        writer.Write(item.Expiration.ToUnixMilliseconds());
+        writer.Write(item.ExpirationWarnCount);
+        writer.Write(item.ExpirationWarning.HasValue);
+        if (item.ExpirationWarning.HasValue)
+            writer.Write(item.ExpirationWarning.Value.ToUnixMilliseconds());
+
+        writer.Write(item.Tags.Length);
+        foreach (string tag in item.Tags)
+            writer.Write(tag);
+
+        writer.Write((int)item.Value.Length);
+        writer.Write(item.Value.ToArray());
+
+        writer.Flush();
+        fs.Close();
     }
 
     #endregion

@@ -13,10 +13,8 @@ public abstract class HorsePlugin
 {
     public string Name { get; protected set; }
     public string Description { get; protected set; }
-
     public bool Initialized { get; internal set; }
     public bool Removed { get; internal set; }
-
     protected IPluginRider Plugin { get; private set; }
 
     internal SortedDictionary<string, IHorsePluginHandler> Handlers { get; } = new SortedDictionary<string, IHorsePluginHandler>(StringComparer.InvariantCultureIgnoreCase);
@@ -50,7 +48,7 @@ public abstract class HorsePlugin
             }
         }
 
-        _timers = Array.Empty<Timer>();
+        _timers = [];
         Removed = true;
         Handlers.Clear();
 

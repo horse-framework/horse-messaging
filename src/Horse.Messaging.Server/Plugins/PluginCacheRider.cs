@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Plugins;
 using Horse.Messaging.Plugins.Cache;
 using Horse.Messaging.Server.Cache;
@@ -17,9 +16,15 @@ internal class PluginCacheRider : IPluginCacheRider
         _rider = rider;
     }
 
-    public async Task<PluginCacheOperation> Set(string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null)
+    public async Task<PluginCacheOperation> Set(string key, string value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
     {
-        CacheOperation result = await _rider.Cache.Set(key, value, duration, expirationWarning, tags);
+        CacheOperation result = await _rider.Cache.Set(key, value, duration, expirationWarning, tags, persistent);
+        return new PluginCacheOperation((PluginCacheResult)result.Result, GetCacheItem(result.Item));
+    }
+
+    public async Task<PluginCacheOperation> Set(string key, MemoryStream value, TimeSpan duration, TimeSpan? expirationWarning = null, string[] tags = null, bool persistent = false)
+    {
+        CacheOperation result = await _rider.Cache.Set(key, value, duration, expirationWarning, tags, persistent);
         return new PluginCacheOperation((PluginCacheResult)result.Result, GetCacheItem(result.Item));
     }
 
@@ -28,7 +33,7 @@ internal class PluginCacheRider : IPluginCacheRider
         var result = await _rider.Cache.Get(key);
         if (result == null)
             return null;
-        
+
         return new PluginCacheItemResult(result.IsFirstWarningReceiver, GetCacheItem(result.Item));
     }
 
@@ -37,7 +42,7 @@ internal class PluginCacheRider : IPluginCacheRider
         var result = await _rider.Cache.GetIncremental(key, duration, incrementValue, tags);
         if (result == null)
             return null;
-        
+
         return new PluginCacheItemResult(result.IsFirstWarningReceiver, GetCacheItem(result.Item));
     }
 
