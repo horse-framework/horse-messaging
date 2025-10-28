@@ -143,11 +143,14 @@ internal class HorseCache : IHorseCache
     #region Set
 
     /// <inheritdoc />
-    public Task<HorseResult> Set<TData>(string key, TData data, string[] tags = null)
+    public Task<HorseResult> Set<TData>(string key, TData data, string[] tags = null, bool persistent = false)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         _client.MessageSerializer.Serialize(message, data);
 
+        if (persistent)
+            message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
+        
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
@@ -155,25 +158,31 @@ internal class HorseCache : IHorseCache
     }
 
     /// <inheritdoc />
-    public Task<HorseResult> Set<TData>(string key, TData data, TimeSpan duration, string[] tags = null)
+    public Task<HorseResult> Set<TData>(string key, TData data, TimeSpan duration, string[] tags = null, bool persistent = false)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         _client.MessageSerializer.Serialize(message, data);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
 
+        if (persistent)
+            message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
+        
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
         return _client.SendAndGetAck(message);
     }
 
-    public Task<HorseResult> Set<TData>(string key, TData data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags = null)
+    public Task<HorseResult> Set<TData>(string key, TData data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags = null, bool persistent = false)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         _client.MessageSerializer.Serialize(message, data);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
         message.SetOrAddHeader(HorseHeaders.WARNING_DURATION, Convert.ToInt32(expirationWarningDuration.TotalSeconds).ToString());
 
+        if (persistent)
+            message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
+        
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
@@ -181,11 +190,14 @@ internal class HorseCache : IHorseCache
     }
 
     /// <inheritdoc />
-    public Task<HorseResult> SetString(string key, string data, string[] tags = null)
+    public Task<HorseResult> SetString(string key, string data, string[] tags = null, bool persistent = false)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         message.SetStringContent(data);
 
+        if (persistent)
+            message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
+        
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
@@ -193,25 +205,31 @@ internal class HorseCache : IHorseCache
     }
 
     /// <inheritdoc />
-    public Task<HorseResult> SetString(string key, string data, TimeSpan duration, string[] tags = null)
+    public Task<HorseResult> SetString(string key, string data, TimeSpan duration, string[] tags = null, bool persistent = false)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         message.SetStringContent(data);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
 
+        if (persistent)
+            message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
+        
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
         return _client.SendAndGetAck(message);
     }
 
-    public Task<HorseResult> SetString(string key, string data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags = null)
+    public Task<HorseResult> SetString(string key, string data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags = null, bool persistent = false)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         message.SetStringContent(data);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
         message.SetOrAddHeader(HorseHeaders.WARNING_DURATION, Convert.ToInt32(expirationWarningDuration.TotalSeconds).ToString());
 
+        if (persistent)
+            message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
+        
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
@@ -219,10 +237,13 @@ internal class HorseCache : IHorseCache
     }
 
     /// <inheritdoc />
-    public Task<HorseResult> SetData(string key, byte[] data, string[] tags = null)
+    public Task<HorseResult> SetData(string key, byte[] data, string[] tags = null, bool persistent = false)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
 
+        if (persistent)
+            message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
+        
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
@@ -232,11 +253,14 @@ internal class HorseCache : IHorseCache
     }
 
     /// <inheritdoc />
-    public Task<HorseResult> SetData(string key, byte[] data, TimeSpan duration, string[] tags = null)
+    public Task<HorseResult> SetData(string key, byte[] data, TimeSpan duration, string[] tags = null, bool persistent = false)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
 
+        if (persistent)
+            message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
+        
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
 
@@ -245,11 +269,14 @@ internal class HorseCache : IHorseCache
         return _client.SendAndGetAck(message);
     }
 
-    public Task<HorseResult> SetData(string key, byte[] data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags = null)
+    public Task<HorseResult> SetData(string key, byte[] data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags = null, bool persistent = false)
     {
         HorseMessage message = new HorseMessage(MessageType.Cache, key, KnownContentTypes.SetCache);
         message.SetOrAddHeader(HorseHeaders.MESSAGE_TIMEOUT, Convert.ToInt32(duration.TotalSeconds).ToString());
         message.SetOrAddHeader(HorseHeaders.WARNING_DURATION, Convert.ToInt32(expirationWarningDuration.TotalSeconds).ToString());
+
+        if (persistent)
+            message.SetOrAddHeader(HorseHeaders.PERSISTENT_CACHE, "true");
 
         if (tags != null && tags.Length > 0)
             message.SetOrAddHeader(HorseHeaders.TAG, tags.Aggregate((t, i) => $"{t},{i}"));
