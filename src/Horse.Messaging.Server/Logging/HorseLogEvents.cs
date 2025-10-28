@@ -32,6 +32,7 @@ internal static class HorseLogEvents
 
     internal const int PluginLoadAssembly = 501;
     internal const int PluginAddAssembly = 502;
+    internal const int PluginHandlerExecution = 503;
 
     internal const int SaveTransactionContainer = 601;
 

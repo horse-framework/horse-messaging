@@ -30,7 +30,7 @@ public class QueueInformation
     /// Count of the messages that are tracking by delivery tracker.
     /// These messages are being tracked because acknowledge is pending from their consumers.
     /// </summary>
-    public int DeliveryTrackingMessags { get; set; }
+    public int DeliveryTrackingMessages { get; set; }
 
     /// <summary>
     /// Pending regular messages in the queue

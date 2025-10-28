@@ -7,6 +7,9 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Horse.Messaging.Plugins;
+using Horse.Messaging.Plugins.Cache;
+using Horse.Messaging.Plugins.Channels;
+using Horse.Messaging.Plugins.Queues;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Clients;
@@ -32,12 +35,24 @@ public class PluginRider : IPluginRider
     /// <summary>
     /// Cache operation manager
     /// </summary>
-    public IPluginCacheRider Cache { get; private set; }
+    public IPluginCacheRider Cache { get; }
+
+    /// <summary>
+    /// Queue operation manager   
+    /// </summary>
+    public IPluginQueueRider Queue { get; }
+
+    /// <summary>
+    /// Channel operation manager  
+    /// </summary>
+    public IPluginChannelRider Channel { get; }
 
     internal PluginRider(HorseRider rider)
     {
         _rider = rider;
         Cache = new PluginCacheRider(rider);
+        Queue = new PluginQueueRider(rider);
+        Channel = new PluginChannelRider(rider);
     }
 
     /// <summary>
@@ -95,7 +110,7 @@ public class PluginRider : IPluginRider
 
         foreach (PluginAssemblyData d in data)
             d.Plugins = d.Plugins.Where(x => !x.Removed).ToList();
-        
+
         lock (_data)
         {
             _data.Clear();

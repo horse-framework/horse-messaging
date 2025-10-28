@@ -466,7 +466,7 @@ internal class ServerMessageHandler : INetworkMessageHandler
                 PriorityMessages = queue.Manager == null ? 0 : queue.Manager.PriorityMessageStore.Count(),
                 Messages = queue.Manager == null ? 0 : queue.Manager.MessageStore.Count(),
                 ProcessingMessages = queue.Clients.Count(x => x.CurrentlyProcessing != null),
-                DeliveryTrackingMessags = queue.Manager == null ? 0 : queue.Manager.DeliveryHandler.Tracker.GetDeliveryCount(),
+                DeliveryTrackingMessages = queue.Manager == null ? 0 : queue.Manager.DeliveryHandler.Tracker.GetDeliveryCount(),
                 Acknowledge = ack,
                 AcknowledgeTimeout = Convert.ToInt32(queue.Options.AcknowledgeTimeout.TotalMilliseconds),
                 MessageTimeout = queue.Options.MessageTimeout,

@@ -1,5 +1,8 @@
 namespace Horse.Messaging.Plugins.Cache;
 
+/// <summary>
+/// The result object of cache operations
+/// </summary>
 public class PluginCacheOperation
 {
     /// <summary>

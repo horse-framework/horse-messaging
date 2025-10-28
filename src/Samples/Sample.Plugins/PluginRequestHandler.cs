@@ -5,6 +5,8 @@ namespace Sample.Plugins;
 
 public class PluginRequestHandler : IHorsePluginHandler
 {
+    public ushort ContentType => 0;
+
     public Task Execute(HorsePluginContext context)
     {
         HorseMessage response = context.Request.CreateResponse(HorseResultCode.Ok);
