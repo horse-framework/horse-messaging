@@ -331,6 +331,11 @@ public class HorseHeaders
     public const string WARNING_DURATION = "Warning-Duration";
 
     /// <summary>
+    /// "Persistent-Cache"
+    /// </summary>
+    public const string PERSISTENT_CACHE = "Persistent-Cache";
+
+    /// <summary>
     /// "Tag"
     /// </summary>
     public const string TAG = "Tag";

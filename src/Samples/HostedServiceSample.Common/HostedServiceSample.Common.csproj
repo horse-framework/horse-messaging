@@ -2,21 +2,21 @@
 
     <PropertyGroup>
         <LangVersion>default</LangVersion>
-        <TargetFrameworks>net7.0;net8.0</TargetFrameworks>
+        <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="8.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="8.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Logging.EventSource" Version="8.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.8" />
+        <PackageReference Include="Microsoft.Extensions.Logging.EventSource" Version="9.0.8" />
     </ItemGroup>
 
     <ItemGroup>

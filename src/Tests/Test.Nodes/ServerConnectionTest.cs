@@ -125,7 +125,7 @@ public class ServerConnectionTest
         await client.ConnectAsync("127.0.0.1", port);
 
         NetworkStream stream = client.GetStream();
-        stream.Write(PredefinedMessages.PROTOCOL_BYTES_V3);
+        stream.Write(PredefinedMessages.PROTOCOL_BYTES_V4);
         HorseMessage msg = new HorseMessage();
         msg.Type = MessageType.Server;
         msg.ContentType = KnownContentTypes.Hello;

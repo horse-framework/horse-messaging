@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
@@ -43,7 +43,7 @@ public class ServerTransactionContainer
     /// </summary>
     public IServerTransactionHandler Handler { get; set; }
 
-    private readonly Dictionary<string, ServerTransaction> _transactions = new();
+    private readonly ConcurrentDictionary<string, ServerTransaction> _transactions = new();
 
     /// <summary>
     /// Creates new server transaction handler
@@ -64,12 +64,11 @@ public class ServerTransactionContainer
         if (Handler != null)
             return Handler.Load(this);
 
-        lock (_transactions)
-            foreach (ServerTransaction transaction in _transactions.Values)
-            {
-                transaction.TimeoutHandler.Task.ContinueWith(HandleTransaction);
-                transaction.Track();
-            }
+        foreach (ServerTransaction transaction in _transactions.Values)
+        {
+            transaction.TimeoutHandler.Task.ContinueWith(HandleTransaction);
+            transaction.Track();
+        }
 
         return Task.CompletedTask;
     }
@@ -96,12 +95,11 @@ public class ServerTransactionContainer
                 return false;
         }
 
-        lock (_transactions)
-            _transactions.Add(message.MessageId, transaction);
+        _transactions.TryAdd(message.MessageId, transaction);
 
         _ = transaction.TimeoutHandler.Task.ContinueWith(HandleTransaction);
         transaction.Track();
-            
+
         return true;
     }
 
@@ -111,7 +109,7 @@ public class ServerTransactionContainer
     public async Task<bool> Create(MessagingClient client, HorseMessage message)
     {
         ServerTransaction transaction = new ServerTransaction(client, message, DateTime.UtcNow.Add(Timeout));
-                
+
         if (Handler != null)
         {
             bool canCreate = await Handler.CanCreate(transaction);
@@ -119,12 +117,11 @@ public class ServerTransactionContainer
                 return false;
         }
 
-        lock (_transactions)
-            _transactions.Add(message.MessageId, transaction);
+        _transactions.TryAdd(message.MessageId, transaction);
 
         _ = transaction.TimeoutHandler.Task.ContinueWith(HandleTransaction);
         transaction.Track();
-            
+
         return true;
     }
 
@@ -134,10 +131,7 @@ public class ServerTransactionContainer
     public async Task Commit(MessagingClient client, HorseMessage message)
     {
         HorseMessage response;
-        ServerTransaction transaction;
-
-        lock (_transactions)
-            _transactions.TryGetValue(message.MessageId, out transaction);
+        _transactions.TryGetValue(message.MessageId, out ServerTransaction transaction);
 
         if (transaction == null)
         {
@@ -170,10 +164,7 @@ public class ServerTransactionContainer
     public async Task Rollback(MessagingClient client, HorseMessage message)
     {
         HorseMessage response;
-        ServerTransaction transaction;
-
-        lock (_transactions)
-            _transactions.TryGetValue(message.MessageId, out transaction);
+        _transactions.TryGetValue(message.MessageId, out ServerTransaction transaction);
 
         if (transaction == null)
         {

@@ -5,6 +5,7 @@ using Horse.Messaging.Server.Cache;
 using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Direct;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Network;
 using Horse.Messaging.Server.Plugins;
 using Horse.Messaging.Server.Queues;

@@ -1,4 +1,5 @@
 using Horse.Messaging.Server;
+using Horse.Messaging.Server.Logging;
 using Horse.Server;
 using HostedServiceSample.Common;
 using HostedServiceSample.Server.Handlers;

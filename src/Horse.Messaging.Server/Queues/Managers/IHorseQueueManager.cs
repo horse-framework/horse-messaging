@@ -48,11 +48,6 @@ public interface IHorseQueueManager
     Task Destroy();
 
     /// <summary>
-    /// That method is called when an exception is thrown on queue operations
-    /// </summary>
-    Task OnExceptionThrown(string hint, QueueMessage message, Exception exception);
-
-    /// <summary>
     /// That method is called when a message is timed out
     /// </summary>
     /// <param name="message"></param>

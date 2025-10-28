@@ -3,7 +3,7 @@ using System;
 namespace Horse.Messaging.Client.Queues.Exceptions;
 
 /// <summary>
-/// Throw when reigstered same type of Exception with PushExceptions attribute
+/// Throw when registered same type of Exception with PushExceptions attribute
 /// </summary>
 public class DuplicatePushException : Exception
 {

@@ -53,7 +53,7 @@ public abstract class ExecutorBase
     /// Additional publish exception descriptors
     /// </summary>
     protected List<TransportExceptionDescriptor> PublishExceptions { get; } = new();
-
+    
     /// <summary>
     /// Resolves type descriptor
     /// </summary>

@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Client.Queues.Annotations;
+using Horse.Messaging.Client.Queues.Exceptions;
 using Horse.Messaging.Protocol;
 
 namespace Horse.Messaging.Client.Queues;
@@ -15,6 +16,8 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
     private readonly IQueueConsumer<TModel> _consumer;
     private readonly Func<IHandlerFactory> _consumerFactoryCreator;
     private QueueConsumerRegistration _registration;
+    private MoveOnErrorAttribute _moveOnError;
+
 
     public QueueConsumerExecutor(Type consumerType, IQueueConsumer<TModel> consumer, Func<IHandlerFactory> consumerFactoryCreator)
     {
@@ -32,6 +35,8 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
 
     private void ResolveQueueAttributes()
     {
+        _moveOnError = _consumerType.GetCustomAttribute<MoveOnErrorAttribute>();
+
         if (!SendPositiveResponse)
         {
             AutoAckAttribute ackAttribute = _consumerType.GetCustomAttribute<AutoAckAttribute>();
@@ -77,7 +82,21 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
         }
         catch (Exception e)
         {
-            if (SendNegativeResponse)
+            if (_moveOnError != null && !string.IsNullOrEmpty(_moveOnError.QueueName))
+            {
+                HorseMessage clone = message.Clone(true, true, client.UniqueIdGenerator.Create());
+                clone.SetStringAdditionalContent(System.Text.Json.JsonSerializer.Serialize(ExceptionDescription.Create(e)));
+                clone.Type = MessageType.QueueMessage;
+                clone.SetTarget(_moveOnError.QueueName);
+
+                var ack = await client.SendAndGetAck(message);
+
+                if (ack.Code == HorseResultCode.Ok)
+                    await client.SendAck(message);
+                else if (SendNegativeResponse)
+                    await SendNegativeAck(message, client, e);
+            }
+            else if (SendNegativeResponse)
                 await SendNegativeAck(message, client, e);
 
             await SendExceptions(message, client, e);
@@ -107,7 +126,7 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
             catch (Exception e)
             {
                 Type type = e.GetType();
-                if (Retry.IgnoreExceptions is { Length: > 0 })
+                if (Retry.IgnoreExceptions is {Length: > 0})
                 {
                     if (Retry.IgnoreExceptions.Any(x => x.IsAssignableFrom(type)))
                         throw;
@@ -121,7 +140,7 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
             }
         }
     }
-        
+
     /// <summary>
     /// Run before interceptors
     /// </summary>

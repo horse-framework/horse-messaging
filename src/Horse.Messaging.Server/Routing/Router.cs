@@ -8,6 +8,7 @@ using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Events;
+using Horse.Messaging.Server.Logging;
 
 namespace Horse.Messaging.Server.Routing;
 
@@ -131,7 +132,7 @@ public class Router
         }
         catch (Exception e)
         {
-            Rider.SendError("ADD_ROUTER_BINDING", e, $"Router:{Name}, Binding:{binding?.Name}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.RouterBindingAdd, $"RemoveBinding Router:{Name},  Binding:{binding?.Name}", e);
             return false;
         }
     }
@@ -181,7 +182,7 @@ public class Router
         }
         catch (Exception e)
         {
-            Rider.SendError("ADD_ROUTER_BINDING", e, $"Router:{Name}, Binding:{binding?.Name}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.RouterBindingAdd, $"RemoveBinding Router:{Name},  Binding:{binding?.Name}", e);
             return false;
         }
     }
@@ -222,7 +223,7 @@ public class Router
         }
         catch (Exception e)
         {
-            Rider.SendError("REMOVE_ROUTER_BINDING", e, $"Router:{Name}, Binding:{bindingName}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.RouterBindingRemove, $"RemoveBinding Router:{Name},  Binding:{bindingName}", e);
         }
     }
 
@@ -257,7 +258,7 @@ public class Router
         }
         catch (Exception e)
         {
-            Rider.SendError("REMOVE_ROUTER_BINDING", e, $"Router:{Name}, Binding:{binding?.Name}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.RouterBindingRemove, $"RemoveBinding Router:{Name},  Binding:{binding?.Name}", e);
         }
     }
 
@@ -304,7 +305,7 @@ public class Router
         }
         catch (Exception e)
         {
-            Rider.SendError("PUBLISH", e, $"Router:{Name}, Binding:{Name}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.RouterPublish, $"Publish Router:{Name}, Binding:{Name}", e);
             return RouterPublishResult.NoBindings;
         }
     }

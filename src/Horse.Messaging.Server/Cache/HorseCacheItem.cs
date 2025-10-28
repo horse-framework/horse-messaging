@@ -36,6 +36,11 @@ public class HorseCacheItem
     public string[] Tags { get; set; }
 
     /// <summary>
+    /// If true, cache will be stored in persistent storage.
+    /// </summary>
+    public bool IsPersistent { get; set; }
+
+    /// <summary>
     /// Cache value
     /// </summary>
     public MemoryStream Value { get; set; }

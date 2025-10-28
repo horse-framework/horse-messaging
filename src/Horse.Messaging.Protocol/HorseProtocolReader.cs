@@ -44,6 +44,16 @@ public class HorseProtocolReader
         if (!success)
             return null;
 
+        if (message.HasAdditionalContent)
+        {
+            success = await ReadAdditionalContent(message, stream);
+            if (!success)
+                return null;
+
+            if (message.AdditionalContent != null)
+                message.AdditionalContent.Position = 0;
+        }
+
         if (message.Content != null && message.Content.Position > 0)
             message.Content.Position = 0;
 
@@ -83,8 +93,7 @@ public class HorseProtocolReader
         else
             message.Type = (MessageType) proto;
 
-        // bytes[1] is reserved
-
+        message.HasAdditionalContent = bytes[1] > 127;
         message.MessageIdLength = bytes[2];
         message.SourceLength = bytes[3];
         message.TargetLength = bytes[4];
@@ -120,6 +129,16 @@ public class HorseProtocolReader
         else
             message.Length = length;
 
+        if (message.HasAdditionalContent)
+        {
+            byte[] additionalContentBytes = new byte[4];
+            bool done = await ReadCertainBytes(stream, additionalContentBytes, 0, additionalContentBytes.Length);
+            if (!done)
+                return false;
+
+            message.AdditionalContentLength = BitConverter.ToInt32(additionalContentBytes);
+        }
+
         if (message.MessageIdLength > 0)
             message.MessageId = await ReadOctetSizeData(stream, message.MessageIdLength);
 
@@ -150,7 +169,7 @@ public class HorseProtocolReader
         if (!read)
             return false;
 
-        string[] headers = Encoding.UTF8.GetString(data).Split(new[] {"\r\n"}, StringSplitOptions.RemoveEmptyEntries);
+        string[] headers = Encoding.UTF8.GetString(data).Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
         foreach (string header in headers)
         {
             int i = header.IndexOf(':');
@@ -188,8 +207,35 @@ public class HorseProtocolReader
 
             left -= (uint) read;
             await message.Content.WriteAsync(_buffer, 0, read);
-        }
-        while (left > 0);
+        } while (left > 0);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Reads message content
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private async Task<bool> ReadAdditionalContent(HorseMessage message, Stream stream)
+    {
+        if (message.AdditionalContentLength == 0)
+            return true;
+
+        if (message.AdditionalContent == null)
+            message.AdditionalContent = new MemoryStream();
+
+        int left = message.AdditionalContentLength;
+        int blen = _buffer.Length;
+        do
+        {
+            int rcount = left > blen ? blen : left;
+            int read = await stream.ReadAsync(_buffer, 0, rcount);
+            if (read == 0)
+                return false;
+
+            left -= read;
+            await message.AdditionalContent.WriteAsync(_buffer, 0, read);
+        } while (left > 0);
 
         return true;
     }
@@ -218,8 +264,7 @@ public class HorseProtocolReader
                 return false;
 
             total += read;
-        }
-        while (total < length);
+        } while (total < length);
 
         return true;
     }

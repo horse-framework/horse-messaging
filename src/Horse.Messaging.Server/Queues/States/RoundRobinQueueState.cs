@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues.Delivery;
 
 namespace Horse.Messaging.Server.Queues.States;
@@ -48,7 +49,7 @@ internal class RoundRobinQueueState : IQueueState
                 PushResult pushResult = _queue.AddMessage(message, false);
                 if (pushResult != PushResult.Success)
                     return pushResult;
-                    
+
                 return PushResult.NoConsumers;
             }
 
@@ -59,7 +60,7 @@ internal class RoundRobinQueueState : IQueueState
         }
         catch (Exception e)
         {
-            _queue.Rider.SendError("PUSH", e, $"QueueName:{_queue.Name}, State:RoundRobin");
+            _queue.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueuePush, "RoundRobin Queue Push: " + _queue.Name, e);
             return PushResult.Error;
         }
         finally
@@ -76,12 +77,13 @@ internal class RoundRobinQueueState : IQueueState
             deadline = DateTime.UtcNow.Add(_queue.Options.AcknowledgeTimeout);
 
         //return if client unsubsribes while waiting ack of previous message
-        if (!_queue.ClientsClone.Contains(receiver))
+        QueueClient receiverClient = _queue.FindClient(receiver.Client.UniqueId);
+        if (receiverClient == null)
         {
             PushResult pushResult = _queue.AddMessage(message, false);
             if (pushResult != PushResult.Success)
                 return pushResult;
-                
+
             return PushResult.NoConsumers;
         }
 
@@ -151,20 +153,19 @@ internal class RoundRobinQueueState : IQueueState
     /// </summary>
     private async Task<Tuple<QueueClient, int>> GetNextAvailableRRClient(int currentIndex, QueueMessage message, bool waitForAcknowledge)
     {
-        List<QueueClient> clients = _queue.ClientsClone;
-        if (clients.Count == 0)
+        if (_queue.ClientsCount() == 0)
             return new Tuple<QueueClient, int>(null, currentIndex);
 
         DateTime retryExpiration = DateTime.UtcNow.AddSeconds(30);
         while (true)
         {
             int index = currentIndex < 0 ? 0 : currentIndex;
-            for (int i = 0; i < clients.Count; i++)
+            for (int i = 0; i < _queue.ClientsArray.Length; i++)
             {
-                if (index >= clients.Count)
+                if (index >= _queue.ClientsArray.Length || _queue.ClientsArray[index] == null)
                     index = 0;
 
-                QueueClient client = clients[index];
+                QueueClient client = _queue.ClientsArray[index];
 
                 if (waitForAcknowledge && client.CurrentlyProcessing != null)
                 {
@@ -192,8 +193,7 @@ internal class RoundRobinQueueState : IQueueState
             }
 
             await Task.Delay(3);
-            clients = _queue.ClientsClone;
-            if (clients.Count == 0)
+            if (_queue.ClientsCount() == 0)
                 break;
 
             //don't try hard so much, wait for next trigger operation of the queue.

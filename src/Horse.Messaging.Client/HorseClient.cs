@@ -171,6 +171,11 @@ public class HorseClient : IDisposable
     public TimeSpan PullTimeout { get; set; } = TimeSpan.FromSeconds(15);
 
     /// <summary>
+    /// Interval for sending ping messages to server. 
+    /// </summary>
+    public TimeSpan PingInterval { get; set; } = TimeSpan.FromSeconds(15);
+
+    /// <summary>
     /// Triggered when client receives a message
     /// </summary>
     public event ClientMessageReceivedHandler MessageReceived;
@@ -268,6 +273,11 @@ public class HorseClient : IDisposable
     /// If horse protocol is specified on host when switching protocol is enabled. Switching protocol will be discarded for the session.
     /// </summary>
     public bool AutoDiscardSwitchingProtocol { get; set; } = true;
+
+    /// <summary>
+    /// If true, client does not send ping message to server if any message transmitted in the last PingInterval duration.
+    /// </summary>
+    public bool SmartHealthCheck { get; set; }
 
     #endregion
 
@@ -709,6 +719,9 @@ public class HorseClient : IDisposable
     /// </summary>
     public bool SendRaw(byte[] data)
     {
+        if (SmartHealthCheck)
+            _socket.KeepAlive();
+
         return _socket.Send(data);
     }
 
@@ -717,6 +730,9 @@ public class HorseClient : IDisposable
     /// </summary>
     public Task<bool> SendRawAsync(byte[] data)
     {
+        if (SmartHealthCheck)
+            _socket.KeepAlive();
+
         return _socket.SendAsync(data);
     }
 
@@ -734,6 +750,9 @@ public class HorseClient : IDisposable
 
         if (_socket == null)
             return false;
+
+        if (SmartHealthCheck)
+            _socket.KeepAlive();
 
         return _socket.Send(data);
     }
@@ -761,6 +780,9 @@ public class HorseClient : IDisposable
             sent = await _socket.SendAsync(data);
         }
 
+        if (sent && SmartHealthCheck)
+            _socket.KeepAlive();
+
         return sent ? HorseResult.Ok() : new HorseResult(HorseResultCode.SendError);
     }
 
@@ -786,6 +808,9 @@ public class HorseClient : IDisposable
         {
             byte[] data = HorseProtocolWriter.Create(message);
             _socket.Send(data, sendCallback);
+
+            if (SmartHealthCheck)
+                _socket.KeepAlive();
         }
     }
 
@@ -993,10 +1018,10 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends acknowledge message for the message.
     /// </summary>
-    public async Task<HorseResult> SendAck(HorseMessage message)
+    public Task<HorseResult> SendAck(HorseMessage message)
     {
         HorseMessage ack = message.CreateAcknowledge();
-        return await SendAsync(ack);
+        return SendAsync(ack);
     }
 
     /// <summary>
@@ -1052,7 +1077,7 @@ public class HorseClient : IDisposable
             if (response == null)
                 return HorseResult.Timeout();
 
-            HorseResult result = new HorseResult((HorseResultCode) response.ContentType);
+            HorseResult result = new HorseResult((HorseResultCode)response.ContentType);
             result.Message = response;
 
             if (response.HasHeader && string.IsNullOrEmpty(result.Reason))
@@ -1070,7 +1095,7 @@ public class HorseClient : IDisposable
 
     internal async Task<bool> EventSubscription(string eventName, bool subscribe, string queueName)
     {
-        ushort ct = subscribe ? (ushort) 1 : (ushort) 0;
+        ushort ct = subscribe ? (ushort)1 : (ushort)0;
         HorseMessage message = new HorseMessage(MessageType.Event, eventName, ct);
         message.SetMessageId(UniqueIdGenerator.Create());
         message.WaitResponse = true;
@@ -1091,7 +1116,7 @@ public class HorseClient : IDisposable
         if (response == null)
             return false;
 
-        HorseResultCode code = (HorseResultCode) response.ContentType;
+        HorseResultCode code = (HorseResultCode)response.ContentType;
         return code == HorseResultCode.Ok;
     }
 
@@ -1158,7 +1183,7 @@ public class HorseClient : IDisposable
                 break;
 
             case MessageType.Ping:
-                _socket.Pong();
+                _socket.Pong(message);
                 break;
 
             case MessageType.Response:
@@ -1199,6 +1224,9 @@ public class HorseClient : IDisposable
 
     internal async Task OnConnected()
     {
+        _socket.PingInterval = PingInterval;
+        _socket.SmartHealthCheck = SmartHealthCheck;
+
         Connected?.Invoke(this);
         ConnectedAction?.Invoke(this);
 

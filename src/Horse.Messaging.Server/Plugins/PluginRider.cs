@@ -7,10 +7,14 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Horse.Messaging.Plugins;
+using Horse.Messaging.Plugins.Cache;
+using Horse.Messaging.Plugins.Channels;
+using Horse.Messaging.Plugins.Queues;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Channels;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
 
@@ -22,15 +26,33 @@ public class PluginRider : IPluginRider
     /// <summary>
     /// Implemented Plugins
     /// </summary>
-    public HorsePlugin[] Plugins { get; private set; } = Array.Empty<HorsePlugin>();
+    public HorsePlugin[] Plugins { get; private set; } = [];
 
     private readonly List<PluginAssemblyData> _data = new List<PluginAssemblyData>();
     private readonly HorseRider _rider;
     private readonly string _dataFilename = "plugins.json";
 
+    /// <summary>
+    /// Cache operation manager
+    /// </summary>
+    public IPluginCacheRider Cache { get; }
+
+    /// <summary>
+    /// Queue operation manager   
+    /// </summary>
+    public IPluginQueueRider Queue { get; }
+
+    /// <summary>
+    /// Channel operation manager  
+    /// </summary>
+    public IPluginChannelRider Channel { get; }
+
     internal PluginRider(HorseRider rider)
     {
         _rider = rider;
+        Cache = new PluginCacheRider(rider);
+        Queue = new PluginQueueRider(rider);
+        Channel = new PluginChannelRider(rider);
     }
 
     /// <summary>
@@ -85,6 +107,9 @@ public class PluginRider : IPluginRider
 
         string json = File.ReadAllText(fullname);
         var data = JsonSerializer.Deserialize<List<PluginAssemblyData>>(json, SerializerFactory.Default(true, true));
+
+        foreach (PluginAssemblyData d in data)
+            d.Plugins = d.Plugins.Where(x => !x.Removed).ToList();
 
         lock (_data)
         {
@@ -144,14 +169,15 @@ public class PluginRider : IPluginRider
     /// </summary>
     private async Task LoadAssemblyPlugins(PluginAssemblyData data)
     {
-        Assembly assembly = Assembly.LoadFrom(data.Location);
+        var context = new PluginAssemblyLoadContext();
+        Assembly assembly = context.LoadFromAssemblyPath(Path.GetFullPath(data.Location));
         data.LoadedAssembly = assembly;
 
         foreach (Type type in GetPluginBuilderTypesOfAssembly(assembly))
         {
             try
             {
-                IHorsePluginBuilder builder = (IHorsePluginBuilder) Activator.CreateInstance(type);
+                IHorsePluginBuilder builder = (IHorsePluginBuilder)Activator.CreateInstance(type);
                 PluginData pluginData = data.Plugins.FirstOrDefault(x => x.BuilderTypeName == type.FullName);
 
                 if (pluginData != null && pluginData.Removed)
@@ -162,7 +188,7 @@ public class PluginRider : IPluginRider
                 {
                     plugin = builder.Build();
                     plugin.SetName(builder.GetName());
-                    
+
                     if (Plugins.Any(x => string.Equals(x.Name, plugin.Name)))
                     {
                         _ = plugin.Remove();
@@ -197,7 +223,7 @@ public class PluginRider : IPluginRider
             }
             catch (Exception e)
             {
-                _rider.SendError("Plugin", e, type.FullName);
+                _rider.SendError(HorseLogLevel.Error, HorseLogEvents.PluginLoadAssembly, "Assembly Name: " + type.FullName, e);
             }
         }
     }
@@ -207,7 +233,8 @@ public class PluginRider : IPluginRider
     /// </summary>
     public async Task AddAssemblyPlugins(string filename)
     {
-        Assembly assembly = Assembly.LoadFrom(filename);
+        var context = new PluginAssemblyLoadContext();
+        Assembly assembly = context.LoadFromAssemblyPath(Path.GetFullPath(filename));
 
         string assemblyVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location).FileVersion;
         lock (_data)
@@ -247,12 +274,12 @@ public class PluginRider : IPluginRider
 
                 try
                 {
-                    IHorsePluginBuilder builder = (IHorsePluginBuilder) Activator.CreateInstance(type);
+                    IHorsePluginBuilder builder = (IHorsePluginBuilder)Activator.CreateInstance(type);
                     await AddPlugin(assemblyData, builder);
                 }
                 catch (Exception e)
                 {
-                    _rider.SendError("Plugin", e, type.FullName);
+                    _rider.SendError(HorseLogLevel.Error, HorseLogEvents.PluginAddAssembly, "Assembly Name: " + type.FullName, e);
                 }
             }
         }
@@ -330,12 +357,12 @@ public class PluginRider : IPluginRider
 
                 try
                 {
-                    IHorsePluginBuilder builder = (IHorsePluginBuilder) Activator.CreateInstance(type);
+                    IHorsePluginBuilder builder = (IHorsePluginBuilder)Activator.CreateInstance(type);
                     await AddPlugin(assemblyData, builder);
                 }
                 catch (Exception e)
                 {
-                    _rider.SendError("Plugin", e, type.FullName);
+                    _rider.SendError(HorseLogLevel.Error, HorseLogEvents.PluginAddAssembly, "Assembly Name: " + type.FullName, e);
                 }
             }
         }
@@ -349,18 +376,19 @@ public class PluginRider : IPluginRider
     private async Task AddPlugin(PluginAssemblyData assemblyData, IHorsePluginBuilder builder)
     {
         HorsePlugin plugin = builder.Build();
+        plugin.SetName(builder.GetName());
 
-        if (Plugins.Any(x => string.Equals(x.Name, plugin.Name, StringComparison.InvariantCultureIgnoreCase)))
+        if (Plugins.Any(x => string.Equals(x.Name, plugin.Name, StringComparison.InvariantCultureIgnoreCase) && !x.Removed))
             throw new DuplicateNameException($"There is already active plugin with name: {plugin.Name}. Please remove it first.");
 
         plugin.Set(this);
-        plugin.SetName(builder.GetName());
         await plugin.Initialize();
 
         plugin.Initialized = true;
         plugin.Removed = false;
 
         var plugins = Plugins.ToList();
+        plugins.RemoveAll(x => string.Equals(x.Name, plugin.Name, StringComparison.InvariantCultureIgnoreCase) && x.Removed);
         plugins.Add(plugin);
         Plugins = plugins.ToArray();
 
@@ -443,7 +471,7 @@ public class PluginRider : IPluginRider
             }
         }
 
-        if (assemblyData == null || pdata == null)
+        if (assemblyData == null)
             return false;
 
         HorsePlugin plugin = Plugins.FirstOrDefault(x => x.Name.Equals(pluginName, StringComparison.InvariantCultureIgnoreCase));
@@ -452,11 +480,14 @@ public class PluginRider : IPluginRider
         if (plugin == null)
         {
             if (assemblyData.LoadedAssembly == null)
-                assemblyData.LoadedAssembly = Assembly.LoadFrom(assemblyData.Location);
+            {
+                var context = new PluginAssemblyLoadContext();
+                assemblyData.LoadedAssembly = context.LoadFromAssemblyPath(Path.GetFullPath(assemblyData.Location));
+            }
 
             foreach (Type type in GetPluginBuilderTypesOfAssembly(assemblyData.LoadedAssembly))
             {
-                IHorsePluginBuilder builder = (IHorsePluginBuilder) Activator.CreateInstance(type);
+                IHorsePluginBuilder builder = (IHorsePluginBuilder)Activator.CreateInstance(type);
                 string builderPluginName = builder.GetName();
 
                 if (string.Equals(builderPluginName, pluginName))
@@ -498,7 +529,11 @@ public class PluginRider : IPluginRider
             return;
 
         string target = targetName;
-        if (!targetName.StartsWith('@'))
+        bool pluginTarget = false;
+
+        if (targetName.StartsWith('@'))
+            pluginTarget = target.StartsWith("@plugin:");
+        else
         {
             switch (sourceEvent)
             {
@@ -522,7 +557,7 @@ public class PluginRider : IPluginRider
 
         foreach (HorsePlugin plugin in Plugins)
         {
-            if (target.StartsWith("@plugin:") && !string.Equals(plugin.Name, target.Substring(8)))
+            if (pluginTarget && !string.Equals(plugin.Name, target.Substring(8)))
                 continue;
 
             if (plugin.Handlers.Count == 0)
@@ -533,7 +568,7 @@ public class PluginRider : IPluginRider
             if (!found)
                 continue;
 
-            _ = handler.Execute(new HorsePluginContext(sourceEvent, plugin, null, message));
+            _ = handler.Execute(new HorsePluginContext(sourceEvent, plugin, this, message));
         }
     }
 
@@ -584,8 +619,8 @@ public class PluginRider : IPluginRider
 
                 if (message.Target.StartsWith("@type:", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    List<MessagingClient> receivers = _rider.Client.FindByType(message.Target.Substring(6));
-                    if (receivers.Count == 0)
+                    MessagingClient[] receivers = _rider.Client.FindByType(message.Target.Substring(6));
+                    if (receivers.Length == 0)
                         return false;
 
                     if (message.HighPriority)
@@ -602,8 +637,8 @@ public class PluginRider : IPluginRider
 
                 if (message.Target.StartsWith("@name:", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    List<MessagingClient> receivers = _rider.Client.FindClientByName(message.Target.Substring(6));
-                    if (receivers.Count == 0)
+                    MessagingClient[] receivers = _rider.Client.FindClientByName(message.Target.Substring(6));
+                    if (receivers.Length == 0)
                         return false;
 
                     if (message.HighPriority)

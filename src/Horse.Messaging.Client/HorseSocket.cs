@@ -95,11 +95,11 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
                 _client.SwitchingProtocol.ClientProtocolHandshake(Data, Stream).Wait();
             else
             {
-                Stream.Write(PredefinedMessages.PROTOCOL_BYTES_V3);
+                Stream.Write(PredefinedMessages.PROTOCOL_BYTES_V4);
                 SendInfoMessage(host).Wait();
 
                 //Reads the protocol response
-                byte[] buffer = new byte[PredefinedMessages.PROTOCOL_BYTES_V3.Length];
+                byte[] buffer = new byte[PredefinedMessages.PROTOCOL_BYTES_V4.Length];
                 int len = Stream.Read(buffer, 0, buffer.Length);
 
                 CheckProtocolResponse(buffer, len);
@@ -157,11 +157,11 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
                 await _client.SwitchingProtocol.ClientProtocolHandshake(Data, Stream);
             else
             {
-                await Stream.WriteAsync(PredefinedMessages.PROTOCOL_BYTES_V3);
+                await Stream.WriteAsync(PredefinedMessages.PROTOCOL_BYTES_V4);
                 await SendInfoMessage(host);
 
                 //Reads the protocol response
-                byte[] buffer = new byte[PredefinedMessages.PROTOCOL_BYTES_V3.Length];
+                byte[] buffer = new byte[PredefinedMessages.PROTOCOL_BYTES_V4.Length];
                 int len = await Stream.ReadAsync(buffer);
 
                 CheckProtocolResponse(buffer, len);
@@ -186,11 +186,11 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
     /// </summary>
     private static void CheckProtocolResponse(byte[] buffer, int length)
     {
-        if (length < PredefinedMessages.PROTOCOL_BYTES_V3.Length)
+        if (length < PredefinedMessages.PROTOCOL_BYTES_V4.Length)
             throw new InvalidOperationException("Unexpected server response");
 
-        for (int i = 0; i < PredefinedMessages.PROTOCOL_BYTES_V3.Length; i++)
-            if (PredefinedMessages.PROTOCOL_BYTES_V3[i] != buffer[i])
+        for (int i = 0; i < PredefinedMessages.PROTOCOL_BYTES_V4.Length; i++)
+            if (PredefinedMessages.PROTOCOL_BYTES_V4[i] != buffer[i])
                 throw new NotSupportedException("Unsupported Horse Protocol version. Server supports: " + Encoding.UTF8.GetString(buffer));
     }
 
@@ -270,9 +270,6 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
             return;
         }
 
-        if (SmartHealthCheck)
-            KeepAlive();
-
         _ = _client.OnMessageReceived(message);
     }
 
@@ -303,6 +300,9 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
             byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
             sent = await SendAsync(data);
         }
+
+        if (sent && SmartHealthCheck)
+            KeepAlive();
 
         return sent ? HorseResult.Ok() : new HorseResult(HorseResultCode.SendError);
     }

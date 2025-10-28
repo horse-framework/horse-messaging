@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.IO;
+using System.Threading.Tasks;
 using Horse.Jockey;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
@@ -33,7 +35,7 @@ namespace Sample.Server
                 .ConfigureQueues(cfg =>
                 {
                     cfg.Options.Type = QueueType.Push;
-                    cfg.Options.MessageLimit = 400;
+                    cfg.Options.MessageLimit = 10;
                     cfg.Options.AutoQueueCreation = true;
                     cfg.UseMemoryQueues();
                 })
@@ -61,6 +63,8 @@ namespace Sample.Server
             HorseServer server = new HorseServer();
             server.Options.PingInterval = 10;
             server.UseRider(rider);
+
+            //await rider.Cache.Set("TestCache1", new MemoryStream("Hello World"u8.ToArray()), TimeSpan.FromHours(4), null, null, true);
             server.Run(2626);
         }
     }

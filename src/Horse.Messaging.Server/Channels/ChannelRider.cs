@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading;
@@ -9,6 +10,7 @@ using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Logging;
 
 namespace Horse.Messaging.Server.Channels;
 
@@ -19,7 +21,7 @@ public class ChannelRider
 {
     #region Properties
 
-    private readonly ArrayContainer<HorseChannel> _channels = new();
+    private readonly ConcurrentDictionary<string, HorseChannel> _channels = new ConcurrentDictionary<string, HorseChannel>();
 
     /// <summary>
     /// Locker object for preventing to create duplicated channels when requests are concurrent and auto channels creation is enabled
@@ -39,7 +41,7 @@ public class ChannelRider
     /// <summary>
     /// All Channels of the server
     /// </summary>
-    public IEnumerable<HorseChannel> Channels => _channels.All();
+    public IEnumerable<HorseChannel> Channels => _channels.Values;
 
     /// <summary>
     /// Default channel options
@@ -140,7 +142,8 @@ public class ChannelRider
     /// </summary>
     public HorseChannel Find(string name)
     {
-        return _channels.Find(x => x.Name == name);
+        _channels.TryGetValue(name, out HorseChannel channel);
+        return channel;
     }
 
     /// <summary>
@@ -192,10 +195,10 @@ public class ChannelRider
             if (!Filter.CheckNameEligibility(channelName))
                 throw new InvalidOperationException("Invalid channel name");
 
-            if (Rider.Options.ChannelLimit > 0 && Rider.Options.ChannelLimit >= _channels.Count())
+            if (Rider.Options.ChannelLimit > 0 && Rider.Options.ChannelLimit >= _channels.Count)
                 throw new OperationCanceledException("Channel limit is exceeded for the server");
 
-            HorseChannel channel = _channels.Find(x => x.Name == channelName);
+            _channels.TryGetValue(channelName, out HorseChannel channel);
 
             if (channel != null)
             {
@@ -209,7 +212,7 @@ public class ChannelRider
             if (requestMessage != null)
                 channel.UpdateOptionsByMessage(requestMessage);
 
-            _channels.Add(channel);
+            _channels.TryAdd(channel.Name, channel);
             foreach (IChannelEventHandler handler in EventHandlers.All())
                 _ = handler.OnCreated(channel);
 
@@ -229,7 +232,7 @@ public class ChannelRider
         }
         catch (Exception e)
         {
-            Rider.SendError("CREATE_CHANNEL", e, $"ChannelName:{channelName}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.ChannelCreate, "Channel Create Error: " + channelName, e);
 
             if (!hideException)
                 throw;
@@ -251,13 +254,10 @@ public class ChannelRider
     /// <summary>
     /// Removes a channel from the server
     /// </summary>
-    public void Remove(string name)
+    public HorseChannel Remove(string name)
     {
-        HorseChannel channel = _channels.Find(x => x.Name == name);
-        if (channel == null)
-            return;
-
-        Remove(channel);
+        _channels.TryRemove(name, out HorseChannel channel);
+        return channel;
     }
 
     /// <summary>
@@ -272,7 +272,7 @@ public class ChannelRider
     {
         try
         {
-            _channels.Remove(channel);
+            _channels.TryRemove(channel.Name, out _);
             channel.Status = ChannelStatus.Destroyed;
 
             foreach (IChannelEventHandler handler in EventHandlers.All())
@@ -292,7 +292,7 @@ public class ChannelRider
         }
         catch (Exception e)
         {
-            Rider.SendError("REMOVE_CHANNEL", e, $"ChannelName:{channel?.Name}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.ChannelRemove, "Channel Remove Error: " + channel?.Name, e);
         }
     }
 

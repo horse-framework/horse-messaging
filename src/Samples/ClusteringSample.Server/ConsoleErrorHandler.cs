@@ -1,12 +1,13 @@
 ﻿using System;
 using Horse.Messaging.Server;
+using Horse.Messaging.Server.Logging;
 
 namespace ClusteringSample.Server;
 
 public class ConsoleErrorHandler : IErrorHandler
 {
-    public void Error(string hint, Exception exception, string payload)
+    public void Error(HorseLogLevel logLevel, int eventId, string message, Exception exception)
     {
-        Console.WriteLine($"Error {hint}: {exception}");
+        Console.WriteLine($"Error {message}: {exception}");
     }
 }

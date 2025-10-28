@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -12,6 +13,7 @@ using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.Managers;
 using Horse.Messaging.Server.Security;
@@ -23,7 +25,7 @@ namespace Horse.Messaging.Server.Queues;
 /// </summary>
 public class QueueRider
 {
-    private readonly ArrayContainer<HorseQueue> _queues = new();
+    private readonly ConcurrentDictionary<string, HorseQueue> _queues = new ConcurrentDictionary<string, HorseQueue>();
 
     /// <summary>
     /// Locker object for preventing to create duplicated queues when requests are concurrent and auto queue creation is enabled
@@ -48,7 +50,7 @@ public class QueueRider
     /// <summary>
     /// All Queues of the server
     /// </summary>
-    public IEnumerable<HorseQueue> Queues => _queues.All();
+    public IEnumerable<HorseQueue> Queues => _queues.Values;
 
     /// <summary>
     /// Key specific registered queue manager methods
@@ -190,7 +192,8 @@ public class QueueRider
     /// </summary>
     public HorseQueue Find(string name)
     {
-        return _queues.Find(x => x.Name == name);
+        _queues.TryGetValue(name, out HorseQueue queue);
+        return queue;
     }
 
     /// <summary>
@@ -271,7 +274,7 @@ public class QueueRider
             if (Rider.Options.QueueLimit > 0 && Rider.Options.QueueLimit >= _queues.Count())
                 throw new OperationCanceledException("Queue limit is exceeded for the server");
 
-            HorseQueue queue = _queues.Find(x => x.Name == queueName);
+            _queues.TryGetValue(queueName, out HorseQueue queue);
 
             if (queue != null)
             {
@@ -329,7 +332,7 @@ public class QueueRider
                 await queue.InitializeQueue(queueManager);
             }
 
-            _queues.Add(queue);
+            _queues.TryAdd(queue.Name, queue);
 
             foreach (IQueueEventHandler handler in EventHandlers.All())
                 _ = handler.OnCreated(queue);
@@ -356,7 +359,7 @@ public class QueueRider
         }
         catch (Exception e)
         {
-            Rider.SendError("CREATE_QUEUE", e, $"QueueName:{queueName}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueCreate, $"CreateQueue: {queueName}", e);
 
             if (!hideException)
                 throw;
@@ -431,7 +434,7 @@ public class QueueRider
                 await queue.InitializeQueue(deliveryHandler, false);
             }
 
-            _queues.Add(queue);
+            _queues.TryAdd(queue.Name, queue);
 
             if (OptionsConfigurator != null)
             {
@@ -452,7 +455,7 @@ public class QueueRider
         }
         catch (Exception e)
         {
-            Rider.SendError("CREATE_QUEUE", e, $"Replicated Queue:{info.Name}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueCreate, $"CreateQueue Replicated: {info.Name}", e);
             return null;
         }
         finally
@@ -486,7 +489,7 @@ public class QueueRider
     {
         try
         {
-            _queues.Remove(queue);
+            _queues.TryRemove(queue.Name, out _);
             queue.SetStatus(QueueStatus.Paused);
 
             foreach (IQueueEventHandler handler in EventHandlers.All())
@@ -503,7 +506,7 @@ public class QueueRider
         }
         catch (Exception e)
         {
-            Rider.SendError("REMOVE_QUEUE", e, $"QueueName:{queue?.Name}");
+            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueRemove, $"Remove Queue: {queue?.Name}", e);
         }
     }
 

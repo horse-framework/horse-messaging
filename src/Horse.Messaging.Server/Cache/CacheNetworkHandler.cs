@@ -54,13 +54,13 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                 }
 
                 GetCacheItemResult result = await _cache.Get(message.Target);
-                if (result?.item == null)
+                if (result?.Item == null)
                 {
                     await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
                     return;
                 }
 
-                HorseCacheItem item = result.item;
+                HorseCacheItem item = result.Item;
                 HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
                 response.SetSource(message.Target);
 
@@ -99,12 +99,14 @@ internal class CacheNetworkHandler : INetworkMessageHandler
 
                 string messageTimeout = message.FindHeader(HorseHeaders.MESSAGE_TIMEOUT);
                 string warningDuration = message.FindHeader(HorseHeaders.WARNING_DURATION);
+                string persistentCache = message.FindHeader(HorseHeaders.PERSISTENT_CACHE);
                 string tags = message.FindHeader(HorseHeaders.TAG);
 
-                string[] tagNames = string.IsNullOrEmpty(tags) ? Array.Empty<string>() : tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
+                string[] tagNames = string.IsNullOrEmpty(tags) ? [] : tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
 
                 TimeSpan timeout = TimeSpan.Zero;
                 TimeSpan? warning = null;
+                bool persistent = false;
 
                 if (!string.IsNullOrEmpty(messageTimeout))
                     timeout = TimeSpan.FromSeconds(Convert.ToInt32(messageTimeout));
@@ -112,7 +114,10 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                 if (!string.IsNullOrEmpty(warningDuration))
                     warning = TimeSpan.FromSeconds(Convert.ToInt32(warningDuration));
 
-                CacheOperation operation = await _cache.Set(client, !client.IsNodeClient, message.Target, message.Content, timeout, warning, tagNames);
+                if (!string.IsNullOrEmpty(persistentCache))
+                    persistent = string.Equals(persistentCache, "1") || string.Equals(persistentCache, "true", StringComparison.InvariantCultureIgnoreCase);
+
+                CacheOperation operation = await _cache.Set(client, !client.IsNodeClient, message.Target, message.Content, timeout, warning, tagNames, persistent);
                 switch (operation.Result)
                 {
                     case CacheResult.Ok:
@@ -160,7 +165,7 @@ internal class CacheNetworkHandler : INetworkMessageHandler
                     timeout = TimeSpan.FromSeconds(Convert.ToInt32(messageTimeout));
 
                 GetCacheItemResult getResult = await _cache.GetIncremental(message.Target, timeout, increment, tagNames);
-                HorseCacheItem item = getResult.item;
+                HorseCacheItem item = getResult.Item;
 
                 HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
                 response.SetSource(message.Target);

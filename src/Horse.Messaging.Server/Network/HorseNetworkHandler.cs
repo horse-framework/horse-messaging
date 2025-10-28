@@ -95,6 +95,12 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         client.Name = data.Properties.GetStringValue(HorseHeaders.CLIENT_NAME);
         client.Type = data.Properties.GetStringValue(HorseHeaders.CLIENT_TYPE);
 
+        if (string.IsNullOrEmpty(client.Name))
+            client.Name = "(Unknown)";
+
+        if (string.IsNullOrEmpty(client.Type))
+            client.Type = "(Unknown)";
+
         if (isNode)
         {
             if (_rider.Cluster.Options.SharedSecret != client.Token)
@@ -220,11 +226,10 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         MessagingClient messagingClient = (MessagingClient) client;
 
         if (messagingClient.IsNodeClient)
-        {
             return Task.CompletedTask;
-        }
 
         _rider.Client.Remove(messagingClient);
+        
         foreach (IClientHandler handler in _rider.Client.Handlers.All())
             _ = handler.Disconnected(_rider, messagingClient);
 
@@ -261,7 +266,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
             else if (message.Source != mc.UniqueId)
                 message.SetSource(mc.UniqueId);
 
-            await RouteToHandler(mc, message);
+            await RouteToHandler(mc, message).ConfigureAwait(false);
         }
         catch
         {

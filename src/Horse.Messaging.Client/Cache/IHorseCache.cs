@@ -60,7 +60,8 @@ public interface IHorseCache
     /// <param name="key">Cache key</param>
     /// <param name="data">Cache item</param>
     /// <param name="tags">Cache tags</param>
-    Task<HorseResult> Set<TData>(string key, TData data, string[] tags = null);
+    /// <param name="persistent">If true, cache key and value will be persistent</param>
+    Task<HorseResult> Set<TData>(string key, TData data, string[] tags = null, bool persistent = false);
 
     /// <summary>
     /// Sets an item to cache store with specified duration
@@ -69,7 +70,7 @@ public interface IHorseCache
     /// <param name="data">Cache item</param>
     /// <param name="duration">Cache expiration duration</param>
     /// <param name="tags">Cache tags</param>
-    Task<HorseResult> Set<TData>(string key, TData data, TimeSpan duration, string[] tags = null);
+    Task<HorseResult> Set<TData>(string key, TData data, TimeSpan duration, string[] tags = null, bool persistent = false);
 
     /// <summary>
     /// Sets an item to cache store with specified duration
@@ -77,9 +78,10 @@ public interface IHorseCache
     /// <param name="key">Cache key</param>
     /// <param name="data">Cache item</param>
     /// <param name="duration">Cache expiration duration</param>
-    /// <param name="expirationWarningDuration">The duration value any getter client receives expiration warning</param>
+    /// <param name="expirationWarningDuration">warning duration for expiration</param>
     /// <param name="tags">Cache tags</param>
-    Task<HorseResult> Set<TData>(string key, TData data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags = null);
+    /// <param name="persistent">The duration value any getter client receives expiration warning</param>
+    Task<HorseResult> Set<TData>(string key, TData data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags = null, bool persistent = false);
 
     /// <summary>
     /// Sets a string to cache store
@@ -87,7 +89,8 @@ public interface IHorseCache
     /// <param name="key">Cache key</param>
     /// <param name="data">Cache item</param>
     /// <param name="tags">Cache tags</param>
-    Task<HorseResult> SetString(string key, string data, string[] tags = null);
+    /// <param name="persistent">The duration value any getter client receives expiration warning</param>
+    Task<HorseResult> SetString(string key, string data, string[] tags = null, bool persistent = false);
 
     /// <summary>
     /// Sets a string to cache store
@@ -96,7 +99,8 @@ public interface IHorseCache
     /// <param name="data">Cache item</param>
     /// <param name="duration">Cache expiration duration</param>
     /// <param name="tags">Cache tags</param>
-    Task<HorseResult> SetString(string key, string data, TimeSpan duration, string[] tags = null);
+    /// <param name="persistent">The duration value any getter client receives expiration warning</param>
+    Task<HorseResult> SetString(string key, string data, TimeSpan duration, string[] tags = null, bool persistent = false);
 
     /// <summary>
     /// Sets a string to cache store
@@ -106,7 +110,8 @@ public interface IHorseCache
     /// <param name="duration">Cache expiration duration</param>
     /// <param name="expirationWarningDuration">The duration value any getter client receives expiration warning</param>
     /// <param name="tags">Cache tags</param>
-    Task<HorseResult> SetString(string key, string data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags = null);
+    /// <param name="persistent">The duration value any getter client receives expiration warning</param>
+    Task<HorseResult> SetString(string key, string data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags = null, bool persistent = false);
 
     /// <summary>
     /// Sets the binary data to cache
@@ -114,7 +119,8 @@ public interface IHorseCache
     /// <param name="key">Cache key</param>
     /// <param name="data">Cache data</param>
     /// <param name="tags">Cache tags</param>
-    Task<HorseResult> SetData(string key, byte[] data, string[] tags = null);
+    /// <param name="persistent">The duration value any getter client receives expiration warning</param>
+    Task<HorseResult> SetData(string key, byte[] data, string[] tags = null, bool persistent = false);
 
     /// <summary>
     /// Sets the binary data to cache
@@ -123,7 +129,8 @@ public interface IHorseCache
     /// <param name="data">Cache data</param>
     /// <param name="duration">Cache expiration duration</param>
     /// <param name="tags">Cache tags</param>
-    Task<HorseResult> SetData(string key, byte[] data, TimeSpan duration, string[] tags = null);
+    /// <param name="persistent">The duration value any getter client receives expiration warning</param>
+    Task<HorseResult> SetData(string key, byte[] data, TimeSpan duration, string[] tags = null, bool persistent = false);
 
     /// <summary>
     /// Sets the binary data to cache
@@ -133,7 +140,8 @@ public interface IHorseCache
     /// <param name="duration">Cache expiration duration</param>
     /// <param name="expirationWarningDuration">The duration value any getter client receives expiration warning</param>
     /// <param name="tags">Cache tags</param>
-    Task<HorseResult> SetData(string key, byte[] data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags = null);
+    /// <param name="persistent">The duration value any getter client receives expiration warning</param>
+    Task<HorseResult> SetData(string key, byte[] data, TimeSpan duration, TimeSpan expirationWarningDuration, string[] tags = null, bool persistent = false);
 
     /// <summary>
     /// Removes a key and value from from

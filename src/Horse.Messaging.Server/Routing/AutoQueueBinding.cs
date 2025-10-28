@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues;
 
 namespace Horse.Messaging.Server.Routing;
@@ -46,7 +47,7 @@ public class AutoQueueBinding : Binding
         }
         catch (Exception e)
         {
-            Router.Rider.SendError("BINDING_SEND", e, $"Type:AutoQueue, Binding:{Name}");
+            Router.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.AutoQueueBindingSend, $"AutoQueueBindingSend to {Name}", e);
             return false;
         }
     }

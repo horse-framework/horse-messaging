@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Helpers;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues;
 
 namespace Horse.Messaging.Server.Routing;
@@ -52,7 +53,7 @@ public class TopicBinding : Binding
         }
         catch (Exception e)
         {
-            Router.Rider.SendError("BINDING_SEND", e, $"Type:Topic, Binding:{Name}");
+            Router.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.RouterBindingSend, $"BindingSend Type:Topic, Binding:{Name}", e);
             return false;
         }
     }

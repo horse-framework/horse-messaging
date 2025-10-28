@@ -3,7 +3,7 @@
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <LangVersion>default</LangVersion>
-        <TargetFrameworks>net7.0;net8.0</TargetFrameworks>
+        <TargetFramework>net9.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
@@ -14,7 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Horse.Jockey" Version="6.9.2" />
+      <PackageReference Include="Horse.Jockey" Version="7.1.0" />
     </ItemGroup>
 
 </Project>

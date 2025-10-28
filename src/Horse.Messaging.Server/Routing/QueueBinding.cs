@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues;
 
 namespace Horse.Messaging.Server.Routing;
@@ -45,7 +46,7 @@ public class QueueBinding : Binding
         }
         catch (Exception e)
         {
-            Router.Rider.SendError("BINDING_SEND", e, $"Type:Queue, Binding:{Name}");
+            Router.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.RouterBindingSend, $"BindingSend Type:Queue, Router:{Router.Name}, Binding:{Name}", e);
             return false;
         }
     }

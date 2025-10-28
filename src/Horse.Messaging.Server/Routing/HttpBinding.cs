@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
+using Horse.Messaging.Server.Logging;
 
 namespace Horse.Messaging.Server.Routing;
 
@@ -73,7 +74,7 @@ public class HttpBinding : Binding
         }
         catch (Exception e)
         {
-            Router.Rider.SendError("BINDING_SEND", e, $"Type:Http, Binding:{Name}");
+            Router.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.RouterBindingSend, $"BindingSend Type:Http, Router:{Router.Name}, Binding:{Name}", e);
             return false;
         }
     }

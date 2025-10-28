@@ -49,26 +49,6 @@ public class HorseProtocolWriter
     }
 
     /// <summary>
-    /// Creates byte array of only Horse message frame
-    /// </summary>
-    public static byte[] CreateFrame(HorseMessage value)
-    {
-        using MemoryStream ms = new MemoryStream();
-        WriteFrame(ms, value, false);
-        return ms.ToArray();
-    }
-
-    /// <summary>
-    /// Creates byte array of only Horse message content
-    /// </summary>
-    public static byte[] CreateContent(HorseMessage value)
-    {
-        using MemoryStream ms = new MemoryStream();
-        WriteContent(ms, value);
-        return ms.ToArray();
-    }
-
-    /// <summary>
     /// Writes frame to stream
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -86,8 +66,13 @@ public class HorseProtocolWriter
             proto += 32;
 
         ms.WriteByte(proto);
-        byte reserved = 0;
-        ms.WriteByte(reserved);
+
+        byte addContent = 0;
+        if (message.HasAdditionalContent)
+            addContent += 128;
+
+        ms.WriteByte(addContent);
+
         ms.WriteByte((byte) message.MessageIdLength);
         ms.WriteByte((byte) message.SourceLength);
         ms.WriteByte((byte) message.TargetLength);
@@ -114,6 +99,9 @@ public class HorseProtocolWriter
             ms.WriteByte(255);
             ms.Write(BitConverter.GetBytes(message.Length));
         }
+
+        if (message.HasAdditionalContent)
+            ms.Write(BitConverter.GetBytes(message.AdditionalContentLength));
 
         if (message.MessageIdLength > 0)
         {
@@ -163,6 +151,9 @@ public class HorseProtocolWriter
     {
         if (message.Length > 0 && message.Content != null)
             message.Content.WriteTo(ms);
+
+        if (message.HasAdditionalContent && message.AdditionalContent != null)
+            message.AdditionalContent.WriteTo(ms);
 
         ms.Position = 0;
     }

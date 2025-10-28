@@ -1,6 +1,7 @@
 using AdvancedSample.Core;
 using AdvancedSample.Messaging.Server.Handlers;
 using Horse.Messaging.Server;
+using Horse.Messaging.Server.Logging;
 using Horse.Server;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

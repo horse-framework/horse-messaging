@@ -43,4 +43,9 @@ public class HorseRiderOptions
     /// Zero is unlimited.
     /// </summary>
     public int RouterLimit { get; set; }
+
+    /// <summary>
+    /// If true, console logs will be written to the Console in Elastic JSON format.
+    /// </summary>
+    public bool UseElasticConsoleLogs { get; set; } = true;
 }

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Logging;
 
 namespace Horse.Messaging.Server.Queues;
 
@@ -68,7 +69,7 @@ public class QueueFiller
         }
         catch (Exception e)
         {
-            _queue.Rider.SendError("FILL_JSON", e, $"QueueName:{_queue.Name}");
+            _queue.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueFill, $"Fill Queue Json: {_queue.Name}", e);
             return PushResult.Error;
         }
     }
@@ -120,7 +121,7 @@ public class QueueFiller
         }
         catch (Exception e)
         {
-            _queue.Rider.SendError("FILL_JSON", e, $"QueueName:{_queue.Name}");
+            _queue.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueFill, $"Fill Queue Json: {_queue.Name}", e);
             return PushResult.Error;
         }
     }
@@ -173,7 +174,7 @@ public class QueueFiller
         }
         catch (Exception e)
         {
-            _queue.Rider.SendError("FILL_STRING", e, $"QueueName:{_queue.Name}");
+            _queue.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueFill, $"Fill Queue String: {_queue.Name}", e);
             return PushResult.Error;
         }
     }
@@ -226,7 +227,7 @@ public class QueueFiller
         }
         catch (Exception e)
         {
-            _queue.Rider.SendError("FILL_DATA", e, $"QueueName:{_queue.Name}");
+            _queue.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueFill, $"Fill Data Json: {_queue.Name}", e);
             return PushResult.Error;
         }
     }
@@ -280,7 +281,7 @@ public class QueueFiller
         }
         catch (Exception e)
         {
-            _queue.Rider.SendError("FILL_MESSAGE", e, $"QueueName:{_queue.Name}");
+            _queue.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueFill, $"Fill Queue Message: {_queue.Name}", e);
             return PushResult.Error;
         }
     }

@@ -8,11 +8,9 @@ namespace Horse.Messaging.Client;
 
 internal class SerializerFactory
 {
-    private static JsonSerializerOptions _options;
-
     internal static JsonSerializerOptions Default()
     {
-        return _options ??= new JsonSerializerOptions
+        return new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
             Converters =

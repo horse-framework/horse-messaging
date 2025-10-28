@@ -7,6 +7,7 @@ using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Cluster;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Direct;
+using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Plugins;
 using Horse.Messaging.Server.Queues;
 using Horse.Messaging.Server.Routing;
@@ -150,18 +151,21 @@ public class HorseRider
     /// <summary>
     /// Trigger error handlers
     /// </summary>
-    internal void SendError(string hint, Exception exception, string payload)
+    internal void SendError(HorseLogLevel level, int eventId, string message, Exception exception)
     {
         foreach (IErrorHandler handler in ErrorHandlers.All())
         {
             //don't crash by end-user exception
             try
             {
-                handler.Error(hint, exception, payload);
+                handler.Error(level, eventId, message, exception);
             }
             catch
             {
             }
         }
+
+        if (Options.UseElasticConsoleLogs)
+            ElasticJsonConsoleLogger.Log(level, eventId, message, exception);
     }
 }
