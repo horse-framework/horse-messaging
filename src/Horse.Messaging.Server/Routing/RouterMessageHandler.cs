@@ -61,10 +61,10 @@ internal class RouterMessageHandler : INetworkMessageHandler
     /// <summary>
     /// Sends negative ack or failed response if client is pending ack or response
     /// </summary>
-    private static Task SendResponse(RouterPublishResult result, MessagingClient client, HorseMessage message)
+    private static ValueTask<bool> SendResponse(RouterPublishResult result, MessagingClient client, HorseMessage message)
     {
         if (result == RouterPublishResult.OkAndWillBeRespond)
-            return Task.CompletedTask;
+            return ValueTask.FromResult(false);
 
         bool positive = result == RouterPublishResult.OkWillNotRespond;
         if (message.WaitResponse)
@@ -76,6 +76,6 @@ internal class RouterMessageHandler : INetworkMessageHandler
             return client.SendAsync(response);
         }
 
-        return Task.CompletedTask;
+        return ValueTask.FromResult(true);
     }
 }

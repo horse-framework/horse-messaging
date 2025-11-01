@@ -764,6 +764,9 @@ public class HorseQueue
         await _triggerLock.WaitAsync();
         try
         {
+            if (_triggering)
+                return;
+
             _triggering = true;
             await ProcessPendingMessages();
         }
@@ -789,20 +792,9 @@ public class HorseQueue
                 return;
 
             bool waitForAck = Options.Type != QueueType.RoundRobin && Options.Acknowledge == QueueAckDecision.WaitForAcknowledge;
+
             if (waitForAck)
                 await WaitForAcknowledge();
-
-            if (Rider.Cluster.Options.Mode == ClusterMode.Reliable)
-            {
-                try
-                {
-                    await QueueLock.WaitAsync();
-                }
-                finally
-                {
-                    QueueLock.Release();
-                }
-            }
 
             QueueMessage message = null;
 
@@ -1187,7 +1179,7 @@ public class HorseQueue
             if (Status == QueueStatus.NotInitialized)
                 return;
 
-            MessageDelivery delivery = Manager.DeliveryHandler.Tracker.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
+            MessageDelivery delivery = Manager.DeliveryHandler.Tracker.FindDelivery(from, deliveryMessage.MessageId, true);
 
             //sometimes consumer sends ack before server start to follow ack of the message
             //that happens when ack message is arrived in less than 0.01ms
@@ -1196,13 +1188,13 @@ public class HorseQueue
             if (delivery == null)
             {
                 await Task.Delay(1);
-                delivery = Manager.DeliveryHandler.Tracker.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
+                delivery = Manager.DeliveryHandler.Tracker.FindDelivery(from, deliveryMessage.MessageId, true);
 
                 //try again
                 if (delivery == null)
                 {
                     await Task.Delay(3);
-                    delivery = Manager.DeliveryHandler.Tracker.FindAndRemoveDelivery(from, deliveryMessage.MessageId);
+                    delivery = Manager.DeliveryHandler.Tracker.FindDelivery(from, deliveryMessage.MessageId, true);
                 }
             }
 
@@ -1288,6 +1280,11 @@ public class HorseQueue
     }
 
     /// <summary>
+    /// Returns true if at least one client is subscribed
+    /// </summary>
+    public bool HasAnyClient() => _queueClients[0] != null;
+
+    /// <summary>
     /// Adds the client to the queue
     /// </summary>
     public async Task<SubscriptionResult> AddClient(MessagingClient client)
@@ -1310,6 +1307,7 @@ public class HorseQueue
 
                 if (_queueClients[i] == null)
                 {
+                    cc.Index = i;
                     _queueClients[i] = cc;
                     added = true;
                     break;
@@ -1348,6 +1346,7 @@ public class HorseQueue
 
                 if (removed && i > 0)
                 {
+                    qc.Index = i - 1;
                     _queueClients[i - 1] = qc;
                     _queueClients[i] = null;
                 }
@@ -1356,6 +1355,7 @@ public class HorseQueue
                     removedClient = qc;
                     _queueClients[i] = null;
                     removed = true;
+                    removedClient.Index = -1;
                 }
             }
         }
@@ -1378,6 +1378,7 @@ public class HorseQueue
 
                 if (removed && i > 0)
                 {
+                    qc.Index = i - 1;
                     _queueClients[i - 1] = qc;
                     _queueClients[i] = null;
                 }
@@ -1386,6 +1387,7 @@ public class HorseQueue
                     removedClient = qc;
                     _queueClients[i] = null;
                     removed = true;
+                    removedClient.Index = -1;
                 }
             }
         }

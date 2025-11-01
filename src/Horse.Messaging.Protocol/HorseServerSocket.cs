@@ -96,12 +96,13 @@ public class HorseServerSocket : SocketBase
     /// <summary>
     /// Sends Horse message to client
     /// </summary>
-    public virtual Task<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
+    public virtual ValueTask<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
         if (string.IsNullOrEmpty(message.MessageId))
             message.SetMessageId(_uniqueIdGenerator.Create());
 
         byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
+
         return SendAsync(data);
     }
 }

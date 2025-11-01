@@ -3,15 +3,15 @@
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <LangVersion>default</LangVersion>
-        <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+        <TargetFramework>net9.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Horse.Server" Version="6.6.0" />
-      <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
-      <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.8" />
-      <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
-      <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.8" />
+      <PackageReference Include="Horse.Server" Version="7.2.0" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.10" />
+      <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.10" />
+      <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
+      <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.10" />
     </ItemGroup>
 
     <ItemGroup>

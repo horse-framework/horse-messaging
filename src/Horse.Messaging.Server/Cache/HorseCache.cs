@@ -72,7 +72,7 @@ public class HorseCache
     private Timer _timer;
     private bool _initialized;
 
-    private readonly ConcurrentDictionary<string, HorseCacheItem> _items = new(StringComparer.InvariantCultureIgnoreCase);
+    private readonly ConcurrentDictionary<string, HorseCacheItem> _items = new(StringComparer.OrdinalIgnoreCase);
 
     #endregion
 
@@ -102,7 +102,7 @@ public class HorseCache
                 return;
 
             _initialized = true;
-            _timer = new Timer(o => _ = RemoveExpiredKeys(), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+            _timer = new Timer(o => RemoveExpiredKeys(), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
 
             LoadPersistentItems();
         }
@@ -112,7 +112,7 @@ public class HorseCache
 
     #region Actions
 
-    private async Task RemoveExpiredKeys()
+    private void RemoveExpiredKeys()
     {
         List<string> keys = new List<string>();
 
@@ -132,7 +132,7 @@ public class HorseCache
     /// <returns></returns>
     public async Task<List<CacheInformation>> GetCacheKeys()
     {
-        await RemoveExpiredKeys();
+        RemoveExpiredKeys();
 
         List<CacheInformation> list = new List<CacheInformation>(_items.Count);
         foreach (HorseCacheItem item in _items.Values)
@@ -143,7 +143,7 @@ public class HorseCache
                 Expiration = item.Expiration.ToUnixSeconds(),
                 WarningDate = item.ExpirationWarning?.ToUnixSeconds() ?? 0,
                 WarnCount = item.ExpirationWarnCount,
-                Tags = item.Tags ?? Array.Empty<string>()
+                Tags = item.Tags ?? []
             });
 
             if (item.Expiration < DateTime.UtcNow)
@@ -223,8 +223,6 @@ public class HorseCache
     /// </summary>
     public async Task<GetCacheItemResult> Get(string key)
     {
-        await RemoveExpiredKeys();
-
         _items.TryGetValue(key, out HorseCacheItem item);
 
         if (item == null)
@@ -266,8 +264,6 @@ public class HorseCache
     /// </summary>
     internal async Task<GetCacheItemResult> GetIncremental(bool notifyCluster, string key, TimeSpan duration, int incrementValue, string[] tags = null)
     {
-        await RemoveExpiredKeys();
-
         _items.TryGetValue(key, out HorseCacheItem item);
         if (item == null)
         {

@@ -239,13 +239,21 @@ internal class PullQueueState : IQueueState
 
         //create delivery object
         MessageDelivery delivery = new MessageDelivery(message, requester, deadline);
+        
+        bool tracked = false;
+        while (!tracked)
+        {
+            tracked = await deliveryHandler.Tracker.Track(delivery);
+            if (!tracked)
+                await Task.Delay(10);
+        }
+        
         bool sent = await requester.Client.SendAsync(message.Message, headers);
 
         if (sent)
         {
             requester.ConsumeCount++;
             message.CurrentDeliveryReceivers.Add(requester);
-            deliveryHandler.Tracker.Track(delivery);
             delivery.MarkAsSent();
 
             foreach (IQueueMessageEventHandler handler in _queue.Rider.Queue.MessageHandlers.All())
@@ -259,6 +267,7 @@ internal class PullQueueState : IQueueState
         }
         else
         {
+            deliveryHandler.Tracker.RemoveDelivery(delivery);
             message.Decision = await deliveryHandler.ConsumerReceiveFailed(_queue, delivery, requester.Client);
             if (!await _queue.ApplyDecision(message.Decision, message))
                 return false;

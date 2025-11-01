@@ -3,7 +3,7 @@
     <PropertyGroup>
         <Nullable>enable</Nullable>
         <UserSecretsId>dotnet-HorseOverWebSockets.Producer-9C9EB9CF-C025-4E6B-99AB-FBCB4976BA8C</UserSecretsId>
-        <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+        <TargetFramework>net9.0</TargetFramework>
         <LangVersion>default</LangVersion>
     </PropertyGroup>
 

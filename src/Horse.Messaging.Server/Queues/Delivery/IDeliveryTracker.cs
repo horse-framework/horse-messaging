@@ -28,23 +28,17 @@ public interface IDeliveryTracker
     /// <summary>
     /// Starts to track new message delivery
     /// </summary>
-    void Track(MessageDelivery delivery);
+    ValueTask<bool> Track(MessageDelivery delivery);
 
     /// <summary>
     /// Returns all tracking queue messages
     /// </summary>
-    List<QueueMessage> GetDeliveringMessages();
+    IEnumerable<QueueMessage> GetDeliveringMessages();
 
     /// <summary>
     /// Finds a tracking delivery by message id and the consumer client that received the queue message.
     /// </summary>
-    MessageDelivery FindDelivery(MessagingClient client, string messageId);
-
-    /// <summary>
-    /// Finds a tracking delivery by message id and the consumer client that received the queue message.
-    /// That method also removes delivery from tracking deliveries list.
-    /// </summary>
-    MessageDelivery FindAndRemoveDelivery(MessagingClient client, string messageId);
+    MessageDelivery FindDelivery(MessagingClient client, string messageId, bool remove);
         
     /// <summary>
     /// Untracks the delivery and removes it from delivering messages list.

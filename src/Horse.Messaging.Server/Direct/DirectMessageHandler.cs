@@ -39,8 +39,8 @@ internal class DirectMessageHandler : INetworkMessageHandler
 
                 await ProcessMultipleReceiverClientMessage(client, receivers, message);
             }
-            else if (message.WaitResponse)
-                await client?.SendAsync(message.CreateResponse(HorseResultCode.NotFound))!;
+            else if (message.WaitResponse && client != null)
+                await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound))!;
 
             if (receivers.Length == 0)
                 foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
@@ -56,8 +56,8 @@ internal class DirectMessageHandler : INetworkMessageHandler
 
                 await ProcessMultipleReceiverClientMessage(client, receivers, message);
             }
-            else if (message.WaitResponse)
-                await client?.SendAsync(message.CreateResponse(HorseResultCode.NotFound))!;
+            else if (message.WaitResponse && client != null)
+                await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound))!;
 
             if (receivers.Length == 0)
                 foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
@@ -71,11 +71,13 @@ internal class DirectMessageHandler : INetworkMessageHandler
     /// <summary>
     /// Processes the client message which has multiple receivers (message by name or type)
     /// </summary>
-    private async Task ProcessMultipleReceiverClientMessage(MessagingClient sender, MessagingClient[] receivers, HorseMessage message)
+    private async ValueTask ProcessMultipleReceiverClientMessage(MessagingClient sender, MessagingClient[] receivers, HorseMessage message)
     {
         if (receivers.Length < 1)
         {
-            await sender?.SendAsync(message.CreateResponse(HorseResultCode.NotFound))!;
+            if (sender != null)
+                await sender.SendAsync(message.CreateResponse(HorseResultCode.NotFound))!;
+
             return;
         }
 
@@ -110,7 +112,9 @@ internal class DirectMessageHandler : INetworkMessageHandler
 
         if (allDenied)
         {
-            await sender?.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized))!;
+            if (sender != null)
+                await sender.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized))!;
+
             return;
         }
 
@@ -143,7 +147,8 @@ internal class DirectMessageHandler : INetworkMessageHandler
         MessagingClient other = _rider.Client.Find(message.Target);
         if (other == null)
         {
-            await client?.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
+            if (client != null)
+                await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
 
             foreach (IDirectMessageHandler handler in _rider.Direct.MessageHandlers.All())
                 _ = handler.OnNotFound(client, message);

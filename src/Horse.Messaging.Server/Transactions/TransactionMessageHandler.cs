@@ -38,7 +38,7 @@ internal class TransactionMessageHandler : INetworkMessageHandler
         }
     }
 
-    private Task HandleUnsafe(MessagingClient client, HorseMessage message)
+    private ValueTask<bool> HandleUnsafe(MessagingClient client, HorseMessage message)
     {
         switch (message.ContentType)
         {

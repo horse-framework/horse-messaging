@@ -11,7 +11,7 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        string hostname = "horse://localhost:27001";
+        string hostname = "horse://localhost:2626";
 
         Console.ForegroundColor = ConsoleColor.Red;
         Console.WriteLine("You should start Benchmark.Server to connect");

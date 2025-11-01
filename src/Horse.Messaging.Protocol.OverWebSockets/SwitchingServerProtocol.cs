@@ -43,7 +43,7 @@ internal class SwitchingServerProtocol : ISwitchingProtocol
         return _socket.Send(msg);
     }
 
-    public Task<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
+    public ValueTask<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
         byte[] bytes = HorseProtocolWriter.Create(message, additionalHeaders);
         WebSocketMessage msg = new WebSocketMessage
@@ -55,7 +55,12 @@ internal class SwitchingServerProtocol : ISwitchingProtocol
         return _socket.SendAsync(msg);
     }
 
-    public Task<bool> SendAsync(byte[] data)
+    public ValueTask<bool> SendAsync(ReadOnlyMemory<byte> data)
+    {
+        throw new NotImplementedException();
+    }
+
+    public ValueTask<bool> SendAsync(byte[] data)
     {
         WebSocketMessage msg = new WebSocketMessage
         {

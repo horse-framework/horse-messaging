@@ -21,20 +21,22 @@ internal class CacheNetworkHandler : INetworkMessageHandler
         _cache = rider.Cache;
     }
 
-    public async Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
+    public Task Handle(MessagingClient client, HorseMessage message, bool fromNode)
     {
         try
         {
-            await HandleUnsafe(client, message);
+            return HandleUnsafe(client, message);
         }
         catch (OperationCanceledException)
         {
-            await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
+            _ = client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
         }
         catch
         {
-            await client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
+            _ = client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
         }
+
+        return Task.CompletedTask;
     }
 
     private async Task HandleUnsafe(MessagingClient client, HorseMessage message)

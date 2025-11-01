@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
@@ -11,8 +12,8 @@ internal class PushQueueState : IQueueState
 {
     public QueueMessage ProcessingMessage { get; private set; }
     public bool TriggerSupported => true;
-
     private readonly HorseQueue _queue;
+
 
     public PushQueueState(HorseQueue queue)
     {
@@ -54,7 +55,7 @@ internal class PushQueueState : IQueueState
             ackDeadline = DateTime.UtcNow.Add(_queue.Options.AcknowledgeTimeout);
 
         //if there are not receivers, complete send operation
-        if (_queue.ClientsCount() == 0)
+        if (!_queue.HasAnyClient())
         {
             PushResult pushResult = _queue.AddMessage(message, false);
             if (pushResult != PushResult.Success)
@@ -79,8 +80,11 @@ internal class PushQueueState : IQueueState
         bool messageIsSent = false;
 
         //to all receivers
-        foreach (QueueClient client in _queue.Clients)
+        foreach (QueueClient client in _queue.ClientsArray)
         {
+            if (client == null)
+                break;
+
             //to only online receivers
             if (!client.Client.IsConnected)
                 continue;
@@ -93,23 +97,29 @@ internal class PushQueueState : IQueueState
             //create delivery object
             MessageDelivery delivery = new MessageDelivery(message, client, ackDeadline);
 
+            //adds the delivery to time keeper to check timing up
+            bool tracked = false;
+            while (!tracked)
+            {
+                tracked = await deliveryHandler.Tracker.Track(delivery);
+                if (!tracked)
+                    await Task.Delay(10);
+            }
+
+            if (_queue.Options.Acknowledge != QueueAckDecision.None)
+            {
+                client.ProcessDeadline = ackDeadline ?? DateTime.UtcNow;
+                message.CurrentDeliveryReceivers.Add(client);
+                client.CurrentlyProcessing = message;
+            }
+
             //send the message
             bool sent = await client.Client.SendRawAsync(messageData);
 
             if (sent)
             {
                 client.ConsumeCount++;
-                if (_queue.Options.Acknowledge != QueueAckDecision.None)
-                {
-                    client.CurrentlyProcessing = message;
-                    client.ProcessDeadline = ackDeadline ?? DateTime.UtcNow;
-                    message.CurrentDeliveryReceivers.Add(client);
-                }
-
                 messageIsSent = true;
-
-                //adds the delivery to time keeper to check timing up
-                deliveryHandler.Tracker.Track(delivery);
 
                 //mark message is sent
                 delivery.MarkAsSent();
@@ -119,6 +129,17 @@ internal class PushQueueState : IQueueState
             }
             else
             {
+                if (_queue.Options.Acknowledge != QueueAckDecision.None)
+                {
+                    if (client.CurrentlyProcessing == message)
+                    {
+                        client.ProcessDeadline = DateTime.UtcNow;
+                        client.CurrentlyProcessing = null;
+                        message.CurrentDeliveryReceivers.Remove(client);
+                    }
+                }
+
+                deliveryHandler.Tracker.RemoveDelivery(delivery);
                 Decision d = await deliveryHandler.ConsumerReceiveFailed(_queue, delivery, client.Client);
                 final = HorseQueue.CreateFinalDecision(final, d);
             }

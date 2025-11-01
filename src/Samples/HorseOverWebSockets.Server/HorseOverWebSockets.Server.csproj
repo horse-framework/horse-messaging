@@ -4,7 +4,7 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <UserSecretsId>dotnet-HorseOverWebSockets.Server-46534828-5AAE-46AA-9873-84CE817347F6</UserSecretsId>
-        <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+        <TargetFramework>net9.0</TargetFramework>
         <LangVersion>default</LangVersion>
     </PropertyGroup>
 

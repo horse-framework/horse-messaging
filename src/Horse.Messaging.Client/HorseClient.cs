@@ -728,7 +728,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends raw byte array over socket
     /// </summary>
-    public Task<bool> SendRawAsync(byte[] data)
+    public ValueTask<bool> SendRawAsync(byte[] data)
     {
         if (SmartHealthCheck)
             _socket.KeepAlive();
@@ -833,7 +833,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends raw message
     /// </summary>
-    public Task<bool> SendAsync(byte[] rawData)
+    public ValueTask<bool> SendAsync(byte[] rawData)
     {
         return _socket.SendAsync(rawData);
     }

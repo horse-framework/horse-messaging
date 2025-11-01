@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
@@ -37,12 +38,11 @@ internal class RoundRobinQueueState : IQueueState
             if (!message.Deadline.HasValue && _queue.Options.MessageTimeout.Policy != MessageTimeoutPolicy.NoTimeout && _queue.Options.MessageTimeout.MessageDuration > 0)
                 message.Deadline = DateTime.UtcNow.AddSeconds(_queue.Options.MessageTimeout.MessageDuration);
 
-            Tuple<QueueClient, int> tuple = await GetNextAvailableRRClient(_roundRobinIndex, message,
-                _queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge);
-            QueueClient cc = tuple.Item1;
+            bool waitForAck = _queue.Options.Acknowledge == QueueAckDecision.WaitForAcknowledge;
+            var tuple = await GetNextAvailableRRClient(_roundRobinIndex, message, waitForAck);
 
-            if (cc != null)
-                _roundRobinIndex = tuple.Item2;
+            QueueClient cc = tuple.Item1;
+            _roundRobinIndex = tuple.Item2;
 
             if (cc == null)
             {
@@ -77,8 +77,7 @@ internal class RoundRobinQueueState : IQueueState
             deadline = DateTime.UtcNow.Add(_queue.Options.AcknowledgeTimeout);
 
         //return if client unsubsribes while waiting ack of previous message
-        QueueClient receiverClient = _queue.FindClient(receiver.Client.UniqueId);
-        if (receiverClient == null)
+        if (receiver.Index < 0)
         {
             PushResult pushResult = _queue.AddMessage(message, false);
             if (pushResult != PushResult.Success)
@@ -102,21 +101,27 @@ internal class RoundRobinQueueState : IQueueState
         //create delivery object
         MessageDelivery delivery = new MessageDelivery(message, receiver, deadline);
 
+        bool tracked = false;
+        while (!tracked)
+        {
+            tracked = await deliveryHandler.Tracker.Track(delivery);
+            if (!tracked)
+                await Task.Delay(10);
+        }
+
+        if (_queue.Options.Acknowledge != QueueAckDecision.None)
+        {
+            receiver.CurrentlyProcessing = message;
+            receiver.ProcessDeadline = deadline ?? DateTime.UtcNow;
+            message.CurrentDeliveryReceivers.Add(receiver);
+        }
+
         //send the message
         bool sent = await receiver.Client.SendRawAsync(messageData);
 
         if (sent)
         {
             receiver.ConsumeCount++;
-            if (_queue.Options.Acknowledge != QueueAckDecision.None)
-            {
-                receiver.CurrentlyProcessing = message;
-                receiver.ProcessDeadline = deadline ?? DateTime.UtcNow;
-                message.CurrentDeliveryReceivers.Add(receiver);
-            }
-
-            //adds the delivery to time keeper to check timing up
-            deliveryHandler.Tracker.Track(delivery);
 
             //mark message is sent
             delivery.MarkAsSent();
@@ -126,7 +131,20 @@ internal class RoundRobinQueueState : IQueueState
                 _ = handler.OnConsumed(_queue, delivery, receiver.Client);
         }
         else
+        {
+            if (_queue.Options.Acknowledge != QueueAckDecision.None)
+            {
+                if (receiver.CurrentlyProcessing == message)
+                {
+                    receiver.ProcessDeadline = DateTime.UtcNow;
+                    receiver.CurrentlyProcessing = null;
+                    message.CurrentDeliveryReceivers.Remove(receiver);
+                }
+            }
+
             message.Decision = await deliveryHandler.ConsumerReceiveFailed(_queue, delivery, receiver.Client);
+            deliveryHandler.Tracker.RemoveDelivery(delivery);
+        }
 
         if (!await _queue.ApplyDecision(message.Decision, message))
             return PushResult.Success;
@@ -153,47 +171,63 @@ internal class RoundRobinQueueState : IQueueState
     /// </summary>
     private async Task<Tuple<QueueClient, int>> GetNextAvailableRRClient(int currentIndex, QueueMessage message, bool waitForAcknowledge)
     {
-        if (_queue.ClientsCount() == 0)
-            return new Tuple<QueueClient, int>(null, currentIndex);
+        if (!_queue.HasAnyClient())
+            return new Tuple<QueueClient, int>(null, -1);
 
         DateTime retryExpiration = DateTime.UtcNow.AddSeconds(30);
+        int tryCount = 0;
         while (true)
         {
             int index = currentIndex < 0 ? 0 : currentIndex;
-            for (int i = 0; i < _queue.ClientsArray.Length; i++)
-            {
-                if (index >= _queue.ClientsArray.Length || _queue.ClientsArray[index] == null)
-                    index = 0;
 
-                QueueClient client = _queue.ClientsArray[index];
+            if (index >= _queue.ClientsArray.Length)
+            {
+                if (!_queue.HasAnyClient())
+                    break;
+
+                currentIndex = 0;
+                continue;
+            }
+
+            for (int i = index; i < _queue.ClientsArray.Length; i++)
+            {
+                QueueClient client = _queue.ClientsArray[i];
+
+                if (client == null)
+                {
+                    if (i == 0)
+                        break;
+
+                    i = 0;
+                    client = _queue.ClientsArray[i];
+                    if (client == null)
+                        break;
+                }
 
                 if (waitForAcknowledge && client.CurrentlyProcessing != null)
                 {
                     if (client.ProcessDeadline < DateTime.UtcNow)
-                    {
                         client.CurrentlyProcessing = null;
-                    }
                     else
-                    {
-                        index++;
                         continue;
-                    }
                 }
 
                 var deliveryHandler = _queue.Manager.DeliveryHandler;
                 bool canReceive = await deliveryHandler.CanConsumerReceive(_queue, message, client.Client);
                 if (!canReceive)
-                {
-                    index++;
                     continue;
-                }
 
-                index++;
-                return new Tuple<QueueClient, int>(client, index);
+                return new Tuple<QueueClient, int>(client, i + 1);
             }
 
-            await Task.Delay(3);
-            if (_queue.ClientsCount() == 0)
+            tryCount++;
+            if (tryCount > 10)
+            {
+                await Task.Delay(1);
+                tryCount = 0;
+            }
+
+            if (!_queue.HasAnyClient())
                 break;
 
             //don't try hard so much, wait for next trigger operation of the queue.
@@ -202,6 +236,6 @@ internal class RoundRobinQueueState : IQueueState
                 break;
         }
 
-        return new Tuple<QueueClient, int>(null, currentIndex);
+        return new Tuple<QueueClient, int>(null, -1);
     }
 }

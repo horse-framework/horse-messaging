@@ -82,7 +82,7 @@ public class DirectBinding : Binding
         }
     }
 
-    private Task<bool> SendRoundRobin(MessagingClient[] clients, HorseMessage message)
+    private ValueTask<bool> SendRoundRobin(MessagingClient[] clients, HorseMessage message)
     {
         MessagingClient client;
 

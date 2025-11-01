@@ -178,6 +178,7 @@ public class HorseChannel
         try
         {
             byte[] messageData = HorseProtocolWriter.Create(message);
+            ReadOnlyMemory<byte> data = new ReadOnlyMemory<byte>(messageData);
             _initialMessage = messageData;
 
             int count = 0;
@@ -192,7 +193,7 @@ public class HorseChannel
                     continue;
 
                 //send the message
-                _ = client.Client.SendRawAsync(messageData);
+                _ = client.Client.SendRawAsync(data);
                 count++;
             }
 

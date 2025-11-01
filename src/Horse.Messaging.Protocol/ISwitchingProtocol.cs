@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -34,13 +35,18 @@ public interface ISwitchingProtocol
     /// <summary>
     /// Sends a HorseMessage over custom protocol
     /// </summary>
-    Task<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null);
+    ValueTask<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null);
 
     /// <summary>
     /// Sends raw data over custom protocol
     /// </summary>
-    Task<bool> SendAsync(byte[] data);
+    ValueTask<bool> SendAsync(byte[] data);
     
+    /// <summary>
+    /// Sends raw data over custom protocol
+    /// </summary>
+    ValueTask<bool> SendAsync(ReadOnlyMemory<byte> data);
+
     /// <summary>
     /// Reads protocol messages over network stream and converts the messages to horse message types
     /// </summary>

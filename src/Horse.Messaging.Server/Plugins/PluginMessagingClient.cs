@@ -36,7 +36,7 @@ internal class PluginMessagingClient : IPluginMessagingClient
         return _client.GetChannels().Select(x => x.Channel.Name);
     }
 
-    public Task<bool> SendMessage(HorseMessage message)
+    public ValueTask<bool> SendMessage(HorseMessage message)
     {
         return _client.SendAsync(message);
     }

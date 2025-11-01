@@ -128,7 +128,7 @@ public class ServerTransactionContainer
     /// <summary>
     /// Called when a client commits a transaction belong this container
     /// </summary>
-    public async Task Commit(MessagingClient client, HorseMessage message)
+    public async ValueTask<bool> Commit(MessagingClient client, HorseMessage message)
     {
         HorseMessage response;
         _transactions.TryGetValue(message.MessageId, out ServerTransaction transaction);
@@ -137,7 +137,7 @@ public class ServerTransactionContainer
         {
             response = message.CreateResponse(HorseResultCode.NotFound);
             await client.SendAsync(response);
-            return;
+            return false;
         }
 
         bool commited = await CommitEndpoint.Send(transaction);
@@ -145,7 +145,7 @@ public class ServerTransactionContainer
         {
             response = message.CreateResponse(HorseResultCode.Failed);
             await client.SendAsync(response);
-            return;
+            return false;
         }
 
         if (Handler != null)
@@ -155,13 +155,14 @@ public class ServerTransactionContainer
 
         response = message.CreateResponse(HorseResultCode.Ok);
         await client.SendAsync(response);
+        return true;
     }
 
 
     /// <summary>
     /// Called when a client rolls back transaction belong this container
     /// </summary>
-    public async Task Rollback(MessagingClient client, HorseMessage message)
+    public async ValueTask<bool> Rollback(MessagingClient client, HorseMessage message)
     {
         HorseMessage response;
         _transactions.TryGetValue(message.MessageId, out ServerTransaction transaction);
@@ -170,7 +171,7 @@ public class ServerTransactionContainer
         {
             response = message.CreateResponse(HorseResultCode.NotFound);
             await client.SendAsync(response);
-            return;
+            return false;
         }
 
         bool rolledback = await RollbackEndpoint.Send(transaction);
@@ -178,7 +179,7 @@ public class ServerTransactionContainer
         {
             response = message.CreateResponse(HorseResultCode.Failed);
             await client.SendAsync(response);
-            return;
+            return false;
         }
 
         if (Handler != null)
@@ -188,6 +189,7 @@ public class ServerTransactionContainer
 
         response = message.CreateResponse(HorseResultCode.Ok);
         await client.SendAsync(response);
+        return true;
     }
 
     private async Task HandleTransaction(Task<ServerTransaction> task)

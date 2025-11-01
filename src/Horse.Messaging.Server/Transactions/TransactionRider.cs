@@ -265,24 +265,25 @@ public class TransactionRider
     /// <summary>
     /// Begins new transaction from remote
     /// </summary>
-    public async Task Begin(MessagingClient client, HorseMessage message)
+    public async ValueTask<bool> Begin(MessagingClient client, HorseMessage message)
     {
         _containers.TryGetValue(message.Target, out ServerTransactionContainer container);
 
         if (container == null)
         {
             await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound));
-            return;
+            return false;
         }
 
         bool created = await container.Create(client, message);
         await client.SendAsync(message.CreateResponse(created ? HorseResultCode.Ok : HorseResultCode.Failed));
+        return true;
     }
 
     /// <summary>
     /// Commits a transaction
     /// </summary>
-    public Task Commit(MessagingClient client, HorseMessage message)
+    public ValueTask<bool> Commit(MessagingClient client, HorseMessage message)
     {
         _containers.TryGetValue(message.Target, out ServerTransactionContainer container);
 
@@ -295,7 +296,7 @@ public class TransactionRider
     /// <summary>
     /// Rollbacks a transaction
     /// </summary>
-    public Task Rollback(MessagingClient client, HorseMessage message)
+    public ValueTask<bool> Rollback(MessagingClient client, HorseMessage message)
     {
         _containers.TryGetValue(message.Target, out ServerTransactionContainer container);
 

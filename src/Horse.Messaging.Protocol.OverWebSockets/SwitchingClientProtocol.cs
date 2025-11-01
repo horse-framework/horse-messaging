@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 using Horse.Core;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
-using Horse.Protocols.Http;
 using Horse.WebSocket.Protocol;
+using Horse.WebSocket.Protocol.Http;
 using PredefinedMessages = Horse.WebSocket.Protocol.PredefinedMessages;
 
 namespace Horse.Messaging.Server.OverWebSockets;
@@ -71,7 +71,7 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
         return _client.SendRaw(_writer.Create(msg));
     }
 
-    public Task<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
+    public ValueTask<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
         byte[] bytes = HorseProtocolWriter.Create(message, additionalHeaders);
         WebSocketMessage msg = new WebSocketMessage
@@ -84,15 +84,25 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
         return _client.SendRawAsync(_writer.Create(msg));
     }
 
-    public Task<bool> SendAsync(byte[] data)
+    public ValueTask<bool> SendAsync(byte[] data)
     {
         WebSocketMessage msg = new WebSocketMessage
         {
             OpCode = SocketOpCode.Binary,
-            Content = new MemoryStream(data)
+            Content = new MemoryStream(data) { Position = 0 }
         };
 
-        msg.Content.Position = 0;
+        return _client.SendRawAsync(_writer.Create(msg));
+    }
+
+    public ValueTask<bool> SendAsync(ReadOnlyMemory<byte> data)
+    {
+        WebSocketMessage msg = new WebSocketMessage
+        {
+            OpCode = SocketOpCode.Binary,
+            ReadOnlyContent = data
+        };
+
         return _client.SendRawAsync(_writer.Create(msg));
     }
 
@@ -176,14 +186,14 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
             throw new InvalidOperationException("Unexpected server response");
 
         int i2 = first.IndexOf(' ', i1 + 1);
-        if (i1 < 0 || i2 < 0 || i2 <= i1)
+        if (i2 < 0 || i2 <= i1)
             throw new InvalidOperationException("Unexpected server response");
 
         string statusCode = first.Substring(i1, i2 - i1).Trim();
         if (statusCode != "101")
             throw new InvalidOperationException("Connection Error: " + statusCode);
 
-        string[] responseLines = response.Split(new[] {"\r\n"}, StringSplitOptions.RemoveEmptyEntries);
+        string[] responseLines = response.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
         string acceptLine = responseLines.FirstOrDefault(x => x.StartsWith(HttpHeaders.WEBSOCKET_ACCEPT, StringComparison.InvariantCultureIgnoreCase));
 
         if (acceptLine == null)
@@ -192,7 +202,6 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
         string[] pair = acceptLine.Split(':');
         string responseKey = pair[1].Trim();
 
-        //check if the key is valid
         using SHA1 sha1 = SHA1.Create();
         byte[] hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(_websocketKey + HttpHeaders.WEBSOCKET_GUID));
         string fkey = Convert.ToBase64String(hash);

@@ -86,7 +86,7 @@ public class QueueMessage
     /// All receivers for current delivery.
     /// That list is reset before each delivery (if message ack timed out or nack received etc)
     /// </summary>
-    internal List<QueueClient> CurrentDeliveryReceivers { get; } = new();
+    internal List<QueueClient> CurrentDeliveryReceivers { get; } = new(2);
 
     /// <summary>
     /// Creates new QueueMessage from HorseMessage with save status

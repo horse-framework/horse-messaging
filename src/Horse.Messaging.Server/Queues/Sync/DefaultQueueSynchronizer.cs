@@ -95,7 +95,7 @@ public class DefaultQueueSynchronizer : IQueueSynchronizer
                 msgIds.Insert(0, processing.Message.MessageId);
         }
 
-        List<QueueMessage> deliveringMessages = Manager.DeliveryHandler.Tracker.GetDeliveringMessages();
+        List<QueueMessage> deliveringMessages = Manager.DeliveryHandler.Tracker.GetDeliveringMessages().ToList();
         foreach (QueueMessage deliveringMessage in deliveringMessages)
         {
             if (deliveringMessage.Message.HighPriority)
@@ -314,7 +314,7 @@ public class DefaultQueueSynchronizer : IQueueSynchronizer
         QueueMessage processingMessage = Manager.Queue.ProcessingMessage;
         List<QueueMessage> priorityMessages = Manager.PriorityMessageStore.GetUnsafe().ToList();
         List<QueueMessage> messages = Manager.MessageStore.GetUnsafe().ToList();
-        List<QueueMessage> deliveringMessages = Manager.DeliveryHandler.Tracker.GetDeliveringMessages();
+        List<QueueMessage> deliveringMessages = Manager.DeliveryHandler.Tracker.GetDeliveringMessages().ToList();
 
         target.Content = new MemoryStream();
 
