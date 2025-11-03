@@ -183,10 +183,14 @@ public class PluginRider : IPluginRider
                 if (pluginData != null && pluginData.Removed)
                     continue;
 
+                if (builder == null)
+                    continue;
+
                 HorsePlugin plugin;
                 if (pluginData == null)
                 {
                     plugin = builder.Build();
+                    plugin.AssemblyVersion = data.AssemblyVersion;
                     plugin.SetName(builder.GetName());
 
                     if (Plugins.Any(x => string.Equals(x.Name, plugin.Name)))
@@ -208,6 +212,7 @@ public class PluginRider : IPluginRider
                 else
                 {
                     plugin = builder.Build();
+                    plugin.AssemblyVersion = data.AssemblyVersion;
                     plugin.SetName(builder.GetName());
                 }
 
@@ -386,6 +391,7 @@ public class PluginRider : IPluginRider
 
         plugin.Initialized = true;
         plugin.Removed = false;
+        plugin.AssemblyVersion = assemblyData.AssemblyVersion;
 
         var plugins = Plugins.ToList();
         plugins.RemoveAll(x => string.Equals(x.Name, plugin.Name, StringComparison.InvariantCultureIgnoreCase) && x.Removed);
@@ -404,10 +410,14 @@ public class PluginRider : IPluginRider
     /// <summary>
     /// Removes plugin by name
     /// </summary>
-    public async Task<bool> DisablePlugin(string pluginName, bool remove)
+    public async Task<bool> DisablePlugin(string pluginName, string version, bool remove)
     {
         HorsePlugin plugin = Plugins.FirstOrDefault(x => string.Equals(x.Name, pluginName));
+
         if (plugin == null)
+            return false;
+
+        if (!string.Equals(plugin.AssemblyVersion, version, StringComparison.OrdinalIgnoreCase))
             return false;
 
         bool canRemove = await plugin.Remove();
@@ -426,6 +436,9 @@ public class PluginRider : IPluginRider
         {
             foreach (PluginAssemblyData data in _data)
             {
+                if (!string.Equals(data.AssemblyVersion, version, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 PluginData pluginData = data.Plugins.FirstOrDefault(x => string.Equals(x.Name, pluginName, StringComparison.InvariantCultureIgnoreCase));
                 if (pluginData != null)
                 {
@@ -447,7 +460,7 @@ public class PluginRider : IPluginRider
     /// <summary>
     /// Enabled, previously added and disabled plugin
     /// </summary>
-    public async Task<bool> EnablePlugin(string pluginName)
+    public async Task<bool> EnablePlugin(string pluginName, string version)
     {
         PluginAssemblyData assemblyData = null;
         PluginData pdata = null;
@@ -456,6 +469,9 @@ public class PluginRider : IPluginRider
         {
             foreach (PluginAssemblyData data in _data)
             {
+                if (!string.Equals(data.AssemblyVersion, version, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 foreach (PluginData pluginData in data.Plugins)
                 {
                     if (pluginData.Name.Equals(pluginName))
@@ -474,7 +490,9 @@ public class PluginRider : IPluginRider
         if (assemblyData == null)
             return false;
 
-        HorsePlugin plugin = Plugins.FirstOrDefault(x => x.Name.Equals(pluginName, StringComparison.InvariantCultureIgnoreCase));
+        HorsePlugin plugin = Plugins
+            .FirstOrDefault(x => x.Name.Equals(pluginName, StringComparison.OrdinalIgnoreCase) &&
+                                 string.Equals(x.AssemblyVersion, version, StringComparison.OrdinalIgnoreCase));
 
         bool addAfterInit = false;
         if (plugin == null)
@@ -488,17 +506,25 @@ public class PluginRider : IPluginRider
             foreach (Type type in GetPluginBuilderTypesOfAssembly(assemblyData.LoadedAssembly))
             {
                 IHorsePluginBuilder builder = (IHorsePluginBuilder)Activator.CreateInstance(type);
+                if (builder == null)
+                    continue;
+                
                 string builderPluginName = builder.GetName();
 
                 if (string.Equals(builderPluginName, pluginName))
                 {
                     plugin = builder.Build();
+                    plugin.SetName(builder.GetName());
+                    plugin.AssemblyVersion = assemblyData.AssemblyVersion;
                     plugin.Set(this);
                     addAfterInit = true;
                     break;
                 }
             }
         }
+
+        if (plugin == null)
+            return false;
 
         await plugin.Initialize();
 
@@ -557,6 +583,9 @@ public class PluginRider : IPluginRider
 
         foreach (HorsePlugin plugin in Plugins)
         {
+            if (target.Length < 8)
+                continue;
+            
             if (pluginTarget && !string.Equals(plugin.Name, target.Substring(8)))
                 continue;
 

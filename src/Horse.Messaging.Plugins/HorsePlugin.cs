@@ -38,6 +38,8 @@ public abstract class HorsePlugin
     /// Rider object for the plugin. Rider object is used for server side operations.
     /// </summary>
     protected IPluginRider Plugin { get; private set; }
+    
+    internal string AssemblyVersion { get; set; }
 
     internal SortedDictionary<string, IHorsePluginHandler> Handlers { get; } = new SortedDictionary<string, IHorsePluginHandler>(StringComparer.InvariantCultureIgnoreCase);
 
