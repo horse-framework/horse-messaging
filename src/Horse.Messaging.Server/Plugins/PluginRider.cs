@@ -144,7 +144,7 @@ public class PluginRider : IPluginRider
                     Fullname = item.Fullname,
                     Location = item.Location,
                     AssemblyVersion = item.AssemblyVersion,
-                    LoadedAssembly = item.LoadedAssembly
+                    AssemblyContext = item.AssemblyContext
                 };
 
                 clone.Plugins = item.Plugins
@@ -171,7 +171,7 @@ public class PluginRider : IPluginRider
     {
         var context = new PluginAssemblyLoadContext();
         Assembly assembly = context.LoadFromAssemblyPath(Path.GetFullPath(data.Location));
-        data.LoadedAssembly = assembly;
+        data.AssemblyContext = context;
 
         foreach (Type type in GetPluginBuilderTypesOfAssembly(assembly))
         {
@@ -268,13 +268,12 @@ public class PluginRider : IPluginRider
                                 Location = assembly.Location,
                                 Fullname = assembly.FullName,
                                 Plugins = new List<PluginData>(),
-                                AssemblyVersion = assemblyVersion
+                                AssemblyVersion = assemblyVersion,
+                                AssemblyContext = context
                             };
                             _data.Add(assemblyData);
                         }
                     }
-
-                    assemblyData.LoadedAssembly = assembly;
                 }
 
                 try
@@ -286,6 +285,8 @@ public class PluginRider : IPluginRider
                 {
                     _rider.SendError(HorseLogLevel.Error, HorseLogEvents.PluginAddAssembly, "Assembly Name: " + type.FullName, e);
                 }
+
+                break;
             }
         }
 
@@ -356,8 +357,6 @@ public class PluginRider : IPluginRider
                             _data.Add(assemblyData);
                         }
                     }
-
-                    assemblyData.LoadedAssembly = assembly;
                 }
 
                 try
@@ -414,22 +413,22 @@ public class PluginRider : IPluginRider
     {
         HorsePlugin plugin = Plugins.FirstOrDefault(x => string.Equals(x.Name, pluginName));
 
-        if (plugin == null)
-            return false;
+        if (plugin != null)
+        {
+            if (!string.Equals(plugin.AssemblyVersion, version, StringComparison.OrdinalIgnoreCase))
+                return false;
 
-        if (!string.Equals(plugin.AssemblyVersion, version, StringComparison.OrdinalIgnoreCase))
-            return false;
+            bool canRemove = await plugin.Remove();
+            if (!canRemove)
+                return false;
 
-        bool canRemove = await plugin.Remove();
-        if (!canRemove)
-            return false;
+            plugin.Initialized = false;
+            plugin.Removed = true;
 
-        plugin.Initialized = false;
-        plugin.Removed = true;
-
-        var list = Plugins.ToList();
-        list.Remove(plugin);
-        Plugins = list.ToArray();
+            var list = Plugins.ToList();
+            list.Remove(plugin);
+            Plugins = list.ToArray();
+        }
 
         bool modified = false;
         lock (_data)
@@ -445,6 +444,18 @@ public class PluginRider : IPluginRider
                     modified = true;
                     pluginData.Disabled = true;
                     pluginData.Removed = remove;
+
+                    if (data.AssemblyContext != null)
+                    {
+                        try
+                        {
+                            data.AssemblyContext.Unload();
+                            data.AssemblyContext = null;
+                        }
+                        catch
+                        {
+                        }
+                    }
 
                     break;
                 }
@@ -490,25 +501,24 @@ public class PluginRider : IPluginRider
         if (assemblyData == null)
             return false;
 
-        HorsePlugin plugin = Plugins
-            .FirstOrDefault(x => x.Name.Equals(pluginName, StringComparison.OrdinalIgnoreCase) &&
-                                 string.Equals(x.AssemblyVersion, version, StringComparison.OrdinalIgnoreCase));
+        HorsePlugin plugin = Plugins.FirstOrDefault(x => x.Name.Equals(pluginName, StringComparison.OrdinalIgnoreCase) &&
+                                                         string.Equals(x.AssemblyVersion, version, StringComparison.OrdinalIgnoreCase));
 
         bool addAfterInit = false;
         if (plugin == null)
         {
-            if (assemblyData.LoadedAssembly == null)
+            if (assemblyData.AssemblyContext == null)
             {
                 var context = new PluginAssemblyLoadContext();
-                assemblyData.LoadedAssembly = context.LoadFromAssemblyPath(Path.GetFullPath(assemblyData.Location));
+                assemblyData.AssemblyContext = context;
             }
 
-            foreach (Type type in GetPluginBuilderTypesOfAssembly(assemblyData.LoadedAssembly))
+            foreach (Type type in GetPluginBuilderTypesOfAssembly(assemblyData.AssemblyContext.Assemblies.FirstOrDefault()))
             {
                 IHorsePluginBuilder builder = (IHorsePluginBuilder)Activator.CreateInstance(type);
                 if (builder == null)
                     continue;
-                
+
                 string builderPluginName = builder.GetName();
 
                 if (string.Equals(builderPluginName, pluginName))
@@ -585,7 +595,7 @@ public class PluginRider : IPluginRider
         {
             if (target.Length < 8)
                 continue;
-            
+
             if (pluginTarget && !string.Equals(plugin.Name, target.Substring(8)))
                 continue;
 

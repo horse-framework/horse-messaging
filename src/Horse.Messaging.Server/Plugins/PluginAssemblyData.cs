@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.Loader;
 using System.Text.Json.Serialization;
 
 namespace Horse.Messaging.Server.Plugins;
@@ -28,7 +29,7 @@ public class PluginAssemblyData
     /// Included plugins in the assembly
     /// </summary>
     public List<PluginData> Plugins { get; set; }
-
+    
     [JsonIgnore]
-    internal Assembly LoadedAssembly { get; set; }
+    internal AssemblyLoadContext AssemblyContext { get; set; }
 }
