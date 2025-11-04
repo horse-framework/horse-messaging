@@ -244,8 +244,25 @@ public class PluginRider : IPluginRider
         string assemblyVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location).FileVersion;
         lock (_data)
         {
-            if (_data.Any(x => x.Location.Equals(assembly.Location) || (x.Fullname.Equals(assembly.FullName) && x.AssemblyVersion.Equals(assemblyVersion))))
-                throw new DuplicateNameException("The assembly is already loaded");
+            PluginAssemblyData previousData = _data.FirstOrDefault(x => x.Location.Equals(assembly.Location));
+
+            if (previousData != null)
+            {
+                if (previousData.Plugins.All(x => x.Removed))
+                    _data.Remove(previousData);
+                else
+                    throw new DuplicateNameException("The assembly is already loaded");
+
+                previousData = _data.FirstOrDefault(x => x.Fullname.Equals(assembly.FullName) && x.AssemblyVersion.Equals(assemblyVersion));
+            }
+
+            if (previousData != null)
+            {
+                if (previousData.Plugins.All(x => x.Removed))
+                    _data.Remove(previousData);
+                else
+                    throw new DuplicateNameException("The assembly is already loaded");
+            }
         }
 
         PluginAssemblyData assemblyData = null;
@@ -256,24 +273,21 @@ public class PluginRider : IPluginRider
 
             if (typeof(IHorsePluginBuilder).IsAssignableFrom(type))
             {
-                if (assemblyData == null)
+                lock (_data)
                 {
-                    lock (_data)
+                    assemblyData = _data.FirstOrDefault(x => x.Fullname == assembly.FullName && x.AssemblyVersion == assemblyVersion);
+                    if (assemblyData != null)
+                        throw new DuplicateNameException("The assembly is already loaded");
+                    
+                    assemblyData = new PluginAssemblyData
                     {
-                        assemblyData = _data.FirstOrDefault(x => x.Fullname == assembly.FullName);
-                        if (assemblyData == null)
-                        {
-                            assemblyData = new PluginAssemblyData
-                            {
-                                Location = assembly.Location,
-                                Fullname = assembly.FullName,
-                                Plugins = new List<PluginData>(),
-                                AssemblyVersion = assemblyVersion,
-                                AssemblyContext = context
-                            };
-                            _data.Add(assemblyData);
-                        }
-                    }
+                        Location = assembly.Location,
+                        Fullname = assembly.FullName,
+                        Plugins = new List<PluginData>(),
+                        AssemblyVersion = assemblyVersion,
+                        AssemblyContext = context
+                    };
+                    _data.Add(assemblyData);
                 }
 
                 try
@@ -441,7 +455,6 @@ public class PluginRider : IPluginRider
                 PluginData pluginData = data.Plugins.FirstOrDefault(x => string.Equals(x.Name, pluginName, StringComparison.InvariantCultureIgnoreCase));
                 if (pluginData != null)
                 {
-                    modified = true;
                     pluginData.Disabled = true;
                     pluginData.Removed = remove;
 
@@ -460,11 +473,11 @@ public class PluginRider : IPluginRider
                     break;
                 }
             }
+
+            _data.RemoveAll(x => x.Plugins.All(y => y.Removed));
         }
 
-        if (modified)
-            SaveData();
-
+        SaveData();
         return true;
     }
 
