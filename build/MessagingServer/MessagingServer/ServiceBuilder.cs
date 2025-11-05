@@ -14,11 +14,6 @@ public class ServiceBuilder
     private HorseRider _rider;
     private AppOptions _options;
 
-    private ServiceBuilder()
-    {
-        _server.Logger = new ConsoleLogger();
-    }
-
     public static ServiceBuilder Create()
     {
         return new ServiceBuilder();
@@ -39,7 +34,7 @@ public class ServiceBuilder
             .ConfigureOptions(o =>
             {
                 o.DataPath = _options.DataPath;
-                o.UseElasticConsoleLogs = _options.UseElasticConsoleLogs;
+                o.UseElasticConsoleLogs = _options.UseElasticLogs;
             })
             .ConfigureChannels(c =>
             {

@@ -61,5 +61,5 @@ public class AppOptions
     public bool QueueUseMemory { get; set; }
     public bool QueueUsePersistentManagerAsDefault { get; set; }
     public bool OverWebSocket { get; set; }
-    public bool UseElasticConsoleLogs { get; set; } = true;
+    public bool UseElasticLogs { get; set; } = true;
 }

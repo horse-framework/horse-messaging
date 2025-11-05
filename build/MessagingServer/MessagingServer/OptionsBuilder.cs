@@ -30,7 +30,7 @@ public class OptionsBuilder
         if (!Directory.Exists(_options.DataPath))
             Directory.CreateDirectory(_options.DataPath);
 
-        _options.UseElasticConsoleLogs = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_USE_ELASTIC_CONSOLE_LOGS") ?? "1") > 0;
+        _options.UseElasticLogs = Convert.ToInt32(Environment.GetEnvironmentVariable("HORSE_USE_ELASTIC_CONSOLE_LOGS") ?? "1") > 0;
 
         LoadJockeyFromEnvironment();
         LoadClusterFromEnvironment();
@@ -104,6 +104,7 @@ public class OptionsBuilder
 
     private void LoadQueueFromEnvironment()
     {
+        _options.QueueType = Enums.Parse<QueueType>(Environment.GetEnvironmentVariable("HORSE_QUEUE_TYPE") ?? "RoundRobin", true, EnumFormat.Name);
         _options.QueueAutoCreate = bool.Parse(Environment.GetEnvironmentVariable("HORSE_QUEUE_AUTO_CREATE") ?? "true");
         _options.QueueAck = Enums.Parse<QueueAckDecision>(Environment.GetEnvironmentVariable("HORSE_QUEUE_ACK") ?? "WaitForAcknowledge");
         _options.QueueDestroy = Enums.Parse<QueueDestroy>(Environment.GetEnvironmentVariable("HORSE_QUEUE_AUTO_DESTROY") ?? "Disabled");
