@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
@@ -179,7 +177,6 @@ internal class RoundRobinQueueState : IQueueState
         while (true)
         {
             int index = currentIndex < 0 ? 0 : currentIndex;
-
             if (index >= _queue.ClientsArray.Length)
             {
                 if (!_queue.HasAnyClient())
@@ -204,6 +201,9 @@ internal class RoundRobinQueueState : IQueueState
                         break;
                 }
 
+                if (!client.Client.IsConnected)
+                    continue;
+
                 if (waitForAcknowledge && client.CurrentlyProcessing != null)
                 {
                     if (client.ProcessDeadline < DateTime.UtcNow)
@@ -222,10 +222,7 @@ internal class RoundRobinQueueState : IQueueState
 
             tryCount++;
             if (tryCount > 10)
-            {
-                await Task.Delay(1);
                 tryCount = 0;
-            }
 
             if (!_queue.HasAnyClient())
                 break;

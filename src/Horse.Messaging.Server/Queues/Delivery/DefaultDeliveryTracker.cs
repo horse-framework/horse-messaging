@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -15,8 +16,7 @@ namespace Horse.Messaging.Server.Queues.Delivery
     /// </summary>
     public class DefaultDeliveryTracker : IDeliveryTracker
     {
-        private readonly MessageDelivery[] _deliveries;
-        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+        private readonly ConcurrentDictionary<string, MessageDelivery> _deliveries = new ConcurrentDictionary<string, MessageDelivery>();
 
         private readonly IHorseQueueManager _manager;
         private readonly HorseQueue _queue;
@@ -30,12 +30,6 @@ namespace Horse.Messaging.Server.Queues.Delivery
         {
             _manager = manager;
             _queue = manager.Queue;
-
-            int deliveryLimit = 128;
-            if (_queue.Options.ClientLimit > 0)
-                deliveryLimit = Math.Max(1024, _queue.Options.ClientLimit);
-
-            _deliveries = new MessageDelivery[deliveryLimit];
         }
 
         /// <summary>
@@ -43,27 +37,38 @@ namespace Horse.Messaging.Server.Queues.Delivery
         /// </summary>
         public void Start()
         {
-            _timer = new Thread(async () =>
+            _timer = new Thread(() =>
             {
+                Task currentDeliveryTask = null;
                 while (!_destroyed)
                 {
                     try
                     {
-                        await Task.Delay(1000);
+                        Thread.Sleep(1000);
 
                         if (_queue.Status == QueueStatus.NotInitialized)
                             continue;
 
-                        await ProcessDeliveries();
+                        if (currentDeliveryTask != null)
+                        {
+                            if (currentDeliveryTask.IsCompleted || currentDeliveryTask.IsFaulted || currentDeliveryTask.IsCanceled)
+                                currentDeliveryTask = null;
+                            else
+                                continue;
+                        }
+
+                        currentDeliveryTask = ProcessDeliveries();
                     }
                     catch (Exception e)
                     {
                     }
                 }
-            });
+            })
+            {
+                IsBackground = true,
+                Priority = ThreadPriority.BelowNormal
+            };
 
-            _timer.IsBackground = true;
-            _timer.Priority = ThreadPriority.BelowNormal;
             _timer.Start();
         }
 
@@ -72,8 +77,7 @@ namespace Horse.Messaging.Server.Queues.Delivery
         /// </summary>
         public void Reset()
         {
-            for (int i = 0; i < _deliveries.Length; i++)
-                _deliveries[i] = null;
+            _deliveries.Clear();
         }
 
         /// <summary>
@@ -92,13 +96,7 @@ namespace Horse.Messaging.Server.Queues.Delivery
         /// </summary>
         public IEnumerable<QueueMessage> GetDeliveringMessages()
         {
-            foreach (MessageDelivery delivery in _deliveries)
-            {
-                if (delivery == null)
-                    yield break;
-
-                yield return delivery.Message;
-            }
+            return _deliveries.Values.Select(x => x.Message).ToList();
         }
 
         /// <summary>
@@ -106,51 +104,43 @@ namespace Horse.Messaging.Server.Queues.Delivery
         /// </summary>
         private async Task ProcessDeliveries()
         {
+            List<string> removingDeliveries = new List<string>();
             var ackTimeoutList = new List<MessageDelivery>(16);
             bool atLeastOneRemoved = false;
 
-            await _semaphore.WaitAsync();
-            try
+            foreach (MessageDelivery delivery in _deliveries.Values)
             {
-                for (int i = 0; i < _deliveries.Length; i++)
+                bool remove = delivery.Acknowledge != DeliveryAcknowledge.None || !delivery.AcknowledgeDeadline.HasValue;
+
+                if (remove)
                 {
-                    MessageDelivery delivery = _deliveries[i];
-                    if (delivery == null)
-                        continue;
+                    removingDeliveries.Add(delivery.Message.Message.MessageId);
+                    atLeastOneRemoved = true;
+                    continue;
+                }
 
-                    bool remove = delivery.Acknowledge != DeliveryAcknowledge.None || !delivery.AcknowledgeDeadline.HasValue;
+                if (DateTime.UtcNow > delivery.AcknowledgeDeadline.Value)
+                    remove = true;
 
-                    if (remove)
+                if (!remove && delivery.Message.CurrentDeliveryReceivers.Count > 0)
+                {
+                    bool allDisconnected = delivery.Message.CurrentDeliveryReceivers.All(x => x.Client == null || !x.Client.IsConnected);
+                    if (allDisconnected)
                     {
-                        _deliveries[i] = null;
-                        atLeastOneRemoved = true;
-                        continue;
-                    }
-
-                    if (DateTime.UtcNow > delivery.AcknowledgeDeadline.Value)
                         remove = true;
-
-                    if (!remove && delivery.Message.CurrentDeliveryReceivers.Count > 0)
-                    {
-                        bool allDisconnected = delivery.Message.CurrentDeliveryReceivers.All(x => x.Client == null || !x.Client.IsConnected);
-                        if (allDisconnected)
-                        {
-                            remove = true;
-                            delivery.Message.CurrentDeliveryReceivers.Clear();
-                        }
-                    }
-
-                    if (remove)
-                    {
-                        atLeastOneRemoved = true;
-                        ackTimeoutList.Add(delivery);
+                        delivery.Message.CurrentDeliveryReceivers.Clear();
                     }
                 }
+
+                if (remove)
+                {
+                    atLeastOneRemoved = true;
+                    ackTimeoutList.Add(delivery);
+                }
             }
-            finally
-            {
-                _semaphore.Release();
-            }
+
+            foreach (string deliveryId in removingDeliveries)
+                _deliveries.TryRemove(deliveryId, out _);
 
             foreach (MessageDelivery delivery in ackTimeoutList)
             {
@@ -180,29 +170,13 @@ namespace Horse.Messaging.Server.Queues.Delivery
         /// <summary>
         /// Adds acknowledge to check it's timeout
         /// </summary>
-        public async ValueTask<bool> Track(MessageDelivery delivery)
+        public ValueTask<bool> Track(MessageDelivery delivery)
         {
             if (!delivery.Message.Message.WaitResponse || !delivery.AcknowledgeDeadline.HasValue)
-                return true;
+                return new ValueTask<bool>(true);
 
-            await _semaphore.WaitAsync();
-            try
-            {
-                for (int i = 0; i < _deliveries.Length; i++)
-                {
-                    if (_deliveries[i] == null)
-                    {
-                        _deliveries[i] = delivery;
-                        return true;
-                    }
-                }
-
-                return false;
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
+            _deliveries.TryAdd(delivery.Message.Message.MessageId, delivery);
+            return new ValueTask<bool>(true);
         }
 
         /// <summary>
@@ -210,20 +184,8 @@ namespace Horse.Messaging.Server.Queues.Delivery
         /// </summary>
         public MessageDelivery FindDelivery(MessagingClient client, string messageId, bool remove)
         {
-            for (int i = 0; i < _deliveries.Length; i++)
-            {
-                MessageDelivery delivery = _deliveries[i];
-
-                if (delivery?.Receiver != null && delivery.Receiver.Client.UniqueId == client.UniqueId && delivery.Message.Message.MessageId == messageId)
-                {
-                    if (remove)
-                        _deliveries[i] = null;
-
-                    return delivery;
-                }
-            }
-
-            return null;
+            _deliveries.TryGetValue(messageId, out MessageDelivery delivery);
+            return delivery;
         }
 
         /// <summary>
@@ -231,15 +193,7 @@ namespace Horse.Messaging.Server.Queues.Delivery
         /// </summary>
         public void RemoveDelivery(MessageDelivery delivery)
         {
-            for (int i = 0; i < _deliveries.Length; i++)
-            {
-                MessageDelivery d = _deliveries[i];
-                if (d == delivery)
-                {
-                    _deliveries[i] = null;
-                    return;
-                }
-            }
+            _deliveries.TryRemove(delivery.Message.Message.MessageId, out _);
         }
 
         /// <summary>
@@ -247,7 +201,7 @@ namespace Horse.Messaging.Server.Queues.Delivery
         /// </summary>
         public int GetDeliveryCount()
         {
-            return _deliveries.Count(x => x != null);
+            return _deliveries.Count;
         }
     }
 }

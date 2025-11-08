@@ -777,6 +777,7 @@ public class HorseQueue
         }
     }
 
+
     /// <summary>
     /// Start to process all pending messages.
     /// This method is called after a client is subscribed to the queue.
@@ -792,7 +793,6 @@ public class HorseQueue
                 return;
 
             bool waitForAck = Options.Type != QueueType.RoundRobin && Options.Acknowledge == QueueAckDecision.WaitForAcknowledge;
-
             if (waitForAck)
                 await WaitForAcknowledge();
 
@@ -831,6 +831,9 @@ public class HorseQueue
             }
             catch (Exception ex)
             {
+                if (message == null)
+                    return;
+
                 if (!message.IsInQueue && !message.IsSent)
                     AddMessage(message, false);
 

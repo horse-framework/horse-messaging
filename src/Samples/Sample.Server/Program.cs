@@ -1,13 +1,13 @@
-﻿using System;
-using System.IO;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Horse.Jockey;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
+using Horse.Messaging.Data;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Server;
 
 [QueueName("demo-queue")]
@@ -34,10 +34,11 @@ namespace Sample.Server
             HorseRider rider = HorseRiderBuilder.Create()
                 .ConfigureQueues(cfg =>
                 {
-                    cfg.Options.Type = QueueType.Push;
-                    cfg.Options.MessageLimit = 10;
+                    cfg.Options.Type = QueueType.RoundRobin;
+                    cfg.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                    cfg.Options.CommitWhen = CommitWhen.AfterReceived;
                     cfg.Options.AutoQueueCreation = true;
-                    cfg.UseMemoryQueues();
+                    cfg.UsePersistentQueues();
                 })
                 .Build();
             /*
