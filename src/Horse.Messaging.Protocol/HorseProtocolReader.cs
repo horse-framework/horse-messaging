@@ -207,24 +207,6 @@ public class HorseProtocolReader
             _arrayPool.Return(data);
         }
 
-        /*
-        read = await ReadCertainBytes(stream, data, 0, data.Length);
-        if (!read)
-            return false;
-
-        string[] headers = Encoding.UTF8.GetString(data).Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
-        foreach (string header in headers)
-        {
-            int i = header.IndexOf(':');
-            if (i < 1)
-                continue;
-
-            string key = header.Substring(0, i);
-            string value = header.Substring(i + 1);
-            message.HeadersList.Add(new KeyValuePair<string, string>(key, value));
-        }
-        */
-
         return true;
     }
 
@@ -237,10 +219,11 @@ public class HorseProtocolReader
         if (message.Length == 0)
             return true;
 
-        if (message.Content == null)
-            message.Content = new MemoryStream();
-
         ulong left = message.Length;
+        
+        if (message.Content == null)
+            message.Content = new MemoryStream((int)message.Length);
+
         byte[] readBuffer = _arrayPool.Rent(BUFFER_SIZE);
         try
         {
@@ -260,21 +243,6 @@ public class HorseProtocolReader
             _arrayPool.Return(readBuffer);
         }
 
-        /*
-        ulong left = message.Length;
-        ulong blen = (ulong) _buffer.Length;
-        do
-        {
-            int rcount = (int) (left > blen ? blen : left);
-            int read = await stream.ReadAsync(_buffer, 0, rcount);
-            if (read == 0)
-                return false;
-
-            left -= (uint) read;
-            await message.Content.WriteAsync(_buffer, 0, read);
-        } while (left > 0);
-        */
-
         return true;
     }
 
@@ -287,10 +255,11 @@ public class HorseProtocolReader
         if (message.AdditionalContentLength == 0)
             return true;
 
-        if (message.AdditionalContent == null)
-            message.AdditionalContent = new MemoryStream();
-
         int left = message.AdditionalContentLength;
+        
+        if (message.AdditionalContent == null)
+            message.AdditionalContent = new MemoryStream(left);
+
         byte[] readBuffer = _arrayPool.Rent(BUFFER_SIZE);
         try
         {

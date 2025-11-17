@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Microsoft.IO;
 
 namespace Horse.Messaging.Protocol;
 
@@ -15,6 +16,19 @@ public class HorseProtocolWriter
     private static readonly ArrayPool<byte> _arrayPool = ArrayPool<byte>.Shared;
     private static readonly UTF8Encoding _utf8NoBom = new UTF8Encoding(false);
 
+    private static readonly RecyclableMemoryStreamManager StreamManager = new(
+        new RecyclableMemoryStreamManager.Options(1024 * 8,
+            1024 * 1024,
+            int.MaxValue,
+            1024 * 1024 * 64,
+            1024 * 1024 * 256)
+        {
+            AggressiveBufferReturn = true,
+            GenerateCallStacks = false,
+            UseExponentialLargeBuffer = true
+        }
+    );
+
     /// <summary>
     /// Writes a Horse message to stream
     /// </summary>
@@ -22,7 +36,7 @@ public class HorseProtocolWriter
     {
         bool hasAdditionalHeader = additionalHeaders != null && additionalHeaders.Count > 0;
 
-        using MemoryStream ms = new MemoryStream();
+        using var ms = StreamManager.GetStream();
         WriteFrame(ms, value, hasAdditionalHeader);
 
         if (value.HasHeader || hasAdditionalHeader)
@@ -42,7 +56,7 @@ public class HorseProtocolWriter
         bool hasAdditionalHeader = additionalHeaders != null && additionalHeaders.Count > 0;
         int estimatedSize = 256 + (int)(value.Content?.Length ?? 0);
 
-        using MemoryStream ms = new MemoryStream(estimatedSize);
+        using var ms = StreamManager.GetStream();
         WriteFrame(ms, value, hasAdditionalHeader);
 
         if (value.HasHeader || hasAdditionalHeader)
@@ -130,76 +144,6 @@ public class HorseProtocolWriter
             position += _utf8NoBom.GetBytes(message.Target, frameBuffer.Slice(position));
 
         ms.Write(frameBuffer[..position]);
-
-        /*
-            byte proto = (byte)message.Type;
-
-            if (message.WaitResponse)
-                proto += 128;
-
-            if (message.HighPriority)
-                proto += 64;
-
-            if (message.HasHeader || hasAdditionalHeaders)
-                proto += 32;
-
-            ms.WriteByte(proto);
-
-            byte addContent = 0;
-            if (message.HasAdditionalContent)
-                addContent += 128;
-
-            ms.WriteByte(addContent);
-
-            ms.WriteByte((byte)message.MessageIdLength);
-            ms.WriteByte((byte)message.SourceLength);
-            ms.WriteByte((byte)message.TargetLength);
-
-            ms.Write(BitConverter.GetBytes(message.ContentType));
-
-            if (message.Content != null && message.Length == 0)
-                message.Length = (ulong)message.Content.Length;
-
-            if (message.Length < 253)
-                ms.WriteByte((byte)message.Length);
-            else if (message.Length <= ushort.MaxValue)
-            {
-                ms.WriteByte(253);
-                ms.Write(BitConverter.GetBytes((ushort)message.Length));
-            }
-            else if (message.Length <= uint.MaxValue)
-            {
-                ms.WriteByte(254);
-                ms.Write(BitConverter.GetBytes((uint)message.Length));
-            }
-            else
-            {
-                ms.WriteByte(255);
-                ms.Write(BitConverter.GetBytes(message.Length));
-            }
-
-            if (message.HasAdditionalContent)
-                ms.Write(BitConverter.GetBytes(message.AdditionalContentLength));
-
-            if (message.MessageIdLength > 0)
-            {
-                byte[] bytes = Encoding.UTF8.GetBytes(message.MessageId);
-                ms.Write(bytes);
-            }
-
-            if (message.SourceLength > 0)
-            {
-                byte[] bytes = Encoding.UTF8.GetBytes(message.Source);
-                ms.Write(bytes);
-            }
-
-            if (message.TargetLength > 0)
-            {
-                byte[] bytes = Encoding.UTF8.GetBytes(message.Target);
-                ms.Write(bytes);
-            }
-
-            */
     }
 
     /// <summary>
@@ -260,21 +204,6 @@ public class HorseProtocolWriter
         {
             _arrayPool.Return(headerBuffer);
         }
-
-        /*
-        using MemoryStream headerStream = new MemoryStream();
-
-        if (message.HeadersList != null)
-            foreach (KeyValuePair<string, string> pair in message.HeadersList)
-                headerStream.Write(Encoding.UTF8.GetBytes(pair.Key + ":" + pair.Value + "\r\n"));
-
-        if (additionalHeaders != null)
-            foreach (KeyValuePair<string, string> pair in additionalHeaders)
-                headerStream.Write(Encoding.UTF8.GetBytes(pair.Key + ":" + pair.Value + "\r\n"));
-
-        ms.Write(BitConverter.GetBytes((ushort) headerStream.Length));
-        headerStream.Position = 0;
-        headerStream.WriteTo(ms);*/
     }
 
     /// <summary>
