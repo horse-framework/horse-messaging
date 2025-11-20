@@ -91,11 +91,8 @@ public class HorseServerSocket : SocketBase
 
         using var stream = HorseProtocolWriter.StreamManager.GetStream();
         HorseProtocolWriter.Write(message, stream, additionalHeaders);
-
-        if (stream.TryGetBuffer(out ArraySegment<byte> buffer))
-            return Send(buffer.AsSpan(0, (int)stream.Length));
-
-        return Send(stream.ToArray().AsSpan(0, (int)stream.Length));
+        ReadOnlySpan<byte> span = stream.GetSpan().Slice(0, (int)stream.Length);
+        return Send(span);
     }
 
     /// <summary>
@@ -108,10 +105,7 @@ public class HorseServerSocket : SocketBase
 
         await using var stream = HorseProtocolWriter.StreamManager.GetStream();
         HorseProtocolWriter.Write(message, stream, additionalHeaders);
-
-        if (stream.TryGetBuffer(out ArraySegment<byte> buffer))
-            return await SendAsync(buffer.AsMemory(0, (int)stream.Length));
-
-        return await SendAsync(stream.ToArray().AsMemory(0, (int)stream.Length));
+        ReadOnlyMemory<byte> memory = stream.GetMemory().Slice(0, (int)stream.Length);
+        return await SendAsync(memory);
     }
 }

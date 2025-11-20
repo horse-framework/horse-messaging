@@ -96,9 +96,7 @@ internal class RoundRobinQueueState : IQueueState
         //create prepared message data
         await using var stream = HorseProtocolWriter.StreamManager.GetStream();
         HorseProtocolWriter.Write(message.Message, stream);
-        ReadOnlyMemory<byte> memory = stream.TryGetBuffer(out var buffer)
-            ? buffer.AsMemory(0, (int)stream.Length)
-            : stream.ToArray().AsMemory(0, (int)stream.Length);
+        ReadOnlyMemory<byte> memory = stream.GetMemory().Slice(0, (int)stream.Length);
 
         //create delivery object
         MessageDelivery delivery = new MessageDelivery(message, receiver, deadline);

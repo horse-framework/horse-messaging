@@ -79,10 +79,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         {
             await using var stream = HorseProtocolWriter.StreamManager.GetStream();
             HorseProtocolWriter.Write(MessageBuilder.Busy(), stream);
-            ReadOnlyMemory<byte> memory = stream.TryGetBuffer(out var buffer)
-                ? buffer.AsMemory(0, (int)stream.Length)
-                : stream.ToArray().AsMemory(0, (int)stream.Length);
-
+            ReadOnlyMemory<byte> memory = stream.GetMemory().Slice(0, (int)stream.Length);
             await connection.Socket.SendAsync(memory);
             return null;
         }

@@ -132,9 +132,7 @@ public class EventManager : IDisposable
 
             using var stream = HorseProtocolWriter.StreamManager.GetStream();
             HorseProtocolWriter.Write(message, stream);
-            ReadOnlySpan<byte> span = stream.TryGetBuffer(out var buffer)
-                ? buffer.AsSpan(0, (int)stream.Length)
-                : stream.ToArray().AsSpan(0, (int)stream.Length);
+            ReadOnlySpan<byte> span = stream.GetSpan().Slice(0, (int)stream.Length);
 
             foreach (MessagingClient subscriber in Subscribers.All())
             {

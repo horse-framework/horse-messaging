@@ -299,11 +299,8 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
         {
             await using var stream = HorseProtocolWriter.StreamManager.GetStream();
             HorseProtocolWriter.Write(message, stream);
-
-            if (stream.TryGetBuffer(out ArraySegment<byte> buffer))
-                sent = await SendAsync(buffer.AsMemory(0, (int)stream.Length));
-            else
-                sent = await SendAsync(stream.ToArray().AsMemory(0, (int)stream.Length));
+            ReadOnlyMemory<byte> memory = stream.GetMemory().Slice(0, (int)stream.Length);
+            sent = await SendAsync(memory);
         }
 
         if (sent && SmartHealthCheck)
