@@ -77,7 +77,13 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         MessagingClient foundClient = _rider.Client.Find(clientId);
         if (foundClient != null)
         {
-            await connection.Socket.SendAsync(HorseProtocolWriter.Create(MessageBuilder.Busy()));
+            await using var stream = HorseProtocolWriter.StreamManager.GetStream();
+            HorseProtocolWriter.Write(MessageBuilder.Busy(), stream);
+            ReadOnlyMemory<byte> memory = stream.TryGetBuffer(out var buffer)
+                ? buffer.AsMemory(0, (int)stream.Length)
+                : stream.ToArray().AsMemory(0, (int)stream.Length);
+
+            await connection.Socket.SendAsync(memory);
             return null;
         }
 
@@ -356,7 +362,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
                 return _eventHandler.Handle(mc, message, mc.IsNodeClient);
 
             case MessageType.Ping:
-                return mc.SendRawAsync(PredefinedMessages.PONG).AsTask();
+                return mc.SendRawAsync(PredefinedMessages.PONG);
 
             case MessageType.Pong:
                 mc.KeepAlive();

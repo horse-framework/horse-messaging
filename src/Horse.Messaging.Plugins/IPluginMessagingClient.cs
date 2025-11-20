@@ -62,5 +62,5 @@ public interface IPluginMessagingClient
     /// <summary>
     /// Sends a message to the client.
     /// </summary>
-    ValueTask<bool> SendMessage(HorseMessage message);
+    Task<bool> SendMessage(HorseMessage message);
 }

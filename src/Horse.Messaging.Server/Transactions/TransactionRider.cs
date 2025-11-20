@@ -265,7 +265,7 @@ public class TransactionRider
     /// <summary>
     /// Begins new transaction from remote
     /// </summary>
-    public async ValueTask<bool> Begin(MessagingClient client, HorseMessage message)
+    public async Task<bool> Begin(MessagingClient client, HorseMessage message)
     {
         _containers.TryGetValue(message.Target, out ServerTransactionContainer container);
 
@@ -283,7 +283,7 @@ public class TransactionRider
     /// <summary>
     /// Commits a transaction
     /// </summary>
-    public ValueTask<bool> Commit(MessagingClient client, HorseMessage message)
+    public Task<bool> Commit(MessagingClient client, HorseMessage message)
     {
         _containers.TryGetValue(message.Target, out ServerTransactionContainer container);
 
@@ -296,7 +296,7 @@ public class TransactionRider
     /// <summary>
     /// Rollbacks a transaction
     /// </summary>
-    public ValueTask<bool> Rollback(MessagingClient client, HorseMessage message)
+    public Task<bool> Rollback(MessagingClient client, HorseMessage message)
     {
         _containers.TryGetValue(message.Target, out ServerTransactionContainer container);
 

@@ -292,7 +292,7 @@ public class MessagingClient : HorseServerSocket, ISwitchingProtocolClient
     /// <summary>
     /// Sends Horse Message to the client
     /// </summary>
-    public override ValueTask<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
+    public override Task<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
         if (SwitchingProtocol != null)
             return SwitchingProtocol.SendAsync(message, additionalHeaders);
@@ -303,7 +303,7 @@ public class MessagingClient : HorseServerSocket, ISwitchingProtocolClient
     /// <summary>
     /// Sends raw data
     /// </summary>
-    public ValueTask<bool> SendRawAsync(byte[] data)
+    public Task<bool> SendRawAsync(byte[] data)
     {
         if (SwitchingProtocol != null)
             return SwitchingProtocol.SendAsync(data);
@@ -314,7 +314,7 @@ public class MessagingClient : HorseServerSocket, ISwitchingProtocolClient
     /// <summary>
     /// Sends raw data
     /// </summary>
-    public ValueTask<bool> SendRawAsync(ReadOnlyMemory<byte> data)
+    public Task<bool> SendRawAsync(ReadOnlyMemory<byte> data)
     {
         if (SwitchingProtocol != null)
             return SwitchingProtocol.SendAsync(data);

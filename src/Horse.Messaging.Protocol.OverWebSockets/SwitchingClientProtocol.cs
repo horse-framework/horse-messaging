@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -61,30 +62,34 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
 
     public bool Send(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
-        byte[] bytes = HorseProtocolWriter.Create(message, additionalHeaders);
+        MemoryStream stream = new MemoryStream();
+        HorseProtocolWriter.Write(message, stream);
+
         WebSocketMessage msg = new WebSocketMessage
         {
             OpCode = SocketOpCode.Binary,
-            Content = new MemoryStream(bytes)
+            Content = stream
         };
 
         return _client.SendRaw(_writer.Create(msg));
     }
 
-    public ValueTask<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
+    public Task<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
-        byte[] bytes = HorseProtocolWriter.Create(message, additionalHeaders);
+        MemoryStream stream = new MemoryStream();
+        HorseProtocolWriter.Write(message, stream, additionalHeaders);
+
         WebSocketMessage msg = new WebSocketMessage
         {
             OpCode = SocketOpCode.Binary,
-            Content = new MemoryStream(bytes)
+            Content = stream
         };
 
         msg.Content.Position = 0;
         return _client.SendRawAsync(_writer.Create(msg));
     }
 
-    public ValueTask<bool> SendAsync(byte[] data)
+    public Task<bool> SendAsync(byte[] data)
     {
         WebSocketMessage msg = new WebSocketMessage
         {
@@ -95,7 +100,7 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
         return _client.SendRawAsync(_writer.Create(msg));
     }
 
-    public ValueTask<bool> SendAsync(ReadOnlyMemory<byte> data)
+    public Task<bool> SendAsync(ReadOnlyMemory<byte> data)
     {
         WebSocketMessage msg = new WebSocketMessage
         {

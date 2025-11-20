@@ -13,15 +13,15 @@ namespace Horse.Messaging.Protocol;
 /// </summary>
 public class HorseProtocolWriter
 {
-    private static readonly ArrayPool<byte> _arrayPool = ArrayPool<byte>.Shared;
-    private static readonly UTF8Encoding _utf8NoBom = new UTF8Encoding(false);
+    private static readonly ArrayPool<byte> ArrayPool = ArrayPool<byte>.Shared;
+    private static readonly UTF8Encoding Utf8NoBom = new(false);
 
-    private static readonly RecyclableMemoryStreamManager StreamManager = new(
+    internal static readonly RecyclableMemoryStreamManager StreamManager = new(
         new RecyclableMemoryStreamManager.Options(1024 * 8,
             1024 * 1024,
-            int.MaxValue,
             1024 * 1024 * 64,
-            1024 * 1024 * 256)
+            1024 * 1024 * 256,
+            1024 * 1024 * 1024)
         {
             AggressiveBufferReturn = true,
             GenerateCallStacks = false,
@@ -36,16 +36,13 @@ public class HorseProtocolWriter
     {
         bool hasAdditionalHeader = additionalHeaders != null && additionalHeaders.Count > 0;
 
-        using var ms = StreamManager.GetStream();
-        WriteFrame(ms, value, hasAdditionalHeader);
+        WriteFrame(stream, value, hasAdditionalHeader);
 
         if (value.HasHeader || hasAdditionalHeader)
-            WriteHeader(ms, value, additionalHeaders);
+            WriteHeader(stream, value, additionalHeaders);
 
         if (value.Length > 0)
-            WriteContent(ms, value);
-
-        ms.WriteTo(stream);
+            WriteContent(stream, value);
     }
 
     /// <summary>
@@ -72,7 +69,7 @@ public class HorseProtocolWriter
     /// Writes frame to stream
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void WriteFrame(MemoryStream ms, HorseMessage message, bool hasAdditionalHeaders)
+    private static void WriteFrame(Stream ms, HorseMessage message, bool hasAdditionalHeaders)
     {
         Span<byte> frameBuffer = stackalloc byte[256];
         int position = 0;
@@ -135,13 +132,13 @@ public class HorseProtocolWriter
         }
 
         if (message.MessageIdLength > 0)
-            position += _utf8NoBom.GetBytes(message.MessageId, frameBuffer.Slice(position));
+            position += Utf8NoBom.GetBytes(message.MessageId, frameBuffer.Slice(position));
 
         if (message.SourceLength > 0)
-            position += _utf8NoBom.GetBytes(message.Source, frameBuffer.Slice(position));
+            position += Utf8NoBom.GetBytes(message.Source, frameBuffer.Slice(position));
 
         if (message.TargetLength > 0)
-            position += _utf8NoBom.GetBytes(message.Target, frameBuffer.Slice(position));
+            position += Utf8NoBom.GetBytes(message.Target, frameBuffer.Slice(position));
 
         ms.Write(frameBuffer[..position]);
     }
@@ -150,7 +147,7 @@ public class HorseProtocolWriter
     /// Writes header length and content to stream
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void WriteHeader(MemoryStream ms, HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders)
+    private static void WriteHeader(Stream ms, HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders)
     {
         int estimatedSize = 0;
         if (message.HeadersList != null)
@@ -165,7 +162,7 @@ public class HorseProtocolWriter
                 estimatedSize += Encoding.UTF8.GetByteCount(pair.Key) + Encoding.UTF8.GetByteCount(pair.Value) + 3;
         }
 
-        byte[] headerBuffer = _arrayPool.Rent(estimatedSize);
+        byte[] headerBuffer = ArrayPool.Rent(estimatedSize);
         try
         {
             int position = 0;
@@ -174,9 +171,9 @@ public class HorseProtocolWriter
             {
                 foreach (KeyValuePair<string, string> pair in message.HeadersList)
                 {
-                    position += _utf8NoBom.GetBytes(pair.Key, 0, pair.Key.Length, headerBuffer, position);
+                    position += Utf8NoBom.GetBytes(pair.Key, 0, pair.Key.Length, headerBuffer, position);
                     headerBuffer[position++] = (byte)':';
-                    position += _utf8NoBom.GetBytes(pair.Value, 0, pair.Value.Length, headerBuffer, position);
+                    position += Utf8NoBom.GetBytes(pair.Value, 0, pair.Value.Length, headerBuffer, position);
                     headerBuffer[position++] = (byte)'\r';
                     headerBuffer[position++] = (byte)'\n';
                 }
@@ -186,9 +183,9 @@ public class HorseProtocolWriter
             {
                 foreach (KeyValuePair<string, string> pair in additionalHeaders)
                 {
-                    position += _utf8NoBom.GetBytes(pair.Key, 0, pair.Key.Length, headerBuffer, position);
+                    position += Utf8NoBom.GetBytes(pair.Key, 0, pair.Key.Length, headerBuffer, position);
                     headerBuffer[position++] = (byte)':';
-                    position += _utf8NoBom.GetBytes(pair.Value, 0, pair.Value.Length, headerBuffer, position);
+                    position += Utf8NoBom.GetBytes(pair.Value, 0, pair.Value.Length, headerBuffer, position);
                     headerBuffer[position++] = (byte)'\r';
                     headerBuffer[position++] = (byte)'\n';
                 }
@@ -202,7 +199,7 @@ public class HorseProtocolWriter
         }
         finally
         {
-            _arrayPool.Return(headerBuffer);
+            ArrayPool.Return(headerBuffer);
         }
     }
 
@@ -210,7 +207,7 @@ public class HorseProtocolWriter
     /// Writes content to stream
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void WriteContent(MemoryStream ms, HorseMessage message)
+    private static void WriteContent(Stream ms, HorseMessage message)
     {
         if (message.Length > 0 && message.Content != null)
             message.Content.WriteTo(ms);

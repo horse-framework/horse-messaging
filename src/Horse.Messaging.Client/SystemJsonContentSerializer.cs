@@ -58,15 +58,13 @@ public class SystemJsonContentSerializer : IMessageContentSerializer
     public void Serialize(HorseMessage message, object model)
     {
         var context = GetJsonContextForType(model.GetType().Name);
-
-        byte[] array;
+        message.Content = new MemoryStream();
 
         if (context != null)
-            array = JsonSerializer.SerializeToUtf8Bytes(model, model.GetType(), context);
+            JsonSerializer.Serialize(message.Content, model, model.GetType(), context);
         else
-            array = JsonSerializer.SerializeToUtf8Bytes(model, model.GetType(), SerializerFactory.Default());
+            JsonSerializer.Serialize(message.Content, model, model.GetType(), SerializerFactory.Default());
 
-        message.Content = new MemoryStream(array);
         message.Content.Position = 0;
     }
 
@@ -80,7 +78,12 @@ public class SystemJsonContentSerializer : IMessageContentSerializer
         if (message.Content == null || message.Content.Length < 1)
             return null;
 
-        ReadOnlySpan<byte> span = message.Content.ToArray();
+        ReadOnlySpan<byte> span;
+
+        if (message.Content.TryGetBuffer(out var sourceSegment))
+            span = sourceSegment.AsSpan( 0, (int)message.Content.Length);
+        else
+            span = message.Content.ToArray().AsSpan(0, (int)message.Content.Length);
 
         var context = GetJsonContextForType(type.Name);
 

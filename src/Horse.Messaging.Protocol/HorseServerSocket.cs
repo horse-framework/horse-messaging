@@ -89,20 +89,29 @@ public class HorseServerSocket : SocketBase
         if (string.IsNullOrEmpty(message.MessageId))
             message.SetMessageId(_uniqueIdGenerator.Create());
 
-        byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
-        return Send(data);
+        using var stream = HorseProtocolWriter.StreamManager.GetStream();
+        HorseProtocolWriter.Write(message, stream, additionalHeaders);
+
+        if (stream.TryGetBuffer(out ArraySegment<byte> buffer))
+            return Send(buffer.AsSpan(0, (int)stream.Length));
+
+        return Send(stream.ToArray().AsSpan(0, (int)stream.Length));
     }
 
     /// <summary>
     /// Sends Horse message to client
     /// </summary>
-    public virtual ValueTask<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
+    public virtual async Task<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
         if (string.IsNullOrEmpty(message.MessageId))
             message.SetMessageId(_uniqueIdGenerator.Create());
 
-        byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
+        await using var stream = HorseProtocolWriter.StreamManager.GetStream();
+        HorseProtocolWriter.Write(message, stream, additionalHeaders);
 
-        return SendAsync(data);
+        if (stream.TryGetBuffer(out ArraySegment<byte> buffer))
+            return await SendAsync(buffer.AsMemory(0, (int)stream.Length));
+
+        return await SendAsync(stream.ToArray().AsMemory(0, (int)stream.Length));
     }
 }

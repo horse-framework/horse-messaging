@@ -728,7 +728,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends raw byte array over socket
     /// </summary>
-    public ValueTask<bool> SendRawAsync(byte[] data)
+    public Task<bool> SendRawAsync(byte[] data)
     {
         if (SmartHealthCheck)
             _socket.KeepAlive();
@@ -746,15 +746,19 @@ public class HorseClient : IDisposable
         if (string.IsNullOrEmpty(message.MessageId))
             message.SetMessageId(UniqueIdGenerator.Create());
 
-        byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
-
         if (_socket == null)
             return false;
 
         if (SmartHealthCheck)
             _socket.KeepAlive();
 
-        return _socket.Send(data);
+        using var stream = HorseProtocolWriter.StreamManager.GetStream();
+        HorseProtocolWriter.Write(message, stream, additionalHeaders);
+
+        if (stream.TryGetBuffer(out ArraySegment<byte> buffer))
+            return _socket.Send(buffer.AsSpan(0, (int)stream.Length));
+
+        return _socket.Send(stream.ToArray().AsSpan(0, (int)stream.Length));
     }
 
 
@@ -776,8 +780,13 @@ public class HorseClient : IDisposable
             sent = await SwitchingProtocol.SendAsync(message, additionalHeaders);
         else
         {
-            byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
-            sent = await _socket.SendAsync(data);
+            await using var stream = HorseProtocolWriter.StreamManager.GetStream();
+            HorseProtocolWriter.Write(message, stream, additionalHeaders);
+
+            if (stream.TryGetBuffer(out ArraySegment<byte> buffer))
+                sent = await _socket.SendAsync(buffer.AsMemory(0, (int)stream.Length));
+            else
+                sent = await _socket.SendAsync(stream.ToArray().AsMemory(0, (int)stream.Length));
         }
 
         if (sent && SmartHealthCheck)
@@ -833,7 +842,7 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends raw message
     /// </summary>
-    public ValueTask<bool> SendAsync(byte[] rawData)
+    public Task<bool> SendAsync(byte[] rawData)
     {
         return _socket.SendAsync(rawData);
     }

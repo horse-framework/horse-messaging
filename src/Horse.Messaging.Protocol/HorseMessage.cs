@@ -188,7 +188,7 @@ public class HorseMessage
         MessageIdLength = string.IsNullOrEmpty(MessageId) ? 0 : Encoding.UTF8.GetByteCount(MessageId);
         SourceLength = string.IsNullOrEmpty(Source) ? 0 : Encoding.UTF8.GetByteCount(Source);
         TargetLength = string.IsNullOrEmpty(Target) ? 0 : Encoding.UTF8.GetByteCount(Target);
-        Length = Content != null ? (ulong) Content.Length : 0;
+        Length = Content != null ? (ulong)Content.Length : 0;
     }
 
     /// <summary>
@@ -211,7 +211,7 @@ public class HorseMessage
             return;
 
         Content = new MemoryStream(Encoding.UTF8.GetBytes(content));
-        Length = Content != null ? (ulong) Content.Length : 0;
+        Length = Content != null ? (ulong)Content.Length : 0;
     }
 
     /// <summary>
@@ -223,7 +223,7 @@ public class HorseMessage
             return;
 
         AdditionalContent = new MemoryStream(Encoding.UTF8.GetBytes(content));
-        AdditionalContentLength = AdditionalContent != null ? (int) AdditionalContent.Length : 0;
+        AdditionalContentLength = AdditionalContent != null ? (int)AdditionalContent.Length : 0;
         HasAdditionalContent = AdditionalContentLength > 0;
     }
 
@@ -240,7 +240,7 @@ public class HorseMessage
     /// </summary>
     public TModel Deserialize<TModel>(IMessageContentSerializer serializer)
     {
-        return (TModel) serializer.Deserialize(this, typeof(TModel));
+        return (TModel)serializer.Deserialize(this, typeof(TModel));
     }
 
     /// <summary>
@@ -312,7 +312,7 @@ public class HorseMessage
                 AdditionalContent.Position = 0;
                 clone.AdditionalContent = new MemoryStream();
                 AdditionalContent.WriteTo(clone.AdditionalContent);
-                clone.AdditionalContentLength = (int) clone.AdditionalContent.Length;
+                clone.AdditionalContentLength = (int)clone.AdditionalContent.Length;
             }
         }
 

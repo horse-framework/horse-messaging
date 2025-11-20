@@ -128,7 +128,7 @@ public class ServerTransactionContainer
     /// <summary>
     /// Called when a client commits a transaction belong this container
     /// </summary>
-    public async ValueTask<bool> Commit(MessagingClient client, HorseMessage message)
+    public async Task<bool> Commit(MessagingClient client, HorseMessage message)
     {
         HorseMessage response;
         _transactions.TryGetValue(message.MessageId, out ServerTransaction transaction);
@@ -162,7 +162,7 @@ public class ServerTransactionContainer
     /// <summary>
     /// Called when a client rolls back transaction belong this container
     /// </summary>
-    public async ValueTask<bool> Rollback(MessagingClient client, HorseMessage message)
+    public async Task<bool> Rollback(MessagingClient client, HorseMessage message)
     {
         HorseMessage response;
         _transactions.TryGetValue(message.MessageId, out ServerTransaction transaction);

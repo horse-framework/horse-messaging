@@ -33,34 +33,36 @@ internal class SwitchingServerProtocol : ISwitchingProtocol
 
     public bool Send(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
-        byte[] bytes = HorseProtocolWriter.Create(message, additionalHeaders);
+        MemoryStream stream = new MemoryStream();
+        HorseProtocolWriter.Write(message, stream, additionalHeaders);
         WebSocketMessage msg = new WebSocketMessage
         {
             OpCode = SocketOpCode.Binary,
-            Content = new MemoryStream(bytes)
+            Content = stream
         };
         msg.Content.Position = 0;
         return _socket.Send(msg);
     }
 
-    public ValueTask<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
+    public Task<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
-        byte[] bytes = HorseProtocolWriter.Create(message, additionalHeaders);
+        MemoryStream stream = new MemoryStream();
+        HorseProtocolWriter.Write(message, stream, additionalHeaders);
         WebSocketMessage msg = new WebSocketMessage
         {
             OpCode = SocketOpCode.Binary,
-            Content = new MemoryStream(bytes)
+            Content = stream
         };
         msg.Content.Position = 0;
         return _socket.SendAsync(msg);
     }
 
-    public ValueTask<bool> SendAsync(ReadOnlyMemory<byte> data)
+    public Task<bool> SendAsync(ReadOnlyMemory<byte> data)
     {
-        throw new NotImplementedException();
+        return _socket.SendAsync(data);
     }
 
-    public ValueTask<bool> SendAsync(byte[] data)
+    public Task<bool> SendAsync(byte[] data)
     {
         WebSocketMessage msg = new WebSocketMessage
         {

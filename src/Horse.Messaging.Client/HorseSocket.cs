@@ -294,11 +294,16 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
 
         bool sent;
         if (_client.SwitchingProtocol != null)
-            sent = _client.SwitchingProtocol.Send(message, additionalHeaders);
+            sent = await _client.SwitchingProtocol.SendAsync(message, additionalHeaders);
         else
         {
-            byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
-            sent = await SendAsync(data);
+            await using var stream = HorseProtocolWriter.StreamManager.GetStream();
+            HorseProtocolWriter.Write(message, stream);
+
+            if (stream.TryGetBuffer(out ArraySegment<byte> buffer))
+                sent = await SendAsync(buffer.AsMemory(0, (int)stream.Length));
+            else
+                sent = await SendAsync(stream.ToArray().AsMemory(0, (int)stream.Length));
         }
 
         if (sent && SmartHealthCheck)
