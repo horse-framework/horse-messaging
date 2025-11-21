@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
@@ -96,7 +97,7 @@ internal class RoundRobinQueueState : IQueueState
         //create prepared message data
         await using var stream = HorseProtocolWriter.StreamManager.GetStream();
         HorseProtocolWriter.Write(message.Message, stream);
-        ReadOnlyMemory<byte> memory = stream.GetMemory().Slice(0, (int)stream.Length);
+        ReadOnlySequence<byte> sequence = stream.GetReadOnlySequence();
 
         //create delivery object
         MessageDelivery delivery = new MessageDelivery(message, receiver, deadline);
@@ -117,7 +118,7 @@ internal class RoundRobinQueueState : IQueueState
         }
 
         //send the message
-        bool sent = await receiver.Client.SendRawAsync(memory);
+        bool sent = await receiver.Client.SendAsync(sequence);
 
         if (sent)
         {
