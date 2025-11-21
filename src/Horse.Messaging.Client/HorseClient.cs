@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -778,7 +779,8 @@ public class HorseClient : IDisposable
         {
             await using var stream = HorseProtocolWriter.StreamManager.GetStream();
             HorseProtocolWriter.Write(message, stream, additionalHeaders);
-            sent = await _socket.SendAsync(stream.GetMemory().Slice(0, (int)stream.Length));
+            ReadOnlySequence<byte> sequence = stream.GetReadOnlySequence();
+            sent = await _socket.SendAsync(sequence);
         }
 
         if (sent && SmartHealthCheck)
