@@ -51,7 +51,6 @@ public class HorseProtocolWriter
     public static byte[] Create(HorseMessage value, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
         bool hasAdditionalHeader = additionalHeaders != null && additionalHeaders.Count > 0;
-        int estimatedSize = 256 + (int)(value.Content?.Length ?? 0);
 
         using var ms = StreamManager.GetStream();
         WriteFrame(ms, value, hasAdditionalHeader);
@@ -62,6 +61,7 @@ public class HorseProtocolWriter
         if (value.Length > 0)
             WriteContent(ms, value);
 
+        ms.Position = 0;
         return ms.ToArray();
     }
 
@@ -194,7 +194,6 @@ public class HorseProtocolWriter
             Span<byte> lengthBytes = stackalloc byte[2];
             BitConverter.TryWriteBytes(lengthBytes, (ushort)position);
             ms.Write(lengthBytes);
-
             ms.Write(headerBuffer, 0, position);
         }
         finally

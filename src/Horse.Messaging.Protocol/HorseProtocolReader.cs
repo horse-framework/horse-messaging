@@ -54,7 +54,8 @@ public class HorseProtocolReader
 
         if (message.Content != null && message.Content.Position > 0)
             message.Content.Position = 0;
-
+        
+        message.CalculateLengths();
         return message;
     }
 

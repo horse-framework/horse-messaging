@@ -66,7 +66,7 @@ internal class QueueMessageHandler : INetworkMessageHandler
             clone = message.Clone(false, true, _rider.MessageIdGenerator.Create(), additionalHeaders);
         }
 
-        await HandlePush(client, message, queue, true);
+        await HandlePush(client, message, queue, message.WaitResponse);
 
         //if there are cc headers, we will push the message to other queues
         if (clone != null)
@@ -86,7 +86,7 @@ internal class QueueMessageHandler : INetworkMessageHandler
             {
                 if (answerSender && !string.IsNullOrEmpty(message.MessageId))
                     await client.SendAsync(message.CreateResponse(HorseResultCode.Unauthorized));
-                
+
                 return;
             }
         }
@@ -97,7 +97,7 @@ internal class QueueMessageHandler : INetworkMessageHandler
 
         //push the message
         PushResult result = await queue.Push(queueMessage, client);
-            
+
         if (answerSender)
         {
             switch (result)
@@ -105,25 +105,30 @@ internal class QueueMessageHandler : INetworkMessageHandler
                 case PushResult.Empty:
                     await client.SendAsync(message.CreateResponse(HorseResultCode.NoContent));
                     break;
-                    
+
                 case PushResult.Error:
                     await client.SendAsync(message.CreateResponse(HorseResultCode.Failed));
                     break;
-                    
+
                 case PushResult.LimitExceeded:
                     await client.SendAsync(message.CreateResponse(HorseResultCode.LimitExceeded));
                     break;
-                    
+
                 case PushResult.NoConsumers:
                     await client.SendAsync(message.CreateResponse(HorseResultCode.NoConsumers));
                     break;
-                    
+
                 case PushResult.DuplicateUniqueId:
                     await client.SendAsync(message.CreateResponse(HorseResultCode.Duplicate));
                     break;
-                    
+
                 case PushResult.StatusNotSupported:
                     await client.SendAsync(message.CreateResponse(HorseResultCode.Unacceptable));
+                    break;
+
+                case PushResult.Success:
+                    await client.SendAsync(message.CreateAcknowledge());
+
                     break;
             }
         }

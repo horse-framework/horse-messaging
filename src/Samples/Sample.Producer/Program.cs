@@ -42,22 +42,20 @@ class Program
         client.NoDelay = false;
         client.Connected += horseClient => Console.WriteLine("connected");
         client.ResponseTimeout = TimeSpan.FromSeconds(300);
-        
+        client.ReconnectWait = TimeSpan.FromHours(1);
+
         client.MessageReceived += (horseClient, message) => Console.WriteLine(message.GetStringContent());
 
-        
-        await client.Direct.RequestJson<RequestModel>(new RequestModel());
+
+        Console.ReadLine();
+        //await client.Direct.RequestJson<RequestModel>(new RequestModel());
         await client.ConnectAsync();
 
-        while (true)
-        {
-            Console.ReadLine();
-         
-        }
-        
-        var r = await client.Queue.Create("test", new List<KeyValuePair<string, string>> { new(HorseHeaders.QUEUE_TYPE, "push") });
-        Console.WriteLine(r);
-        ModelC c = new ModelC();
+        Console.ReadLine();
+
+        //var r = await client.Queue.Create("test", new List<KeyValuePair<string, string>> { new(HorseHeaders.QUEUE_TYPE, "push") });
+        //Console.WriteLine(r);
+        //ModelC c = new ModelC();
 
         while (true)
         {

@@ -96,7 +96,6 @@ internal class RoundRobinQueueState : IQueueState
         //create prepared message data
         await using var stream = HorseProtocolWriter.StreamManager.GetStream();
         HorseProtocolWriter.Write(message.Message, stream);
-        ReadOnlyMemory<byte> memory = stream.GetMemory().Slice(0, (int)stream.Length);
 
         //create delivery object
         MessageDelivery delivery = new MessageDelivery(message, receiver, deadline);
@@ -117,7 +116,7 @@ internal class RoundRobinQueueState : IQueueState
         }
 
         //send the message
-        bool sent = await receiver.Client.SendRawAsync(memory);
+        bool sent = await receiver.Client.SendAsync(stream.GetReadOnlySequence());
 
         if (sent)
         {
@@ -223,8 +222,14 @@ internal class RoundRobinQueueState : IQueueState
             }
 
             tryCount++;
-            if (tryCount > 10)
+            if (tryCount > 5)
+            {
+                int storedMessageCount = _queue.Manager.MessageStore.Count() + _queue.Manager.PriorityMessageStore.Count();
+                if (storedMessageCount < 5)
+                    await Task.Delay(50);
+
                 tryCount = 0;
+            }
 
             if (!_queue.HasAnyClient())
                 break;

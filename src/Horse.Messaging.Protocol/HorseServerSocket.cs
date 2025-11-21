@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Horse.Core;
 
@@ -91,8 +92,7 @@ public class HorseServerSocket : SocketBase
 
         using var stream = HorseProtocolWriter.StreamManager.GetStream();
         HorseProtocolWriter.Write(message, stream, additionalHeaders);
-        ReadOnlySpan<byte> span = stream.GetSpan().Slice(0, (int)stream.Length);
-        return Send(span);
+        return Send(stream.GetReadOnlySequence());
     }
 
     /// <summary>
@@ -105,7 +105,6 @@ public class HorseServerSocket : SocketBase
 
         await using var stream = HorseProtocolWriter.StreamManager.GetStream();
         HorseProtocolWriter.Write(message, stream, additionalHeaders);
-        ReadOnlyMemory<byte> memory = stream.GetMemory().Slice(0, (int)stream.Length);
-        return await SendAsync(memory);
+        return await SendAsync(stream.GetReadOnlySequence());
     }
 }

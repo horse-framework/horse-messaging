@@ -754,8 +754,7 @@ public class HorseClient : IDisposable
 
         using var stream = HorseProtocolWriter.StreamManager.GetStream();
         HorseProtocolWriter.Write(message, stream, additionalHeaders);
-        ReadOnlySpan<byte> span = stream.GetSpan().Slice(0, (int)stream.Length);
-        return _socket.Send(span);
+        return _socket.Send(stream.GetReadOnlySequence());
     }
 
     /// <summary>
@@ -778,7 +777,7 @@ public class HorseClient : IDisposable
         {
             await using var stream = HorseProtocolWriter.StreamManager.GetStream();
             HorseProtocolWriter.Write(message, stream, additionalHeaders);
-            sent = await _socket.SendAsync(stream.GetMemory().Slice(0, (int)stream.Length));
+            sent = await _socket.SendAsync(stream.GetReadOnlySequence());
         }
 
         if (sent && SmartHealthCheck)

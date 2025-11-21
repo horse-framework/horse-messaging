@@ -75,7 +75,6 @@ internal class PushQueueState : IQueueState
         //create prepared message data
         await using var stream = HorseProtocolWriter.StreamManager.GetStream();
         HorseProtocolWriter.Write(message.Message, stream);
-        ReadOnlyMemory<byte> memory = stream.GetMemory().Slice(0, (int)stream.Length);
 
         Decision final = Decision.NoveNext();
         bool messageIsSent = false;
@@ -115,7 +114,7 @@ internal class PushQueueState : IQueueState
             }
 
             //send the message
-            bool sent = await client.Client.SendRawAsync(memory);
+            bool sent = await client.Client.SendAsync(stream.GetReadOnlySequence());
 
             if (sent)
             {
