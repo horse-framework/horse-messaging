@@ -178,7 +178,6 @@ public class HorseChannel
         try
         {
             byte[] messageData = HorseProtocolWriter.Create(message);
-            ReadOnlyMemory<byte> data = new ReadOnlyMemory<byte>(messageData);
             _initialMessage = messageData;
 
             int count = 0;
@@ -193,7 +192,7 @@ public class HorseChannel
                     continue;
 
                 //send the message
-                _ = client.Client.SendRawAsync(data);
+                _ = client.Client.SendRawAsync(messageData);
                 count++;
             }
 
@@ -206,7 +205,7 @@ public class HorseChannel
                 _ = handler.OnPublish(this, message);
 
             Rider.Plugin.TriggerPluginHandlers(HorsePluginEvent.ChannelPublish, Name, message);
-            
+
             return PushResult.Success;
         }
         catch (Exception ex)

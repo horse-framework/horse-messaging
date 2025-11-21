@@ -1,4 +1,7 @@
 ﻿using System;
+using System.IO;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Benchmark.Helper;
 using Horse.Messaging.Client;
@@ -9,6 +12,9 @@ namespace Benchmark.Channel.Publisher;
 class Program
 {
     private static Counter _counter;
+
+    private static long total;
+    private static bool stop;
 
     static async Task Main(string[] args)
     {
@@ -31,20 +37,26 @@ class Program
 
         ChannelModel model = new ChannelModel { Foo = "123" };
 
-        HorseResult result = await client.Channel.Publish("channel", model, true);
+        HorseResult result = await client.Channel.Publish("channel", model, false);
         Console.WriteLine($"First publish result: {result.Code}");
         Console.Write("Enter client count (1-100): ");
         int count = Math.Max(1, Math.Min(100, Convert.ToInt32(Console.ReadLine())));
         Console.Write("Wait of acknowledge? (Y/N): ");
         bool ack = Console.ReadLine().Trim().ToUpper() == "Y";
 
+        total = 0;
+
         for (int i = 0; i < count; i++)
-            _ = Run(ack);
+        {
+            for (int j = 0; j < 3; j++)
+                _ = Run(ack, "channel-" + (i + 1));
+        }
 
         Console.ReadLine();
     }
 
-    private static async Task Run(bool waitForAck)
+
+    private static async Task Run(bool waitForAck, string name)
     {
         ChannelModel model = new ChannelModel { Foo = "123" };
         HorseClient client = new HorseClient();
@@ -52,19 +64,23 @@ class Program
         client.SetClientType("publisher");
         int i = 0;
         await client.ConnectAsync("horse://localhost:2626");
-        while (true)
+        string demoString = new string('a', 10000);
+
+        while (!stop)
         {
-            if (i == 100)
+            HorseResult result;
+            if (i == 400)
             {
                 i = 0;
-                await client.Channel.PublishString("channel", "hello world", waitForAck);
+                result = await client.Channel.PublishString(name, demoString, waitForAck);
             }
             else
             {
                 i++;
-                _ = client.Channel.PublishString("channel", "hello world", waitForAck);
+                await client.Channel.PublishString(name, demoString, waitForAck);
             }
 
+            Interlocked.Increment(ref total);
             _counter.Increase();
         }
     }

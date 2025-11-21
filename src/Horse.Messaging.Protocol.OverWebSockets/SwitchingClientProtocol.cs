@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -105,7 +104,7 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
         WebSocketMessage msg = new WebSocketMessage
         {
             OpCode = SocketOpCode.Binary,
-            ReadOnlyContent = data
+            Content = new MemoryStream(data.ToArray())
         };
 
         return _client.SendRawAsync(_writer.Create(msg));

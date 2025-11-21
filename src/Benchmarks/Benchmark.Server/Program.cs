@@ -65,7 +65,7 @@ class Program
                     cfg.UseMemoryQueues();
                 }
             })
-            .AddJockey(cfg => { cfg.Port = 2627; })
+            //.AddJockey(cfg => { cfg.Port = 2627; })
             .ConfigureCache(cfg => { cfg.Options.DefaultDuration = TimeSpan.FromMinutes(30); })
             .AddErrorHandler<ErrorHandler>()
             .Build();

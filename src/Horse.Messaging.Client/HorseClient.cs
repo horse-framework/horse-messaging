@@ -754,7 +754,8 @@ public class HorseClient : IDisposable
 
         using var stream = HorseProtocolWriter.StreamManager.GetStream();
         HorseProtocolWriter.Write(message, stream, additionalHeaders);
-        return _socket.Send(stream.GetReadOnlySequence());
+        bool sent = _socket.Send(stream.GetReadOnlySequence());
+        return sent;
     }
 
     /// <summary>
@@ -775,7 +776,7 @@ public class HorseClient : IDisposable
             sent = await SwitchingProtocol.SendAsync(message, additionalHeaders);
         else
         {
-            await using var stream = HorseProtocolWriter.StreamManager.GetStream();
+            using var stream = HorseProtocolWriter.StreamManager.GetStream();
             HorseProtocolWriter.Write(message, stream, additionalHeaders);
             sent = await _socket.SendAsync(stream.GetReadOnlySequence());
         }

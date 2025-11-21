@@ -297,7 +297,7 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
             sent = await _client.SwitchingProtocol.SendAsync(message, additionalHeaders);
         else
         {
-            await using var stream = HorseProtocolWriter.StreamManager.GetStream();
+            using var stream = HorseProtocolWriter.StreamManager.GetStream();
             HorseProtocolWriter.Write(message, stream);
             sent = await SendAsync(stream.GetReadOnlySequence());
         }

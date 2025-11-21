@@ -74,7 +74,7 @@ internal class PushQueueState : IQueueState
             return PushResult.Success;
 
         //create prepared message data
-        await using var stream = HorseProtocolWriter.StreamManager.GetStream();
+        using var stream = HorseProtocolWriter.StreamManager.GetStream();
         HorseProtocolWriter.Write(message.Message, stream);
         ReadOnlySequence<byte> sequence = stream.GetReadOnlySequence();
 

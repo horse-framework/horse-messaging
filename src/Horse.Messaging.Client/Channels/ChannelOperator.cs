@@ -222,16 +222,16 @@ public class ChannelOperator
     /// <summary>
     /// Pushes a message to a queue
     /// </summary>
-    public async Task<HorseResult> PublishString(string channel, string content, bool waitAcknowledge = false,
+    public Task<HorseResult> PublishString(string channel, string content, bool waitAcknowledge = false,
         IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
     {
-        return await PublishData(channel, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge, messageHeaders);
+        return PublishData(channel, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge, messageHeaders);
     }
 
     /// <summary>
     /// Pushes a message to a queue
     /// </summary>
-    public async Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitAcknowledge = false,
+    public Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitAcknowledge = false,
         IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
     {
         HorseMessage message = new HorseMessage(MessageType.Channel, channel, KnownContentTypes.ChannelPush);
@@ -241,7 +241,7 @@ public class ChannelOperator
             foreach (KeyValuePair<string, string> pair in messageHeaders)
                 message.AddHeader(pair.Key, pair.Value);
 
-        return await Client.WaitResponse(message, waitAcknowledge);
+        return Client.WaitResponse(message, waitAcknowledge);
     }
 
     #endregion

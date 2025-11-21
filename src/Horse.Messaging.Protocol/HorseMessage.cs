@@ -148,6 +148,12 @@ public class HorseMessage
         SetTarget(target);
     }
 
+    ~HorseMessage()
+    {
+        Content?.Dispose();
+        AdditionalContent?.Dispose();
+    }
+
     #endregion
 
     #region Methods

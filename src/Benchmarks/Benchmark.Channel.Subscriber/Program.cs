@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Benchmark.Helper;
 using Horse.Messaging.Client;
@@ -11,6 +12,8 @@ class Program
 {
     public static Counter Counter { get; private set; }
 
+    private static long total;
+
     static async Task Main(string[] args)
     {
         Counter = new Counter();
@@ -22,13 +25,28 @@ class Program
         client.SetClientName("Test");
         client.SetClientType("Test");
 
-        client.MessageReceived += (c, m) => Counter.Increase();
+        client.MessageReceived += (c, m) =>
+        {
+            //Counter.Increase();
+            Interlocked.Increment(ref total);
+        };
 
         await client.ConnectAsync();
 
 
-        HorseResult result = await client.Channel.Subscribe("channel", true);
-        Console.WriteLine($"Subscription result: {result.Code}");
-        Console.ReadLine();
+        Console.Write("Channel Count: ");
+        int count = Convert.ToInt32(Console.ReadLine());
+        for (int i = 1; i <= count; i++)
+        {
+            string name = "channel-" + i;
+            HorseResult result = await client.Channel.Subscribe(name, true);
+            Console.WriteLine($"Subscription to {name} result: {result.Code}");
+        }
+
+        while (true)
+        {
+            Console.ReadLine();
+            Console.WriteLine("Total: " + total);
+        }
     }
 }

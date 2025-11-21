@@ -90,9 +90,10 @@ public class HorseServerSocket : SocketBase
         if (string.IsNullOrEmpty(message.MessageId))
             message.SetMessageId(_uniqueIdGenerator.Create());
 
-        using var stream = HorseProtocolWriter.StreamManager.GetStream();
+        var stream = HorseProtocolWriter.StreamManager.GetStream();
         HorseProtocolWriter.Write(message, stream, additionalHeaders);
-        return Send(stream.GetReadOnlySequence());
+        bool sent = Send(stream.GetReadOnlySequence());
+        return sent;
     }
 
     /// <summary>

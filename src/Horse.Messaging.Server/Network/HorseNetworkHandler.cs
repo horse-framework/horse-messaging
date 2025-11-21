@@ -78,7 +78,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         MessagingClient foundClient = _rider.Client.Find(clientId);
         if (foundClient != null)
         {
-            await using var stream = HorseProtocolWriter.StreamManager.GetStream();
+            using var stream = HorseProtocolWriter.StreamManager.GetStream();
             HorseProtocolWriter.Write(MessageBuilder.Busy(), stream);
             ReadOnlySequence<byte> sequence = stream.GetReadOnlySequence();
             await connection.Socket.SendAsync(sequence);

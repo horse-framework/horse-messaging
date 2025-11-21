@@ -17,10 +17,10 @@ public class HorseProtocolWriter
     private static readonly UTF8Encoding Utf8NoBom = new(false);
 
     internal static readonly RecyclableMemoryStreamManager StreamManager = new(
-        new RecyclableMemoryStreamManager.Options(1024 * 8,
+        new RecyclableMemoryStreamManager.Options(1024 * 12,
             1024 * 1024,
             1024 * 1024 * 64,
-            1024 * 1024 * 256,
+            1024 * 1024 * 128,
             1024 * 1024 * 1024)
         {
             AggressiveBufferReturn = true,
@@ -52,7 +52,7 @@ public class HorseProtocolWriter
     {
         bool hasAdditionalHeader = additionalHeaders != null && additionalHeaders.Count > 0;
 
-        using var ms = StreamManager.GetStream();
+        using MemoryStream ms = StreamManager.GetStream();
         WriteFrame(ms, value, hasAdditionalHeader);
 
         if (value.HasHeader || hasAdditionalHeader)
@@ -61,7 +61,6 @@ public class HorseProtocolWriter
         if (value.Length > 0)
             WriteContent(ms, value);
 
-        ms.Position = 0;
         return ms.ToArray();
     }
 
@@ -208,6 +207,8 @@ public class HorseProtocolWriter
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void WriteContent(Stream ms, HorseMessage message)
     {
+        message.Content.Position = 0;
+
         if (message.Length > 0 && message.Content != null)
             message.Content.WriteTo(ms);
 
