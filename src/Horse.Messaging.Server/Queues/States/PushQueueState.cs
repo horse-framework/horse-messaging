@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
@@ -75,6 +76,7 @@ internal class PushQueueState : IQueueState
         //create prepared message data
         await using var stream = HorseProtocolWriter.StreamManager.GetStream();
         HorseProtocolWriter.Write(message.Message, stream);
+        ReadOnlySequence<byte> sequence = stream.GetReadOnlySequence();
 
         Decision final = Decision.NoveNext();
         bool messageIsSent = false;
@@ -114,7 +116,7 @@ internal class PushQueueState : IQueueState
             }
 
             //send the message
-            bool sent = await client.Client.SendAsync(stream.GetReadOnlySequence());
+            bool sent = await client.Client.SendAsync(sequence);
 
             if (sent)
             {
