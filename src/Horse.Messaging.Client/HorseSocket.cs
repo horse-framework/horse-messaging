@@ -270,7 +270,14 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
             return;
         }
 
-        _ = _client.OnMessageReceived(message);
+        try
+        {
+            await _client.OnMessageReceived(message);
+        }
+        catch (Exception e)
+        {
+            _client.OnException(e, message);
+        }
     }
 
     /// <summary>

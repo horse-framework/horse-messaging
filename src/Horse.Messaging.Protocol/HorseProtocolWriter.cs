@@ -17,11 +17,11 @@ public class HorseProtocolWriter
     private static readonly UTF8Encoding Utf8NoBom = new(false);
 
     internal static readonly RecyclableMemoryStreamManager StreamManager = new(
-        new RecyclableMemoryStreamManager.Options(1024 * 12,
-            1024 * 1024,
+        new RecyclableMemoryStreamManager.Options(1024 * 4,
+            1024 * 512,
             1024 * 1024 * 64,
             1024 * 1024 * 128,
-            1024 * 1024 * 1024)
+            1024 * 1024 * 512)
         {
             AggressiveBufferReturn = true,
             GenerateCallStacks = false,

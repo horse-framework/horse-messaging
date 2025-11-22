@@ -682,7 +682,7 @@ public class PluginRider : IPluginRider
                     }
 
                     foreach (MessagingClient receiver in receivers)
-                        _ = receiver.SendAsync(message);
+                        await receiver.SendAsync(message);
 
                     return true;
                 }
@@ -700,7 +700,7 @@ public class PluginRider : IPluginRider
                     }
 
                     foreach (MessagingClient receiver in receivers)
-                        _ = receiver.SendAsync(message);
+                        await receiver.SendAsync(message);
 
                     return true;
                 }

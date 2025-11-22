@@ -125,7 +125,7 @@ public class EventManager : IDisposable
         _ = TriggerInternal(target ?? string.Empty, e);
     }
 
-    private Task TriggerInternal(string target, HorseEvent e)
+    private async Task TriggerInternal(string target, HorseEvent e)
     {
         try
         {
@@ -139,14 +139,12 @@ public class EventManager : IDisposable
             foreach (MessagingClient subscriber in Subscribers.All())
             {
                 if (subscriber.IsConnected)
-                    subscriber.Send(sequence);
+                    await subscriber.SendAsync(sequence);
             }
         }
         catch (Exception ex)
         {
             _server.SendError(HorseLogLevel.Error, HorseLogEvents.EventTrigger, $"Event Trigger Type:{Type}, Target:{target}", ex);
         }
-
-        return Task.CompletedTask;
     }
 }

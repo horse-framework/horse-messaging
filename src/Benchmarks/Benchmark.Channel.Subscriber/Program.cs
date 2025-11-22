@@ -27,7 +27,7 @@ class Program
 
         client.MessageReceived += (c, m) =>
         {
-            //Counter.Increase();
+            Counter.Increase();
             Interlocked.Increment(ref total);
         };
 

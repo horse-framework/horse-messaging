@@ -1,6 +1,4 @@
 ﻿using System;
-using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Benchmark.Helper;
@@ -48,8 +46,9 @@ class Program
 
         for (int i = 0; i < count; i++)
         {
-            for (int j = 0; j < 3; j++)
-                _ = Run(ack, "channel-" + (i + 1));
+            _ = Run(ack, "channel-" + (i + 1));
+            _ = Run(ack, "channel-" + (i + 1));
+            _ = Run(ack, "channel-" + (i + 1));
         }
 
         Console.ReadLine();
@@ -64,20 +63,19 @@ class Program
         client.SetClientType("publisher");
         int i = 0;
         await client.ConnectAsync("horse://localhost:2626");
-        string demoString = new string('a', 10000);
+        string demoString = new string('a', 5);
 
         while (!stop)
         {
             HorseResult result;
-            if (i == 400)
+            if (i == 100)
             {
-                i = 0;
-                result = await client.Channel.PublishString(name, demoString, waitForAck);
+                await client.Channel.PublishString(name, demoString, waitForAck);
             }
             else
             {
                 i++;
-                await client.Channel.PublishString(name, demoString, waitForAck);
+                _ = client.Channel.PublishString(name, demoString, waitForAck);
             }
 
             Interlocked.Increment(ref total);

@@ -1,6 +1,6 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Horse.Core;
 
@@ -92,6 +92,7 @@ public class HorseServerSocket : SocketBase
 
         var stream = HorseProtocolWriter.StreamManager.GetStream();
         HorseProtocolWriter.Write(message, stream, additionalHeaders);
+        ArrayPool<byte>.Shared.Return(stream.GetBuffer(), true);
         bool sent = Send(stream.GetReadOnlySequence());
         return sent;
     }
