@@ -192,7 +192,7 @@ public class HorseChannel
                     continue;
 
                 //send the message
-                client.Client.Send(messageData);
+                _ = client.Client.SendAsync(messageData);
                 count++;
             }
 

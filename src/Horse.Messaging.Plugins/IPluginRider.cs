@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Messaging.Plugins.Cache;
 using Horse.Messaging.Plugins.Channels;
@@ -43,4 +44,9 @@ public interface IPluginRider
     /// Sends a message from plugin to server or client 
     /// </summary>
     public Task<bool> SendMessage(HorseMessage message);
+
+    /// <summary>
+    /// Writes error log to the server
+    /// </summary>
+    void WriteErrorLog(Exception exception, int eventId, string message = null);
 }

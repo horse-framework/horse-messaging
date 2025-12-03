@@ -3,7 +3,7 @@
     <PropertyGroup>
         <LangVersion>default</LangVersion>
         <IsPackable>false</IsPackable>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>

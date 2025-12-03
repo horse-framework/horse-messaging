@@ -728,4 +728,10 @@ public class PluginRider : IPluginRider
 
         return false;
     }
+
+    /// <inheritdoc />
+    public void WriteErrorLog(Exception exception,  int eventId, string message = null)
+    {
+        _rider.SendError(HorseLogLevel.Error, eventId, message, exception);
+    }
 }

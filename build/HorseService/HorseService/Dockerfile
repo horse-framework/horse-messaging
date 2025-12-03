@@ -19,6 +19,7 @@ COPY --from=publish /app/publish .
 
 EXPOSE 2626
 EXPOSE 2627
+EXPOSE 2628
 EXPOSE 2680
 
 ENTRYPOINT ["dotnet", "HorseService.dll"]

@@ -6,20 +6,20 @@
         <Product>Horse.Messaging.Server.OverWebSockets</Product>
         <Description>Horse Messaging Client to connect all Horse Servers</Description>
         <PackageTags>horse,client,messaging,queue,channel,cache</PackageTags>
-        <AssemblyVersion>7.3.0</AssemblyVersion>
-        <FileVersion>7.3.0</FileVersion>
-        <PackageVersion>7.3.0</PackageVersion>
+        <AssemblyVersion>7.3.1</AssemblyVersion>
+        <FileVersion>7.3.1</FileVersion>
+        <PackageVersion>7.3.1</PackageVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Mehmet Helvacıköylü</Authors>
         <PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>
         <PackageLicenseUrl>https://github.com/horse-framework/horse-messaging/blob/master/LICENSE</PackageLicenseUrl>
         <RepositoryUrl>https://github.com/horse-framework/horse-messaging</RepositoryUrl>
         <RootNamespace>Horse.Messaging.Server.OverWebSockets</RootNamespace>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Horse.WebSocket.Protocol" Version="7.3.10" />
+        <PackageReference Include="Horse.WebSocket.Protocol" Version="7.3.11" />
     </ItemGroup>
 
     <ItemGroup>
