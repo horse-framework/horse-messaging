@@ -13,18 +13,17 @@ namespace Horse.Messaging.Protocol;
 /// </summary>
 public class HorseProtocolReader
 {
-    private const int REQUIRED_SIZE = 8;
-    private const int BUFFER_SIZE = 1024;
-    private static readonly ArrayPool<byte> _arrayPool = ArrayPool<byte>.Shared;
+    private const int RequiredSize = 8;
+    private static readonly ArrayPool<byte> ArrayPool = ArrayPool<byte>.Shared;
 
     /// <summary>
     /// Reads Horse message from stream
     /// </summary>
     public async Task<HorseMessage> Read(Stream stream)
     {
-        byte[] bytes = new byte[REQUIRED_SIZE];
+        byte[] bytes = new byte[RequiredSize];
 
-        bool done = await ReadCertainBytes(stream, bytes, 0, REQUIRED_SIZE);
+        bool done = await ReadCertainBytes(stream, bytes, 0, RequiredSize);
         if (!done)
             return null;
 
@@ -137,7 +136,7 @@ public class HorseProtocolReader
             message.AdditionalContentLength = BitConverter.ToInt32(additionalContentBytes);
         }
 
-        byte[] octetBuffer = _arrayPool.Rent(256);
+        byte[] octetBuffer = ArrayPool.Rent(256);
         try
         {
             if (message.MessageIdLength > 0)
@@ -151,7 +150,7 @@ public class HorseProtocolReader
         }
         finally
         {
-            _arrayPool.Return(octetBuffer);
+            ArrayPool.Return(octetBuffer);
         }
 
         return true;
@@ -169,7 +168,7 @@ public class HorseProtocolReader
             return false;
 
         int headerLength = BitConverter.ToUInt16(size);
-        byte[] data = _arrayPool.Rent(headerLength);
+        byte[] data = ArrayPool.Rent(headerLength);
 
         try
         {
@@ -204,7 +203,7 @@ public class HorseProtocolReader
         }
         finally
         {
-            _arrayPool.Return(data);
+            ArrayPool.Return(data);
         }
 
         return true;
@@ -224,13 +223,12 @@ public class HorseProtocolReader
         if (message.Content == null)
             message.Content = new MemoryStream(left);
 
-        byte[] readBuffer = _arrayPool.Rent(BUFFER_SIZE);
+        byte[] readBuffer = ArrayPool.Rent(left);
         try
         {
             do
             {
-                int readCount = Math.Min(left, BUFFER_SIZE);
-                int read = await stream.ReadAsync(readBuffer.AsMemory(0, readCount));
+                int read = await stream.ReadAsync(readBuffer.AsMemory(0, left));
                 if (read == 0)
                     return false;
 
@@ -240,7 +238,7 @@ public class HorseProtocolReader
         }
         finally
         {
-            _arrayPool.Return(readBuffer);
+            ArrayPool.Return(readBuffer);
         }
 
         return true;
@@ -260,13 +258,12 @@ public class HorseProtocolReader
         if (message.AdditionalContent == null)
             message.AdditionalContent = new MemoryStream(left);
 
-        byte[] readBuffer = _arrayPool.Rent(BUFFER_SIZE);
+        byte[] readBuffer = ArrayPool.Rent(left);
         try
         {
             do
             {
-                int readCount = left > BUFFER_SIZE ? BUFFER_SIZE : left;
-                int read = await stream.ReadAsync(readBuffer, 0, readCount);
+                int read = await stream.ReadAsync(readBuffer, 0, left);
                 if (read == 0)
                     return false;
 
@@ -276,7 +273,7 @@ public class HorseProtocolReader
         }
         finally
         {
-            _arrayPool.Return(readBuffer);
+            ArrayPool.Return(readBuffer);
         }
 
         return true;
