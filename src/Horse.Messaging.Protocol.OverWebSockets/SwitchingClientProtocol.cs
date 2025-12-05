@@ -161,12 +161,8 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
 
         string request = HttpHeaders.HTTP_GET + " " + path + " " + HttpHeaders.HTTP_VERSION + "\r\n" +
                          HttpHeaders.Create(HttpHeaders.CONNECTION, HttpHeaders.UPGRADE) +
-                         HttpHeaders.Create(HttpHeaders.PRAGMA, HttpHeaders.VALUE_NO_CACHE) +
-                         HttpHeaders.Create(HttpHeaders.CACHE_CONTROL, HttpHeaders.VALUE_NO_CACHE) +
                          HttpHeaders.Create(HttpHeaders.UPGRADE, HttpHeaders.VALUE_WEBSOCKET) +
                          HttpHeaders.Create(HttpHeaders.WEBSOCKET_VERSION, HttpHeaders.VALUE_WEBSOCKET_VERSION) +
-                         HttpHeaders.Create(HttpHeaders.ACCEPT_ENCODING, HttpHeaders.VALUE_GZIP_DEFLATE_BR) +
-                         HttpHeaders.Create(HttpHeaders.ACCEPT_LANGUAGE, HttpHeaders.VALUE_ACCEPT_EN) +
                          HttpHeaders.Create(HttpHeaders.WEBSOCKET_KEY, _websocketKey) +
                          HttpHeaders.Create(HttpHeaders.WEBSOCKET_EXTENSIONS, HttpHeaders.VALUE_WEBSOCKET_EXTENSIONS);
 
@@ -197,7 +193,7 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
         if (statusCode != "101")
             throw new InvalidOperationException("Connection Error: " + statusCode);
 
-        string[] responseLines = response.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+        string[] responseLines = response.Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
         string acceptLine = responseLines.FirstOrDefault(x => x.StartsWith(HttpHeaders.WEBSOCKET_ACCEPT, StringComparison.InvariantCultureIgnoreCase));
 
         if (acceptLine == null)
