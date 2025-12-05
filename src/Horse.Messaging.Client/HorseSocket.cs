@@ -265,10 +265,7 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
             message = await _reader.Read(Stream);
 
         if (message == null)
-        {
-            Disconnect();
-            return;
-        }
+            throw new IOException("Cannot read message from stream.");
 
         try
         {

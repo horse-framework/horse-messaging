@@ -49,8 +49,7 @@ public class HorseProtocolReader
             if (!success)
                 return null;
 
-            if (message.AdditionalContent != null)
-                message.AdditionalContent.Position = 0;
+            message.AdditionalContent?.Position = 0;
         }
 
         if (message.Content != null && message.Content.Position > 0)

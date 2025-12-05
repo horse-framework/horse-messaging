@@ -238,6 +238,9 @@ public class PluginRider : IPluginRider
     /// </summary>
     public async Task AddAssemblyPlugins(string filename)
     {
+        if (filename.StartsWith("..") || filename.Contains("..\\") || filename.Contains("../"))
+            throw new FileLoadException("Assembly file path contain '..' or '../' characters");
+
         var context = new PluginAssemblyLoadContext();
         Assembly assembly = context.LoadFromAssemblyPath(Path.GetFullPath(filename));
 
@@ -278,7 +281,7 @@ public class PluginRider : IPluginRider
                     assemblyData = _data.FirstOrDefault(x => x.Fullname == assembly.FullName && x.AssemblyVersion == assemblyVersion);
                     if (assemblyData != null)
                         throw new DuplicateNameException("The assembly is already loaded");
-                    
+
                     assemblyData = new PluginAssemblyData
                     {
                         Location = assembly.Location,
@@ -730,7 +733,7 @@ public class PluginRider : IPluginRider
     }
 
     /// <inheritdoc />
-    public void WriteErrorLog(Exception exception,  int eventId, string message = null)
+    public void WriteErrorLog(Exception exception, int eventId, string message = null)
     {
         _rider.SendError(HorseLogLevel.Error, eventId, message, exception);
     }
