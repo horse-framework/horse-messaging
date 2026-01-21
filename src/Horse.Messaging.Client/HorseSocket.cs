@@ -300,11 +300,7 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
         if (_client.SwitchingProtocol != null)
             sent = await _client.SwitchingProtocol.SendAsync(message, additionalHeaders);
         else
-        {
-            using var stream = HorseProtocolWriter.StreamManager.GetStream();
-            HorseProtocolWriter.Write(message, stream);
-            sent = await SendAsync(stream.GetReadOnlySequence());
-        }
+            sent = await SendAsync(HorseProtocolWriter.Create(message));
 
         if (sent && SmartHealthCheck)
             KeepAlive();

@@ -752,9 +752,8 @@ public class HorseClient : IDisposable
         if (SmartHealthCheck)
             _socket.KeepAlive();
 
-        using var stream = HorseProtocolWriter.StreamManager.GetStream();
-        HorseProtocolWriter.Write(message, stream, additionalHeaders);
-        bool sent = _socket.Send(stream.GetReadOnlySequence());
+        byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
+        bool sent = _socket.Send(data);
         return sent;
     }
 
@@ -776,9 +775,8 @@ public class HorseClient : IDisposable
             sent = await SwitchingProtocol.SendAsync(message, additionalHeaders);
         else
         {
-            using var stream = HorseProtocolWriter.StreamManager.GetStream();
-            HorseProtocolWriter.Write(message, stream, additionalHeaders);
-            sent = await _socket.SendAsync(stream.GetReadOnlySequence());
+            byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
+            sent = await _socket.SendAsync(data);
         }
 
         if (sent && SmartHealthCheck)

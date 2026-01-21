@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using System.Linq;
 using System.Threading.Tasks;
 using Horse.Core;
@@ -78,10 +77,8 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         MessagingClient foundClient = _rider.Client.Find(clientId);
         if (foundClient != null)
         {
-            using var stream = HorseProtocolWriter.StreamManager.GetStream();
-            HorseProtocolWriter.Write(MessageBuilder.Busy(), stream);
-            ReadOnlySequence<byte> sequence = stream.GetReadOnlySequence();
-            await connection.Socket.SendAsync(sequence);
+            byte[] bytes = HorseProtocolWriter.Create(MessageBuilder.Busy());
+            await connection.Socket.SendAsync(bytes);
             return null;
         }
 

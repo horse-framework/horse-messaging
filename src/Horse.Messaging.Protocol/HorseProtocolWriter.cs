@@ -1,10 +1,8 @@
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Microsoft.IO;
 
 namespace Horse.Messaging.Protocol;
 
@@ -13,21 +11,7 @@ namespace Horse.Messaging.Protocol;
 /// </summary>
 public class HorseProtocolWriter
 {
-    private static readonly ArrayPool<byte> ArrayPool = ArrayPool<byte>.Shared;
     private static readonly UTF8Encoding Utf8NoBom = new(false);
-
-    internal static readonly RecyclableMemoryStreamManager StreamManager = new(
-        new RecyclableMemoryStreamManager.Options(1024 * 4,
-            1024 * 512,
-            1024 * 1024 * 64,
-            1024 * 1024 * 128,
-            1024 * 1024 * 512)
-        {
-            AggressiveBufferReturn = true,
-            GenerateCallStacks = false,
-            UseExponentialLargeBuffer = true
-        }
-    );
 
     /// <summary>
     /// Writes a Horse message to stream
@@ -52,7 +36,7 @@ public class HorseProtocolWriter
     {
         bool hasAdditionalHeader = additionalHeaders != null && additionalHeaders.Count > 0;
 
-        using MemoryStream ms = StreamManager.GetStream();
+        using MemoryStream ms = new MemoryStream();
         WriteFrame(ms, value, hasAdditionalHeader);
 
         if (value.HasHeader || hasAdditionalHeader)
@@ -148,57 +132,44 @@ public class HorseProtocolWriter
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void WriteHeader(Stream ms, HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders)
     {
-        int estimatedSize = 0;
+        long startPosition = ms.Position;
+        ms.Write("\0\0"u8);
+
+        Span<byte> newLine = stackalloc byte[2];
+        newLine[0] = (byte)'\r';
+        newLine[1] = (byte)'\n';
+
         if (message.HeadersList != null)
         {
-            foreach (var pair in message.HeadersList)
-                estimatedSize += Encoding.UTF8.GetByteCount(pair.Key) + Encoding.UTF8.GetByteCount(pair.Value) + 3; // ':' + "\r\n"
+            foreach (KeyValuePair<string, string> pair in message.HeadersList)
+            {
+                ms.Write(Utf8NoBom.GetBytes(pair.Key));
+                ms.WriteByte((byte)':');
+                ms.Write(Utf8NoBom.GetBytes(pair.Value));
+                ms.Write(newLine);
+            }
         }
 
         if (additionalHeaders != null)
         {
-            foreach (var pair in additionalHeaders)
-                estimatedSize += Encoding.UTF8.GetByteCount(pair.Key) + Encoding.UTF8.GetByteCount(pair.Value) + 3;
-        }
-
-        byte[] headerBuffer = ArrayPool.Rent(estimatedSize);
-        try
-        {
-            int position = 0;
-
-            if (message.HeadersList != null)
+            foreach (KeyValuePair<string, string> pair in additionalHeaders)
             {
-                foreach (KeyValuePair<string, string> pair in message.HeadersList)
-                {
-                    position += Utf8NoBom.GetBytes(pair.Key, 0, pair.Key.Length, headerBuffer, position);
-                    headerBuffer[position++] = (byte)':';
-                    position += Utf8NoBom.GetBytes(pair.Value, 0, pair.Value.Length, headerBuffer, position);
-                    headerBuffer[position++] = (byte)'\r';
-                    headerBuffer[position++] = (byte)'\n';
-                }
+                ms.Write(Utf8NoBom.GetBytes(pair.Key));
+                ms.WriteByte((byte)':');
+                ms.Write(Utf8NoBom.GetBytes(pair.Value));
+                ms.Write(newLine);
             }
-
-            if (additionalHeaders != null)
-            {
-                foreach (KeyValuePair<string, string> pair in additionalHeaders)
-                {
-                    position += Utf8NoBom.GetBytes(pair.Key, 0, pair.Key.Length, headerBuffer, position);
-                    headerBuffer[position++] = (byte)':';
-                    position += Utf8NoBom.GetBytes(pair.Value, 0, pair.Value.Length, headerBuffer, position);
-                    headerBuffer[position++] = (byte)'\r';
-                    headerBuffer[position++] = (byte)'\n';
-                }
-            }
-
-            Span<byte> lengthBytes = stackalloc byte[2];
-            BitConverter.TryWriteBytes(lengthBytes, (ushort)position);
-            ms.Write(lengthBytes);
-            ms.Write(headerBuffer, 0, position);
         }
-        finally
-        {
-            ArrayPool.Return(headerBuffer);
-        }
+
+        long endingPosition = ms.Position;
+
+        ushort headerSize = (ushort)(ms.Position - startPosition - 2);
+        Span<byte> lengthBytes = stackalloc byte[2];
+        BitConverter.TryWriteBytes(lengthBytes, headerSize);
+
+        ms.Position = startPosition;
+        ms.Write(lengthBytes);
+        ms.Position = endingPosition;
     }
 
     /// <summary>

@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,7 +7,6 @@ using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Clients;
 using Horse.Messaging.Server.Containers;
 using Horse.Messaging.Server.Logging;
-using Microsoft.IO;
 
 namespace Horse.Messaging.Server.Events;
 
@@ -132,14 +130,11 @@ public class EventManager : IDisposable
             HorseMessage message = new HorseMessage(MessageType.Event, target, Convert.ToUInt16(Type));
             message.Serialize(e, _server.MessageContentSerializer);
 
-            using RecyclableMemoryStream stream = HorseProtocolWriter.StreamManager.GetStream();
-            HorseProtocolWriter.Write(message, stream);
-            ReadOnlySequence<byte> sequence = stream.GetReadOnlySequence();
-
+            byte[] data = HorseProtocolWriter.Create(message);
             foreach (MessagingClient subscriber in Subscribers.All())
             {
                 if (subscriber.IsConnected)
-                    await subscriber.SendAsync(sequence);
+                    await subscriber.SendAsync(data);
             }
         }
         catch (Exception ex)

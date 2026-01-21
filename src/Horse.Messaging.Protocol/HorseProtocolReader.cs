@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -14,7 +13,6 @@ namespace Horse.Messaging.Protocol;
 public class HorseProtocolReader
 {
     private const int RequiredSize = 8;
-    private static readonly ArrayPool<byte> ArrayPool = ArrayPool<byte>.Shared;
 
     /// <summary>
     /// Reads Horse message from stream
@@ -136,22 +134,15 @@ public class HorseProtocolReader
             message.AdditionalContentLength = BitConverter.ToInt32(additionalContentBytes);
         }
 
-        byte[] octetBuffer = ArrayPool.Rent(256);
-        try
-        {
-            if (message.MessageIdLength > 0)
-                message.MessageId = await ReadOctetSizeData(stream, octetBuffer, message.MessageIdLength);
+        byte[] octetBuffer = new byte[256];
+        if (message.MessageIdLength > 0)
+            message.MessageId = await ReadOctetSizeData(stream, octetBuffer, message.MessageIdLength);
 
-            if (message.SourceLength > 0)
-                message.Source = await ReadOctetSizeData(stream, octetBuffer, message.SourceLength);
+        if (message.SourceLength > 0)
+            message.Source = await ReadOctetSizeData(stream, octetBuffer, message.SourceLength);
 
-            if (message.TargetLength > 0)
-                message.Target = await ReadOctetSizeData(stream, octetBuffer, message.TargetLength);
-        }
-        finally
-        {
-            ArrayPool.Return(octetBuffer);
-        }
+        if (message.TargetLength > 0)
+            message.Target = await ReadOctetSizeData(stream, octetBuffer, message.TargetLength);
 
         return true;
     }
@@ -168,42 +159,34 @@ public class HorseProtocolReader
             return false;
 
         int headerLength = BitConverter.ToUInt16(size);
-        byte[] data = ArrayPool.Rent(headerLength);
+        byte[] data = new byte[headerLength];
+        read = await ReadCertainBytes(stream, data, 0, headerLength);
+        if (!read)
+            return false;
 
-        try
+        ReadOnlySpan<byte> dataSpan = data.AsSpan(0, headerLength);
+        int start = 0;
+
+        for (int i = 0; i < dataSpan.Length - 1; i++)
         {
-            read = await ReadCertainBytes(stream, data, 0, headerLength);
-            if (!read)
-                return false;
-
-            ReadOnlySpan<byte> dataSpan = data.AsSpan(0, headerLength);
-            int start = 0;
-
-            for (int i = 0; i < dataSpan.Length - 1; i++)
+            if (dataSpan[i] == (byte)'\r' && dataSpan[i + 1] == (byte)'\n')
             {
-                if (dataSpan[i] == (byte)'\r' && dataSpan[i + 1] == (byte)'\n')
+                if (i > start)
                 {
-                    if (i > start)
+                    ReadOnlySpan<byte> line = dataSpan.Slice(start, i - start);
+                    int colonIndex = line.IndexOf((byte)':');
+
+                    if (colonIndex > 0)
                     {
-                        ReadOnlySpan<byte> line = dataSpan.Slice(start, i - start);
-                        int colonIndex = line.IndexOf((byte)':');
-
-                        if (colonIndex > 0)
-                        {
-                            string key = Encoding.UTF8.GetString(line[..colonIndex]);
-                            string value = Encoding.UTF8.GetString(line[(colonIndex + 1)..]);
-                            message.HeadersList.Add(new KeyValuePair<string, string>(key, value));
-                        }
+                        string key = Encoding.UTF8.GetString(line[..colonIndex]);
+                        string value = Encoding.UTF8.GetString(line[(colonIndex + 1)..]);
+                        message.HeadersList.Add(new KeyValuePair<string, string>(key, value));
                     }
-
-                    start = i + 2;
-                    i++;
                 }
+
+                start = i + 2;
+                i++;
             }
-        }
-        finally
-        {
-            ArrayPool.Return(data);
         }
 
         return true;
@@ -223,23 +206,16 @@ public class HorseProtocolReader
         if (message.Content == null)
             message.Content = new MemoryStream(left);
 
-        byte[] readBuffer = ArrayPool.Rent(left);
-        try
+        byte[] readBuffer = new byte[left];
+        do
         {
-            do
-            {
-                int read = await stream.ReadAsync(readBuffer.AsMemory(0, left));
-                if (read == 0)
-                    return false;
+            int read = await stream.ReadAsync(readBuffer.AsMemory(0, left));
+            if (read == 0)
+                return false;
 
-                left -= read;
-                await message.Content.WriteAsync(readBuffer.AsMemory(0, read));
-            } while (left > 0);
-        }
-        finally
-        {
-            ArrayPool.Return(readBuffer);
-        }
+            left -= read;
+            await message.Content.WriteAsync(readBuffer.AsMemory(0, read));
+        } while (left > 0);
 
         return true;
     }
@@ -258,23 +234,16 @@ public class HorseProtocolReader
         if (message.AdditionalContent == null)
             message.AdditionalContent = new MemoryStream(left);
 
-        byte[] readBuffer = ArrayPool.Rent(left);
-        try
+        byte[] readBuffer = new byte[left];
+        do
         {
-            do
-            {
-                int read = await stream.ReadAsync(readBuffer, 0, left);
-                if (read == 0)
-                    return false;
+            int read = await stream.ReadAsync(readBuffer, 0, left);
+            if (read == 0)
+                return false;
 
-                left -= read;
-                await message.AdditionalContent.WriteAsync(readBuffer, 0, read);
-            } while (left > 0);
-        }
-        finally
-        {
-            ArrayPool.Return(readBuffer);
-        }
+            left -= read;
+            await message.AdditionalContent.WriteAsync(readBuffer, 0, read);
+        } while (left > 0);
 
         return true;
     }

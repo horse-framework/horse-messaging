@@ -191,8 +191,7 @@ public class HorseChannel
                 if (!client.Client.IsConnected)
                     continue;
 
-                //send the message
-                _ = client.Client.SendAsync(messageData);
+                client.SendChannelMessage(messageData);
                 count++;
             }
 
@@ -281,6 +280,7 @@ public class HorseChannel
             return SubscriptionResult.Full;
 
         client.AddSubscription(channelClient);
+        _ = channelClient.Run();
 
         foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
             _ = handler.OnSubscribe(this, client);
@@ -321,6 +321,7 @@ public class HorseChannel
                     removedClient = cc;
                     _channelClients[i] = null;
                     removed = true;
+                    cc.Dispose();
                 }
             }
         }
@@ -351,6 +352,7 @@ public class HorseChannel
                     removedClient = cc;
                     _channelClients[i] = null;
                     removed = true;
+                    cc.Dispose();
                 }
             }
         }
@@ -371,6 +373,7 @@ public class HorseChannel
 
         Info.SubscriberCount = ClientsCount();
         Rider.Channel.UnsubscribeEvent.Trigger(client.Client, Name);
+        client.Dispose();
     }
 
     /// <summary>
@@ -385,6 +388,7 @@ public class HorseChannel
 
         Info.SubscriberCount = ClientsCount();
         Rider.Channel.UnsubscribeEvent.Trigger(client.Client, Name);
+        client.Dispose();
     }
 
     /// <summary>
@@ -404,6 +408,7 @@ public class HorseChannel
 
         Info.SubscriberCount = ClientsCount();
         Rider.Channel.UnsubscribeEvent.Trigger(client, Name);
+        cc.Dispose();
 
         return true;
     }

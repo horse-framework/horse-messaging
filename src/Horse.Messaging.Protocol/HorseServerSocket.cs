@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Horse.Core;
@@ -90,23 +89,20 @@ public class HorseServerSocket : SocketBase
         if (string.IsNullOrEmpty(message.MessageId))
             message.SetMessageId(_uniqueIdGenerator.Create());
 
-        var stream = HorseProtocolWriter.StreamManager.GetStream();
-        HorseProtocolWriter.Write(message, stream, additionalHeaders);
-        ArrayPool<byte>.Shared.Return(stream.GetBuffer(), true);
-        bool sent = Send(stream.GetReadOnlySequence());
+        byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
+        bool sent = Send(data);
         return sent;
     }
 
     /// <summary>
     /// Sends Horse message to client
     /// </summary>
-    public virtual async Task<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
+    public virtual Task<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
         if (string.IsNullOrEmpty(message.MessageId))
             message.SetMessageId(_uniqueIdGenerator.Create());
 
-        await using var stream = HorseProtocolWriter.StreamManager.GetStream();
-        HorseProtocolWriter.Write(message, stream, additionalHeaders);
-        return await SendAsync(stream.GetReadOnlySequence());
+        byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
+        return SendAsync(data);
     }
 }
