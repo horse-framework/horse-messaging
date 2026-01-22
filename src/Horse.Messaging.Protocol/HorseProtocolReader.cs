@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -62,6 +63,8 @@ public class HorseProtocolReader
     private async Task<bool> ReadFrame(HorseMessage message, byte[] bytes, Stream stream)
     {
         byte proto = bytes[0];
+        ReadOnlySpan<byte> span = bytes.AsSpan();
+
         if (proto >= 128)
         {
             message.WaitResponse = true;
@@ -93,7 +96,7 @@ public class HorseProtocolReader
         message.SourceLength = bytes[3];
         message.TargetLength = bytes[4];
 
-        message.ContentType = BitConverter.ToUInt16(bytes, 5);
+        message.ContentType = BinaryPrimitives.ReadUInt16LittleEndian(span.Slice(5, 2));
 
         byte length = bytes[7];
         if (length == 253)
@@ -102,7 +105,7 @@ public class HorseProtocolReader
             if (!done)
                 return false;
 
-            message.Length = BitConverter.ToUInt16(bytes, 0);
+            message.Length = BinaryPrimitives.ReadUInt16LittleEndian(bytes);
         }
         else if (length == 254)
         {
@@ -110,7 +113,7 @@ public class HorseProtocolReader
             if (!done)
                 return false;
 
-            message.Length = BitConverter.ToUInt32(bytes, 0);
+            message.Length = BinaryPrimitives.ReadUInt32LittleEndian(bytes);
         }
         else if (length == 255)
         {
@@ -119,7 +122,7 @@ public class HorseProtocolReader
             if (!done)
                 return false;
 
-            message.Length = BitConverter.ToUInt64(b, 0);
+            message.Length = BinaryPrimitives.ReadUInt64LittleEndian(b);
         }
         else
             message.Length = length;
@@ -131,7 +134,7 @@ public class HorseProtocolReader
             if (!done)
                 return false;
 
-            message.AdditionalContentLength = BitConverter.ToInt32(additionalContentBytes);
+            message.AdditionalContentLength = BinaryPrimitives.ReadInt32LittleEndian(additionalContentBytes);
         }
 
         byte[] octetBuffer = new byte[256];
@@ -158,7 +161,7 @@ public class HorseProtocolReader
         if (!read)
             return false;
 
-        int headerLength = BitConverter.ToUInt16(size);
+        int headerLength = BinaryPrimitives.ReadUInt16LittleEndian(size);
         byte[] data = new byte[headerLength];
         read = await ReadCertainBytes(stream, data, 0, headerLength);
         if (!read)

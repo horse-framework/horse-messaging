@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -79,7 +80,7 @@ public class HorseProtocolWriter
         frameBuffer[position++] = (byte)message.SourceLength;
         frameBuffer[position++] = (byte)message.TargetLength;
 
-        BitConverter.TryWriteBytes(frameBuffer.Slice(position, 2), message.ContentType);
+        BinaryPrimitives.WriteUInt16LittleEndian(frameBuffer.Slice(position, 2), message.ContentType);
         position += 2;
 
         if (message.Content != null && message.Length == 0)
@@ -92,25 +93,25 @@ public class HorseProtocolWriter
         else if (message.Length <= ushort.MaxValue)
         {
             frameBuffer[position++] = 253;
-            BitConverter.TryWriteBytes(frameBuffer.Slice(position, 2), (ushort)message.Length);
+            BinaryPrimitives.WriteUInt16LittleEndian(frameBuffer.Slice(position, 2), (ushort)message.Length);
             position += 2;
         }
         else if (message.Length <= uint.MaxValue)
         {
             frameBuffer[position++] = 254;
-            BitConverter.TryWriteBytes(frameBuffer.Slice(position, 4), (uint)message.Length);
+            BinaryPrimitives.WriteUInt32LittleEndian(frameBuffer.Slice(position, 4), (uint)message.Length);
             position += 4;
         }
         else
         {
             frameBuffer[position++] = 255;
-            BitConverter.TryWriteBytes(frameBuffer.Slice(position, 8), message.Length);
+            BinaryPrimitives.WriteUInt64LittleEndian(frameBuffer.Slice(position, 8), message.Length);
             position += 8;
         }
 
         if (message.HasAdditionalContent)
         {
-            BitConverter.TryWriteBytes(frameBuffer.Slice(position, 4), message.AdditionalContentLength);
+            BinaryPrimitives.WriteInt32LittleEndian(frameBuffer.Slice(position, 4), message.AdditionalContentLength);
             position += 4;
         }
 
@@ -165,7 +166,7 @@ public class HorseProtocolWriter
 
         ushort headerSize = (ushort)(ms.Position - startPosition - 2);
         Span<byte> lengthBytes = stackalloc byte[2];
-        BitConverter.TryWriteBytes(lengthBytes, headerSize);
+        BinaryPrimitives.WriteUInt16LittleEndian(lengthBytes, headerSize);
 
         ms.Position = startPosition;
         ms.Write(lengthBytes);

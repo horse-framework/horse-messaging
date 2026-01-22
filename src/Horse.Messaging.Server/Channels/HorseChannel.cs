@@ -181,9 +181,10 @@ public class HorseChannel
             _initialMessage = messageData;
 
             int count = 0;
-            //to all receivers
-            foreach (ChannelClient client in _channelClients)
+            ChannelClient[] clients = _channelClients;
+            for (int i = 0; i < clients.Length; i++)
             {
+                ChannelClient client = clients[i];
                 if (client == null)
                     break;
 

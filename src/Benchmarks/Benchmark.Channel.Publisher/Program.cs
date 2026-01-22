@@ -59,6 +59,7 @@ class Program
     {
         ChannelModel model = new ChannelModel { Foo = "123" };
         HorseClient client = new HorseClient();
+        client.NoDelay = true;
         client.SetClientName("publisher");
         client.SetClientType("publisher");
         int i = 0;
