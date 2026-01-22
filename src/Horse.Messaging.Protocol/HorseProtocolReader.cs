@@ -2,7 +2,6 @@ using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -59,7 +58,6 @@ public class HorseProtocolReader
     /// <summary>
     /// Reads and process required frame data of the message
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private async Task<bool> ReadFrame(HorseMessage message, byte[] bytes, Stream stream)
     {
         byte proto = bytes[0];
@@ -153,7 +151,6 @@ public class HorseProtocolReader
     /// <summary>
     /// Reads and process header data of the message
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static async Task<bool> ReadHeader(HorseMessage message, Stream stream)
     {
         byte[] size = new byte[2];
@@ -198,7 +195,6 @@ public class HorseProtocolReader
     /// <summary>
     /// Reads message content
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private async Task<bool> ReadContent(HorseMessage message, Stream stream)
     {
         if (message.Length == 0)
@@ -226,7 +222,6 @@ public class HorseProtocolReader
     /// <summary>
     /// Reads message content
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private async Task<bool> ReadAdditionalContent(HorseMessage message, Stream stream)
     {
         if (message.AdditionalContentLength == 0)
@@ -254,7 +249,6 @@ public class HorseProtocolReader
     /// <summary>
     /// Reads octet size data and returns as string
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private async Task<string> ReadOctetSizeData(Stream stream, byte[] buffer, int length)
     {
         bool done = await ReadCertainBytes(stream, buffer, 0, length);
@@ -264,7 +258,6 @@ public class HorseProtocolReader
     /// <summary>
     /// Reads length bytes from the stream, not even one byte less.
     /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static async Task<bool> ReadCertainBytes(Stream stream, byte[] buffer, int start, int length)
     {
         int total = 0;

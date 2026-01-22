@@ -136,18 +136,31 @@ public class HorseProtocolWriter
         long startPosition = ms.Position;
         ms.Write("\0\0"u8);
 
-        Span<byte> newLine = stackalloc byte[2];
-        newLine[0] = (byte)'\r';
-        newLine[1] = (byte)'\n';
+        Span<byte> twoBytesStack = stackalloc byte[2];
+        twoBytesStack[0] = (byte)'\r';
+        twoBytesStack[1] = (byte)'\n';
+
+        Span<byte> buffer = stackalloc byte[1024];
+        int offset = 0;
 
         if (message.HeadersList != null)
         {
             foreach (KeyValuePair<string, string> pair in message.HeadersList)
             {
-                ms.Write(Utf8NoBom.GetBytes(pair.Key));
-                ms.WriteByte((byte)':');
-                ms.Write(Utf8NoBom.GetBytes(pair.Value));
-                ms.Write(newLine);
+                offset = 0;
+
+                int keyLen = Utf8NoBom.GetBytes(pair.Key.AsSpan(), buffer[offset..]);
+                offset += keyLen;
+
+                buffer[offset++] = (byte)':';
+
+                int valueLen = Utf8NoBom.GetBytes(pair.Value.AsSpan(), buffer[offset..]);
+                offset += valueLen;
+
+                buffer[offset++] = (byte)'\r';
+                buffer[offset++] = (byte)'\n';
+
+                ms.Write(buffer[..offset]);
             }
         }
 
@@ -155,21 +168,30 @@ public class HorseProtocolWriter
         {
             foreach (KeyValuePair<string, string> pair in additionalHeaders)
             {
-                ms.Write(Utf8NoBom.GetBytes(pair.Key));
-                ms.WriteByte((byte)':');
-                ms.Write(Utf8NoBom.GetBytes(pair.Value));
-                ms.Write(newLine);
+                offset = 0;
+
+                int keyLen = Utf8NoBom.GetBytes(pair.Key.AsSpan(), buffer[offset..]);
+                offset += keyLen;
+
+                buffer[offset++] = (byte)':';
+
+                int valueLen = Utf8NoBom.GetBytes(pair.Value.AsSpan(), buffer[offset..]);
+                offset += valueLen;
+
+                buffer[offset++] = (byte)'\r';
+                buffer[offset++] = (byte)'\n';
+
+                ms.Write(buffer[..offset]);
             }
         }
 
         long endingPosition = ms.Position;
 
         ushort headerSize = (ushort)(ms.Position - startPosition - 2);
-        Span<byte> lengthBytes = stackalloc byte[2];
-        BinaryPrimitives.WriteUInt16LittleEndian(lengthBytes, headerSize);
+        BinaryPrimitives.WriteUInt16LittleEndian(twoBytesStack, headerSize);
 
         ms.Position = startPosition;
-        ms.Write(lengthBytes);
+        ms.Write(twoBytesStack);
         ms.Position = endingPosition;
     }
 
