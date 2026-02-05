@@ -28,7 +28,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Enums.NET" Version="5.0.0" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
 	</ItemGroup>
 
 	<ItemGroup>

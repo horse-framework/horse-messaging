@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Horse.Messaging.Plugins;
 using Horse.Messaging.Protocol;
@@ -73,10 +74,18 @@ public class HorseChannel
     /// </summary>
     public IEnumerable<ChannelClient> Clients => _channelClients.Where(x => x != null);
 
-    private Timer _destoryTimer;
+    private Timer _destroyTimer;
     private byte[] _initialMessage;
     private readonly object _channelClientLock = new();
     private readonly ChannelClient[] _channelClients = new ChannelClient[256];
+
+    private readonly Channel<HorseMessage> _channel = Channel.CreateBounded<HorseMessage>(
+        new BoundedChannelOptions(50000)
+        {
+            FullMode = BoundedChannelFullMode.Wait,
+            SingleReader = true,
+            SingleWriter = false
+        });
 
     #endregion
 
@@ -98,19 +107,31 @@ public class HorseChannel
         if (options.ClientLimit > 1)
             _channelClients = new ChannelClient[options.ClientLimit];
 
-        _destoryTimer = new Timer(s =>
+        _destroyTimer = new Timer(s =>
         {
             if (Options.AutoDestroy && DateTime.UtcNow - LastPublishDate > TimeSpan.FromSeconds(options.AutoDestroyIdleSeconds) && ClientsCount() == 0)
                 Rider.Channel.Remove(this);
         }, null, 15000, 15000);
+
+        _ = Run();
     }
 
     internal void Destroy()
     {
-        if (_destoryTimer != null)
+        Status = ChannelStatus.Destroyed;
+
+        try
         {
-            _destoryTimer.Dispose();
-            _destoryTimer = null;
+            _channel.Writer.Complete();
+        }
+        catch
+        {
+        }
+
+        if (_destroyTimer != null)
+        {
+            _destroyTimer.Dispose();
+            _destroyTimer = null;
         }
     }
 
@@ -145,6 +166,48 @@ public class HorseChannel
         Rider.Channel.ClusterNotifier.SendChannelUpdated(this);
     }
 
+    private async Task Run()
+    {
+        await foreach (HorseMessage message in _channel.Reader.ReadAllAsync())
+        {
+            try
+            {
+                byte[] messageData = HorseProtocolWriter.Create(message);
+                _initialMessage = messageData;
+
+                int count = 0;
+                ChannelClient[] clients = _channelClients;
+                for (int i = 0; i < clients.Length; i++)
+                {
+                    ChannelClient client = clients[i];
+                    if (client == null)
+                        break;
+
+                    //to only online receivers
+                    if (!client.Client.IsConnected)
+                        continue;
+
+                    client.SendChannelMessage(messageData);
+                    count++;
+                }
+
+                Info.PublishedValue++;
+                Info.ReceivedValue += count;
+
+                PublishEvent.Trigger(Name);
+
+                foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
+                    _ = handler.OnPublish(this, message);
+
+                Rider.Plugin.TriggerPluginHandlers(HorsePluginEvent.ChannelPublish, Name, message);
+            }
+            catch (Exception ex)
+            {
+                Rider.SendError(HorseLogLevel.Error, HorseLogEvents.ChannelPush, "Channel Push Error: " + Name, ex);
+            }
+        }
+    }
+
     #endregion
 
     #region Delivery
@@ -175,44 +238,9 @@ public class HorseChannel
         message.WaitResponse = false;
         LastPublishDate = DateTime.UtcNow;
 
-        try
-        {
-            byte[] messageData = HorseProtocolWriter.Create(message);
-            _initialMessage = messageData;
+        bool result = _channel.Writer.TryWrite(message);
 
-            int count = 0;
-            ChannelClient[] clients = _channelClients;
-            for (int i = 0; i < clients.Length; i++)
-            {
-                ChannelClient client = clients[i];
-                if (client == null)
-                    break;
-
-                //to only online receivers
-                if (!client.Client.IsConnected)
-                    continue;
-
-                client.SendChannelMessage(messageData);
-                count++;
-            }
-
-            Interlocked.Increment(ref Info.PublishedValue);
-            Interlocked.Add(ref Info.ReceivedValue, count);
-
-            PublishEvent.Trigger(Name);
-
-            foreach (IChannelEventHandler handler in Rider.Channel.EventHandlers.All())
-                _ = handler.OnPublish(this, message);
-
-            Rider.Plugin.TriggerPluginHandlers(HorsePluginEvent.ChannelPublish, Name, message);
-
-            return PushResult.Success;
-        }
-        catch (Exception ex)
-        {
-            Rider.SendError(HorseLogLevel.Error, HorseLogEvents.ChannelPush, "Channel Push Error: " + Name, ex);
-            return PushResult.Error;
-        }
+        return result ? PushResult.Success : PushResult.LimitExceeded;
     }
 
     /// <summary>

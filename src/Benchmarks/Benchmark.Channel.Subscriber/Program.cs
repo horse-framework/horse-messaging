@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Benchmark.Helper;
 using Horse.Messaging.Client;
-using Horse.Messaging.Client.Channels;
 using Horse.Messaging.Protocol;
 
 namespace Benchmark.Channel.Subscriber;
@@ -19,7 +18,6 @@ class Program
         Counter = new Counter();
         Counter.Run(c => Console.WriteLine($"{c.ChangeInSecond} m/s \t {c.Total} total \t"));
 
-
         HorseClient client = new HorseClient();
         client.AddHost("horse://127.0.0.1:2626");
         client.SetClientName("Test");
@@ -28,7 +26,7 @@ class Program
         client.MessageReceived += (c, m) =>
         {
             Counter.Increase();
-            Interlocked.Increment(ref total);
+            total++;
         };
 
         await client.ConnectAsync();

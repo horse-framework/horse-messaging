@@ -11,7 +11,7 @@ namespace Horse.Messaging.Server.OverWebSockets;
 internal class SwitchingServerProtocol : ISwitchingProtocol
 {
     private readonly OverWsServerSocket _socket;
-    private readonly WebSocketReader _wsReader = new();
+    private readonly WebSocketReader _wsReader = new(null);
 
     public string ProtocolName => "websocket";
 

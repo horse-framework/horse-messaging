@@ -18,8 +18,8 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
 {
     private string _websocketKey;
     private readonly HorseClient _client;
-    private readonly WebSocketReader _reader = new();
-    private readonly WebSocketWriter _writer = new(true);
+    private readonly WebSocketReader _reader = new(null);
+    private readonly WebSocketWriter _writer = new(true, null);
     private readonly HorseProtocolReader _horseReader = new();
 
     internal SwitchingClientProtocol(HorseClient client)
@@ -55,7 +55,7 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
         if (ping.Length > 0)
             pong.Content = new MemoryStream(ping.Content.ToArray());
 
-        byte[] data = new WebSocketWriter(true).Create(pong, null);
+        ReadOnlySpan<byte> data = new WebSocketWriter(true, null).CreateSpan(pong);
         _client.SendRaw(data);
     }
 
@@ -70,7 +70,7 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
             Content = stream
         };
 
-        return _client.SendRaw(_writer.Create(msg));
+        return _client.SendRaw(_writer.CreateSpan(msg));
     }
 
     public Task<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
@@ -85,7 +85,7 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
         };
 
         msg.Content.Position = 0;
-        return _client.SendRawAsync(_writer.Create(msg));
+        return _client.SendRawAsync(_writer.CreateMemory(msg));
     }
 
     public Task<bool> SendAsync(byte[] data)
@@ -96,7 +96,7 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
             Content = new MemoryStream(data) { Position = 0 }
         };
 
-        return _client.SendRawAsync(_writer.Create(msg));
+        return _client.SendRawAsync(_writer.CreateMemory(msg));
     }
 
     public Task<bool> SendAsync(ReadOnlyMemory<byte> data)
@@ -107,7 +107,7 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
             Content = new MemoryStream(data.ToArray())
         };
 
-        return _client.SendRawAsync(_writer.Create(msg));
+        return _client.SendRawAsync(_writer.CreateMemory(msg));
     }
 
     public async Task<HorseMessage> Read(Stream stream)

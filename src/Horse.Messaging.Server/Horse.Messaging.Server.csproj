@@ -27,7 +27,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Enums.NET" Version="5.0.0" />
-		<PackageReference Include="Horse.Server" Version="7.3.11" />
+		<PackageReference Include="Horse.Server" Version="7.4.1" />
 	</ItemGroup>
 
 	<ItemGroup>
