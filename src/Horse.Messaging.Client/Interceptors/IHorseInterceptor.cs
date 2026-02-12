@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 
-namespace Horse.Messaging.Client;
+namespace Horse.Messaging.Client.Interceptors;
 
 /// <summary>
 ///  You can intercept your handlers (IQueueConsumer, IDirectConsumer or IHorseRequestHandler) when you received message in any handler. 
