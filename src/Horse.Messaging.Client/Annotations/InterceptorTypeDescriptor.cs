@@ -1,4 +1,5 @@
 using System;
+using Horse.Messaging.Client.Interceptors;
 
 namespace Horse.Messaging.Client.Annotations;
 

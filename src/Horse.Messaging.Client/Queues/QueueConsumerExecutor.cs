@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Horse.Messaging.Client.Annotations;
+using Horse.Messaging.Client.Interceptors;
 using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Client.Queues.Exceptions;
@@ -17,7 +19,7 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
     private readonly Func<IHandlerFactory> _consumerFactoryCreator;
     private QueueConsumerRegistration _registration;
     private MoveOnErrorAttribute _moveOnError;
-
+    private InterceptorRunner _interceptorRunner;
 
     public QueueConsumerExecutor(Type consumerType, IQueueConsumer<TModel> consumer, Func<IHandlerFactory> consumerFactoryCreator)
     {
@@ -29,6 +31,7 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
     public override void Resolve(object registration)
     {
         _registration = registration as QueueConsumerRegistration;
+        _interceptorRunner = new InterceptorRunner(_registration!.InterceptorDescriptors);
         ResolveAttributes(_registration!.ConsumerType);
         ResolveQueueAttributes();
     }
@@ -60,9 +63,9 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
         {
             if (_consumer != null)
             {
-                await RunBeforeInterceptors(message, client);
+                await _interceptorRunner.RunBeforeInterceptors(message, client);
                 await Consume(_consumer, message, t, client);
-                await RunAfterInterceptors(message, client);
+                await _interceptorRunner.RunAfterInterceptors(message, client);
             }
 
             else if (_consumerFactoryCreator != null)
@@ -70,9 +73,9 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
                 IHandlerFactory handlerFactory = _consumerFactoryCreator();
                 providedHandler = handlerFactory.CreateHandler(_consumerType);
                 IQueueConsumer<TModel> consumer = (IQueueConsumer<TModel>) providedHandler.Service;
-                await RunBeforeInterceptors(message, client, handlerFactory);
+                await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory);
                 await Consume(consumer, message, t, client);
-                await RunAfterInterceptors(message, client, handlerFactory);
+                await _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory);
             }
             else
                 throw new NullReferenceException("There is no consumer defined");
@@ -139,48 +142,5 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
                     throw;
             }
         }
-    }
-
-    /// <summary>
-    /// Run before interceptors
-    /// </summary>
-    /// <param name="message"></param>
-    /// <param name="client"></param>
-    /// <param name="handlerFactory"></param>
-    protected async Task RunBeforeInterceptors(HorseMessage message, HorseClient client, IHandlerFactory handlerFactory = null)
-    {
-        if (_registration.InterceptorDescriptors.Count == 0) return;
-        var beforeInterceptors = _registration.InterceptorDescriptors.Where(m => m.RunBefore);
-        IEnumerable<IHorseInterceptor> interceptors = handlerFactory is null
-            ? beforeInterceptors.Select(m => m.Instance)
-            : beforeInterceptors.Select(m => handlerFactory.CreateInterceptor(m.InterceptorType));
-
-        foreach (var interceptor in interceptors)
-            await interceptor!.Intercept(message, client);
-    }
-
-    /// <summary>
-    /// Run after interceptors
-    /// </summary>
-    /// <param name="message"></param>
-    /// <param name="client"></param>
-    /// <param name="handlerFactory"></param>
-    protected async Task RunAfterInterceptors(HorseMessage message, HorseClient client, IHandlerFactory handlerFactory = null)
-    {
-        if (_registration.InterceptorDescriptors.Count == 0) return;
-        var afterInterceptors = _registration.InterceptorDescriptors.Where(m => !m.RunBefore);
-        IEnumerable<IHorseInterceptor> interceptors = handlerFactory is null
-            ? afterInterceptors.Select(m => m.Instance)
-            : afterInterceptors.Select(m => handlerFactory.CreateInterceptor(m.InterceptorType));
-
-        foreach (var interceptor in interceptors)
-            try
-            {
-                await interceptor!.Intercept(message, client);
-            }
-            catch (Exception e)
-            {
-                client.OnException(e, message);
-            }
     }
 }

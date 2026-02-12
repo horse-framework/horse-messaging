@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Horse.Messaging.Client.Interceptors;
 using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Protocol;
 
@@ -13,7 +14,8 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
     private readonly IHorseRequestHandler<TRequest, TResponse> _handler;
     private readonly Func<IHandlerFactory> _handlerFactoryCreator;
     private DirectHandlerRegistration _registration;
-
+    private InterceptorRunner _interceptorRunner;
+    
     public RequestHandlerExecutor(Type handlerType, IHorseRequestHandler<TRequest, TResponse> handler, Func<IHandlerFactory> handlerFactoryCreator)
     {
         _handlerType = handlerType;
@@ -24,6 +26,7 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
     public override void Resolve(object registration)
     {
         _registration = registration as DirectHandlerRegistration;
+        _interceptorRunner = new InterceptorRunner(_registration!.IntercetorDescriptors);
         ResolveAttributes(_registration!.HandlerType);
     }
 
@@ -50,7 +53,7 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
 
             try
             {
-                await RunBeforeInterceptors(message, client, handlerFactory);
+                await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory);
                 TResponse responseModel = await Handle(handler, requestModel, message, client);
                 HorseResultCode code = responseModel is null ? HorseResultCode.NoContent : HorseResultCode.Ok;
                 HorseMessage responseMessage = message.CreateResponse(code);
@@ -60,7 +63,7 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
 
                 respond = true;
                 await client.SendAsync(responseMessage);
-                await RunAfterInterceptors(message, client, handlerFactory);
+                await  _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory);
             }
             catch (Exception e)
             {
@@ -144,48 +147,5 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
         }
 
         throw new OperationCanceledException("Reached to maximum retry count and execution could not be completed");
-    }
-
-    /// <summary>
-    /// Run before interceptors
-    /// </summary>
-    /// <param name="message"></param>
-    /// <param name="client"></param>
-    /// <param name="handlerFactory"></param>
-    protected async Task RunBeforeInterceptors(HorseMessage message, HorseClient client, IHandlerFactory handlerFactory = null)
-    {
-        if (_registration.IntercetorDescriptors.Count == 0) return;
-        var beforeInterceptors = _registration.IntercetorDescriptors.Where(m => m.RunBefore);
-        IEnumerable<IHorseInterceptor> interceptors = handlerFactory is null
-            ? beforeInterceptors.Select(m => m.Instance)
-            : beforeInterceptors.Select(m => handlerFactory.CreateInterceptor(m.InterceptorType));
-
-        foreach (var interceptor in interceptors)
-            await interceptor!.Intercept(message, client);
-    }
-
-    /// <summary>
-    /// Run after interceptors
-    /// </summary>
-    /// <param name="message"></param>
-    /// <param name="client"></param>
-    /// <param name="handlerFactory"></param>
-    protected async Task RunAfterInterceptors(HorseMessage message, HorseClient client, IHandlerFactory handlerFactory = null)
-    {
-        if (_registration.IntercetorDescriptors.Count == 0) return;
-        var afterInterceptors = _registration.IntercetorDescriptors.Where(m => !m.RunBefore);
-        IEnumerable<IHorseInterceptor> interceptors = handlerFactory is null
-            ? afterInterceptors.Select(m => m.Instance)
-            : afterInterceptors.Select(m => handlerFactory.CreateInterceptor(m.InterceptorType));
-
-        foreach (var interceptor in interceptors)
-            try
-            {
-                await interceptor!.Intercept(message, client);
-            }
-            catch (Exception e)
-            {
-                client.OnException(e, message);
-            }
     }
 }
