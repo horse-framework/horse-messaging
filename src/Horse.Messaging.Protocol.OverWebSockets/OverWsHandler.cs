@@ -27,6 +27,7 @@ internal class OverWsHandler : IProtocolConnectionHandler<WsServerSocket, WebSoc
     public async Task Ready(IHorseServer server, WsServerSocket client)
     {
         OverWsServerSocket socket = (OverWsServerSocket) client;
+        socket.Compressor = null;
         HorseServerSocket horseSocket = await _horseHandler.Connected(server, socket.Info, socket.Data);
         
         ISwitchingProtocolClient switchingClient = horseSocket as ISwitchingProtocolClient;

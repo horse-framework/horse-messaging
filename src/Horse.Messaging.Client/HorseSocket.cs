@@ -265,12 +265,16 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
             message = await _reader.Read(Stream);
 
         if (message == null)
-        {
-            Disconnect();
-            return;
-        }
+            throw new IOException("Cannot read message from stream.");
 
-        _ = _client.OnMessageReceived(message);
+        try
+        {
+            await _client.OnMessageReceived(message);
+        }
+        catch (Exception e)
+        {
+            _client.OnException(e, message);
+        }
     }
 
     /// <summary>
@@ -294,12 +298,9 @@ public class HorseSocket : ClientSocketBase<HorseMessage>
 
         bool sent;
         if (_client.SwitchingProtocol != null)
-            sent = _client.SwitchingProtocol.Send(message, additionalHeaders);
+            sent = await _client.SwitchingProtocol.SendAsync(message, additionalHeaders);
         else
-        {
-            byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
-            sent = await SendAsync(data);
-        }
+            sent = await SendAsync(HorseProtocolWriter.Create(message));
 
         if (sent && SmartHealthCheck)
             KeepAlive();

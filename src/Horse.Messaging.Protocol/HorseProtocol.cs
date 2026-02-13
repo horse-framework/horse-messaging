@@ -24,7 +24,7 @@ public class HorseProtocol : IHorseProtocol
     /// Server object
     /// </summary>
     private readonly IHorseServer _server;
-        
+
     /// <summary>
     /// Creates new Horse Protocol handler
     /// </summary>
@@ -119,7 +119,7 @@ public class HorseProtocol : IHorseProtocol
         //if user makes a mistake in ready method, we should not interrupt connection handling
         try
         {
-            await _handler.Ready(_server, (HorseServerSocket) handshakeResult.Socket);
+            await _handler.Ready(_server, (HorseServerSocket)handshakeResult.Socket);
         }
         catch (Exception e)
         {
@@ -137,7 +137,7 @@ public class HorseProtocol : IHorseProtocol
                 return;
             }
 
-            await ProcessMessage(info, message, (HorseServerSocket) handshakeResult.Socket);
+            await ProcessMessage(info, message, (HorseServerSocket)handshakeResult.Socket);
         }
     }
 

@@ -6,6 +6,7 @@ using System.Threading;
 using Horse.Messaging.Client.Channels;
 using Horse.Messaging.Client.Direct;
 using Horse.Messaging.Client.Events;
+using Horse.Messaging.Client.Interceptors;
 using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Protocol;

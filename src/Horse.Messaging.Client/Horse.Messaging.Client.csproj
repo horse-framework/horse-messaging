@@ -1,21 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net8.0;net9.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
 		<Title>Horse.Messaging.Client</Title>
 		<Product>Horse.Messaging.Client</Product>
 		<Description>Horse Messaging Client to connect all Horse Servers</Description>
 		<PackageTags>horse,client,messaging,queue,channel,cache</PackageTags>
-        <AssemblyVersion>7.2.1</AssemblyVersion>
-        <FileVersion>7.2.1</FileVersion>
-        <PackageVersion>7.2.1</PackageVersion>
+        <AssemblyVersion>7.4.1</AssemblyVersion>
+        <FileVersion>7.4.1</FileVersion>
+        <PackageVersion>7.4.1</PackageVersion>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<Authors>Mehmet Helvacıköylü;Emre Hızlı</Authors>
+        <Authors>Mehmet Helvacıköylü</Authors>
 		<PackageProjectUrl>https://github.com/horse-framework/horse-messaging</PackageProjectUrl>
 		<PackageLicenseUrl>https://github.com/horse-framework/horse-messaging/blob/master/LICENSE</PackageLicenseUrl>
 		<RepositoryUrl>https://github.com/horse-framework/horse-messaging</RepositoryUrl>
 		<RootNamespace>Horse.Messaging.Client</RootNamespace>
+		<TargetFramework>net10.0</TargetFramework>
 	</PropertyGroup>
 
 	<PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -28,7 +28,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Enums.NET" Version="5.0.0" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
 	</ItemGroup>
 
 	<ItemGroup>

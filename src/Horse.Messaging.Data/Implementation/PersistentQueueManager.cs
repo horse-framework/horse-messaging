@@ -147,6 +147,11 @@ public class PersistentQueueManager : IHorseQueueManager
             RedeliveryService.Delete();
         }
 
+        PriorityMessageStore.TimeoutTracker.Stop();
+        MessageStore.TimeoutTracker.Stop();
+
+        await DeliveryHandler.Tracker.Destroy();
+
         try
         {
             await _priorityMessageStore.Destroy();
@@ -156,13 +161,6 @@ public class PersistentQueueManager : IHorseQueueManager
         {
             Queue.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueuePersistentDestroy, $"Persistent Queue Destroy: {Queue.Name}", e);
         }
-
-        PriorityMessageStore.TimeoutTracker.Stop();
-        MessageStore.TimeoutTracker.Stop();
-
-        await DeliveryHandler.Tracker.Destroy();
-        await PriorityMessageStore.Destroy();
-        await MessageStore.Destroy();
     }
 
     /// <inheritdoc />

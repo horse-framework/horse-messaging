@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -11,23 +12,29 @@ namespace Horse.Messaging.Protocol;
 /// </summary>
 public class HorseProtocolWriter
 {
+    private static readonly UTF8Encoding Utf8NoBom = new(false);
+
     /// <summary>
     /// Writes a Horse message to stream
     /// </summary>
     public static void Write(HorseMessage value, Stream stream, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
+        if (!stream.CanSeek)
+        {
+            byte[] data = Create(value, additionalHeaders);
+            stream.Write(data, 0, data.Length);
+            return;
+        }
+
         bool hasAdditionalHeader = additionalHeaders != null && additionalHeaders.Count > 0;
 
-        using MemoryStream ms = new MemoryStream();
-        WriteFrame(ms, value, hasAdditionalHeader);
+        WriteFrame(stream, value, hasAdditionalHeader);
 
         if (value.HasHeader || hasAdditionalHeader)
-            WriteHeader(ms, value, additionalHeaders);
+            WriteHeader(stream, value, additionalHeaders);
 
         if (value.Length > 0)
-            WriteContent(ms, value);
-
-        ms.WriteTo(stream);
+            WriteContent(stream, value);
     }
 
     /// <summary>
@@ -36,6 +43,7 @@ public class HorseProtocolWriter
     public static byte[] Create(HorseMessage value, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
         bool hasAdditionalHeader = additionalHeaders != null && additionalHeaders.Count > 0;
+
         using MemoryStream ms = new MemoryStream();
         WriteFrame(ms, value, hasAdditionalHeader);
 
@@ -52,9 +60,12 @@ public class HorseProtocolWriter
     /// Writes frame to stream
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void WriteFrame(MemoryStream ms, HorseMessage message, bool hasAdditionalHeaders)
+    private static void WriteFrame(Stream ms, HorseMessage message, bool hasAdditionalHeaders)
     {
-        byte proto = (byte) message.Type;
+        Span<byte> frameBuffer = stackalloc byte[256];
+        int position = 0;
+
+        byte proto = (byte)message.Type;
 
         if (message.WaitResponse)
             proto += 128;
@@ -65,90 +76,140 @@ public class HorseProtocolWriter
         if (message.HasHeader || hasAdditionalHeaders)
             proto += 32;
 
-        ms.WriteByte(proto);
+        frameBuffer[position++] = proto;
 
         byte addContent = 0;
         if (message.HasAdditionalContent)
             addContent += 128;
 
-        ms.WriteByte(addContent);
+        frameBuffer[position++] = addContent;
+        frameBuffer[position++] = (byte)message.MessageIdLength;
+        frameBuffer[position++] = (byte)message.SourceLength;
+        frameBuffer[position++] = (byte)message.TargetLength;
 
-        ms.WriteByte((byte) message.MessageIdLength);
-        ms.WriteByte((byte) message.SourceLength);
-        ms.WriteByte((byte) message.TargetLength);
-
-        ms.Write(BitConverter.GetBytes(message.ContentType));
+        BinaryPrimitives.WriteUInt16LittleEndian(frameBuffer.Slice(position, 2), message.ContentType);
+        position += 2;
 
         if (message.Content != null && message.Length == 0)
-            message.Length = (ulong) message.Content.Length;
+            message.Length = (ulong)message.Content.Length;
 
         if (message.Length < 253)
-            ms.WriteByte((byte) message.Length);
+        {
+            frameBuffer[position++] = (byte)message.Length;
+        }
         else if (message.Length <= ushort.MaxValue)
         {
-            ms.WriteByte(253);
-            ms.Write(BitConverter.GetBytes((ushort) message.Length));
+            frameBuffer[position++] = 253;
+            BinaryPrimitives.WriteUInt16LittleEndian(frameBuffer.Slice(position, 2), (ushort)message.Length);
+            position += 2;
         }
         else if (message.Length <= uint.MaxValue)
         {
-            ms.WriteByte(254);
-            ms.Write(BitConverter.GetBytes((uint) message.Length));
+            frameBuffer[position++] = 254;
+            BinaryPrimitives.WriteUInt32LittleEndian(frameBuffer.Slice(position, 4), (uint)message.Length);
+            position += 4;
         }
         else
         {
-            ms.WriteByte(255);
-            ms.Write(BitConverter.GetBytes(message.Length));
+            frameBuffer[position++] = 255;
+            BinaryPrimitives.WriteUInt64LittleEndian(frameBuffer.Slice(position, 8), message.Length);
+            position += 8;
         }
 
         if (message.HasAdditionalContent)
-            ms.Write(BitConverter.GetBytes(message.AdditionalContentLength));
+        {
+            BinaryPrimitives.WriteInt32LittleEndian(frameBuffer.Slice(position, 4), message.AdditionalContentLength);
+            position += 4;
+        }
 
         if (message.MessageIdLength > 0)
-        {
-            byte[] bytes = Encoding.UTF8.GetBytes(message.MessageId);
-            ms.Write(bytes);
-        }
+            position += Utf8NoBom.GetBytes(message.MessageId, frameBuffer.Slice(position));
 
         if (message.SourceLength > 0)
-        {
-            byte[] bytes = Encoding.UTF8.GetBytes(message.Source);
-            ms.Write(bytes);
-        }
+            position += Utf8NoBom.GetBytes(message.Source, frameBuffer.Slice(position));
 
         if (message.TargetLength > 0)
-        {
-            byte[] bytes = Encoding.UTF8.GetBytes(message.Target);
-            ms.Write(bytes);
-        }
+            position += Utf8NoBom.GetBytes(message.Target, frameBuffer.Slice(position));
+
+        ms.Write(frameBuffer[..position]);
     }
 
     /// <summary>
     /// Writes header length and content to stream
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void WriteHeader(MemoryStream ms, HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders)
+    private static void WriteHeader(Stream ms, HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders)
     {
-        using MemoryStream headerStream = new MemoryStream();
+        long startPosition = ms.Position;
+        ms.Write("\0\0"u8);
+
+        Span<byte> twoBytesStack = stackalloc byte[2];
+        twoBytesStack[0] = (byte)'\r';
+        twoBytesStack[1] = (byte)'\n';
+
+        Span<byte> buffer = stackalloc byte[1024];
+        int offset = 0;
 
         if (message.HeadersList != null)
+        {
             foreach (KeyValuePair<string, string> pair in message.HeadersList)
-                headerStream.Write(Encoding.UTF8.GetBytes(pair.Key + ":" + pair.Value + "\r\n"));
+            {
+                offset = 0;
+
+                int keyLen = Utf8NoBom.GetBytes(pair.Key.AsSpan(), buffer[offset..]);
+                offset += keyLen;
+
+                buffer[offset++] = (byte)':';
+
+                int valueLen = Utf8NoBom.GetBytes(pair.Value.AsSpan(), buffer[offset..]);
+                offset += valueLen;
+
+                buffer[offset++] = (byte)'\r';
+                buffer[offset++] = (byte)'\n';
+
+                ms.Write(buffer[..offset]);
+            }
+        }
 
         if (additionalHeaders != null)
+        {
             foreach (KeyValuePair<string, string> pair in additionalHeaders)
-                headerStream.Write(Encoding.UTF8.GetBytes(pair.Key + ":" + pair.Value + "\r\n"));
+            {
+                offset = 0;
 
-        ms.Write(BitConverter.GetBytes((ushort) headerStream.Length));
-        headerStream.Position = 0;
-        headerStream.WriteTo(ms);
+                int keyLen = Utf8NoBom.GetBytes(pair.Key.AsSpan(), buffer[offset..]);
+                offset += keyLen;
+
+                buffer[offset++] = (byte)':';
+
+                int valueLen = Utf8NoBom.GetBytes(pair.Value.AsSpan(), buffer[offset..]);
+                offset += valueLen;
+
+                buffer[offset++] = (byte)'\r';
+                buffer[offset++] = (byte)'\n';
+
+                ms.Write(buffer[..offset]);
+            }
+        }
+
+        long endingPosition = ms.Position;
+
+        ushort headerSize = (ushort)(ms.Position - startPosition - 2);
+        BinaryPrimitives.WriteUInt16LittleEndian(twoBytesStack, headerSize);
+
+        ms.Position = startPosition;
+        ms.Write(twoBytesStack);
+        ms.Position = endingPosition;
     }
 
     /// <summary>
     /// Writes content to stream
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void WriteContent(MemoryStream ms, HorseMessage message)
+    private static void WriteContent(Stream ms, HorseMessage message)
     {
+        message.Content.Position = 0;
+
         if (message.Length > 0 && message.Content != null)
             message.Content.WriteTo(ms);
 

@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 using Horse.Core;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
-using Horse.Protocols.Http;
 using Horse.WebSocket.Protocol;
+using Horse.WebSocket.Protocol.Http;
 using PredefinedMessages = Horse.WebSocket.Protocol.PredefinedMessages;
 
 namespace Horse.Messaging.Server.OverWebSockets;
@@ -18,8 +18,8 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
 {
     private string _websocketKey;
     private readonly HorseClient _client;
-    private readonly WebSocketReader _reader = new();
-    private readonly WebSocketWriter _writer = new(true);
+    private readonly WebSocketReader _reader = new(null);
+    private readonly WebSocketWriter _writer = new(true, null);
     private readonly HorseProtocolReader _horseReader = new();
 
     internal SwitchingClientProtocol(HorseClient client)
@@ -55,33 +55,37 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
         if (ping.Length > 0)
             pong.Content = new MemoryStream(ping.Content.ToArray());
 
-        byte[] data = new WebSocketWriter(true).Create(pong, null);
+        ReadOnlySpan<byte> data = new WebSocketWriter(true, null).CreateSpan(pong);
         _client.SendRaw(data);
     }
 
     public bool Send(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
-        byte[] bytes = HorseProtocolWriter.Create(message, additionalHeaders);
+        MemoryStream stream = new MemoryStream();
+        HorseProtocolWriter.Write(message, stream);
+
         WebSocketMessage msg = new WebSocketMessage
         {
             OpCode = SocketOpCode.Binary,
-            Content = new MemoryStream(bytes)
+            Content = stream
         };
 
-        return _client.SendRaw(_writer.Create(msg));
+        return _client.SendRaw(_writer.CreateSpan(msg));
     }
 
     public Task<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
-        byte[] bytes = HorseProtocolWriter.Create(message, additionalHeaders);
+        MemoryStream stream = new MemoryStream();
+        HorseProtocolWriter.Write(message, stream, additionalHeaders);
+
         WebSocketMessage msg = new WebSocketMessage
         {
             OpCode = SocketOpCode.Binary,
-            Content = new MemoryStream(bytes)
+            Content = stream
         };
 
         msg.Content.Position = 0;
-        return _client.SendRawAsync(_writer.Create(msg));
+        return _client.SendRawAsync(_writer.CreateMemory(msg));
     }
 
     public Task<bool> SendAsync(byte[] data)
@@ -89,11 +93,21 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
         WebSocketMessage msg = new WebSocketMessage
         {
             OpCode = SocketOpCode.Binary,
-            Content = new MemoryStream(data)
+            Content = new MemoryStream(data) { Position = 0 }
         };
 
-        msg.Content.Position = 0;
-        return _client.SendRawAsync(_writer.Create(msg));
+        return _client.SendRawAsync(_writer.CreateMemory(msg));
+    }
+
+    public Task<bool> SendAsync(ReadOnlyMemory<byte> data)
+    {
+        WebSocketMessage msg = new WebSocketMessage
+        {
+            OpCode = SocketOpCode.Binary,
+            Content = new MemoryStream(data.ToArray())
+        };
+
+        return _client.SendRawAsync(_writer.CreateMemory(msg));
     }
 
     public async Task<HorseMessage> Read(Stream stream)
@@ -147,12 +161,8 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
 
         string request = HttpHeaders.HTTP_GET + " " + path + " " + HttpHeaders.HTTP_VERSION + "\r\n" +
                          HttpHeaders.Create(HttpHeaders.CONNECTION, HttpHeaders.UPGRADE) +
-                         HttpHeaders.Create(HttpHeaders.PRAGMA, HttpHeaders.VALUE_NO_CACHE) +
-                         HttpHeaders.Create(HttpHeaders.CACHE_CONTROL, HttpHeaders.VALUE_NO_CACHE) +
                          HttpHeaders.Create(HttpHeaders.UPGRADE, HttpHeaders.VALUE_WEBSOCKET) +
                          HttpHeaders.Create(HttpHeaders.WEBSOCKET_VERSION, HttpHeaders.VALUE_WEBSOCKET_VERSION) +
-                         HttpHeaders.Create(HttpHeaders.ACCEPT_ENCODING, HttpHeaders.VALUE_GZIP_DEFLATE_BR) +
-                         HttpHeaders.Create(HttpHeaders.ACCEPT_LANGUAGE, HttpHeaders.VALUE_ACCEPT_EN) +
                          HttpHeaders.Create(HttpHeaders.WEBSOCKET_KEY, _websocketKey) +
                          HttpHeaders.Create(HttpHeaders.WEBSOCKET_EXTENSIONS, HttpHeaders.VALUE_WEBSOCKET_EXTENSIONS);
 
@@ -176,14 +186,14 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
             throw new InvalidOperationException("Unexpected server response");
 
         int i2 = first.IndexOf(' ', i1 + 1);
-        if (i1 < 0 || i2 < 0 || i2 <= i1)
+        if (i2 < 0 || i2 <= i1)
             throw new InvalidOperationException("Unexpected server response");
 
         string statusCode = first.Substring(i1, i2 - i1).Trim();
         if (statusCode != "101")
             throw new InvalidOperationException("Connection Error: " + statusCode);
 
-        string[] responseLines = response.Split(new[] {"\r\n"}, StringSplitOptions.RemoveEmptyEntries);
+        string[] responseLines = response.Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
         string acceptLine = responseLines.FirstOrDefault(x => x.StartsWith(HttpHeaders.WEBSOCKET_ACCEPT, StringComparison.InvariantCultureIgnoreCase));
 
         if (acceptLine == null)
@@ -192,7 +202,6 @@ internal class SwitchingClientProtocol : ISwitchingProtocol
         string[] pair = acceptLine.Split(':');
         string responseKey = pair[1].Trim();
 
-        //check if the key is valid
         using SHA1 sha1 = SHA1.Create();
         byte[] hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(_websocketKey + HttpHeaders.WEBSOCKET_GUID));
         string fkey = Convert.ToBase64String(hash);

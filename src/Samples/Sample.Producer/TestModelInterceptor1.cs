@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
+using Horse.Messaging.Client.Interceptors;
 using Horse.Messaging.Protocol;
 
 namespace Sample.Producer;

@@ -77,7 +77,8 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         MessagingClient foundClient = _rider.Client.Find(clientId);
         if (foundClient != null)
         {
-            await connection.Socket.SendAsync(HorseProtocolWriter.Create(MessageBuilder.Busy()));
+            byte[] bytes = HorseProtocolWriter.Create(MessageBuilder.Busy());
+            await connection.Socket.SendAsync(bytes);
             return null;
         }
 
@@ -192,7 +193,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
         if (client == null)
             return;
 
-        MessagingClient mc = (MessagingClient) client;
+        MessagingClient mc = (MessagingClient)client;
 
         if (mc.IsNodeClient && mc.NodeClient != null)
         {
@@ -223,13 +224,13 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
     /// </summary>
     public Task Disconnected(IHorseServer server, HorseServerSocket client)
     {
-        MessagingClient messagingClient = (MessagingClient) client;
+        MessagingClient messagingClient = (MessagingClient)client;
 
         if (messagingClient.IsNodeClient)
             return Task.CompletedTask;
 
         _rider.Client.Remove(messagingClient);
-        
+
         foreach (IClientHandler handler in _rider.Client.Handlers.All())
             _ = handler.Disconnected(_rider, messagingClient);
 
@@ -247,7 +248,7 @@ internal class HorseNetworkHandler : IProtocolConnectionHandler<HorseServerSocke
     {
         try
         {
-            MessagingClient mc = (MessagingClient) client;
+            MessagingClient mc = (MessagingClient)client;
 
             //if client sends anonymous messages and server needs message id, generate new
             if (string.IsNullOrEmpty(message.MessageId))

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Protocol.Events;
 using Horse.Messaging.Server.Clients;
@@ -112,29 +113,33 @@ public class EventManager : IDisposable
         if (Subscribers.Count() == 0)
             return;
 
+        HorseEvent e = new HorseEvent
+        {
+            Type = Type,
+            Target = target,
+            Subject = subject,
+            Parameters = parameters
+        };
+        _ = TriggerInternal(target ?? string.Empty, e);
+    }
+
+    private async Task TriggerInternal(string target, HorseEvent e)
+    {
         try
         {
-            HorseEvent e = new HorseEvent
-            {
-                Type = Type,
-                Target = target,
-                Subject = subject,
-                Parameters = parameters
-            };
-
             HorseMessage message = new HorseMessage(MessageType.Event, target, Convert.ToUInt16(Type));
             message.Serialize(e, _server.MessageContentSerializer);
-            byte[] data = HorseProtocolWriter.Create(message);
 
+            byte[] data = HorseProtocolWriter.Create(message);
             foreach (MessagingClient subscriber in Subscribers.All())
             {
                 if (subscriber.IsConnected)
-                    _ = subscriber.SendRawAsync(data);
+                    await subscriber.SendAsync(data);
             }
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            _server.SendError(HorseLogLevel.Error, HorseLogEvents.EventTrigger, $"Event Trigger Type:{Type}, Target:{Target}", e);
+            _server.SendError(HorseLogLevel.Error, HorseLogEvents.EventTrigger, $"Event Trigger Type:{Type}, Target:{target}", ex);
         }
     }
 }

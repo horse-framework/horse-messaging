@@ -8,6 +8,8 @@ namespace Horse.Messaging.Server.Clients;
 /// </summary>
 public class QueueClient
 {
+    internal int Index { get; set; }
+
     /// <summary>
     /// The time when client has subscribed to the queue
     /// </summary>

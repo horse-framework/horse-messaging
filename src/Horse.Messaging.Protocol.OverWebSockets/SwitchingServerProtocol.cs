@@ -11,7 +11,7 @@ namespace Horse.Messaging.Server.OverWebSockets;
 internal class SwitchingServerProtocol : ISwitchingProtocol
 {
     private readonly OverWsServerSocket _socket;
-    private readonly WebSocketReader _wsReader = new();
+    private readonly WebSocketReader _wsReader = new(null);
 
     public string ProtocolName => "websocket";
 
@@ -33,11 +33,12 @@ internal class SwitchingServerProtocol : ISwitchingProtocol
 
     public bool Send(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
-        byte[] bytes = HorseProtocolWriter.Create(message, additionalHeaders);
+        MemoryStream stream = new MemoryStream();
+        HorseProtocolWriter.Write(message, stream, additionalHeaders);
         WebSocketMessage msg = new WebSocketMessage
         {
             OpCode = SocketOpCode.Binary,
-            Content = new MemoryStream(bytes)
+            Content = stream
         };
         msg.Content.Position = 0;
         return _socket.Send(msg);
@@ -45,14 +46,20 @@ internal class SwitchingServerProtocol : ISwitchingProtocol
 
     public Task<bool> SendAsync(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
-        byte[] bytes = HorseProtocolWriter.Create(message, additionalHeaders);
+        MemoryStream stream = new MemoryStream();
+        HorseProtocolWriter.Write(message, stream, additionalHeaders);
         WebSocketMessage msg = new WebSocketMessage
         {
             OpCode = SocketOpCode.Binary,
-            Content = new MemoryStream(bytes)
+            Content = stream
         };
         msg.Content.Position = 0;
         return _socket.SendAsync(msg);
+    }
+
+    public Task<bool> SendAsync(ReadOnlyMemory<byte> data)
+    {
+        return _socket.SendAsync(data);
     }
 
     public Task<bool> SendAsync(byte[] data)

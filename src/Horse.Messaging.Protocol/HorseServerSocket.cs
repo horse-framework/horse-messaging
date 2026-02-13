@@ -90,7 +90,8 @@ public class HorseServerSocket : SocketBase
             message.SetMessageId(_uniqueIdGenerator.Create());
 
         byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
-        return Send(data);
+        bool sent = Send(data);
+        return sent;
     }
 
     /// <summary>

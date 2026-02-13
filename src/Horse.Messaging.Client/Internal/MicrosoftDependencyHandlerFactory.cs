@@ -1,4 +1,5 @@
 using System;
+using Horse.Messaging.Client.Interceptors;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Horse.Messaging.Client.Internal;
@@ -11,7 +12,7 @@ public class ProvidedHandler
     /// <summary>
     /// The scope service is provided
     /// </summary>
-    public IServiceScope Scope { get; private set; }
+    private IServiceScope Scope { get; set; }
         
     /// <summary>
     /// Service object's itself
@@ -34,40 +35,26 @@ public class ProvidedHandler
     /// </summary>
     public void Dispose()
     {
-        if (Scope != null)
-        {
-            Scope.Dispose();
-            Scope = null;
-        }
+        if (Scope == null) return;
+        Scope.Dispose();
+        Scope = null;
     }
 }
 
-internal class MicrosoftDependencyHandlerFactory : IHandlerFactory
+internal class MicrosoftDependencyHandlerFactory(HorseClient client, ServiceLifetime lifetime) : IHandlerFactory
 {
     private IServiceScope _scope;
-    private readonly ServiceLifetime _lifetime;
-    private readonly HorseClient _client;
-
-    public MicrosoftDependencyHandlerFactory(HorseClient client, ServiceLifetime lifetime)
-    {
-        _client = client;
-        _lifetime = lifetime;
-    }
 
     public ProvidedHandler CreateHandler(Type consumerType)
     {
-        if (_lifetime == ServiceLifetime.Scoped)
-        {
-            _scope = _client.Provider.CreateScope();
-            return new ProvidedHandler(_scope, _scope.ServiceProvider.GetRequiredService(consumerType));
-        }
-
-        return new ProvidedHandler(null, _client.Provider.GetRequiredService(consumerType));
+        if (lifetime != ServiceLifetime.Scoped) return new ProvidedHandler(null, client.Provider.GetRequiredService(consumerType));
+        _scope = client.Provider.CreateScope();
+        return new ProvidedHandler(_scope, _scope.ServiceProvider.GetRequiredService(consumerType));
     }
 
     public IHorseInterceptor CreateInterceptor(Type interceptorType)
     {
-        if (_lifetime == ServiceLifetime.Scoped)
+        if (lifetime == ServiceLifetime.Scoped)
             return (IHorseInterceptor) _scope.ServiceProvider.GetService(interceptorType);
 
         object interceptor = _scope.ServiceProvider.GetService(interceptorType);

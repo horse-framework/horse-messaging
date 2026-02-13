@@ -33,6 +33,9 @@ internal class Configurator
 
     public static T LoadConfiguration<T>(string fullpath) where T : class, new()
     {
+        if (fullpath.StartsWith("..") || fullpath.Contains("..\\") || fullpath.Contains("../"))
+            throw new FileLoadException("Configuration file path cannot contain '..' or '../' characters");
+        
         if (!File.Exists(fullpath))
         {
             T config = new T();

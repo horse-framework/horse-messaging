@@ -1,13 +1,12 @@
-﻿using System;
-using System.IO;
-using System.Threading.Tasks;
-using Horse.Jockey;
+﻿using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
+using Horse.Messaging.Data;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server;
 using Horse.Messaging.Server.Queues;
+using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Server;
 
 [QueueName("demo-queue")]
@@ -34,10 +33,11 @@ namespace Sample.Server
             HorseRider rider = HorseRiderBuilder.Create()
                 .ConfigureQueues(cfg =>
                 {
-                    cfg.Options.Type = QueueType.Push;
-                    cfg.Options.MessageLimit = 10;
+                    cfg.Options.Type = QueueType.RoundRobin;
+                    cfg.Options.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+                    cfg.Options.CommitWhen = CommitWhen.AfterReceived;
                     cfg.Options.AutoQueueCreation = true;
-                    cfg.UseMemoryQueues();
+                    cfg.UsePersistentQueues();
                 })
                 .Build();
             /*
@@ -59,11 +59,12 @@ namespace Sample.Server
                 new QueueTransactionEndpoint(rider.Queue, "RollbackQueue"),
                 new QueueTransactionEndpoint(rider.Queue, "TimeoutQueue"));
 */
+            /*
             rider.AddJockey(p => p.Port = 2627);
+*/
             HorseServer server = new HorseServer();
-            server.Options.PingInterval = 10;
             server.UseRider(rider);
-
+            server.Options.PingInterval = 10;
             //await rider.Cache.Set("TestCache1", new MemoryStream("Hello World"u8.ToArray()), TimeSpan.FromHours(4), null, null, true);
             server.Run(2626);
         }

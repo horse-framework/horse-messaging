@@ -39,7 +39,7 @@ class Program
             {
                 cfg.EventHandlers.Add(new QueueEventHandler());
 
-                cfg.Options.Type = QueueType.Push;
+                cfg.Options.Type = QueueType.RoundRobin;
                 cfg.Options.AcknowledgeTimeout = TimeSpan.FromSeconds(30);
 
                 if (acks == "W")

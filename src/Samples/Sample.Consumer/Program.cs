@@ -26,7 +26,7 @@ class Program
             .Build();
 
         client.MessageReceived += (horseClient, message) => Console.WriteLine(message.GetStringContent());
-        
+
         client.SmartHealthCheck = false;
         client.PingInterval = TimeSpan.FromSeconds(10);
         await client.ConnectAsync();
@@ -34,7 +34,8 @@ class Program
         while (true)
         {
             Console.ReadLine();
-            await client.Direct.SendJsonByType("Test1", 123, new ModelA(), true);
+            //await client.Direct.SendJsonByType("Test1", 123, new ModelA { Foo = new string('a', 10000) }, false);
+            await client.Channel.PublishString("Sample", new string('a',10000), false);
         }
 
         var subs = await client.Queue.Subscribe("model-g", true);

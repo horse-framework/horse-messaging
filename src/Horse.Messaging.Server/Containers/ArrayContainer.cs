@@ -11,7 +11,7 @@ namespace Horse.Messaging.Server.Containers;
 public class ArrayContainer<T> where T : class
 {
     private readonly SemaphoreSlim _semaphore = new(1, 1);
-    private T[] _items = new T[0];
+    private T[] _items = [];
 
     /// <summary>
     /// Gets all items

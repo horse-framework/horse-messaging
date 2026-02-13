@@ -728,7 +728,29 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends raw byte array over socket
     /// </summary>
+    public bool SendRaw(ReadOnlySpan<byte> data)
+    {
+        if (SmartHealthCheck)
+            _socket.KeepAlive();
+
+        return _socket.Send(data);
+    }
+
+    /// <summary>
+    /// Sends raw byte array over socket
+    /// </summary>
     public Task<bool> SendRawAsync(byte[] data)
+    {
+        if (SmartHealthCheck)
+            _socket.KeepAlive();
+
+        return _socket.SendAsync(data);
+    }
+
+    /// <summary>
+    /// Sends raw byte array over socket
+    /// </summary>
+    public Task<bool> SendRawAsync(ReadOnlyMemory<byte> data)
     {
         if (SmartHealthCheck)
             _socket.KeepAlive();
@@ -746,17 +768,16 @@ public class HorseClient : IDisposable
         if (string.IsNullOrEmpty(message.MessageId))
             message.SetMessageId(UniqueIdGenerator.Create());
 
-        byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
-
         if (_socket == null)
             return false;
 
         if (SmartHealthCheck)
             _socket.KeepAlive();
 
-        return _socket.Send(data);
+        byte[] data = HorseProtocolWriter.Create(message, additionalHeaders);
+        bool sent = _socket.Send(data);
+        return sent;
     }
-
 
     /// <summary>
     /// Sends a Horse message

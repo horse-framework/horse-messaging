@@ -6,129 +6,143 @@ using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Clients;
-using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues.Managers;
 
-namespace Horse.Messaging.Server.Queues.Delivery;
-
-/// <summary>
-/// Default delivery tracker implementation.
-/// That object tracks sent messages and manages acknowledge and response messages of them.
-/// </summary>
-public class DefaultDeliveryTracker : IDeliveryTracker
+namespace Horse.Messaging.Server.Queues.Delivery
 {
-    private readonly ConcurrentDictionary<string, MessageDelivery> _deliveries = new ConcurrentDictionary<string, MessageDelivery>();
-
-    private readonly IHorseQueueManager _manager;
-    private readonly HorseQueue _queue;
-    private Thread _timer;
-    private bool _destroyed;
-
     /// <summary>
-    /// Creates new default delivery tracker
+    /// Default delivery tracker implementation.
+    /// That object tracks sent messages and manages acknowledge and response messages of them.
     /// </summary>
-    public DefaultDeliveryTracker(IHorseQueueManager manager)
+    public class DefaultDeliveryTracker : IDeliveryTracker
     {
-        _manager = manager;
-        _queue = manager.Queue;
-    }
+        private readonly ConcurrentDictionary<string, MessageDelivery> _deliveries = new ConcurrentDictionary<string, MessageDelivery>();
 
-    /// <summary>
-    /// Runs the queue time keeper timer
-    /// </summary>
-    public void Start()
-    {
-        _timer = new Thread(async () =>
+        private readonly IHorseQueueManager _manager;
+        private readonly HorseQueue _queue;
+        private Thread _timer;
+        private bool _destroyed;
+
+        /// <summary>
+        /// Creates new default delivery tracker
+        /// </summary>
+        public DefaultDeliveryTracker(IHorseQueueManager manager)
         {
-            while (!_destroyed)
-            {
-                try
-                {
-                    await Task.Delay(1000);
-
-                    if (_queue.Status == QueueStatus.NotInitialized)
-                        continue;
-
-                    await ProcessDeliveries();
-                }
-                catch (Exception e)
-                {
-                    _queue.Rider.SendError(HorseLogLevel.Error, HorseLogEvents.QueueDeliveryProcess, "Process Deliveries of Queue: " + _queue.Name, e);
-                }
-            }
-        });
-
-        _timer.IsBackground = true;
-        _timer.Priority = ThreadPriority.BelowNormal;
-        _timer.Start();
-    }
-
-    /// <summary>
-    /// Clears all following deliveries
-    /// </summary>
-    public void Reset()
-    {
-        _deliveries.Clear();
-    }
-
-    /// <summary>
-    /// Destroys the queue time keeper. 
-    /// </summary>
-    public async Task Destroy()
-    {
-        Reset();
-        _destroyed = true;
-        await Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Returns all actively tracking messages.
-    /// The method is thread safe and returns a copy of original collection.
-    /// </summary>
-    public List<QueueMessage> GetDeliveringMessages()
-    {
-        List<QueueMessage> messages;
-        messages = _deliveries.Values.Select(x => x.Message).ToList();
-        return messages;
-    }
-
-    /// <summary>
-    /// Checks all pending deliveries if they are delivered or time is up
-    /// </summary>
-    private async Task ProcessDeliveries()
-    {
-        var rdlist = new List<Tuple<bool, MessageDelivery>>(16);
-
-        foreach (var pair in _deliveries)
-        {
-            var delivery = pair.Value;
-            //message acknowledge or came here accidently :)
-            if (delivery.Acknowledge != DeliveryAcknowledge.None || !delivery.AcknowledgeDeadline.HasValue)
-                rdlist.Add(new Tuple<bool, MessageDelivery>(false, delivery));
-
-            //expired
-            else if (DateTime.UtcNow > delivery.AcknowledgeDeadline.Value)
-                rdlist.Add(new Tuple<bool, MessageDelivery>(true, delivery));
-
-            //check if all receivers disconnected
-            else if (delivery.Message.CurrentDeliveryReceivers.Count > 0)
-            {
-                bool allDisconnected = delivery.Message.CurrentDeliveryReceivers.All(x => x.Client == null || !x.Client.IsConnected);
-                if (allDisconnected)
-                {
-                    rdlist.Add(new Tuple<bool, MessageDelivery>(true, delivery));
-                    delivery.Message.CurrentDeliveryReceivers.Clear();
-                }
-            }
+            _manager = manager;
+            _queue = manager.Queue;
         }
 
-        if (rdlist.Count == 0)
-            return;
-
-        foreach (Tuple<bool, MessageDelivery> tuple in rdlist)
+        /// <summary>
+        /// Runs the queue time keeper timer
+        /// </summary>
+        public void Start()
         {
-            MessageDelivery delivery = tuple.Item2;
-            if (tuple.Item1)
+            _timer = new Thread(() =>
+            {
+                Task currentDeliveryTask = null;
+                while (!_destroyed)
+                {
+                    try
+                    {
+                        Thread.Sleep(1000);
+
+                        if (_queue.Status == QueueStatus.NotInitialized)
+                            continue;
+
+                        if (currentDeliveryTask != null)
+                        {
+                            if (currentDeliveryTask.IsCompleted || currentDeliveryTask.IsFaulted || currentDeliveryTask.IsCanceled)
+                                currentDeliveryTask = null;
+                            else
+                                continue;
+                        }
+
+                        currentDeliveryTask = ProcessDeliveries();
+                    }
+                    catch (Exception e)
+                    {
+                    }
+                }
+            })
+            {
+                IsBackground = true,
+                Priority = ThreadPriority.BelowNormal
+            };
+
+            _timer.Start();
+        }
+
+        /// <summary>
+        /// Clears all following deliveries
+        /// </summary>
+        public void Reset()
+        {
+            _deliveries.Clear();
+        }
+
+        /// <summary>
+        /// Destroys the queue time keeper. 
+        /// </summary>
+        public async Task Destroy()
+        {
+            Reset();
+            _destroyed = true;
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Returns all actively tracking messages.
+        /// The method is thread safe and returns a copy of original collection.
+        /// </summary>
+        public IEnumerable<QueueMessage> GetDeliveringMessages()
+        {
+            return _deliveries.Values.Select(x => x.Message).ToList();
+        }
+
+        /// <summary>
+        /// Checks all pending deliveries if they are delivered or time is up
+        /// </summary>
+        private async Task ProcessDeliveries()
+        {
+            List<string> removingDeliveries = new List<string>();
+            var ackTimeoutList = new List<MessageDelivery>(16);
+            bool atLeastOneRemoved = false;
+
+            foreach (MessageDelivery delivery in _deliveries.Values)
+            {
+                bool remove = delivery.Acknowledge != DeliveryAcknowledge.None || !delivery.AcknowledgeDeadline.HasValue;
+
+                if (remove)
+                {
+                    removingDeliveries.Add(delivery.Message.Message.MessageId);
+                    atLeastOneRemoved = true;
+                    continue;
+                }
+
+                if (DateTime.UtcNow > delivery.AcknowledgeDeadline.Value)
+                    remove = true;
+
+                if (!remove && delivery.Message.CurrentDeliveryReceivers.Count > 0)
+                {
+                    bool allDisconnected = delivery.Message.CurrentDeliveryReceivers.All(x => x.Client == null || !x.Client.IsConnected);
+                    if (allDisconnected)
+                    {
+                        remove = true;
+                        delivery.Message.CurrentDeliveryReceivers.Clear();
+                    }
+                }
+
+                if (remove)
+                {
+                    atLeastOneRemoved = true;
+                    ackTimeoutList.Add(delivery);
+                }
+            }
+
+            foreach (string deliveryId in removingDeliveries)
+                _deliveries.TryRemove(deliveryId, out _);
+
+            foreach (MessageDelivery delivery in ackTimeoutList)
             {
                 bool marked = delivery.MarkAsAcknowledgeTimeout();
                 if (!marked)
@@ -149,58 +163,70 @@ public class DefaultDeliveryTracker : IDeliveryTracker
                 _queue.MessageUnackEvent.Trigger(new KeyValuePair<string, string>(HorseHeaders.MESSAGE_ID, delivery.Message.Message.MessageId));
             }
 
-            string messageId = tuple.Item2?.Message?.Message?.MessageId;
-
-            if (!string.IsNullOrEmpty(messageId))
-                _deliveries.TryRemove(messageId, out _);
+            if (atLeastOneRemoved)
+                _queue.ReleaseAcknowledgeLock(false);
         }
 
-        if (rdlist.Count > 0)
-            _queue.ReleaseAcknowledgeLock(false);
-    }
+        /// <summary>
+        /// Adds acknowledge to check it's timeout
+        /// </summary>
+        public ValueTask<bool> Track(MessageDelivery delivery)
+        {
+            if (!delivery.Message.Message.WaitResponse || !delivery.AcknowledgeDeadline.HasValue)
+                return new ValueTask<bool>(true);
 
-    /// <summary>
-    /// Adds acknowledge to check it's timeout
-    /// </summary>
-    public void Track(MessageDelivery delivery)
-    {
-        if (!delivery.Message.Message.WaitResponse || !delivery.AcknowledgeDeadline.HasValue)
-            return;
+            _deliveries.TryAdd(delivery.Message.Message.MessageId, delivery);
+            return new ValueTask<bool>(true);
+        }
 
-        _deliveries.TryAdd(delivery.Message.Message.MessageId, delivery);
-    }
+        /// <summary>
+        /// Finds delivery from message id
+        /// </summary>
+        public MessageDelivery FindDelivery(MessagingClient client, string messageId, bool remove)
+        {
+            if (string.IsNullOrEmpty(messageId))
+                return null;
 
-    /// <summary>
-    /// Finds delivery from message id
-    /// </summary>
-    public MessageDelivery FindDelivery(MessagingClient client, string messageId)
-    {
-        _deliveries.TryGetValue(messageId, out MessageDelivery delivery);
-        return delivery;
-    }
+            _deliveries.TryGetValue(messageId, out MessageDelivery delivery);
+            if (delivery == null)
+                return null;
 
-    /// <summary>
-    /// Finds delivery from message id and removes it from deliveries
-    /// </summary>
-    public MessageDelivery FindAndRemoveDelivery(MessagingClient client, string messageId)
-    {
-        _deliveries.TryRemove(messageId, out MessageDelivery delivery);
-        return delivery;
-    }
+            if (!IsDeliveryOwnerValid(client, delivery))
+                return null;
 
-    /// <summary>
-    /// Removes delivery from being tracked
-    /// </summary>
-    public void RemoveDelivery(MessageDelivery delivery)
-    {
-        _deliveries.TryRemove(delivery.Message.Message.MessageId, out _);
-    }
+            if (remove)
+                _deliveries.TryRemove(messageId, out _);
 
-    /// <summary>
-    /// Returns unique pending message count
-    /// </summary>
-    public int GetDeliveryCount()
-    {
-        return _deliveries.Count;
+            return delivery;
+        }
+
+        /// <summary>
+        /// Removes delivery from being tracked
+        /// </summary>
+        public void RemoveDelivery(MessageDelivery delivery)
+        {
+            _deliveries.TryRemove(delivery.Message.Message.MessageId, out _);
+        }
+
+        /// <summary>
+        /// Returns unique pending message count
+        /// </summary>
+        public int GetDeliveryCount()
+        {
+            return _deliveries.Count;
+        }
+
+        private bool IsDeliveryOwnerValid(MessagingClient client, MessageDelivery delivery)
+        {
+            if (client == null || delivery?.Receiver?.Client == null)
+                return true;
+
+            if (delivery.Receiver.Client == client)
+                return true;
+
+            // Push queues can have multiple consumers for a single message.
+            // Acknowledge from any receiver is accepted.
+            return _queue.Type == QueueType.Push;
+        }
     }
 }

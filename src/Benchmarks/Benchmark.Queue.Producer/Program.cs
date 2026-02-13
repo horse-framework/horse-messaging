@@ -42,17 +42,18 @@ class Program
     private static async Task RunProducer(string queue, bool waitForAck)
     {
         string x = new string('a', 1);
-        MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(x));
+        byte[] bytes = Encoding.UTF8.GetBytes(x);
         client = new HorseClient();
+        client.SetClientName("Benchmark.Queue.Producer");
+        client.SetClientType("Benchmark");
 
-        await client.ConnectAsync("horse://localhost:27001");
+        await client.ConnectAsync("horse://localhost:2626");
 
         try
         {
             while (client.IsConnected)
             {
-                ms.Position = 0;
-                await client.Queue.Push(queue, ms, waitForAck);
+                await client.Queue.Push(queue, new MemoryStream(bytes), waitForAck);
                 _counter.Increase();
             }
         }

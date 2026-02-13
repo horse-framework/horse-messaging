@@ -24,7 +24,9 @@ internal class PluginMessageHandler : INetworkMessageHandler
 
         if (plugin == null)
         {
-            await client?.SendAsync(message.CreateResponse(HorseResultCode.NotFound))!;
+            if (client != null)
+                await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound))!;
+
             return;
         }
 
@@ -32,14 +34,16 @@ internal class PluginMessageHandler : INetworkMessageHandler
 
         if (handler == null)
         {
-            await client?.SendAsync(message.CreateResponse(HorseResultCode.NotFound))!;
+            if (client != null)
+                await client.SendAsync(message.CreateResponse(HorseResultCode.NotFound))!;
+            
             return;
         }
 
         if (handler.ContentType != message.ContentType)
         {
             IHorsePluginHandler specifiedHandler = plugin.GetRequestHandler(message.ContentType);
-            
+
             if (specifiedHandler != null)
                 handler = specifiedHandler;
         }
