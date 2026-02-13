@@ -110,7 +110,14 @@ public class QueueOptions
         {
             Type = options.Type,
             AcknowledgeTimeout = options.AcknowledgeTimeout,
-            MessageTimeout = options.MessageTimeout,
+            MessageTimeout = options.MessageTimeout == null
+                ? new MessageTimeoutStrategy()
+                : new MessageTimeoutStrategy
+                {
+                    MessageDuration = options.MessageTimeout.MessageDuration,
+                    Policy = options.MessageTimeout.Policy,
+                    TargetName = options.MessageTimeout.TargetName
+                },
             Acknowledge = options.Acknowledge,
             MessageLimit = options.MessageLimit,
             LimitExceededStrategy = options.LimitExceededStrategy,

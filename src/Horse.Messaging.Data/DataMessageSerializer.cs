@@ -121,7 +121,7 @@ public class DataMessageSerializer
     {
         WriteType(stream, DataType.Insert);
         await WriteId(stream, message.MessageId);
-        message.Content.Position = 0;
+        message.Content?.Position = 0;
 
         await using MemoryStream ms = new MemoryStream();
         HorseProtocolWriter.Write(message, ms);

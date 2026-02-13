@@ -19,6 +19,13 @@ public class HorseProtocolWriter
     /// </summary>
     public static void Write(HorseMessage value, Stream stream, IList<KeyValuePair<string, string>> additionalHeaders = null)
     {
+        if (!stream.CanSeek)
+        {
+            byte[] data = Create(value, additionalHeaders);
+            stream.Write(data, 0, data.Length);
+            return;
+        }
+
         bool hasAdditionalHeader = additionalHeaders != null && additionalHeaders.Count > 0;
 
         WriteFrame(stream, value, hasAdditionalHeader);

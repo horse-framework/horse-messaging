@@ -390,8 +390,10 @@ public class QueueOperator : IDisposable
     /// </summary>
     public void PushBulkJson<T>(string queue, List<T> items, Action<HorseMessage, bool> callback, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
     {
-        T firstModel = items.FirstOrDefault();
-        QueueTypeDescriptor descriptor = DescriptorContainer.GetDescriptor(firstModel.GetType());
+        if (items == null || items.Count == 0)
+            return;
+
+        QueueTypeDescriptor descriptor = DescriptorContainer.GetDescriptor(typeof(T));
 
         if (!string.IsNullOrEmpty(queue))
             descriptor.QueueName = queue;
@@ -411,6 +413,8 @@ public class QueueOperator : IDisposable
             foreach (KeyValuePair<string, string> pair in messageHeaders)
                 firstMessage.AddHeader(pair.Key, pair.Value);
 
+        firstMessage.Serialize(items[0], Client.MessageSerializer);
+
         List<HorseMessage> messages = new List<HorseMessage>(items.Count);
         messages.Add(firstMessage);
 
@@ -418,11 +422,13 @@ public class QueueOperator : IDisposable
         {
             HorseMessage msg = firstMessage.Clone(true, false, Client.UniqueIdGenerator.Create());
             msg.SetMessageId(Client.UniqueIdGenerator.Create());
-            msg.Serialize(msg, Client.MessageSerializer);
+            msg.Serialize(items[i], Client.MessageSerializer);
             messages.Add(msg);
         }
 
-        Client.Tracker.TrackMultiple(messages, callback);
+        if (callback != null)
+            Client.Tracker.TrackMultiple(messages, callback);
+
         Client.SendBulk(messages, null);
     }
 
@@ -483,6 +489,9 @@ public class QueueOperator : IDisposable
         bool waitForCommit, Action<HorseMessage, bool> callback,
         IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
     {
+        if (contents == null || contents.Count == 0)
+            return;
+
         HorseMessage firstMessage = new HorseMessage(MessageType.QueueMessage, queue, 0);
         firstMessage.Content = contents.FirstOrDefault();
         firstMessage.WaitResponse = waitForCommit;
@@ -501,10 +510,13 @@ public class QueueOperator : IDisposable
         {
             HorseMessage msg = firstMessage.Clone(true, false, Client.UniqueIdGenerator.Create());
             msg.Content = contents[i];
+            messages.Add(msg);
         }
 
-        Client.Tracker.TrackMultiple(messages, callback);
-        Client.SendBulk(messages, null);
+        if (waitForCommit && callback != null)
+            Client.Tracker.TrackMultiple(messages, callback);
+
+        Client.SendBulk(messages, waitForCommit ? null : callback);
     }
 
     /// <summary>

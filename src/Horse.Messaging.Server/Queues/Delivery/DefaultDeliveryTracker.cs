@@ -184,7 +184,19 @@ namespace Horse.Messaging.Server.Queues.Delivery
         /// </summary>
         public MessageDelivery FindDelivery(MessagingClient client, string messageId, bool remove)
         {
+            if (string.IsNullOrEmpty(messageId))
+                return null;
+
             _deliveries.TryGetValue(messageId, out MessageDelivery delivery);
+            if (delivery == null)
+                return null;
+
+            if (!IsDeliveryOwnerValid(client, delivery))
+                return null;
+
+            if (remove)
+                _deliveries.TryRemove(messageId, out _);
+
             return delivery;
         }
 
@@ -202,6 +214,19 @@ namespace Horse.Messaging.Server.Queues.Delivery
         public int GetDeliveryCount()
         {
             return _deliveries.Count;
+        }
+
+        private bool IsDeliveryOwnerValid(MessagingClient client, MessageDelivery delivery)
+        {
+            if (client == null || delivery?.Receiver?.Client == null)
+                return true;
+
+            if (delivery.Receiver.Client == client)
+                return true;
+
+            // Push queues can have multiple consumers for a single message.
+            // Acknowledge from any receiver is accepted.
+            return _queue.Type == QueueType.Push;
         }
     }
 }

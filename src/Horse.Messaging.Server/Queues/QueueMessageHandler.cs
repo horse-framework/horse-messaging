@@ -127,8 +127,8 @@ internal class QueueMessageHandler : INetworkMessageHandler
                     break;
 
                 case PushResult.Success:
-                    await client.SendAsync(message.CreateAcknowledge());
-
+                    // Producer responses are managed by queue delivery decisions (CommitWhen).
+                    // Do not send a fallback acknowledge here, otherwise commit semantics are bypassed.
                     break;
             }
         }
