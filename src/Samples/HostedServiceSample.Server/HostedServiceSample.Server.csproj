@@ -7,11 +7,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Horse.Server" Version="7.3.10" />
-      <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.10" />
-      <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.10" />
-      <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
-      <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.10" />
+      <PackageReference Include="Horse.Server" Version="7.4.3" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
+      <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.2" />
+      <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
+      <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.2" />
     </ItemGroup>
 
     <ItemGroup>

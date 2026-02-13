@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Direct.Annotations;
+using Horse.Messaging.Client.Interceptors;
 using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Protocol;
 
@@ -16,7 +17,8 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
     private readonly IDirectMessageHandler<TModel> _messageHandler;
     private readonly Func<IHandlerFactory> _consumerFactoryCreator;
     private DirectHandlerRegistration _registration;
-
+    private InterceptorRunner _interceptorRunner;
+    
     public DirectHandlerExecutor(Type consumerType, IDirectMessageHandler<TModel> messageHandler, Func<IHandlerFactory> consumerFactoryCreator)
     {
         _consumerType = consumerType;
@@ -27,6 +29,7 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
     public override void Resolve(object registration)
     {
         _registration = registration as DirectHandlerRegistration;
+        _interceptorRunner = new InterceptorRunner(_registration!.IntercetorDescriptors);
         ResolveAttributes(_registration!.HandlerType);
         ResolveDirectAttributes();
     }
@@ -54,18 +57,18 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
         {
             if (_messageHandler != null)
             {
-                await RunBeforeInterceptors(message, client);
+                await _interceptorRunner.RunBeforeInterceptors(message, client);
                 await Handle(_messageHandler, message, t, client);
-                await RunAfterInterceptors(message, client);
+                await _interceptorRunner.RunAfterInterceptors(message, client);
             }
             else if (_consumerFactoryCreator != null)
             {
                 IHandlerFactory handlerFactory = _consumerFactoryCreator();
                 providedHandler = handlerFactory.CreateHandler(_consumerType);
                 IDirectMessageHandler<TModel> messageHandler = (IDirectMessageHandler<TModel>) providedHandler.Service;
-                await RunBeforeInterceptors(message, client, handlerFactory);
+                await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory);
                 await Handle(messageHandler, message, t, client);
-                await RunAfterInterceptors(message, client, handlerFactory);
+                await  _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory);
             }
             else
                 throw new InvalidOperationException("There is no handler defined");
@@ -110,49 +113,6 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
 
                 if (Retry.DelayBetweenRetries > 0)
                     await Task.Delay(Retry.DelayBetweenRetries);
-            }
-    }
-
-    /// <summary>
-    ///     Run before interceptors
-    /// </summary>
-    /// <param name="message"></param>
-    /// <param name="client"></param>
-    /// <param name="handlerFactory"></param>
-    protected async Task RunBeforeInterceptors(HorseMessage message, HorseClient client, IHandlerFactory handlerFactory = null)
-    {
-        if (_registration.IntercetorDescriptors.Count == 0) return;
-        IEnumerable<InterceptorTypeDescriptor> beforeInterceptors = _registration.IntercetorDescriptors.Where(m => m.RunBefore);
-        IEnumerable<IHorseInterceptor> interceptors = handlerFactory is null
-            ? beforeInterceptors.Select(m => m.Instance)
-            : beforeInterceptors.Select(m => handlerFactory.CreateInterceptor(m.InterceptorType));
-
-        foreach (IHorseInterceptor interceptor in interceptors)
-            await interceptor!.Intercept(message, client);
-    }
-
-    /// <summary>
-    ///     Run after interceptors
-    /// </summary>
-    /// <param name="message"></param>
-    /// <param name="client"></param>
-    /// <param name="handlerFactory"></param>
-    protected async Task RunAfterInterceptors(HorseMessage message, HorseClient client, IHandlerFactory handlerFactory = null)
-    {
-        if (_registration.IntercetorDescriptors.Count == 0) return;
-        IEnumerable<InterceptorTypeDescriptor> afterInterceptors = _registration.IntercetorDescriptors.Where(m => !m.RunBefore);
-        IEnumerable<IHorseInterceptor> interceptors = handlerFactory is null
-            ? afterInterceptors.Select(m => m.Instance)
-            : afterInterceptors.Select(m => handlerFactory.CreateInterceptor(m.InterceptorType));
-
-        foreach (IHorseInterceptor interceptor in interceptors)
-            try
-            {
-                await interceptor!.Intercept(message, client);
-            }
-            catch (Exception e)
-            {
-                client.OnException(e, message);
             }
     }
 }
