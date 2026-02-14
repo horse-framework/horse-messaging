@@ -57,18 +57,15 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
         {
             if (_messageHandler != null)
             {
-                await _interceptorRunner.RunBeforeInterceptors(message, client);
                 await Handle(_messageHandler, message, t, client);
-                await _interceptorRunner.RunAfterInterceptors(message, client);
+                
             }
             else if (_consumerFactoryCreator != null)
             {
                 IHandlerFactory handlerFactory = _consumerFactoryCreator();
                 providedHandler = handlerFactory.CreateHandler(_consumerType);
                 IDirectMessageHandler<TModel> messageHandler = (IDirectMessageHandler<TModel>) providedHandler.Service;
-                await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory);
                 await Handle(messageHandler, message, t, client);
-                await  _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory);
             }
             else
                 throw new InvalidOperationException("There is no handler defined");
@@ -89,11 +86,13 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
         }
     }
 
-    private async Task Handle(IDirectMessageHandler<TModel> messageHandler, HorseMessage message, TModel model, HorseClient client)
+    private async Task Handle(IDirectMessageHandler<TModel> messageHandler, HorseMessage message, TModel model, HorseClient client, IHandlerFactory handlerFactory = null)
     {
         if (Retry == null)
         {
+            await _interceptorRunner.RunBeforeInterceptors(message, client);
             await messageHandler.Handle(message, model, client);
+            await _interceptorRunner.RunAfterInterceptors(message, client);
             return;
         }
 
@@ -101,7 +100,9 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
         for (int i = 0; i < count; i++)
             try
             {
+                await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory);
                 await messageHandler.Handle(message, model, client);
+                await  _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory);
                 return;
             }
             catch (Exception e)

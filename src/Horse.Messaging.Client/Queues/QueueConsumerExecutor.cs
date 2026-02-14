@@ -63,9 +63,7 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
         {
             if (_consumer != null)
             {
-                await _interceptorRunner.RunBeforeInterceptors(message, client);
                 await Consume(_consumer, message, t, client);
-                await _interceptorRunner.RunAfterInterceptors(message, client);
             }
 
             else if (_consumerFactoryCreator != null)
@@ -73,9 +71,7 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
                 IHandlerFactory handlerFactory = _consumerFactoryCreator();
                 providedHandler = handlerFactory.CreateHandler(_consumerType);
                 IQueueConsumer<TModel> consumer = (IQueueConsumer<TModel>) providedHandler.Service;
-                await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory);
-                await Consume(consumer, message, t, client);
-                await _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory);
+                await Consume(consumer, message, t, client, handlerFactory);
             }
             else
                 throw new NullReferenceException("There is no consumer defined");
@@ -110,11 +106,14 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
         }
     }
 
-    private async Task Consume(IQueueConsumer<TModel> consumer, HorseMessage message, TModel model, HorseClient client)
+    private async Task Consume(IQueueConsumer<TModel> consumer, HorseMessage message, TModel model, HorseClient client, IHandlerFactory handlerFactory = null)
     {
         if (Retry == null)
         {
+            await _interceptorRunner.RunBeforeInterceptors(message, client);
             await consumer.Consume(message, model, client);
+            await _interceptorRunner.RunAfterInterceptors(message, client);
+            
             return;
         }
 
@@ -123,7 +122,9 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
         {
             try
             {
+                await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory);
                 await consumer.Consume(message, model, client);
+                await _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory);
                 return;
             }
             catch (Exception e)

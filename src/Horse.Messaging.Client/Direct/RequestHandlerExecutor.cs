@@ -53,8 +53,7 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
 
             try
             {
-                await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory);
-                TResponse responseModel = await Handle(handler, requestModel, message, client);
+                TResponse responseModel = await Handle(handler, requestModel, message, client, handlerFactory);
                 HorseResultCode code = responseModel is null ? HorseResultCode.NoContent : HorseResultCode.Ok;
                 HorseMessage responseMessage = message.CreateResponse(code);
 
@@ -63,7 +62,6 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
 
                 respond = true;
                 await client.SendAsync(responseMessage);
-                await  _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory);
             }
             catch (Exception e)
             {
@@ -120,17 +118,25 @@ internal class RequestHandlerExecutor<TRequest, TResponse>: ExecutorBase
         }
     }
 
-    private async Task<TResponse> Handle(IHorseRequestHandler<TRequest, TResponse> handler, TRequest request, HorseMessage message, HorseClient client)
+    private async Task<TResponse> Handle(IHorseRequestHandler<TRequest, TResponse> handler, TRequest request, HorseMessage message, HorseClient client, IHandlerFactory handlerFactory)
     {
         if (Retry == null)
-            return await handler.Handle(request, message, client);
+        {
+            await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory);
+            TResponse response = await handler.Handle(request, message, client);
+            await _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory);
+            return response;
+        }
 
         int count = Retry.Count == 0 ? 100 : Retry.Count;
         for (int i = 0; i < count; i++)
         {
             try
             {
-                return await handler.Handle(request, message, client);
+                await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory);
+                TResponse response = await handler.Handle(request, message, client);
+                await _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory);
+                return response;
             }
             catch (Exception e)
             {
