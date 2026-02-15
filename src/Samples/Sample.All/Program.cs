@@ -16,7 +16,7 @@ producerBuilder.AddHorse(config =>
 {
     config.AddHost("horse://localhost:2626");
     config.SetClientName("Sample.Producer");
-    config.WithGracefulShutdown(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), (a) =>
+    config.UseGracefulShutdown(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), () =>
     {
         Console.WriteLine("Graceful shutdown initiated");
         return Task.CompletedTask;
@@ -33,7 +33,7 @@ consumerBuilder.AddHorse(config =>
 {
     config.AddHost("horse://localhost:2626");
     config.SetClientName("Sample.Client");
-    config.WithGracefulShutdown(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), (a) =>
+    config.UseGracefulShutdown(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), () =>
     {
         Console.WriteLine("Graceful shutdown initiated");
         return Task.CompletedTask;

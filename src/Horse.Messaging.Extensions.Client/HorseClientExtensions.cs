@@ -51,6 +51,8 @@ public static class HorseClientExtensions
             services.AddSingleton<IHorseRouterBus>(new HorseRouterBus(client));
             services.AddSingleton<IHorseDirectBus>(new HorseDirectBus(client));
 
+            RegisterGracefulShutdownIfConfigured(services, null, client);
+
             return services;
         }
 
@@ -60,6 +62,7 @@ public static class HorseClientExtensions
         public IServiceCollection AddKeyedHorse(string key, Action<HorseClientBuilder> config)
         {
             HorseClientBuilder builder = new(services);
+            builder.ServiceKey = key;
             config(builder);
             HorseClient client = builder.Build();
             services.AddKeyedSingleton(key, client);
@@ -69,8 +72,24 @@ public static class HorseClientExtensions
             services.AddKeyedSingleton<IHorseRouterBus>(key, new HorseRouterBus(client));
             services.AddKeyedSingleton<IHorseDirectBus>(key, new HorseDirectBus(client));
 
+            RegisterGracefulShutdownIfConfigured(services, key, client);
+
             return services;
         }
+    }
+
+    private static void RegisterGracefulShutdownIfConfigured(IServiceCollection services, string serviceKey, HorseClient client)
+    {
+        var options = client.GracefulShutdownOptions;
+        if (options == null) return;
+
+        services.AddHostedService(prov => new GracefulShutdownService(
+            prov,
+            serviceKey,
+            options.MinWait,
+            options.MaxWait,
+            options.ShuttingDownAction,
+            options.ShuttingDownActionWithProvider));
     }
 
     extension(IServiceProvider provider)

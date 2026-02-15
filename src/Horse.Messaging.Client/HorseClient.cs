@@ -278,6 +278,11 @@ public class HorseClient : IDisposable
     /// If true, client does not send ping message to server if any message transmitted in the last PingInterval duration.
     /// </summary>
     public bool SmartHealthCheck { get; set; }
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    internal GracefulShutdownOptions GracefulShutdownOptions { get; set; }
 
     #endregion
 
@@ -289,6 +294,11 @@ public class HorseClient : IDisposable
     private bool _autoConnect;
     private Timer _reconnectTimer;
     private ISwitchingProtocol _discardedSwitchProtocol;
+
+    /// <summary>
+    /// Indicates if graceful shutdown has already been executed
+    /// </summary>
+    internal volatile bool GracefulShutdownExecuted;
 
     static HorseClient()
     {
@@ -310,6 +320,56 @@ public class HorseClient : IDisposable
         Event = new EventOperator(this);
         Tracker = new MessageTracker(this);
         Tracker.Run();
+
+        RegisterShutdownHandlers();
+    }
+
+    private void RegisterShutdownHandlers()
+    {
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => ExecuteGracefulShutdown();
+
+        Console.CancelKeyPress += (_, _) => ExecuteGracefulShutdown();
+
+        try
+        {
+            System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGTERM, _ => ExecuteGracefulShutdown());
+            System.Runtime.InteropServices.PosixSignalRegistration.Create(System.Runtime.InteropServices.PosixSignal.SIGINT, _ => ExecuteGracefulShutdown());
+        }
+        catch
+        {
+            // PosixSignalRegistration may not be available on all platforms
+        }
+    }
+
+    private void ExecuteGracefulShutdown()
+    {
+        if (GracefulShutdownOptions == null) return;
+        if (GracefulShutdownExecuted) return;
+        GracefulShutdownExecuted = true;
+
+        Channel.UnsubscribeFromAllChannels().GetAwaiter().GetResult();
+        Queue.UnsubscribeFromAllQueues().GetAwaiter().GetResult();
+        int minWait = Convert.ToInt32(GracefulShutdownOptions.MinWait.TotalMilliseconds);
+        int maxWait = Convert.ToInt32(GracefulShutdownOptions.MaxWait.TotalMilliseconds);
+
+        try
+        {
+            GracefulShutdownOptions.ShuttingDownAction?.Invoke().GetAwaiter().GetResult();
+            GracefulShutdownOptions.ShuttingDownActionWithProvider?.Invoke(Provider).GetAwaiter().GetResult();
+        }
+        catch
+        {
+            // ignored
+        }
+
+        while (minWait < maxWait)
+        {
+            if (Queue.ActiveConsumeOperations == 0 && Channel.ActiveChannelOperations == 0)
+                return;
+
+            Thread.Sleep(250);
+            minWait += 250;
+        }
     }
 
     /// <summary>

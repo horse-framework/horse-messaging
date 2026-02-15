@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Horse.Messaging.Client.Channels;
 using Horse.Messaging.Client.Direct;
 using Horse.Messaging.Client.Events;
@@ -55,6 +56,11 @@ public class HorseClientBuilder
     /// Service collection
     /// </summary>
     internal IServiceCollection Services => _services;
+    
+    /// <summary>
+    /// Service key for keyed services. Null if not using keyed services.
+    /// </summary>
+    internal string ServiceKey { get; set; }
     
     /// <summary>
     /// Creates Horse Connector Builder without IOC implementation
@@ -220,6 +226,43 @@ public class HorseClientBuilder
         _client.SwitchingProtocol = protocol;
         return this;
     }
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="minWait"></param>
+    /// <param name="maxWait"></param>
+    /// <param name="shuttingDownAction"></param>
+    /// <returns></returns>
+    public HorseClientBuilder UseGracefulShutdown(TimeSpan minWait, TimeSpan maxWait, Func<IServiceProvider, Task> shuttingDownAction = null)
+    {
+        _client.GracefulShutdownOptions = new GracefulShutdownOptions
+        {
+            MinWait = minWait,
+            MaxWait = maxWait,
+            ShuttingDownActionWithProvider = shuttingDownAction
+        };
+        return this;
+    }
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="minWait"></param>
+    /// <param name="maxWait"></param>
+    /// <param name="shuttingDownAction"></param>
+    /// <returns></returns>
+    public HorseClientBuilder UseGracefulShutdown(TimeSpan minWait, TimeSpan maxWait, Func<Task> shuttingDownAction = null)
+    {
+        _client.GracefulShutdownOptions = new GracefulShutdownOptions
+        {
+            MinWait = minWait,
+            MaxWait = maxWait,
+            ShuttingDownAction = shuttingDownAction
+        };
+        return this;
+    }
+
 
     #endregion
 
