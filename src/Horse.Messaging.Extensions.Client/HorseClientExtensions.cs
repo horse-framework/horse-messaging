@@ -32,6 +32,7 @@ public static class HorseClientExtensions
             services.AddSingleton<IHorseRouterBus<TIdentifier>>(new HorseRouterBus<TIdentifier>(client));
             services.AddSingleton<IHorseDirectBus<TIdentifier>>(new HorseDirectBus<TIdentifier>(client));
 
+            RegisterGracefulShutdownIfConfigured(services, null, client);
             return services;
         }
         
