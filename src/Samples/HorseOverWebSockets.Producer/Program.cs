@@ -8,7 +8,7 @@ using Microsoft.Extensions.Hosting;
 HorseClient client = null;
 
 IHost host = Host.CreateDefaultBuilder(args)
-    .UseHorse(cfg =>
+    .AddHorse(cfg =>
     {
         cfg.AddHost("ws://localhost:8080");
         cfg.SetClientName("Test");

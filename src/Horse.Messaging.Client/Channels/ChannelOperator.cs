@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client.Internal;
 using Horse.Messaging.Client.Queues;
@@ -22,9 +23,15 @@ public delegate string ChannelNameHandler(ChannelNameHandlerContext context);
 public class ChannelOperator
 {
     private readonly TypeDescriptorContainer<ChannelTypeDescriptor> _descriptorContainer;
+    private int _activeChannelOperations;
 
     internal HorseClient Client { get; }
     internal List<ChannelSubscriberRegistration> Registrations { get; } = new();
+    
+    /// <summary>
+    /// Returns count of consume operations
+    /// </summary>
+    public int ActiveChannelOperations => _activeChannelOperations;
 
     /// <summary>
     /// Channel name handler
@@ -52,11 +59,16 @@ public class ChannelOperator
             if (reg.Filter != null && !reg.Filter(message, model))
                 return;
 
+            Interlocked.Increment(ref _activeChannelOperations);
             await reg.Executer.Execute(Client, message, model);
         }
         catch (Exception ex)
         {
             Client.OnException(ex, message);
+        }
+        finally
+        {
+            Interlocked.Decrement(ref _activeChannelOperations);
         }
     }
 
@@ -245,4 +257,12 @@ public class ChannelOperator
     }
 
     #endregion
+    
+    /// <summary>
+    /// Unsubscribes from all channels
+    /// </summary>
+    public Task<HorseResult> UnsubscribeFromAllChannels()
+    {
+        return Unsubscribe("*", true);
+    }
 }

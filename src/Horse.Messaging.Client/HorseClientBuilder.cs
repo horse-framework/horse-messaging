@@ -13,7 +13,6 @@ using Horse.Messaging.Protocol;
 using Microsoft.Extensions.DependencyInjection;
 
 [assembly: InternalsVisibleTo("Horse.Messaging.Extensions.Client")]
-
 namespace Horse.Messaging.Client;
 
 /// <inheritdoc />
@@ -27,7 +26,7 @@ public class HorseClientBuilder<TIdentifier> : HorseClientBuilder
     }
 
     /// <summary>
-    /// Creates Horse Connector Builder without IOC implementation
+    /// Creates Horse Connector Builder with IOC implementation
     /// </summary>
     public HorseClientBuilder(IServiceCollection services) : base(services, new HorseClient<TIdentifier>())
     {
@@ -45,40 +44,42 @@ public class HorseClientBuilder<TIdentifier> : HorseClientBuilder
 /// <summary>
 /// Horse Client Builder
 /// </summary>
+/// 
 public class HorseClientBuilder
 {
     #region Declaration
 
     private readonly HorseClient _client;
-    private IServiceCollection _services;
-
+    private readonly IServiceCollection _services;
+    /// <summary>
+    /// Service collection
+    /// </summary>
     internal IServiceCollection Services => _services;
-
+    
     /// <summary>
     /// Creates Horse Connector Builder without IOC implementation
     /// </summary>
     public HorseClientBuilder()
     {
+        _services = new ServiceCollection();
         _client = new HorseClient();
     }
-
-    internal HorseClientBuilder(HorseClient client)
-    {
-        _client = client;
-    }
-
+    
     /// <summary>
     /// Creates Horse Connector Builder with IOC implementation
     /// </summary>
-    internal HorseClientBuilder(IServiceCollection services)
+    public HorseClientBuilder(IServiceCollection services)
     {
         _services = services;
         _client = new HorseClient();
     }
 
-    /// <summary>
-    /// Creates Horse Connector Builder with IOC implementation
-    /// </summary>
+    internal HorseClientBuilder(HorseClient client)
+    {
+        _services = new ServiceCollection();
+        _client = client;
+    }
+    
     internal HorseClientBuilder(IServiceCollection services, HorseClient client)
     {
         _services = services;
@@ -92,16 +93,6 @@ public class HorseClientBuilder
     {
         return _client;
     }
-
-    /// <summary>
-    /// Adds MSDI implementation
-    /// </summary>
-    public HorseClientBuilder AddServices(IServiceCollection services)
-    {
-        _services = services;
-        return this;
-    }
-
     #endregion
 
     #region Client Info
@@ -890,6 +881,8 @@ public class HorseClientBuilder
     private static void Shutdown(HorseClient client, TimeSpan minWait, TimeSpan maxWait)
     {
         _ = client.Queue.UnsubscribeFromAllQueues();
+        _ = client.Channel.UnsubscribeFromAllChannels();
+        
         int min = Convert.ToInt32(minWait.TotalMilliseconds);
         int max = Convert.ToInt32(maxWait.TotalMilliseconds);
 

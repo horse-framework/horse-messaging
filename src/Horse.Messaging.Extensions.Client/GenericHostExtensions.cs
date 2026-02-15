@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using Horse.Messaging.Client;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -10,140 +12,153 @@ namespace Horse.Messaging.Extensions.Client;
 /// </summary>
 public static class GenericHostExtensions
 {
-    /// <summary>
-    /// Configure your horse client.
-    /// That configuration does not enable Horse Client implementation by itself.
-    /// You MUST use UseHorse method to complete the implementation.
-    /// </summary>
     /// <param name="hostBuilder">IHostBuilder</param>
-    /// <param name="configureDelegate">Configure delegate</param>
-    public static IHostBuilder ConfigureHorseClient(this IHostBuilder hostBuilder, Action<HostBuilderContext, HorseClientBuilder> configureDelegate)
+    extension(IHostBuilder hostBuilder)
     {
-        hostBuilder.Properties.Add("HasHorseClientBuilderDelegateContext", null);
-        return hostBuilder.ConfigureHorseClientInternal(configureDelegate);
-    }
-
-    /// <summary>
-    /// Adds additional configuration to your Horse Client.
-    /// That configuration does not enable Horse Client implementation by itself.
-    /// You MUST use UseHorse method to complete the implementation.
-    /// </summary>
-    /// <param name="hostBuilder">IHostBuilder</param>
-    /// <param name="configureDelegate">Configure delegate</param>
-    public static IHostBuilder ConfigureHorseClient(this IHostBuilder hostBuilder, Action<HorseClientBuilder> configureDelegate)
-    {
-        return hostBuilder.ConfigureHorseClientInternal(configureDelegate);
-    }
-
-    private static IHostBuilder ConfigureHorseClientInternal(this IHostBuilder hostBuilder, object configureDelegate)
-    {
-        const string _clientBuilderDelegate = "HorseClientBuilderDelegate";
-        if (hostBuilder.Properties.ContainsKey(_clientBuilderDelegate))
-            throw new InvalidOperationException("Horse client was already configured.");
-        hostBuilder.Properties.Add(_clientBuilderDelegate, configureDelegate);
-        return hostBuilder;
-    }
-
-    /// <summary>
-    /// Uses Horse Messaging Client
-    /// </summary>
-    /// <param name="host">Builder of Microsoft.Extensions.Hosting</param>
-    /// <param name="cfg">Horse configuration action</param>
-    /// <param name="autoConnect">If true, horse client connects when the host starts. If false, you should call UseHorseBus manually when you want.</param>
-    /// <returns></returns>
-    public static IHostBuilder UseHorse(this IHostBuilder host, Action<HorseClientBuilder> cfg, bool autoConnect = true)
-    {
-        host.ConfigureServices((context, services) =>
+        /// <summary>
+        /// Uses Horse Messaging Client
+        /// </summary>
+        /// <param name="configureDelegate">Horse configuration action</param>
+        /// <param name="autoConnect">If true, horse client connects when the host starts. If false, you should call UseHorse manually when you want. Defaul is true.</param>
+        /// <returns></returns>
+        public IHostBuilder AddHorse(Action<HorseClientBuilder> configureDelegate, bool autoConnect = true)
         {
-            services.AddHorseBus(b =>
-            {
-                b.AddServices(services);
-                cfg(b);
-            });
-
-            if (autoConnect)
-                services.AddHostedService(p => new HorseRunnerHostedService(p));
-        });
-
-        return host;
-    }
-
-    /// <summary>
-    /// Uses Horse Messaging Client
-    /// </summary>
-    /// <param name="host">Builder of Microsoft.Extensions.Hosting</param>
-    /// <param name="cfg">Horse configuration action</param>
-    /// <param name="autoConnect">If true, horse client connects when the host starts. If false, you should call UseHorseBus manually when you want.</param>
-    /// <returns></returns>
-    public static IHostBuilder UseHorse(this IHostBuilder host, Action<HostBuilderContext, HorseClientBuilder> cfg, bool autoConnect = true)
-    {
-        host.ConfigureServices((context, services) =>
+            return hostBuilder.AddHorseInternal(null, configureDelegate, autoConnect);
+        }
+        
+        /// <summary>
+        /// Uses Horse Messaging Client
+        /// </summary>
+        /// <param name="key">Service key for keyed services</param>
+        /// <param name="configureDelegate">Horse configuration action</param>
+        /// <param name="autoConnect">If true, horse client connects when the host starts. If false, you should call UseHorse manually when you want.</param>
+        /// <returns></returns>
+        public IHostBuilder AddHorse(string key, Action<HorseClientBuilder> configureDelegate, bool autoConnect = true)
         {
-            services.AddHorseBus(b =>
-            {
-                b.AddServices(services);
-                cfg(context, b);
-            });
+            return hostBuilder.AddHorseInternal(key, configureDelegate, autoConnect);
+        }
 
-            if (autoConnect)
-                services.AddHostedService(p => new HorseRunnerHostedService(p));
-        });
-        return host;
-    }
-
-
-    /// <summary>
-    /// Configure your horse client.
-    /// That configuration does not enable Horse Client implementation by itself.
-    /// You MUST use UseHorse method to complete the implementation.
-    /// </summary>
-    /// <param name="hostBuilder">IHostBuilder</param>
-    /// <param name="configureDelegate">Configure delegate</param>
-    public static IHostApplicationBuilder ConfigureHorseClient(this IHostApplicationBuilder hostBuilder, Action<HostBuilderContext, HorseClientBuilder> configureDelegate)
-    {
-        hostBuilder.Properties.Add("HasHorseClientBuilderDelegateContext", null);
-        return hostBuilder.ConfigureHorseClientInternal(configureDelegate);
-    }
-
-    /// <summary>
-    /// Adds additional configuration to your Horse Client.
-    /// That configuration does not enable Horse Client implementation by itself.
-    /// You MUST use UseHorse method to complete the implementation.
-    /// </summary>
-    /// <param name="hostBuilder">IHostBuilder</param>
-    /// <param name="configureDelegate">Configure delegate</param>
-    public static IHostApplicationBuilder ConfigureHorseClient(this IHostApplicationBuilder hostBuilder, Action<HorseClientBuilder> configureDelegate)
-    {
-        return hostBuilder.ConfigureHorseClientInternal(configureDelegate);
-    }
-
-    private static IHostApplicationBuilder ConfigureHorseClientInternal(this IHostApplicationBuilder hostBuilder, object configureDelegate)
-    {
-        const string _clientBuilderDelegate = "HorseClientBuilderDelegate";
-        if (hostBuilder.Properties.ContainsKey(_clientBuilderDelegate))
-            throw new InvalidOperationException("Horse client was already configured.");
-        hostBuilder.Properties.Add(_clientBuilderDelegate, configureDelegate);
-        return hostBuilder;
-    }
-
-    /// <summary>
-    /// Uses Horse Messaging Client
-    /// </summary>
-    /// <param name="host">Builder of Microsoft.Extensions.Hosting</param>
-    /// <param name="cfg">Horse configuration action</param>
-    /// <param name="autoConnect">If true, horse client connects when the host starts. If false, you should call UseHorseBus manually when you want.</param>
-    /// <returns></returns>
-    public static IHostApplicationBuilder UseHorse(this IHostApplicationBuilder host, Action<HorseClientBuilder> cfg, bool autoConnect = true)
-    {
-        host.Services.AddHorseBus(b =>
+        /// <summary>
+        /// Uses Horse Messaging Client
+        /// </summary>
+        /// <param name="configureDelegate">Horse configuration action</param>
+        /// <param name="autoConnect">If true, horse client connects when the host starts. If false, you should call UseHorse manually when you want.</param>
+        /// <returns></returns>
+        public IHostBuilder AddHorse(Action<HorseClientBuilder, IConfiguration, IHostEnvironment, IServiceCollection> configureDelegate, bool autoConnect = true)
         {
-            b.AddServices(host.Services);
-            cfg(b);
-        });
+            return hostBuilder.AddHorseInternal(null, configureDelegate, autoConnect);
+        }
 
-        if (autoConnect)
-            host.Services.AddHostedService(p => new HorseRunnerHostedService(p));
+        /// <summary>
+        /// Uses Horse Messaging Client
+        /// </summary>
+        /// <param name="key">Service key for keyed services</param>
+        /// <param name="configureDelegate">Horse configuration action</param>
+        /// <param name="autoConnect">If true, horse client connects when the host starts. If false, you should call UseHorse manually when you want.</param>
+        /// <returns></returns>
+        public IHostBuilder AddHorse(string key, Action<HorseClientBuilder, IConfiguration, IHostEnvironment, IServiceCollection> configureDelegate, bool autoConnect = true)
+        {
+            return hostBuilder.AddHorseInternal(key, configureDelegate, autoConnect);
+        }
+        
+        private IHostBuilder AddHorseInternal(string key, Action<HorseClientBuilder> configureDelegate, bool autoConnect = true)
+        {
+            return hostBuilder.UseServiceProviderFactory((hostContext) => new HorseServiceProviderFactory(key, hostContext.Configuration, hostContext.HostingEnvironment, configureDelegate, null, autoConnect));
 
-        return host;
+        }
+        
+        private IHostBuilder AddHorseInternal(string key, Action<HorseClientBuilder, IConfiguration, IHostEnvironment, IServiceCollection> configureDelegate, bool autoConnect = true)
+        {
+            return hostBuilder.UseServiceProviderFactory((hostContext) => new HorseServiceProviderFactory(key, hostContext.Configuration, hostContext.HostingEnvironment, null, configureDelegate, autoConnect));
+        }
+    }
+
+    /// <param name="hostBuilder">IHostBuilder</param>
+    extension(IHostApplicationBuilder hostBuilder)
+    {
+      
+        /// <summary>
+        /// Uses Horse Messaging Client
+        /// </summary>
+        /// <param name="configureDelegate">Horse configuration action</param>
+        /// <param name="autoConnect">If true, horse client connects when the host starts. If false, you should call UseHorse manually when you want.</param>
+        /// <returns></returns>
+        public IHostApplicationBuilder AddHorse(Action<HorseClientBuilder> configureDelegate, bool autoConnect = true)
+        {
+            return hostBuilder.AddHorseInternal(null, configureDelegate, autoConnect);
+        }
+        
+        /// <summary>
+        /// Uses Horse Messaging Client
+        /// </summary>
+        /// <param name="key">Service key for keyed services</param>
+        /// <param name="configureDelegate">Horse configuration action</param>
+        /// <param name="autoConnect">If true, horse client connects when the host starts. If false, you should call UseHorse manually when you want.</param>
+        /// <returns></returns>
+        public IHostApplicationBuilder AddHorse(string key, Action<HorseClientBuilder> configureDelegate, bool autoConnect = true)
+        {
+            return hostBuilder.AddHorseInternal(key, configureDelegate, autoConnect);
+        }
+        
+        /// <summary>
+        /// Uses Horse Messaging Client
+        /// </summary>
+        /// <param name="configureDelegate">Horse configuration action</param>
+        /// <param name="autoConnect">If true, horse client connects when the host starts. If false, you should call UseHorse manually when you want.</param>
+        /// <returns></returns>
+        public IHostApplicationBuilder AddHorse(Action<HorseClientBuilder, IConfiguration, IHostEnvironment, IServiceCollection> configureDelegate, bool autoConnect = true)
+        {
+            return hostBuilder.AddHorseInternal(null, configureDelegate, autoConnect);
+        }
+        
+        /// <summary>
+        /// Uses Horse Messaging Client
+        /// </summary>
+        /// <param name="key">Service key for keyed services</param>
+        /// <param name="configureDelegate">Horse configuration action</param>
+        /// <param name="autoConnect">If true, horse client connects when the host starts. If false, you should call UseHorse manually when you want.</param>
+        /// <returns></returns>
+        public IHostApplicationBuilder AddHorse(string key,Action<HorseClientBuilder, IConfiguration, IHostEnvironment, IServiceCollection> configureDelegate, bool autoConnect = true)
+        {
+            return hostBuilder.AddHorseInternal(key, configureDelegate, autoConnect);
+        }
+        
+        private IHostApplicationBuilder AddHorseInternal(string key, Action<HorseClientBuilder> configureDelegate, bool autoConnect = true)
+        {
+            HorseServiceProviderFactory factory = new(key, hostBuilder.Configuration, hostBuilder.Environment, configureDelegate, null, autoConnect);
+            hostBuilder.ConfigureContainer(factory);
+            return hostBuilder;
+        }
+        
+        private IHostApplicationBuilder AddHorseInternal(string key, Action<HorseClientBuilder, IConfiguration, IHostEnvironment, IServiceCollection> configureDelegate, bool autoConnect = true)
+        {
+            HorseServiceProviderFactory factory = new(key, hostBuilder.Configuration, hostBuilder.Environment, null, configureDelegate, autoConnect);
+            hostBuilder.ConfigureContainer(factory);
+            return hostBuilder;
+        }
+    }
+
+    extension(IHost host)
+    {
+        /// <summary>
+        /// The host will connect to the server and start horse bus. You should call that method if you set autoConnect to false in AddHorse method.
+        /// </summary>
+        /// <returns></returns>
+        public IHost UseHorse()
+        {
+            host.Services.UseHorse();
+            return host;
+        }
+        
+        /// <summary>
+        /// The host will connect to the server and start horse bus. You should call that method if you set autoConnect to false in AddHorse method.
+        /// </summary>
+        /// <param name="key">Keyed services key</param>
+        /// <returns></returns>
+        public IHost UseHorse(string key)
+        {
+            host.Services.UseHorse(key);
+            return host;
+        }
     }
 }

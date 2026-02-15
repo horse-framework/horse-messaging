@@ -7,20 +7,10 @@ using Microsoft.Extensions.Hosting;
 
 namespace Horse.Messaging.Extensions.Client;
 
-internal class GracefulShutdownService : IHostedService
+internal class GracefulShutdownService(IServiceProvider provider, TimeSpan minWait, TimeSpan maxWait, Func<IServiceProvider, Task> shuttingDownAction)
+    : IHostedService
 {
-    private readonly TimeSpan _minWait;
-    private readonly TimeSpan _maxWait;
-    private readonly IServiceProvider _provider;
-    private readonly Func<Task> _shuttingDownAction;
-
-    public GracefulShutdownService(IServiceProvider provider, TimeSpan minWait, TimeSpan maxWait, Func<Task> shuttingDownAction)
-    {
-        _provider = provider;
-        _minWait = minWait;
-        _maxWait = maxWait;
-        _shuttingDownAction = shuttingDownAction;
-    }
+    private readonly TimeSpan _maxWait = maxWait;
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -29,27 +19,29 @@ internal class GracefulShutdownService : IHostedService
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        HorseClient client = _provider.GetService<HorseClient>();
+        HorseClient client = provider.GetService<HorseClient>();
 
         _ = client.Queue.UnsubscribeFromAllQueues();
-        int min = Convert.ToInt32(_minWait.TotalMilliseconds);
-        int max = Convert.ToInt32(_minWait.TotalMilliseconds);
+        _ = client.Channel.UnsubscribeFromAllChannels();
+        int min = Convert.ToInt32(minWait.TotalMilliseconds);
+        int max = Convert.ToInt32(minWait.TotalMilliseconds);
 
         try
         {
-            await _shuttingDownAction?.Invoke();
+            await shuttingDownAction?.Invoke(provider)!;
         }
         catch
         {
+            // ignored
         }
 
         await Task.Delay(min, cancellationToken);
 
         while (min < max)
         {
-            if (client.Queue.ActiveConsumeOperations == 0)
+            if (client.Queue.ActiveConsumeOperations == 0 && client.Channel.ActiveChannelOperations == 0)
                 return;
-
+            
             await Task.Delay(250, cancellationToken);
             min += 250;
         }
