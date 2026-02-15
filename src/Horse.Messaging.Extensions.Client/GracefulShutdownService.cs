@@ -28,7 +28,8 @@ internal class GracefulShutdownService(IServiceProvider provider, TimeSpan minWa
 
         try
         {
-            await shuttingDownAction?.Invoke(provider)!;
+            if (shuttingDownAction != null)
+                await shuttingDownAction.Invoke(provider);
         }
         catch
         {
