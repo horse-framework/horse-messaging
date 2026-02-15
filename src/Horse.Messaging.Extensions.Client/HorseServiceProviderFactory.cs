@@ -41,7 +41,13 @@ internal sealed class HorseServiceProviderFactory(
     public IServiceProvider CreateServiceProvider(IServiceCollection containerBuilder)
     {
         ServiceProvider provider = containerBuilder.BuildServiceProvider();
-        if (autoConnect) provider.UseHorse();
+        if (autoConnect)
+        {
+            if (string.IsNullOrWhiteSpace(keyedServicesKey))
+                provider.UseHorse();
+            else
+                provider.UseHorse(keyedServicesKey);
+        }
         return provider;
     }
 }
