@@ -89,3 +89,11 @@
 - [Subscribe to Server Events](client.md#subscribe-to-server-events)
 - [Unique Id Generator](client.md#unique-id-generator)
 - [Message Serialization](client.md#message-serialization)
+
+- [Extensions - Generic Host Integration](extensions.md)
+    - [Installation](extensions.md#installation)
+    - [Features](extensions.md#features)
+    - [Extension Methods](extensions.md#extension-methods)
+    - [Complete Examples](extensions.md#complete-examples)
+    - [Best Practices](extensions.md#best-practices)
+
