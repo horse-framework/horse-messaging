@@ -19,7 +19,7 @@ public static class GenericHostExtensions
         /// Uses Horse Messaging Client
         /// </summary>
         /// <param name="configureDelegate">Horse configuration action</param>
-        /// <param name="autoConnect">If true, horse client connects when the host starts. If false, you should call UseHorse manually when you want. Defaul is true.</param>
+        /// <param name="autoConnect">If true, horse client connects when the host starts. If false, you should call UseHorse manually when you want. Default is true.</param>
         /// <returns></returns>
         public IHostBuilder AddHorse(Action<HorseClientBuilder> configureDelegate, bool autoConnect = true)
         {
