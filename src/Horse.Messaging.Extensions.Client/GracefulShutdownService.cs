@@ -24,7 +24,7 @@ internal class GracefulShutdownService(IServiceProvider provider, TimeSpan minWa
         _ = client.Queue.UnsubscribeFromAllQueues();
         _ = client.Channel.UnsubscribeFromAllChannels();
         int min = Convert.ToInt32(minWait.TotalMilliseconds);
-        int max = Convert.ToInt32(minWait.TotalMilliseconds);
+        int max = Convert.ToInt32(maxWait.TotalMilliseconds);
 
         try
         {
