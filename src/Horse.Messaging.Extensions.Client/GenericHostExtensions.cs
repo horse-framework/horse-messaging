@@ -118,7 +118,7 @@ public static class GenericHostExtensions
         /// <param name="configureDelegate">Horse configuration action</param>
         /// <param name="autoConnect">If true, horse client connects when the host starts. If false, you should call UseHorse manually when you want.</param>
         /// <returns></returns>
-        public IHostApplicationBuilder AddHorse(string key,Action<HorseClientBuilder, IConfiguration, IHostEnvironment, IServiceCollection> configureDelegate, bool autoConnect = true)
+        public IHostApplicationBuilder AddHorse(string key, Action<HorseClientBuilder, IConfiguration, IHostEnvironment, IServiceCollection> configureDelegate, bool autoConnect = true)
         {
             return hostBuilder.AddHorseInternal(key, configureDelegate, autoConnect);
         }
