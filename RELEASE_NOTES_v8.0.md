@@ -24,7 +24,7 @@ Graceful shutdown now supports channel operations in addition to queue operation
 
 ```csharp
 // New: Channels are now automatically unsubscribed during graceful shutdown
-builder.WithGracefulShutdown(
+builder.UseGracefulShutdown(
     minWait: TimeSpan.FromSeconds(1),
     maxWait: TimeSpan.FromSeconds(30)
 );
@@ -69,7 +69,7 @@ The shutdown callback now receives `IServiceProvider` for better service access:
 
 ```csharp
 // v8.0 - IServiceProvider is now available in callback
-builder.WithGracefulShutdown(
+builder.UseGracefulShutdown(
     minWait: TimeSpan.FromSeconds(2),
     maxWait: TimeSpan.FromSeconds(30),
     shuttingDownAction: async (serviceProvider) =>
@@ -163,8 +163,8 @@ app.Services.UseHorse("primary");
 
 | v7.4 Method | v8.0 Method | Notes |
 |-------------|-------------|-------|
-| `UseGracefulShutdownHostedService(min, max)` | `WithGracefulShutdown(min, max)` | Renamed |
-| `UseGracefulShutdownHostedService(min, max, action)` | `WithGracefulShutdown(min, max, action)` | Renamed, action signature changed |
+| `UseGracefulShutdownHostedService(min, max)` | `UseGracefulShutdown(min, max)` | Renamed, moved to HorseClientBuilder |
+| `UseGracefulShutdownHostedService(min, max, action)` | `UseGracefulShutdown(min, max, action)` | Renamed, action signature changed |
 
 **v7.4 Usage:**
 ```csharp
@@ -183,16 +183,23 @@ builder.UseGracefulShutdownHostedService(
 
 **v8.0 Usage:**
 ```csharp
-builder.WithGracefulShutdown(
+builder.UseGracefulShutdown(
     TimeSpan.FromSeconds(1),
     TimeSpan.FromSeconds(30)
 );
 
-// With callback (v8.0 - Func<IServiceProvider, Task>)
-builder.WithGracefulShutdown(
+// With callback (v8.0 - Func<IServiceProvider, Task> or Func<Task>)
+builder.UseGracefulShutdown(
     TimeSpan.FromSeconds(1),
     TimeSpan.FromSeconds(30),
     async (serviceProvider) => { /* shutdown logic with DI access */ }
+);
+
+// Or without IServiceProvider
+builder.UseGracefulShutdown(
+    TimeSpan.FromSeconds(1),
+    TimeSpan.FromSeconds(30),
+    async () => { /* shutdown logic */ }
 );
 ```
 
@@ -271,7 +278,7 @@ Use find-and-replace to update method calls:
 | `.AddKeyedHorseBus(` | `.AddKeyedHorse(` |
 | `.UseHorseBus()` | `.UseHorse()` |
 | `.UseKeyedHorseBus(` | `.UseHorse(` |
-| `.UseGracefulShutdownHostedService(` | `.WithGracefulShutdown(` |
+| `.UseGracefulShutdownHostedService(` | `.UseGracefulShutdown(` |
 
 ### Step 4: Remove AddServices() Calls
 
@@ -303,11 +310,17 @@ If you're using the graceful shutdown callback, update the signature:
     // No access to services
 });
 
-// After (v8.0)
-.WithGracefulShutdown(min, max, async (serviceProvider) =>
+// After (v8.0) - with IServiceProvider
+.UseGracefulShutdown(min, max, async (serviceProvider) =>
 {
     var myService = serviceProvider.GetRequiredService<IMyService>();
     await myService.PrepareForShutdownAsync();
+});
+
+// Or without IServiceProvider
+.UseGracefulShutdown(min, max, async () =>
+{
+    // shutdown logic without service access
 });
 ```
 
@@ -370,7 +383,7 @@ builder.AddHorse((horseBuilder, config, env, services) =>
                 .AddTransientConsumers(typeof(Program));
     
     // Use graceful shutdown with IServiceProvider access
-    horseBuilder.WithGracefulShutdown(
+    horseBuilder.UseGracefulShutdown(
         minWait: TimeSpan.FromSeconds(2),
         maxWait: TimeSpan.FromSeconds(30),
         shuttingDownAction: async (serviceProvider) =>
