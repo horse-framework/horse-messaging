@@ -6,7 +6,6 @@ using Horse.Messaging.Client.Direct;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Routers;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace Horse.Messaging.Extensions.Client;
 

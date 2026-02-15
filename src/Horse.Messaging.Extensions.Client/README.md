@@ -283,11 +283,11 @@ host.UseHorse("secondary");
 
 ---
 
-### 5. HorseClientBuilder Extensions
+### 5. HorseClientBuilder Methods
 
-#### WithGracefulShutdown
+#### UseGracefulShutdown
 
-Waits for ongoing consume operations to complete when the application is shutting down.
+Waits for ongoing consume operations to complete when the application is shutting down. This method is defined directly in `HorseClientBuilder` (not an extension method).
 
 **Simple Usage:**
 
@@ -296,7 +296,7 @@ var host = Host.CreateDefaultBuilder(args)
     .AddHorse(builder =>
     {
         builder.AddHost("horse://localhost:26200")
-               .WithGracefulShutdown(
+               .UseGracefulShutdown(
                    minWait: TimeSpan.FromSeconds(1),
                    maxWait: TimeSpan.FromSeconds(30)
                );
@@ -313,12 +313,33 @@ var host = Host.CreateDefaultBuilder(args)
     .AddHorse(builder =>
     {
         builder.AddHost("horse://localhost:26200")
-               .WithGracefulShutdown(
+               .UseGracefulShutdown(
+                   minWait: TimeSpan.FromSeconds(2),
+                   maxWait: TimeSpan.FromSeconds(30),
+                   shuttingDownAction: async () =>
+                   {
+                       // Code to execute before shutdown begins
+                       Console.WriteLine("Application is shutting down...");
+                   }
+               );
+    })
+    .Build();
+
+await host.RunAsync();
+```
+
+**Usage with ServiceProvider Callback:**
+
+```csharp
+var host = Host.CreateDefaultBuilder(args)
+    .AddHorse(builder =>
+    {
+        builder.AddHost("horse://localhost:26200")
+               .UseGracefulShutdown(
                    minWait: TimeSpan.FromSeconds(2),
                    maxWait: TimeSpan.FromSeconds(30),
                    shuttingDownAction: async (serviceProvider) =>
                    {
-                       // Code to execute before shutdown begins
                        var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
                        logger.LogWarning("Application is shutting down, waiting for operations to complete...");
                        
@@ -336,14 +357,40 @@ await host.RunAsync();
 **Parameters:**
 - `minWait`: Minimum wait time. The host will wait at least this duration, even if everything is done
 - `maxWait`: Maximum wait time. If consume operations are still in progress, they will be canceled after this duration
-- `shuttingDownAction`: Function to execute before shutdown begins (optional)
+- `shuttingDownAction`: Function to execute before shutdown begins (optional). Can be `Func<Task>` or `Func<IServiceProvider, Task>`
+
+**Supported Shutdown Signals:**
+- `AppDomain.ProcessExit` - When process is exiting
+- `Console.CancelKeyPress` - When Ctrl+C is pressed
+- `SIGTERM` / `SIGINT` - POSIX signals (Linux/macOS, Docker stop, kill command)
+- `IHostApplicationLifetime.ApplicationStopping` - When host is stopping (via `IHostedService`)
+
+**Single Execution Guarantee:**
+Graceful shutdown is guaranteed to run only once, regardless of which signal triggers it first. This prevents duplicate unsubscribe operations and callback executions.
 
 **How It Works:**
-1. When the application receives a stop signal, all Queue and Channel subscriptions are canceled
+1. When the application receives a stop signal (any of the above), all Queue and Channel subscriptions are canceled
 2. If `shuttingDownAction` exists, it is executed
 3. Waits for `minWait` duration
 4. Waits for active consume operations to complete (up to `maxWait` duration)
 5. The application shuts down gracefully
+
+**Keyed Services Support:**
+Graceful shutdown works automatically with keyed services:
+
+```csharp
+builder.AddHorse("primary", config =>
+{
+    config.AddHost("horse://primary:26200")
+          .UseGracefulShutdown(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30));
+});
+
+builder.AddHorse("secondary", config =>
+{
+    config.AddHost("horse://secondary:26200")
+          .UseGracefulShutdown(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30));
+});
+```
 
 ---
 
@@ -367,7 +414,7 @@ builder.AddHorse(horseBuilder =>
                 .AutoSubscribe(true)
                 .AutoAcknowledge(false)
                 .AddTransientConsumers(typeof(Program))
-                .WithGracefulShutdown(
+                .UseGracefulShutdown(
                     TimeSpan.FromSeconds(2), 
                     TimeSpan.FromSeconds(30));
 });
@@ -450,7 +497,7 @@ builder.AddHorse((horseBuilder, config, env, services) =>
                 .SetClientToken(horseOptions.Token)
                 .SetReconnectWait(TimeSpan.FromSeconds(5))
                 .AddTransientChannelSubscribers(typeof(Program))
-                .WithGracefulShutdown(
+                .UseGracefulShutdown(
                     TimeSpan.FromSeconds(1),
                     TimeSpan.FromSeconds(20));
     
@@ -879,7 +926,7 @@ builder.AddHorse((horseBuilder, config, env, services) =>
 ```csharp
 builder.AddHorse(builder =>
 {
-    builder.WithGracefulShutdown(
+    builder.UseGracefulShutdown(
         minWait: TimeSpan.FromSeconds(2),    // Wait at least 2 seconds
         maxWait: TimeSpan.FromSeconds(60),   // Wait maximum 60 seconds
         shuttingDownAction: async (sp) =>
@@ -897,6 +944,12 @@ builder.AddHorse(builder =>
         });
 });
 ```
+
+**Note:** `UseGracefulShutdown` works in all scenarios:
+- When host is stopped via `IHostApplicationLifetime`
+- When application is terminated with Ctrl+C
+- When process receives SIGTERM/SIGINT signals
+- When application exits normally without calling `host.StopAsync()`
 
 ---
 
