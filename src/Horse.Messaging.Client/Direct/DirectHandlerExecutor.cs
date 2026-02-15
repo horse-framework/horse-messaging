@@ -65,7 +65,7 @@ internal class DirectHandlerExecutor<TModel> : ExecutorBase
                 IHandlerFactory handlerFactory = _consumerFactoryCreator();
                 providedHandler = handlerFactory.CreateHandler(_consumerType);
                 IDirectMessageHandler<TModel> messageHandler = (IDirectMessageHandler<TModel>) providedHandler.Service;
-                await Handle(messageHandler, message, t, client);
+                await Handle(messageHandler, message, t, client, handlerFactory);
             }
             else
                 throw new InvalidOperationException("There is no handler defined");
