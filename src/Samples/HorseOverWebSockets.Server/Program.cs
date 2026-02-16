@@ -29,4 +29,4 @@ Task.Run(async () =>
     }
 });
 
-await server.RunAsync();
+await server.RunAsync(CancellationToken.None);

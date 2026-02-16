@@ -15,10 +15,10 @@ public static class ServerExtensions
     /// <summary>
     /// Uses Horse Protocol over WebSockets
     /// </summary>
-    public static HorseServer UseHorseOverWebsockets(this HorseServer server, Action<HostOptions> configure)
+    public static HorseServer UseHorseOverWebsockets(this HorseServer server, Action<HorseHostOptions> configure)
     {
         InitializeHorseOverWebsockets(server);
-        HostOptions options = new HostOptions();
+        HorseHostOptions options = new HorseHostOptions();
         configure(options);
         server.Options.Hosts.Add(options);
         return server;
@@ -27,7 +27,7 @@ public static class ServerExtensions
     /// <summary>
     /// Uses Horse Protocol over WebSockets
     /// </summary>
-    public static HorseServer UseHorseOverWebsockets(this HorseServer server, HostOptions host)
+    public static HorseServer UseHorseOverWebsockets(this HorseServer server, HorseHostOptions host)
     {
         InitializeHorseOverWebsockets(server);
         server.Options.Hosts.Add(host);

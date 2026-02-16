@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using Horse.Jockey;
 using Horse.Messaging.Data;
 using Horse.Messaging.Protocol;
@@ -74,6 +75,6 @@ class Program
         server.Options.Hosts = [new HorseHostOptions { Port = 2626 }];
         
         server.UseRider(_rider);
-        server.RunAsync();
+        server.RunAsync(CancellationToken.None);
     }
 }
