@@ -198,8 +198,6 @@ public class ClusterManager
         {
             if (State == NodeState.Replica || State == NodeState.Successor)
                 Rider.Client.DisconnectAllClients();
-
-            Rider.Server.Logger?.LogEvent("CLUSTER", $"The Node is {State}");
         }
 
         if (MainNode != null)
@@ -260,8 +258,6 @@ public class ClusterManager
         SuccessorNode = announcement.Successor;
 
         UpdateState();
-
-        Rider.Server.Logger?.LogEvent("CLUSTER", "The node is Main");
     }
 
     /// <summary>
@@ -293,7 +289,6 @@ public class ClusterManager
                 await client.SendMessage(message);
         }
 
-        Rider.Server.Logger?.LogEvent("CLUSTER", "The node is asking for becoming Main");
     }
 
     /// <summary>
@@ -322,8 +317,6 @@ public class ClusterManager
             case NodeState.Single:
                 if (successor.Info.StartDate.HasValue)
                     approve = successor.Info.StartDate <= StartDate;
-                else
-                    Rider.Server.Logger?.LogEvent("CLUSTER", $"Main requester has no valid start date");
                 break;
         }
 
@@ -331,8 +324,6 @@ public class ClusterManager
         message.SetStringContent(approve ? "1" : "0");
 
         await successor.SendMessage(message);
-
-        Rider.Server.Logger?.LogEvent("CLUSTER", $"Main request of {successor.Info.Name} has {(approve ? "approved" : "rejected")} as {State}");
 
         if (State == NodeState.Main)
             await AnnounceMainity();
@@ -348,7 +339,6 @@ public class ClusterManager
             return Task.CompletedTask;
 
         MainNode = null;
-        Rider.Server.Logger?.LogEvent("CLUSTER", $"Main node is down: {mainClient.Info.Name}");
 
         //if the node should be the next main
         if (State == NodeState.Successor || SuccessorNode?.Id == Id)
@@ -420,8 +410,6 @@ public class ClusterManager
         if (Options.Mode == ClusterMode.Scaled)
             return;
 
-        Rider.Server.Logger?.LogEvent("CLUSTER", $"Successor node is down: {successor.Info.Name}");
-
         UpdateState();
 
         if (State == NodeState.Main)
@@ -464,7 +452,6 @@ public class ClusterManager
     internal Task OnRequestAnswered(NodeClient client, bool approved)
     {
         string answer = approved ? "accepted" : "rejected";
-        Rider.Server.Logger?.LogEvent("CLUSTER", $"Main Request {answer} by {client.Info.Name}");
 
         if (Options.Mode == ClusterMode.Scaled)
             return Task.CompletedTask;
@@ -475,7 +462,6 @@ public class ClusterManager
             {
                 _askingForMain = false;
                 client.ApprovedMainity = false;
-                Rider.Server.Logger?.LogEvent("CLUSTER", "Becoming main operation is canceled");
                 return Task.CompletedTask;
             }
 
@@ -501,8 +487,6 @@ public class ClusterManager
         MainNode = announcement.Main;
         SuccessorNode = announcement.Successor;
         UpdateState();
-
-        Rider.Server.Logger?.LogEvent("CLUSTER", $"New Main node is announce by {MainNode.Name} with successor {SuccessorNode?.Name}");
 
         if (State != NodeState.Main && mainHasChanged)
             _ = RequestQueueListForSync();

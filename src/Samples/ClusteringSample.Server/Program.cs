@@ -83,7 +83,6 @@ class Program
         });
 
         HorseServer server = new HorseServer();
-        server.Logger = new ConsoleLogger();
         server.UseRider(rider);
         server.Run(port);
     }

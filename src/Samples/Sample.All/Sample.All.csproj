@@ -8,8 +8,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Horse.Server" Version="7.4.4" />
-      <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
+      <PackageReference Include="Horse.Server" Version="8.0.1" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.3" />
     </ItemGroup>
 
     <ItemGroup>

@@ -111,7 +111,6 @@ public class NodeClient
             ConnectedDate = DateTime.UtcNow;
 
         _connectedToRemote = true;
-        Rider.Server.Logger?.LogEvent("CLUSTER", $"Connected to remote client: {Info.Name}");
     }
 
     internal void IncomingClientConnected(MessagingClient incomingClient, ConnectionData data)
@@ -162,17 +161,12 @@ public class NodeClient
                 });
             }
         }
-
-        Rider.Server.Logger?.LogEvent("CLUSTER", $"Remote client is connected: {Info.Name}");
     }
 
     private void OutgoingClientOnDisconnected(HorseClient client)
     {
         if (_incomingClient == null || !_incomingClient.IsConnected)
             _ = ProcessDisconnection();
-
-        if (_connectedToRemote)
-            Rider.Server.Logger?.LogEvent("CLUSTER", $"Disconnected from remote client: {Info.Name}");
 
         _connectedToRemote = false;
     }
@@ -181,8 +175,6 @@ public class NodeClient
     {
         if (_outgoingClient == null || !_outgoingClient.IsConnected)
             _ = ProcessDisconnection();
-
-        Rider.Server.Logger?.LogEvent("CLUSTER", $"Remote client is disconnected: {Info.Name}");
     }
 
     private async Task ProcessDisconnection()

@@ -123,7 +123,7 @@ public class HorseProtocol : IHorseProtocol
         }
         catch (Exception e)
         {
-            _server.Logger?.LogException("Unhandled Exception", e);
+            // ignore
         }
 
         HorseProtocolReader reader = new HorseProtocolReader();
@@ -155,7 +155,7 @@ public class HorseProtocol : IHorseProtocol
         }
         catch (Exception e)
         {
-            _server.Logger?.LogException("Unhandled Exception", e);
+            // ignore
         }
     }
 

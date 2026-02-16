@@ -8,18 +8,6 @@ using Horse.Server;
 
 namespace Sample.Cluster;
 
-public class ConsoleLogger : ILogger
-{
-    public void LogException(string hint, Exception exception)
-    {
-        Console.WriteLine("ERROR: " + hint + " - " + exception);
-    }
-
-    public void LogEvent(string hint, string message)
-    {
-        Console.WriteLine(hint + "\t" + message);
-    }
-}
 
 class Program
 {
@@ -80,7 +68,6 @@ class Program
         });
 
         HorseServer server = new HorseServer();
-        server.Logger = new ConsoleLogger();
         server.UseRider(rider);
         server.Start(26101);
         return rider;
@@ -112,7 +99,6 @@ class Program
         });
 
         HorseServer server = new HorseServer();
-        server.Logger = new ConsoleLogger();
         server.UseRider(rider);
         server.Start(26102);
         return rider;
@@ -144,7 +130,6 @@ class Program
         });
 
         HorseServer server = new HorseServer();
-        server.Logger = new ConsoleLogger();
         server.UseRider(rider);
         server.Start(26103);
         return rider;

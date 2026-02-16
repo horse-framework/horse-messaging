@@ -13,16 +13,15 @@ internal class ServerHostedService : IHostedService
             config.UseMemoryQueues();
         })
         .Build();
-    public Task StartAsync(CancellationToken cancellationToken)
+    
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         _server.UseRider(_rider);
-        _server.Start(2626);
-        return Task.CompletedTask;
+        await _server.RunAsync(2626, cancellationToken);
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
-        _server.Stop();
-        return Task.CompletedTask;
+        await _server.StopAsync(cancellationToken);
     }
 }
