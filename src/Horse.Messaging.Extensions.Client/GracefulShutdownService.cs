@@ -60,13 +60,15 @@ internal class GracefulShutdownService(
         while (min < max)
         {
             if (cancellationToken.IsCancellationRequested)
-                return;
+                break;
                 
             if (client.Queue.ActiveConsumeOperations == 0 && client.Channel.ActiveChannelOperations == 0)
-                return;
+                break;
             
             await Task.Delay(250, CancellationToken.None);
             min += 250;
         }
+        
+        client.Disconnect();
     }
 }

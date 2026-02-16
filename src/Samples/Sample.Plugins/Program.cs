@@ -20,8 +20,9 @@ HorseRider rider = HorseRiderBuilder.Create()
 
 HorseServer server = new HorseServer();
 server.Options.PingInterval = 10;
+server.Options.Hosts = [new HorseHostOptions { Port = 2626 }];
 server.UseRider(rider);
-server.Start(2626);
+server.StartAsync();
 
 await Task.Delay(250);
 HorseClient client = new HorseClient();

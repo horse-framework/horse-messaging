@@ -365,11 +365,13 @@ public class HorseClient : IDisposable
         while (minWait < maxWait)
         {
             if (Queue.ActiveConsumeOperations == 0 && Channel.ActiveChannelOperations == 0)
-                return;
+                break;
 
             Thread.Sleep(250);
             minWait += 250;
         }
+        
+        Disconnect();
     }
 
     /// <summary>
@@ -377,6 +379,8 @@ public class HorseClient : IDisposable
     /// </summary>
     public void Dispose()
     {
+        _reconnectTimer?.Dispose();
+        _reconnectTimer = null;
         Tracker?.Dispose();
         Queue.Dispose();
     }
@@ -391,6 +395,9 @@ public class HorseClient : IDisposable
             int ms = Convert.ToInt32(_reconnectWait.TotalMilliseconds);
             _reconnectTimer = new Timer(_ =>
             {
+                if (GracefulShutdownExecuted)
+                    return;
+
                 if (!_autoConnect || IsConnected)
                     return;
 

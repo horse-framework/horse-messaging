@@ -47,8 +47,9 @@ class Program
         HorseRider rider = HorseRiderBuilder.Create().Build();
 
         HorseServer server = new HorseServer();
+        server.Options.Hosts = [new HorseHostOptions { Port = 26223 }];
         server.UseRider(rider);
-        server.Start(26223);
+        server.StartAsync();
         return rider;
     }
 }

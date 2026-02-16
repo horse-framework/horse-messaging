@@ -71,7 +71,9 @@ class Program
             .Build();
 
         HorseServer server = new HorseServer();
+        server.Options.Hosts = [new HorseHostOptions { Port = 2626 }];
+        
         server.UseRider(_rider);
-        server.Run(2626);
+        server.RunAsync();
     }
 }

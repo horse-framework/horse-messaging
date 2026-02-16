@@ -68,8 +68,9 @@ class Program
         });
 
         HorseServer server = new HorseServer();
+        server.Options.Hosts = [new HorseHostOptions { Port = 26101 }];
         server.UseRider(rider);
-        server.Start(26101);
+        server.StartAsync();
         return rider;
     }
 
@@ -100,7 +101,8 @@ class Program
 
         HorseServer server = new HorseServer();
         server.UseRider(rider);
-        server.Start(26102);
+        server.Options.Hosts = [new HorseHostOptions { Port = 26102 }];
+        server.StartAsync();
         return rider;
     }
 
@@ -131,7 +133,8 @@ class Program
 
         HorseServer server = new HorseServer();
         server.UseRider(rider);
-        server.Start(26103);
+        server.Options.Hosts = [new HorseHostOptions { Port = 26102 }];
+        server.StartAsync();
         return rider;
     }
 }

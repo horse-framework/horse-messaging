@@ -93,14 +93,14 @@ public class TestHorseRider
             try
             {
                 int port = rnd.Next(5000, 65000);
-                ServerOptions serverOptions = ServerOptions.CreateDefault();
+                HorseServerOptions serverOptions = HorseServerOptions.CreateDefault();
                 serverOptions.Hosts[0].Port = port;
                 serverOptions.PingInterval = pingInterval;
                 serverOptions.RequestTimeout = requestTimeout;
 
                 Server = new HorseServer(serverOptions);
                 Server.UseRider(Rider);
-                Server.Start();
+                Server.StartAsync().GetAwaiter().GetResult();
                 Port = port;
                 return port;
             }
@@ -121,6 +121,6 @@ public class TestHorseRider
 
     public void Stop()
     {
-        Server.Stop();
+        Server.StopAsync().GetAwaiter().GetResult();
     }
 }

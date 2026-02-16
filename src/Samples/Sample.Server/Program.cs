@@ -65,8 +65,9 @@ namespace Sample.Server
             HorseServer server = new HorseServer();
             server.UseRider(rider);
             server.Options.PingInterval = 10;
+            server.Options.Hosts = [new HorseHostOptions { Port = 2626 }];
             //await rider.Cache.Set("TestCache1", new MemoryStream("Hello World"u8.ToArray()), TimeSpan.FromHours(4), null, null, true);
-            server.Run(2626);
+            await server.StartAsync();
         }
     }
 }

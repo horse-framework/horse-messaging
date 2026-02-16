@@ -82,6 +82,7 @@ public class DefaultMessageTimeoutTracker : IMessageTimeoutTracker
     public void Start()
     {
         _running = true;
+        _checker.IsBackground = true;
         _checker.Start();
     }
 

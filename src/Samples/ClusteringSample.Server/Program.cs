@@ -83,7 +83,8 @@ class Program
         });
 
         HorseServer server = new HorseServer();
+        server.Options.Hosts = [new HorseHostOptions { Port = port }];
         server.UseRider(rider);
-        server.Run(port);
+        server.StartAsync();
     }
 }

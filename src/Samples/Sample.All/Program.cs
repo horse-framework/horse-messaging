@@ -74,6 +74,7 @@ _ = producer.StopAsync();
 _ = consumer.StopAsync();
 _ = server.StopAsync();
 
+Console.WriteLine("Exit");
 
 internal static class Test
 {

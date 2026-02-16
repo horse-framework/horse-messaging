@@ -16,8 +16,9 @@ internal class ServerHostedService : IHostedService
     
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        _server.Options.Hosts = [new HorseHostOptions { Port = 2626 }];
         _server.UseRider(_rider);
-        await _server.RunAsync(2626, cancellationToken);
+        await _server.StartAsync(cancellationToken);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)

@@ -76,6 +76,6 @@ public class PersistentDelivery
 
         deliveries = manager.RedeliveryService.GetDeliveries();
         Assert.Empty(deliveries);
-        server.Stop();
+        await server.StopAsync();
     }
 }
