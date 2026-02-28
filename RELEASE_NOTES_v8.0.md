@@ -201,7 +201,7 @@ public class FetchOrderConsumer : IQueueConsumer<FetchOrderEvent> { ... }
 **Produce (unchanged — producer writes to the parent queue name):**
 ```csharp
 // Without label → orphan partition
-await client.Queue.PushJson(message, false);
+await client.Queue.Push(message, false);
 
 // With label → dedicated partition
 await client.Queue.Push("FetchOrders", message, false,
@@ -380,6 +380,44 @@ The previous implementation relied on `HorseServiceProviderFactory.CreateService
 which did not work correctly with `IHostApplicationBuilder` (e.g. `WebApplication.CreateBuilder`).
 `HorseConnectService` runs in the standard `IHostedService` pipeline and is fully lifecycle-aware.
 
+### 8. Json Suffix Removed from All Bus APIs
+
+All `*Json` suffixed methods have been replaced with clean generic overloads across every bus interface. The `object` parameter is now `T model` with `where T : class` constraint.
+
+**Queue Bus (`IHorseQueueBus` / `QueueOperator`):**
+
+| v7.4 Method | v8.0 Method |
+|---|---|
+| `PushJson(object, ...)` | `Push<T>(T model, ...)` |
+| `PushJson(string queue, object, ...)` | `Push<T>(string queue, T model, ...)` |
+| `PushBulkJson<T>(...)` | `PushBulk<T>(...)` |
+
+**Router Bus (`IHorseRouterBus` / `RouterOperator`):**
+
+| v7.4 Method | v8.0 Method |
+|---|---|
+| `PublishJson(object, ...)` | `Publish<T>(T model, ...)` |
+| `PublishJson(string router, object, ...)` | `Publish<T>(string router, T model, ...)` |
+| `PublishRequestJson<TReq, TResp>(...)` | `PublishRequest<TReq, TResp>(...)` |
+
+**Direct Bus (`IHorseDirectBus` / `DirectOperator`):**
+
+| v7.4 Method | v8.0 Method |
+|---|---|
+| `SendJson(object, ...)` | `Send<T>(T model, ...)` |
+| `SendJsonByName<T>(...)` | `SendByName<T>(...)` |
+| `SendJsonByType<T>(...)` | `SendByType<T>(...)` |
+| `SendJsonById<T>(...)` | `SendById<T>(...)` |
+| `SendDirectJsonAsync<T>(...)` | `SendAsync<T>(...)` |
+| `RequestJsonAsync<TResp>(...)` | `Request<TResp>(...)` |
+| `RequestJsonAsync<TReq, TResp>(...)` | `Request<TReq, TResp>(...)` |
+
+**HorseClient:**
+
+| v7.4 Method | v8.0 Method |
+|---|---|
+| `SendAndGetJson<T>(...)` | `SendAndGet<T>(...)` |
+
 ---
 
 ## 📝 Migration Guide
@@ -413,6 +451,17 @@ Use find-and-replace to update method calls:
 | `.UseHorseBus()` | `.UseHorse()` |
 | `.UseKeyedHorseBus(` | `.UseHorse(` |
 | `.UseGracefulShutdownHostedService(` | `.UseGracefulShutdown(` |
+| `.PushJson(` | `.Push<T>(` |
+| `.PushBulkJson(` | `.PushBulk<T>(` |
+| `.PublishJson(` | `.Publish<T>(` |
+| `.PublishRequestJson<` | `.PublishRequest<` |
+| `.SendJson(` | `.Send<T>(` |
+| `.SendJsonByName(` | `.SendByName(` |
+| `.SendJsonByType(` | `.SendByType(` |
+| `.SendJsonById(` | `.SendById(` |
+| `.SendDirectJsonAsync(` | `.SendAsync<T>(` |
+| `.RequestJsonAsync<` | `.Request<` |
+| `.SendAndGetJson<` | `.SendAndGet<` |
 
 ### Step 4: Remove AddServices() Calls
 
@@ -621,6 +670,159 @@ builder.AddHorse(b =>
              logger.LogInformation("Graceful shutdown initiated...");
          });
 });
+```
+
+---
+
+## ✅ CancellationToken Support in All Consumer / Handler Interfaces
+
+All consumer, subscriber and handler interfaces now accept an optional `CancellationToken` parameter.  
+The token is **automatically cancelled** when the client disconnects or graceful shutdown begins.
+
+### Changed Interfaces
+
+| Interface | Changed Method |
+|---|---|
+| `IQueueConsumer<TModel>` | `Consume(..., CancellationToken ct = default)` |
+| `IChannelSubscriber<TModel>` | `Handle(..., CancellationToken ct = default)` · `Error(..., CancellationToken ct = default)` |
+| `IDirectMessageHandler<TModel>` | `Handle(..., CancellationToken ct = default)` |
+| `IHorseRequestHandler<TReq,TResp>` | `Handle(..., CancellationToken ct = default)` · `OnError(..., CancellationToken ct = default)` |
+| `IHorseInterceptor` | `Intercept(..., CancellationToken ct = default)` |
+
+### New HorseClient property
+
+```csharp
+/// <summary>Cancelled when the client disconnects or shuts down gracefully.</summary>
+public CancellationToken ConsumeToken { get; }
+```
+
+### Usage — Pass the token to your I/O calls
+
+```csharp
+public class OrderConsumer : IQueueConsumer<OrderEvent>
+{
+    private readonly HttpClient _http;
+    private readonly IOrderRepository _repo;
+
+    public async Task Consume(HorseMessage message, OrderEvent model, HorseClient client,
+        CancellationToken cancellationToken = default)
+    {
+        await _http.PostAsJsonAsync("/api/orders", model, cancellationToken);
+        await _repo.SaveAsync(model, cancellationToken);
+    }
+}
+```
+
+### Graceful Shutdown behaviour (improved)
+
+```
+SIGTERM
+  → _consumeCts.Cancel()       ← new: signals all active consumers
+  → active consumers receive OperationCanceledException
+  → HttpClient / EF Core / Task.Delay calls stop immediately
+  → ActiveConsumeOperations → 0
+  → Disconnect()
+```
+
+**Backward compatible:** All signatures use `default` parameter — existing implementations continue to compile without any changes.
+
+### Test Coverage
+
+16 unit tests added under `Tests/Test.Client/CancellationTokenTests/`:
+
+| # | Test | What it verifies |
+|---|------|-----------------|
+| 1 | `ConsumeToken_IsNotCancelled_OnCreation` | Fresh `HorseClient` has a live, cancellable token (not `CancellationToken.None`) |
+| 2 | `ConsumeToken_IsNotCancelled_AfterConnect` | Token stays live after successful `ConnectAsync` |
+| 3 | `ConsumeToken_IsCancelled_AfterDisconnect` | `Disconnect()` cancels the captured token |
+| 4 | `ConsumeToken_IsRefreshed_AfterReconnect` | Reconnect produces a new, non-cancelled token |
+| 5 | `MultipleDisconnects_DoNotThrow` | Double/triple `Disconnect()` calls are idempotent |
+| 6 | `QueueConsumer_ReceivesLiveConsumeToken` | Consumer's `cancellationToken` param equals `client.ConsumeToken` |
+| 7 | `QueueConsumer_BlockedOnToken_IsInterruptedOnDisconnect` | Long-running consumer unblocks immediately on `Disconnect()` |
+| 8 | `CancellableDelay_StopsEarlyOnDisconnect` | `Task.Delay(token)` stops in <5 s when client disconnects |
+| 9 | `TokenIsolation_DisconnectOneClient_OtherUnaffected` | Disconnecting client-1 does **not** cancel client-2's token |
+| 10 | `MultipleMessages_AllReceiveSameLiveToken` | All 5 messages see the same live token instance |
+| 11 | `MultipleReconnects_EachCycleProducesUniqueToken` | 3 connect-disconnect cycles each yield a distinct token |
+| 12 | `GracefulShutdown_CancelsConsumeToken` | `UseGracefulShutdown` → `Disconnect()` cancels token |
+| 13 | `ReconnectAfterCancel_DoesNotThrow_AndProducesFreshToken` | No exception; old token stays cancelled, new token is live |
+| 14 | `DirectHandler_ReceivesLiveConsumeToken` | `IDirectMessageHandler.Handle` receives live token |
+| 15 | `DirectHandler_Blocked_IsInterruptedOnDisconnect` | Blocking `DirectHandler` is interrupted on `Disconnect()` |
+| 16 | `ChannelSubscriber_ReceivesLiveConsumeToken` | `IChannelSubscriber.Handle` receives live token |
+
+---
+
+## ⚠️ Breaking Changes — API Cleanup
+
+### String Content Overloads Removed
+
+The `string content` overloads on `QueueOperator.Push` and `RouterOperator.Publish` have been **removed** to eliminate ambiguity with the `Push<T>` / `Publish<T>` generic methods (where `T=string` caused `CS0121` compile errors).
+
+**Before (v7.x):**
+```csharp
+await client.Queue.Push("my-queue", "Hello", false);           // string overload — REMOVED
+await client.Router.Publish("router", "Hello", true);          // string overload — REMOVED
+```
+
+**After (v8.0):**
+```csharp
+await client.Queue.Push("my-queue", Encoding.UTF8.GetBytes("Hello"), false);       // byte[] overload
+await client.Queue.Push("my-queue", new MemoryStream(data), false);                // MemoryStream overload
+await client.Router.Publish("router", Encoding.UTF8.GetBytes("Hello"), messageId: null, waitForAcknowledge: true);
+```
+
+### RouterOperator.Publish — Convenience byte[] Overload Merged
+
+The two `byte[]` `Publish` overloads (with/without `messageId`) have been merged into a single overload with `string messageId = null` as a default parameter:
+
+```csharp
+// Single overload — pass null or omit messageId
+Task<HorseResult> Publish(string routerName, byte[] data,
+    string messageId = null, bool waitForAcknowledge = false, ...);
+```
+
+### QueueOperator.Push — byte[] Convenience Overloads Added
+
+New `byte[]` overloads added to `QueueOperator` for simpler raw data pushing:
+
+```csharp
+Task<HorseResult> Push(string queue, byte[] data, bool waitForCommit, ...);
+Task<HorseResult> Push(string queue, byte[] data, string messageId, bool waitForCommit, ...);
+```
+
+### Parameter Order Consistency
+
+All public APIs now follow a consistent parameter order:
+`(target, content/model, [messageId], waitForCommit/waitForAcknowledge, [contentType], messageHeaders, [partitionLabel], cancellationToken)`
+
+### PushToPartition Methods Removed — `partitionLabel` Merged into Push
+
+All `PushToPartition` / `PushToPartition<T>` methods have been **removed** from `IHorseQueueBus` and `HorseQueueBus`.
+Partition routing is now an optional `string partitionLabel = null` parameter on every `Push` overload.
+
+**Before (v8.0-preview):**
+```csharp
+await bus.PushToPartition("FetchOrders", "tenant-42", model, false);
+await bus.PushToPartition("FetchOrders", "tenant-42", stream, false);
+```
+
+**After (v8.0):**
+```csharp
+await bus.Push("FetchOrders", model, false, partitionLabel: "tenant-42");
+await bus.Push("FetchOrders", stream, false, partitionLabel: "tenant-42");
+// Without partition — exactly the same as before
+await bus.Push("FetchOrders", model, false);
+```
+
+### PushBulk Methods Added to IHorseQueueBus
+
+`PushBulk<T>` (model) and `PushBulk` (raw `MemoryStream`) are now exposed on `IHorseQueueBus`:
+
+```csharp
+// Bulk push — typed models
+bus.PushBulk<OrderEvent>("order-queue", orders, (msg, ok) => Console.WriteLine(ok));
+
+// Bulk push — raw binary
+bus.PushBulk("order-queue", streams, waitForCommit: true, callback: (msg, ok) => { });
 ```
 
 ---

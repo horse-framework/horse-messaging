@@ -630,92 +630,74 @@ Queue-Name:      FetchOrders-Partition-a3k9x  ← fiziksel queue adı
 
 ---
 
-### `IHorseQueueBus` — Partition Push Overload'ları
+### `IHorseQueueBus` — `partitionLabel` Parametresi ile Partition Push
 
-DI ile inject edilen `IHorseQueueBus` (ve `IHorseQueueBus<TIdentifier>`) nesnesi, partition'a doğrudan mesaj göndermek için tam bir overload seti içeriyor. Tüm metodlar arka planda `PARTITION_LABEL` header'ını otomatik ekler ve mevcut `Push` / `PushJson` altyapısına delege eder.
+Tüm `Push` metodları opsiyonel `string partitionLabel = null` parametresi kabul eder.
+Değer verildiğinde bus otomatik olarak `PARTITION_LABEL` header'ını ekler.
 
-#### `PushToPartition` — ham / string içerik
+#### Push İmzaları (partition destekli)
 
 ```csharp
-// MemoryStream içerik
-Task<HorseResult> PushToPartition(
-    string queue, string partitionLabel, MemoryStream content,
+// Ham içerik
+Task<HorseResult> Push(string queue, MemoryStream content,
     bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+    string partitionLabel = null,
+    CancellationToken cancellationToken = default);
 
-// string içerik
-Task<HorseResult> PushToPartition(
-    string queue, string partitionLabel, string content,
+// Ham içerik + messageId
+Task<HorseResult> Push(string queue, MemoryStream content, string messageId,
     bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+    string partitionLabel = null,
+    CancellationToken cancellationToken = default);
 
-// MemoryStream + explicit messageId
-Task<HorseResult> PushToPartition(
-    string queue, string partitionLabel, MemoryStream content,
-    string messageId, bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+// Model (queue attribute'tan)
+Task<HorseResult> Push<T>(T model, bool waitForCommit = false,
+    IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+    string partitionLabel = null,
+    CancellationToken cancellationToken = default) where T : class;
 
-// string içerik + explicit messageId
-Task<HorseResult> PushToPartition(
-    string queue, string partitionLabel, string content,
-    string messageId, bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+// Model + explicit queue
+Task<HorseResult> Push<T>(string queue, T model, bool waitForCommit = false,
+    IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+    string partitionLabel = null,
+    CancellationToken cancellationToken = default) where T : class;
 ```
 
-#### `PushJsonToPartition` — JSON / model nesnesi
+#### PushBulk İmzaları
 
 ```csharp
-// queue adı [QueueName] attribute'tan — partitionLabel zorunlu
-Task<HorseResult> PushJsonToPartition(
-    string partitionLabel, object jsonObject,
-    bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+// Toplu model push
+void PushBulk<T>(string queue, List<T> items,
+    Action<HorseMessage, bool> callback,
+    IEnumerable<KeyValuePair<string, string>> messageHeaders = null) where T : class;
 
-// queue adı explicit
-Task<HorseResult> PushJsonToPartition(
-    string queue, string partitionLabel, object jsonObject,
-    bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-// queue [QueueName]'den + messageId
-Task<HorseResult> PushJsonToPartition(
-    string partitionLabel, object jsonObject, string messageId,
-    bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-// queue explicit + messageId
-Task<HorseResult> PushJsonToPartition(
-    string queue, string partitionLabel, object jsonObject,
-    string messageId, bool waitForCommit = false,
+// Toplu ham içerik push
+void PushBulk(string queue, List<MemoryStream> contents,
+    bool waitForCommit, Action<HorseMessage, bool> callback,
     IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 ```
 
 #### Kullanım örnekleri
 
 ```csharp
-// ── DI ile inject edilmiş bus (constructor injection) ─────────────────
-// services.AddHorseBus<IHorseQueueBus>(...)
-
-// String mesaj → tenantId partition'ına
-await bus.PushToPartition("FetchOrders", tenantId, "payload");
-
-// JSON model → tenantId partition'ına (queue adı [QueueName]'den gelir)
+// Model → tenantId partition'ına
 [QueueName("FetchOrders")]
 public record FetchOrderEvent(string OrderId);
+await bus.Push(new FetchOrderEvent("ord-1"), partitionLabel: tenantId);
 
-await bus.PushJsonToPartition(tenantId, new FetchOrderEvent("ord-1"));
+// Model → explicit queue + partition
+await bus.Push("FetchOrders", new FetchOrderEvent("ord-1"), partitionLabel: tenantId);
 
-// JSON model → explicit queue + messageId
-await bus.PushJsonToPartition("FetchOrders", tenantId,
-    new FetchOrderEvent("ord-1"),
-    messageId: Guid.NewGuid().ToString());
+// WaitForCommit + partition
+HorseResult result = await bus.Push("FetchOrders", model, waitForCommit: true, partitionLabel: tenantId);
 
-// WaitForCommit (server ACK bekle)
-HorseResult result = await bus.PushToPartition("FetchOrders", tenantId, "payload",
-    waitForCommit: true);
+// Partition'sız — eskisi ile aynı
+await bus.Push("FetchOrders", model, false);
 
 // Label null → orphan'a (veya round-robin, orphan disabled ise)
-await bus.PushToPartition("JobQueue", null, "unlabeled-payload");
+await bus.Push("JobQueue", stream, false, partitionLabel: null);
 ```
 
 ### Mesaj Gönderme (low-level — QueueOperator üzerinden)
@@ -1323,3 +1305,5 @@ dotnet run -c Release -- --filter "*LargePayload*"
 # Sonuçlar şuraya yazılır:
 # src/Benchmarks/Benchmark.Partition/BenchmarkDotNet.Artifacts/results/
 ```
+
+

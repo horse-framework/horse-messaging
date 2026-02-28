@@ -557,79 +557,74 @@ Queue-Name:      FetchOrders-Partition-a3k9x
 
 ---
 
-### `IHorseQueueBus` — Partition Push Overloads
+### `IHorseQueueBus` — Partition Push via `partitionLabel` Parameter
 
-All methods automatically add the `PARTITION_LABEL` header.
+All `Push` methods accept an optional `string partitionLabel = null` parameter.
+When set, the bus automatically adds the `PARTITION_LABEL` header.
 
-#### `PushToPartition` — raw / string content
+#### Push Signatures (partition-aware)
 
 ```csharp
-Task<HorseResult> PushToPartition(
-    string queue, string partitionLabel, MemoryStream content,
+// Raw content
+Task<HorseResult> Push(string queue, MemoryStream content,
     bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+    string partitionLabel = null,
+    CancellationToken cancellationToken = default);
 
-Task<HorseResult> PushToPartition(
-    string queue, string partitionLabel, string content,
+// Raw content + messageId
+Task<HorseResult> Push(string queue, MemoryStream content, string messageId,
     bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+    string partitionLabel = null,
+    CancellationToken cancellationToken = default);
 
-Task<HorseResult> PushToPartition(
-    string queue, string partitionLabel, MemoryStream content,
-    string messageId, bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+// Model (queue from attribute)
+Task<HorseResult> Push<T>(T model, bool waitForCommit = false,
+    IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+    string partitionLabel = null,
+    CancellationToken cancellationToken = default) where T : class;
 
-Task<HorseResult> PushToPartition(
-    string queue, string partitionLabel, string content,
-    string messageId, bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+// Model + explicit queue
+Task<HorseResult> Push<T>(string queue, T model, bool waitForCommit = false,
+    IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+    string partitionLabel = null,
+    CancellationToken cancellationToken = default) where T : class;
 ```
 
-#### `PushJsonToPartition` — JSON / model object
+#### PushBulk Signatures
 
 ```csharp
-Task<HorseResult> PushJsonToPartition(
-    string partitionLabel, object jsonObject,
-    bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+// Bulk model push
+void PushBulk<T>(string queue, List<T> items,
+    Action<HorseMessage, bool> callback,
+    IEnumerable<KeyValuePair<string, string>> messageHeaders = null) where T : class;
 
-Task<HorseResult> PushJsonToPartition(
-    string queue, string partitionLabel, object jsonObject,
-    bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-Task<HorseResult> PushJsonToPartition(
-    string partitionLabel, object jsonObject, string messageId,
-    bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-Task<HorseResult> PushJsonToPartition(
-    string queue, string partitionLabel, object jsonObject,
-    string messageId, bool waitForCommit = false,
+// Bulk raw content push
+void PushBulk(string queue, List<MemoryStream> contents,
+    bool waitForCommit, Action<HorseMessage, bool> callback,
     IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 ```
 
 #### Usage Examples
 
 ```csharp
-// String message → tenantId partition
-await bus.PushToPartition("FetchOrders", tenantId, "payload");
-
-// JSON model → tenantId partition (queue name from [QueueName])
+// Model → tenantId partition
 [QueueName("FetchOrders")]
 public record FetchOrderEvent(string OrderId);
-await bus.PushJsonToPartition(tenantId, new FetchOrderEvent("ord-1"));
+await bus.Push(new FetchOrderEvent("ord-1"), partitionLabel: tenantId);
 
-// JSON model → explicit queue + messageId
-await bus.PushJsonToPartition("FetchOrders", tenantId,
-    new FetchOrderEvent("ord-1"), messageId: Guid.NewGuid().ToString());
+// Model → explicit queue + partition
+await bus.Push("FetchOrders", new FetchOrderEvent("ord-1"), partitionLabel: tenantId);
 
-// WaitForCommit
-HorseResult result = await bus.PushToPartition("FetchOrders", tenantId, "payload",
-    waitForCommit: true);
+// WaitForCommit + partition
+HorseResult result = await bus.Push("FetchOrders", model, waitForCommit: true, partitionLabel: tenantId);
+
+// No partition — same as before
+await bus.Push("FetchOrders", model, false);
 
 // Label null → orphan (or round-robin if orphan disabled)
-await bus.PushToPartition("JobQueue", null, "unlabeled-payload");
+await bus.Push("JobQueue", stream, false, partitionLabel: null);
 ```
 
 ### Low-level (via QueueOperator)
@@ -1140,3 +1135,5 @@ dotnet run -c Release -- --filter "*LargePayload*"
 # Results land in:
 # src/Benchmarks/Benchmark.Partition/BenchmarkDotNet.Artifacts/results/
 ```
+
+
