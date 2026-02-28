@@ -2,6 +2,7 @@ using System;
 using System.Text.Json.Serialization;
 using EnumsNET;
 using Horse.Messaging.Protocol;
+using Horse.Messaging.Server.Queues.Partitions;
 
 namespace Horse.Messaging.Server.Queues;
 
@@ -91,6 +92,24 @@ public class NetworkOptionsBuilder
     [JsonPropertyName("MessageIdUniqueCheck")]
     public bool? MessageIdUniqueCheck { get; set; }
 
+    /// <summary>
+    /// Enables queue partitioning when true.
+    /// </summary>
+    [JsonPropertyName("PartitionEnabled")]
+    public bool? PartitionEnabled { get; set; }
+
+    /// <summary>
+    /// Maximum number of partitions (0 = unlimited).
+    /// </summary>
+    [JsonPropertyName("PartitionLimit")]
+    public int? PartitionLimit { get; set; }
+
+    /// <summary>
+    /// Maximum subscribers per partition.
+    /// </summary>
+    [JsonPropertyName("PartitionSubscriberLimit")]
+    public int? PartitionSubscriberLimit { get; set; }
+
     #endregion
 
     #region Apply
@@ -137,6 +156,18 @@ public class NetworkOptionsBuilder
 
         if (MessageIdUniqueCheck.HasValue)
             target.MessageIdUniqueCheck = MessageIdUniqueCheck.Value;
+
+        if (PartitionEnabled == true)
+        {
+            target.Partition ??= new PartitionOptions();
+            target.Partition.Enabled = true;
+
+            if (PartitionLimit.HasValue)
+                target.Partition.MaxPartitionCount = PartitionLimit.Value;
+
+            if (PartitionSubscriberLimit.HasValue)
+                target.Partition.SubscribersPerPartition = PartitionSubscriberLimit.Value;
+        }
     }
 
     #endregion

@@ -370,4 +370,24 @@ public class HorseHeaders
     /// </summary>
     public const string WAIT_MESSAGES = "Wait-Messages";
 
+    /// <summary>
+    /// "Partition-Label" — Worker routing label; messages are routed to the partition owning this label
+    /// </summary>
+    public const string PARTITION_LABEL = "Partition-Label";
+
+    /// <summary>
+    /// "Partition-Id" — The short ID of the partition a message was routed to (stamped by server)
+    /// </summary>
+    public const string PARTITION_ID = "Partition-Id";
+
+    /// <summary>
+    /// "Partition-Limit" — Maximum number of partitions allowed for a partitioned queue
+    /// </summary>
+    public const string PARTITION_LIMIT = "Partition-Limit";
+
+    /// <summary>
+    /// "Partition-Subscribers" — Maximum subscribers per partition
+    /// </summary>
+    public const string PARTITION_SUBSCRIBERS = "Partition-Subscribers";
+
 }

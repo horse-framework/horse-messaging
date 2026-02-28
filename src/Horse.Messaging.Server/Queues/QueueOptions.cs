@@ -1,6 +1,7 @@
 using System;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues.Delivery;
+using Horse.Messaging.Server.Queues.Partitions;
 
 namespace Horse.Messaging.Server.Queues;
 
@@ -93,9 +94,14 @@ public class QueueOptions
     public bool MessageIdUniqueCheck { get; set; }
 
     /// <summary>
+    /// Partition configuration. When non-null and Enabled = true, this queue acts as a
+    /// virtual parent queue that routes messages to its partition sub-queues.
+    /// </summary>
+    public PartitionOptions Partition { get; set; }
+
+    /// <summary>
     /// Creates clone of the object
     /// </summary>
-    /// <returns></returns>
     internal object Clone()
     {
         return MemberwiseClone();
@@ -129,7 +135,16 @@ public class QueueOptions
             CommitWhen = options.CommitWhen,
             PutBack = options.PutBack,
             AutoQueueCreation = options.AutoQueueCreation,
-            MessageIdUniqueCheck = options.MessageIdUniqueCheck
+            MessageIdUniqueCheck = options.MessageIdUniqueCheck,
+            Partition = options.Partition == null ? null : new PartitionOptions
+            {
+                Enabled                = options.Partition.Enabled,
+                MaxPartitionCount      = options.Partition.MaxPartitionCount,
+                SubscribersPerPartition = options.Partition.SubscribersPerPartition,
+                AutoDestroy            = options.Partition.AutoDestroy,
+                AutoDestroyIdleSeconds = options.Partition.AutoDestroyIdleSeconds,
+                EnableOrphanPartition  = options.Partition.EnableOrphanPartition
+            }
         };
     }
 }

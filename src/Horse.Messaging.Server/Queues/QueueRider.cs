@@ -16,6 +16,7 @@ using Horse.Messaging.Server.Helpers;
 using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.Managers;
+using Horse.Messaging.Server.Queues.Partitions;
 using Horse.Messaging.Server.Security;
 
 namespace Horse.Messaging.Server.Queues;
@@ -93,6 +94,16 @@ public class QueueRider
     public EventManager UnsubscriptionEvent { get; }
 
     /// <summary>
+    /// Event Manager for HorseEventType.QueuePartitionCreated
+    /// </summary>
+    public EventManager PartitionCreatedEvent { get; }
+
+    /// <summary>
+    /// Server-side lifecycle handlers for partition events
+    /// </summary>
+    public ArrayContainer<IPartitionEventHandler> PartitionEventHandlers { get; } = new();
+
+    /// <summary>
     /// Persistence configurator for queues.
     /// Settings this value to null disables the persistence for queues and queues are lost after application restart.
     /// Default value is not null and saves queues into ./data/queues.json file
@@ -110,60 +121,112 @@ public class QueueRider
         StatusChangeEvent = new EventManager(rider, HorseEventType.QueueStatusChange);
         SubscriptionEvent = new EventManager(rider, HorseEventType.QueueSubscription);
         UnsubscriptionEvent = new EventManager(rider, HorseEventType.QueueUnsubscription);
+        PartitionCreatedEvent = new EventManager(rider, HorseEventType.QueuePartitionCreated);
         OptionsConfigurator = new QueueOptionsConfigurator(rider, "queues.json");
     }
 
     internal void Initialize()
     {
-        if (OptionsConfigurator != null)
+        if (OptionsConfigurator == null)
+            return;
+
+        QueueConfiguration[] configurations = OptionsConfigurator.Load();
+
+        // ── Pass 1: Restore all queues ──────────────────────────────────────────
+        // Both parent queues and partition sub-queues are loaded here; the order
+        // does not matter because sub-queue re-attachment is done in Pass 2.
+        var createTasks = new List<Task<HorseQueue>>();
+
+        foreach (QueueConfiguration configuration in configurations)
         {
-            QueueConfiguration[] configurations = OptionsConfigurator.Load();
-
-            foreach (QueueConfiguration configuration in configurations)
+            QueueOptions options = new QueueOptions
             {
-                QueueOptions options = new QueueOptions
+                Acknowledge = Enums.Parse<QueueAckDecision>(configuration.Acknowledge, true, EnumFormat.Description),
+                AcknowledgeTimeout = TimeSpan.FromMilliseconds(configuration.AcknowledgeTimeout),
+                Type = Enums.Parse<QueueType>(configuration.Type, true, EnumFormat.Description),
+                AutoDestroy = Enums.Parse<QueueDestroy>(configuration.AutoDestroy, true, EnumFormat.Description),
+                ClientLimit = configuration.ClientLimit,
+                CommitWhen = Enums.Parse<CommitWhen>(configuration.CommitWhen, true, EnumFormat.Description),
+                MessageLimit = configuration.MessageLimit,
+                MessageTimeout = new MessageTimeoutStrategy
                 {
-                    Acknowledge = Enums.Parse<QueueAckDecision>(configuration.Acknowledge, true, EnumFormat.Description),
-                    AcknowledgeTimeout = TimeSpan.FromMilliseconds(configuration.AcknowledgeTimeout),
-                    Type = Enums.Parse<QueueType>(configuration.Type, true, EnumFormat.Description),
-                    AutoDestroy = Enums.Parse<QueueDestroy>(configuration.AutoDestroy, true, EnumFormat.Description),
-                    ClientLimit = configuration.ClientLimit,
-                    CommitWhen = Enums.Parse<CommitWhen>(configuration.CommitWhen, true, EnumFormat.Description),
-                    MessageLimit = configuration.MessageLimit,
-                    MessageTimeout = new MessageTimeoutStrategy
+                    MessageDuration = configuration.MessageTimeout.MessageDuration,
+                    Policy = Enums.Parse<MessageTimeoutPolicy>(configuration.MessageTimeout.Policy, true, EnumFormat.Description),
+                    TargetName = configuration.MessageTimeout.TargetName
+                },
+                PutBack = Enums.Parse<PutBackDecision>(configuration.PutBack, true, EnumFormat.Description),
+                DelayBetweenMessages = configuration.DelayBetweenMessages,
+                LimitExceededStrategy = Enums.Parse<MessageLimitExceededStrategy>(configuration.LimitExceededStrategy, true, EnumFormat.Description),
+                MessageSizeLimit = configuration.MessageSizeLimit,
+                PutBackDelay = configuration.PutBackDelay,
+                MessageIdUniqueCheck = configuration.MessageIdUniqueCheck,
+                Partition = configuration.Partition == null ? null : new Partitions.PartitionOptions
+                {
+                    Enabled                = configuration.Partition.Enabled,
+                    MaxPartitionCount      = configuration.Partition.MaxPartitionCount,
+                    SubscribersPerPartition = configuration.Partition.SubscribersPerPartition,
+                    AutoDestroy            = Enum.TryParse<Partitions.PartitionAutoDestroy>(configuration.Partition.AutoDestroy, out var pad)
+                                                 ? pad
+                                                 : Partitions.PartitionAutoDestroy.Disabled,
+                    AutoDestroyIdleSeconds = configuration.Partition.AutoDestroyIdleSeconds,
+                    EnableOrphanPartition  = configuration.Partition.EnableOrphanPartition
+                }
+            };
+
+            QueueStatus status = Enums.Parse<QueueStatus>(configuration.Status, true, EnumFormat.Description);
+            HorseMessage nonInitializionMessage = null;
+
+            if (status == QueueStatus.NotInitialized)
+                nonInitializionMessage = new HorseMessage(MessageType.Server, configuration.Name, KnownContentTypes.QueueSubscribe);
+
+            var cfg = configuration; // capture for closure
+            var t = Create(cfg.Name, options, nonInitializionMessage, true, true, null, cfg.ManagerName)
+                .ContinueWith(o =>
+                {
+                    HorseQueue queue = o.Result;
+                    if (queue != null)
                     {
-                        MessageDuration = configuration.MessageTimeout.MessageDuration,
-                        Policy = Enums.Parse<MessageTimeoutPolicy>(configuration.MessageTimeout.Policy, true, EnumFormat.Description),
-                        TargetName = configuration.MessageTimeout.TargetName
-                    },
-                    PutBack = Enums.Parse<PutBackDecision>(configuration.PutBack, true, EnumFormat.Description),
-                    DelayBetweenMessages = configuration.DelayBetweenMessages,
-                    LimitExceededStrategy = Enums.Parse<MessageLimitExceededStrategy>(configuration.LimitExceededStrategy, true, EnumFormat.Description),
-                    MessageSizeLimit = configuration.MessageSizeLimit,
-                    PutBackDelay = configuration.PutBackDelay,
-                    MessageIdUniqueCheck = configuration.MessageIdUniqueCheck
-                };
+                        if (!string.IsNullOrEmpty(cfg.Topic))
+                            queue.Topic = cfg.Topic;
 
-                QueueStatus status = Enums.Parse<QueueStatus>(configuration.Status, true, EnumFormat.Description);
-                HorseMessage nonInitializionMessage = null;
+                        if (status != QueueStatus.NotInitialized)
+                            queue.SetStatus(status);
+                    }
 
-                if (status == QueueStatus.NotInitialized)
-                    nonInitializionMessage = new HorseMessage(MessageType.Server, configuration.Name, KnownContentTypes.QueueSubscribe);
+                    return queue;
+                });
+            createTasks.Add(t);
+        }
 
-                Create(configuration.Name, options, nonInitializionMessage, true, true, null, configuration.ManagerName)
-                    .ContinueWith(o =>
-                    {
-                        HorseQueue queue = o.Result;
-                        if (queue != null)
-                        {
-                            if (!string.IsNullOrEmpty(configuration.Topic))
-                                queue.Topic = configuration.Topic;
+        // Wait for all queues to be created before the re-attachment pass.
+        Task.WhenAll(createTasks).GetAwaiter().GetResult();
 
-                            if (status != QueueStatus.NotInitialized)
-                                queue.SetStatus(status);
-                        }
-                    });
-            }
+        // ── Pass 2: Re-attach partition sub-queues to their parent PartitionManagers ──
+        // Queues that have SubPartition != null were saved as partition sub-queues.
+        // Find their parent, locate its PartitionManager and call ReAttach so that
+        // routing and label-index are fully restored — no new GUIDs are generated.
+        foreach (QueueConfiguration configuration in configurations)
+        {
+            if (configuration.SubPartition == null)
+                continue;
+
+            HorseQueue subQueue = Find(configuration.Name);
+            if (subQueue == null)
+                continue;
+
+            HorseQueue parentQueue = Find(configuration.SubPartition.ParentQueueName);
+            if (parentQueue?.PartitionManager == null)
+                continue;
+
+            // Skip if already attached (e.g. triggered by some other path)
+            if (subQueue.IsPartitionQueue)
+                continue;
+
+            parentQueue.PartitionManager.ReAttach(
+                subQueue,
+                configuration.SubPartition.PartitionId,
+                configuration.SubPartition.Label,
+                configuration.SubPartition.IsOrphan);
         }
     }
 
@@ -293,6 +356,10 @@ public class QueueRider
                     typeSpecified = true;
                     options.Type = Enums.Parse<QueueType>(queueType, true, EnumFormat.Description);
                 }
+
+                // Partition headers also force initialization so the PartitionManager is set up immediately
+                if (!typeSpecified && options.Partition is { Enabled: true })
+                    typeSpecified = true;
             }
 
             queue = new HorseQueue(Rider, queueName, options);

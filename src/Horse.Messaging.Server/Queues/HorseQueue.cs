@@ -14,6 +14,7 @@ using Horse.Messaging.Server.Events;
 using Horse.Messaging.Server.Logging;
 using Horse.Messaging.Server.Queues.Delivery;
 using Horse.Messaging.Server.Queues.Managers;
+using Horse.Messaging.Server.Queues.Partitions;
 using Horse.Messaging.Server.Queues.States;
 using Horse.Messaging.Server.Queues.Sync;
 using Horse.Messaging.Server.Security;
@@ -90,6 +91,30 @@ public class HorseQueue
     /// Queue statistics and information
     /// </summary>
     public QueueInfo Info { get; } = new();
+
+    /// <summary>
+    /// Partition manager for this queue.
+    /// Non-null only when Options.Partition.Enabled = true and IsPartitionQueue = false.
+    /// </summary>
+    public PartitionManager PartitionManager { get; private set; }
+
+    /// <summary>
+    /// True when this queue is a virtual parent queue with active partitions.
+    /// </summary>
+    public bool IsPartitioned => PartitionManager != null;
+
+    /// <summary>
+    /// True when this queue IS a partition sub-queue (child of a partitioned parent).
+    /// Prevents recursive partitioning.
+    /// </summary>
+    public bool IsPartitionQueue { get; internal set; } = false;
+
+    /// <summary>
+    /// Non-null when <see cref="IsPartitionQueue"/> is true.
+    /// Carries the parent queue name, partition id, label and orphan flag used for
+    /// persistence and restart recovery.
+    /// </summary>
+    public SubPartitionMeta PartitionMeta { get; internal set; }
 
     /// <summary>
     /// Queue manager name
@@ -276,6 +301,19 @@ public class HorseQueue
 
             Status = QueueStatus.Running;
 
+            // Initialize partition manager for partitioned queues (not for partition sub-queues)
+            if (Options.Partition is { Enabled: true } && !IsPartitionQueue)
+            {
+                PartitionManager = new PartitionManager(this, Options.Partition);
+
+                // Pre-create orphan when WaitForAcknowledge to guarantee subscriber availability
+                if (Options.Acknowledge == QueueAckDecision.WaitForAcknowledge &&
+                    Options.Partition.EnableOrphanPartition)
+                {
+                    _ = PartitionManager.GetOrCreateOrphanQueue();
+                }
+            }
+
             _triggerTimer = new Timer(a =>
             {
                 if (!_triggering && State != null && State.TriggerSupported)
@@ -307,6 +345,14 @@ public class HorseQueue
 
         try
         {
+            // Destroy all partition sub-queues before destroying the parent
+            if (IsPartitioned)
+            {
+                PartitionManager.Dispose();
+                foreach (PartitionEntry entry in PartitionManager.Partitions.ToList())
+                    await Rider.Queue.Remove(entry.Queue);
+            }
+
             await Manager.Destroy();
 
             QueueLock?.Dispose();
@@ -612,6 +658,13 @@ public class HorseQueue
 
         if (Status is QueueStatus.OnlyConsume or QueueStatus.Paused)
             return PushResult.StatusNotSupported;
+
+        // Partition routing: delegate to PartitionManager instead of pushing directly
+        if (IsPartitioned)
+        {
+            var (_, partitionResult) = await PartitionManager.RouteMessage(message, sender);
+            return partitionResult;
+        }
 
         if (Options.MessageLimit > 0)
         {
@@ -1305,7 +1358,7 @@ public class HorseQueue
         {
             for (int i = 0; i < _queueClients.Length; i++)
             {
-                if (Options.ClientLimit > 0 && i + 1 >= Options.ClientLimit)
+                if (Options.ClientLimit > 0 && i + 1 > Options.ClientLimit)
                     return SubscriptionResult.Full;
 
                 if (_queueClients[i] == null)

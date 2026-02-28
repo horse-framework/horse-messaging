@@ -586,6 +586,47 @@ public class QueueOperator : IDisposable
     }
 
     /// <summary>
+    /// Subscribes to a partitioned queue.
+    /// <para>
+    /// <paramref name="partitionLabel"/> — worker routing label; the server routes messages
+    /// with a matching <c>Partition-Label</c> header to the partition owned by this worker.
+    /// </para>
+    /// <para>
+    /// <paramref name="maxPartitions"/> — if the queue does not yet exist and
+    /// <c>AutoQueueCreation</c> is enabled on the server, the queue will be created with
+    /// this partition limit. Pass <c>0</c> to use the server default.
+    /// </para>
+    /// <para>
+    /// <paramref name="subscribersPerPartition"/> — maximum subscribers per partition when
+    /// the queue is auto-created. Pass <c>0</c> to use the server default.
+    /// </para>
+    /// </summary>
+    public Task<HorseResult> SubscribePartitioned(
+        string queue,
+        string partitionLabel,
+        bool verifyResponse,
+        int maxPartitions = 0,
+        int subscribersPerPartition = 0,
+        IEnumerable<KeyValuePair<string, string>> additionalHeaders = null)
+    {
+        var headers = new List<KeyValuePair<string, string>>();
+
+        if (!string.IsNullOrEmpty(partitionLabel))
+            headers.Add(new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, partitionLabel));
+
+        if (maxPartitions > 0)
+            headers.Add(new KeyValuePair<string, string>(HorseHeaders.PARTITION_LIMIT, maxPartitions.ToString()));
+
+        if (subscribersPerPartition > 0)
+            headers.Add(new KeyValuePair<string, string>(HorseHeaders.PARTITION_SUBSCRIBERS, subscribersPerPartition.ToString()));
+
+        if (additionalHeaders != null)
+            headers.AddRange(additionalHeaders);
+
+        return Subscribe(queue, verifyResponse, headers);
+    }
+
+    /// <summary>
     /// Re-registers the consumer type for another queue name and subscribes to the queue
     /// </summary>
     public Task<HorseResult> Subscribe<TConsumer, TModel>(string queue, bool verifyResponse, IEnumerable<KeyValuePair<string, string>> headers = null)

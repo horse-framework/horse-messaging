@@ -20,6 +20,10 @@
     </ItemGroup>
 
     <ItemGroup>
+      <EmbeddedResource Include="xunit.runner.json" />
+    </ItemGroup>
+
+    <ItemGroup>
       <ProjectReference Include="..\..\Horse.Messaging.Client\Horse.Messaging.Client.csproj" />
       <ProjectReference Include="..\..\Horse.Messaging.Data\Horse.Messaging.Data.csproj" />
       <ProjectReference Include="..\..\Horse.Messaging.Server\Horse.Messaging.Server.csproj" />

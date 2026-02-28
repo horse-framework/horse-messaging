@@ -10,107 +10,111 @@ namespace Horse.Messaging.Client.Queues;
 public interface IHorseQueueBus<TIdentifier> : IHorseQueueBus
 {
 }
-    
+
 /// <summary>
 /// Implementation for queue messages and requests
 /// </summary>
 public interface IHorseQueueBus : IHorseConnection
 {
-    /// <summary>
-    /// Pushes a message into a queue
-    /// </summary>
-    /// <param name="queue">Target queue name</param>
-    /// <param name="content">Message content</param>
-    /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
-    /// <param name="messageHeaders">Additional message headers</param>
-    /// <returns></returns>
+    // ──────────────────────────────────────────────────────────────────
+    // Push
+    // ──────────────────────────────────────────────────────────────────
+
+    /// <summary>Pushes a message into a queue.</summary>
     Task<HorseResult> Push(string queue, MemoryStream content, bool waitForCommit = false,
         IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
-    /// <summary>
-    /// Pushes a message into a queue
-    /// </summary>
-    /// <param name="queue">Target queue name</param>
-    /// <param name="content">Message content</param>
-    /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
-    /// <param name="messageHeaders">Additional message headers</param>
-    /// <returns></returns>
+    /// <summary>Pushes a message into a queue.</summary>
     Task<HorseResult> Push(string queue, string content, bool waitForCommit = false,
         IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
-    /// <summary>
-    /// Pushes a message into a queue
-    /// </summary>
-    /// <param name="queue">Target queue name</param>
-    /// <param name="content">Message content</param>
-    /// <param name="messageId">Message Id string</param>
-    /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
-    /// <param name="messageHeaders">Additional message headers</param>
-    /// <returns></returns>
+    /// <summary>Pushes a message into a queue.</summary>
     Task<HorseResult> Push(string queue, MemoryStream content, string messageId, bool waitForCommit = false,
         IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
-    /// <summary>
-    /// Pushes a message into a queue
-    /// </summary>
-    /// <param name="queue">Target queue name</param>
-    /// <param name="content">Message content</param>
-    /// <param name="messageId">Message Id string</param>
-    /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
-    /// <param name="messageHeaders">Additional message headers</param>
-    /// <returns></returns>
+    /// <summary>Pushes a message into a queue.</summary>
     Task<HorseResult> Push(string queue, string content, string messageId, bool waitForCommit = false,
         IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
-    /// <summary>
-    /// Pushes a JSON message into a queue
-    /// </summary>
-    /// <param name="jsonObject">The object that will be serialized to JSON string</param>
-    /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
-    /// <param name="messageHeaders">Additional message headers</param>
-    /// <returns></returns>
+    // ──────────────────────────────────────────────────────────────────
+    // PushJson
+    // ──────────────────────────────────────────────────────────────────
+
+    /// <summary>Pushes a JSON message into a queue. Queue name is resolved from the type's [QueueName] attribute.</summary>
     Task<HorseResult> PushJson(object jsonObject, bool waitForCommit = false,
         IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
-    /// <summary>
-    /// Pushes a JSON message into a specified queue
-    /// </summary>
-    /// <param name="queue">Target queue name</param>
-    /// <param name="jsonObject">The object that will be serialized to JSON string</param>
-    /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
-    /// <param name="messageHeaders">Additional message headers</param>
-    /// <returns></returns>
+    /// <summary>Pushes a JSON message into a specified queue.</summary>
     Task<HorseResult> PushJson(string queue, object jsonObject, bool waitForCommit = false,
         IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
-    /// <summary>
-    /// Pushes a JSON message into a queue
-    /// </summary>
-    /// <param name="jsonObject">The object that will be serialized to JSON string</param>
-    /// <param name="messageId">Message Id string</param>
-    /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
-    /// <param name="messageHeaders">Additional message headers</param>
-    /// <returns></returns>
+    /// <summary>Pushes a JSON message into a queue with an explicit message id.</summary>
     Task<HorseResult> PushJson(object jsonObject, string messageId, bool waitForCommit = false,
         IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
-    /// <summary>
-    /// Pushes a JSON message into a specified queue
-    /// </summary>
-    /// <param name="queue">Target queue name</param>
-    /// <param name="messageId">Message Id string</param>
-    /// <param name="jsonObject">The object that will be serialized to JSON string</param>
-    /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
-    /// <param name="messageHeaders">Additional message headers</param>
-    /// <returns></returns>
+    /// <summary>Pushes a JSON message into a specified queue with an explicit message id.</summary>
     Task<HorseResult> PushJson(string queue, object jsonObject, string messageId, bool waitForCommit = false,
         IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
 
+    // ──────────────────────────────────────────────────────────────────
+    // Partition Push  — separate method names are required because
+    // Push(string queue, string partitionLabel, ...) and
+    // Push(string queue, string content, ...) have identical signatures
+    // and cannot be distinguished by the C# overload resolver.
+    // ──────────────────────────────────────────────────────────────────
+
     /// <summary>
-    /// Request a pull request
+    /// Pushes a message into a specific partition of a queue identified by <paramref name="partitionLabel"/>.
+    /// Pass <c>null</c> for label-less routing (orphan or round-robin depending on server config).
     /// </summary>
-    /// <param name="request">Pull request object</param>
-    /// <param name="actionForEachMessage">Action for each pulled messages</param>
-    /// <returns></returns>
+    Task<HorseResult> PushToPartition(string queue, string partitionLabel, MemoryStream content,
+        bool waitForCommit = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+
+    /// <inheritdoc cref="PushToPartition(string,string,MemoryStream,bool,IEnumerable{KeyValuePair{string,string}})"/>
+    Task<HorseResult> PushToPartition(string queue, string partitionLabel, string content,
+        bool waitForCommit = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+
+    /// <inheritdoc cref="PushToPartition(string,string,MemoryStream,bool,IEnumerable{KeyValuePair{string,string}})"/>
+    Task<HorseResult> PushToPartition(string queue, string partitionLabel, MemoryStream content,
+        string messageId, bool waitForCommit = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+
+    /// <inheritdoc cref="PushToPartition(string,string,MemoryStream,bool,IEnumerable{KeyValuePair{string,string}})"/>
+    Task<HorseResult> PushToPartition(string queue, string partitionLabel, string content,
+        string messageId, bool waitForCommit = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+
+    // ──────────────────────────────────────────────────────────────────
+    // Partition PushJson  — same rationale: PushJson(string, object)
+    // vs PushJson(string partitionLabel, object) are identical signatures.
+    // ──────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Pushes a JSON-serialised object into a specific partition of a queue.
+    /// Queue name is resolved from the type's <c>[QueueName]</c> attribute.
+    /// </summary>
+    Task<HorseResult> PushJsonToPartition(string partitionLabel, object jsonObject,
+        bool waitForCommit = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+
+    /// <summary>
+    /// Pushes a JSON-serialised object into a specific partition of the given queue.
+    /// </summary>
+    Task<HorseResult> PushJsonToPartition(string queue, string partitionLabel, object jsonObject,
+        bool waitForCommit = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+
+    /// <inheritdoc cref="PushJsonToPartition(string,object,bool,IEnumerable{KeyValuePair{string,string}})"/>
+    Task<HorseResult> PushJsonToPartition(string partitionLabel, object jsonObject, string messageId,
+        bool waitForCommit = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+
+    /// <inheritdoc cref="PushJsonToPartition(string,string,object,bool,IEnumerable{KeyValuePair{string,string}})"/>
+    Task<HorseResult> PushJsonToPartition(string queue, string partitionLabel, object jsonObject,
+        string messageId, bool waitForCommit = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+
+    // ──────────────────────────────────────────────────────────────────
+    // Pull
+    // ──────────────────────────────────────────────────────────────────
+
+    /// <summary>Request a pull request.</summary>
     Task<PullContainer> Pull(PullRequest request, Func<int, HorseMessage, Task> actionForEachMessage = null);
 }

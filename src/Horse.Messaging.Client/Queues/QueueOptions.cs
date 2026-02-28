@@ -12,7 +12,7 @@ public class QueueOptions
     /// Acknowledge decisions:
     /// "none": Acknowledge is disabled
     /// "request": Requests acknowledge but doesn't wait until ack is received
-    /// "wait": Requests ack and waits until acknowledge is received
+    /// "wait-for-ack": Requests ack and waits until acknowledge is received
     /// </summary>
     [JsonPropertyName("Acknowledge")]
     public string Acknowledge { get; set; }
