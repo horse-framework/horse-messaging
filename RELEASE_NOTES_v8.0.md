@@ -794,17 +794,6 @@ Task<HorseResult> Push(string queue, byte[] data, string messageId, bool waitFor
 All public APIs now follow a consistent parameter order:
 `(target, content/model, [messageId], waitForCommit/waitForAcknowledge, [contentType], messageHeaders, [partitionLabel], cancellationToken)`
 
-### PushToPartition Methods Removed — `partitionLabel` Merged into Push
-
-All `PushToPartition` / `PushToPartition<T>` methods have been **removed** from `IHorseQueueBus` and `HorseQueueBus`.
-Partition routing is now an optional `string partitionLabel = null` parameter on every `Push` overload.
-
-**Before (v8.0-preview):**
-```csharp
-await bus.PushToPartition("FetchOrders", "tenant-42", model, false);
-await bus.PushToPartition("FetchOrders", "tenant-42", stream, false);
-```
-
 **After (v8.0):**
 ```csharp
 await bus.Push("FetchOrders", model, false, partitionLabel: "tenant-42");
