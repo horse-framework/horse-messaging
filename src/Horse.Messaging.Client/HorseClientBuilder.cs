@@ -579,6 +579,32 @@ public class HorseClientBuilder
     }
 
     /// <summary>
+    /// Adds a queue consumer with transient life time and subscribes to a partitioned queue.
+    /// </summary>
+    /// <param name="partitionLabel">
+    /// Routing label sent as <c>Partition-Label</c> header.
+    /// Pass <c>null</c> or empty string for label-less (orphan / round-robin) partitioned subscribe.
+    /// </param>
+    /// <param name="maxPartitions">
+    /// Maximum partitions forwarded as <c>Partition-Limit</c> header for auto-create. 0 = server default.
+    /// </param>
+    /// <param name="subscribersPerPartition">
+    /// Max subscribers per partition for auto-create. 0 = server default.
+    /// </param>
+    public HorseClientBuilder AddTransientConsumer<TConsumer>(string partitionLabel, int maxPartitions = 0, int subscribersPerPartition = 0) where TConsumer : class
+    {
+        if (_services == null)
+            throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                            "If you want to use transient queue consumers " +
+                                            "Build HorseClient with IServiceCollection");
+
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), partitionLabel, maxPartitions, subscribersPerPartition);
+        _services.AddTransient<TConsumer>();
+        return this;
+    }
+
+    /// <summary>
     /// Adds a queue consumer with scoped life time
     /// </summary>
     public HorseClientBuilder AddScopedConsumer<TConsumer>() where TConsumer : class
@@ -595,6 +621,28 @@ public class HorseClientBuilder
     }
 
     /// <summary>
+    /// Adds a queue consumer with scoped life time and subscribes to a partitioned queue.
+    /// </summary>
+    /// <param name="partitionLabel">
+    /// Routing label sent as <c>Partition-Label</c> header.
+    /// Pass <c>null</c> or empty string for label-less partitioned subscribe.
+    /// </param>
+    /// <param name="maxPartitions">Maximum partitions for auto-create. 0 = server default.</param>
+    /// <param name="subscribersPerPartition">Max subscribers per partition. 0 = server default.</param>
+    public HorseClientBuilder AddScopedConsumer<TConsumer>(string partitionLabel, int maxPartitions = 0, int subscribersPerPartition = 0) where TConsumer : class
+    {
+        if (_services == null)
+            throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                            "If you want to use scoped queue consumers " +
+                                            "Build HorseClient with IServiceCollection");
+
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), partitionLabel, maxPartitions, subscribersPerPartition);
+        _services.AddScoped<TConsumer>();
+        return this;
+    }
+
+    /// <summary>
     /// Adds a queue consumer with singleton life time
     /// </summary>
     public HorseClientBuilder AddSingletonConsumer<TConsumer>() where TConsumer : class
@@ -605,6 +653,29 @@ public class HorseClientBuilder
         else
         {
             registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton));
+            _services.AddSingleton<TConsumer>();
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a queue consumer with singleton life time and subscribes to a partitioned queue.
+    /// </summary>
+    /// <param name="partitionLabel">
+    /// Routing label sent as <c>Partition-Label</c> header.
+    /// Pass <c>null</c> or empty string for label-less partitioned subscribe.
+    /// </param>
+    /// <param name="maxPartitions">Maximum partitions for auto-create. 0 = server default.</param>
+    /// <param name="subscribersPerPartition">Max subscribers per partition. 0 = server default.</param>
+    public HorseClientBuilder AddSingletonConsumer<TConsumer>(string partitionLabel, int maxPartitions = 0, int subscribersPerPartition = 0) where TConsumer : class
+    {
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        if (_services == null)
+            registrar.RegisterConsumer(typeof(TConsumer), null, partitionLabel, maxPartitions, subscribersPerPartition);
+        else
+        {
+            registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), partitionLabel, maxPartitions, subscribersPerPartition);
             _services.AddSingleton<TConsumer>();
         }
 

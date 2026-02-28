@@ -73,6 +73,20 @@ public class QueueOperator : IDisposable
 
         //consume push state queue message
         QueueConsumerRegistration reg = Registrations.FirstOrDefault(x => x.QueueName == message.Target);
+
+        // If not found by exact name, check whether this is a partition sub-queue message
+        // (e.g. "FetchOrders-Partition-a3k9x" → look up by parent queue name "FetchOrders").
+        if (reg == null && message.Target != null)
+        {
+            const string partitionSuffix = "-Partition-";
+            int idx = message.Target.LastIndexOf(partitionSuffix, StringComparison.Ordinal);
+            if (idx > 0)
+            {
+                string parentQueueName = message.Target.Substring(0, idx);
+                reg = Registrations.FirstOrDefault(x => x.QueueName == parentQueueName);
+            }
+        }
+
         if (reg == null)
             return;
 
@@ -643,7 +657,11 @@ public class QueueOperator : IDisposable
             ConsumerExecuter = current.ConsumerExecuter,
             ConsumerType = current.ConsumerType,
             MessageType = current.MessageType,
-            QueueName = queue
+            QueueName = queue,
+            // carry partition metadata from the original registration
+            PartitionLabel = current.PartitionLabel,
+            MaxPartitions = current.MaxPartitions,
+            SubscribersPerPartition = current.SubscribersPerPartition
         };
 
         foreach (InterceptorTypeDescriptor descriptor in current.InterceptorDescriptors)

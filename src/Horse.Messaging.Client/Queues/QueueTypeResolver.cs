@@ -152,5 +152,14 @@ internal class QueueTypeResolver : ITypeDescriptorResolver<QueueTypeDescriptor>
         IEnumerable<MessageHeaderAttribute> headerAttributes = type.GetCustomAttributes<MessageHeaderAttribute>(true);
         foreach (MessageHeaderAttribute headerAttribute in headerAttributes)
             descriptor.Headers.Add(new KeyValuePair<string, string>(headerAttribute.Key, headerAttribute.Value));
+
+        // ── Partition attribute ───────────────────────────────────────────────
+        PartitionedQueueAttribute partAttr = type.GetCustomAttribute<PartitionedQueueAttribute>(true);
+        if (partAttr != null)
+        {
+            descriptor.PartitionLabel = partAttr.Label ?? string.Empty;
+            descriptor.MaxPartitions = partAttr.MaxPartitions;
+            descriptor.SubscribersPerPartition = partAttr.SubscribersPerPartition;
+        }
     }
 }

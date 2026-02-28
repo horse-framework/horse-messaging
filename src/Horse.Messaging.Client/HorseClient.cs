@@ -1348,7 +1348,24 @@ public class HorseClient : IDisposable
                 }
             }
 
-            HorseResult joinResult = await Queue.Subscribe(registration.QueueName, true, descriptorHeaders);
+            HorseResult joinResult;
+            if (registration.IsPartitioned)
+            {
+                // Use SubscribePartitioned so Partition-Label / Partition-Limit /
+                // Partition-Subscribers headers are forwarded correctly.
+                joinResult = await Queue.SubscribePartitioned(
+                    queue: registration.QueueName,
+                    partitionLabel: string.IsNullOrEmpty(registration.PartitionLabel) ? null : registration.PartitionLabel,
+                    verifyResponse: true,
+                    maxPartitions: registration.MaxPartitions,
+                    subscribersPerPartition: registration.SubscribersPerPartition,
+                    additionalHeaders: descriptorHeaders.Count > 0 ? descriptorHeaders : null);
+            }
+            else
+            {
+                joinResult = await Queue.Subscribe(registration.QueueName, true, descriptorHeaders);
+            }
+
             if (joinResult.Code == HorseResultCode.Ok)
                 continue;
 

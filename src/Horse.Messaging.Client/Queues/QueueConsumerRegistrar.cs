@@ -44,6 +44,24 @@ public class QueueConsumerRegistrar
     }
 
     /// <summary>
+    /// Registers a single consumer with explicit partition options.
+    /// The <paramref name="partitionLabel"/> overrides any
+    /// <see cref="Annotations.PartitionedQueueAttribute"/> present on the consumer or model type.
+    /// </summary>
+    /// <param name="consumerFactoryBuilder">Optional factory for DI-based consumer creation.</param>
+    /// <param name="partitionLabel">
+    /// Routing label for the partition. Use <c>null</c> to keep the value resolved from
+    /// attributes (or no partition). Use <see cref="string.Empty"/> for label-less
+    /// partitioned subscribe (orphan / round-robin path).
+    /// </param>
+    /// <param name="maxPartitions">Maximum partitions for auto-create. 0 = server default.</param>
+    /// <param name="subscribersPerPartition">Max subscribers per partition. 0 = server default.</param>
+    public void RegisterConsumer<TConsumer>(Func<IHandlerFactory> consumerFactoryBuilder, string partitionLabel, int maxPartitions = 0, int subscribersPerPartition = 0)
+    {
+        RegisterConsumer(typeof(TConsumer), consumerFactoryBuilder, partitionLabel, maxPartitions, subscribersPerPartition);
+    }
+
+    /// <summary>
     /// Registers all IQueueConsumers in assemblies
     /// </summary>
     public IEnumerable<Type> RegisterAssemblyConsumers(Func<IHandlerFactory> consumerFactoryBuilder, params Type[] assemblyTypes)
@@ -80,6 +98,21 @@ public class QueueConsumerRegistrar
     /// </summary>
     public void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder = null)
     {
+        RegisterConsumer(consumerType, consumerFactoryBuilder, partitionLabel: null, 0, 0, overridePartition: false);
+    }
+
+    /// <summary>
+    /// Registers a single consumer with explicit partition options that override any attributes on the type.
+    /// </summary>
+    public void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder,
+        string partitionLabel, int maxPartitions = 0, int subscribersPerPartition = 0)
+    {
+        RegisterConsumer(consumerType, consumerFactoryBuilder, partitionLabel, maxPartitions, subscribersPerPartition, overridePartition: true);
+    }
+
+    private void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder,
+        string partitionLabel, int maxPartitions, int subscribersPerPartition, bool overridePartition)
+    {
         List<ModelTypeInfo> types = FindModelTypes(consumerType);
 
         foreach (ModelTypeInfo typeInfo in types)
@@ -87,6 +120,14 @@ public class QueueConsumerRegistrar
             QueueConsumerRegistration registration = CreateConsumerRegistration(typeInfo, consumerFactoryBuilder);
             if (registration == null)
                 throw new TypeLoadException("Cant resolve consumer type");
+
+            // Builder-level partition settings override attribute-level ones
+            if (overridePartition)
+            {
+                registration.PartitionLabel = partitionLabel ?? string.Empty;
+                registration.MaxPartitions = maxPartitions;
+                registration.SubscribersPerPartition = subscribersPerPartition;
+            }
 
             lock (_operator.Registrations)
                 _operator.Registrations.Add(registration);
@@ -151,6 +192,21 @@ public class QueueConsumerRegistrar
             ConsumerType = typeInfo.ConsumerType,
             ConsumerExecuter = executor
         };
+
+        // ── Partition metadata from consumer-level attributes ─────────────────
+        // PartitionLabel: consumer descriptor wins, fall back to model descriptor
+        if (consumerDescriptor.PartitionLabel != null)
+        {
+            registration.PartitionLabel = consumerDescriptor.PartitionLabel;
+            registration.MaxPartitions = consumerDescriptor.MaxPartitions;
+            registration.SubscribersPerPartition = consumerDescriptor.SubscribersPerPartition;
+        }
+        else if (modelDescriptor.PartitionLabel != null)
+        {
+            registration.PartitionLabel = modelDescriptor.PartitionLabel;
+            registration.MaxPartitions = modelDescriptor.MaxPartitions;
+            registration.SubscribersPerPartition = modelDescriptor.SubscribersPerPartition;
+        }
 
         registration.InterceptorDescriptors.AddRange(ResolveInterceptorAttributes(typeInfo, !useConsumerFactory));
 
