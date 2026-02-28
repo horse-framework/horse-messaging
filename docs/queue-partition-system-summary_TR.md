@@ -521,547 +521,68 @@ HorseEventType.QueuePartitionDestroyed // Partition yok edildi
 
 ## Client API Özeti
 
-### `SubscribePartitioned` (QueueOperator)
+### Attribute Tabanlı Konfigürasyon (Önerilen)
+
+Partition seçenekleri tek bir `[PartitionedQueue]` attribute ile consumer veya model sınıfında bildirilebilir — builder'da kod değişikliğine gerek yok.
 
 ```csharp
-// client.Queue üzerinden doğrudan kullanım
-Task<HorseResult> QueueOperator.SubscribePartitioned(
-    string   queue,
-    string   partitionLabel,              // null = label'sız
-    bool     verifyResponse,
-    int      maxPartitions       = 0,     // AutoCreate için PARTITION_LIMIT
-    int      subscribersPerPartition = 0, // AutoCreate için PARTITION_SUBSCRIBERS
-    IEnumerable<KeyValuePair<string,string>> additionalHeaders = null);
-```
+// ── Consumer sınıfında — tenant-42'ye özel partition ─────────────────
+[PartitionedQueue("tenant-42", MaxPartitions = 10, SubscribersPerPartition = 1)]
+public class FetchOrderConsumer : IQueueConsumer<FetchOrderEvent>
+{~~~~
+    public Task Consume(HorseMessage rawMessage, FetchOrderEvent model, HorseClient client)
+    {
+        // ...
+        return Task.CompletedTask;
+    }
+}
 
-Bu method aşağıdaki header'ları otomatik inşa eder:
+// ── Label'sız partitioned subscribe (orphan / round-robin yolu) ───────
+[PartitionedQueue(MaxPartitions = 5)]
+public class JobConsumer : IQueueConsumer<JobEvent> { ... }
 
-| Header | Koşul |
-|---|---|
-| `Partition-Label` | `partitionLabel` null değilse |
-| `Partition-Limit` | `maxPartitions > 0` ise |
-| `Partition-Subscribers` | `subscribersPerPartition > 0` ise |
-
-**Örnekler:**
-
-```csharp
-// Tenant izolasyonu
-await client.Queue.SubscribePartitioned("FetchOrders", "tenant-42", true, 10, 1);
-
-// Label'sız, orphan üzerinden dağıtım
-await client.Queue.SubscribePartitioned("JobQueue", null, true, 5, 1);
-
-// Auto-create ile, queue yoksa server oluşturur
-await client.Queue.SubscribePartitioned("new-queue", "w1", true, maxPartitions: 8);
-```
-
-### Subscribe Response
-
-Partitioned queue'ya subscribe başarılıysa response aşağıdaki header'ları içerir:
-
-```
-HorseResultCode: Ok
-Partition-Id:    a3k9x                         ← hangi partition'a eklenildi
-Queue-Name:      FetchOrders-Partition-a3k9x  ← fiziksel queue adı
-```
-
----
-
-### `IHorseQueueBus` — Partition Push Overload'ları
-
-DI ile inject edilen `IHorseQueueBus` (ve `IHorseQueueBus<TIdentifier>`) nesnesi, partition'a doğrudan mesaj göndermek için tam bir overload seti içeriyor. Tüm metodlar arka planda `PARTITION_LABEL` header'ını otomatik ekler ve mevcut `Push` / `PushJson` altyapısına delege eder.
-
-#### `PushToPartition` — ham / string içerik
-
-```csharp
-// MemoryStream içerik
-Task<HorseResult> PushToPartition(
-    string queue, string partitionLabel, MemoryStream content,
-    bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-// string içerik
-Task<HorseResult> PushToPartition(
-    string queue, string partitionLabel, string content,
-    bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-// MemoryStream + explicit messageId
-Task<HorseResult> PushToPartition(
-    string queue, string partitionLabel, MemoryStream content,
-    string messageId, bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-// string içerik + explicit messageId
-Task<HorseResult> PushToPartition(
-    string queue, string partitionLabel, string content,
-    string messageId, bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-```
-
-#### `PushJsonToPartition` — JSON / model nesnesi
-
-```csharp
-// queue adı [QueueName] attribute'tan — partitionLabel zorunlu
-Task<HorseResult> PushJsonToPartition(
-    string partitionLabel, object jsonObject,
-    bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-// queue adı explicit
-Task<HorseResult> PushJsonToPartition(
-    string queue, string partitionLabel, object jsonObject,
-    bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-// queue [QueueName]'den + messageId
-Task<HorseResult> PushJsonToPartition(
-    string partitionLabel, object jsonObject, string messageId,
-    bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-// queue explicit + messageId
-Task<HorseResult> PushJsonToPartition(
-    string queue, string partitionLabel, object jsonObject,
-    string messageId, bool waitForCommit = false,
-    IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-```
-
-#### Kullanım örnekleri
-
-```csharp
-// ── DI ile inject edilmiş bus (constructor injection) ─────────────────
-// services.AddHorseBus<IHorseQueueBus>(...)
-
-// String mesaj → tenantId partition'ına
-await bus.PushToPartition("FetchOrders", tenantId, "payload");
-
-// JSON model → tenantId partition'ına (queue adı [QueueName]'den gelir)
+// ── Veya model sınıfında (o da çalışır) ───────────────────────────────
 [QueueName("FetchOrders")]
+[PartitionedQueue("tenant-42", MaxPartitions = 10, SubscribersPerPartition = 1)]
 public record FetchOrderEvent(string OrderId);
 
-await bus.PushJsonToPartition(tenantId, new FetchOrderEvent("ord-1"));
-
-// JSON model → explicit queue + messageId
-await bus.PushJsonToPartition("FetchOrders", tenantId,
-    new FetchOrderEvent("ord-1"),
-    messageId: Guid.NewGuid().ToString());
-
-// WaitForCommit (server ACK bekle)
-HorseResult result = await bus.PushToPartition("FetchOrders", tenantId, "payload",
-    waitForCommit: true);
-
-// Label null → orphan'a (veya round-robin, orphan disabled ise)
-await bus.PushToPartition("JobQueue", null, "unlabeled-payload");
+public class FetchOrderConsumer : IQueueConsumer<FetchOrderEvent> { ... }
 ```
 
-### Mesaj Gönderme (low-level — QueueOperator üzerinden)
+`AutoSubscribe = true` olduğunda client, reconnect'te bildirilen değerlerle otomatik olarak `SubscribePartitioned` çağırır.
 
-```csharp
-// Label'lı — direkt o partition'a gider
-await producer.Queue.Push("FetchOrders", content, false,
-    new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "tenant-42") });
-
-// Label'sız — orphan'a (enabled) veya round-robin'e (disabled) gider
-await producer.Queue.Push("FetchOrders", content, false);
-```
-
----
-
-## RoundRobin Queue ile Karşılaştırma
-
-Horse zaten `QueueType.RoundRobin` ile N worker'a sırayla mesaj dağıtabiliyordu. Partition sistemi buna ne katıyor?
-
-### RoundRobin Queue (mevcut sistem)
-
-```
-FetchOrders (RoundRobin)
-    ├── Worker-1  ┐
-    ├── Worker-2  ├── Hepsi aynı fiziksel queue'dan sırayla mesaj alır
-    └── Worker-3  ┘
-```
-
-- 10 worker var, mesajlar 1→2→3→…→10→1 sırasıyla dağıtılır
-- **Hepsi aynı fiziksel queue'da yarışır**
-- `WaitForAcknowledge` açıksa: Worker-1 bir mesajı işlerken Worker-2'ye sıra **gelmez** — Worker-1'in ACK'ini bekler → tüm sistem yavaşlar
-- Bir worker yavaşlarsa diğerleri de durur
-
-### Partition sistemi
-
-```
-FetchOrders (parent, Partitioned)
-    ├── Partition-a → Worker-1  (sadece kendi mesajları)
-    ├── Partition-b → Worker-2  (sadece kendi mesajları)
-    └── Partition-c → Worker-3  (sadece kendi mesajları)
-```
-
-- Her worker **kendi fiziksel queue'sunda** çalışır
-- `WaitForAcknowledge` açıksa: Worker-1 yavaşlarsa sadece `Partition-a` bekler, Worker-2 ve Worker-3 **etkilenmez**
-- Worker-1 düşerse sadece `Partition-a` silinir, diğerleri çalışmaya devam eder
-
-### Yan Yana Karşılaştırma
-
-| | RoundRobin Queue | Partition (label'sız + orphan) | Partition (label'lı) |
-|---|---|---|---|
-| Fiziksel yapı | 1 queue, N worker | N+1 queue, N worker | N queue, N worker |
-| `WaitForAck` izolasyonu | ⚠️ Worker meşgulse atlanır, mesaj başkasına gider | ✅ Her worker bağımsız | ✅ Mesaj sadece o partition'da kalır |
-| Tenant izolasyonu | ❌ Yok | ❌ Yok | ✅ Label ile tam izolasyon |
-| Worker düşünce | Mesajlar diğer worker'lara | Orphan üzerinden devam | Sadece o partition bekler |
-| Bellek | En az | Orta (+1 orphan queue) | Orta (N ayrı queue) |
-| Kurulum karmaşıklığı | Basit | Orta | Orta |
-| Ne zaman kullan | Hafif, hızlı işler | Biraz daha güvenli dağıtım | Tenant/worker izolasyonu |
-
-### WaitForAcknowledge Gerçeği
-
-> **Yaygın yanılgı:** `WaitForAcknowledge` sıralı işleme garantisi verir.  
-> **Gerçek:** Tek bir mesajın güvenli teslimini garanti eder — mesaj kaybolmaz. Sıra garantisi değildir.
-
-**RoundRobin + WaitForAck davranışı** (`RoundRobinQueueState` kaynak kodundan):
-
-```csharp
-// Worker meşgulse (CurrentlyProcessing != null) atla, bir sonrakine geç
-if (waitForAcknowledge && client.CurrentlyProcessing != null)
-    continue;
-```
-
-Yani RoundRobin, Worker-1 meşgulken Worker-2'ye geçer — sistem bloke **olmaz**. Tüm worker'lar aynı anda meşgulse o zaman bekler.
-
-**Partition + WaitForAck davranışı:**
-
-```
-Mesaj "tenant-42" label'ıyla geldi
-    → Partition-tenant42'ye gönderildi
-    → Worker-42 meşgul → mesaj Partition-tenant42'de BEKLER
-    → Başka worker'a GİTMEZ
-```
-
-Bu **gerçek izolasyondur**: tenant-42'nin mesajı yavaşlasa bile diğer tenant'ların mesajları başka partition'larında kendi hızlarında işlenir.
-
-### Partitionun Gerçekten Fark Yarattığı 2 Senaryo
-
-**Senaryo 1 — Tenant izolasyonu (en net fark):**
-
-```
-// RoundRobin ile problem:
-tenant-A'nın 10.000 ağır işi kuyrukta
-→ Worker-1, Worker-2 meşgul → tenant-B mesajı Worker-3'e atanır
-→ ama Worker-3 de dolunca tenant-B bekler
-→ tenant-A mesajları tüm worker'lar arasında "sızar"
-
-// Partition ile çözüm (label = tenantId):
-Partition-tenantA → Worker-A  (kendi hızında, diğerlerini etkilemez)
-Partition-tenantB → Worker-B  (tenant-A ne kadar yoğun olursa olsun bağımsız) ✅
-```
-
-**Senaryo 2 — Mesajın sahibini kaybetmeme:**
-
-```
-// RoundRobin + WaitForAck:
-msg-1 → Worker-1'e gönderildi, ACK bekleniyor
-msg-2 → Worker-1 meşgul → Worker-2'ye gönderildi
-// msg-1 ve msg-2 farklı worker'larda işleniyor
-// "Bu mesaj mutlaka Worker-1 tarafından işlensin" garantisi YOK
-
-// Partition + WaitForAck:
-msg-1 → Partition-worker1 → Worker-1
-msg-2 → Partition-worker1 → Worker-1 ACK vermeden geldi → BEKLER
-// msg-1 ACK gelince msg-2 işlenir
-// "Bu mesajlar sırasıyla aynı worker'da işlensin" garantisi VAR ✅
-```
-
-### Özet: Ne Zaman Hangisi?
-
-| İhtiyaç | Tercih |
+| Sözdizimi | Etki |
 |---|---|
-| Basit yük dağıtımı, hızlı işler | RoundRobin yeterli |
-| Worker meşgulken mesaj başkasına gitmesin | **Partition (label'lı)** |
-| Tenant/müşteri bazlı tam izolasyon | **Partition (label'lı)** |
-| Mesajlar sırasıyla aynı worker'da işlensin | **Partition (label'lı, SubscribersPerPartition=1)** |
-| Worker düşünce sadece onu etkilesin | **Partition** |
-| En az bellek, en basit yapı | RoundRobin |
+| `[PartitionedQueue("label")]` | Subscribe'da `Partition-Label` header'ı gönderir |
+| `[PartitionedQueue("label", MaxPartitions = N)]` | Auto-create için `Partition-Limit: N` de gönderir |
+| `[PartitionedQueue("label", MaxPartitions = N, SubscribersPerPartition = M)]` | Her üç partition header'ını gönderir |
+| `[PartitionedQueue]` veya `[PartitionedQueue(null)]` | Label'sız partitioned subscribe (orphan / round-robin) |
 
 ---
 
-## QueueType ve Partition Davranışı
-
-Parent queue'ya verilen `QueueType` (`Push`, `RoundRobin`, `Pull`) **partition queue'lara `CloneFrom` ile aktarılır**. Yani her partition kendi içinde o tip gibi davranır. Parent queue'nun tipi yalnızca routing kararını değil, mesajın partition'a **ulaştıktan sonraki** dağıtım biçimini de belirler.
-
-```
-Producer → Push("FetchOrders", msg)
-               │
-         PartitionManager.RouteMessage  ← label veya round-robin ile seçim
-               │
-         target = Partition-a3k9x
-               │
-         target.Push(msg)  ← BURADAN SONRA QueueType devreye girer
-               │
-     QueueType neyse ona göre davranır
-```
-
-### Push + Partition (`QueueType.Push`)
+### `HorseClientBuilder` — Partition ile Consumer Kaydı
 
 ```csharp
-opts.Type = QueueType.Push;
-opts.Partition = new PartitionOptions { SubscribersPerPartition = 3 };
+// ── Singleton (en yaygın) ─────────────────────────────────────────────
+services.AddHorseClient(b => b
+    .AddHost("horse://localhost:2626")
+    // düz — partition yok
+    .AddSingletonConsumer<FetchOrderConsumer>()
+    // explicit partition label — attribute varsa üzerine yazar
+    .AddSingletonConsumer<FetchOrderConsumer>("tenant-42", maxPartitions: 10, subscribersPerPartition: 1)
+    // label'sız partitioned (orphan / round-robin yolu)
+    .AddSingletonConsumer<JobConsumer>(partitionLabel: "", maxPartitions: 5));
+
+// ── Transient ─────────────────────────────────────────────────────────
+.AddTransientConsumer<FetchOrderConsumer>("tenant-42", maxPartitions: 10, subscribersPerPartition: 1)
+
+// ── Scoped ────────────────────────────────────────────────────────────
+.AddScopedConsumer<FetchOrderConsumer>("tenant-42", maxPartitions: 10, subscribersPerPartition: 1)
 ```
 
-- Mesaj partition'a gelince `PushQueueState.ProcessMessage` çalışır
-- Partition'daki **tüm subscriber'lara aynı anda** gönderilir
-- `SubscribersPerPartition = 3` ile 3 worker aynı mesajı alır (broadcast içi)
-- Genellikle `SubscribersPerPartition = 1` ile kullanılır — o zaman Push ve RoundRobin arasında fark kalmaz
-
-```
-Partition-a3k9x (Push, 3 subscriber)
-    ├── Worker-1a  ┐
-    ├── Worker-1b  ├── msg-1'i hepsi alır (broadcast)
-    └── Worker-1c  ┘
-```
-
-**Ne zaman kullanılır:** Her partition için hem yedek (redundancy) hem de partition izolasyonu istiyorsanız. Örneğin her tenant için 3 replika worker.
+Öncelik: **builder parametresi > `[PartitionedQueue]` attribute > partition yok**.
 
 ---
-
-### RoundRobin + Partition (`QueueType.RoundRobin`)
-
-```csharp
-opts.Type = QueueType.RoundRobin;
-opts.Partition = new PartitionOptions { SubscribersPerPartition = 3 };
-```
-
-- Mesaj partition'a gelince `RoundRobinQueueState.Push` çalışır
-- Partition'daki subscriber'lardan **sıradakine** gönderilir (1'e)
-- `SubscribersPerPartition = 3` ile aynı partition'da 3 worker vardır, her mesaj sırayla birine gider
-- `WaitForAcknowledge` ile meşgul worker atlanır, boştaki bir sonrakine geçilir
-
-```
-Partition-a3k9x (RoundRobin, 3 subscriber)
-    ├── Worker-1a  ← msg-1
-    ├── Worker-1b  ← msg-2
-    └── Worker-1c  ← msg-3
-         msg-4 → Worker-1a (döngü)
-```
-
-**Ne zaman kullanılır:** Aynı tenant'ın yükü tek bir worker'a sığmıyor ama diğer tenant'larla da karışmasın istiyorsanız. Örneğin her tenant için kendi worker havuzu.
-
----
-
-### Pull + Partition (`QueueType.Pull`)
-
-```csharp
-opts.Type = QueueType.Pull;
-opts.Partition = new PartitionOptions { ... };
-```
-
-- Mesaj partition'a gelince `PullQueueState.Push` çalışır — bu metod sadece `return Success` döndürür, mesajı **depoya yazar**
-- Consumer aktif olarak `Pull` isteği göndermeden mesaj iletilmez
-- `SubscribePartitioned` ile subscribe olunabilir ama mesaj kendiliğinden gelmez; her işlem için `Pull` request gerekir
-- Partition izolasyonu korunur: Pull isteği hangi partition'dan geliyorsa o partition'un deposundan mesaj çekilir
-
-```
-Partition-a3k9x (Pull)
-    └── Worker-1  →  "Pull isteği" gönderir  →  Partition-a3k9x deposundan mesaj gelir
-                      (isteği olmadan mesaj gelmez)
-```
-
-**Ne zaman kullanılır:** Consumer hazır olmadan mesaj işlememesi gereken durumlar. Örneğin uzun batch işlemler, başlamadan önce hazırlık gerektiren işler.
-
----
-
-### Karşılaştırma: SubscribersPerPartition = 1 ile
-
-`SubscribersPerPartition = 1` olduğunda Push ve RoundRobin **aynı davranır** — partition'da tek subscriber olduğundan seçim fark etmez.
-
-| QueueType | SubscribersPerPartition = 1 | SubscribersPerPartition > 1 |
-|---|---|---|
-| `Push` | Tek worker alır | Tüm worker'lar alır (broadcast) |
-| `RoundRobin` | Tek worker alır | Sıradaki worker alır (1'e dağıtım) |
-| `Pull` | Worker çekene kadar bekler | Worker çekene kadar bekler |
-
-### Pratik Öneriler
-
-| İhtiyaç | Tip | SubscribersPerPartition |
-|---|---|---|
-| Tenant izolasyonu, tek işleyici | `Push` veya `RoundRobin` | 1 |
-| Tenant izolasyonu, yük paylaşımı | `RoundRobin` | N (iş yüküne göre) |
-| Partition içi broadcast / replikasyon | `Push` | N |
-| Hazır olunca çek, önce depolama | `Pull` | 1+ |
-
-> **Önemli not:** `Pull` tipi ile `SubscribePartitioned` kullanıldığında subscribe işlemi partition'u oluşturur ama mesajlar aktif pull isteği olmadan iletilmez. Bu bilerek tercih edilmesi gereken bir kombinasyondur.
-
----
-
-### Klasik Tek Queue Sorunu
-
-```
-Queue → [msg1, msg2, msg3, msg4, msg5]
-          ↓       ↓       ↓
-       Worker1  Worker1  Worker2   ← dengesiz, race condition, lock
-```
-
-Tüm consumer'lar aynı queue'dan yarışır. `WaitForAcknowledge` modunda bir consumer meşgulken diğerleri de bekler.
-
-### Partition Sistemi ile
-
-```
-FetchOrders (parent)
-    ├── Partition-a → Worker-1  (sadece kendi mesajları)
-    ├── Partition-b → Worker-2  (sadece kendi mesajları)
-    ├── Partition-c → Worker-3  (sadece kendi mesajları)
-    └── Orphan      → Worker-1 + Worker-2 + Worker-3 (label'sız fallback)
-```
-
-| Avantaj | Açıklama |
-|---|---|
-| **Sıfır lock contention** | Her worker kendi partition'ından okur, başkasını beklemez |
-| **Mesaj sahipliği** | `WaitForAck` modunda mesaj partition'da bekler, başka worker'a kaçmaz |
-| **Tenant izolasyonu** | Yoğun tenant diğer tenant'ların partition'larını etkilemez |
-| **Ölçeklenebilir** | Yeni worker = yeni partition açılır |
-| **Esnek temizlik** | Bir partition yok olursa diğerleri çalışmaya devam eder |
-| **Şeffaf producer** | Producer hâlâ `FetchOrders`'a yazar, routing sisteme aittir |
-
----
-
-## Bilinen Davranışlar ve Notlar
-
-### Label Eşleşmesi
-
-- Label karşılaştırması **büyük/küçük harf duyarsız** (`OrdinalIgnoreCase`).
-- `_labelIndex` sadece non-null label'ları saklar; label'sız partition'lar sadece `_partitions`'ta bulunur.
-
-### Subscribe Sırası
-
-```
-SubscribeClient(client, label)
-    │
-    ├─ label != null → GetOrCreateLabelPartition(label) → AddClient
-    │                   Full ise → SubscribeToOrphan(client)
-    │
-    └─ label == null → Mevcut non-orphan partition'ları dene
-                       Hepsi Full → CreatePartition(null) → AddClient
-                       MaxPartitionCount aşıldıysa → SubscribeToOrphan(client)
-    │
-    └─ EnableOrphanPartition == true → Orphan'a da ekle (her iki durumda)
-```
-
-### SubscribersPerPartition = 1 Notu
-
-`ClientLimit = 1` ile `AddClient` doğru çalışır; partition tam dolduğunda `Full` döner ve bir sonraki partition açılır. Off-by-one fix (`i + 1 > ClientLimit`) 28 Şubat 2026'da uygulandı.
-
-### QueueRider.Create ve Partition Initialization
-
-Subscribe mesajından auto-create yapılırken, `PARTITION_LIMIT` veya `PARTITION_SUBSCRIBERS` header'ı varsa `typeSpecified = true` sayılır ve queue hemen initialize edilir. Böylece `PartitionManager` anında oluşturulur (`IsPartitioned = true`).
-
-### Partition Queue'nun Options'ı
-
-Partition queue, parent queue'nun options'ını `CloneFrom` ile kopyalar. Aşağıdaki alanlar override edilir:
-
-```csharp
-partitionOptions.ClientLimit        = SubscribersPerPartition;
-partitionOptions.AutoQueueCreation  = false;   // recursive partition önlenir
-partitionOptions.Partition          = null;    // recursive partition önlenir
-```
-
-Orphan için ek override:
-```csharp
-orphanOptions.ClientLimit = 0; // sınırsız subscriber
-```
-
-### AutoDestroy ve Orphan
-
-- Orphan partition, AutoDestroy timer'ında `IsOrphan = true` kontrolü ile **atlanır** — yani hiçbir zaman otomatik silinmez.
-- Orphan ancak `HorseQueue.Destroy()` direkt çağrıldığında silinir.
-
----
-
-## Metrikler
-
-```csharp
-// Server-side: partition metriklerini tazele
-queue.Info.RefreshPartitionMetrics(queue.PartitionManager);
-
-Console.WriteLine($"Partition sayısı : {queue.Info.PartitionCount}");
-Console.WriteLine($"Orphan aktif     : {queue.Info.OrphanPartitionActive}");
-
-foreach (PartitionMetricSnapshot snap in queue.Info.PartitionMetrics)
-{
-    Console.WriteLine($"  [{snap.Label ?? "(orphan)"}]" +
-                      $"  id={snap.PartitionId}" +
-                      $"  queue={snap.QueueName}" +
-                      $"  mesaj={snap.MessageCount}" +
-                      $"  consumer={snap.ConsumerCount}" +
-                      $"  son mesaj={snap.LastMessageAt:HH:mm:ss}");
-}
-```
-
-### PartitionMetricSnapshot
-
-| Alan | Tip | Açıklama |
-|---|---|---|
-| `PartitionId` | `string` | Unique partition kimliği |
-| `Label` | `string?` | Worker label'ı (null = label'sız veya orphan) |
-| `IsOrphan` | `bool` | Orphan partition mı |
-| `QueueName` | `string` | Fiziksel queue adı |
-| `MessageCount` | `int` | Şu anda kuyruktaki mesaj sayısı |
-| `ConsumerCount` | `int` | Aktif subscriber sayısı |
-| `CreatedAt` | `DateTime` | Partition oluşturulma zamanı |
-| `LastMessageAt` | `DateTime` | Son mesaj iletim zamanı |
-
-### QueueInfo Alanları
-
-```csharp
-public int PartitionCount { get; set; }         // Toplam partition sayısı (orphan dahil)
-public bool OrphanPartitionActive { get; set; } // Orphan var ve aktif mi
-public List<PartitionMetricSnapshot> PartitionMetrics { get; set; }
-```
-
----
-
-## Event Sistemi
-
-### Server-Side Event Handler
-
-```csharp
-public class MyPartitionHandler : IPartitionEventHandler
-{
-    public Task OnPartitionCreated(HorseQueue parent, PartitionEntry entry)
-    {
-        Console.WriteLine($"[{parent.Name}] Yeni partition: {entry.PartitionId} label={entry.Label}");
-        return Task.CompletedTask;
-    }
-
-    public Task OnPartitionDestroyed(HorseQueue parent, string partitionId)
-    {
-        Console.WriteLine($"[{parent.Name}] Partition silindi: {partitionId}");
-        return Task.CompletedTask;
-    }
-}
-
-// Kayıt
-rider.Queue.PartitionEventHandlers.Add(new MyPartitionHandler());
-```
-
-### Client-Side Event Subscribe
-
-```csharp
-// QueuePartitionCreated event'ine abone ol
-await client.Event.SubscribeToQueuePartitionCreated("FetchOrders", async (ev, c) =>
-{
-    string partitionId = ev.Name;     // PartitionId
-    string queueName   = ev.Content;  // Fiziksel queue adı
-    Console.WriteLine($"Yeni partition açıldı: {partitionId} → {queueName}");
-});
-```
-
-### HorseEventType
-
-```csharp
-HorseEventType.QueuePartitionCreated   // Yeni partition oluşturuldu
-HorseEventType.QueuePartitionDestroyed // Partition yok edildi
-```
-
----
-
-## Client API Özeti
 
 ### `SubscribePartitioned` (QueueOperator)
 
@@ -1574,3 +1095,231 @@ Consumer tenant-42 ile bağlandı:
 | `TwoTenants_ConsumerBounce_FullIsolationMaintained` | A düşünce mesajlar A'nın partition'ında bekler; B asla A'nın mesajını almaz; A geri gelince tam teslim |
 | `ServerRestart_PartitionSubQueues_ReAttachedAndMessagesDelivered` | Restart sonrası sub-queue re-attach, aynı GUID korunur, 1 mesaj teslim edilir |
 | `OrphanPartition_ConsumerBounce_OfflineMessages_Delivered` | Label'sız orphan mesajları bounce sonrası teslim edilir |
+
+---
+
+## Benchmark Sonuçları
+
+> **Ortam:** Apple M1 Max · 10 çekirdek · .NET 10.0.2 (Arm64 RyuJIT AdvSIMD)  
+> **Konfigürasyon:** 1 launch · 2 warmup · 5 ölçüm iterasyonu · `Release` build  
+> **Suite konumu:** `src/Benchmarks/Benchmark.Partition/`  
+> **Çalıştırma tarihi:** 28 Şubat 2026
+
+### Suite Envanteri
+
+| # | Suite | Filtre | Benchmark Sayısı |
+|---|---|---|---|
+| 1 | Routing Maliyeti | `*RoutingCost*` | 8 |
+| 2 | Partition Ölçekleme | `*Scaling*` | 4 |
+| 3 | Partition vs. Flat RoundRobin | `*VsFlat*` | 12 |
+| 4 | Labeled Push Throughput | `*Labeled*` | 4 |
+| 5 | Orphan Throughput | `*Orphan*` | 6 |
+| 6 | Partition Lifecycle | `*Lifecycle*` | 3 |
+| 7 | Multi-Tenant İzolasyon | `*MultiTenant*` | 4 |
+| 8 | Partition İçi Broadcast | `*Broadcast*` | 3 |
+| 9 | WaitForAck İzolasyonu | `*WaitForAck*` | 8 |
+| 10 | Consumer Bounce & Redeliver | `*Bounce*` | 3 |
+| 11 | Büyük Payload Routing | `*LargePayload*` | 8 |
+
+---
+
+### 1. Routing Maliyeti — Label Lookup vs. Label'sız Round-Robin
+
+PartitionManager routing katmanının mesaj başına maliyetini ölçer (consumer backpressure yok, `QueueAckDecision.None`).
+
+| Method | PartitionCount | Ortalama | Ratio | Allocated |
+|---|---|---|---|---|
+| Routing_NoLabel_RoundRobin *(baseline)* | 1 | 37.01 µs | 1.00 | 7.78 KB |
+| Routing_LabelLookup_Push | 1 | 38.54 µs | 1.04 | 7.78 KB |
+| Routing_LabelLookup_Push | 10 | 379.07 µs | **0.95** | 79.57 KB |
+| Routing_NoLabel_RoundRobin | 10 | 399 µs | 1.00 | 95.1 KB |
+| Routing_LabelLookup_Push | 50 | 2.068 µs | **0.81** | 414.42 KB |
+| Routing_NoLabel_RoundRobin | 50 | 2.563 µs | 1.00 | 630 KB |
+| Routing_LabelLookup_Push | 100 | 4.439 µs | **0.67** | 866.64 KB |
+| Routing_NoLabel_RoundRobin | 100 | 6.657 µs | 1.00 | 1.694 KB |
+
+**Bulgular:**
+- 1 partition'da label lookup overhead'i ihmal edilebilir (+1.5 µs).
+- Label routing **sub-lineer** ölçeklenir; 100 partition'da **%33 daha hızlı**.
+- Label routing'de bellek tahsisi yüksek partition sayısında **%49'a kadar daha az**.
+
+---
+
+### 2. Partition Ölçekleme — Labeled Push (toplam 10.000 mesaj)
+
+| Method | PartitionCount | Ortalama | Rank | Allocated |
+|---|---|---|---|---|
+| PartitionScale_LabeledPush | 5 | 200.5 ms | 1 | 80.2 MB |
+| PartitionScale_LabeledPush | 10 | 216.0 ms | 1 | 58.9 MB |
+| PartitionScale_LabeledPush | 20 | 220.2 ms | 1 | 67.3 MB |
+| PartitionScale_LabeledPush | 1 | 390.1 ms | 2 | 76.1 MB |
+
+**Bulgular:** 1 partition en yavaş (390 ms). 5–20 partition eşit hızda (~200–220 ms) — paralel producer'lar tüm partition'ları eş zamanlı doyuruyor.
+
+---
+
+### 3. Partition vs. Flat RoundRobin (label'sız, acknowledge yok)
+
+| Method *(Baseline = Flat)* | WorkerCount | MessageCount | Ortalama | Ratio | Allocated |
+|---|---|---|---|---|---|
+| FlatRoundRobin | 2 | 5.000 | 177.4 ms | 1.00 | 33.5 MB |
+| PartitionedRoundRobin | 2 | 5.000 | 184.4 ms | 1.04 | 40.7 MB |
+| FlatRoundRobin | 2 | 20.000 | 706.6 ms | 1.00 | 134 MB |
+| PartitionedRoundRobin | 2 | 20.000 | 740.7 ms | 1.05 | 160 MB |
+| FlatRoundRobin | 5 | 5.000 | 173.8 ms | 1.00 | 33.5 MB |
+| PartitionedRoundRobin | 5 | 5.000 | 191.7 ms | 1.10 | 41.6 MB |
+| FlatRoundRobin | 5 | 20.000 | 696.8 ms | 1.00 | 133 MB |
+| PartitionedRoundRobin | 5 | 20.000 | 746.5 ms | 1.07 | 167 MB |
+| FlatRoundRobin | 10 | 5.000 | 173.2 ms | 1.00 | 33.5 MB |
+| PartitionedRoundRobin | 10 | 5.000 | 189.0 ms | 1.09 | 44.1 MB |
+| FlatRoundRobin | 10 | 20.000 | 691.6 ms | 1.00 | 134 MB |
+| PartitionedRoundRobin | 10 | 20.000 | 760.2 ms | 1.10 | 175.8 MB |
+
+**Bulgular:** Partition overhead saf push-throughput (ack yok) senaryolarında **%4–10**. İzolasyon, bağımsız AutoDestroy ve WaitForAck bağımsızlığının bedeli.
+
+---
+
+### 4. Labeled Push Throughput
+
+Her N labeled partition'a eş zamanlı 100 mesaj.
+
+| Method | PartitionCount | Ortalama | Allocated |
+|---|---|---|---|
+| LabeledPush_Throughput | 1 | ~38.5 µs | 7.78 KB |
+| LabeledPush_Throughput | 10 | ~379 µs | 79.6 KB |
+| LabeledPush_Throughput | 50 | ~2.068 µs | 414 KB |
+| LabeledPush_Throughput | 100 | ~4.439 µs | 867 KB |
+
+---
+
+### 5. Orphan Throughput — Label'sız Push
+
+| Method | ConsumerCount | MessageCount | Ortalama | Allocated |
+|---|---|---|---|---|
+| OrphanLabelLess_Push | 1 | 5.000 | 187.3 ms | 36.1 MB |
+| OrphanLabelLess_Push | 3 | 5.000 | 319.7 ms | 56.0 MB |
+| OrphanLabelLess_Push | 8 | 5.000 | 654.2 ms | 102.9 MB |
+| OrphanLabelLess_Push | 1 | 20.000 | 747.0 ms | 147.2 MB |
+| OrphanLabelLess_Push | 3 | 20.000 | 1.272 ms | 223.1 MB |
+| OrphanLabelLess_Push | 8 | 20.000 | 2.616 ms | 411.5 MB |
+
+**Bulgular:** Orphan throughput consumer sayısıyla **lineer** ölçeklenir (fan-out). N=8'de N=1'in ~3.5 katı. Fan-out maliyeti kabul edilemezse label'lı partition kullanılmalı.
+
+---
+
+### 6. Partition Lifecycle — Oluştur / Push / Yok Et
+
+| Method | PartitionsToCreate | Ortalama | Allocated |
+|---|---|---|---|
+| Partition_Create_Push_Destroy | 1 | 23.4 ms | 882 KB |
+| Partition_Create_Push_Destroy | 5 | 102 ms | 11.7 MB |
+| Partition_Create_Push_Destroy | 10 | 217 ms | 24.4 MB |
+
+**Bulgular:** Lifecycle maliyeti partition başına ~20–22 ms. Lineer ölçeklenir.
+
+---
+
+### 7. Multi-Tenant İzolasyon — Gürültülü Tenant
+
+| Method | TenantCount | Mesaj/tenant | Ortalama | Allocated |
+|---|---|---|---|---|
+| MultiTenant_With_NoisyTenant | 3 | 500 | 115.3 ms | 30.5 MB |
+| MultiTenant_With_NoisyTenant | 8 | 500 | 187.7 ms | 49.2 MB |
+| MultiTenant_With_NoisyTenant | 3 | 2.000 | 466.6 ms | 123.4 MB |
+| MultiTenant_With_NoisyTenant | 8 | 2.000 | 751.1 ms | 204.3 MB |
+
+**Bulgular:** 3→8 tenant geçişinde süre sadece ~%63 artıyor (beklenen 2.67× değil). Partition izolasyonu gürültülü tenant'ın diğerlerinde head-of-line blocking yapmasını engelliyor.
+
+---
+
+### 8. Partition İçi Broadcast (Push, çok subscriber)
+
+| Method | FanOut | Ortalama | Allocated |
+|---|---|---|---|
+| Broadcast_Push_PerPartition | 1 | 82.4 ms | 15.95 MB |
+| Broadcast_Push_PerPartition | 2 | 110.3 ms | 19.9 MB |
+| Broadcast_Push_PerPartition | 5 | 194.9 ms | 31.2 MB |
+
+**Bulgular:** 1.000 mesajda her ek subscriber ~28 ms ekliyor. `QueueType.Push` + `SubscribersPerPartition > 1` partition içi artıklık için kullanılır.
+
+---
+
+### 9. WaitForAck İzolasyonu — Partitioned vs. Flat
+
+Worker 0 yavaş (5 ms/mesaj), diğerleri hızlı.
+
+| Method *(Baseline = Flat)* | WorkerCount | MessageCount | Ortalama | Ratio | Allocated |
+|---|---|---|---|---|---|
+| WaitForAck_FlatQueue | 2 | 200 | 4.618 ms | 1.00 | 858 KB |
+| WaitForAck_Partitioned | 2 | 200 | 5.214 ms | **1.13** | 1.015 KB |
+| WaitForAck_FlatQueue | 2 | 1.000 | 21.79 ms | 1.00 | 4.296 KB |
+| WaitForAck_Partitioned | 2 | 1.000 | 26.34 ms | **1.21** | 5.320 KB |
+| WaitForAck_FlatQueue | 4 | 200 | 4.429 ms | 1.00 | 863 KB |
+| WaitForAck_Partitioned | 4 | 200 | 4.158 ms | **0.94** | 1.020 KB |
+| WaitForAck_FlatQueue | 4 | 1.000 | 21.97 ms | 1.00 | 5.046 KB |
+| WaitForAck_Partitioned | 4 | 1.000 | 22.91 ms | **1.04** | 5.014 KB |
+
+**Bulgular:**
+- **2 worker** (1 yavaş, 1 hızlı): Partitioned %13–21 daha yavaş — flat queue yavaş worker'ı atlayabiliyor.
+- **4 worker** (1 yavaş, 3 hızlı): Partitioned **%6 daha hızlı** — 3 hızlı worker yavaş worker'ın partition'ından hiç etkilenmiyor.
+- Partition'ın WaitForAck avantajı ≥3 worker + heterojen işlem hızında ortaya çıkar. Worker sayısı arttıkça fark büyür.
+
+---
+
+### 10. Consumer Bounce & Redeliver
+
+N mesaj push → consumer bağlantısını kes → yeniden bağlan → tüm N mesajı al.
+
+| Method | MessageCount | Ortalama | Median | Allocated |
+|---|---|---|---|---|
+| Bounce_Buffer_Redeliver | 100 | 568 ms | 943 ms | 797 KB |
+| Bounce_Buffer_Redeliver | 1.000 | 894 ms | 38 ms | 7.4 MB |
+| Bounce_Buffer_Redeliver | 5.000 | 166 ms | 166 ms | 36.7 MB |
+
+> **Not:** 100/1.000 durum için yüksek `Error` TCP yeniden bağlanma zamanlaması kaynaklı. 5.000 mesajlı durum kararlı (±9 ms).
+
+**Bulgular:** Bounce sırasında hiçbir mesaj kaybolmaz. 5.000+ mesajda redeliver hızlıdır (166 ms ≈ 30.000 mesaj/sn). Reconnect overhead sabit ~30–50 ms.
+
+---
+
+### 11. Büyük Payload Routing
+
+Partition başına 10 mesaj, labeled push, 1 KB – 256 KB.
+
+| Method | PayloadKB | PartitionCount | Ortalama | Allocated |
+|---|---|---|---|---|
+| LargePayload_Labeled_Push | 16 | 10 | 4.57 ms | 16.3 MB |
+| LargePayload_Labeled_Push | 64 | 10 | 13.8 ms | 63.1 MB |
+| LargePayload_Labeled_Push | 256 | 10 | 19.1 ms | 250.7 MB |
+| LargePayload_Labeled_Push | 1 | 10 | 27.9 ms | 7.3 MB |
+| LargePayload_Labeled_Push | 1 | 1 | 28.3 ms | 7.3 MB |
+| LargePayload_Labeled_Push | 16 | 1 | 46.5 ms | 66.4 MB |
+| LargePayload_Labeled_Push | 64 | 1 | 123 ms | 251.6 MB |
+| LargePayload_Labeled_Push | 256 | 1 | 195 ms | 976 MB |
+
+**Bulgular:**
+- 10-partition routing büyük payload'larda **4–10× daha hızlı** — paralel kanal kullanımı.
+- 256 KB × 10 partition 19 ms vs. tek partition 195 ms: **10× hızlanma**.
+- Bellek payload × partition sayısıyla lineer ölçeklenir.
+
+---
+
+### Yeniden Çalıştırma
+
+```bash
+# Tekil suite'ler:
+dotnet run -c Release -- --filter "*RoutingCost*"
+dotnet run -c Release -- --filter "*Scaling*"
+dotnet run -c Release -- --filter "*VsFlat*"
+dotnet run -c Release -- --filter "*Labeled*"
+dotnet run -c Release -- --filter "*Orphan*"
+dotnet run -c Release -- --filter "*Lifecycle*"
+dotnet run -c Release -- --filter "*MultiTenant*"
+dotnet run -c Release -- --filter "*Broadcast*"
+dotnet run -c Release -- --filter "*WaitForAck*"
+dotnet run -c Release -- --filter "*Bounce*"
+dotnet run -c Release -- --filter "*LargePayload*"
+
+# Sonuçlar şuraya yazılır:
+# src/Benchmarks/Benchmark.Partition/BenchmarkDotNet.Artifacts/results/
+```
