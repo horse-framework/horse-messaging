@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>Benchmark.Partition.OrphanThroughputBenchmark-20260228-091145</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, macOS 26.2 (25C56) [Darwin 25.2.0]
+Apple M1 Max, 1 CPU, 10 logical and 10 physical cores
+.NET SDK 10.0.102
+  [Host]     : .NET 10.0.2 (10.0.225.61305), Arm64 RyuJIT AdvSIMD
+  Job-WFPSZR : .NET 10.0.2 (10.0.225.61305), Arm64 RyuJIT AdvSIMD
+</code></pre>
+<pre><code>IterationCount=5  LaunchCount=1  WarmupCount=2  
+</code></pre>
+
+<table>
+<thead><tr><th>Method        </th><th>ConsumerCount</th><th>MessageCount</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Rank</th><th>Gen0</th><th>Gen1</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>OrphanLabelLess_Push</td><td>1</td><td>5000</td><td>187.3 ms</td><td>5.05 ms</td><td>1.31 ms</td><td>1</td><td>6000.0000</td><td>3000.0000</td><td>36.08 MB</td>
+</tr><tr><td>OrphanLabelLess_Push</td><td>3</td><td>5000</td><td>319.7 ms</td><td>8.20 ms</td><td>2.13 ms</td><td>2</td><td>9333.3333</td><td>4666.6667</td><td>56 MB</td>
+</tr><tr><td>OrphanLabelLess_Push</td><td>8</td><td>5000</td><td>654.2 ms</td><td>9.35 ms</td><td>2.43 ms</td><td>3</td><td>17000.0000</td><td>8500.0000</td><td>102.89 MB</td>
+</tr><tr><td>OrphanLabelLess_Push</td><td>1</td><td>20000</td><td>747.0 ms</td><td>13.37 ms</td><td>3.47 ms</td><td>3</td><td>24000.0000</td><td>12000.0000</td><td>147.16 MB</td>
+</tr><tr><td>OrphanLabelLess_Push</td><td>3</td><td>20000</td><td>1,272.2 ms</td><td>35.79 ms</td><td>5.54 ms</td><td>4</td><td>37000.0000</td><td>18000.0000</td><td>223.09 MB</td>
+</tr><tr><td>OrphanLabelLess_Push</td><td>8</td><td>20000</td><td>2,616.2 ms</td><td>103.01 ms</td><td>26.75 ms</td><td>5</td><td>69000.0000</td><td>34000.0000</td><td>411.47 MB</td>
+</tr></tbody></table>
+</body>
+</html>

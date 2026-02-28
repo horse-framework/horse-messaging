@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <LangVersion>default</LangVersion>
+        <TargetFramework>net10.0</TargetFramework>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <Nullable>enable</Nullable>
+        <!-- BenchmarkDotNet requires Release build for meaningful results -->
+        <Optimize>true</Optimize>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Horse.Messaging.Client\Horse.Messaging.Client.csproj" />
+        <ProjectReference Include="..\..\Horse.Messaging.Data\Horse.Messaging.Data.csproj" />
+        <ProjectReference Include="..\..\Horse.Messaging.Protocol\Horse.Messaging.Protocol.csproj" />
+        <ProjectReference Include="..\..\Horse.Messaging.Server\Horse.Messaging.Server.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+    </ItemGroup>
+
+</Project>
+

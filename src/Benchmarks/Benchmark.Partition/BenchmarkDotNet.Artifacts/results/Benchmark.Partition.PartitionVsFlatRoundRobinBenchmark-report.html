@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>Benchmark.Partition.PartitionVsFlatRoundRobinBenchmark-20260228-085854</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, macOS 26.2 (25C56) [Darwin 25.2.0]
+Apple M1 Max, 1 CPU, 10 logical and 10 physical cores
+.NET SDK 10.0.102
+  [Host]     : .NET 10.0.2 (10.0.225.61305), Arm64 RyuJIT AdvSIMD
+  Job-FBKBXN : .NET 10.0.2 (10.0.225.61305), Arm64 RyuJIT AdvSIMD
+</code></pre>
+<pre><code>IterationCount=5  LaunchCount=1  WarmupCount=2  
+</code></pre>
+
+<table>
+<thead><tr><th>Method         </th><th>WorkerCount</th><th>MessageCount</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Rank</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>FlatRoundRobin</td><td>2</td><td>5000</td><td>177.4 ms</td><td>2.85 ms</td><td>0.74 ms</td><td>1.00</td><td>0.01</td><td>1</td><td>5666.6667</td><td>3000.0000</td><td>33.59 MB</td><td>1.00</td>
+</tr><tr><td>PartitionedRoundRobin</td><td>2</td><td>5000</td><td>184.4 ms</td><td>35.75 ms</td><td>5.53 ms</td><td>1.04</td><td>0.03</td><td>1</td><td>6666.6667</td><td>3333.3333</td><td>40.71 MB</td><td>1.21</td>
+</tr><tr><td>FlatRoundRobin</td><td>2</td><td>20000</td><td>706.6 ms</td><td>13.01 ms</td><td>3.38 ms</td><td>1.00</td><td>0.01</td><td>1</td><td>22000.0000</td><td>11000.0000</td><td>134 MB</td><td>1.00</td>
+</tr><tr><td>PartitionedRoundRobin</td><td>2</td><td>20000</td><td>740.7 ms</td><td>32.85 ms</td><td>5.08 ms</td><td>1.05</td><td>0.01</td><td>1</td><td>27000.0000</td><td>14000.0000</td><td>160.02 MB</td><td>1.19</td>
+</tr><tr><td>FlatRoundRobin</td><td>5</td><td>5000</td><td>173.8 ms</td><td>3.44 ms</td><td>0.89 ms</td><td>1.00</td><td>0.01</td><td>1</td><td>5666.6667</td><td>3000.0000</td><td>33.5 MB</td><td>1.00</td>
+</tr><tr><td>PartitionedRoundRobin</td><td>5</td><td>5000</td><td>191.7 ms</td><td>23.45 ms</td><td>6.09 ms</td><td>1.10</td><td>0.03</td><td>1</td><td>7000.0000</td><td>3333.3333</td><td>41.58 MB</td><td>1.24</td>
+</tr><tr><td>FlatRoundRobin</td><td>5</td><td>20000</td><td>696.8 ms</td><td>48.81 ms</td><td>7.55 ms</td><td>1.00</td><td>0.01</td><td>1</td><td>22000.0000</td><td>11000.0000</td><td>133.07 MB</td><td>1.00</td>
+</tr><tr><td>PartitionedRoundRobin</td><td>5</td><td>20000</td><td>746.5 ms</td><td>48.76 ms</td><td>12.66 ms</td><td>1.07</td><td>0.02</td><td>1</td><td>28000.0000</td><td>14000.0000</td><td>167.1 MB</td><td>1.26</td>
+</tr><tr><td>FlatRoundRobin</td><td>10</td><td>5000</td><td>173.2 ms</td><td>2.41 ms</td><td>0.62 ms</td><td>1.00</td><td>0.00</td><td>1</td><td>5666.6667</td><td>3000.0000</td><td>33.53 MB</td><td>1.00</td>
+</tr><tr><td>PartitionedRoundRobin</td><td>10</td><td>5000</td><td>189.0 ms</td><td>3.19 ms</td><td>0.83 ms</td><td>1.09</td><td>0.01</td><td>1</td><td>7333.3333</td><td>3666.6667</td><td>44.07 MB</td><td>1.31</td>
+</tr><tr><td>FlatRoundRobin</td><td>10</td><td>20000</td><td>691.6 ms</td><td>16.36 ms</td><td>2.53 ms</td><td>1.00</td><td>0.00</td><td>1</td><td>22000.0000</td><td>11000.0000</td><td>133.85 MB</td><td>1.00</td>
+</tr><tr><td>PartitionedRoundRobin</td><td>10</td><td>20000</td><td>760.2 ms</td><td>33.20 ms</td><td>5.14 ms</td><td>1.10</td><td>0.01</td><td>1</td><td>29000.0000</td><td>15000.0000</td><td>175.8 MB</td><td>1.31</td>
+</tr></tbody></table>
+</body>
+</html>

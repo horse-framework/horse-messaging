@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>Benchmark.Partition.LargePayloadRoutingBenchmark-20260228-092913</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, macOS 26.2 (25C56) [Darwin 25.2.0]
+Apple M1 Max, 1 CPU, 10 logical and 10 physical cores
+.NET SDK 10.0.102
+  [Host]     : .NET 10.0.2 (10.0.225.61305), Arm64 RyuJIT AdvSIMD
+  Job-HTNLQP : .NET 10.0.2 (10.0.225.61305), Arm64 RyuJIT AdvSIMD
+</code></pre>
+<pre><code>InvocationCount=1  IterationCount=5  LaunchCount=1  
+UnrollFactor=1  WarmupCount=2  
+</code></pre>
+
+<table>
+<thead><tr><th>Method             </th><th>PayloadKB</th><th>PartitionCount</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Rank</th><th>Gen0</th><th>Gen1</th><th>Gen2</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>LargePayload_Labeled_Push</td><td>16</td><td>10</td><td>4.567 ms</td><td>0.3592 ms</td><td>0.0933 ms</td><td>1</td><td>3000.0000</td><td>1000.0000</td><td>-</td><td>16.26 MB</td>
+</tr><tr><td>LargePayload_Labeled_Push</td><td>64</td><td>10</td><td>13.823 ms</td><td>1.3429 ms</td><td>0.2078 ms</td><td>2</td><td>11000.0000</td><td>4000.0000</td><td>-</td><td>63.14 MB</td>
+</tr><tr><td>LargePayload_Labeled_Push</td><td>256</td><td>10</td><td>19.051 ms</td><td>27.8866 ms</td><td>4.3155 ms</td><td>3</td><td>3000.0000</td><td>3000.0000</td><td>3000.0000</td><td>250.7 MB</td>
+</tr><tr><td>LargePayload_Labeled_Push</td><td>1</td><td>10</td><td>27.944 ms</td><td>27.2128 ms</td><td>7.0671 ms</td><td>4</td><td>1000.0000</td><td>-</td><td>-</td><td>7.34 MB</td>
+</tr><tr><td>LargePayload_Labeled_Push</td><td>1</td><td>1</td><td>28.342 ms</td><td>5.1019 ms</td><td>0.7895 ms</td><td>4</td><td>1000.0000</td><td>1000.0000</td><td>-</td><td>7.29 MB</td>
+</tr><tr><td>LargePayload_Labeled_Push</td><td>16</td><td>1</td><td>46.531 ms</td><td>1.0369 ms</td><td>0.1605 ms</td><td>5</td><td>12000.0000</td><td>6000.0000</td><td>-</td><td>66.4 MB</td>
+</tr><tr><td>LargePayload_Labeled_Push</td><td>64</td><td>1</td><td>123.442 ms</td><td>87.9029 ms</td><td>22.8281 ms</td><td>6</td><td>43000.0000</td><td>21000.0000</td><td>6000.0000</td><td>251.62 MB</td>
+</tr><tr><td>LargePayload_Labeled_Push</td><td>256</td><td>1</td><td>194.806 ms</td><td>64.9783 ms</td><td>16.8747 ms</td><td>7</td><td>61000.0000</td><td>61000.0000</td><td>61000.0000</td><td>976.11 MB</td>
+</tr></tbody></table>
+</body>
+</html>
