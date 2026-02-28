@@ -41,7 +41,7 @@ class Program
                 hasConnection = true;
             }
 
-            HorseResult result = await client.Queue.PushJson(new Foo {No = no}, true);
+            HorseResult result = await client.Queue.Push(new Foo {No = no}, true);
             Console.WriteLine($"Message #{no} Push Result {result.Code} ");
                 
             if (result.Code == HorseResultCode.Ok)

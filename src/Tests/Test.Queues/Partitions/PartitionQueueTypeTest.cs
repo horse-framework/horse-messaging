@@ -1,3 +1,4 @@
+using System.Text;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -97,7 +98,7 @@ public class PartitionQueueTypeTest
 
         // 4 mesajı w1 label'ı ile gönder
         for (int i = 0; i < 4; i++)
-            await producer.Queue.Push("pp1-q", "msg", false,
+            await producer.Queue.Push("pp1-q", Encoding.UTF8.GetBytes("msg"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") });
 
         await Task.Delay(800);
@@ -130,10 +131,10 @@ public class PartitionQueueTypeTest
         await producer.ConnectAsync("horse://localhost:" + port);
 
         for (int i = 0; i < 3; i++)
-            await producer.Queue.Push("pp2-q", "msg", false,
+            await producer.Queue.Push("pp2-q", Encoding.UTF8.GetBytes("msg"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "labelA") });
         for (int i = 0; i < 5; i++)
-            await producer.Queue.Push("pp2-q", "msg", false,
+            await producer.Queue.Push("pp2-q", Encoding.UTF8.GetBytes("msg"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "labelB") });
 
         await Task.Delay(800);
@@ -174,7 +175,7 @@ public class PartitionQueueTypeTest
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync("horse://localhost:" + port);
 
-        await producer.Queue.Push("pb-q", "hello", false,
+        await producer.Queue.Push("pb-q", Encoding.UTF8.GetBytes("hello"), false,
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "shared") });
 
         await Task.Delay(600);
@@ -211,7 +212,7 @@ public class PartitionQueueTypeTest
         await producer.ConnectAsync("horse://localhost:" + port);
 
         for (int i = 0; i < 4; i++)
-            await producer.Queue.Push("rr1-q", "msg", false,
+            await producer.Queue.Push("rr1-q", Encoding.UTF8.GetBytes("msg"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "t1") });
 
         await Task.Delay(800);
@@ -252,7 +253,7 @@ public class PartitionQueueTypeTest
         await producer.ConnectAsync("horse://localhost:" + port);
 
         for (int i = 0; i < 4; i++)
-            await producer.Queue.Push("rr2-q", "msg", false,
+            await producer.Queue.Push("rr2-q", Encoding.UTF8.GetBytes("msg"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "shared") });
 
         await Task.Delay(800);
@@ -295,7 +296,7 @@ public class PartitionQueueTypeTest
         HorseClient rrProducer = new HorseClient();
         await rrProducer.ConnectAsync("horse://localhost:" + portRR);
         for (int i = 0; i < 4; i++)
-            await rrProducer.Queue.Push("cmp-rr-q", "msg", false);
+            await rrProducer.Queue.Push("cmp-rr-q", Encoding.UTF8.GetBytes("msg"), false);
         await Task.Delay(1000);
 
         // RoundRobin: worker1 meşgul → atlanır, mesajlar worker2'ye de gider
@@ -331,7 +332,7 @@ public class PartitionQueueTypeTest
         HorseClient ptProducer = new HorseClient();
         await ptProducer.ConnectAsync("horse://localhost:" + portPT);
         for (int i = 0; i < 4; i++)
-            await ptProducer.Queue.Push("cmp-pt-q", "msg", false,
+            await ptProducer.Queue.Push("cmp-pt-q", Encoding.UTF8.GetBytes("msg"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1-label") });
         await Task.Delay(1000);
 
@@ -363,7 +364,7 @@ public class PartitionQueueTypeTest
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync("horse://localhost:" + port);
 
-        await producer.Queue.Push("pull1-q", "stored", false,
+        await producer.Queue.Push("pull1-q", Encoding.UTF8.GetBytes("stored"), false,
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "pw1") });
 
         await Task.Delay(400);
@@ -396,7 +397,7 @@ public class PartitionQueueTypeTest
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync("horse://localhost:" + port);
 
-        await producer.Queue.Push("pull2-q", "stored", false,
+        await producer.Queue.Push("pull2-q", Encoding.UTF8.GetBytes("stored"), false,
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "pw2") });
 
         // Pull etmeden 800ms bekle — otomatik iletilmemeli
@@ -425,9 +426,9 @@ public class PartitionQueueTypeTest
         await producer.ConnectAsync("horse://localhost:" + port);
 
         for (int i = 0; i < 2; i++)
-            await producer.Queue.Push("pull3-q", "p1-msg", false,
+            await producer.Queue.Push("pull3-q", Encoding.UTF8.GetBytes("p1-msg"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "p1") });
-        await producer.Queue.Push("pull3-q", "p2-msg", false,
+        await producer.Queue.Push("pull3-q", Encoding.UTF8.GetBytes("p2-msg"), false,
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "p2") });
         await Task.Delay(300);
 
@@ -483,7 +484,7 @@ public class PartitionQueueTypeTest
             HorseClient p = new HorseClient();
             await p.ConnectAsync("horse://localhost:" + port);
             for (int i = 0; i < 5; i++)
-                await p.Queue.Push("eq-push-q", "m", false,
+                await p.Queue.Push("eq-push-q", Encoding.UTF8.GetBytes("m"), false,
                     new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl") });
             await Task.Delay(600);
         }
@@ -498,7 +499,7 @@ public class PartitionQueueTypeTest
             HorseClient p = new HorseClient();
             await p.ConnectAsync("horse://localhost:" + port);
             for (int i = 0; i < 5; i++)
-                await p.Queue.Push("eq-rr-q", "m", false,
+                await p.Queue.Push("eq-rr-q", Encoding.UTF8.GetBytes("m"), false,
                     new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl") });
             await Task.Delay(600);
         }
@@ -556,9 +557,9 @@ public class PartitionQueueTypeTest
 
         for (int i = 0; i < 3; i++)
         {
-            await producer.Queue.Push("iso-q", "a-msg", false,
+            await producer.Queue.Push("iso-q", Encoding.UTF8.GetBytes("a-msg"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "tenantA") });
-            await producer.Queue.Push("iso-q", "b-msg", false,
+            await producer.Queue.Push("iso-q", Encoding.UTF8.GetBytes("b-msg"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "tenantB") });
         }
 

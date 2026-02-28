@@ -61,7 +61,7 @@ while (!producerClient.IsConnected || !consumerClient.IsConnected)
 }
 
 IHorseQueueBus bus = producer.Services.GetRequiredService<IHorseQueueBus>();
-HorseResult? result = await bus.PushJson(new TestEvent(), true);
+HorseResult? result = await bus.Push(new TestEvent(), true);
 Console.WriteLine($"Message sent: {result.Code}");
 
 while (!Test.MessageConsumed)
@@ -90,7 +90,8 @@ internal class TestEvent
 [AutoNack]
 internal class TestEventConsumer : IQueueConsumer<TestEvent>
 {
-    public Task Consume(HorseMessage message, TestEvent model, HorseClient client)
+    public Task Consume(HorseMessage message, TestEvent model, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
         Console.WriteLine($"Received TestEvent: {model.Foo}");
         Test.MessageConsumed = true;

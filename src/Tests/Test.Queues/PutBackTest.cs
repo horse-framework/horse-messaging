@@ -1,3 +1,4 @@
+using System.Text;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -27,9 +28,9 @@ public class PutBackTest
         await producer.ConnectAsync("horse://localhost:" + port);
         Assert.True(producer.IsConnected);
 
-        await producer.Queue.Push("push-a", "First", false);
+        await producer.Queue.Push("push-a", Encoding.UTF8.GetBytes("First"), false);
         await Task.Delay(100);
-        await producer.Queue.Push("push-a", "Second", false);
+        await producer.Queue.Push("push-a", Encoding.UTF8.GetBytes("Second"), false);
         await Task.Delay(200);
         Assert.Equal(2, queue.Manager.MessageStore.Count() + queue.Manager.DeliveryHandler.Tracker.GetDeliveryCount());
 
@@ -79,9 +80,9 @@ public class PutBackTest
         await producer.ConnectAsync("horse://localhost:" + port);
         Assert.True(producer.IsConnected);
 
-        await producer.Queue.Push("push-a", "First", false);
+        await producer.Queue.Push("push-a", Encoding.UTF8.GetBytes("First"), false);
         await Task.Delay(100);
-        await producer.Queue.Push("push-a", "Second", false);
+        await producer.Queue.Push("push-a", Encoding.UTF8.GetBytes("Second"), false);
         await Task.Delay(200);
         Assert.Equal(2, queue.Manager.MessageStore.Count());
 

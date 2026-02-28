@@ -1,3 +1,4 @@
+using System.Text;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -217,10 +218,10 @@ public class PartitionPersistentTest : IDisposable
         await prod.ConnectAsync("horse://localhost:" + port);
 
         for (int i = 0; i < 3; i++)
-            await prod.Queue.Push("persist-files", $"a-{i}", false,
+            await prod.Queue.Push("persist-files", Encoding.UTF8.GetBytes($"a-{i}"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "fileA") });
         for (int i = 0; i < 2; i++)
-            await prod.Queue.Push("persist-files", $"b-{i}", false,
+            await prod.Queue.Push("persist-files", Encoding.UTF8.GetBytes($"b-{i}"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "fileB") });
 
         await Task.Delay(700); // allow flush
@@ -265,7 +266,7 @@ public class PartitionPersistentTest : IDisposable
         await producer.ConnectAsync("horse://localhost:" + port);
 
         // Label-less → orphan partition
-        await producer.Queue.Push("persist-orphan", "orphan-payload", false);
+        await producer.Queue.Push("persist-orphan", Encoding.UTF8.GetBytes("orphan-payload"), false);
         await Task.Delay(600);
 
         HorseQueue parentQueue = rider.Queue.Find("persist-orphan");
@@ -298,7 +299,7 @@ public class PartitionPersistentTest : IDisposable
 
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync("horse://localhost:" + port);
-        await producer.Queue.Push("persist-disk", "disk-payload", false,
+        await producer.Queue.Push("persist-disk", Encoding.UTF8.GetBytes("disk-payload"), false,
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "disk-lbl") });
 
         await Task.Delay(600); // allow flush
@@ -343,7 +344,7 @@ public class PartitionPersistentTest : IDisposable
         await prod.ConnectAsync("horse://localhost:" + port);
 
         for (int i = 0; i < 2; i++)
-            await prod.Queue.Push("persist-destroy", $"msg-{i}", false,
+            await prod.Queue.Push("persist-destroy", Encoding.UTF8.GetBytes($"msg-{i}"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "destroyLbl") });
 
         await Task.Delay(500);

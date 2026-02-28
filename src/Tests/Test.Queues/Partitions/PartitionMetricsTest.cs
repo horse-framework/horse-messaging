@@ -1,3 +1,4 @@
+using System.Text;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -111,7 +112,7 @@ public class PartitionMetricsTest
         await producer.ConnectAsync("horse://localhost:" + port);
 
         for (int i = 0; i < 3; i++)
-            await producer.Queue.Push("met-q", "m" + i,
+            await producer.Queue.Push("met-q", Encoding.UTF8.GetBytes("m" + i),
                 false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "count-w") });
 
         await Task.Delay(600);
@@ -220,15 +221,14 @@ public class PartitionMetricsTest
         {
             // Worker ended up in orphan — LastMessageAt test not meaningful in this case
             // Just verify message routing works to orphan
-            await producer.Queue.Push("met-q", "ts-msg", false,
+            await producer.Queue.Push("met-q", Encoding.UTF8.GetBytes("ts-msg"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "ts2") });
             await Task.Delay(500);
             // orphan received message; just pass
             return;
         }
 
-        await producer.Queue.Push("met-q", "ts-msg",
-            false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "ts2") });
+        await producer.Queue.Push("met-q", Encoding.UTF8.GetBytes("ts-msg"), false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "ts2") });
         await Task.Delay(700);
 
         // LastMessageAt should be set after RouteMessage is called

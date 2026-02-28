@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Direct;
@@ -11,12 +12,14 @@ namespace Test.Client.Handlers;
 [DirectContentType(300)]
 public class RequestHandler : IHorseRequestHandler<ModelC, ModelA>
 {
-    public Task<ModelA> Handle(ModelC request, HorseMessage rawMessage, HorseClient client)
+    public Task<ModelA> Handle(ModelC request, HorseMessage rawMessage, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new ModelA());
     }
 
-    public Task<ErrorResponse> OnError(Exception exception, ModelC request, HorseMessage rawMessage, HorseClient client)
+    public Task<ErrorResponse> OnError(Exception exception, ModelC request, HorseMessage rawMessage, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new ErrorResponse());
     }

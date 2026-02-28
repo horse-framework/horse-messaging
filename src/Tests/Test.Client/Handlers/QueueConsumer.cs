@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
@@ -11,7 +12,8 @@ namespace Test.Client.Handlers;
 [AutoNack]
 public class QueueConsumer : IQueueConsumer<ModelB>
 {
-    public Task Consume(HorseMessage message, ModelB model, HorseClient client)
+    public Task Consume(HorseMessage message, ModelB model, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;
     }

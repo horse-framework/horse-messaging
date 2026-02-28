@@ -1,3 +1,4 @@
+using System.Text;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -146,7 +147,7 @@ public class PartitionOrphanTest
         await Task.Delay(300);
 
         // Push without label → orphan (orphan has the worker as subscriber)
-        await producer.Queue.Push("orphan-q", "data", false);
+        await producer.Queue.Push("orphan-q", Encoding.UTF8.GetBytes("data"), false);
         await Task.Delay(800);
 
         Assert.Equal(1, received);
@@ -182,7 +183,7 @@ public class PartitionOrphanTest
 
         // waitForCommit=true: wait for server response
         // No subscribers → ResolveNoSubscriberTarget returns null → NoConsumers
-        HorseResult result = await producer.Queue.Push("wack-orphan-q", "hello", true);
+        HorseResult result = await producer.Queue.Push("wack-orphan-q", Encoding.UTF8.GetBytes("hello"), true);
         Assert.NotEqual(HorseResultCode.Ok, result.Code);
     }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 
@@ -12,109 +13,112 @@ public interface IHorseQueueBus<TIdentifier> : IHorseQueueBus
 }
 
 /// <summary>
-/// Implementation for queue messages and requests
+/// Bus interface for pushing messages to and pulling messages from Horse queues.
+/// Provides raw binary, typed model, bulk push, and pull patterns.
+/// All push methods accept an optional <c>partitionLabel</c> for partition-aware routing.
 /// </summary>
 public interface IHorseQueueBus : IHorseConnection
 {
     // ──────────────────────────────────────────────────────────────────
-    // Push
+    // Push — raw content
     // ──────────────────────────────────────────────────────────────────
 
-    /// <summary>Pushes a message into a queue.</summary>
+    /// <summary>
+    /// Pushes raw binary content into a queue.
+    /// When <paramref name="partitionLabel"/> is not null, the message is routed to the partition with that label.
+    /// </summary>
     Task<HorseResult> Push(string queue, MemoryStream content, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        string partitionLabel = null,
+        CancellationToken cancellationToken = default);
 
-    /// <summary>Pushes a message into a queue.</summary>
-    Task<HorseResult> Push(string queue, string content, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-    /// <summary>Pushes a message into a queue.</summary>
-    Task<HorseResult> Push(string queue, MemoryStream content, string messageId, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-    /// <summary>Pushes a message into a queue.</summary>
-    Task<HorseResult> Push(string queue, string content, string messageId, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-    // ──────────────────────────────────────────────────────────────────
-    // PushJson
-    // ──────────────────────────────────────────────────────────────────
-
-    /// <summary>Pushes a JSON message into a queue. Queue name is resolved from the type's [QueueName] attribute.</summary>
-    Task<HorseResult> PushJson(object jsonObject, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-    /// <summary>Pushes a JSON message into a specified queue.</summary>
-    Task<HorseResult> PushJson(string queue, object jsonObject, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-    /// <summary>Pushes a JSON message into a queue with an explicit message id.</summary>
-    Task<HorseResult> PushJson(object jsonObject, string messageId, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-    /// <summary>Pushes a JSON message into a specified queue with an explicit message id.</summary>
-    Task<HorseResult> PushJson(string queue, object jsonObject, string messageId, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    /// <summary>
+    /// Pushes raw binary content into a queue with an explicit message id.
+    /// When <paramref name="partitionLabel"/> is not null, the message is routed to the partition with that label.
+    /// </summary>
+    Task<HorseResult> Push(string queue, MemoryStream content, string messageId,
+        bool waitForCommit = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        string partitionLabel = null,
+        CancellationToken cancellationToken = default);
 
     // ──────────────────────────────────────────────────────────────────
-    // Partition Push  — separate method names are required because
-    // Push(string queue, string partitionLabel, ...) and
-    // Push(string queue, string content, ...) have identical signatures
-    // and cannot be distinguished by the C# overload resolver.
+    // Push — model
     // ──────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Pushes a message into a specific partition of a queue identified by <paramref name="partitionLabel"/>.
-    /// Pass <c>null</c> for label-less routing (orphan or round-robin depending on server config).
+    /// Pushes a serialized model into a queue.
+    /// The queue name is resolved from the <typeparamref name="T"/> attribute.
+    /// When <paramref name="partitionLabel"/> is not null, the message is routed to the partition with that label.
     /// </summary>
-    Task<HorseResult> PushToPartition(string queue, string partitionLabel, MemoryStream content,
-        bool waitForCommit = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    Task<HorseResult> Push<T>(T model, bool waitForCommit = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        string partitionLabel = null,
+        CancellationToken cancellationToken = default) where T : class;
 
-    /// <inheritdoc cref="PushToPartition(string,string,MemoryStream,bool,IEnumerable{KeyValuePair{string,string}})"/>
-    Task<HorseResult> PushToPartition(string queue, string partitionLabel, string content,
-        bool waitForCommit = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    /// <summary>
+    /// Pushes a serialized model into the specified queue.
+    /// When <paramref name="partitionLabel"/> is not null, the message is routed to the partition with that label.
+    /// </summary>
+    Task<HorseResult> Push<T>(string queue, T model, bool waitForCommit = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        string partitionLabel = null,
+        CancellationToken cancellationToken = default) where T : class;
 
-    /// <inheritdoc cref="PushToPartition(string,string,MemoryStream,bool,IEnumerable{KeyValuePair{string,string}})"/>
-    Task<HorseResult> PushToPartition(string queue, string partitionLabel, MemoryStream content,
-        string messageId, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    /// <summary>
+    /// Pushes a serialized model into a queue with an explicit message id.
+    /// The queue name is resolved from the <typeparamref name="T"/> attribute.
+    /// When <paramref name="partitionLabel"/> is not null, the message is routed to the partition with that label.
+    /// </summary>
+    Task<HorseResult> Push<T>(T model, string messageId, bool waitForCommit = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        string partitionLabel = null,
+        CancellationToken cancellationToken = default) where T : class;
 
-    /// <inheritdoc cref="PushToPartition(string,string,MemoryStream,bool,IEnumerable{KeyValuePair{string,string}})"/>
-    Task<HorseResult> PushToPartition(string queue, string partitionLabel, string content,
-        string messageId, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    /// <summary>
+    /// Pushes a serialized model into the specified queue with an explicit message id.
+    /// When <paramref name="partitionLabel"/> is not null, the message is routed to the partition with that label.
+    /// </summary>
+    Task<HorseResult> Push<T>(string queue, T model, string messageId, bool waitForCommit = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        string partitionLabel = null,
+        CancellationToken cancellationToken = default) where T : class;
 
     // ──────────────────────────────────────────────────────────────────
-    // Partition PushJson  — same rationale: PushJson(string, object)
-    // vs PushJson(string partitionLabel, object) are identical signatures.
+    // PushBulk — model
     // ──────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Pushes a JSON-serialised object into a specific partition of a queue.
-    /// Queue name is resolved from the type's <c>[QueueName]</c> attribute.
+    /// Pushes multiple serialized models to a queue in a single batch.
+    /// The <paramref name="callback"/> is invoked for each message with the server's commit result.
+    /// When <paramref name="partitionLabel"/> is not null, every message in the batch is routed to the partition with that label.
     /// </summary>
-    Task<HorseResult> PushJsonToPartition(string partitionLabel, object jsonObject,
-        bool waitForCommit = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    void PushBulk<T>(string queue, List<T> items, Action<HorseMessage, bool> callback,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        string partitionLabel = null) where T : class;
+
+    // ──────────────────────────────────────────────────────────────────
+    // PushBulk — raw content
+    // ──────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Pushes a JSON-serialised object into a specific partition of the given queue.
+    /// Pushes multiple raw binary contents to a queue in a single batch.
+    /// The <paramref name="callback"/> is invoked for each message with the server's commit result.
+    /// When <paramref name="partitionLabel"/> is not null, every message in the batch is routed to the partition with that label.
     /// </summary>
-    Task<HorseResult> PushJsonToPartition(string queue, string partitionLabel, object jsonObject,
-        bool waitForCommit = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-    /// <inheritdoc cref="PushJsonToPartition(string,object,bool,IEnumerable{KeyValuePair{string,string}})"/>
-    Task<HorseResult> PushJsonToPartition(string partitionLabel, object jsonObject, string messageId,
-        bool waitForCommit = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-    /// <inheritdoc cref="PushJsonToPartition(string,string,object,bool,IEnumerable{KeyValuePair{string,string}})"/>
-    Task<HorseResult> PushJsonToPartition(string queue, string partitionLabel, object jsonObject,
-        string messageId, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    void PushBulk(string queue, List<MemoryStream> contents, bool waitForCommit,
+        Action<HorseMessage, bool> callback,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        string partitionLabel = null);
 
     // ──────────────────────────────────────────────────────────────────
     // Pull
     // ──────────────────────────────────────────────────────────────────
 
-    /// <summary>Request a pull request.</summary>
-    Task<PullContainer> Pull(PullRequest request, Func<int, HorseMessage, Task> actionForEachMessage = null);
+    /// <summary>
+    /// Requests messages from a pull-type queue.
+    /// </summary>
+    Task<PullContainer> Pull(PullRequest request,
+        Func<int, HorseMessage, Task> actionForEachMessage = null,
+        CancellationToken cancellationToken = default);
 }

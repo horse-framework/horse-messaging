@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 
@@ -91,8 +92,12 @@ public class PullContainer
         _source.SetResult(this);
     }
 
-    internal Task<PullContainer> GetAwaitableTask()
+    internal Task<PullContainer> GetAwaitableTask(CancellationToken cancellationToken = default)
     {
+        if (cancellationToken == default || !cancellationToken.CanBeCanceled)
+            return _source.Task;
+
+        cancellationToken.Register(() => _source.TrySetCanceled(cancellationToken), useSynchronizationContext: false);
         return _source.Task;
     }
 }

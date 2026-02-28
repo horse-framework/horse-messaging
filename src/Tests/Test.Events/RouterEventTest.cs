@@ -137,7 +137,7 @@ public class RouterEventTest
         HorseResult result = await client.Event.Subscribe(HorseEventType.RouterPublish, "router", true);
         Assert.Equal(HorseResultCode.Ok, result.Code);
 
-        await client.Router.Publish("router", "Hello, World!", false);
+        await client.Router.Publish("router", "Hello, World!", messageId: null, waitForAcknowledge: false);
 
         await Task.Delay(250);
         Assert.Equal(1, RouterPublishHandler.Count);

@@ -1,3 +1,4 @@
+using System.Text;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -65,8 +66,7 @@ public class PartitionRouteTest
 
         await Task.Delay(300);
 
-        await producer.Queue.Push("route-q", "msg",
-            false,
+        await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("msg"), false,
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") });
 
         await Task.Delay(600);
@@ -95,8 +95,7 @@ public class PartitionRouteTest
 
         await Task.Delay(300);
 
-        await producer.Queue.Push("route-q", "msg",
-            false,
+        await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("msg"), false,
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "px") });
 
         await Task.Delay(600);
@@ -125,8 +124,7 @@ public class PartitionRouteTest
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "strip-test") });
         await Task.Delay(300);
 
-        await producer.Queue.Push("route-q", "msg",
-            false,
+        await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("msg"), false,
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "strip-test") });
 
         await Task.Delay(600);
@@ -159,12 +157,10 @@ public class PartitionRouteTest
         await Task.Delay(400);
 
         for (int i = 0; i < 2; i++)
-            await producer.Queue.Push("route-q", "msg",
-                false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "wA") });
+            await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("msg"), false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "wA") });
 
         for (int i = 0; i < 2; i++)
-            await producer.Queue.Push("route-q", "msg",
-                false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "wB") });
+            await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("msg"), false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "wB") });
 
         await Task.Delay(1500);
 
@@ -191,7 +187,7 @@ public class PartitionRouteTest
         await worker.Queue.Subscribe("route-q", true);
         await Task.Delay(300);
 
-        await producer.Queue.Push("route-q", "orphan-msg", false);
+        await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("orphan-msg"), false);
 
         await Task.Delay(600);
         Assert.Equal(1, received);
@@ -210,8 +206,7 @@ public class PartitionRouteTest
         await producer.ConnectAsync("horse://localhost:" + port);
 
         // Push to a label that has no subscriber yet
-        await producer.Queue.Push("route-q", "msg",
-            false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "unknown-label") });
+        await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("msg"), false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "unknown-label") });
 
         await Task.Delay(600);
 
@@ -254,7 +249,7 @@ public class PartitionRouteTest
 
         // No subscribers → message goes to orphan (which has no consumer) → NoConsumers
         // waitForCommit=true ensures we get the server response
-        HorseResult result = await producer.Queue.Push("wack-q", "no-consumer-msg", true);
+        HorseResult result = await producer.Queue.Push("wack-q", Encoding.UTF8.GetBytes("no-consumer-msg"), true);
         Assert.NotEqual(HorseResultCode.Ok, result.Code);
     }
 
@@ -280,8 +275,7 @@ public class PartitionRouteTest
         HorseQueue orphanQueue = await queue.PartitionManager.GetOrCreateOrphanQueue();
         int beforeCount = orphanQueue.Manager?.MessageStore.Count() ?? 0;
 
-        await producer.Queue.Push("route-q", "stored-msg",
-            false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "offline-w") });
+        await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("stored-msg"), false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "offline-w") });
 
         await Task.Delay(500);
 
@@ -367,7 +361,7 @@ public class PartitionRouteTest
         await producer.ConnectAsync("horse://localhost:" + port);
 
         // Hiç subscriber yok, label'sız push
-        HorseResult result = await producer.Queue.Push("noorp2-q", "hello", true);
+        HorseResult result = await producer.Queue.Push("noorp2-q", Encoding.UTF8.GetBytes("hello"), true);
         Assert.NotEqual(HorseResultCode.Ok, result.Code);
     }
 }

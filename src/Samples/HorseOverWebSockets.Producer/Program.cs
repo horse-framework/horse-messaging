@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Extensions.Client;
@@ -47,6 +48,6 @@ while (true)
         continue;
     }
 
-    var result = await client.Queue.Push("Foo", line, true);
+    var result = await client.Queue.Push("Foo", Encoding.UTF8.GetBytes(line), true);
     Console.WriteLine("result: " + result.Code);
 }

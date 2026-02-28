@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
@@ -10,9 +11,10 @@ namespace ClusteringSample.Consumer;
 [AutoAck]
 public class FooConsumer : IQueueConsumer<Foo>
 {
-    public async Task Consume(HorseMessage message, Foo model, HorseClient client)
+    public async Task Consume(HorseMessage message, Foo model, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
-        await Task.Delay(new Random().Next(50, 350));
+        await Task.Delay(new Random().Next(50, 350), cancellationToken);
         Console.WriteLine($"Message #{model.No} is Consumed");
     }
 }

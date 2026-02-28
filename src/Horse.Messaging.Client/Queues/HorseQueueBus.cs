@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 
@@ -12,123 +13,99 @@ internal class HorseQueueBus<TIdentifier> : HorseQueueBus, IHorseQueueBus<TIdent
 }
 
 /// <summary>
-/// Implementation for queue messages and requests
+/// Default implementation of <see cref="IHorseQueueBus"/>.
+/// Delegates every call to the underlying <see cref="HorseClient.Queue"/> operator.
 /// </summary>
 public class HorseQueueBus : IHorseQueueBus
 {
     private readonly HorseClient _client;
 
+    /// <summary>Creates a new queue bus wrapper for the given client.</summary>
     public HorseQueueBus(HorseClient client) => _client = client;
 
     /// <inheritdoc />
     public HorseClient GetClient() => _client;
 
     // ──────────────────────────────────────────────────────────────────
-    // Push — standard
+    // Push — raw content
     // ──────────────────────────────────────────────────────────────────
 
     /// <inheritdoc />
     public Task<HorseResult> Push(string queue, MemoryStream content, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
-        => _client.Queue.Push(queue, content, waitForCommit, messageHeaders);
-
-    /// <inheritdoc />
-    public Task<HorseResult> Push(string queue, string content, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
-        => _client.Queue.Push(queue, content, waitForCommit, messageHeaders);
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        string partitionLabel = null,
+        CancellationToken cancellationToken = default)
+        => _client.Queue.Push(queue, content, waitForCommit,
+            MergePartitionHeader(partitionLabel, messageHeaders), cancellationToken);
 
     /// <inheritdoc />
     public Task<HorseResult> Push(string queue, MemoryStream content, string messageId,
-        bool waitForCommit = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
-        => _client.Queue.Push(queue, content, messageId, waitForCommit, messageHeaders);
-
-    /// <inheritdoc />
-    public Task<HorseResult> Push(string queue, string content, string messageId,
-        bool waitForCommit = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
-        => _client.Queue.Push(queue, content, messageId, waitForCommit, messageHeaders);
-
-    // ──────────────────────────────────────────────────────────────────
-    // PushToPartition
-    // ──────────────────────────────────────────────────────────────────
-
-    /// <inheritdoc />
-    public Task<HorseResult> PushToPartition(string queue, string partitionLabel, MemoryStream content,
-        bool waitForCommit = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
-        => _client.Queue.Push(queue, content, waitForCommit,
-            BuildPartitionHeaders(partitionLabel, messageHeaders));
-
-    /// <inheritdoc />
-    public Task<HorseResult> PushToPartition(string queue, string partitionLabel, string content,
-        bool waitForCommit = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
-        => _client.Queue.Push(queue, content, waitForCommit,
-            BuildPartitionHeaders(partitionLabel, messageHeaders));
-
-    /// <inheritdoc />
-    public Task<HorseResult> PushToPartition(string queue, string partitionLabel, MemoryStream content,
-        string messageId, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        bool waitForCommit = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        string partitionLabel = null,
+        CancellationToken cancellationToken = default)
         => _client.Queue.Push(queue, content, messageId, waitForCommit,
-            BuildPartitionHeaders(partitionLabel, messageHeaders));
-
-    /// <inheritdoc />
-    public Task<HorseResult> PushToPartition(string queue, string partitionLabel, string content,
-        string messageId, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
-        => _client.Queue.Push(queue, content, messageId, waitForCommit,
-            BuildPartitionHeaders(partitionLabel, messageHeaders));
+            MergePartitionHeader(partitionLabel, messageHeaders), cancellationToken);
 
     // ──────────────────────────────────────────────────────────────────
-    // PushJson — standard
+    // Push — model
     // ──────────────────────────────────────────────────────────────────
 
     /// <inheritdoc />
-    public Task<HorseResult> PushJson(object jsonObject, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
-        => _client.Queue.PushJson(jsonObject, waitForCommit, messageHeaders);
+    public Task<HorseResult> Push<T>(T model, bool waitForCommit = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        string partitionLabel = null,
+        CancellationToken cancellationToken = default) where T : class
+        => _client.Queue.Push<T>(model, waitForCommit,
+            MergePartitionHeader(partitionLabel, messageHeaders), cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> PushJson(string queue, object jsonObject, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
-        => _client.Queue.PushJson(queue, jsonObject, waitForCommit, messageHeaders);
+    public Task<HorseResult> Push<T>(string queue, T model, bool waitForCommit = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        string partitionLabel = null,
+        CancellationToken cancellationToken = default) where T : class
+        => _client.Queue.Push<T>(queue, model, waitForCommit,
+            MergePartitionHeader(partitionLabel, messageHeaders), cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> PushJson(object jsonObject, string messageId, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
-        => _client.Queue.PushJson(jsonObject, messageId, waitForCommit, messageHeaders);
+    public Task<HorseResult> Push<T>(T model, string messageId, bool waitForCommit = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        string partitionLabel = null,
+        CancellationToken cancellationToken = default) where T : class
+        => _client.Queue.Push<T>(model, messageId, waitForCommit,
+            MergePartitionHeader(partitionLabel, messageHeaders), cancellationToken);
 
     /// <inheritdoc />
-    public Task<HorseResult> PushJson(string queue, object jsonObject, string messageId,
-        bool waitForCommit = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
-        => _client.Queue.PushJson(queue, jsonObject, messageId, waitForCommit, messageHeaders);
+    public Task<HorseResult> Push<T>(string queue, T model, string messageId,
+        bool waitForCommit = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        string partitionLabel = null,
+        CancellationToken cancellationToken = default) where T : class
+        => _client.Queue.Push<T>(queue, model, messageId, waitForCommit,
+            MergePartitionHeader(partitionLabel, messageHeaders), cancellationToken);
 
     // ──────────────────────────────────────────────────────────────────
-    // PushJsonToPartition
+    // PushBulk — model
     // ──────────────────────────────────────────────────────────────────
 
     /// <inheritdoc />
-    public Task<HorseResult> PushJsonToPartition(string partitionLabel, object jsonObject,
-        bool waitForCommit = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
-        => _client.Queue.PushJson(jsonObject, waitForCommit,
-            BuildPartitionHeaders(partitionLabel, messageHeaders));
+    public void PushBulk<T>(string queue, List<T> items, Action<HorseMessage, bool> callback,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        string partitionLabel = null) where T : class
+        => _client.Queue.PushBulk<T>(queue, items, callback,
+            MergePartitionHeader(partitionLabel, messageHeaders));
+
+    // ──────────────────────────────────────────────────────────────────
+    // PushBulk — raw content
+    // ──────────────────────────────────────────────────────────────────
 
     /// <inheritdoc />
-    public Task<HorseResult> PushJsonToPartition(string queue, string partitionLabel, object jsonObject,
-        bool waitForCommit = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
-        => _client.Queue.PushJson(queue, jsonObject, waitForCommit,
-            BuildPartitionHeaders(partitionLabel, messageHeaders));
-
-    /// <inheritdoc />
-    public Task<HorseResult> PushJsonToPartition(string partitionLabel, object jsonObject, string messageId,
-        bool waitForCommit = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
-        => _client.Queue.PushJson(jsonObject, messageId, waitForCommit,
-            BuildPartitionHeaders(partitionLabel, messageHeaders));
-
-    /// <inheritdoc />
-    public Task<HorseResult> PushJsonToPartition(string queue, string partitionLabel, object jsonObject,
-        string messageId, bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
-        => _client.Queue.PushJson(queue, jsonObject, messageId, waitForCommit,
-            BuildPartitionHeaders(partitionLabel, messageHeaders));
+    public void PushBulk(string queue, List<MemoryStream> contents, bool waitForCommit,
+        Action<HorseMessage, bool> callback,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        string partitionLabel = null)
+        => _client.Queue.PushBulk(queue, contents, waitForCommit, callback,
+            MergePartitionHeader(partitionLabel, messageHeaders));
 
     // ──────────────────────────────────────────────────────────────────
     // Pull
@@ -136,21 +113,25 @@ public class HorseQueueBus : IHorseQueueBus
 
     /// <inheritdoc />
     public Task<PullContainer> Pull(PullRequest request,
-        Func<int, HorseMessage, Task> actionForEachMessage = null)
-        => _client.Queue.Pull(request, actionForEachMessage);
+        Func<int, HorseMessage, Task> actionForEachMessage = null,
+        CancellationToken cancellationToken = default)
+        => _client.Queue.Pull(request, actionForEachMessage, cancellationToken);
 
     // ──────────────────────────────────────────────────────────────────
     // Private helpers
     // ──────────────────────────────────────────────────────────────────
 
-    private static IEnumerable<KeyValuePair<string, string>> BuildPartitionHeaders(
+    private static IEnumerable<KeyValuePair<string, string>> MergePartitionHeader(
         string partitionLabel,
         IEnumerable<KeyValuePair<string, string>> extra)
     {
-        var headers = new List<KeyValuePair<string, string>>();
+        if (string.IsNullOrEmpty(partitionLabel))
+            return extra;
 
-        if (!string.IsNullOrEmpty(partitionLabel))
-            headers.Add(new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, partitionLabel));
+        var headers = new List<KeyValuePair<string, string>>
+        {
+            new(HorseHeaders.PARTITION_LABEL, partitionLabel)
+        };
 
         if (extra != null)
             headers.AddRange(extra);

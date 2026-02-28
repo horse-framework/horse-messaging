@@ -45,7 +45,7 @@ class Program
 
         while (true)
         {
-            client.Queue.PushBulkJson("Test", items, (message, b) =>
+            client.Queue.PushBulk("Test", items, (message, b) =>
             {
                 if (b)
                     c++;

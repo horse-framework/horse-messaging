@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Channels;
@@ -11,12 +12,14 @@ namespace Test.Client.Handlers;
 [ChannelName("channel1")]
 public class ChannelSubscriber : IChannelSubscriber<ModelA>
 {
-    public Task Handle(ModelA model, HorseMessage rawMessage, HorseClient client)
+    public Task Handle(ModelA model, HorseMessage rawMessage, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;
     }
 
-    public Task Error(Exception exception, ModelA model, HorseMessage rawMessage, HorseClient client)
+    public Task Error(Exception exception, ModelA model, HorseMessage rawMessage, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;
     }

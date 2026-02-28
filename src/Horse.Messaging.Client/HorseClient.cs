@@ -284,6 +284,12 @@ public class HorseClient : IDisposable
     /// </summary>
     internal GracefulShutdownOptions GracefulShutdownOptions { get; set; }
 
+    /// <summary>
+    /// Cancelled when the client disconnects or shuts down gracefully.
+    /// Forwarded to every consumer / subscriber / handler Consume/Handle call.
+    /// </summary>
+    public CancellationToken ConsumeToken => _consumeCts.Token;
+
     #endregion
 
     #region Constructors - Destructors
@@ -294,6 +300,7 @@ public class HorseClient : IDisposable
     private bool _autoConnect;
     private Timer _reconnectTimer;
     private ISwitchingProtocol _discardedSwitchProtocol;
+    private CancellationTokenSource _consumeCts = new();
 
     /// <summary>
     /// Indicates if graceful shutdown has already been executed
@@ -346,6 +353,9 @@ public class HorseClient : IDisposable
         if (GracefulShutdownOptions == null) return;
         if (GracefulShutdownExecuted) return;
         GracefulShutdownExecuted = true;
+
+        // Signal all active consumers to cancel their work
+        _consumeCts.Cancel();
 
         Channel.UnsubscribeFromAllChannels().GetAwaiter().GetResult();
         Queue.UnsubscribeFromAllQueues().GetAwaiter().GetResult();
@@ -768,6 +778,10 @@ public class HorseClient : IDisposable
     /// </summary>
     public void Disconnect()
     {
+        // Cancel any in-flight consumer operations and prepare a fresh token for reconnect
+        _consumeCts.Cancel();
+        _consumeCts = new CancellationTokenSource();
+
         SetAutoReconnect(false);
 
         if (_socket != null)
@@ -929,7 +943,8 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends a Horse message and waits for acknowledge
     /// </summary>
-    public Task<HorseResult> SendAndGetAck(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null)
+    public Task<HorseResult> SendAndGetAck(HorseMessage message, IList<KeyValuePair<string, string>> additionalHeaders = null,
+        CancellationToken cancellationToken = default)
     {
         message.SetSource(_clientId);
         message.WaitResponse = true;
@@ -947,13 +962,15 @@ public class HorseClient : IDisposable
         if (string.IsNullOrEmpty(message.MessageId))
             throw new ArgumentNullException("Messages without unique id cannot be acknowledged");
 
-        return WaitResponse(message, true);
+        return WaitResponse(message, true, cancellationToken);
     }
 
     /// <summary>
     /// Sends multiple horses messages in a single horse message and waits for acknowledge
     /// </summary>
-    public Task<HorseResult> SendEnvelopedAndGetAck(IEnumerable<HorseMessage> messages, string envelopeTarget = null, IList<KeyValuePair<string, string>> additionalHeaders = null)
+    public Task<HorseResult> SendEnvelopedAndGetAck(IEnumerable<HorseMessage> messages, string envelopeTarget = null,
+        IList<KeyValuePair<string, string>> additionalHeaders = null,
+        CancellationToken cancellationToken = default)
     {
         HorseMessage envelope = new HorseMessage(MessageType.Envelope, string.IsNullOrEmpty(envelopeTarget) ? "*" : envelopeTarget, 0);
         envelope.SetSource(_clientId);
@@ -980,13 +997,13 @@ public class HorseClient : IDisposable
         }
 
         envelope.CalculateLengths();
-        return WaitResponse(envelope, true);
+        return WaitResponse(envelope, true, cancellationToken);
     }
 
     /// <summary>
-    /// Sends a message, waits response and deserializes JSON response to T template type
+    /// Sends a message, waits response and deserializes the response to T template type
     /// </summary>
-    public async Task<HorseModelResult<T>> SendAndGetJson<T>(HorseMessage message)
+    public async Task<HorseModelResult<T>> SendAndGet<T>(HorseMessage message)
     {
         message.WaitResponse = true;
 
@@ -1066,13 +1083,18 @@ public class HorseClient : IDisposable
     /// <summary>
     /// Sends the message and waits for response
     /// </summary>
-    public async Task<HorseMessage> Request(HorseMessage message)
+    public Task<HorseMessage> Request(HorseMessage message, CancellationToken cancellationToken = default)
     {
         message.WaitResponse = true;
 
         if (string.IsNullOrEmpty(message.MessageId))
             message.SetMessageId(UniqueIdGenerator.Create());
 
+        return RequestCore(message, cancellationToken);
+    }
+
+    private async Task<HorseMessage> RequestCore(HorseMessage message, CancellationToken cancellationToken)
+    {
         Task<HorseMessage> task = Tracker.Track(message);
 
         HorseResult sent = await SendAsync(message);
@@ -1082,9 +1104,24 @@ public class HorseClient : IDisposable
             return message.CreateResponse(sent.Code);
         }
 
-        HorseMessage response = await task ?? message.CreateResponse(HorseResultCode.RequestTimeout);
+        if (cancellationToken.CanBeCanceled)
+        {
+            var tcs = new System.Threading.Tasks.TaskCompletionSource<HorseMessage>(
+                System.Threading.Tasks.TaskCreationOptions.RunContinuationsAsynchronously);
+            cancellationToken.Register(() => tcs.TrySetCanceled(cancellationToken), useSynchronizationContext: false);
+            var completed = await System.Threading.Tasks.Task.WhenAny(task, tcs.Task);
+            if (completed == tcs.Task)
+            {
+                Tracker.Forget(message);
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+        }
 
-        return response;
+        HorseMessage response = task.IsCompletedSuccessfully
+            ? task.Result
+            : await task;
+
+        return response ?? message.CreateResponse(HorseResultCode.RequestTimeout);
     }
 
     #endregion
@@ -1138,7 +1175,12 @@ public class HorseClient : IDisposable
     /// if verify requires, waits response and checkes status code of the response.
     /// returns true if Ok.
     /// </summary>
-    protected internal async Task<HorseResult> WaitResponse(HorseMessage message, bool waitForResponse)
+    protected internal Task<HorseResult> WaitResponse(HorseMessage message, bool waitForResponse,
+        CancellationToken cancellationToken = default)
+        => WaitResponseCore(message, waitForResponse, cancellationToken);
+
+    private async Task<HorseResult> WaitResponseCore(HorseMessage message, bool waitForResponse,
+        CancellationToken cancellationToken)
     {
         Task<HorseMessage> task = null;
         if (waitForResponse)
@@ -1161,7 +1203,25 @@ public class HorseClient : IDisposable
 
         if (waitForResponse)
         {
-            HorseMessage response = await task;
+            HorseMessage response;
+            if (cancellationToken.CanBeCanceled)
+            {
+                var tcs = new System.Threading.Tasks.TaskCompletionSource<HorseMessage>(
+                    System.Threading.Tasks.TaskCreationOptions.RunContinuationsAsynchronously);
+                cancellationToken.Register(() => tcs.TrySetCanceled(cancellationToken), useSynchronizationContext: false);
+                var completed = await System.Threading.Tasks.Task.WhenAny(task, tcs.Task);
+                if (completed == tcs.Task)
+                {
+                    Tracker.Forget(message);
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+                response = task.IsCompletedSuccessfully ? task.Result : await task;
+            }
+            else
+            {
+                response = await task;
+            }
+
             if (response == null)
                 return HorseResult.Timeout();
 

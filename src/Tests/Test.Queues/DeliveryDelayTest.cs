@@ -1,3 +1,4 @@
+using System.Text;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Protocol;
@@ -35,7 +36,7 @@ public class DeliveryDelayTest
         Assert.Equal(HorseResultCode.Ok, joined.Code);
 
         for (int i = 0; i < 30; i++)
-            await producer.Queue.Push("push-a", "Hello, World!", false);
+            await producer.Queue.Push("push-a", Encoding.UTF8.GetBytes("Hello, World!"), false);
 
         await Task.Delay(500);
         Assert.True(receivedMessages > 4);

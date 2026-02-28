@@ -1,3 +1,4 @@
+using System.Text;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -46,7 +47,7 @@ public class RoundRobinTypeTest
         await Task.Delay(500);
         for (int i = 0; i < 50; i++)
         {
-            await producer.Queue.Push("rr-a", "Hello, World!", false);
+            await producer.Queue.Push("rr-a", Encoding.UTF8.GetBytes("Hello, World!"), false);
             msgSent++;
         }
 
@@ -66,7 +67,7 @@ public class RoundRobinTypeTest
         await producer.ConnectAsync("horse://localhost:" + port);
         Assert.True(producer.IsConnected);
 
-        await producer.Queue.Push("rr-a", "Hello, World!", false);
+        await producer.Queue.Push("rr-a", Encoding.UTF8.GetBytes("Hello, World!"), false);
         await Task.Delay(700);
 
         HorseQueue queue = server.Rider.Queue.Find("rr-a");
@@ -114,7 +115,7 @@ public class RoundRobinTypeTest
         HorseResult joined = await consumer.Queue.Subscribe("rr-a", true);
         Assert.Equal(HorseResultCode.Ok, joined.Code);
 
-        HorseResult ack = await producer.Queue.Push("rr-a", "Hello, World!", true);
+        HorseResult ack = await producer.Queue.Push("rr-a", Encoding.UTF8.GetBytes("Hello, World!"), true);
         Assert.True(ack.Code == HorseResultCode.Ok);
         server.Stop();
     }
@@ -153,7 +154,7 @@ public class RoundRobinTypeTest
         Assert.Equal(HorseResultCode.Ok, joined.Code);
 
         for (int i = 0; i < 50; i++)
-            await producer.Queue.Push("rr-a", "Hello, World!", false);
+            await producer.Queue.Push("rr-a", Encoding.UTF8.GetBytes("Hello, World!"), false);
 
         await Task.Delay(1050);
         Assert.True(received > 8);
@@ -191,7 +192,7 @@ public class RoundRobinTypeTest
         Assert.Equal(HorseResultCode.Ok, joined.Code);
 
         for (int i = 0; i < 10; i++)
-            await producer.Queue.Push("rr-a", "Hello, World!", false);
+            await producer.Queue.Push("rr-a", Encoding.UTF8.GetBytes("Hello, World!"), false);
 
         await Task.Delay(3500);
         Assert.Equal(2, received);
@@ -252,7 +253,7 @@ public class RoundRobinTypeTest
         Assert.Equal(HorseResultCode.Ok, joined3.Code);
 
         for (int i = 0; i < 10; i++)
-            await producer.Queue.Push("rr-a", "Hello, World!", false);
+            await producer.Queue.Push("rr-a", Encoding.UTF8.GetBytes("Hello, World!"), false);
 
         await Task.Delay(1200);
         Assert.Equal(1, c1);

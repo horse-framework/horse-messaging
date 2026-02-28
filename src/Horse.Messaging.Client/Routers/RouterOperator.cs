@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Horse.Messaging.Client.Routers;
@@ -50,7 +51,7 @@ public class RouterOperator
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Server;
         message.ContentType = KnownContentTypes.ListRouters;
-        return await _client.SendAndGetJson<List<RouterInformation>>(message);
+        return await _client.SendAndGet<List<RouterInformation>>(message);
     }
 
     /// <summary>
@@ -118,7 +119,7 @@ public class RouterOperator
         message.Type = MessageType.Server;
         message.ContentType = KnownContentTypes.ListBindings;
         message.SetTarget(routerName);
-        return await _client.SendAndGetJson<List<BindingInformation>>(message);
+        return await _client.SendAndGet<List<BindingInformation>>(message);
     }
 
     /// <summary>
@@ -141,65 +142,16 @@ public class RouterOperator
     #region Publish
 
     /// <summary>
-    /// Publishes a string message to a router
-    /// </summary>
-    public Task<HorseResult> Publish(string routerName,
-        string message,
-        bool waitForAcknowledge = false,
-        ushort contentType = 0,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
-    {
-        return Publish(routerName, message, null, waitForAcknowledge, contentType, messageHeaders);
-    }
-
-    /// <summary>
-    /// Publishes a string message to a router
-    /// </summary>
-    public async Task<HorseResult> Publish(string routerName,
-        string message,
-        string messageId = null,
-        bool waitForAcknowledge = false,
-        ushort contentType = 0,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
-    {
-        HorseMessage msg = new HorseMessage(MessageType.Router, routerName, contentType);
-        msg.WaitResponse = waitForAcknowledge;
-
-        if (!string.IsNullOrEmpty(messageId))
-            msg.SetMessageId(messageId);
-        else
-            msg.SetMessageId(_client.UniqueIdGenerator.Create());
-
-        msg.Content = new MemoryStream(Encoding.UTF8.GetBytes(message));
-
-        if (messageHeaders != null)
-            foreach (KeyValuePair<string, string> pair in messageHeaders)
-                msg.AddHeader(pair.Key, pair.Value);
-
-        return await _client.WaitResponse(msg, waitForAcknowledge);
-    }
-
-    /// <summary>
-    /// Publishes a byte array data to a router
-    /// </summary>
-    public Task<HorseResult> Publish(string routerName,
-        byte[] data,
-        bool waitForAcknowledge = false,
-        ushort contentType = 0,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
-    {
-        return Publish(routerName, data, null, waitForAcknowledge, contentType, messageHeaders);
-    }
-
-    /// <summary>
-    /// Publishes a byte array data to a router
+    /// Publishes raw binary content to a router.
+    /// Pass <c>null</c> for <paramref name="messageId"/> to auto-generate one.
     /// </summary>
     public async Task<HorseResult> Publish(string routerName,
         byte[] data,
         string messageId = null,
         bool waitForAcknowledge = false,
         ushort contentType = 0,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default)
     {
         HorseMessage msg = new HorseMessage(MessageType.Router, routerName, contentType);
 
@@ -215,38 +167,63 @@ public class RouterOperator
             foreach (KeyValuePair<string, string> pair in messageHeaders)
                 msg.AddHeader(pair.Key, pair.Value);
 
-        return await _client.WaitResponse(msg, waitForAcknowledge);
+        return await _client.WaitResponse(msg, waitForAcknowledge, cancellationToken);
     }
 
     /// <summary>
-    /// Publishes a JSON object to a router
+    /// Publishes a serialized model to a router.
+    /// The router name is resolved from the <typeparamref name="T"/> attribute when not specified.
     /// </summary>
-    public Task<HorseResult> PublishJson(object model, bool waitForAcknowledge = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+    public Task<HorseResult> Publish<T>(T model, bool waitForAcknowledge = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default) where T : class
     {
-        return PublishJson(null, model, null, waitForAcknowledge, null, messageHeaders);
+        return PublishObject(null, model, null, waitForAcknowledge, null, messageHeaders, cancellationToken);
     }
 
     /// <summary>
-    /// Publishes a JSON object to a router
+    /// Publishes a serialized model to the specified router.
     /// </summary>
-    public Task<HorseResult> PublishJson(string routerName, object model, bool waitForAcknowledge = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+    public Task<HorseResult> Publish<T>(string routerName, T model, bool waitForAcknowledge = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default) where T : class
     {
-        return PublishJson(routerName, model, null, waitForAcknowledge, null, messageHeaders);
+        return PublishObject(routerName, model, null, waitForAcknowledge, null, messageHeaders, cancellationToken);
     }
 
     /// <summary>
-    /// Publishes a JSON object to a router
+    /// Publishes a serialized model to the specified router with an explicit content type.
     /// </summary>
-    public async Task<HorseResult> PublishJson(string routerName,
+    public Task<HorseResult> Publish<T>(string routerName, T model, ushort? contentType = null,
+        bool waitForAcknowledge = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default) where T : class
+    {
+        return PublishObject(routerName, model, null, waitForAcknowledge, contentType, messageHeaders, cancellationToken);
+    }
+
+    /// <summary>
+    /// Publishes a serialized model to the specified router with an explicit message id and content type.
+    /// </summary>
+    public Task<HorseResult> Publish<T>(string routerName, T model, string messageId, ushort? contentType = null,
+        bool waitForAcknowledge = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default) where T : class
+    {
+        return PublishObject(routerName, model, messageId, waitForAcknowledge, contentType, messageHeaders, cancellationToken);
+    }
+
+    /// <summary>
+    /// Internal publish for object models (used when compile-time type is not available)
+    /// </summary>
+    internal async Task<HorseResult> PublishObject(string routerName,
         object model,
         string messageId = null,
         bool waitForAcknowledge = false,
         ushort? contentType = null,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default)
     {
-
         RouterTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(model.GetType());
 
         if (!string.IsNullOrEmpty(routerName))
@@ -269,15 +246,16 @@ public class RouterOperator
             foreach (KeyValuePair<string, string> pair in messageHeaders)
                 message.AddHeader(pair.Key, pair.Value);
 
-        return await _client.WaitResponse(message, waitForAcknowledge);
+        return await _client.WaitResponse(message, waitForAcknowledge, cancellationToken);
     }
 
     /// <summary>
-    /// Sends a string request to router.
-    /// Waits response from at least one binding.
+    /// Sends a raw string request to a router and waits for a response from at least one binding.
+    /// The <paramref name="contentType"/> parameter disambiguates this overload from the model-based variants.
     /// </summary>
     public async Task<HorseMessage> PublishRequest(string routerName, string message, ushort contentType = 0,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default)
     {
         HorseMessage msg = new HorseMessage(MessageType.Router, routerName, contentType);
         msg.WaitResponse = true;
@@ -287,25 +265,26 @@ public class RouterOperator
             foreach (KeyValuePair<string, string> pair in messageHeaders)
                 msg.AddHeader(pair.Key, pair.Value);
 
-        return await _client.Request(msg);
+        return await _client.Request(msg, cancellationToken);
     }
 
     /// <summary>
-    /// Sends a request to router.
-    /// Waits response from at least one binding.
+    /// Publishes a model request to a router and waits for a typed response from at least one binding.
+    /// The router name is resolved from the <typeparamref name="TRequest"/> attribute.
     /// </summary>
-    public Task<HorseResult<TResponse>> PublishRequestJson<TRequest, TResponse>(TRequest request,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+    public Task<HorseResult<TResponse>> PublishRequest<TRequest, TResponse>(TRequest request,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default)
     {
-        return PublishRequestJson<TRequest, TResponse>(null, request, null, messageHeaders);
+        return PublishRequest<TRequest, TResponse>(null, request, null, messageHeaders, cancellationToken);
     }
 
     /// <summary>
-    /// Sends a request to router.
-    /// Waits response from at least one binding.
+    /// Publishes a model request to the specified router and waits for a typed response.
     /// </summary>
-    public async Task<HorseResult<TResponse>> PublishRequestJson<TRequest, TResponse>(string routerName, TRequest request, ushort? contentType = null,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+    public async Task<HorseResult<TResponse>> PublishRequest<TRequest, TResponse>(string routerName, TRequest request, ushort? contentType = null,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default)
     {
         RouterTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(request.GetType());
 
@@ -323,14 +302,14 @@ public class RouterOperator
             foreach (KeyValuePair<string, string> pair in messageHeaders)
                 message.AddHeader(pair.Key, pair.Value);
 
-        HorseMessage responseMessage = await _client.Request(message);
+        HorseMessage responseMessage = await _client.Request(message, cancellationToken);
         if (responseMessage.ContentType == 0)
         {
             TResponse response = responseMessage.Deserialize<TResponse>(_client.MessageSerializer);
             return new HorseResult<TResponse>(response, message, HorseResultCode.Ok);
         }
 
-        return new HorseResult<TResponse>(default, responseMessage, (HorseResultCode) responseMessage.ContentType);
+        return new HorseResult<TResponse>(default, responseMessage, (HorseResultCode)responseMessage.ContentType);
     }
 
     #endregion

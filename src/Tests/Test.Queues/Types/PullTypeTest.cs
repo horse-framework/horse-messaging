@@ -1,3 +1,4 @@
+using System.Text;
 using System;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
@@ -31,7 +32,7 @@ public class PullTypeTest
         await producer.ConnectAsync("horse://localhost:" + port);
         Assert.True(producer.IsConnected);
 
-        await producer.Queue.Push("pull-a", "Hello, World!", false);
+        await producer.Queue.Push("pull-a", Encoding.UTF8.GetBytes("Hello, World!"), false);
         await Task.Delay(700);
 
         HorseQueue queue = server.Rider.Queue.Find("pull-a");
@@ -87,7 +88,7 @@ public class PullTypeTest
 
         HorseQueue horseQueue = server.Rider.Queue.Find("pull-a");
 
-        Task<HorseResult> taskAck = producer.Queue.Push("pull-a", "Hello, World!", true);
+        Task<HorseResult> taskAck = producer.Queue.Push("pull-a", Encoding.UTF8.GetBytes("Hello, World!"), true);
 
         await Task.Delay(500);
         Assert.False(taskAck.IsCompleted);

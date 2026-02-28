@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client.Annotations;
 using Horse.Messaging.Client.Interceptors;
@@ -54,7 +55,8 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
         }
     }
 
-    public override async Task Execute(HorseClient client, HorseMessage message, object model)
+    public override async Task Execute(HorseClient client, HorseMessage message, object model,
+        CancellationToken cancellationToken = default)
     {
         TModel t = (TModel) model;
         ProvidedHandler providedHandler = null;
@@ -63,15 +65,14 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
         {
             if (_consumer != null)
             {
-                await Consume(_consumer, message, t, client);
+                await Consume(_consumer, message, t, client, cancellationToken: cancellationToken);
             }
-
             else if (_consumerFactoryCreator != null)
             {
                 IHandlerFactory handlerFactory = _consumerFactoryCreator();
                 providedHandler = handlerFactory.CreateHandler(_consumerType);
                 IQueueConsumer<TModel> consumer = (IQueueConsumer<TModel>) providedHandler.Service;
-                await Consume(consumer, message, t, client, handlerFactory);
+                await Consume(consumer, message, t, client, handlerFactory, cancellationToken);
             }
             else
                 throw new NullReferenceException("There is no consumer defined");
@@ -106,14 +107,14 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
         }
     }
 
-    private async Task Consume(IQueueConsumer<TModel> consumer, HorseMessage message, TModel model, HorseClient client, IHandlerFactory handlerFactory = null)
+    private async Task Consume(IQueueConsumer<TModel> consumer, HorseMessage message, TModel model,
+        HorseClient client, IHandlerFactory handlerFactory = null, CancellationToken cancellationToken = default)
     {
         if (Retry == null)
         {
-            await _interceptorRunner.RunBeforeInterceptors(message, client);
-            await consumer.Consume(message, model, client);
-            await _interceptorRunner.RunAfterInterceptors(message, client);
-            
+            await _interceptorRunner.RunBeforeInterceptors(message, client, cancellationToken: cancellationToken);
+            await consumer.Consume(message, model, client, cancellationToken);
+            await _interceptorRunner.RunAfterInterceptors(message, client, cancellationToken: cancellationToken);
             return;
         }
 
@@ -122,9 +123,9 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
         {
             try
             {
-                await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory);
-                await consumer.Consume(message, model, client);
-                await _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory);
+                await _interceptorRunner.RunBeforeInterceptors(message, client, handlerFactory, cancellationToken);
+                await consumer.Consume(message, model, client, cancellationToken);
+                await _interceptorRunner.RunAfterInterceptors(message, client, handlerFactory, cancellationToken);
                 return;
             }
             catch (Exception e)
@@ -137,7 +138,7 @@ internal class QueueConsumerExecutor<TModel> : ExecutorBase
                 }
 
                 if (Retry.DelayBetweenRetries > 0)
-                    await Task.Delay(Retry.DelayBetweenRetries);
+                    await Task.Delay(Retry.DelayBetweenRetries, cancellationToken);
 
                 if (i == count - 1)
                     throw;

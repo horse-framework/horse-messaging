@@ -45,7 +45,7 @@ async Task<HorseResult> PushQueueMessage(string userId, string modelType)
 			break;
 	}
 
-	return await service.HorseClient.Queue.PushJson(model, true, headers);
+	return await service.HorseClient.Queue.Push(model, true, headers);
 }
 
 async Task<HorseResult> PushQueueMessageThroughRouter(string userId, string modelType)
@@ -73,7 +73,7 @@ async Task<HorseResult> PushQueueMessageThroughRouter(string userId, string mode
 			break;
 	}
 
-	return await service.HorseClient.Router.PublishJson(model, true, headers);
+	return await service.HorseClient.Router.Publish(model, true, headers);
 }
 
 async Task<HorseResult> PushRouteDirectMessage(string userId)
@@ -87,7 +87,7 @@ async Task<HorseResult> PushRouteDirectMessage(string userId)
 	{
 		{ "UserId", userId },
 	};
-	return await service.HorseClient.Router.PublishJson(model, false, headers);
+	return await service.HorseClient.Router.Publish(model, false, headers);
 }
 
 async Task<HorseResult<TestResponseModel>> PushRouteRequestMessage(string userId)
@@ -97,5 +97,5 @@ async Task<HorseResult<TestResponseModel>> PushRouteRequestMessage(string userId
 	{
 		{ "UserId", userId },
 	};
-	return await service.HorseClient.Router.PublishRequestJson<TestRequestModel, TestResponseModel>(model, headers);
+	return await service.HorseClient.Router.PublishRequest<TestRequestModel, TestResponseModel>(model, headers);
 }

@@ -1,3 +1,4 @@
+using System.Text;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,7 +44,7 @@ public class PushTypeTest
             Assert.Equal(HorseResultCode.Ok, joined.Code);
         }
 
-        await producer.Queue.Push("push-a", "Hello, World!", false);
+        await producer.Queue.Push("push-a", Encoding.UTF8.GetBytes("Hello, World!"), false);
         await Task.Delay(1500);
         Assert.Equal(onlineConsumerCount, msgReceived);
         server.Stop();
@@ -60,7 +61,7 @@ public class PushTypeTest
         await producer.ConnectAsync("horse://localhost:" + port);
         Assert.True(producer.IsConnected);
 
-        await producer.Queue.Push("push-a", "Hello, World!", false);
+        await producer.Queue.Push("push-a", Encoding.UTF8.GetBytes("Hello, World!"), false);
         await Task.Delay(700);
 
         HorseQueue queue = server.Rider.Queue.Find("push-a");
@@ -108,7 +109,7 @@ public class PushTypeTest
         HorseResult joined = await consumer.Queue.Subscribe("push-a", true);
         Assert.Equal(HorseResultCode.Ok, joined.Code);
 
-        HorseResult ack = await producer.Queue.Push("push-a", "Hello, World!", true);
+        HorseResult ack = await producer.Queue.Push("push-a", Encoding.UTF8.GetBytes("Hello, World!"), true);
         Assert.Equal(queueAckIsActive, ack.Code == HorseResultCode.Ok);
         server.Stop();
     }

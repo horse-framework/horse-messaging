@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
@@ -12,7 +13,7 @@ namespace Sample.Consumer;
 [QueueName("SampleTestEvent")]
 public class ModelAConsumer : IQueueConsumer<ModelA>
 {
-    public Task Consume(HorseMessage message, ModelA model, HorseClient client)
+    public Task Consume(HorseMessage message, ModelA model, HorseClient client, CancellationToken cancellationToken)
     {
         _ = Console.Out.WriteLineAsync("CONSUMED");
         return Task.CompletedTask;

@@ -31,7 +31,7 @@ public class EventOperator
         try
         {
             HorseEvent horseEvent = (HorseEvent) Client.MessageSerializer.Deserialize(message, typeof(HorseEvent));
-            await reg.Executer.Execute(Client, message, horseEvent);
+            await reg.Executer.Execute(Client, message, horseEvent, Client.ConsumeToken);
         }
         catch (Exception ex)
         {

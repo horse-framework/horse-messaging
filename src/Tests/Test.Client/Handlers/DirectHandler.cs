@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Direct;
@@ -10,7 +11,8 @@ namespace Test.Client.Handlers;
 [AutoResponse(AutoResponse.All)]
 public class DirectHandler : IDirectMessageHandler<ModelC>
 {
-    public Task Handle(HorseMessage message, ModelC model, HorseClient client)
+    public Task Handle(HorseMessage message, ModelC model, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;
     }

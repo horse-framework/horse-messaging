@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 
@@ -19,12 +20,14 @@ public interface IHorseChannelBus
     /// <summary>
     /// Creates new channel
     /// </summary>
-    Task<HorseResult> Create(string channel, Action<ChannelOptions> options = null, bool verifyResponse = false);
+    Task<HorseResult> Create(string channel, Action<ChannelOptions> options = null, bool verifyResponse = false,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates new channel
     /// </summary>
-    Task<HorseResult> Delete(string channel, bool verifyResponse = false);
+    Task<HorseResult> Delete(string channel, bool verifyResponse = false,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Publishes a message to a channel
@@ -34,7 +37,8 @@ public interface IHorseChannelBus
     /// <param name="messageHeaders">Additional message headers</param>
     /// <returns></returns>
     Task<HorseResult> Publish(object model, bool waitForAcknowledge = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Publishes a message to a channel
@@ -45,7 +49,8 @@ public interface IHorseChannelBus
     /// <param name="messageHeaders">Additional message headers</param>
     /// <returns></returns>
     Task<HorseResult> Publish(string channel, object model, bool waitForAcknowledge = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Publishes a message to a channel
@@ -56,7 +61,8 @@ public interface IHorseChannelBus
     /// <param name="messageHeaders">Additional message headers</param>
     /// <returns></returns>
     Task<HorseResult> PublishString(string channel, string message, bool waitForAcknowledge = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Publishes a message to a channel
@@ -67,5 +73,6 @@ public interface IHorseChannelBus
     /// <param name="messageHeaders">Additional message headers</param>
     /// <returns></returns>
     Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitForAcknowledge = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default);
 }

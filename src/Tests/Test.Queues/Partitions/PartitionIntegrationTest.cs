@@ -1,3 +1,4 @@
+using System.Text;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -69,8 +70,7 @@ public class PartitionIntegrationTest
 
         for (int i = 0; i < 10; i++)
             for (int m = 0; m < 5; m++)
-                await producer.Queue.Push("FetchOrders", $"order-{m}",
-                    false,
+                await producer.Queue.Push("FetchOrders", Encoding.UTF8.GetBytes($"order-{m}"), false,
                     new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, $"worker-{i}") });
 
         await Task.Delay(3000);
@@ -107,8 +107,7 @@ public class PartitionIntegrationTest
         await producer.ConnectAsync("horse://localhost:" + port);
 
         for (int i = 0; i < 4; i++)
-            await producer.Queue.Push("Orders", $"msg-{i}",
-                false,
+            await producer.Queue.Push("Orders", Encoding.UTF8.GetBytes($"msg-{i}"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, i % 2 == 0 ? "partA" : "partB") });
 
         await Task.Delay(1500);

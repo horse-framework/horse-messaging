@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 
@@ -11,155 +12,83 @@ public interface IHorseRouterBus<TIdentifier> : IHorseRouterBus
 }
     
 /// <summary>
-/// Implementation for route messages and requests
+/// Bus interface for publishing messages to Horse routers.
+/// Provides raw binary, typed model, and request/response publish patterns.
 /// </summary>
 public interface IHorseRouterBus : IHorseConnection
 {
-    /// <summary>
-    /// Publish a message to a router
-    /// </summary>
-    /// <param name="routerName">Router name</param>
-    /// <param name="content">Message content</param>
-    /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
-    /// <param name="messageHeaders">Additional message headers</param>
-    /// <returns></returns>
-    Task<HorseResult> Publish(string routerName,
-        string content,
-        bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    // ──────────────────────────────────────────────────────────────────
+    // Publish — raw content
+    // ──────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Publish a message to a router
+    /// Publishes raw binary content to a router.
+    /// Pass <c>null</c> for <paramref name="messageId"/> to auto-generate one.
     /// </summary>
-    /// <param name="routerName">Router name</param>
-    /// <param name="content">Message content</param>
-    /// <param name="messageId">User specified message Id, must be unique</param>
-    /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
-    /// <param name="messageHeaders">Additional message headers</param>
-    /// <returns></returns>
-    Task<HorseResult> Publish(string routerName,
-        string content,
-        string messageId,
-        bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    Task<HorseResult> Publish(string routerName, byte[] data, string messageId = null,
+        bool waitForAcknowledge = false, ushort contentType = 0,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default);
+
+    // ──────────────────────────────────────────────────────────────────
+    // Publish — model
+    // ──────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Publish a message to a router
+    /// Publishes a serialized model to a router.
+    /// The router name is resolved from the <typeparamref name="T"/> attribute.
     /// </summary>
-    /// <param name="routerName">Router name</param>
-    /// <param name="content">Message content</param>
-    /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
-    /// <param name="messageHeaders">Additional message headers</param>
-    /// <returns></returns>
-    Task<HorseResult> Publish(string routerName,
-        MemoryStream content,
-        bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    Task<HorseResult> Publish<T>(T model, bool waitForAcknowledge = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default) where T : class;
 
     /// <summary>
-    /// Publish a message to a router
+    /// Publishes a serialized model to the specified router.
     /// </summary>
-    /// <param name="routerName">Router name</param>
-    /// <param name="content">Message content</param>
-    /// <param name="messageId">User specified message Id, must be unique</param>
-    /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
-    /// <param name="messageHeaders">Additional message headers</param>
-    /// <returns></returns>
-    Task<HorseResult> Publish(string routerName,
-        MemoryStream content,
-        string messageId,
-        bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    Task<HorseResult> Publish<T>(string routerName, T model, bool waitForAcknowledge = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default) where T : class;
 
     /// <summary>
-    /// Publish a JSON message to a router
+    /// Publishes a serialized model to the specified router with an explicit content type.
     /// </summary>
-    /// <param name="jsonObject">The object that will be serialized to JSON string</param>
-    /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
-    /// <param name="messageHeaders">Additional message headers</param>
-    /// <returns></returns>
-    Task<HorseResult> PublishJson(object jsonObject,
-        bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    Task<HorseResult> Publish<T>(string routerName, T model, ushort? contentType = null,
+        bool waitForAcknowledge = false,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default) where T : class;
 
     /// <summary>
-    /// Publish a JSON message to a router
+    /// Publishes a serialized model to the specified router with an explicit message id and content type.
     /// </summary>
-    /// <param name="routerName">Router name</param>
-    /// <param name="jsonObject">The object that will be serialized to JSON string</param>
-    /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
-    /// <param name="messageHeaders">Additional message headers</param>
-    /// <returns></returns>
-    Task<HorseResult> PublishJson(string routerName,
-        object jsonObject,
-        bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    Task<HorseResult> Publish<T>(string routerName, T model, string messageId, ushort? contentType = null,
+        bool waitForAcknowledge = false, IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default) where T : class;
+
+    // ──────────────────────────────────────────────────────────────────
+    // PublishRequest
+    // ──────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Publish a JSON message to a router
+    /// Sends a raw string request to a router and waits for a response from at least one binding.
+    /// The <paramref name="contentType"/> parameter disambiguates this overload from model-based variants.
     /// </summary>
-    /// <param name="routerName">Router name</param>
-    /// <param name="jsonObject">The object that will be serialized to JSON string</param>
-    /// <param name="contentType">Message content type</param>
-    /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
-    /// <param name="messageHeaders">Additional message headers</param>
-    /// <returns></returns>
-    Task<HorseResult> PublishJson(string routerName,
-        object jsonObject,
-        ushort? contentType = null,
-        bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-    /// <summary>
-    /// Publish a JSON message to a router
-    /// </summary>
-    /// <param name="routerName">Router name</param>
-    /// <param name="jsonObject">The object that will be serialized to JSON string</param>
-    /// <param name="messageId">User specified message Id, must be unique</param>
-    /// <param name="contentType">Message content type</param>
-    /// <param name="waitForCommit">If true, Task awaits until acknowledge received from server</param>
-    /// <param name="messageHeaders">Additional message headers</param>
-    /// <returns></returns>
-    Task<HorseResult> PublishJson(string routerName,
-        object jsonObject,
-        string messageId,
-        ushort? contentType = null,
-        bool waitForCommit = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
-
-
-        
-    /// <summary>
-    /// Publish a string message to a router and waits for a response message
-    /// </summary>
-    /// <param name="routerName">Router name</param>
-    /// <param name="message"></param>
-    /// <param name="contentType">Message content type</param>
-    /// <param name="messageHeaders">Additional message headers</param>
-    /// <returns></returns>
     Task<HorseMessage> PublishRequest(string routerName, string message, ushort contentType = 0,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Publish a JSON message to a router and waits for a response message
+    /// Publishes a model request to a router and waits for a typed response.
+    /// The router name is resolved from the <typeparamref name="TRequest"/> attribute.
     /// </summary>
-    /// <param name="request">Request model</param>
-    /// <typeparam name="TRequest">Request model type</typeparam>
-    /// <typeparam name="TResponse">Response model type</typeparam>
-    /// <param name="messageHeaders">Additional message headers</param>
-    Task<HorseResult<TResponse>> PublishRequestJson<TRequest, TResponse>(TRequest request,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    Task<HorseResult<TResponse>> PublishRequest<TRequest, TResponse>(TRequest request,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Publish a JSON message to a router and waits for a response message
+    /// Publishes a model request to the specified router and waits for a typed response.
     /// </summary>
-    /// <param name="routerName">Target router name</param>
-    /// <param name="request">Request model</param>
-    /// <param name="contentType">Message content type</param>
-    /// <typeparam name="TRequest">Request model type</typeparam>
-    /// <typeparam name="TResponse">Response model type</typeparam>
-    /// <param name="messageHeaders">Additional message headers</param>
-    /// <returns></returns>
-    Task<HorseResult<TResponse>> PublishRequestJson<TRequest, TResponse>(string routerName, TRequest request, ushort? contentType = null,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null);
+    Task<HorseResult<TResponse>> PublishRequest<TRequest, TResponse>(string routerName, TRequest request,
+        ushort? contentType = null,
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default);
 }

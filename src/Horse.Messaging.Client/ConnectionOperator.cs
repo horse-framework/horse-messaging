@@ -31,7 +31,7 @@ public class ConnectionOperator
             ContentType = KnownContentTypes.NodeList
         };
 
-        return _client.SendAndGetJson<List<NodeInformation>>(message);
+        return _client.SendAndGet<List<NodeInformation>>(message);
     }
 
     /// <summary>
@@ -46,7 +46,7 @@ public class ConnectionOperator
         };
         message.SetTarget(typeFilter);
 
-        return _client.SendAndGetJson<List<ClientInformation>>(message);
+        return _client.SendAndGet<List<ClientInformation>>(message);
     }
 
     #endregion

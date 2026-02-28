@@ -34,7 +34,7 @@ class Program
         while (true)
         {
             Console.ReadLine();
-            //await client.Direct.SendJsonByType("Test1", 123, new ModelA { Foo = new string('a', 10000) }, false);
+            //await client.Direct.SendByType("Test1", 123, new ModelA { Foo = new string('a', 10000) }, false);
             await client.Channel.PublishString("Sample", new string('a',10000), false);
         }
 

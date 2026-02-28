@@ -16,7 +16,7 @@ namespace RoutingSample.Producer
 
             while (true)
             {
-                HorseResult result = await client.Router.PublishJson(new SampleMessage(), true);
+                HorseResult result = await client.Router.Publish(new SampleMessage(), true);
                 Console.WriteLine($"Push: {result.Code}");
                 await Task.Delay(5000);
             }

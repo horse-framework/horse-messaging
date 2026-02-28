@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Protocol;
 
@@ -15,8 +16,12 @@ public interface IChannelSubscriber<in TModel>
     /// <param name="model">Message model</param>
     /// <param name="rawMessage">Raw message</param>
     /// <param name="client">Consumer client</param>
-    /// <returns></returns>
-    Task Handle(TModel model, HorseMessage rawMessage, HorseClient client);
+    /// <param name="cancellationToken">
+    /// Cancelled when the client disconnects or shuts down gracefully.
+    /// Pass this token to any async I/O calls inside the handler.
+    /// </param>
+    Task Handle(TModel model, HorseMessage rawMessage, HorseClient client,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Triggered when an exception is thrown while consuming the message
@@ -25,6 +30,7 @@ public interface IChannelSubscriber<in TModel>
     /// <param name="model">Message model</param>
     /// <param name="rawMessage">Raw message</param>
     /// <param name="client">Consumer client</param>
-    /// <returns></returns>
-    Task Error(Exception exception, TModel model, HorseMessage rawMessage, HorseClient client);
+    /// <param name="cancellationToken">Cancellation token passed from the executor.</param>
+    Task Error(Exception exception, TModel model, HorseMessage rawMessage, HorseClient client,
+        CancellationToken cancellationToken = default);
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Interceptors;
@@ -8,7 +9,7 @@ namespace AdvancedSample.Service.Interceptors;
 
 internal class TestInterceptor : IHorseInterceptor
 {
-    public Task Intercept(HorseMessage message, HorseClient client)
+    public Task Intercept(HorseMessage message, HorseClient client, CancellationToken cancellationToken = default)
     {
         Console.WriteLine("INTERCEPT");
         return Task.CompletedTask;

@@ -60,7 +60,7 @@ public class ChannelOperator
                 return;
 
             Interlocked.Increment(ref _activeChannelOperations);
-            await reg.Executer.Execute(Client, message, model);
+            await reg.Executer.Execute(Client, message, model, Client.ConsumeToken);
         }
         catch (Exception ex)
         {
@@ -75,7 +75,8 @@ public class ChannelOperator
     /// <summary>
     /// Creates new channel
     /// </summary>
-    public Task<HorseResult> Create(string channel, Action<ChannelOptions> options = null, bool verifyResponse = false)
+    public Task<HorseResult> Create(string channel, Action<ChannelOptions> options = null, bool verifyResponse = false,
+        CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Channel;
@@ -107,13 +108,14 @@ public class ChannelOperator
         if (verifyResponse)
             message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-        return Client.WaitResponse(message, verifyResponse);
+        return Client.WaitResponse(message, verifyResponse, cancellationToken);
     }
 
     /// <summary>
-    /// Creates a channel
+    /// Deletes a channel
     /// </summary>
-    public Task<HorseResult> Delete(string channel, bool verifyResponse = false)
+    public Task<HorseResult> Delete(string channel, bool verifyResponse = false,
+        CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Channel;
@@ -124,13 +126,15 @@ public class ChannelOperator
         if (verifyResponse)
             message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-        return Client.WaitResponse(message, verifyResponse);
+        return Client.WaitResponse(message, verifyResponse, cancellationToken);
     }
 
     /// <summary>
     /// Subscribes to a channel
     /// </summary>
-    public async Task<HorseResult> Subscribe(string channel, bool verifyResponse, IEnumerable<KeyValuePair<string, string>> headers = null)
+    public async Task<HorseResult> Subscribe(string channel, bool verifyResponse,
+        IEnumerable<KeyValuePair<string, string>> headers = null,
+        CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Channel;
@@ -145,13 +149,14 @@ public class ChannelOperator
         if (verifyResponse)
             message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-        return await Client.WaitResponse(message, verifyResponse);
+        return await Client.WaitResponse(message, verifyResponse, cancellationToken);
     }
 
     /// <summary>
     /// Unsubscribes from a channel
     /// </summary>
-    public async Task<HorseResult> Unsubscribe(string channel, bool verifyResponse)
+    public async Task<HorseResult> Unsubscribe(string channel, bool verifyResponse,
+        CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage();
         message.Type = MessageType.Channel;
@@ -162,7 +167,7 @@ public class ChannelOperator
         if (verifyResponse)
             message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-        return await Client.WaitResponse(message, verifyResponse);
+        return await Client.WaitResponse(message, verifyResponse, cancellationToken);
     }
 
     /// <summary>
@@ -175,7 +180,7 @@ public class ChannelOperator
         message.SetMessageId(Client.UniqueIdGenerator.Create());
         message.ContentType = KnownContentTypes.ChannelList;
         message.AddHeader(HorseHeaders.FILTER, filter);
-        return await Client.SendAndGetJson<List<ChannelInformation>>(message);
+        return await Client.SendAndGet<List<ChannelInformation>>(message);
     }
 
     /// <summary>
@@ -191,7 +196,7 @@ public class ChannelOperator
 
         message.AddHeader(HorseHeaders.CHANNEL_NAME, channelName);
 
-        return await Client.SendAndGetJson<List<ClientInformation>>(message);
+        return await Client.SendAndGet<List<ClientInformation>>(message);
     }
 
     #region Publish
@@ -200,16 +205,18 @@ public class ChannelOperator
     /// Publishes a message to a channel
     /// </summary>
     public Task<HorseResult> Publish(object jsonObject, bool waitAcknowledge = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default)
     {
-        return Publish(null, jsonObject, waitAcknowledge, messageHeaders);
+        return Publish(null, jsonObject, waitAcknowledge, messageHeaders, cancellationToken);
     }
 
     /// <summary>
     /// Publishes a message to a channel
     /// </summary>
     public async Task<HorseResult> Publish(string channel, object jsonObject, bool waitAcknowledge = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default)
     {
         ChannelTypeDescriptor descriptor = _descriptorContainer.GetDescriptor(jsonObject.GetType());
 
@@ -228,23 +235,25 @@ public class ChannelOperator
         if (string.IsNullOrEmpty(message.MessageId) && waitAcknowledge)
             message.SetMessageId(Client.UniqueIdGenerator.Create());
 
-        return await Client.WaitResponse(message, waitAcknowledge);
+        return await Client.WaitResponse(message, waitAcknowledge, cancellationToken);
     }
 
     /// <summary>
-    /// Pushes a message to a queue
+    /// Publishes a string message to a channel
     /// </summary>
     public Task<HorseResult> PublishString(string channel, string content, bool waitAcknowledge = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default)
     {
-        return PublishData(channel, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge, messageHeaders);
+        return PublishData(channel, new MemoryStream(Encoding.UTF8.GetBytes(content)), waitAcknowledge, messageHeaders, cancellationToken);
     }
 
     /// <summary>
-    /// Pushes a message to a queue
+    /// Publishes binary data to a channel
     /// </summary>
     public Task<HorseResult> PublishData(string channel, MemoryStream content, bool waitAcknowledge = false,
-        IEnumerable<KeyValuePair<string, string>> messageHeaders = null)
+        IEnumerable<KeyValuePair<string, string>> messageHeaders = null,
+        CancellationToken cancellationToken = default)
     {
         HorseMessage message = new HorseMessage(MessageType.Channel, channel, KnownContentTypes.ChannelPush);
         message.Content = content;
@@ -253,16 +262,16 @@ public class ChannelOperator
             foreach (KeyValuePair<string, string> pair in messageHeaders)
                 message.AddHeader(pair.Key, pair.Value);
 
-        return Client.WaitResponse(message, waitAcknowledge);
+        return Client.WaitResponse(message, waitAcknowledge, cancellationToken);
     }
 
     #endregion
-    
+
     /// <summary>
     /// Unsubscribes from all channels
     /// </summary>
-    public Task<HorseResult> UnsubscribeFromAllChannels()
+    public Task<HorseResult> UnsubscribeFromAllChannels(CancellationToken cancellationToken = default)
     {
-        return Unsubscribe("*", true);
+        return Unsubscribe("*", true, cancellationToken);
     }
 }

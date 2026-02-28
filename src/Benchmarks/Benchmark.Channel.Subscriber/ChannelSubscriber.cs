@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
 using Horse.Messaging.Client.Channels;
@@ -8,13 +9,15 @@ namespace Benchmark.Channel.Subscriber;
 
 public class ChannelSubscriber : IChannelSubscriber<ChannelModel>
 {
-    public Task Handle(ChannelModel model, HorseMessage rawMessage, HorseClient client)
+    public Task Handle(ChannelModel model, HorseMessage rawMessage, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
         Program.Counter.Increase();
         return Task.CompletedTask;
     }
 
-    public async Task Error(Exception exception, ChannelModel model, HorseMessage rawMessage, HorseClient client)
+    public async Task Error(Exception exception, ChannelModel model, HorseMessage rawMessage, HorseClient client,
+        CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }

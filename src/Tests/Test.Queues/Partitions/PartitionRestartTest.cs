@@ -1,3 +1,4 @@
+using System.Text;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -201,7 +202,7 @@ public class PartitionRestartTest : IDisposable
         await prod.ConnectAsync("horse://localhost:" + port);
 
         for (int i = 0; i < 3; i++)
-            await prod.Queue.Push(queueName, $"offline-{i}", false,
+            await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes($"offline-{i}"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
 
         await Task.Delay(500); // allow flush
@@ -296,7 +297,7 @@ public class PartitionRestartTest : IDisposable
 
         // Push 5 messages while connected
         for (int i = 0; i < 5; i++)
-            await prod.Queue.Push(queueName, $"online-{i}", false,
+            await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes($"online-{i}"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
 
         await Task.Delay(500);
@@ -310,7 +311,7 @@ public class PartitionRestartTest : IDisposable
         await Task.Delay(200);
 
         for (int i = 0; i < 4; i++)
-            await prod.Queue.Push(queueName, $"offline-{i}", false,
+            await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes($"offline-{i}"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
 
         await Task.Delay(500); // allow flush to disk
@@ -364,9 +365,9 @@ public class PartitionRestartTest : IDisposable
         // Both online: each message goes to its labeled partition
         for (int i = 0; i < 2; i++)
         {
-            await prod.Queue.Push(queueName, $"a-online-{i}", false,
+            await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes($"a-online-{i}"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, labelA) });
-            await prod.Queue.Push(queueName, $"b-online-{i}", false,
+            await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes($"b-online-{i}"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, labelB) });
         }
 
@@ -383,11 +384,11 @@ public class PartitionRestartTest : IDisposable
 
         // Push 3 messages labeled A → stored in A's partition, NOT delivered to B
         for (int i = 0; i < 3; i++)
-            await prod.Queue.Push(queueName, $"a-offline-{i}", false,
+            await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes($"a-offline-{i}"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, labelA) });
 
         // Push 1 more to B (B is still online, receives immediately)
-        await prod.Queue.Push(queueName, "b-while-a-offline", false,
+        await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes("b-while-a-offline"), false,
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, labelB) });
 
         await Task.Delay(600);
@@ -461,7 +462,7 @@ public class PartitionRestartTest : IDisposable
             // Push while consumer offline → stored in labeled partition
             HorseClient prod = new HorseClient();
             await prod.ConnectAsync("horse://localhost:" + port1);
-            await prod.Queue.Push(queueName, "restart-payload", false,
+            await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes("restart-payload"), false,
                 new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, label) });
             await Task.Delay(600); // flush
 
@@ -546,7 +547,7 @@ public class PartitionRestartTest : IDisposable
         HorseClient prod = new HorseClient();
         await prod.ConnectAsync("horse://localhost:" + port);
         for (int i = 0; i < 3; i++)
-            await prod.Queue.Push(queueName, $"orphan-{i}", false);
+            await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes($"orphan-{i}"), false);
 
         await Task.Delay(500); // flush
 

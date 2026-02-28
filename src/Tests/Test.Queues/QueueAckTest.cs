@@ -1,3 +1,4 @@
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Horse.Messaging.Client;
@@ -20,7 +21,7 @@ public class QueueAckTest
         await producer.ConnectAsync("horse://localhost:" + port);
         Assert.True(producer.IsConnected);
 
-        await producer.Queue.Push("push-a", "Hello, World!", false);
+        await producer.Queue.Push("push-a", Encoding.UTF8.GetBytes("Hello, World!"), false);
         await Task.Delay(100);
 
         HorseClient consumer = new HorseClient();
