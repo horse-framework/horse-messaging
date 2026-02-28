@@ -20,8 +20,12 @@ internal sealed class HorseConnectService(IServiceProvider provider, string serv
             : provider.GetRequiredKeyedService<HorseClient>(serviceKey);
 
         client.Provider = provider;
-        client.Connect();
-        return Task.CompletedTask;
+
+        return Task.Run(() =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            client.Connect();
+        }, cancellationToken);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
