@@ -138,11 +138,13 @@ public class QueueOptions
             MessageIdUniqueCheck = options.MessageIdUniqueCheck,
             Partition = options.Partition == null ? null : new PartitionOptions
             {
-                Enabled                = options.Partition.Enabled,
-                MaxPartitionCount      = options.Partition.MaxPartitionCount,
+                Enabled                 = options.Partition.Enabled,
+                MaxPartitionCount       = options.Partition.MaxPartitionCount,
                 SubscribersPerPartition = options.Partition.SubscribersPerPartition,
-                AutoDestroy            = options.Partition.AutoDestroy,
-                AutoDestroyIdleSeconds = options.Partition.AutoDestroyIdleSeconds
+                AutoDestroy             = options.Partition.AutoDestroy,
+                AutoDestroyIdleSeconds  = options.Partition.AutoDestroyIdleSeconds,
+                AutoAssignWorkers       = options.Partition.AutoAssignWorkers,
+                MaxPartitionsPerWorker  = options.Partition.MaxPartitionsPerWorker
             }
         };
     }

@@ -162,13 +162,15 @@ public class QueueRider
                 MessageIdUniqueCheck = configuration.MessageIdUniqueCheck,
                 Partition = configuration.Partition == null ? null : new Partitions.PartitionOptions
                 {
-                    Enabled                = configuration.Partition.Enabled,
-                    MaxPartitionCount      = configuration.Partition.MaxPartitionCount,
+                    Enabled                 = configuration.Partition.Enabled,
+                    MaxPartitionCount       = configuration.Partition.MaxPartitionCount,
                     SubscribersPerPartition = configuration.Partition.SubscribersPerPartition,
-                    AutoDestroy            = Enum.TryParse<Partitions.PartitionAutoDestroy>(configuration.Partition.AutoDestroy, out var pad)
-                                                 ? pad
-                                                 : Partitions.PartitionAutoDestroy.Disabled,
-                    AutoDestroyIdleSeconds = configuration.Partition.AutoDestroyIdleSeconds
+                    AutoDestroy             = Enum.TryParse<Partitions.PartitionAutoDestroy>(configuration.Partition.AutoDestroy, out var pad)
+                                                  ? pad
+                                                  : Partitions.PartitionAutoDestroy.Disabled,
+                    AutoDestroyIdleSeconds  = configuration.Partition.AutoDestroyIdleSeconds,
+                    AutoAssignWorkers       = configuration.Partition.AutoAssignWorkers,
+                    MaxPartitionsPerWorker  = configuration.Partition.MaxPartitionsPerWorker
                 }
             };
 

@@ -25,12 +25,15 @@ internal class QueueTypeResolver : ITypeDescriptorResolver<QueueTypeDescriptor>
         if (defaultDescriptor != null)
             ResolveDefaults(type, descriptor, defaultDescriptor);
 
+        ResolveDescriptor(type, descriptor);
+
         if (_client.Queue.NameHandler != null && !IsConsumerType(type))
         {
             string queueName = _client.Queue.NameHandler.Invoke(new QueueNameHandlerContext
             {
                 Type = type,
-                Client = _client
+                Client = _client,
+                QueueName = descriptor.QueueName
             });
 
             if (!string.IsNullOrEmpty(queueName))
@@ -40,7 +43,6 @@ internal class QueueTypeResolver : ITypeDescriptorResolver<QueueTypeDescriptor>
             }
         }
 
-        ResolveDescriptor(type, descriptor);
 
         return descriptor;
     }

@@ -379,15 +379,7 @@ public class QueueOperator : IDisposable
 
         if (!string.IsNullOrEmpty(queue))
             descriptor.QueueName = queue;
-
-        if (NameHandler != null)
-            descriptor.QueueName = NameHandler.Invoke(new QueueNameHandlerContext
-            {
-                Client = Client,
-                Type = typeof(T),
-                QueueName = descriptor.QueueName
-            });
-
+        
         HorseMessage message = descriptor.CreateMessage();
 
         if (!string.IsNullOrEmpty(messageId))
@@ -429,13 +421,6 @@ public class QueueOperator : IDisposable
         if (!string.IsNullOrEmpty(queue))
             descriptor.QueueName = queue;
 
-        if (NameHandler != null)
-            descriptor.QueueName = NameHandler.Invoke(new QueueNameHandlerContext
-            {
-                Client = Client,
-                Type = model.GetType(),
-                QueueName = descriptor.QueueName
-            });
 
         HorseMessage message = descriptor.CreateMessage();
 
@@ -469,13 +454,6 @@ public class QueueOperator : IDisposable
         if (!string.IsNullOrEmpty(queue))
             descriptor.QueueName = queue;
 
-        if (NameHandler != null)
-            descriptor.QueueName = NameHandler.Invoke(new QueueNameHandlerContext
-            {
-                Client = Client,
-                Type = typeof(T),
-                QueueName = descriptor.QueueName
-            });
 
         HorseMessage firstMessage = descriptor.CreateMessage();
         firstMessage.WaitResponse = true;

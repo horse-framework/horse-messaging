@@ -1,4 +1,4 @@
-﻿using Horse.Messaging.Client;
+﻿﻿using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Extensions.Client;
@@ -16,6 +16,7 @@ producerBuilder.AddHorse(config =>
 {
     config.AddHost("horse://localhost:2626");
     config.SetClientName("Sample.Producer");
+    config.UseQueueName(ctx => $"{ctx.QueueName}-Free");
     config.UseGracefulShutdown(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), () =>
     {
         Console.WriteLine("Graceful shutdown initiated");
@@ -38,7 +39,7 @@ consumerBuilder.AddHorse(config =>
         Console.WriteLine("Graceful shutdown initiated");
         return Task.CompletedTask;
     });
-    config.AddTransientConsumer<TestEventConsumer>();
+    config.AddTransientConsumer<TestEventConsumer>((queueName) => $"{queueName}-Free", null);
     config.OnConnected(m =>
     {
         Console.WriteLine("Connected to Horse server");
@@ -61,8 +62,15 @@ while (!producerClient.IsConnected || !consumerClient.IsConnected)
 }
 
 IHorseQueueBus bus = producer.Services.GetRequiredService<IHorseQueueBus>();
-HorseResult? result = await bus.Push(new TestEvent(), true);
-Console.WriteLine($"Message sent: {result.Code}");
+try
+{
+    HorseResult? result = await bus.Push(new TestEvent(), true, partitionLabel: "sample-tenant");
+    Console.WriteLine($"Message sent: {result.Code}");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Push failed: {ex.Message}");
+}
 
 while (!Test.MessageConsumed)
 {

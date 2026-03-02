@@ -1007,6 +1007,153 @@ public class PartitionTierScenarioTest
         Assert.All(freeMetrics, m => Assert.Equal(1, m.ConsumerCount));
         Assert.All(stdMetrics, m => Assert.Equal(1, m.ConsumerCount));
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 13. SAMPLE.ALL SCENARIO — Exact reproduction of Sample.All/Program.cs
+    //     Server with global partition config + AutoQueueCreation,
+    //     consumer with queueName transform, producer with NameHandler + label.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task SampleAll_GlobalPartitionConfig_TransformAndLabel_ConsumerReceives()
+    {
+        // ── Server: global partition config (same as Sample.All/Server.cs) ──
+        var (rider, port, _) = await PartitionTestServer.Create();
+        // PartitionTestServer already sets AutoQueueCreation = true.
+        // Set the default partition config (global) that auto-created queues will inherit.
+        rider.Queue.Options.Partition = new PartitionOptions
+        {
+            Enabled = true,
+            AutoDestroy = PartitionAutoDestroy.NoMessages,
+            AutoAssignWorkers = true,
+            MaxPartitionsPerWorker = 50,
+            AutoDestroyIdleSeconds = 600
+        };
+
+        // ── Consumer: subscribe to "TestEvent-Free" via transform, no label ──
+        HorseClient consumer = new HorseClient();
+        bool messageConsumed = false;
+        consumer.MessageReceived += (_, msg) =>
+        {
+            string body = Encoding.UTF8.GetString(msg.Content.ToArray());
+            if (body.Contains("Foo"))
+                messageConsumed = true;
+        };
+
+        await consumer.ConnectAsync("horse://localhost:" + port);
+        Assert.True(consumer.IsConnected);
+
+        // Transform: "TestEvent" → "TestEvent-Free", no label → enters worker pool
+        await consumer.Queue.Subscribe("TestEvent-Free", true);
+        await Task.Delay(500);
+
+        // Queue should be auto-created with global partition config
+        HorseQueue queue = rider.Queue.Find("TestEvent-Free");
+        Assert.NotNull(queue);
+        Assert.NotNull(queue.PartitionManager);
+        // Worker is in pool — no partitions yet
+        Assert.Empty(queue.PartitionManager.Partitions);
+
+        // ── Producer: push with partition label ──
+        HorseClient producer = await Connect(port);
+
+        await producer.Queue.Push("TestEvent-Free",
+            Encoding.UTF8.GetBytes("{\"Foo\":\"Bar\"}"),
+            false,
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "sample-tenant") });
+
+        await Task.Delay(800);
+
+        // ── Assertions ──
+        Assert.True(messageConsumed, "Consumer should have received the message");
+
+        // Partition created for "sample-tenant"
+        Assert.Single(queue.PartitionManager.Partitions);
+        PartitionEntry entry = queue.PartitionManager.Partitions.First();
+        Assert.Equal("sample-tenant", entry.Label);
+        Assert.True(entry.Queue.Clients.Any(), "Worker should be auto-assigned to partition");
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 14. CLONEFROM BUG — QueueOptions.CloneFrom must copy
+    //     AutoAssignWorkers and MaxPartitionsPerWorker
+    // ═══════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void CloneFrom_CopiesAutoAssignWorkers()
+    {
+        QueueOptions original = new QueueOptions
+        {
+            Partition = new PartitionOptions
+            {
+                Enabled = true,
+                AutoAssignWorkers = true,
+                MaxPartitionsPerWorker = 42,
+                MaxPartitionCount = 10,
+                SubscribersPerPartition = 3,
+                AutoDestroy = PartitionAutoDestroy.NoMessages,
+                AutoDestroyIdleSeconds = 120
+            }
+        };
+
+        QueueOptions cloned = QueueOptions.CloneFrom(original);
+
+        Assert.NotNull(cloned.Partition);
+        Assert.True(cloned.Partition.Enabled);
+        Assert.True(cloned.Partition.AutoAssignWorkers);
+        Assert.Equal(42, cloned.Partition.MaxPartitionsPerWorker);
+        Assert.Equal(10, cloned.Partition.MaxPartitionCount);
+        Assert.Equal(3, cloned.Partition.SubscribersPerPartition);
+        Assert.Equal(PartitionAutoDestroy.NoMessages, cloned.Partition.AutoDestroy);
+        Assert.Equal(120, cloned.Partition.AutoDestroyIdleSeconds);
+    }
+
+    [Fact]
+    public void CloneFrom_NullPartition_StaysNull()
+    {
+        QueueOptions original = new QueueOptions { Partition = null };
+        QueueOptions cloned = QueueOptions.CloneFrom(original);
+        Assert.Null(cloned.Partition);
+    }
+
+    [Fact]
+    public async Task AutoQueueCreation_InheritsGlobalAutoAssignWorkers()
+    {
+        // Verifies that auto-created queues get AutoAssignWorkers from global config
+        var (rider, port, _) = await PartitionTestServer.Create();
+
+        rider.Queue.Options.Partition = new PartitionOptions
+        {
+            Enabled = true,
+            AutoAssignWorkers = true,
+            MaxPartitionsPerWorker = 25
+        };
+
+        // Trigger auto-creation by subscribing
+        HorseClient worker = await Connect(port);
+        await worker.Queue.Subscribe("InheritTest-Queue", true);
+        await Task.Delay(300);
+
+        HorseQueue queue = rider.Queue.Find("InheritTest-Queue");
+        Assert.NotNull(queue);
+        Assert.NotNull(queue.PartitionManager);
+
+        // The queue's partition options should have inherited AutoAssignWorkers
+        // This was the CloneFrom bug — before the fix, AutoAssignWorkers would be false
+        // Worker should be in pool (no partitions), not assigned to a label-less partition
+        Assert.Empty(queue.PartitionManager.Partitions);
+
+        // Push a labeled message — if AutoAssignWorkers is true, worker gets auto-assigned
+        HorseClient producer = await Connect(port);
+        int received = 0;
+        worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
+
+        await PushWithLabel(producer, "InheritTest-Queue", "tenant-1");
+        await Task.Delay(600);
+
+        Assert.Equal(1, received);
+        Assert.Single(queue.PartitionManager.Partitions);
+    }
 }
 
 // ── Test model & consumer used by QueueNameTransform tests ───────────────

@@ -219,16 +219,6 @@ public class QueueConsumerRegistrar
         if (consumerDescriptor.HasQueueName && !string.IsNullOrEmpty(consumerDescriptor.QueueName))
             queueName = consumerDescriptor.QueueName;
 
-        if (_operator?.NameHandler != null)
-        {
-            queueName = _operator.NameHandler.Invoke(new QueueNameHandlerContext
-            {
-                Client = _operator.Client,
-                Type = typeInfo.ModelType,
-                QueueName = queueName
-            });
-        }
-
         QueueConsumerRegistration registration = new QueueConsumerRegistration
         {
             QueueName = queueName,

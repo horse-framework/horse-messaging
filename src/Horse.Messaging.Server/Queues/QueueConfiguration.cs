@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿using System;
 using EnumsNET;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues.Partitions;
@@ -15,6 +15,8 @@ public class PartitionConfigurationData
     public int    SubscribersPerPartition { get; set; }
     public string AutoDestroy             { get; set; }
     public int    AutoDestroyIdleSeconds  { get; set; }
+    public bool   AutoAssignWorkers       { get; set; }
+    public int    MaxPartitionsPerWorker  { get; set; }
 }
 
 /// <summary>
@@ -193,11 +195,13 @@ public class QueueConfiguration
             MessageIdUniqueCheck = queue.Options.MessageIdUniqueCheck,
             Partition = queue.Options.Partition == null ? null : new PartitionConfigurationData
             {
-                Enabled                = queue.Options.Partition.Enabled,
-                MaxPartitionCount      = queue.Options.Partition.MaxPartitionCount,
+                Enabled                 = queue.Options.Partition.Enabled,
+                MaxPartitionCount       = queue.Options.Partition.MaxPartitionCount,
                 SubscribersPerPartition = queue.Options.Partition.SubscribersPerPartition,
-                AutoDestroy            = queue.Options.Partition.AutoDestroy.ToString(),
-                AutoDestroyIdleSeconds = queue.Options.Partition.AutoDestroyIdleSeconds
+                AutoDestroy             = queue.Options.Partition.AutoDestroy.ToString(),
+                AutoDestroyIdleSeconds  = queue.Options.Partition.AutoDestroyIdleSeconds,
+                AutoAssignWorkers       = queue.Options.Partition.AutoAssignWorkers,
+                MaxPartitionsPerWorker  = queue.Options.Partition.MaxPartitionsPerWorker
             },
             SubPartition = subPartData
         };

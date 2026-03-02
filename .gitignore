@@ -258,3 +258,8 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
+
+# Horse runtime data (queues.json, .hdb files)
+**/data/
+**/pt-data-*/
+
