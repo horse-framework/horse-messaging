@@ -9,13 +9,9 @@ public class SubPartitionMeta
     /// <summary>Name of the parent (partitioned) queue.</summary>
     public string ParentQueueName { get; set; }
 
-    /// <summary>Partition id (base-62 or "Orphan").</summary>
+    /// <summary>Partition id (base-62).</summary>
     public string PartitionId { get; set; }
 
-    /// <summary>Worker routing label. Null for label-less or orphan partitions.</summary>
+    /// <summary>Worker routing label. Null for label-less partitions.</summary>
     public string Label { get; set; }
-
-    /// <summary>True when this is the orphan (fallback) partition.</summary>
-    public bool IsOrphan { get; set; }
 }
-

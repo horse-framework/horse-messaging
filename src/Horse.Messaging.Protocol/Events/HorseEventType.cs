@@ -88,7 +88,7 @@ public enum HorseEventType : short
     /// <summary>
     /// Triggered when a new partition is created for a partitioned queue.
     /// Event target = parent queue name.
-    /// Event parameters: Partition-Id, Partition-Queue, Partition-Label, Partition-Is-Orphan
+    /// Event parameters: Partition-Id, Partition-Queue, Partition-Label
     /// </summary>
     QueuePartitionCreated = 211,
 

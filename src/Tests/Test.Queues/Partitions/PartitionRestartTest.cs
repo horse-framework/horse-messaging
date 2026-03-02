@@ -109,7 +109,6 @@ public class PartitionRestartTest : IDisposable
     private static async Task<(HorseRider rider, int port, string dataPath)> CreateServer(
         string queueName,
         string dataPath = null,
-        bool enableOrphan = false,
         int maxPartitions = 10,
         int subscribersPerPartition = 1)
     {
@@ -151,7 +150,6 @@ public class PartitionRestartTest : IDisposable
                     Enabled = true,
                     MaxPartitionCount = maxPartitions,
                     SubscribersPerPartition = subscribersPerPartition,
-                    EnableOrphanPartition = enableOrphan,
                     AutoDestroy = PartitionAutoDestroy.Disabled
                 };
             });
@@ -169,7 +167,7 @@ public class PartitionRestartTest : IDisposable
     /// consumer reconnects with same label → receives all 3 messages.
     ///
     /// NEW BEHAVIOUR: Messages pushed while the labeled partition has no active
-    /// consumer are stored in the labeled partition queue itself (not orphan).
+    /// consumer are stored in the labeled partition queue itself.
     /// When the consumer reconnects it is subscribed to the same partition and
     /// Trigger() delivers the buffered messages.
     /// </summary>
@@ -177,9 +175,7 @@ public class PartitionRestartTest : IDisposable
     public async Task ConsumerBounce_OfflinePushedMessages_DeliveredOnReconnect()
     {
         string guid = Guid.NewGuid().ToString("N")[..8];
-        // enableOrphan is irrelevant for this scenario now — labeled messages stay
-        // in the labeled partition regardless of orphan setting.
-        var (rider, port, dataPath) = await CreateServer($"bounce-{guid}", enableOrphan: false);
+        var (rider, port, dataPath) = await CreateServer($"bounce-{guid}");
         _dataPaths.Add(dataPath);
 
         const string label = "tenant-bounce";
@@ -207,7 +203,7 @@ public class PartitionRestartTest : IDisposable
 
         await Task.Delay(500); // allow flush
 
-        // Messages must be stored in the LABELED partition, not in orphan or dropped
+        // Messages must be stored in the LABELED partition, not dropped
         Assert.Equal(3, entry.Queue.Manager.MessageStore.Count());
         Assert.True(File.Exists(Path.Combine(dataPath, $"{entry.Queue.Name}.hdb")));
 
@@ -278,7 +274,7 @@ public class PartitionRestartTest : IDisposable
     public async Task Producer_Continuous_ConsumerReconnects_ReceivesAll()
     {
         string guid = Guid.NewGuid().ToString("N")[..8];
-        var (rider, port, dataPath) = await CreateServer($"cont-{guid}", enableOrphan: false);
+        var (rider, port, dataPath) = await CreateServer($"cont-{guid}");
         _dataPaths.Add(dataPath);
 
         const string label = "worker-cont";
@@ -316,7 +312,7 @@ public class PartitionRestartTest : IDisposable
 
         await Task.Delay(500); // allow flush to disk
 
-        // Offline messages must be stored in the LABELED partition (not dropped, not orphan)
+        // Offline messages must be stored in the LABELED partition (not dropped)
         Assert.Equal(4, part.Queue.Manager.MessageStore.Count());
 
         // ── Phase 3: consumer reconnects with same label ──────────────
@@ -338,7 +334,7 @@ public class PartitionRestartTest : IDisposable
     public async Task TwoTenants_ConsumerBounce_FullIsolationMaintained()
     {
         string guid = Guid.NewGuid().ToString("N")[..8];
-        var (rider, port, dataPath) = await CreateServer($"isolation-{guid}", enableOrphan: false);
+        var (rider, port, dataPath) = await CreateServer($"isolation-{guid}");
         _dataPaths.Add(dataPath);
 
         string queueName = $"isolation-{guid}";
@@ -442,7 +438,7 @@ public class PartitionRestartTest : IDisposable
 
         // ── Phase 1: subscribe, push while offline, then stop server ─
         {
-            var (rider1, port1, dp) = await CreateServer(queueName, enableOrphan: false);
+            var (rider1, port1, dp) = await CreateServer(queueName);
             dataPath = dp;
             _dataPaths.Add(dataPath);
 
@@ -515,56 +511,6 @@ public class PartitionRestartTest : IDisposable
             // Message delivered successfully after restart
             Assert.Equal(1, received[0]);
         }
-    }
-
-    // ─────────────────────────────────────────────────────────────────
-    // R6. Orphan partition — offline push, consumer reconnects
-    // ─────────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Label-less messages routed to the orphan partition are held in the .hdb store
-    /// when no consumer is present. When a consumer reconnects (same or different client),
-    /// the orphan messages are delivered.
-    /// </summary>
-    [Fact]
-    public async Task OrphanPartition_ConsumerBounce_OfflineMessages_Delivered()
-    {
-        string guid = Guid.NewGuid().ToString("N")[..8];
-        var (rider, port, dataPath) = await CreateServer($"orphan-bounce-{guid}", enableOrphan: true);
-        _dataPaths.Add(dataPath);
-        string queueName = $"orphan-bounce-{guid}";
-
-        // ── Phase 1: subscribe (creates orphan), disconnect ───────────
-        HorseClient sub1 = new HorseClient { AutoAcknowledge = true };
-        await sub1.ConnectAsync("horse://localhost:" + port);
-        await sub1.Queue.SubscribePartitioned(queueName, "lbl", true);
-        await Task.Delay(300);
-
-        sub1.Disconnect();
-        await Task.Delay(300);
-
-        // ── Phase 2: push label-less messages → orphan ────────────────
-        HorseClient prod = new HorseClient();
-        await prod.ConnectAsync("horse://localhost:" + port);
-        for (int i = 0; i < 3; i++)
-            await prod.Queue.Push(queueName, Encoding.UTF8.GetBytes($"orphan-{i}"), false);
-
-        await Task.Delay(500); // flush
-
-        HorseQueue parent = rider.Queue.Find(queueName);
-        PartitionEntry orphanEntry = parent.PartitionManager.OrphanPartition;
-        Assert.NotNull(orphanEntry);
-        Assert.Equal(3, orphanEntry.Queue.Manager.MessageStore.Count());
-
-        // ── Phase 3: consumer reconnects, gets the orphan messages ─────
-        int[] received = { 0 };
-        HorseClient sub2 = new HorseClient { AutoAcknowledge = true };
-        sub2.MessageReceived += (_, _) => Interlocked.Increment(ref received[0]);
-        await sub2.ConnectAsync("horse://localhost:" + port);
-        await sub2.Queue.SubscribePartitioned(queueName, "lbl", true);
-
-        await Task.Delay(1200);
-        Assert.Equal(3, received[0]);
     }
 }
 

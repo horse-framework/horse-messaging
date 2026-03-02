@@ -111,7 +111,7 @@ public class HorseQueue
 
     /// <summary>
     /// Non-null when <see cref="IsPartitionQueue"/> is true.
-    /// Carries the parent queue name, partition id, label and orphan flag used for
+    /// Carries the parent queue name, partition id and label used for
     /// persistence and restart recovery.
     /// </summary>
     public SubPartitionMeta PartitionMeta { get; internal set; }
@@ -305,13 +305,6 @@ public class HorseQueue
             if (Options.Partition is { Enabled: true } && !IsPartitionQueue)
             {
                 PartitionManager = new PartitionManager(this, Options.Partition);
-
-                // Pre-create orphan when WaitForAcknowledge to guarantee subscriber availability
-                if (Options.Acknowledge == QueueAckDecision.WaitForAcknowledge &&
-                    Options.Partition.EnableOrphanPartition)
-                {
-                    _ = PartitionManager.GetOrCreateOrphanQueue();
-                }
             }
 
             _triggerTimer = new Timer(a =>

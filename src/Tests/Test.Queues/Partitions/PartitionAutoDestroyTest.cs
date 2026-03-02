@@ -33,7 +33,6 @@ public class PartitionAutoDestroyTest
                 Enabled = true,
                 MaxPartitionCount = 10,
                 SubscribersPerPartition = 1,
-                EnableOrphanPartition = true,
                 AutoDestroy = rule,
                 AutoDestroyIdleSeconds = idleSeconds
             };
@@ -55,7 +54,7 @@ public class PartitionAutoDestroyTest
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "w1") });
 
         await Task.Delay(200);
-        string partitionId = queue.PartitionManager.Partitions.First(p => !p.IsOrphan).PartitionId;
+        string partitionId = queue.PartitionManager.Partitions.First().PartitionId;
 
         client.Disconnect();
         await Task.Delay(3000);
@@ -77,7 +76,7 @@ public class PartitionAutoDestroyTest
 
         await Task.Delay(200);
 
-        PartitionEntry entry = queue.PartitionManager.Partitions.FirstOrDefault(p => !p.IsOrphan && p.Label == "wX");
+        PartitionEntry entry = queue.PartitionManager.Partitions.FirstOrDefault(p => p.Label != null && p.Label == "wX");
         Assert.NotNull(entry);
         string partId = entry.PartitionId;
 
@@ -91,7 +90,7 @@ public class PartitionAutoDestroyTest
     }
 
     [Fact]
-    public async Task AutoDestroy_NoConsumers_ParentQueueAndOrphanSurvive()
+    public async Task AutoDestroy_NoConsumers_ParentQueueSurvives()
     {
         var (server, port, queue) = await CreateQueue(PartitionAutoDestroy.NoConsumers, idleSeconds: 2);
 
@@ -116,7 +115,6 @@ public class PartitionAutoDestroyTest
         // Only proceed if keepMe queue actually has c2 as subscriber
         if (!keepEntry.Queue.Clients.Any())
         {
-            // If somehow c2 ended up in orphan, test the parent queue survival instead
             Assert.False(queue.IsDestroyed);
             server.Stop();
             return;
@@ -151,7 +149,7 @@ public class PartitionAutoDestroyTest
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "active-w") });
 
         await Task.Delay(200);
-        string partId = queue.PartitionManager.Partitions.First(p => !p.IsOrphan).PartitionId;
+        string partId = queue.PartitionManager.Partitions.First().PartitionId;
 
         // No messages pushed, consumer connected
         // Wait for multiple timer cycles
@@ -179,7 +177,7 @@ public class PartitionAutoDestroyTest
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "emp-w") });
 
         await Task.Delay(200);
-        string partId = queue.PartitionManager.Partitions.First(p => !p.IsOrphan).PartitionId;
+        string partId = queue.PartitionManager.Partitions.First().PartitionId;
 
         client.Disconnect();
         await Task.Delay(3000);
@@ -205,11 +203,11 @@ public class PartitionAutoDestroyTest
 
         await Task.Delay(400);
 
-        PartitionEntry entry = queue.PartitionManager.Partitions.FirstOrDefault(p => !p.IsOrphan);
+        PartitionEntry entry = queue.PartitionManager.Partitions.FirstOrDefault(p => p.Label != null);
         Assert.NotNull(entry);
         string partId = entry.PartitionId;
 
-        // If client ended up in orphan instead of label partition, just verify parent queue alive
+        // If client ended up somewhere else, just verify parent queue alive
         if (!entry.Queue.Clients.Any())
         {
             Assert.False(queue.IsDestroyed);

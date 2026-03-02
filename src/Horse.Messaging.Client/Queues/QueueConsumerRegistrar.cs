@@ -52,7 +52,7 @@ public class QueueConsumerRegistrar
     /// <param name="partitionLabel">
     /// Routing label for the partition. Use <c>null</c> to keep the value resolved from
     /// attributes (or no partition). Use <see cref="string.Empty"/> for label-less
-    /// partitioned subscribe (orphan / round-robin path).
+    /// partitioned subscribe (round-robin path).
     /// </param>
     /// <param name="maxPartitions">Maximum partitions for auto-create. 0 = server default.</param>
     /// <param name="subscribersPerPartition">Max subscribers per partition. 0 = server default.</param>

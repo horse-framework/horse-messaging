@@ -34,7 +34,6 @@ public class PartitionEventTest
                 Enabled = true,
                 MaxPartitionCount = 10,
                 SubscribersPerPartition = 1,
-                EnableOrphanPartition = true,
                 AutoDestroy = PartitionAutoDestroy.Disabled
             };
         });
@@ -81,30 +80,33 @@ public class PartitionEventTest
 
         await Task.Delay(300);
 
-        // At least orphan + label partition = 2 created events
+        // Label partition = 1 created event
         Assert.True(handler.CreatedCount >= 1);
 
         server.Stop();
     }
 
     [Fact]
-    public async Task ServerHandler_CalledForOrphanCreation()
+    public async Task ServerHandler_CalledForMultiplePartitions()
     {
         var (server, port, queue) = await CreateQueue();
 
         var handler = new TestPartitionEventHandler();
         server.Rider.Queue.PartitionEventHandlers.Add(handler);
 
-        HorseClient client = new HorseClient();
-        await client.ConnectAsync("horse://localhost:" + port);
-        await client.Queue.Subscribe("ev-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl") });
+        HorseClient c1 = new HorseClient();
+        HorseClient c2 = new HorseClient();
+        await c1.ConnectAsync("horse://localhost:" + port);
+        await c2.ConnectAsync("horse://localhost:" + port);
+        await c1.Queue.Subscribe("ev-q", true,
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl1") });
+        await c2.Queue.Subscribe("ev-q", true,
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "lbl2") });
 
         await Task.Delay(300);
 
-        // Orphan partition creation fires the handler too
-        bool orphanFired = handler.CreatedIds.Contains("Orphan");
-        Assert.True(orphanFired);
+        // Two label partitions created
+        Assert.True(handler.CreatedCount >= 2);
 
         server.Stop();
     }
@@ -123,7 +125,6 @@ public class PartitionEventTest
                 Enabled = true,
                 MaxPartitionCount = 10,
                 SubscribersPerPartition = 1,
-                EnableOrphanPartition = true,
                 AutoDestroy = PartitionAutoDestroy.NoConsumers,
                 AutoDestroyIdleSeconds = 1
             };

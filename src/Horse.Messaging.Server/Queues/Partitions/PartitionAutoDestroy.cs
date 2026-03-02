@@ -2,7 +2,7 @@ namespace Horse.Messaging.Server.Queues.Partitions;
 
 /// <summary>
 /// Auto-destroy rules specific to partition queues.
-/// Applies only to individual partitions; the parent queue and orphan partition are not affected.
+/// Applies only to individual partitions; the parent queue is not affected.
 /// </summary>
 public enum PartitionAutoDestroy
 {

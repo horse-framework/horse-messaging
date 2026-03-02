@@ -34,7 +34,6 @@ public class PartitionMetricsTest
                 Enabled = true,
                 MaxPartitionCount = maxPartitions,
                 SubscribersPerPartition = 1,
-                EnableOrphanPartition = true,
                 AutoDestroy = PartitionAutoDestroy.Disabled
             };
         });
@@ -70,26 +69,7 @@ public class PartitionMetricsTest
 
         PartitionMetricSnapshot labelSnap = snapshots.FirstOrDefault(s => s.Label == "w1");
         Assert.NotNull(labelSnap);
-        Assert.False(labelSnap.IsOrphan);
         Assert.Equal(0, labelSnap.MessageCount);
-    }
-
-    [Fact]
-    public async Task GetMetrics_OrphanIncluded()
-    {
-        var (_, port, queue) = await CreateSimpleQueue();
-
-        HorseClient client = new HorseClient();
-        await client.ConnectAsync("horse://localhost:" + port);
-        await client.Queue.Subscribe("met-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "any") });
-
-        await Task.Delay(300);
-
-        var snapshots = queue.PartitionManager.GetMetrics().ToList();
-        PartitionMetricSnapshot orphan = snapshots.FirstOrDefault(s => s.IsOrphan);
-        Assert.NotNull(orphan);
-        Assert.Equal("Orphan", orphan.PartitionId);
     }
 
     [Fact]
@@ -138,8 +118,7 @@ public class PartitionMetricsTest
         await Task.Delay(400);
 
         var snapshots = queue.PartitionManager.GetMetrics().ToList();
-        int normalCount = snapshots.Count(s => !s.IsOrphan);
-        Assert.Equal(3, normalCount);
+        Assert.Equal(3, snapshots.Count);
     }
 
     // ── RefreshPartitionMetrics on QueueInfo ──────────────────────────────────
@@ -159,7 +138,6 @@ public class PartitionMetricsTest
         queue.Info.RefreshPartitionMetrics(queue.PartitionManager);
 
         Assert.Equal(1, queue.Info.PartitionCount);
-        Assert.True(queue.Info.OrphanPartitionActive);
         Assert.NotEmpty(queue.Info.PartitionMetrics);
     }
 
@@ -173,7 +151,6 @@ public class PartitionMetricsTest
         HorseQueue queue = server.Rider.Queue.Find("push-a");
         Assert.NotNull(queue);
         Assert.Equal(0, queue.Info.PartitionCount);
-        Assert.False(queue.Info.OrphanPartitionActive);
         Assert.Empty(queue.Info.PartitionMetrics);
 
         server.Stop();
@@ -193,7 +170,7 @@ public class PartitionMetricsTest
 
         await Task.Delay(200);
 
-        PartitionEntry entry = queue.PartitionManager.Partitions.First(p => !p.IsOrphan);
+        PartitionEntry entry = queue.PartitionManager.Partitions.First();
         Assert.True((DateTime.UtcNow - entry.CreatedAt).TotalSeconds < 10);
         Assert.Null(entry.LastMessageAt);
     }
@@ -211,28 +188,15 @@ public class PartitionMetricsTest
 
         await worker.Queue.Subscribe("met-q", true,
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "ts2") });
-        await Task.Delay(800); // let partition queue initialize and worker subscription settle
+        await Task.Delay(800);
 
-        // Verify client is actually in the partition before pushing
         PartitionEntry entry = queue.PartitionManager.Partitions.FirstOrDefault(p => p.Label == "ts2");
         Assert.NotNull(entry);
 
-        if (!entry.Queue.Clients.Any())
-        {
-            // Worker ended up in orphan — LastMessageAt test not meaningful in this case
-            // Just verify message routing works to orphan
-            await producer.Queue.Push("met-q", Encoding.UTF8.GetBytes("ts-msg"), false,
-                new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "ts2") });
-            await Task.Delay(500);
-            // orphan received message; just pass
-            return;
-        }
-
-        await producer.Queue.Push("met-q", Encoding.UTF8.GetBytes("ts-msg"), false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "ts2") });
+        await producer.Queue.Push("met-q", Encoding.UTF8.GetBytes("ts-msg"), false,
+            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "ts2") });
         await Task.Delay(700);
 
-        // LastMessageAt should be set after RouteMessage is called
         Assert.NotNull(entry.LastMessageAt);
     }
 }
-

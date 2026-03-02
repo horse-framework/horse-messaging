@@ -142,8 +142,7 @@ public class QueueOptions
                 MaxPartitionCount      = options.Partition.MaxPartitionCount,
                 SubscribersPerPartition = options.Partition.SubscribersPerPartition,
                 AutoDestroy            = options.Partition.AutoDestroy,
-                AutoDestroyIdleSeconds = options.Partition.AutoDestroyIdleSeconds,
-                EnableOrphanPartition  = options.Partition.EnableOrphanPartition
+                AutoDestroyIdleSeconds = options.Partition.AutoDestroyIdleSeconds
             }
         };
     }

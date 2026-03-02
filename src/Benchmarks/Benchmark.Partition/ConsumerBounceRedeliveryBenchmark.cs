@@ -43,9 +43,9 @@ public class ConsumerBounceRedeliveryBenchmark : BenchmarkBase
     {
         StartServer(QueueType.Push, QueueAckDecision.None);
 
-        // EnableOrphanPartition=false so offline messages stay in labeled partition only
+        // Offline messages stay in labeled partition only
         CreatePartitionedQueue(Queue, QueueType.Push,
-            maxPartitions: 5, subscribersPerPart: 1, enableOrphan: false)
+            maxPartitions: 5, subscribersPerPart: 1)
             .GetAwaiter().GetResult();
 
         // Create partition by subscribing once

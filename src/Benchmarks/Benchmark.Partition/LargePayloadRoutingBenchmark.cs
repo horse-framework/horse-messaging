@@ -46,7 +46,7 @@ public class LargePayloadRoutingBenchmark : BenchmarkBase
     {
         StartServer(QueueType.Push, QueueAckDecision.None);
         CreatePartitionedQueue(Queue, QueueType.Push,
-            maxPartitions: PartitionCount, subscribersPerPart: 1, enableOrphan: false)
+            maxPartitions: PartitionCount, subscribersPerPart: 1)
             .GetAwaiter().GetResult();
 
         _labels    = new string[PartitionCount];

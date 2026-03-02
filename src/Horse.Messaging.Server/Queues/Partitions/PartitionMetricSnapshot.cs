@@ -10,7 +10,6 @@ public class PartitionMetricSnapshot
 {
     public string PartitionId { get; init; }
     public string Label { get; init; }
-    public bool IsOrphan { get; init; }
     public int MessageCount { get; init; }
     public int ConsumerCount { get; init; }
     public string QueueName { get; init; }

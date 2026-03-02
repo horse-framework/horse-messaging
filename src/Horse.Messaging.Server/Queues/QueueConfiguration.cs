@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using EnumsNET;
 using Horse.Messaging.Protocol;
 using Horse.Messaging.Server.Queues.Partitions;
@@ -15,7 +15,6 @@ public class PartitionConfigurationData
     public int    SubscribersPerPartition { get; set; }
     public string AutoDestroy             { get; set; }
     public int    AutoDestroyIdleSeconds  { get; set; }
-    public bool   EnableOrphanPartition   { get; set; }
 }
 
 /// <summary>
@@ -28,14 +27,11 @@ public class SubPartitionData
     /// <summary>Parent queue name.</summary>
     public string ParentQueueName { get; set; }
 
-    /// <summary>Partition id (base-62 or "Orphan").</summary>
+    /// <summary>Partition id (base-62).</summary>
     public string PartitionId { get; set; }
 
-    /// <summary>Worker routing label. Null for label-less or orphan partitions.</summary>
+    /// <summary>Worker routing label. Null for label-less partitions.</summary>
     public string Label { get; set; }
-
-    /// <summary>True when this is the orphan (fallback) partition.</summary>
-    public bool IsOrphan { get; set; }
 }
 
 /// <summary>
@@ -153,7 +149,7 @@ public class QueueConfiguration
 
     /// <summary>
     /// Non-null when this queue is a partition sub-queue (IsPartitionQueue = true).
-    /// Carries the parent queue name, partition id, label and orphan flag so that
+    /// Carries the parent queue name, partition id and label so that
     /// the PartitionManager can re-attach this queue on server restart.
     /// </summary>
     public SubPartitionData SubPartition { get; set; }
@@ -170,8 +166,7 @@ public class QueueConfiguration
             {
                 ParentQueueName = queue.PartitionMeta.ParentQueueName,
                 PartitionId     = queue.PartitionMeta.PartitionId,
-                Label           = queue.PartitionMeta.Label,
-                IsOrphan        = queue.PartitionMeta.IsOrphan
+                Label           = queue.PartitionMeta.Label
             };
         }
 
@@ -202,8 +197,7 @@ public class QueueConfiguration
                 MaxPartitionCount      = queue.Options.Partition.MaxPartitionCount,
                 SubscribersPerPartition = queue.Options.Partition.SubscribersPerPartition,
                 AutoDestroy            = queue.Options.Partition.AutoDestroy.ToString(),
-                AutoDestroyIdleSeconds = queue.Options.Partition.AutoDestroyIdleSeconds,
-                EnableOrphanPartition  = queue.Options.Partition.EnableOrphanPartition
+                AutoDestroyIdleSeconds = queue.Options.Partition.AutoDestroyIdleSeconds
             },
             SubPartition = subPartData
         };

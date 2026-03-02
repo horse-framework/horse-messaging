@@ -37,7 +37,6 @@ public class PartitionQueueTypeTest
         QueueType type,
         int maxPartitions = 10,
         int subscribersPerPartition = 1,
-        bool enableOrphan = true,
         QueueAckDecision ack = QueueAckDecision.None)
     {
         var (rider, port, _) = await PartitionTestServer.Create();
@@ -51,7 +50,6 @@ public class PartitionQueueTypeTest
                 Enabled = true,
                 MaxPartitionCount = maxPartitions,
                 SubscribersPerPartition = subscribersPerPartition,
-                EnableOrphanPartition = enableOrphan,
                 AutoDestroy = PartitionAutoDestroy.Disabled
             };
             opts.Type = type; // set AFTER Partition so CloneFrom carries it
@@ -169,7 +167,7 @@ public class PartitionQueueTypeTest
         await Task.Delay(400);
 
         // Partition'da 2 subscriber olmalı
-        var part = queue.PartitionManager.Partitions.First(p => !p.IsOrphan);
+        var part = queue.PartitionManager.Partitions.First();
         Assert.Equal(2, part.Queue.ClientsCount());
 
         HorseClient producer = new HorseClient();
@@ -246,7 +244,7 @@ public class PartitionQueueTypeTest
         await workerB.Queue.SubscribePartitioned("rr2-q", "shared", true);
         await Task.Delay(400);
 
-        var part = queue.PartitionManager.Partitions.First(p => !p.IsOrphan);
+        var part = queue.PartitionManager.Partitions.First();
         Assert.Equal(2, part.Queue.ClientsCount());
 
         HorseClient producer = new HorseClient();
@@ -314,7 +312,6 @@ public class PartitionQueueTypeTest
                 Enabled = true,
                 MaxPartitionCount = 10,
                 SubscribersPerPartition = 1,
-                EnableOrphanPartition = false,
                 AutoDestroy = PartitionAutoDestroy.Disabled
             };
         });
@@ -370,7 +367,7 @@ public class PartitionQueueTypeTest
         await Task.Delay(400);
 
         // Mesaj pull edilmeden önce partition deposunda durmalı
-        var part = queue.PartitionManager.Partitions.First(p => !p.IsOrphan);
+        var part = queue.PartitionManager.Partitions.First();
         Assert.Equal(1, part.Queue.Manager.MessageStore.Count());
 
         // Pull isteği gönder
@@ -405,14 +402,14 @@ public class PartitionQueueTypeTest
 
         Assert.Equal(0, received[0]);
 
-        var part = queue.PartitionManager.Partitions.First(p => !p.IsOrphan);
+        var part = queue.PartitionManager.Partitions.First();
         Assert.Equal(1, part.Queue.Manager.MessageStore.Count());
     }
 
     [Fact]
     public async Task Pull_Partition_IsolationMaintained_EachWorkerPullsOwnPartition()
     {
-        var (rider, port, queue) = await CreateServer("pull3-q", QueueType.Pull, subscribersPerPartition: 1, enableOrphan: false);
+        var (rider, port, queue) = await CreateServer("pull3-q", QueueType.Pull, subscribersPerPartition: 1);
 
         HorseClient worker1 = new HorseClient { AutoAcknowledge = true };
         HorseClient worker2 = new HorseClient { AutoAcknowledge = true };
@@ -459,8 +456,8 @@ public class PartitionQueueTypeTest
         await c2.Queue.SubscribePartitioned("inh-pl-q", "lbl", true);
         await Task.Delay(300);
 
-        var rrPart = queueRR.PartitionManager.Partitions.First(p => !p.IsOrphan);
-        var plPart = queuePL.PartitionManager.Partitions.First(p => !p.IsOrphan);
+        var rrPart = queueRR.PartitionManager.Partitions.First();
+        var plPart = queuePL.PartitionManager.Partitions.First();
 
         Assert.Equal(QueueType.RoundRobin, rrPart.Queue.Type);
         Assert.Equal(QueueType.Pull, plPart.Queue.Type);
@@ -531,7 +528,6 @@ public class PartitionQueueTypeTest
                 Enabled = true,
                 MaxPartitionCount = 10,
                 SubscribersPerPartition = 1,
-                EnableOrphanPartition = false,
                 AutoDestroy = PartitionAutoDestroy.Disabled
             };
         });

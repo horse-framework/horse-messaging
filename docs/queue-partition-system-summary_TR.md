@@ -1,6 +1,6 @@
 # Queue Partition Sistemi — Özet
 
-> **Son güncelleme:** 28 Şubat 2026  
+> **Son güncelleme:** 2 Mart 2026  
 > Bu döküman partition sistemiyle ilgili her kullanım senaryosunu, tasarım kararını ve API detayını kapsar. Yeni özellik eklendiğinde bu dosya güncellenmelidir.
 
 ---
@@ -12,14 +12,12 @@
 3. [Partition Seçenekleri (PartitionOptions)](#partition-seçenekleri-partitionoptions)
 4. [Kullanım Senaryoları](#kullanım-senaryoları)
    - [Label'lı Kullanım — Dedicated Partition](#1-labelli-kullanım--dedicated-partition)
-   - [Label'sız + Orphan Enabled — Load Distribution](#2-labelsız--orphan-enabled--load-distribution)
-   - [Label'sız + Orphan Disabled — Round-Robin Partition](#3-labelsız--orphan-disabled--round-robin-partition)
-   - [AutoQueueCreation ile Partition Oluşturma](#4-autoqueuecreation-ile-partition-oluşturma)
+   - [Label'sız — Round-Robin Partition](#2-labelsız--round-robin-partition)
+   - [AutoQueueCreation ile Partition Oluşturma](#3-autoqueuecreation-ile-partition-oluşturma)
 5. [QueueType ve Partition Davranışı](#queuetype-ve-partition-davranışı)
 6. [Header Referansı](#header-referansı)
 7. [Routing Akışı](#routing-akışı)
-8. [Orphan Partition](#orphan-partition)
-9. [AutoDestroy](#autodestroy)
+8. [AutoDestroy](#autodestroy)
 10. [Metrikler](#metrikler)
 11. [Event Sistemi](#event-sistemi)
 12. [Client API Özeti](#client-api-özeti)
@@ -43,8 +41,8 @@ Producer  ──►  FetchOrders (parent, IsPartitioned=true)
                PartitionManager
                 ┌────┴────────────────┐
                 ▼                     ▼
-   FetchOrders-Partition-a3k9x   FetchOrders-Partition-Orphan
-         (Worker-1'e ait)              (sahipsiz mesajlar)
+   FetchOrders-Partition-a3k9x   FetchOrders-Partition-b7m2p
+         (Worker-1'e ait)              (Worker-2'ye ait)
 ```
 
 ---
@@ -64,13 +62,11 @@ PartitionManager ≠ null
 ```
 FetchOrders-Partition-a3k9x   ← worker-1'e ait  (IsPartitionQueue=true)
 FetchOrders-Partition-b7m2p   ← worker-2'e ait  (IsPartitionQueue=true)
-FetchOrders-Partition-Orphan  ← sahipsiz mesajlar için
 ```
 
 - Her partition queue normal bir `HorseQueue`'dur ama `IsPartitionQueue = true`.
 - Partition queue'ların kendi `PartitionManager`'ı **yoktur** (`IsPartitioned = false`).
 - İsim formatı: `{parentQueueName}-Partition-{base62Id}`
-- Orphan sabit isimle oluşur: `{parentQueueName}-Partition-Orphan`
 
 ### PartitionManager
 
@@ -91,9 +87,8 @@ Her partition'ı temsil eden iç struct:
 ```csharp
 public class PartitionEntry
 {
-    public string PartitionId  { get; set; }  // base62 unique id ("Orphan" sabit)
-    public string Label        { get; set; }  // null = label'sız veya orphan
-    public bool   IsOrphan     { get; set; }
+    public string PartitionId  { get; set; }  // base62 unique id
+    public string Label        { get; set; }  // null = label'sız
     public HorseQueue Queue    { get; set; }
     public DateTime CreatedAt  { get; set; }
     public DateTime LastMessageAt { get; set; }
@@ -110,7 +105,6 @@ opts.Partition = new PartitionOptions
     Enabled                = true,
     MaxPartitionCount      = 10,    // 0 = sınırsız
     SubscribersPerPartition = 1,    // her partition'da max kaç subscriber
-    EnableOrphanPartition  = true,  // orphan partition açık mı
     AutoDestroy            = PartitionAutoDestroy.Disabled,
     AutoDestroyIdleSeconds = 30     // AutoDestroy kontrol aralığı (saniye)
 };
@@ -121,7 +115,6 @@ opts.Partition = new PartitionOptions
 | `Enabled` | `false` | Partitioning aktif mi |
 | `MaxPartitionCount` | `0` | Maksimum label partition sayısı (0 = sınırsız) |
 | `SubscribersPerPartition` | `1` | Her partition'daki max subscriber sayısı |
-| `EnableOrphanPartition` | `true` | Orphan partition oluşturulsun mu |
 | `AutoDestroy` | `Disabled` | Otomatik silme kuralı |
 | `AutoDestroyIdleSeconds` | `30` | AutoDestroy timer aralığı |
 
@@ -143,7 +136,6 @@ await rider.Queue.Create("FetchOrders", opts =>
         Enabled                = true,
         MaxPartitionCount      = 10,
         SubscribersPerPartition = 1,
-        EnableOrphanPartition  = true,
         AutoDestroy            = PartitionAutoDestroy.NoConsumers,
         AutoDestroyIdleSeconds = 30
     };
@@ -176,14 +168,11 @@ await producer.Queue.Push("FetchOrders", message, false,
 4. Başka worker mesajı göremez
 5. Worker düşerse `NoConsumers` kuralı ile partition `AutoDestroyIdleSeconds` sonra silinir
 
-**Orphan ile ilişki:**  
-Label'lı worker aynı zamanda orphan partition'a da otomatik subscribe edilir (`EnableOrphanPartition=true` ise). Bu sayede label'sız gelen mesajlar da bu worker tarafından alınabilir.
-
 ---
 
-### 2. Label'sız + Orphan Enabled — Load Distribution
+### 2. Label'sız — Round-Robin Partition
 
-**Ne zaman kullanılır:** Worker'lar hangi partition'a ait olduklarını bilmek istemediğinde; mesajların tüm worker'lara eşit dağıtılmasını istediğinizde.
+**Ne zaman kullanılır:** Worker'lar hangi partition'a ait olduklarını bilmek istemediğinde; mesajların round-robin ile dağıtılmasını istediğinizde.
 
 ```csharp
 // ── Worker tarafı ──────────────────────────────────────────
@@ -200,58 +189,9 @@ await producer.Queue.Push("JobQueue", message, false);
 ```
 
 **Ne olur:**
-1. Her worker bağlandığında kendine ait bir label'sız partition açılır
-2. Tüm worker'lar **orphan partition'a da** otomatik subscribe edilir
-3. Label'sız mesajlar orphan partition'a gönderilir
-4. Orphan push semantiği ile tüm subscriber'lara dağıtır
-
-```
-JobQueue (parent)
-    ├── Partition-abc  ← Worker-1 (kendi partition'ı)
-    ├── Partition-xyz  ← Worker-2 (kendi partition'ı)
-    └── Orphan         ← Worker-1 + Worker-2 (her ikisi de burada)
-
-Mesaj (label'sız) → Orphan → Worker-1 veya Worker-2
-```
-
-**Not:** Bu mod temelde klasik push queue gibi davranır. Partition açılması ek bellek kullanır ama mesaj dağıtımı için orphan kullanıldığından ayrı partition'ların pratikte bir katkısı yoktur.
-
----
-
-### 3. Label'sız + Orphan Disabled — Round-Robin Partition
-
-**Ne zaman kullanılır:** Orphan partition istemediğinizde, mesajların round-robin ile partition'lara dağıtılmasını istediğinizde.
-
-```csharp
-// ── Server tarafı ──────────────────────────────────────────
-await rider.Queue.Create("JobQueue", opts =>
-{
-    opts.Type = QueueType.Push;
-    opts.Partition = new PartitionOptions
-    {
-        Enabled                = true,
-        MaxPartitionCount      = 5,
-        SubscribersPerPartition = 1,
-        EnableOrphanPartition  = false,   // ← orphan kapalı
-        AutoDestroy            = PartitionAutoDestroy.NoConsumers,
-        AutoDestroyIdleSeconds = 30
-    };
-});
-
-// ── Worker tarafı ──────────────────────────────────────────
-await client.Queue.Subscribe("JobQueue", true);
-// Her worker kendi partition'ını alır (label = null)
-
-// ── Producer tarafı ────────────────────────────────────────
-await producer.Queue.Push("JobQueue", message, false);
-// Label'sız → round-robin ile partition'lara dağıtılır
-```
-
-**Ne olur:**
-1. Worker-1 bağlanır → `Partition-abc` açılır, Worker-1 eklenir
-2. Worker-2 bağlanır → `Partition-abc` dolu → `Partition-xyz` açılır, Worker-2 eklenir
-3. Label'sız mesaj gelir → subscriber'ı olan partition'lar arasında **round-robin**
-4. Orphan hiç oluşturulmaz
+1. Her worker bağlandığında kendine ait bir partition açılır
+2. Label'sız mesajlar subscriber'ı olan partition'lar arasında **round-robin** dağıtılır
+3. Worker düşerse ilgili partition `AutoDestroy` kuralı ile temizlenir
 
 ```
 JobQueue (parent)
@@ -260,22 +200,18 @@ JobQueue (parent)
 
 Mesaj-1 → Partition-xyz → Worker-2
 Mesaj-2 → Partition-abc → Worker-1
-Mesaj-3 → Partition-xyz → Worker-2
 ...
 ```
 
-**Orphan Enabled vs Disabled karşılaştırması:**
-
-| | Orphan Enabled | Orphan Disabled |
-|---|---|---|
-| Mesaj dağıtımı | Orphan üzerinden push | Round-robin ile direkt partition'a |
-| Bellek | +1 orphan queue | Sadece label partition'lar |
-| Orphan oluşturulur mu | Evet | Hayır |
-| Subscriber yoksa | Orphan'a gider (boş kalır) | `NoConsumers` döner |
+| Durum | Davranış |
+|---|---|
+| 3 worker bağlı, 100 mesaj | 3 partition, mesajlar round-robin dağıtılır |
+| 1 worker düştü | Diğer 2 devam eder; düşen worker'ın partition'ı `NoConsumers` ile silinir |
+| Subscriber yok, label'sız push | `NoConsumers` döner |
 
 ---
 
-### 4. AutoQueueCreation ile Partition Oluşturma
+### 3. AutoQueueCreation ile Partition Oluşturma
 
 **Ne zaman kullanılır:** Queue henüz mevcut değilken client'ın subscribe olurken aynı anda partitioned queue oluşturmasını istediğinizde.
 
@@ -343,15 +279,14 @@ Producer → Push("FetchOrders", msg, headers)
     ┌───────────┴───────────────┐
    YES                          NO
     │                            │
-LabelIndex'te var mı?    EnableOrphanPartition?
-    │ YES                ┌───────┴───────┐
-    │                   YES             NO
-    ▼                    │               │
-entry.Queue         GetOrCreate     Round-Robin
-entry.LastMessageAt  Orphan()       (subscriber'ı
-= DateTime.UtcNow                    olan partition'lar
-    │                    │           arasında)
-    └────────────────────┘
+LabelIndex'te var mı?      Round-Robin
+    │ YES                  (subscriber'ı
+    ▼                       olan partition'lar
+entry.Queue                 arasında)
+entry.LastMessageAt
+= DateTime.UtcNow
+    │                            │
+    └────────────────────────────┘
                 │
            target.Push(msg)
                 │
@@ -359,43 +294,9 @@ entry.LastMessageAt  Orphan()       (subscriber'ı
            → NoConsumers
 ```
 
-**Label var ama subscriber yok → `ResolveNoSubscriberTarget`:**
+**Label var ama subscriber yok:**
 
-```
-EnableOrphanPartition == false → null → NoConsumers
-EnableOrphanPartition == true  → orphan.Clients.Any()?
-    WaitForAcknowledge && !any  → null → NoConsumers
-    Otherwise                   → orphan queue
-```
-
----
-
-## Orphan Partition
-
-Orphan partition label'sız veya sahipsiz mesajlar için bir fallback havuzudur.
-
-### Oluşturulma Kuralları
-
-| Koşul | Durum |
-|---|---|
-| `EnableOrphanPartition = false` | Hiç oluşturulmaz |
-| `EnableOrphanPartition = true` + herhangi bir subscribe | Lazy olarak oluşturulur |
-| `WaitForAcknowledge` queue + `EnableOrphanPartition = true` | `InitializeQueue`'da önceden oluşturulur |
-
-### Subscriber Kuralları
-
-- Orphan partition'ın `ClientLimit = 0` (sınırsız).
-- Label'lı subscribe olan her worker, label partition'ına ek olarak orphan'a da otomatik eklenir.
-- Label'sız subscribe olan her worker direkt orphan'a da eklenir.
-- `EnableOrphanPartition = false` ise orphan subscribe edilmez.
-
-### WaitForAcknowledge Garantisi
-
-```csharp
-// WaitForAcknowledge modunda orphan'da her zaman en az 1 subscriber şartı
-if (Acknowledge == WaitForAcknowledge && !orphan.Clients.Any())
-    return null; // → NoConsumers
-```
+Labeled mesajlar HER ZAMAN kendi label partition'larına yönlendirilir. Subscriber olsun olmasın mesaj partition'da bekler, subscriber gelince teslim edilir. Başka partition'a veya worker'a asla gitmez.
 
 ---
 
@@ -424,7 +325,6 @@ public enum PartitionAutoDestroy
 
 ### Notlar
 
-- Orphan partition AutoDestroy timer'dan **muaftır** (`IsOrphan = true` olan entry'ler atlanır).
 - Partition silinince `_partitions` ve `_labelIndex`'ten kaldırılır.
 - Parent queue yaşamaya devam eder, diğer partition'lar etkilenmez.
 - Partition queue kendi `QueueOptions.AutoDestroy` değeri `Disabled`'dır (recursive silme olmaz).
@@ -438,11 +338,10 @@ public enum PartitionAutoDestroy
 queue.Info.RefreshPartitionMetrics(queue.PartitionManager);
 
 Console.WriteLine($"Partition sayısı : {queue.Info.PartitionCount}");
-Console.WriteLine($"Orphan aktif     : {queue.Info.OrphanPartitionActive}");
 
 foreach (PartitionMetricSnapshot snap in queue.Info.PartitionMetrics)
 {
-    Console.WriteLine($"  [{snap.Label ?? "(orphan)"}]" +
+    Console.WriteLine($"  [{snap.Label ?? "(labelsiz)"}]" +
                       $"  id={snap.PartitionId}" +
                       $"  queue={snap.QueueName}" +
                       $"  mesaj={snap.MessageCount}" +
@@ -456,8 +355,7 @@ foreach (PartitionMetricSnapshot snap in queue.Info.PartitionMetrics)
 | Alan | Tip | Açıklama |
 |---|---|---|
 | `PartitionId` | `string` | Unique partition kimliği |
-| `Label` | `string?` | Worker label'ı (null = label'sız veya orphan) |
-| `IsOrphan` | `bool` | Orphan partition mı |
+| `Label` | `string?` | Worker label'ı (null = label'sız) |
 | `QueueName` | `string` | Fiziksel queue adı |
 | `MessageCount` | `int` | Şu anda kuyruktaki mesaj sayısı |
 | `ConsumerCount` | `int` | Aktif subscriber sayısı |
@@ -537,7 +435,7 @@ public class FetchOrderConsumer : IQueueConsumer<FetchOrderEvent>
     }
 }
 
-// ── Label'sız partitioned subscribe (orphan / round-robin yolu) ───────
+// ── Label'sız partitioned subscribe (round-robin yolu) ───────
 [PartitionedQueue(MaxPartitions = 5)]
 public class JobConsumer : IQueueConsumer<JobEvent> { ... }
 
@@ -556,7 +454,7 @@ public class FetchOrderConsumer : IQueueConsumer<FetchOrderEvent> { ... }
 | `[PartitionedQueue("label")]` | Subscribe'da `Partition-Label` header'ı gönderir |
 | `[PartitionedQueue("label", MaxPartitions = N)]` | Auto-create için `Partition-Limit: N` de gönderir |
 | `[PartitionedQueue("label", MaxPartitions = N, SubscribersPerPartition = M)]` | Her üç partition header'ını gönderir |
-| `[PartitionedQueue]` veya `[PartitionedQueue(null)]` | Label'sız partitioned subscribe (orphan / round-robin) |
+| `[PartitionedQueue]` veya `[PartitionedQueue(null)]` | Label'sız partitioned subscribe (round-robin) |
 
 ---
 
@@ -570,7 +468,7 @@ services.AddHorseClient(b => b
     .AddSingletonConsumer<FetchOrderConsumer>()
     // explicit partition label — attribute varsa üzerine yazar
     .AddSingletonConsumer<FetchOrderConsumer>("tenant-42", maxPartitions: 10, subscribersPerPartition: 1)
-    // label'sız partitioned (orphan / round-robin yolu)
+    // label'sız partitioned (round-robin yolu)
     .AddSingletonConsumer<JobConsumer>(partitionLabel: "", maxPartitions: 5));
 
 // ── Transient ─────────────────────────────────────────────────────────
@@ -611,7 +509,7 @@ Bu method aşağıdaki header'ları otomatik inşa eder:
 // Tenant izolasyonu
 await client.Queue.SubscribePartitioned("FetchOrders", "tenant-42", true, 10, 1);
 
-// Label'sız, orphan üzerinden dağıtım
+// Label'sız, round-robin ile dağıtım
 await client.Queue.SubscribePartitioned("JobQueue", null, true, 5, 1);
 
 // Auto-create ile, queue yoksa server oluşturur
@@ -696,7 +594,7 @@ HorseResult result = await bus.Push("FetchOrders", model, waitForCommit: true, p
 // Partition'sız — eskisi ile aynı
 await bus.Push("FetchOrders", model, false);
 
-// Label null → orphan'a (veya round-robin, orphan disabled ise)
+// Label null → round-robin ile dağıtılır
 await bus.Push("JobQueue", stream, false, partitionLabel: null);
 ```
 
@@ -707,7 +605,7 @@ await bus.Push("JobQueue", stream, false, partitionLabel: null);
 await producer.Queue.Push("FetchOrders", content, false,
     new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "tenant-42") });
 
-// Label'sız — orphan'a (enabled) veya round-robin'e (disabled) gider
+// Label'sız — round-robin ile partition'lara dağıtılır
 await producer.Queue.Push("FetchOrders", content, false);
 ```
 
@@ -746,13 +644,13 @@ FetchOrders (parent, Partitioned)
 
 ### Yan Yana Karşılaştırma
 
-| | RoundRobin Queue | Partition (label'sız + orphan) | Partition (label'lı) |
+| | RoundRobin Queue | Partition (label'sız) | Partition (label'lı) |
 |---|---|---|---|
-| Fiziksel yapı | 1 queue, N worker | N+1 queue, N worker | N queue, N worker |
+| Fiziksel yapı | 1 queue, N worker | N queue, N worker | N queue, N worker |
 | `WaitForAck` izolasyonu | ⚠️ Worker meşgulse atlanır, mesaj başkasına gider | ✅ Her worker bağımsız | ✅ Mesaj sadece o partition'da kalır |
 | Tenant izolasyonu | ❌ Yok | ❌ Yok | ✅ Label ile tam izolasyon |
-| Worker düşünce | Mesajlar diğer worker'lara | Orphan üzerinden devam | Sadece o partition bekler |
-| Bellek | En az | Orta (+1 orphan queue) | Orta (N ayrı queue) |
+| Worker düşünce | Mesajlar diğer worker'lara | Round-robin kalan partition'larla devam | Sadece o partition bekler |
+| Bellek | En az | Orta (N ayrı queue) | Orta (N ayrı queue) |
 | Kurulum karmaşıklığı | Basit | Orta | Orta |
 | Ne zaman kullan | Hafif, hızlı işler | Biraz daha güvenli dağıtım | Tenant/worker izolasyonu |
 
@@ -951,8 +849,7 @@ Tüm consumer'lar aynı queue'dan yarışır. `WaitForAcknowledge` modunda bir c
 FetchOrders (parent)
     ├── Partition-a → Worker-1  (sadece kendi mesajları)
     ├── Partition-b → Worker-2  (sadece kendi mesajları)
-    ├── Partition-c → Worker-3  (sadece kendi mesajları)
-    └── Orphan      → Worker-1 + Worker-2 + Worker-3 (label'sız fallback)
+    └── Partition-c → Worker-3  (sadece kendi mesajları)
 ```
 
 | Avantaj | Açıklama |
@@ -984,14 +881,12 @@ Consumer düştükten sonra producer mesaj göndermeye devam ederse ne olur?
 | Consumer **offline**, push label'lı | **Aynı labeled partition'a** yönlendirilir, store'da bekler |
 | Consumer **yeniden bağlanır** | Partition store'undaki mesajlar Trigger() ile teslim edilir |
 
-**`enableOrphan` değeri bu davranışı etkilemez.** Labeled mesajlar asla orphan'a gitmez, asla drop edilmez.
+**Labeled mesajlar asla drop edilmez.**
 
 ```csharp
-// enableOrphan=true/false fark etmez — labeled mesajlar her zaman labeled partition'da saklanır
 opts.Partition = new PartitionOptions
 {
     Enabled               = true,
-    EnableOrphanPartition = false,   // tercihsel — labeled bounce için gerekli değil
     MaxPartitionCount     = 10,
     SubscribersPerPartition = 1,
 };
@@ -1001,7 +896,7 @@ opts.Partition = new PartitionOptions
 
 ### Tam Tenant İzolasyonu
 
-`enableOrphan=false` veya `enableOrphan=true` olması fark etmez: **A-label'lı mesajlar yalnızca A partition'ında işlenir**.
+**A-label'lı mesajlar yalnızca A partition'ında işlenir**.
 
 ```
 Worker-A online:   msg(label=A) → Partition-A → Worker-A  ✓ izole
@@ -1022,8 +917,7 @@ Worker-A geri geldi: Partition-A → Worker-A  ✓ doğru worker'a teslim
 | Partition sub-queue isimleri ve metadata | `queues.json` → `SubPartition` alanı ile — restore edilir |
 | `IsPartitionQueue` flag'i | `queues.json` → `SubPartition != null` ise ReAttach içinde set edilir |
 | Partition label index | ReAttach → `_labelIndex`'e eklenir |
-| Orphan partition | ReAttach → `_orphanPartition` set edilir |
-| Partition / orphan sub-queue'lardaki mesajlar | `.hdb` dosyaları — reload edilir |
+| Partition sub-queue'lardaki mesajlar | `.hdb` dosyaları — reload edilir |
 | Restart sonrası consumer aynı label ile bağlanırsa | **AYNI partition queue'ya** re-attach edilir, yeni GUID üretilmez |
 | Restart sonrası buffered mesajların teslimi | Consumer bağlandığında `Trigger()` → mesajlar teslim edilir ✅ |
 
@@ -1033,7 +927,6 @@ Worker-A geri geldi: Partition-A → Worker-A  ✓ doğru worker'a teslim
 Restart öncesi:
   FetchOrders                     (Partition.Enabled=true)
   FetchOrders-Partition-abc123    (label=tenant-42, SubPartition kaydedildi, 5 mesaj .hdb'de)
-  FetchOrders-Partition-Orphan    (IsOrphan=true, SubPartition kaydedildi, 3 mesaj .hdb'de)
 
 Restart sonrası:
   Pass 1 — queues.json'dan tüm queue'lar yüklenir
@@ -1041,7 +934,6 @@ Restart sonrası:
 
   FetchOrders                     ← Partition.Enabled=true ✓, PartitionManager.Partitions dolu ✓
   FetchOrders-Partition-abc123    ← IsPartitionQueue=true ✓, _labelIndex["tenant-42"] ✓, 5 mesaj ✓
-  FetchOrders-Partition-Orphan    ← IsPartitionQueue=true ✓, _orphanPartition ✓, 3 mesaj ✓
 
 Consumer tenant-42 ile bağlandı:
   _labelIndex["tenant-42"] → mevcut Partition-abc123 ✓ (yeni GUID üretilmez)
@@ -1057,13 +949,12 @@ Consumer tenant-42 ile bağlandı:
   "SubPartition": {
     "ParentQueueName": "FetchOrders",
     "PartitionId": "abc123",
-    "Label": "tenant-42",
-    "IsOrphan": false
+    "Label": "tenant-42"
   }
 }
 ```
 
-`SubPartition` alanı `PartitionManager.CreatePartition()` veya `GetOrCreateOrphanQueue()` içinde `PartitionMeta` set edildikten hemen sonra `UpdateConfiguration(false)` çağrısıyla persiste edilir.
+`SubPartition` alanı `PartitionManager.CreatePartition()` içinde `PartitionMeta` set edildikten hemen sonra `UpdateConfiguration(false)` çağrısıyla persiste edilir.
 
 ---
 
@@ -1076,7 +967,6 @@ Consumer tenant-42 ile bağlandı:
 | `Producer_Continuous_ConsumerReconnects_ReceivesAll` | Producer sürekli push → consumer bounce → reconnect → 4 offline mesaj labeled partition'dan alınır |
 | `TwoTenants_ConsumerBounce_FullIsolationMaintained` | A düşünce mesajlar A'nın partition'ında bekler; B asla A'nın mesajını almaz; A geri gelince tam teslim |
 | `ServerRestart_PartitionSubQueues_ReAttachedAndMessagesDelivered` | Restart sonrası sub-queue re-attach, aynı GUID korunur, 1 mesaj teslim edilir |
-| `OrphanPartition_ConsumerBounce_OfflineMessages_Delivered` | Label'sız orphan mesajları bounce sonrası teslim edilir |
 
 ---
 
@@ -1095,13 +985,12 @@ Consumer tenant-42 ile bağlandı:
 | 2 | Partition Ölçekleme | `*Scaling*` | 4 |
 | 3 | Partition vs. Flat RoundRobin | `*VsFlat*` | 12 |
 | 4 | Labeled Push Throughput | `*Labeled*` | 4 |
-| 5 | Orphan Throughput | `*Orphan*` | 6 |
-| 6 | Partition Lifecycle | `*Lifecycle*` | 3 |
-| 7 | Multi-Tenant İzolasyon | `*MultiTenant*` | 4 |
-| 8 | Partition İçi Broadcast | `*Broadcast*` | 3 |
-| 9 | WaitForAck İzolasyonu | `*WaitForAck*` | 8 |
-| 10 | Consumer Bounce & Redeliver | `*Bounce*` | 3 |
-| 11 | Büyük Payload Routing | `*LargePayload*` | 8 |
+| 5 | Partition Lifecycle | `*Lifecycle*` | 3 |
+| 6 | Multi-Tenant İzolasyon | `*MultiTenant*` | 4 |
+| 7 | Partition İçi Broadcast | `*Broadcast*` | 3 |
+| 8 | WaitForAck İzolasyonu | `*WaitForAck*` | 8 |
+| 9 | Consumer Bounce & Redeliver | `*Bounce*` | 3 |
+| 10 | Büyük Payload Routing | `*LargePayload*` | 8 |
 
 ---
 
@@ -1174,22 +1063,7 @@ Her N labeled partition'a eş zamanlı 100 mesaj.
 
 ---
 
-### 5. Orphan Throughput — Label'sız Push
-
-| Method | ConsumerCount | MessageCount | Ortalama | Allocated |
-|---|---|---|---|---|
-| OrphanLabelLess_Push | 1 | 5.000 | 187.3 ms | 36.1 MB |
-| OrphanLabelLess_Push | 3 | 5.000 | 319.7 ms | 56.0 MB |
-| OrphanLabelLess_Push | 8 | 5.000 | 654.2 ms | 102.9 MB |
-| OrphanLabelLess_Push | 1 | 20.000 | 747.0 ms | 147.2 MB |
-| OrphanLabelLess_Push | 3 | 20.000 | 1.272 ms | 223.1 MB |
-| OrphanLabelLess_Push | 8 | 20.000 | 2.616 ms | 411.5 MB |
-
-**Bulgular:** Orphan throughput consumer sayısıyla **lineer** ölçeklenir (fan-out). N=8'de N=1'in ~3.5 katı. Fan-out maliyeti kabul edilemezse label'lı partition kullanılmalı.
-
----
-
-### 6. Partition Lifecycle — Oluştur / Push / Yok Et
+### 5. Partition Lifecycle — Oluştur / Push / Yok Et
 
 | Method | PartitionsToCreate | Ortalama | Allocated |
 |---|---|---|---|
@@ -1201,7 +1075,7 @@ Her N labeled partition'a eş zamanlı 100 mesaj.
 
 ---
 
-### 7. Multi-Tenant İzolasyon — Gürültülü Tenant
+### 6. Multi-Tenant İzolasyon — Gürültülü Tenant
 
 | Method | TenantCount | Mesaj/tenant | Ortalama | Allocated |
 |---|---|---|---|---|
@@ -1214,7 +1088,7 @@ Her N labeled partition'a eş zamanlı 100 mesaj.
 
 ---
 
-### 8. Partition İçi Broadcast (Push, çok subscriber)
+### 7. Partition İçi Broadcast (Push, çok subscriber)
 
 | Method | FanOut | Ortalama | Allocated |
 |---|---|---|---|
@@ -1226,7 +1100,7 @@ Her N labeled partition'a eş zamanlı 100 mesaj.
 
 ---
 
-### 9. WaitForAck İzolasyonu — Partitioned vs. Flat
+### 8. WaitForAck İzolasyonu — Partitioned vs. Flat
 
 Worker 0 yavaş (5 ms/mesaj), diğerleri hızlı.
 
@@ -1248,7 +1122,7 @@ Worker 0 yavaş (5 ms/mesaj), diğerleri hızlı.
 
 ---
 
-### 10. Consumer Bounce & Redeliver
+### 9. Consumer Bounce & Redeliver
 
 N mesaj push → consumer bağlantısını kes → yeniden bağlan → tüm N mesajı al.
 
@@ -1264,7 +1138,7 @@ N mesaj push → consumer bağlantısını kes → yeniden bağlan → tüm N me
 
 ---
 
-### 11. Büyük Payload Routing
+### 10. Büyük Payload Routing
 
 Partition başına 10 mesaj, labeled push, 1 KB – 256 KB.
 
@@ -1294,7 +1168,6 @@ dotnet run -c Release -- --filter "*RoutingCost*"
 dotnet run -c Release -- --filter "*Scaling*"
 dotnet run -c Release -- --filter "*VsFlat*"
 dotnet run -c Release -- --filter "*Labeled*"
-dotnet run -c Release -- --filter "*Orphan*"
 dotnet run -c Release -- --filter "*Lifecycle*"
 dotnet run -c Release -- --filter "*MultiTenant*"
 dotnet run -c Release -- --filter "*Broadcast*"

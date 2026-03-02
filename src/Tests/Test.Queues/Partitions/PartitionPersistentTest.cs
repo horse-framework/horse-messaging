@@ -24,9 +24,8 @@ namespace Test.Queues.Partitions;
 ///  1. Partition queues use PersistentQueueManager (not MemoryQueueManager)
 ///  2. Without a consumer-ACK, a pushed message remains in the persistent store
 ///  3. Two labels produce two independent .hdb files
-///  4. Orphan partition also backed by PersistentQueueManager
-///  5. Pushed message persists in the .hdb file (disk presence check)
-///  6. After message consumption, AutoDestroy.NoMessages removes the partition
+///  4. Pushed message persists in the .hdb file (disk presence check)
+///  5. After message consumption, AutoDestroy.NoMessages removes the partition
 /// </summary>
 public class PartitionPersistentTest : IDisposable
 {
@@ -49,7 +48,6 @@ public class PartitionPersistentTest : IDisposable
         string queueName,
         int maxPartitions = 10,
         int subscribersPerPartition = 1,
-        bool enableOrphan = true,
         QueueAckDecision ack = QueueAckDecision.None,
         PartitionAutoDestroy autoDestroy = PartitionAutoDestroy.Disabled,
         int autoDestroyIdleSeconds = 5)
@@ -66,7 +64,6 @@ public class PartitionPersistentTest : IDisposable
                 Enabled = true,
                 MaxPartitionCount = maxPartitions,
                 SubscribersPerPartition = subscribersPerPartition,
-                EnableOrphanPartition = enableOrphan,
                 AutoDestroy = autoDestroy,
                 AutoDestroyIdleSeconds = autoDestroyIdleSeconds
             };
@@ -149,7 +146,7 @@ public class PartitionPersistentTest : IDisposable
         await Task.Delay(400);
 
         HorseQueue parentQueue = rider.Queue.Find("ptype-q");
-        PartitionEntry part = parentQueue.PartitionManager.Partitions.First(p => !p.IsOrphan);
+        PartitionEntry part = parentQueue.PartitionManager.Partitions.First();
 
         Assert.IsType<PersistentQueueManager>(part.Queue.Manager);
     }
@@ -166,8 +163,7 @@ public class PartitionPersistentTest : IDisposable
     public async Task Push_LabeledMessage_NoSubscriber_StaysInPersistentStore()
     {
         var (rider, _, dataPath) = await CreatePersistentServer(
-            "persist-nosubscriber",
-            enableOrphan: false);
+            "persist-nosubscriber");
 
         // Create the parent queue but do NOT subscribe any worker — partition is created
         // explicitly via CreatePartition so the hdb file is allocated.
@@ -203,7 +199,7 @@ public class PartitionPersistentTest : IDisposable
     [Fact]
     public async Task Push_TwoLabels_TwoIndependentHdbFiles()
     {
-        var (rider, port, dataPath) = await CreatePersistentServer("persist-files", enableOrphan: false);
+        var (rider, port, dataPath) = await CreatePersistentServer("persist-files");
 
         // AutoAcknowledge=false so messages remain tracked / not instantly cleared
         HorseClient w1 = new HorseClient { AutoAcknowledge = false };
@@ -244,43 +240,7 @@ public class PartitionPersistentTest : IDisposable
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // 4. Orphan partition uses PersistentQueueManager and .hdb is created
-    // ─────────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// The orphan partition (label-less messages) also uses PersistentQueueManager
-    /// and its .hdb file appears on disk.
-    /// </summary>
-    [Fact]
-    public async Task Push_NoLabel_OrphanPartition_HdbFileCreatedOnDisk()
-    {
-        var (rider, port, dataPath) = await CreatePersistentServer("persist-orphan");
-
-        // Subscribe to create the partition (and trigger orphan creation)
-        HorseClient worker = new HorseClient { AutoAcknowledge = false };
-        await worker.ConnectAsync("horse://localhost:" + port);
-        await worker.Queue.SubscribePartitioned("persist-orphan", "lbl", true);
-        await Task.Delay(400);
-
-        HorseClient producer = new HorseClient();
-        await producer.ConnectAsync("horse://localhost:" + port);
-
-        // Label-less → orphan partition
-        await producer.Queue.Push("persist-orphan", Encoding.UTF8.GetBytes("orphan-payload"), false);
-        await Task.Delay(600);
-
-        HorseQueue parentQueue = rider.Queue.Find("persist-orphan");
-        PartitionEntry orphan = parentQueue.PartitionManager.Partitions.First(p => p.IsOrphan);
-
-        Assert.IsType<PersistentQueueManager>(orphan.Queue.Manager);
-
-        // .hdb file must exist on disk
-        string orphanDb = Path.Combine(dataPath, $"{orphan.Queue.Name}.hdb");
-        Assert.True(File.Exists(orphanDb), $"Missing orphan hdb: {orphanDb}");
-    }
-
-    // ─────────────────────────────────────────────────────────────────
-    // 5. Pushed message creates a .hdb file — disk persistence proof
+    // 4. Pushed message creates a .hdb file — disk persistence proof
     // ─────────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -290,7 +250,7 @@ public class PartitionPersistentTest : IDisposable
     [Fact]
     public async Task Push_LabeledMessage_CreatesHdbFileOnDisk()
     {
-        var (rider, port, dataPath) = await CreatePersistentServer("persist-disk", enableOrphan: false);
+        var (rider, port, dataPath) = await CreatePersistentServer("persist-disk");
 
         HorseClient worker = new HorseClient { AutoAcknowledge = true };
         await worker.ConnectAsync("horse://localhost:" + port);
@@ -326,7 +286,6 @@ public class PartitionPersistentTest : IDisposable
     {
         var (rider, port, _) = await CreatePersistentServer(
             "persist-destroy",
-            enableOrphan: false,
             autoDestroy: PartitionAutoDestroy.NoMessages,
             autoDestroyIdleSeconds: 3);
 

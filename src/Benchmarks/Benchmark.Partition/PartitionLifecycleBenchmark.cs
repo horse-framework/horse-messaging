@@ -42,7 +42,6 @@ public class PartitionLifecycleBenchmark : BenchmarkBase
         CreatePartitionedQueue(Queue, QueueType.Push,
             maxPartitions: PartitionsToCreate + 5,
             subscribersPerPart: 1,
-            enableOrphan: false,
             autoDestroy: PartitionAutoDestroy.NoConsumers)
             .GetAwaiter().GetResult();
 

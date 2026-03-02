@@ -56,7 +56,7 @@ public class WaitForAckIsolationBenchmark : BenchmarkBase
         }).GetAwaiter().GetResult();
 
         CreatePartitionedQueue(PartQueue, QueueType.Push,
-            maxPartitions: WorkerCount, subscribersPerPart: 1, enableOrphan: true,
+            maxPartitions: WorkerCount, subscribersPerPart: 1,
             ackDecision: QueueAckDecision.WaitForAcknowledge)
             .GetAwaiter().GetResult();
 

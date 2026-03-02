@@ -36,7 +36,6 @@ public class PartitionRouteTest
                 Enabled = true,
                 MaxPartitionCount = maxPartitions,
                 SubscribersPerPartition = subscribersPerPartition,
-                EnableOrphanPartition = true,
                 AutoDestroy = PartitionAutoDestroy.Disabled
             };
         });
@@ -168,10 +167,10 @@ public class PartitionRouteTest
         Assert.True(receivedW2 >= 2, $"w2 expected >= 2, actual {receivedW2}");
     }
 
-    // ── Orphan routing ────────────────────────────────────────────────────────
+    // ── Label-less round-robin routing ────────────────────────────────────────
 
     [Fact]
-    public async Task Push_NoLabel_GoesToOrphan()
+    public async Task Push_NoLabel_RoutesRoundRobinAcrossPartitions()
     {
         var (rider, port, queue) = await CreateServer();
 
@@ -184,10 +183,11 @@ public class PartitionRouteTest
         int received = 0;
         worker.MessageReceived += (_, _) => Interlocked.Increment(ref received);
 
+        // No-label subscribe creates a partition
         await worker.Queue.Subscribe("route-q", true);
         await Task.Delay(300);
 
-        await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("orphan-msg"), false);
+        await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("rr-msg"), false);
 
         await Task.Delay(600);
         Assert.Equal(1, received);
@@ -196,10 +196,6 @@ public class PartitionRouteTest
     [Fact]
     public async Task Push_LabelHasNoSubscriber_MessageStoredInLabeledPartition()
     {
-        // New behaviour: a labeled message always routes to its labeled partition,
-        // regardless of whether a subscriber is present.  The message is buffered
-        // until the owning worker reconnects — it is NEVER cross-delivered to another
-        // worker or to the orphan partition.
         var (rider, port, queue) = await CreateServer();
 
         HorseClient producer = new HorseClient();
@@ -216,79 +212,16 @@ public class PartitionRouteTest
             .FirstOrDefault(p => string.Equals(p.Label, "unknown-label", StringComparison.OrdinalIgnoreCase));
 
         Assert.NotNull(entry);
-        // Message is stored in the labeled partition (not orphan, not dropped)
+        // Message is stored in the labeled partition (not dropped)
         Assert.Equal(1, entry.Queue.Manager.MessageStore.Count());
-
-        // Orphan is untouched
-        if (parent.PartitionManager.OrphanPartition != null)
-            Assert.Equal(0, parent.PartitionManager.OrphanPartition.Queue.Manager.MessageStore.Count());
-    }
-
-    [Fact]
-    public async Task Push_LabelHasNoSubscriber_WaitAck_NoOrphanSubscriber_MessageNotDelivered()
-    {
-        // Create with WaitForAcknowledge — needs special handling
-        var (rider, port, _) = await PartitionTestServer.Create();
-
-        await rider.Queue.Create("wack-q", opts =>
-        {
-            opts.Type = QueueType.Push;
-            opts.Acknowledge = QueueAckDecision.WaitForAcknowledge;
-            opts.Partition = new PartitionOptions
-            {
-                Enabled = true,
-                MaxPartitionCount = 10,
-                SubscribersPerPartition = 1,
-                EnableOrphanPartition = true,
-                AutoDestroy = PartitionAutoDestroy.Disabled
-            };
-        });
-
-        HorseClient producer = new HorseClient();
-        await producer.ConnectAsync("horse://localhost:" + port);
-
-        // No subscribers → message goes to orphan (which has no consumer) → NoConsumers
-        // waitForCommit=true ensures we get the server response
-        HorseResult result = await producer.Queue.Push("wack-q", Encoding.UTF8.GetBytes("no-consumer-msg"), true);
-        Assert.NotEqual(HorseResultCode.Ok, result.Code);
-    }
-
-    // ── Message stored when no consumer online ──────────────────────────────
-
-    [Fact]
-    public async Task Push_WithLabel_NoConsumer_MessageStoredInOrphanPartition()
-    {
-        var (rider, port, queue) = await CreateServer();
-
-        HorseClient worker = new HorseClient();
-        await worker.ConnectAsync("horse://localhost:" + port);
-        await worker.Queue.Subscribe("route-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "offline-w") });
-
-        await Task.Delay(300);
-        worker.Disconnect();
-        await Task.Delay(300);
-
-        HorseClient producer = new HorseClient();
-        await producer.ConnectAsync("horse://localhost:" + port);
-
-        HorseQueue orphanQueue = await queue.PartitionManager.GetOrCreateOrphanQueue();
-        int beforeCount = orphanQueue.Manager?.MessageStore.Count() ?? 0;
-
-        await producer.Queue.Push("route-q", Encoding.UTF8.GetBytes("stored-msg"), false, new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "offline-w") });
-
-        await Task.Delay(500);
-
-        int afterCount = orphanQueue.Manager?.MessageStore.Count() ?? 0;
-        Assert.True(afterCount >= beforeCount);
     }
 
     /// <summary>
-    /// Orphan disabled + label'sız subscribe: her worker kendi partition'ını alır.
-    /// Orphan queue oluşturulmamalı. Partition sayısı subscriber sayısına eşit olmalı.
+    /// Round-robin + label-less subscribe: her worker kendi partition'ını alır.
+    /// Partition sayısı subscriber sayısına eşit olmalı.
     /// </summary>
     [Fact]
-    public async Task Push_NoLabel_OrphanDisabled_RoutesToLeastLoadedPartition()
+    public async Task Push_NoLabel_RoundRobin_RoutesToPartitions()
     {
         var (rider, port, _) = await PartitionTestServer.Create();
 
@@ -301,7 +234,6 @@ public class PartitionRouteTest
                 Enabled = true,
                 MaxPartitionCount = 5,
                 SubscribersPerPartition = 1,
-                EnableOrphanPartition = false,   // ← orphan kapalı
                 AutoDestroy = PartitionAutoDestroy.Disabled
             };
         });
@@ -320,26 +252,23 @@ public class PartitionRouteTest
         await worker1.ConnectAsync("horse://localhost:" + port);
         await worker2.ConnectAsync("horse://localhost:" + port);
 
-        // Label'sız subscribe — her worker kendi partition'ını alır
+        // Label-less subscribe — each worker gets its own partition
         await worker1.Queue.Subscribe("noorp-q", true);
         await worker2.Queue.Subscribe("noorp-q", true);
         await Task.Delay(500);
 
-        // Orphan hiç oluşturulmamalı
-        Assert.Null(queue.PartitionManager.OrphanPartition);
-
-        // 2 label partition oluşturulmuş olmalı, her birinde 1 client
-        var labelParts = queue.PartitionManager.Partitions.Where(p => !p.IsOrphan).ToList();
-        Assert.Equal(2, labelParts.Count);
-        Assert.True(labelParts.All(p => p.Queue.Clients.Any()),
-            $"Expected clients in all partitions. p0={labelParts[0].Queue.ClientsCount()}, p1={labelParts[1].Queue.ClientsCount()}");
+        // 2 partitions created, each with 1 client
+        var parts = queue.PartitionManager.Partitions.ToList();
+        Assert.Equal(2, parts.Count);
+        Assert.True(parts.All(p => p.Queue.Clients.Any()),
+            $"Expected clients in all partitions. p0={parts[0].Queue.ClientsCount()}, p1={parts[1].Queue.ClientsCount()}");
     }
 
     /// <summary>
-    /// Orphan disabled + label'sız + hiç subscriber yoksa NoConsumers dönmeli.
+    /// No subscribers + label-less push → NoConsumers.
     /// </summary>
     [Fact]
-    public async Task Push_NoLabel_OrphanDisabled_NoSubscribers_ReturnsNoConsumers()
+    public async Task Push_NoLabel_NoSubscribers_ReturnsNoConsumers()
     {
         var (rider, port, _) = await PartitionTestServer.Create();
 
@@ -352,7 +281,6 @@ public class PartitionRouteTest
                 Enabled = true,
                 MaxPartitionCount = 5,
                 SubscribersPerPartition = 1,
-                EnableOrphanPartition = false,
                 AutoDestroy = PartitionAutoDestroy.Disabled
             };
         });
@@ -360,9 +288,8 @@ public class PartitionRouteTest
         HorseClient producer = new HorseClient();
         await producer.ConnectAsync("horse://localhost:" + port);
 
-        // Hiç subscriber yok, label'sız push
+        // No subscriber, label-less push
         HorseResult result = await producer.Queue.Push("noorp2-q", Encoding.UTF8.GetBytes("hello"), true);
         Assert.NotEqual(HorseResultCode.Ok, result.Code);
     }
 }
-

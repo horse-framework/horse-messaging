@@ -20,15 +20,11 @@ public class PartitionManager
     private readonly SemaphoreSlim _createLock = new(1, 1);
     private readonly ConcurrentDictionary<string, PartitionEntry> _partitions = new();
     private readonly ConcurrentDictionary<string, PartitionEntry> _labelIndex = new(StringComparer.OrdinalIgnoreCase);
-    private PartitionEntry _orphanPartition;
     private Timer _autoDestroyTimer;
-    private int _roundRobinIndex; // used for label-less routing when orphan is disabled
+    private int _roundRobinIndex;
 
     /// <summary>All active partition entries (snapshot).</summary>
     public IEnumerable<PartitionEntry> Partitions => _partitions.Values;
-
-    /// <summary>Orphan partition entry, or null if not yet created.</summary>
-    public PartitionEntry OrphanPartition => _orphanPartition;
 
     public PartitionManager(HorseQueue parentQueue, PartitionOptions options)
     {
@@ -46,8 +42,7 @@ public class PartitionManager
     /// <summary>
     /// Called when a client subscribes to the parent queue.
     /// Finds or creates a suitable partition and subscribes the client to it.
-    /// Also subscribes client to orphan partition for fallback message delivery
-    /// (only when EnableOrphanPartition = true).
+    /// Returns null when no partition slot is available (label partition full or max partitions reached).
     /// </summary>
     public async Task<PartitionEntry> SubscribeClient(MessagingClient client, string partitionLabel)
     {
@@ -58,12 +53,12 @@ public class PartitionManager
             entry = await GetOrCreateLabelPartition(partitionLabel);
             SubscriptionResult result = await entry.Queue.AddClient(client);
             if (result == SubscriptionResult.Full)
-                entry = await SubscribeToOrphan(client);
+                return null;
         }
         else
         {
             entry = null;
-            foreach (PartitionEntry existing in _partitions.Values.Where(p => !p.IsOrphan))
+            foreach (PartitionEntry existing in _partitions.Values)
             {
                 SubscriptionResult r = await existing.Queue.AddClient(client);
                 if (r == SubscriptionResult.Success)
@@ -76,23 +71,13 @@ public class PartitionManager
             if (entry == null)
             {
                 bool limitReached = _options.MaxPartitionCount > 0 &&
-                                    _partitions.Values.Count(p => !p.IsOrphan) >= _options.MaxPartitionCount;
+                                    _partitions.Count >= _options.MaxPartitionCount;
                 if (!limitReached)
                 {
                     entry = await CreatePartition(null);
                     await entry.Queue.AddClient(client);
                 }
-                else
-                    entry = await SubscribeToOrphan(client);
             }
-        }
-
-        // Subscribe to orphan so worker also receives fallback messages
-        if (entry != null && !entry.IsOrphan && _options.EnableOrphanPartition)
-        {
-            HorseQueue orphanQueue = await GetOrCreateOrphanQueue();
-            if (orphanQueue.FindClient(client.UniqueId) == null)
-                await orphanQueue.AddClient(client);
         }
 
         return entry;
@@ -107,12 +92,8 @@ public class PartitionManager
     /// Called by the parent queue's Push intercept.
     ///
     /// Key behaviours:
-    /// - Label present + active subscriber  → deliver directly to labeled partition.
-    /// - Label present + NO subscriber      → store in the labeled partition queue
-    ///   (creates it if it doesn't exist yet) so the message waits for the owner
-    ///   worker to reconnect.  Never cross-delivered to another worker.
-    /// - Label absent + orphan enabled      → orphan partition.
-    /// - Label absent + orphan disabled     → round-robin across active partitions.
+    /// - Label present  → deliver directly to labeled partition (creates if needed).
+    /// - Label absent   → round-robin across active partitions.
     /// </summary>
     public async Task<(HorseQueue target, PushResult result)> RouteMessage(QueueMessage message, MessagingClient sender)
     {
@@ -121,37 +102,24 @@ public class PartitionManager
 
         if (!string.IsNullOrEmpty(label))
         {
-            // Always route to the labeled partition — whether or not a subscriber is
-            // currently present.  The message is stored there and delivered as soon as
-            // the owning worker reconnects.  This guarantees tenant isolation: a message
-            // labeled "tenant-A" can never be consumed by a "tenant-B" worker.
             PartitionEntry entry = await GetOrCreateLabelPartition(label);
             target = entry.Queue;
             entry.LastMessageAt = DateTime.UtcNow;
         }
         else
         {
-            // Label-less message: use orphan when enabled, otherwise route to
-            // the least-loaded non-orphan partition (fewest stored messages).
-            if (_options.EnableOrphanPartition)
-                target = await GetOrCreateOrphanQueue();
+            // Round-robin across partitions that have active subscribers
+            var available = _partitions.Values
+                .Where(p => p.Queue.Clients.Any())
+                .OrderBy(p => p.PartitionId)
+                .ToList();
+
+            if (available.Count == 0)
+                target = null;
             else
             {
-                // Round-robin across non-orphan partitions that have active subscribers
-                var available = _partitions.Values
-                    .Where(p => !p.IsOrphan && p.Queue.Clients.Any())
-                    .OrderBy(p => p.PartitionId)   // stable sort for determinism
-                    .ToList();
-
-                if (available.Count == 0)
-                {
-                    target = null;
-                }
-                else
-                {
-                    int idx = Math.Abs(Interlocked.Increment(ref _roundRobinIndex)) % available.Count;
-                    target = available[idx].Queue;
-                }
+                int idx = Math.Abs(Interlocked.Increment(ref _roundRobinIndex)) % available.Count;
+                target = available[idx].Queue;
             }
         }
 
@@ -217,8 +185,6 @@ public class PartitionManager
             partitionOptions.AutoQueueCreation = false;
             partitionOptions.Partition = null; // Prevent recursive partitioning
 
-            // returnIfExists=true: if the queue was already restored from queues.json
-            // (restart scenario), reuse it instead of throwing DuplicateNameException.
             HorseQueue partitionQueue = await _parentQueue.Rider.Queue.Create(
                 queueName, partitionOptions, null, hideException: false, returnIfExists: true);
 
@@ -227,17 +193,14 @@ public class PartitionManager
             {
                 ParentQueueName = _parentQueue.Name,
                 PartitionId     = partitionId,
-                Label           = label,
-                IsOrphan        = false
+                Label           = label
             };
-            // Persist the SubPartition metadata to queues.json now that PartitionMeta is set
             partitionQueue.UpdateConfiguration(false);
 
             var entry = new PartitionEntry
             {
                 PartitionId = partitionId,
                 Label = label,
-                IsOrphan = false,
                 Queue = partitionQueue
             };
 
@@ -262,42 +225,29 @@ public class PartitionManager
     /// <summary>
     /// Called on server restart to re-attach a partition sub-queue that was
     /// restored from queues.json back into this PartitionManager.
-    /// The HorseQueue already exists (loaded by QueueRider.Initialize); we just
-    /// wire up the bookkeeping structures.
     /// </summary>
-    public void ReAttach(HorseQueue partitionQueue, string partitionId, string label, bool isOrphan)
+    public void ReAttach(HorseQueue partitionQueue, string partitionId, string label)
     {
         partitionQueue.IsPartitionQueue = true;
         partitionQueue.PartitionMeta = new SubPartitionMeta
         {
             ParentQueueName = _parentQueue.Name,
             PartitionId     = partitionId,
-            Label           = label,
-            IsOrphan        = isOrphan
+            Label           = label
         };
 
         var entry = new PartitionEntry
         {
             PartitionId = partitionId,
             Label       = label,
-            IsOrphan    = isOrphan,
             Queue       = partitionQueue
         };
 
-        if (!string.IsNullOrEmpty(label) && !isOrphan)
+        if (!string.IsNullOrEmpty(label))
             _labelIndex[label] = entry;
 
         _partitions[partitionId] = entry;
-
-        if (isOrphan)
-        {
-            _orphanPartition = entry;
-            partitionQueue.OnDestroyed += _ => _orphanPartition = null;
-        }
-        else
-        {
-            partitionQueue.OnDestroyed += _ => OnPartitionQueueDestroyed(entry);
-        }
+        partitionQueue.OnDestroyed += _ => OnPartitionQueueDestroyed(entry);
     }
 
     private void OnPartitionQueueDestroyed(PartitionEntry entry)
@@ -307,77 +257,8 @@ public class PartitionManager
         if (!string.IsNullOrEmpty(entry.Label))
             _labelIndex.TryRemove(entry.Label, out _);
 
-        if (entry.IsOrphan)
-            _orphanPartition = null;
-
         foreach (IPartitionEventHandler handler in _parentQueue.Rider.Queue.PartitionEventHandlers.All())
             _ = handler.OnPartitionDestroyed(_parentQueue, entry.PartitionId);
-    }
-
-    #endregion
-
-    #region Orphan Partition
-
-    /// <summary>
-    /// Returns the orphan (fallback) partition queue, creating it if necessary.
-    /// The orphan partition has a fixed suffix "-Partition-Orphan" for predictability.
-    /// Uses returnIfExists=true so restart recovery (where the queue was already
-    /// loaded from queues.json) works without a DuplicateNameException.
-    /// </summary>
-    public async Task<HorseQueue> GetOrCreateOrphanQueue()
-    {
-        if (_orphanPartition != null)
-            return _orphanPartition.Queue;
-
-        await _createLock.WaitAsync();
-        try
-        {
-            if (_orphanPartition != null)
-                return _orphanPartition.Queue;
-
-            string queueName = $"{_parentQueue.Name}-Partition-Orphan";
-
-            QueueOptions orphanOptions = QueueOptions.CloneFrom(_parentQueue.Options);
-            orphanOptions.ClientLimit = 0; // Unlimited subscribers on orphan
-            orphanOptions.AutoQueueCreation = false;
-            orphanOptions.Partition = null;
-
-            // returnIfExists=true: reuse already-restored queue on restart
-            HorseQueue orphanQueue = await _parentQueue.Rider.Queue.Create(
-                queueName, orphanOptions, null, hideException: false, returnIfExists: true);
-
-            orphanQueue.IsPartitionQueue = true;
-            orphanQueue.PartitionMeta = new SubPartitionMeta
-            {
-                ParentQueueName = _parentQueue.Name,
-                PartitionId     = "Orphan",
-                Label           = null,
-                IsOrphan        = true
-            };
-            // Persist SubPartition metadata to queues.json
-            orphanQueue.UpdateConfiguration(false);
-
-            _orphanPartition = new PartitionEntry
-            {
-                PartitionId = "Orphan",
-                Label = null,
-                IsOrphan = true,
-                Queue = orphanQueue
-            };
-
-            _partitions["Orphan"] = _orphanPartition;
-            orphanQueue.OnDestroyed += _ => _orphanPartition = null;
-            FirePartitionCreatedEvent(_orphanPartition);
-
-            foreach (IPartitionEventHandler handler in _parentQueue.Rider.Queue.PartitionEventHandlers.All())
-                _ = handler.OnPartitionCreated(_parentQueue, _orphanPartition);
-
-            return orphanQueue;
-        }
-        finally
-        {
-            _createLock.Release();
-        }
     }
 
     #endregion
@@ -389,17 +270,6 @@ public class PartitionManager
         if (_labelIndex.TryGetValue(label, out PartitionEntry entry))
             return entry;
         return await CreatePartition(label);
-    }
-
-
-    private async Task<PartitionEntry> SubscribeToOrphan(MessagingClient client)
-    {
-        if (!_options.EnableOrphanPartition)
-            return null;
-
-        HorseQueue orphanQueue = await GetOrCreateOrphanQueue();
-        await orphanQueue.AddClient(client);
-        return _orphanPartition;
     }
 
     private string GetPartitionIdFromQueue(HorseQueue queue)
@@ -417,7 +287,6 @@ public class PartitionManager
             new(HorseHeaders.QUEUE_NAME, _parentQueue.Name),
             new(HorseHeaders.PARTITION_ID, entry.PartitionId),
             new("Partition-Queue", entry.Queue.Name),
-            new("Partition-Is-Orphan", entry.IsOrphan ? "true" : "false"),
             new(HorseHeaders.PARTITION_LABEL, entry.Label ?? string.Empty)
         };
         _parentQueue.Rider.Queue.PartitionCreatedEvent?.Trigger(parameters);
@@ -432,7 +301,7 @@ public class PartitionManager
         if (_options.AutoDestroy == PartitionAutoDestroy.Disabled)
             return;
 
-        foreach (PartitionEntry entry in _partitions.Values.Where(e => !e.IsOrphan).ToList())
+        foreach (PartitionEntry entry in _partitions.Values.ToList())
         {
             bool shouldDestroy = _options.AutoDestroy switch
             {
@@ -464,7 +333,6 @@ public class PartitionManager
             {
                 PartitionId   = entry.PartitionId,
                 Label         = entry.Label,
-                IsOrphan      = entry.IsOrphan,
                 MessageCount  = msgCount,
                 ConsumerCount = entry.Queue.Clients.Count(),
                 QueueName     = entry.Queue.Name,

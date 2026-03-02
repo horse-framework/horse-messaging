@@ -583,7 +583,7 @@ public class HorseClientBuilder
     /// </summary>
     /// <param name="partitionLabel">
     /// Routing label sent as <c>Partition-Label</c> header.
-    /// Pass <c>null</c> or empty string for label-less (orphan / round-robin) partitioned subscribe.
+    /// Pass <c>null</c> or empty string for label-less (round-robin) partitioned subscribe.
     /// </param>
     /// <param name="maxPartitions">
     /// Maximum partitions forwarded as <c>Partition-Limit</c> header for auto-create. 0 = server default.

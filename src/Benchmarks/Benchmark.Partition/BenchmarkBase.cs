@@ -17,7 +17,7 @@ namespace Benchmark.Partition;
 /// <summary>
 /// Base class for all partition benchmarks.
 /// Spins up an in-process HorseServer on a random port, tears it down after each benchmark.
-/// Each derived class drives one concrete scenario (label routing, orphan, RoundRobin, Pull, …).
+/// Each derived class drives one concrete scenario (label routing, RoundRobin, Pull, …).
 /// </summary>
 public abstract class BenchmarkBase
 {
@@ -109,7 +109,6 @@ public abstract class BenchmarkBase
         QueueType       type                = QueueType.Push,
         int             maxPartitions       = 10,
         int             subscribersPerPart  = 1,
-        bool            enableOrphan        = true,
         PartitionAutoDestroy autoDestroy     = PartitionAutoDestroy.Disabled,
         QueueAckDecision ackDecision        = QueueAckDecision.None)
     {
@@ -123,7 +122,6 @@ public abstract class BenchmarkBase
                 Enabled                = true,
                 MaxPartitionCount      = maxPartitions,
                 SubscribersPerPartition = subscribersPerPart,
-                EnableOrphanPartition  = enableOrphan,
                 AutoDestroy            = autoDestroy,
                 AutoDestroyIdleSeconds = 5
             };

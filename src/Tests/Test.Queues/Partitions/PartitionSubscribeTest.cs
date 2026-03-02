@@ -20,7 +20,6 @@ public class PartitionSubscribeTest
         string queueName = "part-q",
         int maxPartitions = 5,
         int subscribersPerPartition = 1,
-        bool enableOrphan = true,
         QueueAckDecision ack = QueueAckDecision.None)
     {
         var server = new TestHorseRider();
@@ -35,7 +34,6 @@ public class PartitionSubscribeTest
                 Enabled = true,
                 MaxPartitionCount = maxPartitions,
                 SubscribersPerPartition = subscribersPerPartition,
-                EnableOrphanPartition = enableOrphan,
                 AutoDestroy = PartitionAutoDestroy.Disabled
             };
         });
@@ -64,7 +62,6 @@ public class PartitionSubscribeTest
         Assert.NotNull(queue.PartitionManager);
         PartitionEntry entry = queue.PartitionManager.Partitions.FirstOrDefault(p => p.Label == "worker-1");
         Assert.NotNull(entry);
-        Assert.False(entry.IsOrphan);
 
         server.Stop();
     }
@@ -87,9 +84,9 @@ public class PartitionSubscribeTest
     }
 
     [Fact]
-    public async Task Subscribe_SameLabelTwice_SecondClientCreatesNewPartitionWhenFull()
+    public async Task Subscribe_SameLabelTwice_SecondClientReturnsLimitExceeded()
     {
-        // SubscribersPerPartition=1 means second client with same label gets a new partition
+        // SubscribersPerPartition=1 means second client with same label gets rejected
         var (server, port, queue) = await CreatePartitionedQueue(subscribersPerPartition: 1);
 
         HorseClient c1 = new HorseClient();
@@ -97,20 +94,20 @@ public class PartitionSubscribeTest
         await c1.ConnectAsync("horse://localhost:" + port);
         await c2.ConnectAsync("horse://localhost:" + port);
 
-        await c1.Queue.Subscribe("part-q", true,
+        HorseResult r1 = await c1.Queue.Subscribe("part-q", true,
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "shared-label") });
-        // second same-label client: partition is full → falls back to orphan
-        await c2.Queue.Subscribe("part-q", true,
+        Assert.Equal(HorseResultCode.Ok, r1.Code);
+
+        // second same-label client: partition is full → no fallback → LimitExceeded
+        HorseResult r2 = await c2.Queue.Subscribe("part-q", true,
             new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "shared-label") });
+        Assert.Equal(HorseResultCode.LimitExceeded, r2.Code);
 
         await Task.Delay(200);
 
-        // c1 in label partition, c2 in orphan (since label partition was full)
-        int normalPartitions = queue.PartitionManager.Partitions.Count(p => !p.IsOrphan);
-        Assert.Equal(1, normalPartitions);
-        // Orphan should also have a subscriber (c2)
-        Assert.NotNull(queue.PartitionManager.OrphanPartition);
-        Assert.True(queue.PartitionManager.OrphanPartition.Queue.Clients.Any());
+        // Only 1 partition created
+        int partitionCount = queue.PartitionManager.Partitions.Count();
+        Assert.Equal(1, partitionCount);
 
         server.Stop();
     }
@@ -132,8 +129,8 @@ public class PartitionSubscribeTest
 
         await Task.Delay(200);
 
-        int normalPartitions = queue.PartitionManager.Partitions.Count(p => !p.IsOrphan);
-        Assert.Equal(2, normalPartitions);
+        int partitionCount = queue.PartitionManager.Partitions.Count();
+        Assert.Equal(2, partitionCount);
 
         server.Stop();
     }
@@ -151,8 +148,8 @@ public class PartitionSubscribeTest
 
         await Task.Delay(200);
 
-        int normalPartitions = queue.PartitionManager.Partitions.Count(p => !p.IsOrphan);
-        Assert.Equal(1, normalPartitions);
+        int partitionCount = queue.PartitionManager.Partitions.Count();
+        Assert.Equal(1, partitionCount);
 
         server.Stop();
     }
@@ -172,16 +169,16 @@ public class PartitionSubscribeTest
 
         await Task.Delay(200);
 
-        int normalPartitions = queue.PartitionManager.Partitions.Count(p => !p.IsOrphan);
-        Assert.Equal(2, normalPartitions);
+        int partitionCount = queue.PartitionManager.Partitions.Count();
+        Assert.Equal(2, partitionCount);
 
         server.Stop();
     }
 
     [Fact]
-    public async Task Subscribe_MaxPartitionsReached_NoLabelSubscriber_FallsBackToOrphan()
+    public async Task Subscribe_MaxPartitionsReached_NoLabelSubscriber_ReturnsNull()
     {
-        // 2 max partitions, 1 subscriber each — no-label path respects the limit
+        // 2 max partitions, 1 subscriber each — 3rd subscriber gets rejected
         var (server, port, queue) = await CreatePartitionedQueue(maxPartitions: 2, subscribersPerPartition: 1);
 
         HorseClient c1 = new HorseClient();
@@ -192,40 +189,20 @@ public class PartitionSubscribeTest
         await c3.ConnectAsync("horse://localhost:" + port);
 
         // Two no-label subscribers fill up the 2 partitions
-        await c1.Queue.Subscribe("part-q", true);
-        await c2.Queue.Subscribe("part-q", true);
-        // 3rd no-label subscriber: max reached → falls back to orphan
-        await c3.Queue.Subscribe("part-q", true);
+        HorseResult r1 = await c1.Queue.Subscribe("part-q", true);
+        HorseResult r2 = await c2.Queue.Subscribe("part-q", true);
+        Assert.Equal(HorseResultCode.Ok, r1.Code);
+        Assert.Equal(HorseResultCode.Ok, r2.Code);
+
+        // 3rd no-label subscriber: max reached → LimitExceeded
+        HorseResult r3 = await c3.Queue.Subscribe("part-q", true);
+        Assert.Equal(HorseResultCode.LimitExceeded, r3.Code);
 
         await Task.Delay(200);
 
-        // Still only 2 non-orphan partitions
-        int normalPartitions = queue.PartitionManager.Partitions.Count(p => !p.IsOrphan);
-        Assert.Equal(2, normalPartitions);
-
-        // Orphan partition should have been created for c3
-        Assert.NotNull(queue.PartitionManager.OrphanPartition);
-        Assert.True(queue.PartitionManager.OrphanPartition.Queue.Clients.Any());
-
-        server.Stop();
-    }
-
-    [Fact]
-    public async Task Subscribe_WithLabel_ClientAlsoSubscribedToOrphan()
-    {
-        var (server, port, queue) = await CreatePartitionedQueue(enableOrphan: true);
-
-        HorseClient client = new HorseClient();
-        await client.ConnectAsync("horse://localhost:" + port);
-
-        await client.Queue.Subscribe("part-q", true,
-            new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "worker-A") });
-
-        await Task.Delay(300);
-
-        HorseQueue orphanQueue = queue.PartitionManager.OrphanPartition?.Queue;
-        Assert.NotNull(orphanQueue);
-        Assert.True(orphanQueue.Clients.Any());
+        // Still only 2 partitions
+        int partitionCount = queue.PartitionManager.Partitions.Count();
+        Assert.Equal(2, partitionCount);
 
         server.Stop();
     }
@@ -237,6 +214,7 @@ public class PartitionSubscribeTest
         Assert.True(queue.IsPartitioned);
         server.Stop();
     }
+
 
     [Fact]
     public async Task NonPartitionedQueue_IsPartitioned_False()
@@ -298,7 +276,6 @@ public class PartitionSubscribeTest
 
         PartitionEntry entry = queue.PartitionManager.Partitions.FirstOrDefault(p => p.Label == "worker-a");
         Assert.NotNull(entry);
-        Assert.False(entry.IsOrphan);
 
         server.Stop();
     }

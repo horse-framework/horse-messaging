@@ -36,7 +36,6 @@ public class PartitionIntegrationTest
                 Enabled = true,
                 MaxPartitionCount = maxPartitions,
                 SubscribersPerPartition = subscribersPerPartition,
-                EnableOrphanPartition = true,
                 AutoDestroy = PartitionAutoDestroy.Disabled
             };
         });
@@ -78,7 +77,7 @@ public class PartitionIntegrationTest
         for (int i = 0; i < 10; i++)
             Assert.True(received[i] >= 5, $"worker-{i} received {received[i]}, expected >= 5");
 
-        Assert.Equal(10, queue.PartitionManager.Partitions.Count(p => !p.IsOrphan));
+        Assert.Equal(10, queue.PartitionManager.Partitions.Count());
     }
 
     [Fact]
@@ -132,7 +131,7 @@ public class PartitionIntegrationTest
 
         await Task.Delay(300);
 
-        int normalPartitions = queue.PartitionManager.Partitions.Count(p => !p.IsOrphan);
+        int normalPartitions = queue.PartitionManager.Partitions.Count();
         Assert.Equal(3, normalPartitions);
     }
 
@@ -153,7 +152,6 @@ public class PartitionIntegrationTest
         await Task.Delay(500);
 
         var ids = queue.PartitionManager.Partitions
-            .Where(p => !p.IsOrphan)
             .Select(p => p.PartitionId)
             .ToList();
 
@@ -172,12 +170,8 @@ public class PartitionIntegrationTest
 
         await Task.Delay(200);
 
-        foreach (var entry in queue.PartitionManager.Partitions.Where(p => !p.IsOrphan))
+        foreach (var entry in queue.PartitionManager.Partitions)
             Assert.StartsWith("NamingQ-Partition-", entry.Queue.Name);
-
-        HorseQueue orphanQ = queue.PartitionManager.OrphanPartition?.Queue;
-        Assert.NotNull(orphanQ);
-        Assert.Equal("NamingQ-Partition-Orphan", orphanQ.Name);
     }
 
     [Fact]
@@ -193,15 +187,13 @@ public class PartitionIntegrationTest
         await Task.Delay(200);
         Assert.NotEmpty(queue.PartitionManager.Partitions);
 
-        string orphanName = "TeardownQ-Partition-Orphan";
         string labelPartName = queue.PartitionManager.Partitions
-            .FirstOrDefault(p => !p.IsOrphan)?.Queue.Name;
+            .FirstOrDefault()?.Queue.Name;
 
         await rider.Queue.Remove(queue);
         await Task.Delay(300);
 
         Assert.True(queue.IsDestroyed);
-        Assert.Null(rider.Queue.Find(orphanName));
         if (labelPartName != null)
             Assert.Null(rider.Queue.Find(labelPartName));
     }
@@ -219,7 +211,6 @@ public class PartitionIntegrationTest
                 Enabled = true,
                 MaxPartitionCount = 5,
                 SubscribersPerPartition = 1,
-                EnableOrphanPartition = true
             };
         });
 

@@ -12,7 +12,7 @@ namespace Horse.Messaging.Client.Queues.Annotations;
 /// [PartitionedQueue("tenant-42", MaxPartitions = 10, SubscribersPerPartition = 1)]
 /// public class FetchOrderConsumer : IQueueConsumer&lt;FetchOrderEvent&gt; { ... }
 ///
-/// // Label-less partitioned subscribe (orphan / round-robin path)
+/// // Label-less partitioned subscribe (round-robin path)
 /// [PartitionedQueue(MaxPartitions = 5)]
 /// public class JobConsumer : IQueueConsumer&lt;JobEvent&gt; { ... }
 /// </code>
@@ -27,7 +27,7 @@ public class PartitionedQueueAttribute : Attribute
 {
     /// <summary>
     /// Routing label sent to the server as <c>Partition-Label</c> header.
-    /// <c>null</c> or empty = label-less partitioned subscribe (orphan / round-robin path).
+    /// <c>null</c> or empty = label-less partitioned subscribe (round-robin path).
     /// </summary>
     public string Label { get; }
 

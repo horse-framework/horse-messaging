@@ -1,6 +1,6 @@
 # Queue Partition System — Reference
 
-> **Last updated:** February 28, 2026
+> **Last updated:** March 2, 2026
 > This document covers every usage scenario, design decision, and API detail related to the partition system.
 > Update both this file and `queue-partition-system-summary_TR.md` whenever a new feature is added.
 
@@ -13,14 +13,12 @@
 3. [Partition Options](#partition-options)
 4. [Usage Scenarios](#usage-scenarios)
    - [Labeled Usage — Dedicated Partition](#1-labeled-usage--dedicated-partition)
-   - [Label-less + Orphan Enabled — Load Distribution](#2-label-less--orphan-enabled--load-distribution)
-   - [Label-less + Orphan Disabled — Round-Robin Partition](#3-label-less--orphan-disabled--round-robin-partition)
-   - [Partition Creation via AutoQueueCreation](#4-partition-creation-via-autoqueuecreation)
+   - [Label-less — Round-Robin Partition](#2-label-less--round-robin-partition)
+   - [Partition Creation via AutoQueueCreation](#3-partition-creation-via-autoqueuecreation)
 5. [QueueType and Partition Behaviour](#queuetype-and-partition-behaviour)
 6. [Header Reference](#header-reference)
 7. [Routing Flow](#routing-flow)
-8. [Orphan Partition](#orphan-partition)
-9. [AutoDestroy](#autodestroy)
+8. [AutoDestroy](#autodestroy)
 10. [Metrics](#metrics)
 11. [Event System](#event-system)
 12. [Client API Summary](#client-api-summary)
@@ -45,8 +43,8 @@ Producer  ──►  FetchOrders (parent, IsPartitioned=true)
                PartitionManager
                 ┌────┴────────────────┐
                 ▼                     ▼
-   FetchOrders-Partition-a3k9x   FetchOrders-Partition-Orphan
-         (owned by Worker-1)          (for ownerless messages)
+   FetchOrders-Partition-a3k9x   FetchOrders-Partition-b7m2p
+         (owned by Worker-1)          (owned by Worker-2)
 ```
 
 ---
@@ -66,13 +64,11 @@ PartitionManager ≠ null
 ```
 FetchOrders-Partition-a3k9x   ← owned by worker-1  (IsPartitionQueue=true)
 FetchOrders-Partition-b7m2p   ← owned by worker-2  (IsPartitionQueue=true)
-FetchOrders-Partition-Orphan  ← for ownerless messages
 ```
 
 - Each partition queue is a regular `HorseQueue` with `IsPartitionQueue = true`.
 - Partition queues do **not** have their own `PartitionManager` (`IsPartitioned = false`).
 - Name format: `{parentQueueName}-Partition-{base62Id}`
-- The orphan uses a fixed name: `{parentQueueName}-Partition-Orphan`
 
 ### PartitionManager
 
@@ -93,9 +89,8 @@ Internal class representing each partition:
 ```csharp
 public class PartitionEntry
 {
-    public string PartitionId  { get; set; }  // base62 unique id ("Orphan" is fixed)
-    public string Label        { get; set; }  // null = label-less or orphan
-    public bool   IsOrphan     { get; set; }
+    public string PartitionId  { get; set; }  // base62 unique id
+    public string Label        { get; set; }  // null = label-less
     public HorseQueue Queue    { get; set; }
     public DateTime CreatedAt  { get; set; }
     public DateTime LastMessageAt { get; set; }
@@ -112,7 +107,6 @@ opts.Partition = new PartitionOptions
     Enabled                = true,
     MaxPartitionCount      = 10,    // 0 = unlimited
     SubscribersPerPartition = 1,    // max subscribers per partition
-    EnableOrphanPartition  = true,  // enable orphan partition?
     AutoDestroy            = PartitionAutoDestroy.Disabled,
     AutoDestroyIdleSeconds = 30     // AutoDestroy check interval (seconds)
 };
@@ -121,9 +115,8 @@ opts.Partition = new PartitionOptions
 | Field | Default | Description |
 |---|---|---|
 | `Enabled` | `false` | Enable partitioning |
-| `MaxPartitionCount` | `0` | Maximum label partition count (0 = unlimited) |
+| `MaxPartitionCount` | `0` | Maximum partition count (0 = unlimited) |
 | `SubscribersPerPartition` | `1` | Max subscribers per partition |
-| `EnableOrphanPartition` | `true` | Create an orphan partition? |
 | `AutoDestroy` | `Disabled` | Automatic removal rule |
 | `AutoDestroyIdleSeconds` | `30` | AutoDestroy timer interval |
 
@@ -145,7 +138,6 @@ await rider.Queue.Create("FetchOrders", opts =>
         Enabled                = true,
         MaxPartitionCount      = 10,
         SubscribersPerPartition = 1,
-        EnableOrphanPartition  = true,
         AutoDestroy            = PartitionAutoDestroy.NoConsumers,
         AutoDestroyIdleSeconds = 30
     };
@@ -178,15 +170,11 @@ await producer.Queue.Push("FetchOrders", message, false,
 4. No other worker can see the message
 5. When the worker drops, the partition is removed after `AutoDestroyIdleSeconds` via the `NoConsumers` rule
 
-**Relation with orphan:**
-A labeled worker is also automatically subscribed to the orphan partition (when `EnableOrphanPartition=true`).
-This allows label-less messages to be received by this worker as well.
-
 ---
 
-### 2. Label-less + Orphan Enabled — Load Distribution
+### 2. Label-less — Round-Robin Partition
 
-**When to use:** When workers don't care which partition they belong to; when you want messages distributed equally across all workers.
+**When to use:** When workers don't care which partition they belong to; messages are distributed round-robin across partitions with active subscribers.
 
 ```csharp
 // ── Worker side ──────────────────────────────────────────
@@ -203,69 +191,27 @@ await producer.Queue.Push("JobQueue", message, false);
 ```
 
 **What happens:**
-1. Each worker gets its own label-less partition when it connects
-2. All workers are also automatically subscribed to the **orphan partition**
-3. Label-less messages are sent to the orphan partition
-4. The orphan distributes to all subscribers via push semantics
-
-```
-JobQueue (parent)
-    ├── Partition-abc  ← Worker-1 (its own partition)
-    ├── Partition-xyz  ← Worker-2 (its own partition)
-    └── Orphan         ← Worker-1 + Worker-2 (both are here)
-
-Message (label-less) → Orphan → Worker-1 or Worker-2
-```
-
-| State | Behaviour |
-|---|---|
-| 3 workers connected, 100 messages | 3 partitions open, messages pushed via orphan |
-| 1 worker dropped | Other 2 continue; that worker's partition destroyed via `NoConsumers` |
-| New worker added | 4th partition opened; new messages automatically routed there |
-
----
-
-### 3. Label-less + Orphan Disabled — Round-Robin Partition
-
-**When to use:** When you don't want an orphan partition and want messages distributed round-robin across partitions.
-
-```csharp
-await rider.Queue.Create("JobQueue", opts =>
-{
-    opts.Type = QueueType.Push;
-    opts.Partition = new PartitionOptions
-    {
-        Enabled                = true,
-        MaxPartitionCount      = 5,
-        SubscribersPerPartition = 1,
-        EnableOrphanPartition  = false,   // ← orphan disabled
-        AutoDestroy            = PartitionAutoDestroy.NoConsumers,
-        AutoDestroyIdleSeconds = 30
-    };
-});
-```
-
-**What happens:**
-1. Worker-1 connects → `Partition-abc` created
-2. Worker-2 connects → `Partition-abc` full → `Partition-xyz` created
-3. Label-less message arrives → **round-robin** across partitions with active subscribers
-4. No orphan is ever created
+1. Each worker gets its own partition when it connects
+2. Label-less messages are distributed **round-robin** across partitions with active subscribers
+3. When a worker drops, its partition is cleaned up via `AutoDestroy` rule
 
 ```
 JobQueue (parent)
     ├── Partition-abc  ← Worker-1  (round-robin target)
     └── Partition-xyz  ← Worker-2  (round-robin target)
+
+Message (label-less) → Round-robin → Worker-1 or Worker-2
 ```
 
-| | Orphan Enabled | Orphan Disabled |
-|---|---|---|
-| Message distribution | Push via orphan | Direct to partition via round-robin |
-| Memory | +1 orphan queue | Only label partitions |
-| When no subscriber | Goes to orphan | Returns `NoConsumers` |
+| State | Behaviour |
+|---|---|
+| 3 workers connected, 100 messages | 3 partitions, messages round-robin distributed |
+| 1 worker dropped | Other 2 continue; that worker's partition destroyed via `NoConsumers` |
+| No subscribers, label-less push | Returns `NoConsumers` |
 
 ---
 
-### 4. Partition Creation via AutoQueueCreation
+### 3. Partition Creation via AutoQueueCreation
 
 ```csharp
 rider.Queue.Options.AutoQueueCreation = true;
@@ -312,13 +258,10 @@ Producer → Push("FetchOrders", msg, headers)
     ┌───────────┴───────────────┐
    YES                          NO
     │                            │
-GetOrCreate                EnableOrphanPartition?
-LabelPartition(label)    ┌───────┴───────┐
-    │                   YES             NO
-    ▼                GetOrCreate     Round-Robin
-entry.Queue          Orphan()       (active partitions)
-    │                    │
-    └────────────────────┘
+GetOrCreate                 Round-Robin
+LabelPartition(label)     (active partitions)
+    │                            │
+    └────────────────────────────┘
                 │
            target.Push(msg)
 ```
@@ -327,35 +270,7 @@ entry.Queue          Orphan()       (active partitions)
 
 > A labeled message is ALWAYS routed to its labeled partition whether or not a subscriber is
 > currently present. The message is stored and delivered when the owning worker reconnects.
-> It is NEVER cross-delivered to another worker or to the orphan.
-
----
-
-## Orphan Partition
-
-The orphan partition is a fallback pool for label-less or ownerless messages.
-
-### Creation Rules
-
-| Condition | Status |
-|---|---|
-| `EnableOrphanPartition = false` | Never created |
-| `EnableOrphanPartition = true` + any subscribe | Created lazily |
-| `WaitForAcknowledge` queue + `EnableOrphanPartition = true` | Created eagerly in `InitializeQueue` |
-
-### Subscriber Rules
-
-- Orphan `ClientLimit = 0` (unlimited).
-- Every labeled worker is automatically added to the orphan in addition to its label partition.
-- Every label-less worker is also added directly to the orphan.
-- `EnableOrphanPartition = false` → no orphan subscription.
-
-### WaitForAcknowledge Guarantee
-
-```csharp
-if (Acknowledge == WaitForAcknowledge && !orphan.Clients.Any())
-    return null; // → NoConsumers
-```
+> It is NEVER cross-delivered to another worker.
 
 ---
 
@@ -378,7 +293,6 @@ public enum PartitionAutoDestroy
 | `NoMessages` | Queue drained | Removed after `AutoDestroyIdleSeconds` |
 | `Empty` | No subscribers and no messages | Removed after `AutoDestroyIdleSeconds` |
 
-- Orphan is **exempt** from AutoDestroy (`IsOrphan = true` entries are skipped).
 - Parent queue keeps running; other partitions are unaffected.
 
 ---
@@ -389,11 +303,10 @@ public enum PartitionAutoDestroy
 queue.Info.RefreshPartitionMetrics(queue.PartitionManager);
 
 Console.WriteLine($"Partition count : {queue.Info.PartitionCount}");
-Console.WriteLine($"Orphan active   : {queue.Info.OrphanPartitionActive}");
 
 foreach (PartitionMetricSnapshot snap in queue.Info.PartitionMetrics)
 {
-    Console.WriteLine($"  [{snap.Label ?? "(orphan)"}] id={snap.PartitionId}" +
+    Console.WriteLine($"  [{snap.Label ?? "(unlabeled)"}] id={snap.PartitionId}" +
                       $"  messages={snap.MessageCount}  consumers={snap.ConsumerCount}");
 }
 ```
@@ -403,8 +316,7 @@ foreach (PartitionMetricSnapshot snap in queue.Info.PartitionMetrics)
 | Field | Type | Description |
 |---|---|---|
 | `PartitionId` | `string` | Unique partition identifier |
-| `Label` | `string?` | Worker label (null = label-less or orphan) |
-| `IsOrphan` | `bool` | Is this the orphan partition? |
+| `Label` | `string?` | Worker label (null = label-less) |
 | `QueueName` | `string` | Physical queue name |
 | `MessageCount` | `int` | Messages currently in the queue |
 | `ConsumerCount` | `int` | Active subscriber count |
@@ -415,7 +327,6 @@ foreach (PartitionMetricSnapshot snap in queue.Info.PartitionMetrics)
 
 ```csharp
 public int PartitionCount { get; set; }
-public bool OrphanPartitionActive { get; set; }
 public List<PartitionMetricSnapshot> PartitionMetrics { get; set; }
 ```
 
@@ -472,7 +383,7 @@ public class FetchOrderConsumer : IQueueConsumer<FetchOrderEvent>
     }
 }
 
-// ── Label-less partitioned subscribe (orphan / round-robin path) ──────
+// ── Label-less partitioned subscribe (round-robin path) ──────
 [PartitionedQueue(MaxPartitions = 5)]
 public class JobConsumer : IQueueConsumer<JobEvent> { ... }
 
@@ -491,7 +402,7 @@ When `AutoSubscribe = true` the client automatically calls `SubscribePartitioned
 | `[PartitionedQueue("label")]` | Sends `Partition-Label` header on subscribe |
 | `[PartitionedQueue("label", MaxPartitions = N)]` | Also sends `Partition-Limit: N` for auto-create |
 | `[PartitionedQueue("label", MaxPartitions = N, SubscribersPerPartition = M)]` | Sends all three partition headers |
-| `[PartitionedQueue]` or `[PartitionedQueue(null)]` | Label-less partitioned subscribe (orphan / round-robin) |
+| `[PartitionedQueue]` or `[PartitionedQueue(null)]` | Label-less partitioned subscribe (round-robin) |
 
 ---
 
@@ -505,7 +416,7 @@ services.AddHorseClient(b => b
     .AddSingletonConsumer<FetchOrderConsumer>()
     // explicit partition label overrides any attribute
     .AddSingletonConsumer<FetchOrderConsumer>("tenant-42", maxPartitions: 10, subscribersPerPartition: 1)
-    // label-less partitioned (orphan / round-robin path)
+    // label-less partitioned (round-robin path)
     .AddSingletonConsumer<JobConsumer>(partitionLabel: "", maxPartitions: 5));
 
 // ── Transient ─────────────────────────────────────────────────────────
@@ -541,7 +452,7 @@ Task<HorseResult> QueueOperator.SubscribePartitioned(
 // Tenant isolation
 await client.Queue.SubscribePartitioned("FetchOrders", "tenant-42", true, 10, 1);
 
-// Label-less, distribution via orphan
+// Label-less, round-robin distribution
 await client.Queue.SubscribePartitioned("JobQueue", null, true, 5, 1);
 
 // Auto-create
@@ -623,7 +534,7 @@ HorseResult result = await bus.Push("FetchOrders", model, waitForCommit: true, p
 // No partition — same as before
 await bus.Push("FetchOrders", model, false);
 
-// Label null → orphan (or round-robin if orphan disabled)
+// Label null → round-robin across partitions
 await bus.Push("JobQueue", stream, false, partitionLabel: null);
 ```
 
@@ -634,7 +545,7 @@ await bus.Push("JobQueue", stream, false, partitionLabel: null);
 await producer.Queue.Push("FetchOrders", content, false,
     new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, "tenant-42") });
 
-// Label-less → orphan (enabled) or round-robin (disabled)
+// Label-less → round-robin across partitions
 await producer.Queue.Push("FetchOrders", content, false);
 ```
 
@@ -658,8 +569,7 @@ All consumers compete on the same queue. In `WaitForAcknowledge` mode, while one
 FetchOrders (parent)
     ├── Partition-a → Worker-1  (only its own messages)
     ├── Partition-b → Worker-2  (only its own messages)
-    ├── Partition-c → Worker-3  (only its own messages)
-    └── Orphan      → Worker-1 + Worker-2 + Worker-3 (label-less fallback)
+    └── Partition-c → Worker-3  (only its own messages)
 ```
 
 | Advantage | Description |
@@ -677,13 +587,13 @@ FetchOrders (parent)
 
 ### Side-by-Side
 
-| | RoundRobin Queue | Partition (label-less + orphan) | Partition (labeled) |
+| | RoundRobin Queue | Partition (label-less) | Partition (labeled) |
 |---|---|---|---|
-| Physical structure | 1 queue, N workers | N+1 queues, N workers | N queues, N workers |
+| Physical structure | 1 queue, N workers | N queues, N workers | N queues, N workers |
 | `WaitForAck` isolation | ⚠️ Busy worker skipped; message goes elsewhere | ✅ Each worker independent | ✅ Message stays in its partition |
 | Tenant isolation | ❌ None | ❌ None | ✅ Full isolation with label |
-| When worker drops | Messages go to other workers | Continues via orphan | Only that partition waits |
-| Memory | Least | Medium (+1 orphan) | Medium (N queues) |
+| When worker drops | Messages go to other workers | Round-robin continues with remaining | Only that partition waits |
+| Memory | Least | Medium (N queues) | Medium (N queues) |
 | When to use | Light, fast jobs | Safer distribution | Tenant/worker isolation |
 
 ### The Truth About WaitForAcknowledge
@@ -764,11 +674,10 @@ Producer → Push("FetchOrders", msg)
 ```
 SubscribeClient(client, label)
     ├─ label != null → GetOrCreateLabelPartition(label) → AddClient
-    │                   If Full → SubscribeToOrphan(client)
-    └─ label == null → Try existing non-orphan partitions
+    │                   If Full → return null (LimitExceeded)
+    └─ label == null → Try existing partitions
                        All Full → CreatePartition(null) → AddClient
-                       MaxPartitionCount exceeded → SubscribeToOrphan(client)
-    └─ EnableOrphanPartition == true → Also add to orphan (in both cases)
+                       MaxPartitionCount exceeded → return null (LimitExceeded)
 ```
 
 ### Partition Queue Options
@@ -777,13 +686,7 @@ SubscribeClient(client, label)
 partitionOptions.ClientLimit        = SubscribersPerPartition;
 partitionOptions.AutoQueueCreation  = false;   // prevents recursive partitioning
 partitionOptions.Partition          = null;    // prevents recursive partitioning
-
-orphanOptions.ClientLimit = 0; // unlimited subscribers
 ```
-
-### AutoDestroy and Orphan
-- Orphan is **skipped** in AutoDestroy timer (`IsOrphan = true`) — never automatically removed.
-- Orphan is only removed when `HorseQueue.Destroy()` is called directly.
 
 ---
 
@@ -799,13 +702,12 @@ orphanOptions.ClientLimit = 0; // unlimited subscribers
 | Consumer **offline**, labeled push | Routed to **same labeled partition**, waits in store |
 | Consumer **reconnects** | Messages delivered via `Trigger()` |
 
-**`enableOrphan` does not affect this.** Labeled messages never go to the orphan; they are never dropped.
+**Labeled messages never leave their partition; they are never dropped.**
 
 ```csharp
 opts.Partition = new PartitionOptions
 {
     Enabled               = true,
-    EnableOrphanPartition = false,   // optional — not needed for labeled bounce protection
     MaxPartitionCount     = 10,
     SubscribersPerPartition = 1,
 };
@@ -830,7 +732,6 @@ Worker-A returned: Partition-A → Worker-A                  ✓ correct deliver
 | Partition sub-queue names and metadata | `queues.json` → `SubPartition` field |
 | `IsPartitionQueue` flag | Set in ReAttach when `SubPartition != null` |
 | Partition label index | ReAttach → `_labelIndex` |
-| Orphan partition | ReAttach → `_orphanPartition` |
 | Messages in sub-queues | `.hdb` files reloaded |
 | Consumer reconnects with same label | **SAME partition queue** — no new GUID |
 | Buffered messages after restart | `Trigger()` → delivered ✅ |
@@ -841,7 +742,6 @@ Worker-A returned: Partition-A → Worker-A                  ✓ correct deliver
 Before restart:
   FetchOrders                     (Partition.Enabled=true)
   FetchOrders-Partition-abc123    (label=tenant-42, 5 messages in .hdb)
-  FetchOrders-Partition-Orphan    (IsOrphan=true, 3 messages in .hdb)
 
 After restart:
   Pass 1 — all queues loaded from queues.json
@@ -849,7 +749,6 @@ After restart:
 
   FetchOrders                     ← PartitionManager.Partitions populated ✓
   FetchOrders-Partition-abc123    ← _labelIndex["tenant-42"] ✓, 5 messages ✓
-  FetchOrders-Partition-Orphan    ← _orphanPartition ✓, 3 messages ✓
 
 Consumer reconnects with tenant-42:
   → existing Partition-abc123 ✓ (no new GUID)
@@ -864,8 +763,7 @@ Consumer reconnects with tenant-42:
   "SubPartition": {
     "ParentQueueName": "FetchOrders",
     "PartitionId": "abc123",
-    "Label": "tenant-42",
-    "IsOrphan": false
+    "Label": "tenant-42"
   }
 }
 ```
@@ -879,7 +777,6 @@ Consumer reconnects with tenant-42:
 | `Producer_Continuous_ConsumerReconnects_ReceivesAll` | Producer keeps pushing → bounce → reconnect → all delivered |
 | `TwoTenants_ConsumerBounce_FullIsolationMaintained` | A drops → A's messages wait → B never sees them → A returns → full delivery |
 | `ServerRestart_PartitionSubQueues_ReAttachedAndMessagesDelivered` | Sub-queue re-attached, same GUID, message delivered |
-| `OrphanPartition_ConsumerBounce_OfflineMessages_Delivered` | Orphan messages delivered after bounce |
 
 ---
 
@@ -890,7 +787,6 @@ Consumer reconnects with tenant-42:
 | **Tenant isolation** | Each tenant's messages in their own partition; never affects others |
 | **Lock-free scaling** | Workers = partitions; zero competition |
 | **Dynamic expansion** | Add worker → partition opens; remove worker → partition closes |
-| **Orphan guarantee** | Label-less messages never lost; automatic fallback in `WaitForAck` mode |
 | **Partial fault tolerance** | One partition destroyed → others keep running |
 | **Transparent producer** | Producer writes to `FetchOrders`; routing belongs to the system |
 | **Observability** | Message count, consumer count, last message time per partition |
@@ -915,13 +811,12 @@ Consumer reconnects with tenant-42:
 | 2 | Partition Scaling | `*Scaling*` | 4 |
 | 3 | Partition vs. Flat RoundRobin | `*VsFlat*` | 12 |
 | 4 | Labeled Push Throughput | `*Labeled*` | 4 |
-| 5 | Orphan Throughput | `*Orphan*` | 6 |
-| 6 | Partition Lifecycle | `*Lifecycle*` | 3 |
-| 7 | Multi-Tenant Isolation | `*MultiTenant*` | 4 |
-| 8 | Broadcast within Partition | `*Broadcast*` | 3 |
-| 9 | WaitForAck Isolation | `*WaitForAck*` | 8 |
-| 10 | Consumer Bounce & Redeliver | `*Bounce*` | 3 |
-| 11 | Large Payload Routing | `*LargePayload*` | 8 |
+| 5 | Partition Lifecycle | `*Lifecycle*` | 3 |
+| 6 | Multi-Tenant Isolation | `*MultiTenant*` | 4 |
+| 7 | Broadcast within Partition | `*Broadcast*` | 3 |
+| 8 | WaitForAck Isolation | `*WaitForAck*` | 8 |
+| 9 | Consumer Bounce & Redeliver | `*Bounce*` | 3 |
+| 10 | Large Payload Routing | `*LargePayload*` | 8 |
 
 ---
 
@@ -998,22 +893,7 @@ Measures the per-message cost of the PartitionManager routing layer alone (no co
 
 ---
 
-### 5. Orphan Throughput — Label-less Push
-
-| Method | ConsumerCount | MessageCount | Mean | Allocated |
-|---|---|---|---|---|
-| OrphanLabelLess_Push | 1 | 5,000 | 187.3 ms | 36.1 MB |
-| OrphanLabelLess_Push | 3 | 5,000 | 319.7 ms | 56.0 MB |
-| OrphanLabelLess_Push | 8 | 5,000 | 654.2 ms | 102.9 MB |
-| OrphanLabelLess_Push | 1 | 20,000 | 747.0 ms | 147.2 MB |
-| OrphanLabelLess_Push | 3 | 20,000 | 1,272 ms | 223.1 MB |
-| OrphanLabelLess_Push | 8 | 20,000 | 2,616 ms | 411.5 MB |
-
-**Findings:** Orphan throughput scales **linearly** with consumer count because each message is pushed to every subscriber (fan-out). For N=8 the time is ~3.5× that of N=1, matching the expected fan-out overhead. Use labeled partitions when fan-out cost is unacceptable.
-
----
-
-### 6. Partition Lifecycle — Create / Push / Destroy
+### 5. Partition Lifecycle — Create / Push / Destroy
 
 Each iteration: create N partitions, push 50 messages to each, destroy all.
 
@@ -1124,7 +1004,6 @@ dotnet run -c Release -- --filter "*RoutingCost*"
 dotnet run -c Release -- --filter "*Scaling*"
 dotnet run -c Release -- --filter "*VsFlat*"
 dotnet run -c Release -- --filter "*Labeled*"
-dotnet run -c Release -- --filter "*Orphan*"
 dotnet run -c Release -- --filter "*Lifecycle*"
 dotnet run -c Release -- --filter "*MultiTenant*"
 dotnet run -c Release -- --filter "*Broadcast*"

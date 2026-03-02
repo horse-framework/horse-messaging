@@ -50,7 +50,7 @@ public class PartitionVsFlatRoundRobinBenchmark : BenchmarkBase
 
         // Partitioned queue — each worker gets its own partition
         CreatePartitionedQueue(PartQueue, QueueType.RoundRobin,
-            maxPartitions: WorkerCount, subscribersPerPart: 1, enableOrphan: false)
+            maxPartitions: WorkerCount, subscribersPerPart: 1)
             .GetAwaiter().GetResult();
 
         _flatWorkers = new HorseClient[WorkerCount];

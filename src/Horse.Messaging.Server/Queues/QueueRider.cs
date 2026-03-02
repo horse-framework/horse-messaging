@@ -168,8 +168,7 @@ public class QueueRider
                     AutoDestroy            = Enum.TryParse<Partitions.PartitionAutoDestroy>(configuration.Partition.AutoDestroy, out var pad)
                                                  ? pad
                                                  : Partitions.PartitionAutoDestroy.Disabled,
-                    AutoDestroyIdleSeconds = configuration.Partition.AutoDestroyIdleSeconds,
-                    EnableOrphanPartition  = configuration.Partition.EnableOrphanPartition
+                    AutoDestroyIdleSeconds = configuration.Partition.AutoDestroyIdleSeconds
                 }
             };
 
@@ -225,8 +224,7 @@ public class QueueRider
             parentQueue.PartitionManager.ReAttach(
                 subQueue,
                 configuration.SubPartition.PartitionId,
-                configuration.SubPartition.Label,
-                configuration.SubPartition.IsOrphan);
+                configuration.SubPartition.Label);
         }
     }
 

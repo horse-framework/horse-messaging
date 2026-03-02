@@ -168,7 +168,6 @@ Queues can now be automatically split into physical sub-queues (partitions). Fro
 | **Tenant isolation** | Label-based routing keeps each tenant's messages in a dedicated partition |
 | **Lock-free scaling** | Each worker owns its partition — zero contention |
 | **Dynamic expansion** | New worker → new partition; worker drops → partition auto-destroyed |
-| **Orphan partition** | Label-less messages are routed to a shared orphan partition; guaranteed consumer in `WaitForAck` mode |
 | **Per-partition AutoDestroy** | `NoConsumers` / `NoMessages` / `Empty` — only the affected partition is destroyed |
 | **Metrics** | Partition count, message count, consumer count per partition via `QueueInfo` |
 | **Events** | `IPartitionEventHandler.OnPartitionCreated/OnPartitionDestroyed` on server; `client.Event.SubscribeToQueuePartitionCreated` on client |
@@ -188,7 +187,7 @@ await client.Queue.SubscribePartitioned(
     maxPartitions:           10,
     subscribersPerPartition: 1);
 
-// Label-less (load distribution via orphan)
+// Label-less (round-robin distribution across partitions)
 await client.Queue.SubscribePartitioned("JobQueue", null, true, maxPartitions: 5);
 ```
 
@@ -200,7 +199,7 @@ public class FetchOrderConsumer : IQueueConsumer<FetchOrderEvent> { ... }
 
 **Produce (unchanged — producer writes to the parent queue name):**
 ```csharp
-// Without label → orphan partition
+// Without label → round-robin across partitions
 await client.Queue.Push(message, false);
 
 // With label → dedicated partition

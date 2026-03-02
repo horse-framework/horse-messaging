@@ -38,7 +38,7 @@ internal class QueueConsumerRegistration
     /// If not null, <see cref="QueueOperator.SubscribePartitioned"/> is called instead of
     /// plain <see cref="QueueOperator.Subscribe"/> during auto-subscribe.
     /// Sourced from <see cref="Annotations.PartitionedQueueAttribute"/> or the builder overload.
-    /// Empty string means "label-less partitioned subscribe" (orphan / round-robin path).
+    /// Empty string means "label-less partitioned subscribe" (round-robin path).
     /// Null means "not partitioned" — plain subscribe is used.
     /// </summary>
     public string PartitionLabel { get; set; }

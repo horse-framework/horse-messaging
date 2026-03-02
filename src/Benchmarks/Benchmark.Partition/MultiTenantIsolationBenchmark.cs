@@ -50,7 +50,7 @@ public class MultiTenantIsolationBenchmark : BenchmarkBase
     {
         StartServer(QueueType.Push, QueueAckDecision.None);
         CreatePartitionedQueue(Queue, QueueType.Push,
-            maxPartitions: TenantCount + 2, subscribersPerPart: 1, enableOrphan: true)
+            maxPartitions: TenantCount + 2, subscribersPerPart: 1)
             .GetAwaiter().GetResult();
 
         _labels    = new string[TenantCount];

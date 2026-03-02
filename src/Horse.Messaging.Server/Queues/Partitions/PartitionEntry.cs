@@ -12,12 +12,9 @@ public class PartitionEntry
 
     /// <summary>
     /// Worker routing label assigned to this partition.
-    /// Null for unlabeled or orphan partitions.
+    /// Null for unlabeled partitions.
     /// </summary>
     public string Label { get; set; }
-
-    /// <summary>True when this is the orphan (fallback) partition.</summary>
-    public bool IsOrphan { get; init; } = false;
 
     /// <summary>The underlying HorseQueue instance for this partition.</summary>
     public HorseQueue Queue { get; init; }

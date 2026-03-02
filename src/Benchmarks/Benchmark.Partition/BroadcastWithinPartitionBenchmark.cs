@@ -43,7 +43,7 @@ public class BroadcastWithinPartitionBenchmark : BenchmarkBase
     {
         StartServer(QueueType.Push, QueueAckDecision.None);
         CreatePartitionedQueue(Queue, QueueType.Push,
-            maxPartitions: Partitions, subscribersPerPart: FanOut, enableOrphan: false)
+            maxPartitions: Partitions, subscribersPerPart: FanOut)
             .GetAwaiter().GetResult();
 
         _labels    = new string[Partitions];
