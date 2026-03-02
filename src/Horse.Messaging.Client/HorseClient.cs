@@ -1274,28 +1274,31 @@ public class HorseClient : IDisposable
     {
         switch (message.Type)
         {
+            // ── User-code paths ─────────────────────────────────────
+            // These are dispatched as fire-and-forget so the read loop
+            // is never blocked by consumer / handler / event-handler
+            // code.  If such code calls WaitResponse (e.g. pushes a
+            // new message with waitForCommit:true) the read loop must
+            // remain free to receive the server's Response frame;
+            // otherwise a deadlock occurs.
+
             case MessageType.Channel:
-                await Channel.OnChannelMessage(message);
-                InvokeMessageReceived(message);
+                _ = DispatchChannelMessageAsync(message);
                 break;
 
             case MessageType.QueueMessage:
-
                 if (message.WaitResponse && AutoAcknowledge)
                     await SendAsync(message.CreateAcknowledge());
-
-                await Queue.OnQueueMessage(message);
-                InvokeMessageReceived(message);
+                _ = DispatchQueueMessageAsync(message);
                 break;
 
             case MessageType.DirectMessage:
-
                 if (message.WaitResponse && AutoAcknowledge)
                     await SendAsync(message.CreateAcknowledge());
-
-                await Direct.OnDirectMessage(message);
-                InvokeMessageReceived(message);
+                _ = DispatchDirectMessageAsync(message);
                 break;
+
+            // ── Protocol-critical paths (never blocked) ─────────────
 
             case MessageType.Server:
                 if (message.ContentType == KnownContentTypes.Accepted)
@@ -1348,6 +1351,57 @@ public class HorseClient : IDisposable
                 if (CatchEventMessages)
                     InvokeMessageReceived(message);
                 break;
+        }
+    }
+
+    /// <summary>
+    /// Dispatches a channel message to the subscriber handler and fires MessageReceived.
+    /// Runs on a pooled task so the read loop is not blocked.
+    /// </summary>
+    private async Task DispatchChannelMessageAsync(HorseMessage message)
+    {
+        try
+        {
+            await Channel.OnChannelMessage(message);
+            InvokeMessageReceived(message);
+        }
+        catch (Exception e)
+        {
+            OnException(e, message);
+        }
+    }
+
+    /// <summary>
+    /// Dispatches a queue message to the consumer handler and fires MessageReceived.
+    /// Runs on a pooled task so the read loop is not blocked.
+    /// </summary>
+    private async Task DispatchQueueMessageAsync(HorseMessage message)
+    {
+        try
+        {
+            await Queue.OnQueueMessage(message);
+            InvokeMessageReceived(message);
+        }
+        catch (Exception e)
+        {
+            OnException(e, message);
+        }
+    }
+
+    /// <summary>
+    /// Dispatches a direct message to the handler and fires MessageReceived.
+    /// Runs on a pooled task so the read loop is not blocked.
+    /// </summary>
+    private async Task DispatchDirectMessageAsync(HorseMessage message)
+    {
+        try
+        {
+            await Direct.OnDirectMessage(message);
+            InvokeMessageReceived(message);
+        }
+        catch (Exception e)
+        {
+            OnException(e, message);
         }
     }
 
