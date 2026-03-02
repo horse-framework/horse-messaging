@@ -384,7 +384,8 @@ public class QueueOperator : IDisposable
             descriptor.QueueName = NameHandler.Invoke(new QueueNameHandlerContext
             {
                 Client = Client,
-                Type = typeof(T)
+                Type = typeof(T),
+                QueueName = descriptor.QueueName
             });
 
         HorseMessage message = descriptor.CreateMessage();
@@ -432,7 +433,8 @@ public class QueueOperator : IDisposable
             descriptor.QueueName = NameHandler.Invoke(new QueueNameHandlerContext
             {
                 Client = Client,
-                Type = model.GetType()
+                Type = model.GetType(),
+                QueueName = descriptor.QueueName
             });
 
         HorseMessage message = descriptor.CreateMessage();
@@ -471,7 +473,8 @@ public class QueueOperator : IDisposable
             descriptor.QueueName = NameHandler.Invoke(new QueueNameHandlerContext
             {
                 Client = Client,
-                Type = typeof(T)
+                Type = typeof(T),
+                QueueName = descriptor.QueueName
             });
 
         HorseMessage firstMessage = descriptor.CreateMessage();

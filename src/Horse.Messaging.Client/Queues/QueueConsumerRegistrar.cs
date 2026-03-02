@@ -98,7 +98,7 @@ public class QueueConsumerRegistrar
     /// </summary>
     public void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder = null)
     {
-        RegisterConsumer(consumerType, consumerFactoryBuilder, partitionLabel: null, 0, 0, overridePartition: false);
+        RegisterConsumer(consumerType, consumerFactoryBuilder, queueName: null, partitionLabel: null, 0, 0, overridePartition: false);
     }
 
     /// <summary>
@@ -107,11 +107,24 @@ public class QueueConsumerRegistrar
     public void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder,
         string partitionLabel, int maxPartitions = 0, int subscribersPerPartition = 0)
     {
-        RegisterConsumer(consumerType, consumerFactoryBuilder, partitionLabel, maxPartitions, subscribersPerPartition, overridePartition: true);
+        RegisterConsumer(consumerType, consumerFactoryBuilder, queueName: null, partitionLabel, maxPartitions, subscribersPerPartition, overridePartition: true);
     }
 
-    private void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder,
-        string partitionLabel, int maxPartitions, int subscribersPerPartition, bool overridePartition)
+    /// <summary>
+    /// Registers a single consumer with an explicit queue name override and optional partition options.
+    /// </summary>
+    public void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder,
+        string queueName, string partitionLabel, int maxPartitions = 0, int subscribersPerPartition = 0)
+    {
+        RegisterConsumer(consumerType, consumerFactoryBuilder, queueName, partitionLabel, maxPartitions, subscribersPerPartition, overridePartition: partitionLabel != null);
+    }
+
+    /// <summary>
+    /// Registers a single consumer with a queue name transform function and optional partition label.
+    /// The transform receives the original queue name (resolved from attributes) and returns the final name.
+    /// </summary>
+    public void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder,
+        Func<string, string> queueNameTransform, string partitionLabel)
     {
         List<ModelTypeInfo> types = FindModelTypes(consumerType);
 
@@ -120,6 +133,36 @@ public class QueueConsumerRegistrar
             QueueConsumerRegistration registration = CreateConsumerRegistration(typeInfo, consumerFactoryBuilder);
             if (registration == null)
                 throw new TypeLoadException("Cant resolve consumer type");
+
+            if (queueNameTransform != null)
+                registration.QueueName = queueNameTransform(registration.QueueName);
+
+            if (partitionLabel != null)
+            {
+                registration.PartitionLabel = partitionLabel;
+                registration.MaxPartitions = 0;
+                registration.SubscribersPerPartition = 0;
+            }
+
+            lock (_operator.Registrations)
+                _operator.Registrations.Add(registration);
+        }
+    }
+
+    private void RegisterConsumer(Type consumerType, Func<IHandlerFactory> consumerFactoryBuilder,
+        string queueName, string partitionLabel, int maxPartitions, int subscribersPerPartition, bool overridePartition)
+    {
+        List<ModelTypeInfo> types = FindModelTypes(consumerType);
+
+        foreach (ModelTypeInfo typeInfo in types)
+        {
+            QueueConsumerRegistration registration = CreateConsumerRegistration(typeInfo, consumerFactoryBuilder);
+            if (registration == null)
+                throw new TypeLoadException("Cant resolve consumer type");
+
+            // Override queue name if explicitly provided
+            if (!string.IsNullOrEmpty(queueName))
+                registration.QueueName = queueName;
 
             // Builder-level partition settings override attribute-level ones
             if (overridePartition)
@@ -181,7 +224,8 @@ public class QueueConsumerRegistrar
             queueName = _operator.NameHandler.Invoke(new QueueNameHandlerContext
             {
                 Client = _operator.Client,
-                Type = typeInfo.ModelType
+                Type = typeInfo.ModelType,
+                QueueName = queueName
             });
         }
 

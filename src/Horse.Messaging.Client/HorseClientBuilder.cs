@@ -605,6 +605,47 @@ public class HorseClientBuilder
     }
 
     /// <summary>
+    /// Adds a queue consumer with transient life time, overrides the queue name,
+    /// and optionally subscribes with a partition label.
+    /// </summary>
+    /// <param name="queueName">Overrides the queue name resolved from attributes or model type.</param>
+    /// <param name="partitionLabel">Optional partition label. Pass null for no partition.</param>
+    public HorseClientBuilder AddTransientConsumer<TConsumer>(string queueName, string partitionLabel) where TConsumer : class
+    {
+        if (_services == null)
+            throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                            "If you want to use transient queue consumers " +
+                                            "Build HorseClient with IServiceCollection");
+
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), queueName, partitionLabel);
+        _services.AddTransient<TConsumer>();
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a queue consumer with transient life time, transforms the queue name resolved from attributes,
+    /// and optionally subscribes with a partition label.
+    /// </summary>
+    /// <param name="queueNameTransform">
+    /// Receives the original queue name (from <c>[QueueName]</c> attribute or model type) and returns the final queue name.
+    /// Example: <c>name => $"{name}-Free"</c>
+    /// </param>
+    /// <param name="partitionLabel">Optional partition label. Pass null to enter the auto-assign worker pool.</param>
+    public HorseClientBuilder AddTransientConsumer<TConsumer>(Func<string, string> queueNameTransform, string partitionLabel) where TConsumer : class
+    {
+        if (_services == null)
+            throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                            "If you want to use transient queue consumers " +
+                                            "Build HorseClient with IServiceCollection");
+
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Transient), queueNameTransform, partitionLabel);
+        _services.AddTransient<TConsumer>();
+        return this;
+    }
+
+    /// <summary>
     /// Adds a queue consumer with scoped life time
     /// </summary>
     public HorseClientBuilder AddScopedConsumer<TConsumer>() where TConsumer : class
@@ -643,6 +684,47 @@ public class HorseClientBuilder
     }
 
     /// <summary>
+    /// Adds a queue consumer with scoped life time, overrides the queue name,
+    /// and optionally subscribes with a partition label.
+    /// </summary>
+    /// <param name="queueName">Overrides the queue name resolved from attributes or model type.</param>
+    /// <param name="partitionLabel">Optional partition label. Pass null for no partition.</param>
+    public HorseClientBuilder AddScopedConsumer<TConsumer>(string queueName, string partitionLabel) where TConsumer : class
+    {
+        if (_services == null)
+            throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                            "If you want to use scoped queue consumers " +
+                                            "Build HorseClient with IServiceCollection");
+
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), queueName, partitionLabel);
+        _services.AddScoped<TConsumer>();
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a queue consumer with scoped life time, transforms the queue name resolved from attributes,
+    /// and optionally subscribes with a partition label.
+    /// </summary>
+    /// <param name="queueNameTransform">
+    /// Receives the original queue name (from <c>[QueueName]</c> attribute or model type) and returns the final queue name.
+    /// Example: <c>name => $"{name}-Free"</c>
+    /// </param>
+    /// <param name="partitionLabel">Optional partition label. Pass null to enter the auto-assign worker pool.</param>
+    public HorseClientBuilder AddScopedConsumer<TConsumer>(Func<string, string> queueNameTransform, string partitionLabel) where TConsumer : class
+    {
+        if (_services == null)
+            throw new NotSupportedException("Only Singleton lifetime is supported without MSDI Implementation. " +
+                                            "If you want to use scoped queue consumers " +
+                                            "Build HorseClient with IServiceCollection");
+
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Scoped), queueNameTransform, partitionLabel);
+        _services.AddScoped<TConsumer>();
+        return this;
+    }
+
+    /// <summary>
     /// Adds a queue consumer with singleton life time
     /// </summary>
     public HorseClientBuilder AddSingletonConsumer<TConsumer>() where TConsumer : class
@@ -676,6 +758,49 @@ public class HorseClientBuilder
         else
         {
             registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), partitionLabel, maxPartitions, subscribersPerPartition);
+            _services.AddSingleton<TConsumer>();
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a queue consumer with singleton life time, overrides the queue name,
+    /// and optionally subscribes with a partition label.
+    /// </summary>
+    /// <param name="queueName">Overrides the queue name resolved from attributes or model type.</param>
+    /// <param name="partitionLabel">Optional partition label. Pass null for no partition.</param>
+    public HorseClientBuilder AddSingletonConsumer<TConsumer>(string queueName, string partitionLabel) where TConsumer : class
+    {
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        if (_services == null)
+            registrar.RegisterConsumer(typeof(TConsumer), null, queueName, partitionLabel);
+        else
+        {
+            registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), queueName, partitionLabel);
+            _services.AddSingleton<TConsumer>();
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a queue consumer with singleton life time, transforms the queue name resolved from attributes,
+    /// and optionally subscribes with a partition label.
+    /// </summary>
+    /// <param name="queueNameTransform">
+    /// Receives the original queue name (from <c>[QueueName]</c> attribute or model type) and returns the final queue name.
+    /// Example: <c>name => $"{name}-Free"</c>
+    /// </param>
+    /// <param name="partitionLabel">Optional partition label. Pass null to enter the auto-assign worker pool.</param>
+    public HorseClientBuilder AddSingletonConsumer<TConsumer>(Func<string, string> queueNameTransform, string partitionLabel) where TConsumer : class
+    {
+        QueueConsumerRegistrar registrar = new QueueConsumerRegistrar(_client.Queue);
+        if (_services == null)
+            registrar.RegisterConsumer(typeof(TConsumer), null, queueNameTransform, partitionLabel);
+        else
+        {
+            registrar.RegisterConsumer(typeof(TConsumer), () => new MicrosoftDependencyHandlerFactory(_client, ServiceLifetime.Singleton), queueNameTransform, partitionLabel);
             _services.AddSingleton<TConsumer>();
         }
 

@@ -80,7 +80,16 @@ public class PartitionManager
             // Try to assign to an existing partition that needs a consumer first
             entry = await TryAssignToExistingPartition(client);
 
-            if (entry == null)
+            if (entry != null)
+            {
+                // Worker was assigned to existing partition(s).
+                // If it still has capacity, keep it in the pool for future on-demand assignments.
+                int currentCount = _workerAssignmentCount.GetValueOrDefault(client.UniqueId, 0);
+                int max = _options.MaxPartitionsPerWorker;
+                if (max == 0 || currentCount < max)
+                    _availableWorkers.Enqueue(client);
+            }
+            else
             {
                 // No partition needs a consumer right now; add to pool
                 _availableWorkers.Enqueue(client);
