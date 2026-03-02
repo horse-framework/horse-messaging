@@ -13,18 +13,20 @@
 4. [Kullanım Senaryoları](#kullanım-senaryoları)
    - [Label'lı Kullanım — Dedicated Partition](#1-labelli-kullanım--dedicated-partition)
    - [Label'sız — Round-Robin Partition](#2-labelsız--round-robin-partition)
-   - [AutoQueueCreation ile Partition Oluşturma](#3-autoqueuecreation-ile-partition-oluşturma)
+   - [Auto-Assign Workers — Dinamik Tenant Senaryosu](#3-auto-assign-workers--dinamik-tenant-senaryosu)
+   - [AutoQueueCreation ile Partition Oluşturma](#4-autoqueuecreation-ile-partition-oluşturma)
 5. [QueueType ve Partition Davranışı](#queuetype-ve-partition-davranışı)
 6. [Header Referansı](#header-referansı)
 7. [Routing Akışı](#routing-akışı)
 8. [AutoDestroy](#autodestroy)
-10. [Metrikler](#metrikler)
-11. [Event Sistemi](#event-sistemi)
-12. [Client API Özeti](#client-api-özeti)
+9. [Metrikler](#metrikler)
+10. [Event Sistemi](#event-sistemi)
+11. [Client API Özeti](#client-api-özeti)
     - [SubscribePartitioned](#subscribePartitioned-queueoperator)
     - [IHorseQueueBus Partition Push Overload'ları](#ihorsequeuebus--partition-push-overloadları)
-13. [Yük Dağılımı Avantajları](#yük-dağılımı-avantajları)
-14. [RoundRobin Queue ile Karşılaştırma](#roundrobin-queue-ile-karşılaştırma)
+12. [Yük Dağılımı Avantajları](#yük-dağılımı-avantajları)
+13. [RoundRobin Queue ile Karşılaştırma](#roundrobin-queue-ile-karşılaştırma)
+14. [WaitForAcknowledge ve Sıralama Garantileri](#waitforacknowledge-ve-sıralama-garantileri)
 15. [Bilinen Davranışlar ve Notlar](#bilinen-davranışlar-ve-notlar)
 16. [Ne Elde Ettik?](#ne-elde-ettik)
 
@@ -102,11 +104,13 @@ public class PartitionEntry
 ```csharp
 opts.Partition = new PartitionOptions
 {
-    Enabled                = true,
-    MaxPartitionCount      = 10,    // 0 = sınırsız
-    SubscribersPerPartition = 1,    // her partition'da max kaç subscriber
-    AutoDestroy            = PartitionAutoDestroy.Disabled,
-    AutoDestroyIdleSeconds = 30     // AutoDestroy kontrol aralığı (saniye)
+    Enabled                  = true,
+    MaxPartitionCount        = 10,    // 0 = sınırsız
+    SubscribersPerPartition  = 1,     // her partition'da max kaç subscriber
+    AutoAssignWorkers        = false, // label'sız worker'ları labeled partition'lara otomatik ata
+    MaxPartitionsPerWorker   = 1,     // bir worker aynı anda kaç partition'a hizmet edebilir (0 = sınırsız)
+    AutoDestroy              = PartitionAutoDestroy.Disabled,
+    AutoDestroyIdleSeconds   = 30     // AutoDestroy kontrol aralığı (saniye)
 };
 ```
 
@@ -115,6 +119,8 @@ opts.Partition = new PartitionOptions
 | `Enabled` | `false` | Partitioning aktif mi |
 | `MaxPartitionCount` | `0` | Maksimum label partition sayısı (0 = sınırsız) |
 | `SubscribersPerPartition` | `1` | Her partition'daki max subscriber sayısı |
+| `AutoAssignWorkers` | `false` | True olduğunda label'sız subscribe olan worker'lar havuza eklenir ve labeled mesaj geldiğinde otomatik olarak ilgili partition'a atanır (dinamik tenant senaryosu) |
+| `MaxPartitionsPerWorker` | `1` | `AutoAssignWorkers` aktifken bir worker'ın eş zamanlı hizmet edebileceği max partition sayısı. 0 = sınırsız. Her partition kendi mesaj döngüsünü bağımsız çalıştırır, bu yüzden `WaitForAcknowledge` ile partition başına FIFO sıralaması korunur. |
 | `AutoDestroy` | `Disabled` | Otomatik silme kuralı |
 | `AutoDestroyIdleSeconds` | `30` | AutoDestroy timer aralığı |
 
@@ -211,7 +217,72 @@ Mesaj-2 → Partition-abc → Worker-1
 
 ---
 
-### 3. AutoQueueCreation ile Partition Oluşturma
+### 3. Auto-Assign Workers — Dinamik Tenant Senaryosu
+
+**Ne zaman kullanılır:** Tenant/label değerleri başlangıçta bilinmediğinde. Worker'lar label olmadan subscribe olur, server labeled mesaj geldiğinde worker'ı otomatik olarak partition'a atar.
+
+```csharp
+// ── Server tarafı ──────────────────────────────────────────
+await rider.Queue.Create("OrderQueue", opts =>
+{
+    opts.Type = QueueType.Push;
+    opts.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+    opts.Partition = new PartitionOptions
+    {
+        Enabled                 = true,
+        MaxPartitionCount       = 0,     // sınırsız — her tenant için bir tane
+        SubscribersPerPartition = 1,
+        AutoAssignWorkers       = true,  // ← worker havuzu aktif
+        MaxPartitionsPerWorker  = 10,    // ← her worker aynı anda 10 tenant'a hizmet edebilir
+        AutoDestroy             = PartitionAutoDestroy.NoMessages,  // ← worker geri dönüşümü için kritik
+        AutoDestroyIdleSeconds  = 60
+    };
+});
+
+// ── Worker tarafı (10 instance, label yok) ─────────────────
+await client.Queue.Subscribe("OrderQueue", true);
+// Worker havuza girer; server gerektiğinde atayacak
+
+// ── Producer tarafı ────────────────────────────────────────
+await producer.Queue.Push("OrderQueue", order, false,
+    new[] { new KeyValuePair<string, string>(HorseHeaders.PARTITION_LABEL, tenantId) });
+```
+
+**Ne olur:**
+1. 10 worker `OrderQueue`'ya label'sız subscribe olur → **worker havuzuna** girer
+2. İlk mesaj `Partition-Label: tenant-42` ile gelir → `OrderQueue-Partition-x7k2` oluşur
+3. Partition'da subscriber yok → server havuzdan bir worker çeker ve atar
+4. `MaxPartitionsPerWorker = 10` olduğu için worker havuzda kalır ve 9 partition'a daha atanabilir
+5. Sonraki 9 tenant için de aynı worker atanır — **1 worker, 10 tenant'a eş zamanlı hizmet eder**
+6. Her partition kendi mesaj döngüsünü bağımsız çalıştırır, `WaitForAcknowledge` ile **tenant bazlı FIFO korunur**
+7. 11. tenant geldiğinde Worker-2 havuzdan çekilir
+8. Bir partition'daki tüm mesajlar tüketildiğinde → `NoMessages` tetiklenir → destroy → worker'ın atama sayısı düşer → kapasite açılır
+
+```
+OrderQueue (parent, AutoAssignWorkers=true, MaxPartitionsPerWorker=10)
+  Havuz: [Worker-2, Worker-3, ..., Worker-10]   ← 9 worker bekliyor
+  ├── Partition-x7k2 (tenant-42) → Worker-1     ← 1/10 kapasite
+  ├── Partition-m3p8 (tenant-99) → Worker-1     ← 2/10 kapasite
+  ├── Partition-q1r8 (tenant-7)  → Worker-1     ← 3/10 kapasite
+  └── ... 10 partition'a kadar   → Worker-1     ← sonra Worker-2 devralır
+```
+
+#### AutoDestroy ve AutoAssignWorkers Uyumluluğu
+
+`AutoAssignWorkers = true` ve `MaxPartitionsPerWorker > 1` olduğunda, `AutoDestroy` değeri worker'ların yeni partition'lara **geri dönüştürülüp dönüştürülemeyeceğini** doğrudan kontrol eder:
+
+| AutoDestroy | AutoAssignWorkers ile Davranış | Worker Geri Dönüşümü |
+|---|---|---|
+| **`NoMessages`** | Tüm mesajlar tüketilince partition destroy edilir. Worker'ın atama sayısı düşer, yeni partition'lar için kapasite açılır. | ✅ **Önerilen** — tenant'ların işi bitince worker'lar geri dönüştürülür |
+| **`Disabled`** | Partition'lar asla silinmez. Worker'lar sonsuza kadar atanmış kalır, havuz kalıcı olarak boşalır. | ❌ **Kötü** — worker havuzu tükenir, yeni tenant'lara hizmet verilemez |
+| **`NoConsumers`** | Partition sadece worker bağlantısı düştüğünde silinir. Worker bağlıyken partition yaşar. | ⚠️ **Etkisiz** — worker'lar sağlıklıyken Disabled ile aynı |
+| **`Empty`** | Hem consumer hem mesaj olmaması gerekir. Worker bağlıyken, partition boş olsa bile yaşar. | ⚠️ **Etkisiz** — worker'lar sağlıklıyken Disabled ile aynı |
+
+> **Kural:** `AutoAssignWorkers + MaxPartitionsPerWorker > 1` kullanırken her zaman `AutoDestroy = NoMessages` kullanın. Diğer değerler worker geri dönüşümünü engeller.
+
+---
+
+### 4. AutoQueueCreation ile Partition Oluşturma
 
 **Ne zaman kullanılır:** Queue henüz mevcut değilken client'ın subscribe olurken aynı anda partitioned queue oluşturmasını istediğinizde.
 
@@ -860,6 +931,79 @@ FetchOrders (parent)
 | **Ölçeklenebilir** | Yeni worker = yeni partition açılır |
 | **Esnek temizlik** | Bir partition yok olursa diğerleri çalışmaya devam eder |
 | **Şeffaf producer** | Producer hâlâ `FetchOrders`'a yazar, routing sisteme aittir |
+
+---
+
+## WaitForAcknowledge ve Sıralama Garantileri
+
+### Problem
+
+`WaitForAcknowledge` tek bir partition queue'sunun N+1. mesajı, N. mesaj acknowledge edilmeden göndermemesini garanti eder. **Ancak partitioning tanımı gereği mesajları birden fazla bağımsız queue'ya böler.** Her partition'ın kendi acknowledge lock'u vardır — birbirleriyle koordine olmazlar.
+
+### Label'sız (Round-Robin) + WaitForAcknowledge
+
+```
+Parent: OrderQueue (Partitioned, WaitForAcknowledge)
+  ├── Partition-a → Worker-1
+  └── Partition-b → Worker-2
+
+msg-1 → round-robin → Partition-a → Worker-1 (işliyor...)
+msg-2 → round-robin → Partition-b → Worker-2 (paralel işliyor!)
+```
+
+**Global sıralama GARANTİ EDİLMEZ.** msg-1 ve msg-2 farklı partition'larda paralel çalışır. Kesin global sıralama istiyorsanız **partition kullanmayın** — tek queue + tek subscriber kullanın.
+
+### Label'lı + WaitForAcknowledge + SubscribersPerPartition = 1
+
+```
+Parent: OrderQueue (Partitioned, WaitForAcknowledge)
+  ├── Partition-tenantA → Worker-A
+  └── Partition-tenantB → Worker-B
+
+msg-1 (label=A) → Partition-A → Worker-A (işliyor...)
+msg-2 (label=A) → Partition-A → msg-1 acknowledge edilene kadar BEKLER
+msg-3 (label=B) → Partition-B → Worker-B (bağımsız, paralel çalışır)
+```
+
+**Label bazlı sıralama GARANTİ EDİLİR.** Tek bir partition içinde:
+- Tek subscriber (`SubscribersPerPartition = 1`)
+- `WaitForAcknowledge` lock'u bir sonraki mesajı ACK gelene kadar engeller
+- `tenant-A`'nın mesajları her zaman FIFO sırasında işlenir
+
+Bu gerçek dünya senaryolarının çoğu için doğru pattern'dir: global sıralamaya ihtiyacınız yok — **tenant bazlı** veya **entity bazlı** sıralamaya ihtiyacınız var.
+
+### Karar Matrisi
+
+| Senaryo | Partitioned? | Konfigürasyon | Sıralama Garantisi |
+|---|---|---|---|
+| Global kesin sıralama | ❌ Hayır | Tek queue, tek subscriber, `WaitForAcknowledge` | ✅ Global FIFO |
+| Tenant bazlı sıralama | ✅ Evet | Label'lı, `SubscribersPerPartition = 1`, `WaitForAcknowledge` | ✅ Label bazlı FIFO |
+| Tenant bazlı sıralama + yük paylaşımı | ✅ Evet | Label'lı, `SubscribersPerPartition > 1`, `QueueType.RoundRobin` | ⚠️ Partition içi round-robin (kesin sıra yok) |
+| Maksimum throughput, sıralama gerekmez | ✅ Evet | Label'sız, round-robin | ❌ Sıralama yok |
+
+### Önerilen Pattern
+
+```csharp
+// Tenant bazlı kesin sıralama
+opts.Type = QueueType.Push; // veya RoundRobin — SubscribersPerPartition=1 ile aynı
+opts.Acknowledge = QueueAckDecision.WaitForAcknowledge;
+opts.Partition = new PartitionOptions
+{
+    Enabled                 = true,
+    MaxPartitionCount       = 100,
+    SubscribersPerPartition = 1,   // ← kritik: partition başına tek consumer
+    AutoDestroy             = PartitionAutoDestroy.NoConsumers,
+    AutoDestroyIdleSeconds  = 30
+};
+
+// Producer: her zaman sıralama alanını temsil eden bir label ile gönder
+await bus.Push("OrderQueue", order, partitionLabel: order.TenantId);
+
+// Consumer: tenant label'ı ile subscribe ol
+await client.Queue.SubscribePartitioned("OrderQueue", "tenant-42", true);
+```
+
+> **Kilit kavram:** Partition = paralellik sınırı. WaitForAcknowledge = partition içi sıralama sınırı. Label'ları sıralama alanınızı tanımlamak için kullanın (tenant, müşteri, entity ID, vb.).
 
 ---
 

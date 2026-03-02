@@ -23,6 +23,20 @@ public class PartitionManager
     private Timer _autoDestroyTimer;
     private int _roundRobinIndex;
 
+    /// <summary>
+    /// Pool of workers waiting to be auto-assigned to partitions.
+    /// Only used when <see cref="PartitionOptions.AutoAssignWorkers"/> is true.
+    /// Workers subscribe without a label and wait here until a partition needs a consumer.
+    /// </summary>
+    private readonly ConcurrentQueue<MessagingClient> _availableWorkers = new();
+
+    /// <summary>
+    /// Tracks how many partitions each worker is currently assigned to.
+    /// Key = MessagingClient.UniqueId, Value = current assignment count.
+    /// Only used when <see cref="PartitionOptions.AutoAssignWorkers"/> is true.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, int> _workerAssignmentCount = new();
+
     /// <summary>All active partition entries (snapshot).</summary>
     public IEnumerable<PartitionEntry> Partitions => _partitions.Values;
 
@@ -42,6 +56,12 @@ public class PartitionManager
     /// <summary>
     /// Called when a client subscribes to the parent queue.
     /// Finds or creates a suitable partition and subscribes the client to it.
+    /// <para>
+    /// When <see cref="PartitionOptions.AutoAssignWorkers"/> is true and no label is provided,
+    /// the worker is added to the available pool and will be auto-assigned when a labeled
+    /// partition needs a consumer. In this case the method returns a synthetic entry with
+    /// <see cref="PartitionEntry.PartitionId"/> set to "pool" to signal successful pool registration.
+    /// </para>
     /// Returns null when no partition slot is available (label partition full or max partitions reached).
     /// </summary>
     public async Task<PartitionEntry> SubscribeClient(MessagingClient client, string partitionLabel)
@@ -54,6 +74,25 @@ public class PartitionManager
             SubscriptionResult result = await entry.Queue.AddClient(client);
             if (result == SubscriptionResult.Full)
                 return null;
+        }
+        else if (_options.AutoAssignWorkers)
+        {
+            // Try to assign to an existing partition that needs a consumer first
+            entry = await TryAssignToExistingPartition(client);
+
+            if (entry == null)
+            {
+                // No partition needs a consumer right now; add to pool
+                _availableWorkers.Enqueue(client);
+
+                // Return a synthetic entry to signal "you're in the pool, we'll assign you later"
+                entry = new PartitionEntry
+                {
+                    PartitionId = "pool",
+                    Label = null,
+                    Queue = null
+                };
+            }
         }
         else
         {
@@ -93,6 +132,8 @@ public class PartitionManager
     ///
     /// Key behaviours:
     /// - Label present  → deliver directly to labeled partition (creates if needed).
+    ///                     When AutoAssignWorkers is enabled and the partition has no subscriber,
+    ///                     a worker is pulled from the pool and assigned automatically.
     /// - Label absent   → round-robin across active partitions.
     /// </summary>
     public async Task<(HorseQueue target, PushResult result)> RouteMessage(QueueMessage message, MessagingClient sender)
@@ -105,6 +146,10 @@ public class PartitionManager
             PartitionEntry entry = await GetOrCreateLabelPartition(label);
             target = entry.Queue;
             entry.LastMessageAt = DateTime.UtcNow;
+
+            // Auto-assign: if partition has no consumer, pull one from the worker pool
+            if (_options.AutoAssignWorkers && !target.Clients.Any())
+                await TryAssignPooledWorker(entry);
         }
         else
         {
@@ -252,6 +297,34 @@ public class PartitionManager
 
     private void OnPartitionQueueDestroyed(PartitionEntry entry)
     {
+        // When AutoAssignWorkers is enabled, decrement assignment counts and
+        // ensure workers with remaining capacity are back in the pool
+        if (_options.AutoAssignWorkers)
+        {
+            foreach (QueueClient qc in entry.Queue.Clients)
+            {
+                if (!qc.Client.IsConnected)
+                {
+                    _workerAssignmentCount.TryRemove(qc.Client.UniqueId, out _);
+                    continue;
+                }
+
+                int newCount = _workerAssignmentCount.AddOrUpdate(
+                    qc.Client.UniqueId, 0, (_, c) => Math.Max(0, c - 1));
+
+                // If worker is not already in the pool and has capacity, add it back
+                int max = _options.MaxPartitionsPerWorker;
+                bool hasCapacity = max == 0 || newCount < max;
+                bool alreadyInPool = _availableWorkers.Any(w => w.UniqueId == qc.Client.UniqueId);
+
+                if (hasCapacity && !alreadyInPool)
+                    _availableWorkers.Enqueue(qc.Client);
+
+                if (newCount == 0)
+                    _workerAssignmentCount.TryRemove(qc.Client.UniqueId, out _);
+            }
+        }
+
         _partitions.TryRemove(entry.PartitionId, out _);
 
         if (!string.IsNullOrEmpty(entry.Label))
@@ -278,6 +351,97 @@ public class PartitionManager
             if (entry.Queue == queue)
                 return entry.PartitionId;
         return string.Empty;
+    }
+
+    /// <summary>
+    /// Attempts to find a connected worker from the available pool and assign it to the given partition.
+    /// Respects <see cref="PartitionOptions.MaxPartitionsPerWorker"/>: if the limit is not yet reached
+    /// after assignment, the worker stays in the pool for future assignments.
+    /// Skips disconnected workers (lazy pool cleanup).
+    /// </summary>
+    private async Task TryAssignPooledWorker(PartitionEntry entry)
+    {
+        int poolSize = _availableWorkers.Count;
+        for (int i = 0; i < poolSize; i++)
+        {
+            if (!_availableWorkers.TryDequeue(out MessagingClient worker))
+                break;
+
+            // Lazy cleanup: skip disconnected workers
+            if (!worker.IsConnected)
+            {
+                _workerAssignmentCount.TryRemove(worker.UniqueId, out _);
+                continue;
+            }
+
+            // Check if this worker has capacity for more partitions
+            int currentCount = _workerAssignmentCount.GetValueOrDefault(worker.UniqueId, 0);
+            int max = _options.MaxPartitionsPerWorker;
+            if (max > 0 && currentCount >= max)
+            {
+                // Worker is at capacity — put back and try next
+                _availableWorkers.Enqueue(worker);
+                continue;
+            }
+
+            SubscriptionResult result = await entry.Queue.AddClient(worker);
+            if (result == SubscriptionResult.Success)
+            {
+                int newCount = _workerAssignmentCount.AddOrUpdate(worker.UniqueId, 1, (_, c) => c + 1);
+
+                // If worker still has capacity, keep it in the pool
+                if (max == 0 || newCount < max)
+                    _availableWorkers.Enqueue(worker);
+
+                _ = entry.Queue.Trigger();
+                return;
+            }
+
+            // Partition already full — put the worker back and stop trying
+            if (result == SubscriptionResult.Full)
+            {
+                _availableWorkers.Enqueue(worker);
+                return;
+            }
+
+            // Other failure — put worker back
+            _availableWorkers.Enqueue(worker);
+        }
+    }
+
+    /// <summary>
+    /// When a new worker arrives with AutoAssignWorkers, try to place it into an existing
+    /// partition that has room (fewer subscribers than SubscribersPerPartition).
+    /// May assign to multiple partitions up to <see cref="PartitionOptions.MaxPartitionsPerWorker"/>.
+    /// Returns the first assigned entry, or null if no partition needs a consumer.
+    /// </summary>
+    private async Task<PartitionEntry> TryAssignToExistingPartition(MessagingClient client)
+    {
+        PartitionEntry firstAssigned = null;
+        int assignedCount = 0;
+        int max = _options.MaxPartitionsPerWorker;
+
+        foreach (PartitionEntry entry in _partitions.Values)
+        {
+            if (max > 0 && assignedCount >= max)
+                break;
+
+            if (entry.Queue.Clients.Count() < _options.SubscribersPerPartition)
+            {
+                SubscriptionResult result = await entry.Queue.AddClient(client);
+                if (result == SubscriptionResult.Success)
+                {
+                    _ = entry.Queue.Trigger();
+                    firstAssigned ??= entry;
+                    assignedCount++;
+                }
+            }
+        }
+
+        if (assignedCount > 0)
+            _workerAssignmentCount.AddOrUpdate(client.UniqueId, assignedCount, (_, c) => c + assignedCount);
+
+        return firstAssigned;
     }
 
     private void FirePartitionCreatedEvent(PartitionEntry entry)

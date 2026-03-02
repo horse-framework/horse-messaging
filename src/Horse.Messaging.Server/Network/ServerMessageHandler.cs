@@ -198,7 +198,8 @@ internal class ServerMessageHandler : INetworkMessageHandler
                 {
                     HorseMessage response = message.CreateResponse(HorseResultCode.Ok);
                     response.AddHeader(HorseHeaders.PARTITION_ID, entry.PartitionId);
-                    response.AddHeader(HorseHeaders.QUEUE_NAME, entry.Queue.Name);
+                    if (entry.Queue != null)
+                        response.AddHeader(HorseHeaders.QUEUE_NAME, entry.Queue.Name);
                     await client.SendAsync(response);
                 }
                 else
