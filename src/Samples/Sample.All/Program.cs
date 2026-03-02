@@ -1,8 +1,9 @@
-﻿﻿﻿using Horse.Messaging.Client;
+﻿using Horse.Messaging.Client;
 using Horse.Messaging.Client.Queues;
 using Horse.Messaging.Client.Queues.Annotations;
 using Horse.Messaging.Extensions.Client;
 using Horse.Messaging.Protocol;
+using infra.messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Sample.All;
@@ -26,8 +27,9 @@ producerBuilder.AddHorse(config =>
 IHost producer = producerBuilder.Build();
 
 HostApplicationBuilder consumerBuilder = Host.CreateApplicationBuilder();
-consumerBuilder.AddHorse(config =>
+consumerBuilder.AddHorse((config, configuration, _, services) =>
 {
+    services.AddHostedService<HorseClientService>();
     config.AddHost("horse://localhost:2626");
     config.SetClientName("Sample.Client");
     config.UseGracefulShutdown(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), () =>
