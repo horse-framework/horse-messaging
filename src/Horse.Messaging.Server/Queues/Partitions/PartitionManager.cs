@@ -180,6 +180,12 @@ public class PartitionManager
         if (target == null)
             return (null, PushResult.NoConsumers);
 
+        // Rewrite Target to the partition sub-queue name.
+        // Consumer ack is built from message.Target (see HorseMessage.CreateAcknowledge).
+        // Without this, ack goes to the parent queue which has no matching delivery
+        // in its tracker — the ack is silently lost and the message stays in HDB forever.
+        message.Message.SetTarget(target.Name);
+
         // Strip routing header before forwarding to consumers
         message.Message.RemoveHeaders(HorseHeaders.PARTITION_LABEL);
 
@@ -198,19 +204,16 @@ public class PartitionManager
 
     /// <summary>
     /// Creates a new partition queue, registers it, and fires QueuePartitionCreated event.
+    /// <para>
+    /// Partition naming is deterministic and idempotent:
+    /// labeled → <c>{ParentQueue}-Partition-{Label}</c>,
+    /// label-less → <c>{ParentQueue}-Partition-{counter}</c>.
+    /// This ensures the same queue name across server restarts so that
+    /// persistent .hdb files are naturally picked up.
+    /// </para>
     /// </summary>
     /// <param name="label">Routing label, or null for label-less partitions.</param>
-    /// <param name="preKnownQueueName">
-    /// When non-null the queue is created (or reused) under this exact name instead of
-    /// generating a new GUID-based name.  Used during restart recovery so that existing
-    /// .hdb files are picked up automatically.
-    /// </param>
-    /// <param name="preKnownPartitionId">
-    /// When non-null this id is used instead of generating a new one.
-    /// </param>
-    public async Task<PartitionEntry> CreatePartition(string label,
-        string preKnownQueueName = null,
-        string preKnownPartitionId = null)
+    public async Task<PartitionEntry> CreatePartition(string label)
     {
         await _createLock.WaitAsync();
         try
@@ -221,17 +224,20 @@ public class PartitionManager
             string partitionId;
             string queueName;
 
-            if (!string.IsNullOrEmpty(preKnownPartitionId) && !string.IsNullOrEmpty(preKnownQueueName))
+            if (!string.IsNullOrEmpty(label))
             {
-                partitionId = preKnownPartitionId;
-                queueName   = preKnownQueueName;
+                // Deterministic: label IS the partition id
+                partitionId = label;
+                queueName = $"{_parentQueue.Name}-Partition-{label}";
             }
             else
             {
-                partitionId = PartitionIdGenerator.Generate();
-                while (_partitions.ContainsKey(partitionId))
-                    partitionId = PartitionIdGenerator.Generate();
-                queueName = $"{_parentQueue.Name}-Partition-{partitionId}";
+                // Label-less: use incrementing counter
+                int counter = _partitions.Count + 1;
+                while (_partitions.ContainsKey(counter.ToString()))
+                    counter++;
+                partitionId = counter.ToString();
+                queueName = $"{_parentQueue.Name}-Partition-{counter}";
             }
 
             QueueOptions partitionOptions = QueueOptions.CloneFrom(_parentQueue.Options);
@@ -240,7 +246,18 @@ public class PartitionManager
             partitionOptions.Partition = null; // Prevent recursive partitioning
 
             HorseQueue partitionQueue = await _parentQueue.Rider.Queue.Create(
-                queueName, partitionOptions, null, hideException: false, returnIfExists: true);
+                queueName, partitionOptions, null, false, true);
+
+            // Partition sub-queues use deterministic names and must NOT be persisted
+            // in queues.json. InitializeQueue() may have already written an entry;
+            // remove it and prevent future writes.
+            partitionQueue.SkipPersistence = true;
+            var configurator = _parentQueue.Rider.Queue.OptionsConfigurator;
+            if (configurator != null)
+            {
+                configurator.Remove(x => x.Name == queueName);
+                configurator.Save();
+            }
 
             partitionQueue.IsPartitionQueue = true;
             partitionQueue.PartitionMeta = new SubPartitionMeta
@@ -249,7 +266,6 @@ public class PartitionManager
                 PartitionId     = partitionId,
                 Label           = label
             };
-            partitionQueue.UpdateConfiguration(false);
 
             var entry = new PartitionEntry
             {
@@ -276,33 +292,6 @@ public class PartitionManager
         }
     }
 
-    /// <summary>
-    /// Called on server restart to re-attach a partition sub-queue that was
-    /// restored from queues.json back into this PartitionManager.
-    /// </summary>
-    public void ReAttach(HorseQueue partitionQueue, string partitionId, string label)
-    {
-        partitionQueue.IsPartitionQueue = true;
-        partitionQueue.PartitionMeta = new SubPartitionMeta
-        {
-            ParentQueueName = _parentQueue.Name,
-            PartitionId     = partitionId,
-            Label           = label
-        };
-
-        var entry = new PartitionEntry
-        {
-            PartitionId = partitionId,
-            Label       = label,
-            Queue       = partitionQueue
-        };
-
-        if (!string.IsNullOrEmpty(label))
-            _labelIndex[label] = entry;
-
-        _partitions[partitionId] = entry;
-        partitionQueue.OnDestroyed += _ => OnPartitionQueueDestroyed(entry);
-    }
 
     private void OnPartitionQueueDestroyed(PartitionEntry entry)
     {

@@ -132,9 +132,52 @@ public class QueueRider
 
         QueueConfiguration[] configurations = OptionsConfigurator.Load();
 
-        // ── Pass 1: Restore all queues ──────────────────────────────────────────
-        // Both parent queues and partition sub-queues are loaded here; the order
-        // does not matter because sub-queue re-attachment is done in Pass 2.
+        // ── Cleanup: remove partition sub-queue entries ──────────────────────────
+        // Partition sub-queues now use deterministic names and are re-created
+        // on-demand when clients subscribe. They should NOT be in queues.json.
+        // Remove any leftover entries from previous versions.
+        bool cleaned = false;
+
+        var parentNames = new HashSet<string>(
+            configurations
+                .Where(c => c.Partition is { Enabled: true })
+                .Select(c => c.Name));
+
+        foreach (QueueConfiguration configuration in configurations)
+        {
+            // Has explicit SubPartition data → definitely a sub-queue
+            if (configuration.SubPartition != null)
+            {
+                OptionsConfigurator.Remove(x => x.Name == configuration.Name);
+                cleaned = true;
+                continue;
+            }
+
+            // Legacy: SubPartition was null due to old bug, detect by name pattern
+            if (configuration.Partition == null)
+            {
+                foreach (string parent in parentNames)
+                {
+                    if (configuration.Name.StartsWith(parent + "-Partition-", StringComparison.Ordinal))
+                    {
+                        OptionsConfigurator.Remove(x => x.Name == configuration.Name);
+                        cleaned = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (cleaned)
+        {
+            OptionsConfigurator.Save();
+            configurations = OptionsConfigurator.Load();
+        }
+
+        // ── Restore parent queues only ──────────────────────────────────────────
+        // Partition sub-queues will be re-created with deterministic names when
+        // clients subscribe. QueueRider.Create(returnIfExists:true) will pick up
+        // existing HDB files since the queue name is the same.
         var createTasks = new List<Task<HorseQueue>>();
 
         foreach (QueueConfiguration configuration in configurations)
@@ -180,7 +223,7 @@ public class QueueRider
             if (status == QueueStatus.NotInitialized)
                 nonInitializionMessage = new HorseMessage(MessageType.Server, configuration.Name, KnownContentTypes.QueueSubscribe);
 
-            var cfg = configuration; // capture for closure
+            var cfg = configuration;
             var t = Create(cfg.Name, options, nonInitializionMessage, true, true, null, cfg.ManagerName)
                 .ContinueWith(o =>
                 {
@@ -199,35 +242,7 @@ public class QueueRider
             createTasks.Add(t);
         }
 
-        // Wait for all queues to be created before the re-attachment pass.
         Task.WhenAll(createTasks).GetAwaiter().GetResult();
-
-        // ── Pass 2: Re-attach partition sub-queues to their parent PartitionManagers ──
-        // Queues that have SubPartition != null were saved as partition sub-queues.
-        // Find their parent, locate its PartitionManager and call ReAttach so that
-        // routing and label-index are fully restored — no new GUIDs are generated.
-        foreach (QueueConfiguration configuration in configurations)
-        {
-            if (configuration.SubPartition == null)
-                continue;
-
-            HorseQueue subQueue = Find(configuration.Name);
-            if (subQueue == null)
-                continue;
-
-            HorseQueue parentQueue = Find(configuration.SubPartition.ParentQueueName);
-            if (parentQueue?.PartitionManager == null)
-                continue;
-
-            // Skip if already attached (e.g. triggered by some other path)
-            if (subQueue.IsPartitionQueue)
-                continue;
-
-            parentQueue.PartitionManager.ReAttach(
-                subQueue,
-                configuration.SubPartition.PartitionId,
-                configuration.SubPartition.Label);
-        }
     }
 
     #region Actions
@@ -410,7 +425,7 @@ public class QueueRider
             CreateEvent.Trigger(client, queue.Name);
             queue.ClusterNotifier.SendCreated();
 
-            if (OptionsConfigurator != null)
+            if (OptionsConfigurator != null && !queue.SkipPersistence)
             {
                 QueueConfiguration configuration = OptionsConfigurator.Find(x => x.Name == queue.Name);
 

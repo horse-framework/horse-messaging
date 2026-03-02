@@ -110,6 +110,13 @@ public class HorseQueue
     public bool IsPartitionQueue { get; internal set; } = false;
 
     /// <summary>
+    /// When true, <see cref="UpdateConfiguration"/> is a no-op.
+    /// Used for partition sub-queues with deterministic names that do not need
+    /// to be persisted in queues.json — they are re-created on demand.
+    /// </summary>
+    internal bool SkipPersistence { get; set; }
+
+    /// <summary>
     /// Non-null when <see cref="IsPartitionQueue"/> is true.
     /// Carries the parent queue name, partition id and label used for
     /// persistence and restart recovery.
@@ -408,6 +415,9 @@ public class HorseQueue
     /// </summary>
     public void UpdateConfiguration(bool notifyCluster)
     {
+        if (SkipPersistence)
+            return;
+
         IOptionsConfigurator<QueueConfiguration> options = Rider.Queue.OptionsConfigurator;
 
         if (options == null)

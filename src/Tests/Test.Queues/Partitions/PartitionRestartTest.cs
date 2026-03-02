@@ -419,13 +419,13 @@ public class PartitionRestartTest : IDisposable
     ///  - Partition sub-queues ARE restored as standalone HorseQueue instances
     ///    (IsPartitionQueue=true) and their .hdb messages are reloaded.
     /// <summary>
-    /// Verifies full restart recovery for the partition system:
-    ///
-    ///  - Partition sub-queues are saved to queues.json with SubPartition metadata.
-    ///  - On restart, sub-queues are re-attached to the parent PartitionManager.
-    ///  - IsPartitionQueue is set correctly after re-attach.
+    /// Verifies the deterministic partition naming approach across server restarts:
+    ///  - Partition queue name is "{ParentQueue}-Partition-{Label}" (deterministic, not random).
+    ///  - Partition sub-queues are NOT persisted in queues.json.
+    ///  - On restart, parent queue is restored; partition sub-queues are re-created
+    ///    on-demand when a client subscribes with the same label.
+    ///  - Because the queue name is deterministic, PersistentQueueManager picks up the existing .hdb file.
     ///  - Buffered messages survive restart and are delivered when the consumer reconnects.
-    ///  - The consumer gets the SAME partition (same queue name) — no new GUID generated.
     /// </summary>
     [Fact]
     public async Task ServerRestart_PartitionSubQueues_ReAttachedAndMessagesDelivered()
@@ -434,7 +434,7 @@ public class PartitionRestartTest : IDisposable
         string queueName = $"rsr-{guid}";
         string label = "tenant-rsr";
         string dataPath;
-        string partQueueName;
+        string expectedPartQueueName;
 
         // ── Phase 1: subscribe, push while offline, then stop server ─
         {
@@ -442,15 +442,18 @@ public class PartitionRestartTest : IDisposable
             dataPath = dp;
             _dataPaths.Add(dataPath);
 
-            // Subscribe → creates labeled partition
-            HorseClient sub1 = new HorseClient { AutoAcknowledge = false }; // hold messages
+            // Subscribe → creates labeled partition with deterministic name
+            HorseClient sub1 = new HorseClient { AutoAcknowledge = false };
             await sub1.ConnectAsync("horse://localhost:" + port1);
             await sub1.Queue.SubscribePartitioned(queueName, label, true);
             await Task.Delay(300);
 
             HorseQueue p1 = rider1.Queue.Find(queueName);
             PartitionEntry e1 = p1.PartitionManager.Partitions.First(q => q.Label == label);
-            partQueueName = e1.Queue.Name; // e.g. "rsr-xxxx-Partition-abc123"
+
+            // Deterministic name: "{parent}-Partition-{label}"
+            expectedPartQueueName = $"{queueName}-Partition-{label}";
+            Assert.Equal(expectedPartQueueName, e1.Queue.Name);
 
             sub1.Disconnect();
             await Task.Delay(200);
@@ -464,12 +467,15 @@ public class PartitionRestartTest : IDisposable
 
             Assert.Equal(1, e1.Queue.Manager.MessageStore.Count());
 
-            // Verify queues.json contains the partition sub-queue with SubPartition data
+            // Partition sub-queues are NOT persisted in queues.json
             string queuesJson = Path.Combine(dataPath, "queues.json");
             Assert.True(File.Exists(queuesJson), "queues.json must exist");
             string jsonContent = await File.ReadAllTextAsync(queuesJson);
-            Assert.Contains(partQueueName, jsonContent);
-            Assert.Contains("SubPartition", jsonContent); // SubPartition metadata persisted
+            Assert.DoesNotContain(expectedPartQueueName, jsonContent);
+
+            // But the HDB file DOES exist
+            string hdbFile = Path.Combine(dataPath, expectedPartQueueName + ".hdb");
+            Assert.True(File.Exists(hdbFile), "HDB file must exist for the partition");
         }
 
         // ── Phase 2: rebuild rider from same dataPath ─────────────────
@@ -483,30 +489,24 @@ public class PartitionRestartTest : IDisposable
             Assert.NotNull(parent2);
             Assert.True(parent2.Options.Partition.Enabled);
 
-            // Partition sub-queue IS re-attached to PartitionManager
-            Assert.NotEmpty(parent2.PartitionManager.Partitions);
+            // PartitionManager is empty until clients subscribe
+            Assert.Empty(parent2.PartitionManager.Partitions);
 
-            PartitionEntry reAttached = parent2.PartitionManager.Partitions
-                .FirstOrDefault(p => p.Label == label);
-            Assert.NotNull(reAttached);
-
-            // SAME queue name — no new GUID generated
-            Assert.Equal(partQueueName, reAttached.Queue.Name);
-
-            // IsPartitionQueue is true after re-attach
-            Assert.True(reAttached.Queue.IsPartitionQueue);
-
-            // The message from phase 1 IS in the restored partition's store
-            Assert.Equal(1, reAttached.Queue.Manager.MessageStore.Count());
-
-            // Consumer reconnects with same label → gets assigned to the SAME partition
-            // → buffered message is delivered immediately via Trigger()
+            // Consumer reconnects with same label → CreatePartition uses deterministic name
+            // → QueueRider.Create creates new queue, PersistentQueueManager loads HDB
             int[] received = { 0 };
             HorseClient sub2 = new HorseClient { AutoAcknowledge = true };
             sub2.MessageReceived += (_, _) => Interlocked.Increment(ref received[0]);
             await sub2.ConnectAsync("horse://localhost:" + port2);
             await sub2.Queue.SubscribePartitioned(queueName, label, true);
             await Task.Delay(1000);
+
+            // Partition was re-created with the SAME deterministic name
+            PartitionEntry reCreated = parent2.PartitionManager.Partitions
+                .FirstOrDefault(p => p.Label == label);
+            Assert.NotNull(reCreated);
+            Assert.Equal(expectedPartQueueName, reCreated.Queue.Name);
+            Assert.True(reCreated.Queue.IsPartitionQueue);
 
             // Message delivered successfully after restart
             Assert.Equal(1, received[0]);
