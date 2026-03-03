@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -161,5 +162,177 @@ public class CacheSetGetTest
         Assert.NotNull(result);
         Assert.Equal("value", Encoding.UTF8.GetString(result.Item.Value.ToArray()));
     }
-}
 
+    [Fact]
+    public async Task Set_EmptyString_GetReturnsEmpty()
+    {
+        await using var ctx = await CacheTestServer.Create();
+        var cache = ctx.Rider.Cache;
+
+        CacheOperation op = cache.Set("empty-val", "", TimeSpan.FromMinutes(5));
+        Assert.Equal(CacheResult.Ok, op.Result);
+
+        var result = await cache.Get("empty-val");
+        Assert.NotNull(result);
+        Assert.Equal("", Encoding.UTF8.GetString(result.Item.Value.ToArray()));
+    }
+
+    [Fact]
+    public async Task Set_LargeValue_RoundTrip()
+    {
+        await using var ctx = await CacheTestServer.Create();
+        var cache = ctx.Rider.Cache;
+
+        byte[] largeData = new byte[8192];
+        Random.Shared.NextBytes(largeData);
+
+        CacheOperation op = cache.Set("large", new MemoryStream(largeData), TimeSpan.FromMinutes(5));
+        Assert.Equal(CacheResult.Ok, op.Result);
+
+        var result = await cache.Get("large");
+        Assert.NotNull(result);
+        Assert.Equal(largeData, result.Item.Value.ToArray());
+    }
+
+    [Fact]
+    public async Task Set_ReturnedItem_HasCorrectProperties()
+    {
+        await using var ctx = await CacheTestServer.Create();
+        var cache = ctx.Rider.Cache;
+
+        string[] tags = ["tag-x", "tag-y"];
+        CacheOperation op = cache.Set("props-key", "props-val", TimeSpan.FromMinutes(10), tags: tags);
+
+        Assert.Equal(CacheResult.Ok, op.Result);
+        Assert.NotNull(op.Item);
+        Assert.Equal("props-key", op.Item.Key);
+        Assert.Equal(tags, op.Item.Tags);
+        Assert.True(op.Item.Expiration > DateTime.UtcNow.AddMinutes(8));
+        Assert.Equal("props-val", Encoding.UTF8.GetString(op.Item.Value.ToArray()));
+    }
+
+    [Fact]
+    public async Task Set_Overwrite_UpdatesExpiration()
+    {
+        await using var ctx = await CacheTestServer.Create(o =>
+        {
+            o.MinimumDuration = TimeSpan.Zero;
+            o.MaximumDuration = TimeSpan.Zero;
+        });
+
+        var cache = ctx.Rider.Cache;
+
+        cache.Set("renew", "first", TimeSpan.FromMinutes(1));
+        var first = await cache.Get("renew");
+        DateTime firstExpiry = first.Item.Expiration;
+
+        await Task.Delay(50);
+
+        cache.Set("renew", "second", TimeSpan.FromMinutes(10));
+        var second = await cache.Get("renew");
+        DateTime secondExpiry = second.Item.Expiration;
+
+        Assert.True(secondExpiry > firstExpiry);
+    }
+
+    [Fact]
+    public async Task Set_Overwrite_UpdatesTags()
+    {
+        await using var ctx = await CacheTestServer.Create();
+        var cache = ctx.Rider.Cache;
+
+        cache.Set("tag-change", "v1", TimeSpan.FromMinutes(5), tags: ["old-tag"]);
+        cache.Set("tag-change", "v2", TimeSpan.FromMinutes(5), tags: ["new-tag"]);
+
+        var result = await cache.Get("tag-change");
+        Assert.NotNull(result);
+        Assert.Single(result.Item.Tags);
+        Assert.Contains("new-tag", result.Item.Tags);
+    }
+
+    [Fact]
+    public async Task ConcurrentSetGet_SameKey_NoException()
+    {
+        await using var ctx = await CacheTestServer.Create();
+        var cache = ctx.Rider.Cache;
+
+        var tasks = new List<Task>();
+        for (int i = 0; i < 50; i++)
+        {
+            int idx = i;
+            tasks.Add(Task.Run(() => cache.Set("concurrent", $"val-{idx}", TimeSpan.FromMinutes(5))));
+            tasks.Add(Task.Run(async () => await cache.Get("concurrent")));
+        }
+
+        await Task.WhenAll(tasks);
+
+        // Final state: key exists with some value
+        var result = await cache.Get("concurrent");
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task Set_NoTags_DefaultsToEmptyArray()
+    {
+        await using var ctx = await CacheTestServer.Create();
+        var cache = ctx.Rider.Cache;
+
+        cache.Set("no-tags", "val", TimeSpan.FromMinutes(5));
+
+        var result = await cache.Get("no-tags");
+        Assert.NotNull(result);
+        Assert.NotNull(result.Item.Tags);
+        Assert.Empty(result.Item.Tags);
+    }
+
+    [Fact]
+    public async Task Set_MemoryStreamNonExposable_GetReturnsValue()
+    {
+        await using var ctx = await CacheTestServer.Create();
+        var cache = ctx.Rider.Cache;
+
+        byte[] raw = Encoding.UTF8.GetBytes("non-exposable-data");
+        var ms = new MemoryStream(raw, 0, raw.Length, writable: false, publiclyVisible: false);
+
+        CacheOperation op = cache.Set("non-exp", ms, TimeSpan.FromMinutes(5));
+        Assert.Equal(CacheResult.Ok, op.Result);
+
+        var result2 = await cache.Get("non-exp");
+        Assert.NotNull(result2);
+        Assert.Equal("non-exposable-data", Encoding.UTF8.GetString(result2.Item.Value.ToArray()));
+    }
+
+    [Fact]
+    public async Task Get_Expired_RemovesFromDictionary()
+    {
+        await using var ctx = await CacheTestServer.Create(o =>
+        {
+            o.MinimumDuration = TimeSpan.Zero;
+            o.MaximumDuration = TimeSpan.Zero;
+        });
+
+        var cache = ctx.Rider.Cache;
+        cache.Set("exp-dict", "val", TimeSpan.FromMilliseconds(50));
+        await Task.Delay(200);
+
+        Assert.Null(await cache.Get("exp-dict"));
+        Assert.Null(await cache.Get("exp-dict"));
+
+        var keys = cache.GetCacheKeys();
+        Assert.DoesNotContain(keys, k => k.Key == "exp-dict");
+    }
+
+    [Fact]
+    public async Task Set_MultipleSequentialOverwrites_LastValueWins()
+    {
+        await using var ctx = await CacheTestServer.Create();
+        var cache = ctx.Rider.Cache;
+
+        for (int i = 0; i < 20; i++)
+            cache.Set("rapid", $"v{i}", TimeSpan.FromMinutes(5));
+
+        var result3 = await cache.Get("rapid");
+        Assert.NotNull(result3);
+        Assert.Equal("v19", Encoding.UTF8.GetString(result3.Item.Value.ToArray()));
+    }
+}

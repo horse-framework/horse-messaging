@@ -504,7 +504,7 @@ public class HorseCache
 
         string filename = string.Concat(_cacheDirectory, item.Key, ".hci");
 
-        using FileStream fs = new FileStream(filename, FileMode.OpenOrCreate, FileAccess.Write);
+        using FileStream fs = new FileStream(filename, FileMode.Create, FileAccess.Write);
         using BinaryWriter writer = new BinaryWriter(fs, System.Text.Encoding.UTF8);
 
         writer.Write(item.Key);

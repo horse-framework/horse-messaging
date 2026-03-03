@@ -95,5 +95,79 @@ public class CacheExpirationWarningTest
         Assert.NotNull(result);
         Assert.True(result.IsFirstWarningReceiver);
     }
+
+    [Fact]
+    public async Task ExpirationWarning_Overwrite_ResetsWarnCount()
+    {
+        await using var ctx = await CacheTestServer.Create(o =>
+        {
+            o.MinimumDuration = TimeSpan.Zero;
+            o.MaximumDuration = TimeSpan.Zero;
+        });
+
+        var cache = ctx.Rider.Cache;
+        cache.Set("warn-reset", "v1", TimeSpan.FromSeconds(3), expirationWarning: TimeSpan.FromMilliseconds(50));
+
+        await Task.Delay(150);
+
+        // Trigger warning
+        var warned = await cache.Get("warn-reset");
+        Assert.NotNull(warned);
+        Assert.True(warned.IsFirstWarningReceiver);
+        Assert.Equal(1, warned.Item.ExpirationWarnCount);
+
+        // Overwrite same key - should reset
+        cache.Set("warn-reset", "v2", TimeSpan.FromSeconds(3), expirationWarning: TimeSpan.FromMinutes(10));
+
+        var fresh = await cache.Get("warn-reset");
+        Assert.NotNull(fresh);
+        Assert.False(fresh.IsFirstWarningReceiver);
+        Assert.Equal(0, fresh.Item.ExpirationWarnCount);
+    }
+
+    [Fact]
+    public async Task ExpirationWarning_Disabled_NeverTriggersWarning()
+    {
+        await using var ctx = await CacheTestServer.Create(o =>
+        {
+            o.ExpirationWarningIsEnabled = false;
+            o.MinimumDuration = TimeSpan.Zero;
+            o.MaximumDuration = TimeSpan.Zero;
+        });
+
+        var cache = ctx.Rider.Cache;
+        // When warning is disabled but no explicit expirationWarning passed,
+        // the Set method sets ExpirationWarning = UtcNow + duration (same as expiration),
+        // which means warning would be == expiration. 
+        // Key won't be in warning state until it's also expired.
+        cache.Set("no-warn-item", "val", TimeSpan.FromSeconds(5));
+
+        // The item's ExpirationWarning should be set to same as Expiration
+        var result = await cache.Get("no-warn-item");
+        Assert.NotNull(result);
+        Assert.False(result.IsFirstWarningReceiver);
+    }
+
+    [Fact]
+    public async Task ExpirationWarning_ExplicitWarning_OverridesDefault()
+    {
+        await using var ctx = await CacheTestServer.Create(o =>
+        {
+            o.ExpirationWarningIsEnabled = true;
+            o.DefaultExpirationWarning = TimeSpan.FromMinutes(10);
+            o.MinimumDuration = TimeSpan.Zero;
+            o.MaximumDuration = TimeSpan.Zero;
+        });
+
+        var cache = ctx.Rider.Cache;
+        // Set with explicit 50ms warning (overrides default 10min)
+        cache.Set("explicit-warn", "val", TimeSpan.FromSeconds(5), expirationWarning: TimeSpan.FromMilliseconds(50));
+
+        await Task.Delay(150);
+
+        var result = await cache.Get("explicit-warn");
+        Assert.NotNull(result);
+        Assert.True(result.IsFirstWarningReceiver);
+    }
 }
 

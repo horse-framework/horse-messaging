@@ -142,5 +142,67 @@ public class CacheLimitsTest
             Assert.Equal(CacheResult.Ok, op.Result);
         }
     }
+
+    [Fact]
+    public async Task ValueMaxSize_OneByteOver_Rejected()
+    {
+        await using var ctx = await CacheTestServer.Create(o =>
+        {
+            o.ValueMaxSize = 50;
+        });
+
+        var cache = ctx.Rider.Cache;
+
+        byte[] data = new byte[51]; // one byte over limit
+        CacheOperation op = cache.Set("over-by-one", new MemoryStream(data), TimeSpan.FromMinutes(5));
+        Assert.Equal(CacheResult.ItemSizeLimit, op.Result);
+    }
+
+    [Fact]
+    public async Task MaximumKeys_ExpiredKeyFreesSlot()
+    {
+        await using var ctx = await CacheTestServer.Create(o =>
+        {
+            o.MaximumKeys = 2;
+            o.MinimumDuration = TimeSpan.Zero;
+            o.MaximumDuration = TimeSpan.Zero;
+        });
+
+        var cache = ctx.Rider.Cache;
+        cache.Purge();
+
+        cache.Set("short-lived", "a", TimeSpan.FromMilliseconds(50));
+        cache.Set("long-lived", "b", TimeSpan.FromMinutes(5));
+
+        await Task.Delay(200);
+
+        // short-lived is expired but still in dictionary until cleanup
+        // Try to get it — this triggers removal via Get
+        Assert.Null(await cache.Get("short-lived"));
+
+        // Now there should be room for a new key
+        CacheOperation op = cache.Set("new-key", "c", TimeSpan.FromMinutes(5));
+        Assert.Equal(CacheResult.Ok, op.Result);
+    }
+
+    [Fact]
+    public async Task CombinedLimits_BothApply()
+    {
+        await using var ctx = await CacheTestServer.Create(o =>
+        {
+            o.MaximumKeys = 5;
+            o.ValueMaxSize = 100;
+        });
+
+        var cache = ctx.Rider.Cache;
+        cache.Purge();
+
+        // Small value accepted
+        Assert.Equal(CacheResult.Ok, cache.Set("ok", "small", TimeSpan.FromMinutes(5)).Result);
+
+        // Large value rejected (even though key count < limit)
+        byte[] big = new byte[200];
+        Assert.Equal(CacheResult.ItemSizeLimit, cache.Set("big", new MemoryStream(big), TimeSpan.FromMinutes(5)).Result);
+    }
 }
 

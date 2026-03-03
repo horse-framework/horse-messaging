@@ -124,5 +124,74 @@ public class CacheRemovePurgeTest
         Assert.NotNull(result);
         Assert.Equal("second", Encoding.UTF8.GetString(result.Item.Value.ToArray()));
     }
+
+    [Fact]
+    public async Task PurgeByTag_MultipleTagsOnItem_MatchesAny()
+    {
+        await using var ctx = await CacheTestServer.Create();
+        var cache = ctx.Rider.Cache;
+
+        cache.Set("multi-tag", "data", TimeSpan.FromMinutes(5), tags: ["alpha", "beta"]);
+
+        // Purge by second tag only
+        cache.PurgeByTag("beta");
+
+        Assert.Null(await cache.Get("multi-tag"));
+    }
+
+    [Fact]
+    public async Task Purge_FreesSlotForNewKeys()
+    {
+        await using var ctx = await CacheTestServer.Create(o =>
+        {
+            o.MaximumKeys = 2;
+        });
+
+        var cache = ctx.Rider.Cache;
+
+        cache.Set("a", "1", TimeSpan.FromMinutes(5));
+        cache.Set("b", "2", TimeSpan.FromMinutes(5));
+
+        // At limit
+        Assert.Equal(CacheResult.KeyLimit, cache.Set("c", "3", TimeSpan.FromMinutes(5)).Result);
+
+        cache.Purge();
+
+        // After purge, slots are free
+        Assert.Equal(CacheResult.Ok, cache.Set("c", "3", TimeSpan.FromMinutes(5)).Result);
+        Assert.Equal(CacheResult.Ok, cache.Set("d", "4", TimeSpan.FromMinutes(5)).Result);
+    }
+
+    [Fact]
+    public async Task PurgeByTag_FreesSlotForNewKeys()
+    {
+        await using var ctx = await CacheTestServer.Create(o =>
+        {
+            o.MaximumKeys = 2;
+        });
+
+        var cache = ctx.Rider.Cache;
+
+        cache.Set("tagged", "1", TimeSpan.FromMinutes(5), tags: ["session"]);
+        cache.Set("untagged", "2", TimeSpan.FromMinutes(5));
+
+        Assert.Equal(CacheResult.KeyLimit, cache.Set("new", "3", TimeSpan.FromMinutes(5)).Result);
+
+        cache.PurgeByTag("session");
+
+        Assert.Equal(CacheResult.Ok, cache.Set("new", "3", TimeSpan.FromMinutes(5)).Result);
+    }
+
+    [Fact]
+    public async Task Remove_CaseInsensitiveKey_Removes()
+    {
+        await using var ctx = await CacheTestServer.Create();
+        var cache = ctx.Rider.Cache;
+
+        cache.Set("CaseKey", "data", TimeSpan.FromMinutes(5));
+        cache.Remove("casekey");
+
+        Assert.Null(await cache.Get("CaseKey"));
+    }
 }
 

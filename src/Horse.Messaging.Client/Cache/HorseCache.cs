@@ -37,7 +37,7 @@ internal class HorseCache : IHorseCache
         if (result == null || result.Code != HorseResultCode.Ok)
             return null;
 
-        HorseCacheData<string> data = CreateCacheData<string>(key, message);
+        HorseCacheData<string> data = CreateCacheData<string>(key, result.Message);
         data.Value = result.Message.GetStringContent();
         return data;
     }
@@ -62,7 +62,7 @@ internal class HorseCache : IHorseCache
         if (result == null || result.Code != HorseResultCode.Ok)
             return null;
 
-        HorseCacheData<byte[]> data = CreateCacheData<byte[]>(key, message);
+        HorseCacheData<byte[]> data = CreateCacheData<byte[]>(key, result.Message);
         data.Value = result.Message.Content.ToArray();
         int value = BitConverter.ToInt32(data.Value);
         return new HorseCacheData<int>
@@ -86,7 +86,7 @@ internal class HorseCache : IHorseCache
         if (result == null || result.Code != HorseResultCode.Ok)
             return null;
 
-        HorseCacheData<byte[]> data = CreateCacheData<byte[]>(key, message);
+        HorseCacheData<byte[]> data = CreateCacheData<byte[]>(key, result.Message);
         data.Value = result.Message.Content.ToArray();
         return data;
     }
@@ -100,7 +100,7 @@ internal class HorseCache : IHorseCache
         if (result == null)
             return default;
 
-        HorseCacheData<TData> data = CreateCacheData<TData>(key, message);
+        HorseCacheData<TData> data = CreateCacheData<TData>(key, result.Result.Message);
         data.Value = result.Model;
         return data;
     }
