@@ -70,7 +70,7 @@ public class OptionsBuilder
             string replicaHost = hostTemplate.Replace("INDEX", index.ToString());
 
             index++;
-            if (replicaHost.Equals(hostname, StringComparison.InvariantCultureIgnoreCase))
+            if (replicaHost.Equals(hostname, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             _options.OtherNodes.Add(new NodeOptions { Name = replicaHost, Host = replicaHost });
@@ -133,7 +133,7 @@ public class OptionsBuilder
         _options.QueueUseMemory = bool.Parse(Environment.GetEnvironmentVariable("HORSE_QUEUE_USE_MEMORY") ?? "true");
 
         string defaultManager = Environment.GetEnvironmentVariable("HORSE_QUEUE_DEFAULT_MANAGER") ?? "Persistent";
-        _options.QueueUsePersistentManagerAsDefault = defaultManager.Equals("Persistent", StringComparison.InvariantCultureIgnoreCase);
+        _options.QueueUsePersistentManagerAsDefault = defaultManager.Equals("Persistent", StringComparison.OrdinalIgnoreCase);
     }
 
     public AppOptions Build()
