@@ -71,6 +71,7 @@ public class HorseCache
 
     private Timer _timer;
     private bool _initialized;
+    private string _cacheDirectory;
 
     private readonly ConcurrentDictionary<string, HorseCacheItem> _items = new(StringComparer.OrdinalIgnoreCase);
 
@@ -102,6 +103,7 @@ public class HorseCache
                 return;
 
             _initialized = true;
+            _cacheDirectory = $"{Rider.Options.DataPath}/Cache/";
             _timer = new Timer(o => RemoveExpiredKeys(), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
 
             LoadPersistentItems();
@@ -200,7 +202,9 @@ public class HorseCache
                 : Options.ExpirationWarningIsEnabled
                     ? DateTime.UtcNow + Options.DefaultExpirationWarning
                     : DateTime.UtcNow + d,
-            Value = new MemoryStream(value.ToArray())
+            Value = value.TryGetBuffer(out ArraySegment<byte> seg) && seg.Array != null
+                ? new MemoryStream(seg.Array, seg.Offset, seg.Count)
+                : new MemoryStream(value.ToArray())
         };
 
         _items[key] = item;
@@ -285,8 +289,12 @@ public class HorseCache
 
         lock (item)
         {
-            byte[] valueArray = item.Value.ToArray();
-            int value = BitConverter.ToInt32(valueArray);
+            int value;
+            if (item.Value.TryGetBuffer(out ArraySegment<byte> seg))
+                value = BitConverter.ToInt32(seg.AsSpan());
+            else
+                value = BitConverter.ToInt32(item.Value.ToArray());
+
             byte[] data = BitConverter.GetBytes(value + incrementValue);
             item.Value.Position = 0;
             item.Value.Write(data);
@@ -319,10 +327,9 @@ public class HorseCache
 
         if (item != null && item.IsPersistent)
         {
-            string directory = $"{Rider.Options.DataPath}/Cache/";
             try
             {
-                File.Delete(directory + key + ".hci");
+                File.Delete(_cacheDirectory + key + ".hci");
             }
             catch
             {
@@ -349,7 +356,7 @@ public class HorseCache
         List<string> removingFiles = new List<string>();
         foreach (KeyValuePair<string, HorseCacheItem> pair in _items)
         {
-            if (pair.Value.Tags.Contains(tagName, StringComparer.CurrentCultureIgnoreCase))
+            if (pair.Value.Tags.Contains(tagName, StringComparer.OrdinalIgnoreCase))
             {
                 removingKeys.Add(pair.Key);
                 if (pair.Value.IsPersistent)
@@ -368,15 +375,14 @@ public class HorseCache
         if (removingFiles.Count == 0)
             return;
 
-        string directory = $"{Rider.Options.DataPath}/Cache/";
-        if (!Directory.Exists(directory))
+        if (!Directory.Exists(_cacheDirectory))
             return;
 
         foreach (string key in removingFiles)
         {
             try
             {
-                File.Delete(directory + key + ".hci");
+                File.Delete(_cacheDirectory + key + ".hci");
             }
             catch
             {
@@ -408,10 +414,9 @@ public class HorseCache
         if (!hasPersistentCache)
             return Task.CompletedTask;
 
-        string directory = $"{Rider.Options.DataPath}/Cache/";
-        if (Directory.Exists(directory))
+        if (Directory.Exists(_cacheDirectory))
         {
-            string[] filenames = Directory.GetFiles(directory);
+            string[] filenames = Directory.GetFiles(_cacheDirectory);
             foreach (string filename in filenames)
             {
                 try
@@ -435,17 +440,15 @@ public class HorseCache
     {
         try
         {
-            string directory = $"{Rider.Options.DataPath}/Cache/";
-
-            if (!Directory.Exists(directory))
+            if (!Directory.Exists(_cacheDirectory))
             {
-                Directory.CreateDirectory(directory);
+                Directory.CreateDirectory(_cacheDirectory);
                 return;
             }
 
             List<string> expiredFiles = new List<string>();
 
-            string[] filenames = Directory.GetFiles(directory);
+            string[] filenames = Directory.GetFiles(_cacheDirectory);
             foreach (string filename in filenames)
             {
                 using FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read);
@@ -488,11 +491,10 @@ public class HorseCache
 
     private void WritePersistentItem(HorseCacheItem item)
     {
-        string directory = $"{Rider.Options.DataPath}/Cache";
-        if (!Directory.Exists(directory))
-            Directory.CreateDirectory(directory);
+        if (!Directory.Exists(_cacheDirectory))
+            Directory.CreateDirectory(_cacheDirectory);
 
-        string filename = $"{directory}/{item.Key}.hci";
+        string filename = $"{_cacheDirectory}{item.Key}.hci";
 
         using FileStream fs = new FileStream(filename, FileMode.OpenOrCreate, FileAccess.Write);
         using BinaryWriter writer = new BinaryWriter(fs, System.Text.Encoding.UTF8);
@@ -509,7 +511,10 @@ public class HorseCache
             writer.Write(tag);
 
         writer.Write((int)item.Value.Length);
-        writer.Write(item.Value.ToArray());
+        if (item.Value.TryGetBuffer(out ArraySegment<byte> valueSeg) && valueSeg.Array != null)
+            writer.Write(valueSeg.Array, valueSeg.Offset, valueSeg.Count);
+        else
+            writer.Write(item.Value.ToArray());
 
         writer.Flush();
         fs.Close();

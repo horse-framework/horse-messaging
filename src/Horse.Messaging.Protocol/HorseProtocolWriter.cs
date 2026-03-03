@@ -53,6 +53,9 @@ public class HorseProtocolWriter
         if (value.Length > 0)
             WriteContent(ms, value);
 
+        if (ms.TryGetBuffer(out ArraySegment<byte> buffer))
+            return buffer.AsSpan().ToArray();
+
         return ms.ToArray();
     }
 

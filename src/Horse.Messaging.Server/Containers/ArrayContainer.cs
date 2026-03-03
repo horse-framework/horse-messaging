@@ -94,7 +94,14 @@ public class ArrayContainer<T> where T : class
             
         try
         {
-            T[] newItems = _items.Where(x => x != value).ToArray();
+            int index = Array.IndexOf(_items, value);
+            if (index < 0) return;
+
+            T[] newItems = new T[_items.Length - 1];
+            if (index > 0)
+                Array.Copy(_items, 0, newItems, 0, index);
+            if (index < _items.Length - 1)
+                Array.Copy(_items, index + 1, newItems, index, _items.Length - index - 1);
             _items = newItems;
         }
         finally
@@ -112,16 +119,25 @@ public class ArrayContainer<T> where T : class
 
         try
         {
+            int keepCount = 0;
             for (int i = 0; i < _items.Length; i++)
             {
-                T item = _items[i];
-
-                bool remove = predicate(item);
-                if (remove)
+                if (!predicate(_items[i]))
+                    keepCount++;
+                else
                     _items[i] = null;
             }
 
-            T[] newItems = _items.Where(x => x != null).ToArray();
+            if (keepCount == _items.Length)
+                return;
+
+            T[] newItems = new T[keepCount];
+            int idx = 0;
+            for (int i = 0; i < _items.Length; i++)
+            {
+                if (_items[i] != null)
+                    newItems[idx++] = _items[i];
+            }
             _items = newItems;
         }
         finally

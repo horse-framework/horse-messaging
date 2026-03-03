@@ -157,24 +157,41 @@ public class PartitionManager
             entry.LastMessageAt = DateTime.UtcNow;
 
             // Auto-assign: if partition has no consumer, pull one from the worker pool
-            if (_options.AutoAssignWorkers && !target.Clients.Any())
+            if (_options.AutoAssignWorkers && !target.HasAnyClient())
                 await TryAssignPooledWorker(entry);
         }
         else
         {
             // Round-robin across partitions that have active subscribers
-            var available = _partitions.Values
-                .Where(p => p.Queue.Clients.Any())
-                .OrderBy(p => p.PartitionId)
-                .ToList();
+            HorseQueue roundRobinTarget = null;
+            int availableCount = 0;
 
-            if (available.Count == 0)
-                target = null;
-            else
+            foreach (PartitionEntry p in _partitions.Values)
             {
-                int idx = Math.Abs(Interlocked.Increment(ref _roundRobinIndex)) % available.Count;
-                target = available[idx].Queue;
+                if (p.Queue.HasAnyClient())
+                    availableCount++;
             }
+
+            if (availableCount > 0)
+            {
+                int idx = Math.Abs(Interlocked.Increment(ref _roundRobinIndex)) % availableCount;
+                int current = 0;
+                foreach (PartitionEntry p in _partitions.Values)
+                {
+                    if (!p.Queue.HasAnyClient())
+                        continue;
+
+                    if (current == idx)
+                    {
+                        roundRobinTarget = p.Queue;
+                        break;
+                    }
+
+                    current++;
+                }
+            }
+
+            target = roundRobinTarget;
         }
 
         if (target == null)

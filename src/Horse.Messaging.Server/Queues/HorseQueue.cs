@@ -195,7 +195,7 @@ public class HorseQueue
 
     private readonly SemaphoreSlim _triggerLock = new(1, 1);
     private readonly List<PutBackQueueMessage> _putBackWaitList = new(8);
-    private readonly SortedSet<string> _messageIdList = new(StringComparer.InvariantCulture);
+    private readonly HashSet<string> _messageIdList = new(StringComparer.Ordinal);
 
     private readonly object _queueClientLock = new();
     private readonly QueueClient[] _queueClients = new QueueClient[32];
@@ -391,7 +391,7 @@ public class HorseQueue
         switch (Options.AutoDestroy)
         {
             case QueueDestroy.NoConsumers:
-                if (_queueClients.All(x => x == null))
+                if (!HasAnyClient())
                     await Rider.Queue.Remove(this);
 
                 break;
@@ -403,7 +403,7 @@ public class HorseQueue
                 break;
 
             case QueueDestroy.Empty:
-                if (_queueClients.All(x => x == null) && IsEmpty && Manager.DeliveryHandler.Tracker.GetDeliveryCount() == 0)
+                if (!HasAnyClient() && IsEmpty && Manager.DeliveryHandler.Tracker.GetDeliveryCount() == 0)
                     await Rider.Queue.Remove(this);
 
                 break;
@@ -526,22 +526,22 @@ public class HorseQueue
 
         foreach (KeyValuePair<string, string> pair in message.Headers)
         {
-            if (pair.Key.Equals(HorseHeaders.ACKNOWLEDGE, StringComparison.InvariantCultureIgnoreCase))
+            if (pair.Key.Equals(HorseHeaders.ACKNOWLEDGE, StringComparison.OrdinalIgnoreCase))
                 Options.Acknowledge = Enums.Parse<QueueAckDecision>(pair.Value, true, EnumFormat.Description);
 
-            else if (pair.Key.Equals(HorseHeaders.QUEUE_TYPE, StringComparison.InvariantCultureIgnoreCase))
+            else if (pair.Key.Equals(HorseHeaders.QUEUE_TYPE, StringComparison.OrdinalIgnoreCase))
                 Options.Type = Enums.Parse<QueueType>(pair.Value, true, EnumFormat.Description);
 
-            else if (pair.Key.Equals(HorseHeaders.QUEUE_TOPIC, StringComparison.InvariantCultureIgnoreCase))
+            else if (pair.Key.Equals(HorseHeaders.QUEUE_TOPIC, StringComparison.OrdinalIgnoreCase))
                 Topic = pair.Value;
 
-            else if (pair.Key.Equals(HorseHeaders.PUT_BACK, StringComparison.InvariantCultureIgnoreCase))
+            else if (pair.Key.Equals(HorseHeaders.PUT_BACK, StringComparison.OrdinalIgnoreCase))
                 Options.PutBack = Enums.Parse<PutBackDecision>(pair.Value, true, EnumFormat.Description);
 
-            else if (pair.Key.Equals(HorseHeaders.PUT_BACK_DELAY, StringComparison.InvariantCultureIgnoreCase))
+            else if (pair.Key.Equals(HorseHeaders.PUT_BACK_DELAY, StringComparison.OrdinalIgnoreCase))
                 Options.PutBackDelay = Convert.ToInt32(pair.Value);
 
-            else if (pair.Key.Equals(HorseHeaders.MESSAGE_TIMEOUT, StringComparison.InvariantCultureIgnoreCase))
+            else if (pair.Key.Equals(HorseHeaders.MESSAGE_TIMEOUT, StringComparison.OrdinalIgnoreCase))
             {
                 string[] timeoutValues = pair.Value.Split(';', StringSplitOptions.RemoveEmptyEntries);
                 if (timeoutValues.Length == 3)
@@ -553,13 +553,13 @@ public class HorseQueue
                     };
             }
 
-            else if (pair.Key.Equals(HorseHeaders.ACK_TIMEOUT, StringComparison.InvariantCultureIgnoreCase))
+            else if (pair.Key.Equals(HorseHeaders.ACK_TIMEOUT, StringComparison.OrdinalIgnoreCase))
                 Options.AcknowledgeTimeout = TimeSpan.FromSeconds(Convert.ToInt32(pair.Value));
 
-            else if (pair.Key.Equals(HorseHeaders.MESSAGE_ID_UNIQUE_CHECK, StringComparison.InvariantCultureIgnoreCase))
-                Options.MessageIdUniqueCheck = pair.Value.Equals("true", StringComparison.InvariantCultureIgnoreCase) || Convert.ToInt32(pair.Value) == 1;
+            else if (pair.Key.Equals(HorseHeaders.MESSAGE_ID_UNIQUE_CHECK, StringComparison.OrdinalIgnoreCase))
+                Options.MessageIdUniqueCheck = pair.Value.Equals("true", StringComparison.OrdinalIgnoreCase) || Convert.ToInt32(pair.Value) == 1;
 
-            else if (pair.Key.Equals(HorseHeaders.DELAY_BETWEEN_MESSAGES, StringComparison.InvariantCultureIgnoreCase))
+            else if (pair.Key.Equals(HorseHeaders.DELAY_BETWEEN_MESSAGES, StringComparison.OrdinalIgnoreCase))
             {
                 if (!string.IsNullOrEmpty(pair.Value))
                     Options.DelayBetweenMessages = Convert.ToInt32(pair.Value);
@@ -1270,7 +1270,7 @@ public class HorseQueue
             if (delivery.Acknowledge == DeliveryAcknowledge.Timeout)
                 return;
 
-            bool success = !(deliveryMessage.HasHeader && deliveryMessage.Headers.Any(x => x.Key.Equals(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.InvariantCultureIgnoreCase)));
+            bool success = !(deliveryMessage.HasHeader && deliveryMessage.Headers.Any(x => x.Key.Equals(HorseHeaders.NEGATIVE_ACKNOWLEDGE_REASON, StringComparison.OrdinalIgnoreCase)));
 
             delivery.MarkAsAcknowledged(success);
             ReleaseAcknowledgeLock(true);

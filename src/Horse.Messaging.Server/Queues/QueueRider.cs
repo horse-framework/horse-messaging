@@ -56,7 +56,7 @@ public class QueueRider
     /// <summary>
     /// Key specific registered queue manager methods
     /// </summary>
-    internal Dictionary<string, Func<QueueManagerBuilder, Task<IHorseQueueManager>>> QueueManagerFactories { get; } = new(StringComparer.InvariantCultureIgnoreCase);
+    internal Dictionary<string, Func<QueueManagerBuilder, Task<IHorseQueueManager>>> QueueManagerFactories { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Root horse rider object
