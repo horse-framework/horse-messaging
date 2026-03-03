@@ -76,6 +76,9 @@ public class PersistentDelivery
 
         deliveries = manager.RedeliveryService.GetDeliveries();
         Assert.Empty(deliveries);
-        await server.StopAsync();
+
+        // No server.StopAsync() needed — the server was never started (no StartAsync call).
+        // Calling StopAsync on an unstarted HorseServer throws NullReferenceException
+        // because internal state (_serverCts) is not initialized until StartAsync.
     }
 }
